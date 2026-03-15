@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground: #0f172a;
+  --background: #ffffff;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+}
+
+/* Smooth scroll and focus styles */
+html {
+  scroll-behavior: smooth;
+}
+
+*:focus-visible {
+  @apply outline-2 outline-offset-2 outline-primary-500;
+}
