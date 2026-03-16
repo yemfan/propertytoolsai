@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
-import ToolLinks from "../../components/ToolLinks";
+import JsonLd from "../../components/JsonLd";
 
 export default function HOAFeeTracker() {
   const [monthlyHoa, setMonthlyHoa] = useState<number>(350);
@@ -30,6 +30,19 @@ export default function HOAFeeTracker() {
 
   return (
     <div className="container mx-auto px-4 py-10">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: "HOA Fee Tracker",
+          applicationCategory: "FinanceApplication",
+          operatingSystem: "All",
+          browserRequirements: "Requires JavaScript",
+          url: "https://propertytoolsai.com/hoa-fee-tracker",
+          description:
+            "Project long-term HOA costs with annual increases to understand the impact of homeowners association fees.",
+        }}
+      />
       <Link
         href="/"
         className="inline-flex items-center gap-2 text-gray-600 hover:text-blue-600 text-sm font-medium mb-6"
@@ -57,11 +70,10 @@ export default function HOAFeeTracker() {
             <button
               type="button"
               className="mt-6 w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
+              >
               Calculate
             </button>
           </div>
-          <ToolLinks excludeHref="/hoa-fee-tracker" />
         </div>
         <div className="lg:col-span-1">
           <div className="lg:sticky lg:top-24">
@@ -73,6 +85,23 @@ export default function HOAFeeTracker() {
           </div>
         </div>
       </div>
+
+      <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">
+        <h2 className="text-xl font-semibold text-gray-900">
+          Understand long-term HOA costs
+        </h2>
+        <p>
+          The HOA fee tracker projects how much you will pay in homeowners association
+          dues over time, including expected annual increases. It calculates the total
+          HOA cost over your ownership period and highlights how rising fees affect
+          long-term affordability.
+        </p>
+        <p>
+          Buyers, condo owners, and townhome investors can use this calculator to factor
+          HOA charges into overall housing costs, compare communities, and anticipate
+          the impact of regular fee increases on cash flow and net returns.
+        </p>
+      </section>
     </div>
   );
 }

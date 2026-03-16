@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
-import ToolLinks from "../../components/ToolLinks";
+import JsonLd from "../../components/JsonLd";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0) return 0;
@@ -64,6 +64,19 @@ export default function CapRateRoiCalculator() {
 
   return (
     <div className="container mx-auto px-4 py-10">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: "Cap Rate & ROI Calculator",
+          applicationCategory: "FinanceApplication",
+          operatingSystem: "All",
+          browserRequirements: "Requires JavaScript",
+          url: "https://propertytoolsai.com/cap-rate-roi-calculator",
+          description:
+            "Calculate cap rate and first-year cash-on-cash ROI for leveraged real estate investments.",
+        }}
+      />
       <Link
         href="/"
         className="inline-flex items-center gap-2 text-gray-600 hover:text-blue-600 text-sm font-medium mb-6"
@@ -93,8 +106,8 @@ export default function CapRateRoiCalculator() {
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white shadow-md rounded-lg p-6">
+        <div className="lg:col-span-2">
+          <div className="bg-white shadow-md rounded-lg p-6 space-y-4">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               Property &amp; financing
             </h2>
@@ -165,14 +178,15 @@ export default function CapRateRoiCalculator() {
                 max={30}
               />
             </div>
-            <button
-              type="button"
-              className="mt-6 w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              Calculate
-            </button>
+            <div className="pt-2">
+              <button
+                type="button"
+                className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                Calculate
+              </button>
+            </div>
           </div>
-          <ToolLinks excludeHref="/cap-rate-roi-calculator" />
         </div>
         <div className="lg:col-span-1">
           <div className="lg:sticky lg:top-24">
@@ -197,6 +211,24 @@ export default function CapRateRoiCalculator() {
           </div>
         </div>
       </div>
+
+      <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">
+        <h2 className="text-xl font-semibold text-gray-900">
+          Combine cap rate and cash-on-cash ROI
+        </h2>
+        <p>
+          This calculator blends traditional cap rate with first-year cash-on-cash ROI
+          by layering financing costs on top of NOI. It shows how leverage, interest
+          rates, and down payment size impact actual investor returns compared to the
+          unlevered cap rate.
+        </p>
+        <p>
+          Use it when evaluating loan options, comparing all-cash purchases to financed
+          deals, or presenting investment opportunities to partners. The tool helps
+          clarify how much of the return comes from property performance versus
+          financing structure.
+        </p>
+      </section>
     </div>
   );
 }

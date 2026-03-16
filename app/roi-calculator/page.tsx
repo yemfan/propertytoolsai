@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
-import ToolLinks from "../../components/ToolLinks";
+import JsonLd from "../../components/JsonLd";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0) return 0;
@@ -65,6 +65,19 @@ export default function ROICalculator() {
 
   return (
     <div className="container mx-auto px-4 py-10">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: "Real Estate ROI Calculator",
+          applicationCategory: "FinanceApplication",
+          operatingSystem: "All",
+          browserRequirements: "Requires JavaScript",
+          url: "https://propertytoolsai.com/roi-calculator",
+          description:
+            "Model long-term real estate return on investment using rent, expenses, financing and property appreciation.",
+        }}
+      />
       <Link
         href="/"
         className="inline-flex items-center gap-2 text-gray-600 hover:text-blue-600 text-sm font-medium mb-6"
@@ -81,8 +94,8 @@ export default function ROICalculator() {
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white shadow-md rounded-lg p-6">
+        <div className="lg:col-span-2">
+          <div className="bg-white shadow-md rounded-lg p-6 space-y-4">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Investment inputs</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <InputField label="Purchase price ($)" value={purchasePrice} onChange={setPurchasePrice} min={1000} />
@@ -94,14 +107,15 @@ export default function ROICalculator() {
               <InputField label="Appreciation (%/yr)" value={appreciationPercent} onChange={setAppreciationPercent} min={-10} max={20} step={0.5} />
               <InputField label="Years held" value={yearsHeld} onChange={setYearsHeld} min={1} max={30} />
             </div>
-            <button
-              type="button"
-              className="mt-6 w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              Calculate
-            </button>
+            <div className="pt-2">
+              <button
+                type="button"
+                className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                Calculate
+              </button>
+            </div>
           </div>
-          <ToolLinks excludeHref="/roi-calculator" />
         </div>
         <div className="lg:col-span-1">
           <div className="lg:sticky lg:top-24">
@@ -113,6 +127,23 @@ export default function ROICalculator() {
           </div>
         </div>
       </div>
+
+      <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">
+        <h2 className="text-xl font-semibold text-gray-900">
+          Long-term real estate ROI modeling
+        </h2>
+        <p>
+          The ROI calculator models long-term returns by combining rental income,
+          operating expenses, mortgage amortization, and property appreciation. It
+          estimates equity growth, total profit, and percentage return based on your
+          down payment and holding period.
+        </p>
+        <p>
+          This tool is ideal for buy-and-hold investors who want to see how a property
+          might perform over several years. Adjust appreciation, expenses, and financing
+          to test different market conditions and exit strategies.
+        </p>
+      </section>
     </div>
   );
 }

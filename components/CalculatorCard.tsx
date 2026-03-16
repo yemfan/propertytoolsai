@@ -1,19 +1,19 @@
 import Link from "next/link";
 
 interface Props {
-  name: string;
+  title: string;
   description: string;
-  href: string;
+  link: string;
 }
 
-export default function CalculatorCard({ name, description, href }: Props) {
+export default function CalculatorCard({ title, description, link }: Props) {
   return (
-    <div className="bg-white shadow-md rounded p-6 hover:shadow-lg transition">
-      <h2 className="text-xl font-semibold mb-2">{name}</h2>
-      <p className="text-gray-600 mb-4">{description}</p>
-      <Link href={href} className="text-blue-600 hover:underline font-medium">
-        Try Now
-      </Link>
-    </div>
+    <Link
+      href={link}
+      className="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition"
+    >
+      <h3 className="text-lg font-semibold mb-2">{title}</h3>
+      <p className="text-gray-600">{description}</p>
+    </Link>
   );
 }

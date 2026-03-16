@@ -1,22 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  --foreground: #0f172a;
-  --background: #ffffff;
+html, body {
+  height: 100%;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-}
-
-/* Smooth scroll and focus styles */
-html {
-  scroll-behavior: smooth;
-}
-
-*:focus-visible {
-  @apply outline-2 outline-offset-2 outline-primary-500;
+  font-family: system-ui, sans-serif;
 }

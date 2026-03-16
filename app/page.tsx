@@ -1,36 +1,81 @@
-import CalculatorCard from '../components/CalculatorCard';
+import CalculatorCard from "../components/CalculatorCard";
 
-const tools = [
-  { name: 'Mortgage Calculator', description: 'Calculate your monthly mortgage payments', href: '/mortgage-calculator' },
-  { name: 'Refinance Calculator', description: 'See if refinancing saves you money', href: '/refinance-calculator' },
-  { name: 'Affordability Calculator', description: 'Know how much house you can afford', href: '/affordability-calculator' },
-  { name: 'Rent vs Buy Calculator', description: 'Compare total cost of renting vs buying', href: '/rent-vs-buy-calculator' },
-  { name: 'Closing Cost Estimator', description: 'Estimate closing costs for your purchase', href: '/closing-cost-estimator' },
-  { name: 'Property Investment Analyzer', description: 'Analyze NOI, cash flow, and cap rate', href: '/property-investment-analyzer' },
-  { name: 'Down Payment Calculator', description: 'Plan your down payment strategy', href: '/down-payment-calculator' },
-  { name: 'HOA Fee Tracker', description: 'Project HOA costs over time', href: '/hoa-fee-tracker' },
-  { name: 'Cash Flow Calculator', description: 'Estimate rental property cash flow', href: '/cash-flow-calculator' },
-  { name: 'Cap Rate Calculator', description: 'Calculate capitalization rate from NOI', href: '/cap-rate-calculator' },
-  { name: 'ROI Calculator', description: 'Estimate return on investment', href: '/roi-calculator' },
+const calculators = [
+  {
+    title: "Mortgage Calculator",
+    description: "Calculate monthly mortgage payments for your home.",
+    link: "/mortgage-calculator",
+  },
+  {
+    title: "Refinance Calculator",
+    description: "Estimate savings when refinancing your mortgage.",
+    link: "/refinance-calculator",
+  },
+  {
+    title: "Affordability Calculator",
+    description: "Find out how much home you can afford.",
+    link: "/affordability-calculator",
+  },
+  {
+    title: "Rent vs Buy Calculator",
+    description: "Compare the cost of renting vs buying a home.",
+    link: "/rent-vs-buy-calculator",
+  },
+  {
+    title: "Closing Cost Estimator",
+    description: "Estimate closing costs when purchasing property.",
+    link: "/closing-cost-estimator",
+  },
+  {
+    title: "Property Investment Analyzer",
+    description: "Analyze rental property investment returns.",
+    link: "/property-investment-analyzer",
+  },
+  {
+    title: "Down Payment Calculator",
+    description: "Calculate required down payment for your home purchase.",
+    link: "/down-payment-calculator",
+  },
+  {
+    title: "HOA Fee Tracker",
+    description: "Track monthly HOA costs and total ownership expenses.",
+    link: "/hoa-fee-tracker",
+  },
+  {
+    title: "Cash Flow Calculator",
+    description: "Calculate rental property monthly cash flow.",
+    link: "/cash-flow-calculator",
+  },
+  {
+    title: "Cap Rate & ROI Calculator",
+    description: "Estimate cap rate and return on investment.",
+    link: "/cap-rate-roi-calculator",
+  },
 ];
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="container mx-auto px-4 py-10">
-      <section className="text-center mb-10">
-        <h1 className="text-4xl font-bold text-blue-600 mb-4">
-          AI-Powered Real Estate Tools
-        </h1>
-        <p className="text-gray-700 text-lg">
-          Calculate, analyze, and invest with confidence.
-        </p>
-      </section>
+    <div className="p-6">
+      
+      <h1 className="text-3xl font-bold mb-2">
+        AI Property Tools
+      </h1>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tools.map((tool) => (
-          <CalculatorCard key={tool.name} name={tool.name} description={tool.description} href={tool.href} />
+      <p className="text-gray-600 mb-8">
+        Professional real estate calculators for buyers, investors, and agents.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {calculators.map((calc) => (
+          <CalculatorCard
+            key={calc.title}
+            title={calc.title}
+            description={calc.description}
+            link={calc.link}
+          />
         ))}
-      </section>
+      </div>
+
     </div>
   );
 }

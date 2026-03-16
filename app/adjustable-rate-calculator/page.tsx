@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
-import ToolLinks from "../../components/ToolLinks";
+import JsonLd from "../../components/JsonLd";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0) return 0;
@@ -80,6 +80,19 @@ export default function AdjustableRateCalculator() {
 
   return (
     <div className="container mx-auto px-4 py-10">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: "Adjustable Rate Mortgage Calculator",
+          applicationCategory: "FinanceApplication",
+          operatingSystem: "All",
+          browserRequirements: "Requires JavaScript",
+          url: "https://propertytoolsai.com/adjustable-rate-calculator",
+          description:
+            "Estimate initial and adjusted monthly payments for adjustable rate mortgages based on rate caps and adjustment schedule.",
+        }}
+      />
       <Link
         href="/"
         className="inline-flex items-center gap-2 text-gray-600 hover:text-blue-600 text-sm font-medium mb-6"
@@ -98,9 +111,9 @@ export default function AdjustableRateCalculator() {
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white shadow-md rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Loan details</h2>
+        <div className="lg:col-span-2">
+          <div className="bg-white shadow-md rounded-lg p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">Loan details</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <InputField label="Home price ($)" value={homePrice} onChange={setHomePrice} min={1000} />
               <InputField label="Down payment ($)" value={downPayment} onChange={setDownPayment} min={0} />
@@ -133,8 +146,6 @@ export default function AdjustableRateCalculator() {
               <InputField label="HOA fees (monthly $)" value={hoaFees} onChange={setHoaFees} min={0} />
             </div>
           </div>
-
-          <ToolLinks excludeHref="/adjustable-rate-calculator" />
         </div>
 
         <div className="lg:col-span-1">
