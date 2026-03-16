@@ -16,34 +16,22 @@ function pmt(principal: number, annualRate: number, years: number): number {
 export default function RefinanceCalculator() {
   const [currentBalance, setCurrentBalance] = useState<number>(250000);
   const [currentRate, setCurrentRate] = useState<number>(6.5);
-  const [currentTermRemaining, setCurrentTermRemaining] = useState<number>(25);
   const [newRate, setNewRate] = useState<number>(5.25);
-  const [newTerm, setNewTerm] = useState<number>(20);
+  const [remainingTermYears, setRemainingTermYears] = useState<number>(25);
   const [closingCosts, setClosingCosts] = useState<number>(4000);
 
-  const { currentMonthlyPayment, newMonthlyPayment, monthlySavings, totalInterestSavings } = useMemo(() => {
-    const P_c = pmt(currentBalance, currentRate, currentTermRemaining);
-    const P_n = pmt(currentBalance, newRate, newTerm);
-    const n_c = currentTermRemaining * 12;
-    const n_n = newTerm * 12;
-    const currentTotalInterest = P_c * n_c - currentBalance;
-    const newTotalInterest = P_n * n_n - currentBalance;
-    const totalInterestSavings = Math.max(0, currentTotalInterest - newTotalInterest);
-    const monthlySavings = Math.max(0, P_c - P_n);
+  const { paymentBefore, paymentAfter, monthlySavings, breakEvenMonths } = useMemo(() => {
+    const paymentBefore = pmt(currentBalance, currentRate, remainingTermYears);
+    const paymentAfter = pmt(currentBalance, newRate, remainingTermYears);
+    const monthlySavings = Math.max(0, paymentBefore - paymentAfter);
+    const breakEvenMonths = monthlySavings > 0 ? Math.ceil(closingCosts / monthlySavings) : 0;
     return {
-      currentMonthlyPayment: P_c,
-      newMonthlyPayment: P_n,
+      paymentBefore,
+      paymentAfter,
       monthlySavings,
-      totalInterestSavings,
+      breakEvenMonths,
     };
-  }, [
-    currentBalance,
-    currentRate,
-    currentTermRemaining,
-    newRate,
-    newTerm,
-    closingCosts,
-  ]);
+  }, [currentBalance, currentRate, newRate, remainingTermYears, closingCosts]);
 
   return (
     <div className="container mx-auto px-4 py-10">
@@ -59,7 +47,7 @@ export default function RefinanceCalculator() {
 
       <h1 className="text-3xl font-bold text-blue-600 mb-2">Refinance Calculator</h1>
       <p className="text-gray-600 mb-8">
-        Compare your current loan to a new one. See monthly payment and interest savings.
+        Compare your current loan to a new rate. See monthly savings and break-even.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -82,13 +70,6 @@ export default function RefinanceCalculator() {
                 step={0.125}
               />
               <InputField
-                label="Current term remaining (years)"
-                value={currentTermRemaining}
-                onChange={setCurrentTermRemaining}
-                min={1}
-                max={30}
-              />
-              <InputField
                 label="New interest rate (%)"
                 value={newRate}
                 onChange={setNewRate}
@@ -97,9 +78,9 @@ export default function RefinanceCalculator() {
                 step={0.125}
               />
               <InputField
-                label="New loan term (years)"
-                value={newTerm}
-                onChange={setNewTerm}
+                label="Remaining loan term (years)"
+                value={remainingTermYears}
+                onChange={setRemainingTermYears}
                 min={1}
                 max={30}
               />
@@ -119,8 +100,8 @@ export default function RefinanceCalculator() {
           <div className="lg:sticky lg:top-24">
             <ResultCard
               title="Refinance results"
-              value={`$${newMonthlyPayment.toFixed(2)}`}
-              details={`Current monthly payment: $${currentMonthlyPayment.toFixed(2)}\nNew monthly payment: $${newMonthlyPayment.toFixed(2)}\nMonthly savings: $${monthlySavings.toFixed(2)}\nTotal interest savings: $${totalInterestSavings.toFixed(2)}`}
+              value={`$${paymentAfter.toFixed(2)}`}
+              details={`Monthly payment before: $${paymentBefore.toFixed(2)}\nMonthly payment after: $${paymentAfter.toFixed(2)}\nMonthly savings: $${monthlySavings.toFixed(2)}\nBreak-even (months): ${breakEvenMonths}`}
             />
           </div>
         </div>

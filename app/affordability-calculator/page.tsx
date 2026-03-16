@@ -13,48 +13,33 @@ function principalFromPmt(monthlyPmt: number, annualRate: number, years: number)
   return (monthlyPmt * (Math.pow(1 + r, n) - 1)) / (r * Math.pow(1 + r, n));
 }
 
+function pmt(principal: number, annualRate: number, years: number): number {
+  if (principal <= 0 || years <= 0) return 0;
+  const r = annualRate / 100 / 12;
+  const n = years * 12;
+  return (principal * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+}
+
 export default function AffordabilityCalculator() {
   const [annualIncome, setAnnualIncome] = useState<number>(120000);
   const [monthlyDebts, setMonthlyDebts] = useState<number>(500);
   const [downPayment, setDownPayment] = useState<number>(60000);
   const [interestRate, setInterestRate] = useState<number>(6.5);
   const [loanTerm, setLoanTerm] = useState<number>(30);
-  const [propertyTax, setPropertyTax] = useState<number>(4000);
-  const [homeInsurance, setHomeInsurance] = useState<number>(1200);
-  const [hoaFees, setHoaFees] = useState<number>(0);
 
   const { maxHomePrice, estimatedMonthlyPayment } = useMemo(() => {
     const monthlyIncome = annualIncome / 12;
-    const maxHousingPayment = Math.max(0, 0.28 * monthlyIncome);
-
-    const taxInsHoa = propertyTax / 12 + homeInsurance / 12 + hoaFees;
-    const maxPi = Math.max(0, maxHousingPayment - taxInsHoa);
-    const maxPrincipal = principalFromPmt(maxPi, interestRate, loanTerm);
-    const maxPrice = maxPrincipal + downPayment;
-
-    const principal = Math.max(0, maxPrice - downPayment);
-    const r = interestRate / 100 / 12;
-    const n = loanTerm * 12;
-    const pi =
-      principal > 0 && n > 0
-        ? (principal * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1)
-        : 0;
-    const monthlyPayment = pi + taxInsHoa;
-
+    const maxTotalDebtPayment = 0.36 * monthlyIncome;
+    const maxHousingPayment = Math.max(0, maxTotalDebtPayment - monthlyDebts);
+    const maxPrincipal = principalFromPmt(maxHousingPayment, interestRate, loanTerm);
+    const maxHomePrice = maxPrincipal + downPayment;
+    const principal = Math.max(0, maxHomePrice - downPayment);
+    const monthlyPmt = pmt(principal, interestRate, loanTerm);
     return {
-      maxHomePrice: Math.max(0, maxPrice),
-      estimatedMonthlyPayment: monthlyPayment,
+      maxHomePrice: Math.max(0, maxHomePrice),
+      estimatedMonthlyPayment: monthlyPmt,
     };
-  }, [
-    annualIncome,
-    monthlyDebts,
-    downPayment,
-    interestRate,
-    loanTerm,
-    propertyTax,
-    homeInsurance,
-    hoaFees,
-  ]);
+  }, [annualIncome, monthlyDebts, downPayment, interestRate, loanTerm]);
 
   return (
     <div className="container mx-auto px-4 py-10">
@@ -68,9 +53,9 @@ export default function AffordabilityCalculator() {
         Back to Home
       </Link>
 
-      <h1 className="text-3xl font-bold text-blue-600 mb-2">Home Affordability Calculator</h1>
+      <h1 className="text-3xl font-bold text-blue-600 mb-2">Affordability Calculator</h1>
       <p className="text-gray-600 mb-8">
-        See how much home you can afford. Housing cost does not exceed 28% of gross monthly income.
+        See how much home you can afford. Uses a 36% debt-to-income ratio.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -111,19 +96,6 @@ export default function AffordabilityCalculator() {
                 min={1}
                 max={30}
               />
-              <InputField
-                label="Property tax (yearly $)"
-                value={propertyTax}
-                onChange={setPropertyTax}
-                min={0}
-              />
-              <InputField
-                label="Home insurance (yearly $)"
-                value={homeInsurance}
-                onChange={setHomeInsurance}
-                min={0}
-              />
-              <InputField label="HOA fees (monthly $)" value={hoaFees} onChange={setHoaFees} min={0} />
             </div>
           </div>
 

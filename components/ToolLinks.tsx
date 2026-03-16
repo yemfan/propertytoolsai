@@ -6,6 +6,7 @@ const allTools = [
   { name: "Adjustable Rate Calculator", href: "/adjustable-rate-calculator" },
   { name: "Affordability Calculator", href: "/affordability-calculator" },
   { name: "Down Payment Calculator", href: "/down-payment-calculator" },
+  { name: "Rent vs Buy Calculator", href: "/rent-vs-buy-calculator" },
 ];
 
 export default function ToolLinks({ excludeHref }: { excludeHref?: string }) {
