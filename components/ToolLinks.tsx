@@ -3,10 +3,15 @@ import Link from "next/link";
 const allTools = [
   { name: "Mortgage Calculator", href: "/mortgage-calculator" },
   { name: "Refinance Calculator", href: "/refinance-calculator" },
-  { name: "Adjustable Rate Calculator", href: "/adjustable-rate-calculator" },
   { name: "Affordability Calculator", href: "/affordability-calculator" },
-  { name: "Down Payment Calculator", href: "/down-payment-calculator" },
   { name: "Rent vs Buy Calculator", href: "/rent-vs-buy-calculator" },
+  { name: "Closing Cost Estimator", href: "/closing-cost-estimator" },
+  { name: "Property Investment Analyzer", href: "/property-investment-analyzer" },
+  { name: "Down Payment Calculator", href: "/down-payment-calculator" },
+  { name: "HOA Fee Tracker", href: "/hoa-fee-tracker" },
+  { name: "Cash Flow Calculator", href: "/cash-flow-calculator" },
+  { name: "Cap Rate Calculator", href: "/cap-rate-calculator" },
+  { name: "ROI Calculator", href: "/roi-calculator" },
 ];
 
 export default function ToolLinks({ excludeHref }: { excludeHref?: string }) {

@@ -3,10 +3,15 @@ import CalculatorCard from '../components/CalculatorCard';
 const tools = [
   { name: 'Mortgage Calculator', description: 'Calculate your monthly mortgage payments', href: '/mortgage-calculator' },
   { name: 'Refinance Calculator', description: 'See if refinancing saves you money', href: '/refinance-calculator' },
-  { name: 'Adjustable Rate Calculator', description: 'Estimate payments for ARMs', href: '/adjustable-rate-calculator' },
   { name: 'Affordability Calculator', description: 'Know how much house you can afford', href: '/affordability-calculator' },
-  { name: 'Down Payment Calculator', description: 'Plan your down payment strategy', href: '/down-payment-calculator' },
   { name: 'Rent vs Buy Calculator', description: 'Compare total cost of renting vs buying', href: '/rent-vs-buy-calculator' },
+  { name: 'Closing Cost Estimator', description: 'Estimate closing costs for your purchase', href: '/closing-cost-estimator' },
+  { name: 'Property Investment Analyzer', description: 'Analyze NOI, cash flow, and cap rate', href: '/property-investment-analyzer' },
+  { name: 'Down Payment Calculator', description: 'Plan your down payment strategy', href: '/down-payment-calculator' },
+  { name: 'HOA Fee Tracker', description: 'Project HOA costs over time', href: '/hoa-fee-tracker' },
+  { name: 'Cash Flow Calculator', description: 'Estimate rental property cash flow', href: '/cash-flow-calculator' },
+  { name: 'Cap Rate Calculator', description: 'Calculate capitalization rate from NOI', href: '/cap-rate-calculator' },
+  { name: 'ROI Calculator', description: 'Estimate return on investment', href: '/roi-calculator' },
 ];
 
 export default function Home() {
