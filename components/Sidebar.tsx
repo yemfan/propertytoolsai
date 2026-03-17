@@ -69,6 +69,13 @@ export default function Sidebar() {
         </Link>
 
         <Link
+          href="/ai-real-estate-deal-analyzer"
+          className="block px-3 py-2 rounded-lg hover:bg-gray-100"
+        >
+          AI Deal Analyzer
+        </Link>
+
+        <Link
           href="/down-payment-calculator"
           className="block px-3 py-2 rounded-lg hover:bg-gray-100"
         >
