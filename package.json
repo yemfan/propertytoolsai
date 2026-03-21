@@ -11,6 +11,8 @@
     "dev:leadsmart": "npm run dev -w leadsmart-ai -- --port 3000",
     "clean:next": "node -e \"const fs=require('fs');const path=require('path');for(const app of ['leadsmart-ai','property-tools']){const p=path.join('apps',app,'.next');try{fs.rmSync(p,{recursive:true,force:true});console.log('cleaned',p);}catch(e){console.warn('skip',p,e?.message||e);}}\"",
     "build": "npm run clean:next && turbo build --concurrency=1",
+    "build:leadsmart": "npm run build -w leadsmart-ai",
+    "build:property-tools": "npm run build -w property-tools",
     "lint": "turbo lint",
     "smoke:db:all": "node scripts/smoke-db-all.mjs"
   },
