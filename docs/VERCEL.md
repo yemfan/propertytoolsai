@@ -23,7 +23,7 @@ Redeploy (clear build cache once if needed).
 
 **Fix (fallback — if you cannot change Root Directory):**
 
-1. **Environment variable (per Vercel project):** **`VERCEL_MONOREPO_APP`** = **`leadsmart-ai`** or **`property-tools`** (must match that deployment). If unset, the build script tries to infer from **`VERCEL_PROJECT_NAME`** (e.g. a project named “Leadsmart AI” or “property-tools”).
+1. **Environment variable (per Vercel project):** **`VERCEL_MONOREPO_APP`** = **`leadsmart-ai`** or **`property-tools`** (must match that deployment). If unset, the build script infers from **`VERCEL_PROJECT_NAME`** and deployment URLs (**`VERCEL_URL`**, etc.) using a **normalized** match (e.g. **“Property Tools AI”** and **property.tools** both match **`propertytools`**).
 
 2. **Build Command:** leave **`npm run build`** (default). Root **`build`** detects **`VERCEL=1`** and runs **`build:vercel-*-root`** for the chosen app — **no Turbo** for both apps, and **`.next`** is emitted at **`/vercel/path0/.next`**.
 
@@ -34,6 +34,14 @@ Redeploy (clear build cache once if needed).
 Prefer fixing **Root Directory** to **`apps/<app>`** instead of repo root.
 
 **Repo-root `vercel.json`:** The file **`vercel.json`** at the **repository root** sets **`buildCommand`** to **`npm run build`** so Vercel does **not** auto-select **`turbo run build`** (which leaves **`.next`** under **`apps/<app>`**). It is **ignored** when **Root Directory** is **`apps/<app>`** (that folder’s **`vercel.json`** applies instead).
+
+### LeadSmart works, Property Tools does not (same repo)
+
+1. **Mirror LeadSmart’s layout** — In the **Property Tools** Vercel project, set **Root Directory** to **`apps/property-tools`** (same pattern as **`apps/leadsmart-ai`**). Leave **Install / Build** empty so **`apps/property-tools/vercel.json`** runs.
+
+2. **Do not set `NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT` on Property Tools** when **Root Directory** is **`apps/property-tools`**. That env moves **`.next`** to the **monorepo root**; Vercel still expects **`apps/property-tools/.next`** → **`.next` not found** or Routes Manifest errors. Remove it from **Property Tools → Environment Variables** (LeadSmart can keep different env; each project is separate).
+
+3. **Repo-root Property Tools project only** — If **Root Directory** stays the **repository root**, set **`VERCEL_MONOREPO_APP=property-tools`** (or rely on URL / project-name inference after the latest script update).
 
 ## Option A — Recommended: one Vercel project per app
 
