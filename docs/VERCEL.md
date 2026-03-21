@@ -31,10 +31,17 @@ Redeploy (clear build cache once if needed).
 
 The build log should **not** show `turbo build` from the repo root unless you intend to build everything.
 
-### “Output Directory” / Routes Manifest / other `.next` errors
+### “Routes Manifest Could Not Be Found” / “Output Directory” / other `.next` errors
 
-1. **Output Directory** must stay **empty** unless you customized **`distDir`** in **`next.config.js`** (this repo does not).
-2. **Turborepo** — Root **`turbo.json`** `build.outputs` includes `.next/**`, `!.next/cache/**`, and `dist/**`. If you run **`turbo build`** from the repo root, use **`npx turbo run build --filter=leadsmart-ai`** when you only need one app.
+Vercel shows this when it **cannot read** `routes-manifest.json` inside the Next build output — almost always because **`.next` is missing, empty, or in the wrong place** (same fix as **`path0/.next` not found** above).
+
+**Checklist:**
+
+1. **Scroll up** in the deploy log — if **`next build` failed** (TypeScript, OOM, etc.), fix that first; the Routes Manifest error is often a **follow-on**.
+2. **Root Directory** = **`apps/leadsmart-ai`** or **`apps/property-tools`** (not the monorepo root). **Output Directory** in the dashboard = **empty**.
+3. If Root Directory **must** stay the repo root, set **`NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT=1`** for that project only (see **Critical** section above). If Root Directory is **`apps/<app>`**, **do not** set that variable — it would move `.next` to the repo root while Vercel still expects **`apps/<app>/.next`**.
+4. **Turborepo** — Root **`turbo.json`** `build.outputs` includes `.next/**`, `!.next/cache/**`, and `dist/**`. If you run **`turbo build`** from the repo root, use **`npx turbo run build --filter=leadsmart-ai`** when you only need one app.
+5. After changing settings, **Redeploy** (optionally **Clear build cache**).
 
 ## Option B — Repo-root Vercel project (not recommended for Next.js)
 
