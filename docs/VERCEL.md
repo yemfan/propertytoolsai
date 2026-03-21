@@ -36,7 +36,7 @@ Each app runs **`node ./scripts/next-build.mjs`** (see that app’s **`package.j
 
 The repo root still has **`scripts/next-build-with-heap.mjs`** for reference / manual use; the deployed apps do not depend on it.
 
-**Bundler:** Next.js 16 defaults to **Turbopack** for `next build`. On **Vercel** (`VERCEL=1`), each app’s **`next-build.mjs`** appends **`--webpack`** so production builds use **webpack** (more consistent on Vercel’s Linux runners). Logs show **`bundler=webpack`** or **`bundler=turbopack`**. To force webpack anywhere: **`NEXT_BUILD_USE_WEBPACK=1`**. To force Turbopack on Vercel: **`NEXT_BUILD_USE_WEBPACK=0`**.
+**Bundler:** Next.js 16 defaults to **Turbopack** for `next build`. **`next-build.mjs` does not force `--webpack` on Vercel** — webpack + **`@tailwindcss/postcss`** + native **`lightningcss` / `@tailwindcss/oxide`** often fails in CI with generic **“Build failed because of webpack errors”** / `require-hook` traces. Logs show **`bundler=turbopack`** unless you set **`NEXT_BUILD_USE_WEBPACK=1`** (opt-in webpack for debugging).
 
 **Tailwind v4 + webpack:** Theme tokens live in **`app/globals.css`** via **`@theme`** (not **`@config` → `tailwind.config.ts`**) so PostCSS does not load TypeScript during the CSS pipeline — avoids **Linux/Vercel-only webpack** failures around config resolution.
 

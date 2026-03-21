@@ -34,12 +34,11 @@ process.env.NODE_OPTIONS = [process.env.NODE_OPTIONS, `--max-old-space-size=${he
   .filter(Boolean)
   .join(" ");
 
-// Next 16 defaults to Turbopack for `next build`. Vercel’s Linux CI can hit Turbopack-only
-// issues; webpack is the stable path. Opt out with NEXT_BUILD_USE_WEBPACK=0 on Vercel.
+// Next 16 defaults to Turbopack for `next build`. Do NOT force `--webpack` on Vercel by
+// default: webpack + @tailwindcss/postcss + native lightningcss/oxide often fails in CI
+// (require-hook / "Build failed because of webpack errors"). Opt in with NEXT_BUILD_USE_WEBPACK=1.
 const extra = process.argv.slice(2);
-const useWebpack =
-  process.env.NEXT_BUILD_USE_WEBPACK === "1" ||
-  (process.env.VERCEL === "1" && process.env.NEXT_BUILD_USE_WEBPACK !== "0");
+const useWebpack = process.env.NEXT_BUILD_USE_WEBPACK === "1";
 const buildArgs = [nextBin, "build", ...extra];
 if (useWebpack && !buildArgs.includes("--webpack")) {
   buildArgs.push("--webpack");
