@@ -5,32 +5,34 @@ export type CityConfig = {
   slug: string;
   city: string;
   state: string;
+  /** Representative ZIP for RentCast GET /v1/markets (required by API). */
+  marketZip: string;
   median_price: number;
   price_per_sqft: number;
   trend: Trend;
 };
 
 export const TRAFFIC_CITIES: CityConfig[] = [
-  { slug: "los-angeles-ca", city: "Los Angeles", state: "CA", median_price: 955000, price_per_sqft: 650, trend: "up" },
-  { slug: "san-diego-ca", city: "San Diego", state: "CA", median_price: 910000, price_per_sqft: 610, trend: "up" },
-  { slug: "san-francisco-ca", city: "San Francisco", state: "CA", median_price: 1325000, price_per_sqft: 910, trend: "stable" },
-  { slug: "austin-tx", city: "Austin", state: "TX", median_price: 575000, price_per_sqft: 320, trend: "stable" },
-  { slug: "houston-tx", city: "Houston", state: "TX", median_price: 385000, price_per_sqft: 210, trend: "up" },
-  { slug: "dallas-tx", city: "Dallas", state: "TX", median_price: 455000, price_per_sqft: 245, trend: "up" },
-  { slug: "phoenix-az", city: "Phoenix", state: "AZ", median_price: 485000, price_per_sqft: 285, trend: "stable" },
-  { slug: "miami-fl", city: "Miami", state: "FL", median_price: 640000, price_per_sqft: 430, trend: "up" },
-  { slug: "orlando-fl", city: "Orlando", state: "FL", median_price: 420000, price_per_sqft: 250, trend: "stable" },
-  { slug: "seattle-wa", city: "Seattle", state: "WA", median_price: 830000, price_per_sqft: 520, trend: "up" },
-  { slug: "denver-co", city: "Denver", state: "CO", median_price: 615000, price_per_sqft: 360, trend: "stable" },
-  { slug: "atlanta-ga", city: "Atlanta", state: "GA", median_price: 445000, price_per_sqft: 235, trend: "up" },
-  { slug: "charlotte-nc", city: "Charlotte", state: "NC", median_price: 410000, price_per_sqft: 220, trend: "up" },
-  { slug: "nashville-tn", city: "Nashville", state: "TN", median_price: 520000, price_per_sqft: 280, trend: "up" },
-  { slug: "chicago-il", city: "Chicago", state: "IL", median_price: 395000, price_per_sqft: 255, trend: "stable" },
-  { slug: "tampa-fl", city: "Tampa", state: "FL", median_price: 445000, price_per_sqft: 260, trend: "up" },
-  { slug: "jacksonville-fl", city: "Jacksonville", state: "FL", median_price: 370000, price_per_sqft: 210, trend: "stable" },
-  { slug: "fort-worth-tx", city: "Fort Worth", state: "TX", median_price: 395000, price_per_sqft: 215, trend: "up" },
-  { slug: "san-antonio-tx", city: "San Antonio", state: "TX", median_price: 355000, price_per_sqft: 195, trend: "stable" },
-  { slug: "las-vegas-nv", city: "Las Vegas", state: "NV", median_price: 460000, price_per_sqft: 275, trend: "up" },
+  { slug: "los-angeles-ca", city: "Los Angeles", state: "CA", marketZip: "90012", median_price: 955000, price_per_sqft: 650, trend: "up" },
+  { slug: "san-diego-ca", city: "San Diego", state: "CA", marketZip: "92101", median_price: 910000, price_per_sqft: 610, trend: "up" },
+  { slug: "san-francisco-ca", city: "San Francisco", state: "CA", marketZip: "94102", median_price: 1325000, price_per_sqft: 910, trend: "stable" },
+  { slug: "austin-tx", city: "Austin", state: "TX", marketZip: "78701", median_price: 575000, price_per_sqft: 320, trend: "stable" },
+  { slug: "houston-tx", city: "Houston", state: "TX", marketZip: "77002", median_price: 385000, price_per_sqft: 210, trend: "up" },
+  { slug: "dallas-tx", city: "Dallas", state: "TX", marketZip: "75201", median_price: 455000, price_per_sqft: 245, trend: "up" },
+  { slug: "phoenix-az", city: "Phoenix", state: "AZ", marketZip: "85003", median_price: 485000, price_per_sqft: 285, trend: "stable" },
+  { slug: "miami-fl", city: "Miami", state: "FL", marketZip: "33131", median_price: 640000, price_per_sqft: 430, trend: "up" },
+  { slug: "orlando-fl", city: "Orlando", state: "FL", marketZip: "32801", median_price: 420000, price_per_sqft: 250, trend: "stable" },
+  { slug: "seattle-wa", city: "Seattle", state: "WA", marketZip: "98101", median_price: 830000, price_per_sqft: 520, trend: "up" },
+  { slug: "denver-co", city: "Denver", state: "CO", marketZip: "80202", median_price: 615000, price_per_sqft: 360, trend: "stable" },
+  { slug: "atlanta-ga", city: "Atlanta", state: "GA", marketZip: "30303", median_price: 445000, price_per_sqft: 235, trend: "up" },
+  { slug: "charlotte-nc", city: "Charlotte", state: "NC", marketZip: "28202", median_price: 410000, price_per_sqft: 220, trend: "up" },
+  { slug: "nashville-tn", city: "Nashville", state: "TN", marketZip: "37203", median_price: 520000, price_per_sqft: 280, trend: "up" },
+  { slug: "chicago-il", city: "Chicago", state: "IL", marketZip: "60602", median_price: 395000, price_per_sqft: 255, trend: "stable" },
+  { slug: "tampa-fl", city: "Tampa", state: "FL", marketZip: "33602", median_price: 445000, price_per_sqft: 260, trend: "up" },
+  { slug: "jacksonville-fl", city: "Jacksonville", state: "FL", marketZip: "32202", median_price: 370000, price_per_sqft: 210, trend: "stable" },
+  { slug: "fort-worth-tx", city: "Fort Worth", state: "TX", marketZip: "76102", median_price: 395000, price_per_sqft: 215, trend: "up" },
+  { slug: "san-antonio-tx", city: "San Antonio", state: "TX", marketZip: "78205", median_price: 355000, price_per_sqft: 195, trend: "stable" },
+  { slug: "las-vegas-nv", city: "Las Vegas", state: "NV", marketZip: "89101", median_price: 460000, price_per_sqft: 275, trend: "up" },
 ];
 
 export const KEYWORD_VARIATIONS: Record<PageType, string[]> = {
