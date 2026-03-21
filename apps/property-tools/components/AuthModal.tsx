@@ -130,11 +130,13 @@ export default function AuthModal(props: {
               Close
             </button>
           </div>
-          <div className="mt-4 flex rounded-xl bg-slate-100 p-1">
+          <div className="mt-4 flex gap-2">
             <button
               type="button"
-              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
-                mode === "login" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"
+              className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+                mode === "login"
+                  ? "border-slate-300 bg-white text-slate-900 shadow-sm"
+                  : "border-slate-200 bg-slate-50 text-slate-800 hover:bg-white"
               }`}
               onClick={() => {
                 setMode("login");
@@ -146,8 +148,10 @@ export default function AuthModal(props: {
             </button>
             <button
               type="button"
-              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
-                mode === "signup" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"
+              className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+                mode === "signup"
+                  ? "border-slate-300 bg-white text-slate-900 shadow-sm"
+                  : "border-slate-200 bg-slate-50 text-slate-800 hover:bg-white"
               }`}
               onClick={() => {
                 setMode("signup");
@@ -191,7 +195,7 @@ export default function AuthModal(props: {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                className="w-full rounded-xl bg-[#2563eb] py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1d4ed8] disabled:opacity-60"
               >
                 {loading ? "Signing in…" : "Sign in"}
               </button>
@@ -240,7 +244,7 @@ export default function AuthModal(props: {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                className="w-full rounded-xl bg-[#2563eb] py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1d4ed8] disabled:opacity-60"
               >
                 {loading ? "Creating account…" : "Create free account"}
               </button>

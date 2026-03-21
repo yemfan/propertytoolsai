@@ -9,8 +9,8 @@ const monorepoRoot = path.join(__dirname, "../..");
 const nextConfig = {
   // When Vercel "Root Directory" is the monorepo root, Vercel expects `.next` at `/vercel/path0/.next`,
   // but `next build` normally writes to `apps/<app>/.next`. Set env in Vercel:
-  // NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT=1 — or fix Root Directory to `apps/<app>` (preferred).
-  ...(process.env.NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT === "1" && {
+  // NEXT_DIST_IN_MONOREPO_ROOT=1 — only from root `build:vercel-*-root` scripts (see docs/VERCEL.md).
+  ...(process.env.NEXT_DIST_IN_MONOREPO_ROOT === "1" && {
     distDir: path.join(monorepoRoot, ".next"),
   }),
   // Trace serverless bundles from repo root (required for npm workspaces on Vercel)

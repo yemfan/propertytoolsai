@@ -3,7 +3,7 @@
  *
  * - Local / non-Vercel: `clean:next` + `turbo build` (unchanged behavior).
  * - Vercel with Root Directory = repo root: build ONE Next app and emit `.next`
- *   at the monorepo root (see `NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT` in each app's
+ *   at the monorepo root (see `NEXT_DIST_IN_MONOREPO_ROOT` in each app's
  *   `next.config.js`). Default `turbo build` leaves output under `apps/<app>/.next`,
  *   which breaks Vercel's expectation of `/vercel/path0/.next`.
  *

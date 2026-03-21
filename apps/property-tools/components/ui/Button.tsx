@@ -7,10 +7,11 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variantClasses: Record<Variant, string> = {
-  primary: "bg-blue-600 text-white hover:bg-blue-700",
-  secondary: "bg-teal-600 text-white hover:bg-teal-700",
-  cta: "bg-orange-500 text-white hover:bg-orange-600",
-  ghost: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50",
+  /* Hex + explicit text-white avoids white-on-white if palette utilities fail in CI */
+  primary: "bg-[#2563eb] text-white shadow-sm hover:bg-[#1d4ed8]",
+  secondary: "bg-[#0d9488] text-white shadow-sm hover:bg-[#0f766e]",
+  cta: "bg-[#f97316] text-white shadow-sm hover:bg-[#ea580c]",
+  ghost: "border border-slate-200 bg-white text-slate-800 hover:bg-slate-50",
 };
 
 export default function Button({

@@ -27,9 +27,9 @@ Redeploy (clear build cache once if needed).
 
 2. **Build Command:** leave **`npm run build`** (default). Root **`build`** detects **`VERCEL=1`** and runs **`build:vercel-*-root`** for the chosen app — **no Turbo** for both apps, and **`.next`** is emitted at **`/vercel/path0/.next`**.
 
-**Manual override (optional):** **`npm run build:vercel-leadsmart-root`** or **`npm run build:vercel-property-tools-root`** instead of **`npm run build`**. Those scripts set **`NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT=1`** and **`npm run build -w …`**.
+**Manual override (optional):** **`npm run build:vercel-leadsmart-root`** or **`npm run build:vercel-property-tools-root`** instead of **`npm run build`**. Those scripts set **`NEXT_DIST_IN_MONOREPO_ROOT=1`** (only there — **do not** add this variable in the Vercel dashboard).
 
-**Alternative:** Set **`NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT=1`** and **Build Command** **`npm run build -w leadsmart-ai`** (or **`property-tools`**) — same idea.
+**Alternative:** Use **Build Command** **`npm run build:vercel-leadsmart-root`** (or **`…-property-tools-root`**) from the repo root — do **not** try to replicate **`distDir`** with dashboard env vars.
 
 Prefer fixing **Root Directory** to **`apps/<app>`** instead of repo root.
 
@@ -39,7 +39,7 @@ Prefer fixing **Root Directory** to **`apps/<app>`** instead of repo root.
 
 1. **Mirror LeadSmart’s layout** — In the **Property Tools** Vercel project, set **Root Directory** to **`apps/property-tools`** (same pattern as **`apps/leadsmart-ai`**). Leave **Install / Build** empty so **`apps/property-tools/vercel.json`** runs.
 
-2. **Do not set `NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT` on Property Tools** when **Root Directory** is **`apps/property-tools`**. That env moves **`.next`** to the **monorepo root**; Vercel still expects **`apps/property-tools/.next`** → **`.next` not found** or Routes Manifest errors. Remove it from **Property Tools → Environment Variables** (LeadSmart can keep different env; each project is separate).
+2. **Remove legacy env `NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT`** from **Property Tools** (and any project whose **Root Directory** is **`apps/<app>`**). It forced **`distDir`** to the **monorepo root** while Vercel expects **`apps/<app>/.next`** → **`routes-manifest.json` not found** / Output Directory errors. **Never** set **`NEXT_DIST_IN_MONOREPO_ROOT`** in the dashboard either — only the root **`build:vercel-*-root`** npm scripts set it.
 
 3. **Repo-root Property Tools project only** — If **Root Directory** stays the **repository root**, set **`VERCEL_MONOREPO_APP=property-tools`** (or rely on URL / project-name inference after the latest script update).
 
@@ -60,9 +60,10 @@ Vercel shows this when it **cannot read** `routes-manifest.json` inside the Next
 
 1. **Scroll up** in the deploy log — if **`next build` failed** (TypeScript, OOM, etc.), fix that first; the Routes Manifest error is often a **follow-on**.
 2. **Root Directory** = **`apps/leadsmart-ai`** or **`apps/property-tools`** (not the monorepo root). **Output Directory** in the dashboard = **empty**.
-3. If Root Directory **must** stay the repo root, set **`VERCEL_MONOREPO_APP`** (see **Critical** above) so **`npm run build`** runs the correct single-app build. If Root Directory is **`apps/<app>`**, **do not** set **`VERCEL_MONOREPO_APP`** for a “repo root” flow — use **`apps/<app>/vercel.json`** instead.
-4. **Turborepo** — Root **`turbo.json`** `build.outputs` includes `.next/**`, `!.next/cache/**`, and `dist/**`. If you run **`turbo build`** from the repo root, use **`npx turbo run build --filter=leadsmart-ai`** when you only need one app.
-5. After changing settings, **Redeploy** (optionally **Clear build cache**).
+3. **Wrong `distDir` from env** — For **Root Directory** = **`apps/<app>`**, **remove** **`NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT`** (legacy) from Vercel env. It pointed **`.next`** at the **repo root** while Vercel reads **`apps/<app>/.next`** → missing **`routes-manifest.json`**. **Do not** set **`NEXT_DIST_IN_MONOREPO_ROOT`** in the dashboard (only root **`npm run build:vercel-*-root`** scripts set it).
+4. If Root Directory **must** stay the repo root, set **`VERCEL_MONOREPO_APP`** (see **Critical** above) so **`npm run build`** runs the correct single-app build. If Root Directory is **`apps/<app>`**, **do not** set **`VERCEL_MONOREPO_APP`** for a “repo root” flow — use **`apps/<app>/vercel.json`** instead.
+5. **Turborepo** — Root **`turbo.json`** `build.outputs` includes `.next/**`, `!.next/cache/**`, and `dist/**`. If you run **`turbo build`** from the repo root, use **`npx turbo run build --filter=leadsmart-ai`** when you only need one app.
+6. After changing settings, **Redeploy** (optionally **Clear build cache**).
 
 ## Option B — Repo-root Vercel project (not recommended for Next.js)
 
