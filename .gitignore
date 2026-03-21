@@ -1,6 +1,8 @@
 # dependencies
 node_modules/
 /node_modules
+# Use only the root lockfile in this monorepo (nested lockfiles confuse Next.js + Vercel)
+apps/**/package-lock.json
 /.pnp
 .pnp.js
 .yarn/install-state.gz
