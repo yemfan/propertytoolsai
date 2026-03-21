@@ -32,7 +32,7 @@ The repo root **`package.json`** sets **`engines.node` to `20.x`** so Vercel use
 
 ## Build script (`next-build-with-heap.mjs`)
 
-Both apps run **`node ../../scripts/next-build-with-heap.mjs`** instead of `cross-env … next build` so **`NODE_OPTIONS=--max-old-space-size=…` is always set** in the process that spawns Next (Turbo/npm workspace runs don’t always propagate env from the root). Override heap with **`NEXT_BUILD_HEAP_MB`** if needed.
+Both apps run **`node ../../scripts/next-build-with-heap.mjs`** so **`NODE_OPTIONS=--max-old-space-size=…` is always set** before spawning Next. The script resolves **`apps/<name>`** using **`npm_package_name`** and the repo root (from the script path), not only `process.cwd()` — Turbo/Vercel sometimes run with a cwd that would break `next` resolution. Override heap with **`NEXT_BUILD_HEAP_MB`** if needed.
 
 ## Environment variables
 
