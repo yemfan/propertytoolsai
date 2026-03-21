@@ -37,6 +37,12 @@ Optional (recommended on Vercel):
 | `TURBO_TELEMETRY_DISABLED=1` | Quiets Turborepo’s telemetry banner (root `build` also sets this via `cross-env`). |
 | `NEXT_TELEMETRY_DISABLED=1` | Quiets Next.js telemetry; apps also load this from committed `.env.production`. |
 
+## `property-tools`: fewer pages at **build** time
+
+`property-tools` previously prerendered **~2500+** static HTML routes (programmatic SEO + keyword matrix), which can **OOM** Vercel’s build VM even with a large `NODE_OPTIONS` heap.
+
+Heavy routes now use **`generateStaticParams()` → `[]`**, **`revalidate` (ISR)**, and (for `/tool/...`) **`dynamicParams: true`** so URLs are **rendered on first request** and cached at the edge — not all at build time. The **sitemap** still lists those URLs for SEO.
+
 ## Troubleshooting `next build` exit code 1
 
 The lines at the **bottom** of the log (`npm error Lifecycle script build failed`, `command sh -c next build`) only mean Next failed — they do **not** show the cause.

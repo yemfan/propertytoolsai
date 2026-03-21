@@ -10,16 +10,13 @@ import {
   getMarketSnapshot,
   getNearbyCities,
   isValidKeywordSlugForCity,
-  TRAFFIC_CITIES,
 } from "@/lib/trafficSeo";
 
+/** Empty at build: ~400+ keyword routes per app — bulk SSG OOMs Vercel. Render on demand + ISR. */
+export const revalidate = 86400;
+
 export function generateStaticParams() {
-  return TRAFFIC_CITIES.flatMap((city) =>
-    getKeywordPagesForCity("home-value", city.slug).map((k) => ({
-      city: city.slug,
-      keyword: k.keywordSlug,
-    }))
-  );
+  return [];
 }
 
 function resolveKeyword(citySlug: string, keywordSlug: string) {

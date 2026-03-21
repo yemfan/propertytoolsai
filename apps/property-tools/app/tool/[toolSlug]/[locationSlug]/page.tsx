@@ -2,18 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ProgressiveLeadCapture from "@/components/growth/ProgressiveLeadCapture";
-import {
-  getProgrammaticSeoStaticParams,
-  getRelatedTools,
-  loadProgrammaticSeoPage,
-} from "@/lib/programmaticSeo";
+import { getRelatedTools, loadProgrammaticSeoPage } from "@/lib/programmaticSeo";
 
 type Props = { params: Promise<{ toolSlug: string; locationSlug: string }> };
 
-export const dynamicParams = false;
+/** Allow on-demand rendering — bulk prerender (~1000+ paths) OOMs Vercel build RAM. */
+export const dynamicParams = true;
+/** Cache generated HTML at the edge after first request (SEO + perf). */
+export const revalidate = 86400;
 
+/** Empty at build: all /tool/* paths render on demand (see dynamicParams). */
 export function generateStaticParams() {
-  return getProgrammaticSeoStaticParams();
+  return [];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
