@@ -11,7 +11,7 @@ If Vercel reports:
 
 then **Root Directory is set to the repo root** (`/vercel/path0`). Vercel looks for **`.next` next to the project root**. This monorepo puts the build at **`apps/<name>/.next`**, not at **`/.next`**.
 
-**Fix (required):**
+**Fix (preferred):**
 
 1. **Vercel** → your project → **Settings** → **General** → **Root Directory**
 2. Set **`apps/leadsmart-ai`** (or **`apps/property-tools`** for the other project). **Do not** leave this empty or `.` if you want a working Next.js deploy.
@@ -19,6 +19,8 @@ then **Root Directory is set to the repo root** (`/vercel/path0`). Vercel looks 
 4. **Build Command** / **Install Command** → leave **empty** so **`apps/<app>/vercel.json`** is used (`cd ../.. && npm ci` and `cd ../.. && npm run build -w …`).
 
 Redeploy (clear build cache once if needed).
+
+**Fix (fallback — if you cannot change Root Directory):** In **Vercel → Settings → Environment Variables** for that project, add **`NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT`** = **`1`**. This makes **`next build`** write **`.next`** at the **monorepo root** (where Vercel expects it when Root Directory is wrong). **Only enable this** for the matching app’s project; do not build both apps into the same root `.next`. Prefer fixing Root Directory instead.
 
 ## Option A — Recommended: one Vercel project per app
 

@@ -7,6 +7,10 @@ const monorepoRoot = path.join(__dirname, "../..");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Same as leadsmart-ai: see NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT in docs/VERCEL.md
+  ...(process.env.NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT === "1" && {
+    distDir: path.join(monorepoRoot, ".next"),
+  }),
   // Trace serverless bundles from repo root (required for npm workspaces on Vercel)
   outputFileTracingRoot: monorepoRoot,
   turbopack: {
