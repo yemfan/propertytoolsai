@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -34,7 +34,7 @@ function persistUnlocked() {
   }
 }
 
-export default function HomeValueToolPage() {
+function HomeValueToolPageInner() {
   const searchParams = useSearchParams();
   const queryAddress = searchParams?.get("address");
   const { address, setAddress, saveSelectedAddress } = useAddressPrefill(queryAddress);
@@ -260,5 +260,13 @@ export default function HomeValueToolPage() {
         }}
       />
     </>
+  );
+}
+
+export default function HomeValueToolPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[240px]" aria-hidden />}>
+      <HomeValueToolPageInner />
+    </Suspense>
   );
 }

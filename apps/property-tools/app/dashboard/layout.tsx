@@ -65,6 +65,12 @@ export default async function DashboardLayout({
     // If profiles/status isn't available yet, don't block dashboard rendering.
   }
 
+  const showRevenue = await isUserAdmin(ctx.userId);
+  const navItems = nav.filter((item) => {
+    if (item.href === "/dashboard/revenue") return showRevenue;
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-slate-50">
       <TopBar email={ctx?.email} />

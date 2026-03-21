@@ -1,15 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// Middleware access control:
+// Proxy (Next.js 16+): access control at the edge of the app (replaces middleware.ts).
 // - Protect dashboard pages
 // - Do NOT protect API routes here (API routes return proper 401/402 JSON and
-//   support bearer-token auth). Middleware redirects break API clients.
-export function middleware(req: NextRequest) {
+//   support bearer-token auth). Redirects here break API clients.
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const protectedPagePrefixes = [
-    "/dashboard",
-  ];
+  const protectedPagePrefixes = ["/dashboard"];
 
   const isProtected = protectedPagePrefixes.some((p) => pathname.startsWith(p));
 
@@ -29,8 +27,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/dashboard/:path*",
-  ],
+  matcher: ["/dashboard/:path*"],
 };
-
