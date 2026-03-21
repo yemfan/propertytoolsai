@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=12288 next build",
     "start": "next start",
     "lint": "eslint .",
     "smoke:lead-score": "tsx scripts/smoke-lead-score.ts",
@@ -50,6 +50,7 @@
     "@types/papaparse": "^5.5.2",
     "@types/react": "^18.2.7",
     "autoprefixer": "^10.4.27",
+    "cross-env": "^7.0.3",
     "dotenv": "^16.4.7",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.0",
