@@ -13,6 +13,15 @@ A Vercel project that uses the **repository root** as its Root Directory will ru
 
 Redeploy. The build log should **not** show `turbo build` from the repo root unless you intend to build everything.
 
+### “Output Directory” / Routes Manifest / missing `.next`
+
+If Vercel says the Next.js output is **missing** or **misconfigured**:
+
+1. **Project → Settings → General → Build & Development**
+   - **Output Directory** must be **empty** (default). Next.js writes to **`apps/<app>/.next`** when Root Directory is **`apps/<app>`**. Do **not** set `out`, `dist`, or `.next` unless you customized **`distDir`** in **`next.config.js`** (this repo does not).
+   - **Build Command** should be **empty** so **`apps/<app>/vercel.json`** is used (`cd ../.. && npm run build -w …`). It must **not** point at a script that skips **`next build`**.
+2. **Turborepo** — Root **`turbo.json`** declares **`build.outputs`** as **`.next/**`** and **`!.next/cache/**`** so cached builds restore the Next output correctly. If you run **`turbo build`** from the repo root, a failed or skipped workspace can leave another app without `.next`; prefer **per-app** Vercel projects (Option A) or filter: **`npx turbo run build --filter=leadsmart-ai`**.
+
 ## Option B — Root Directory stays `.` (repo root)
 
 Override in **Project → Settings → Build & Development**:
