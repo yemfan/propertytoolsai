@@ -18,9 +18,10 @@ type PropertyRow = {
 export default async function PropertiesPage({
   searchParams,
 }: {
-  searchParams?: { q?: string };
+  searchParams?: Promise<{ q?: string }>;
 }) {
-  const q = (searchParams?.q ?? "").trim();
+  const sp = searchParams != null ? await searchParams : {};
+  const q = (sp.q ?? "").trim();
 
   let query = supabaseServer
     .from("properties_warehouse")
