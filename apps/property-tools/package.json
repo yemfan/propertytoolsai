@@ -38,6 +38,7 @@
     "@supabase/supabase-js": "^2.99.2",
     "jspdf": "^2.5.1",
     "lightningcss": "1.31.1",
+    "@tailwindcss/postcss": "^4.2.1",
     "next": "16.1.6",
     "nodemailer": "^8.0.2",
     "papaparse": "^5.5.3",
@@ -47,10 +48,11 @@
     "recharts": "^3.8.0",
     "resend": "^6.9.4",
     "stripe": "^18.5.0",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.1",
     "twilio": "^5.13.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.2.1",
     "@types/google.maps": "^3.58.1",
     "@types/node": "^20.4.2",
     "@types/nodemailer": "^7.0.11",
@@ -60,8 +62,6 @@
     "dotenv": "^16.4.7",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.0",
-    "postcss": "^8.5.8",
-    "tailwindcss": "^4.2.1",
     "tsx": "^4.19.3",
     "typescript": "^5.1.6",
     "vitest": "^3.2.4"

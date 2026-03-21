@@ -9,13 +9,12 @@
   --color-brand-text: #333333;
 }
 
-@layer utilities {
-  .font-heading {
-    font-family: var(--font-heading), system-ui, sans-serif;
-  }
-  .font-body {
-    font-family: var(--font-body), system-ui, sans-serif;
-  }
+/* Plain CSS (not @layer) — avoids Turbopack/PostCSS ordering issues on Vercel */
+.font-heading {
+  font-family: var(--font-heading), system-ui, sans-serif;
+}
+.font-body {
+  font-family: var(--font-body), system-ui, sans-serif;
 }
 
 :root {

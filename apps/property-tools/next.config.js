@@ -7,13 +7,6 @@ const monorepoRoot = path.join(__dirname, "../..");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: [
-    "@tailwindcss/postcss",
-    "@tailwindcss/node",
-    "@tailwindcss/oxide",
-    "tailwindcss",
-    "lightningcss",
-  ],
   // Trace serverless bundles from repo root (required for npm workspaces on Vercel)
   outputFileTracingRoot: monorepoRoot,
   turbopack: {

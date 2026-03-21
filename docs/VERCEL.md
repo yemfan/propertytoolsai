@@ -40,6 +40,8 @@ The repo root still has **`scripts/next-build-with-heap.mjs`** for reference / m
 
 **Tailwind v4 + webpack:** Theme tokens live in **`app/globals.css`** via **`@theme`** (not **`@config` → `tailwind.config.ts`**) so PostCSS does not load TypeScript during the CSS pipeline — avoids **Linux/Vercel-only webpack** failures around config resolution.
 
+**Install:** Keep **`tailwindcss`**, **`postcss`**, **`@tailwindcss/postcss`**, and **`lightningcss`** in **`dependencies`** (not only `devDependencies`) so `npm ci` / production-oriented installs always have them for `next build`. **Do not** list Tailwind packages in **`serverExternalPackages`** — that can break PostCSS/Turbopack resolution and show **`globals.css` → `layout.tsx`** import traces with no clear error.
+
 ## Environment variables
 
 Add the same variables as `apps/<app>/.env.local` in **Vercel → Settings → Environment Variables** (Production / Preview). Do not commit secrets.
@@ -62,7 +64,7 @@ Heavy routes use **`generateStaticParams()` → `[]`**, **`revalidate` (ISR)**, 
 The lines at the **bottom** of the log (`npm error Lifecycle script build failed`, `command sh -c next build`) only mean Next failed — they do **not** show the cause.
 
 1. Scroll **up** in the Vercel build log and find the **first** message that is not `npm error` — e.g. `Failed to compile`, `Type error`, `Error occurred prerendering`, `Cannot find module '…lightningcss…'`, `JavaScript heap out of memory`, `Killed`, etc.
-2. **`Cannot find module '…lightningcss.linux-x64-gnu.node'`** — The repo root `package.json` includes `optionalDependencies` for Linux `lightningcss` binaries so `npm ci` on Vercel (Linux) installs them. Ensure that commit is deployed and run **Redeploy** (clear build cache if needed).
+2. **`Cannot find module '…lightningcss…'` or `…tailwindcss-oxide.linux-x64-gnu.node'`** — The repo root `package.json` includes **`optionalDependencies`** for Linux **`lightningcss-*`** and **`@tailwindcss/oxide-linux-x64-gnu`** / **`musl`** (same versions as Tailwind 4.2.x) so `npm ci` on Vercel installs the native binaries. Ensure that commit is deployed and **Redeploy** (clear build cache if needed).
 3. **Heap / OOM** — Each app’s **`next.config.js`** lowers **static generation concurrency** and enables **webpack memory optimizations**. The **`build` script** runs **`apps/<app>/scripts/next-build.mjs`**, which sets **`NODE_OPTIONS`** before spawning `next build`. `apps/*/vercel.json` can also set heap when Root Directory is that app. The **root** `package.json` scripts set `NODE_OPTIONS` for **`turbo build`**. You can mirror **`NODE_OPTIONS`** in **Project → Settings → Environment Variables** if needed.
 4. **Build log still shows `cross-env … next build`** — That is the **old** script. Fix: (a) confirm the **commit SHA** on the deployment matches GitHub `main`; (b) **Redeploy** with **Clear cache**; (c) in **Project → Settings → General**, ensure **Build Command** is **empty** (use `apps/<app>/vercel.json`) or `cd ../.. && npm run build -w <workspace>` — **remove** any manual `cross-env …` override. A current log should show **`[next-build] appRoot=...`** before Next runs.
 5. **Turbo building both apps** — If the log shows `leadsmart-ai:build:` and `property-tools:build:`, the project is running the **root** `turbo build`. To build **only** `leadsmart-ai`, use **Root Directory** `apps/leadsmart-ai` (Option A above) or **Build Command** `npm run build:leadsmart` from the repo root (Option B).

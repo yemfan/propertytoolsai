@@ -7,14 +7,6 @@ const monorepoRoot = path.join(__dirname, "../..");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Keep Tailwind / native deps out of incorrect webpack bundles (monorepo + App Router)
-  serverExternalPackages: [
-    "@tailwindcss/postcss",
-    "@tailwindcss/node",
-    "@tailwindcss/oxide",
-    "tailwindcss",
-    "lightningcss",
-  ],
   // Trace serverless bundles from repo root (required for npm workspaces on Vercel)
   outputFileTracingRoot: monorepoRoot,
   turbopack: {
