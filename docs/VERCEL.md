@@ -26,6 +26,14 @@ Override in **Project → Settings → Build & Development**:
 
 For **property-tools** only: `npm run build:property-tools`.
 
+## Node.js version
+
+The repo root **`package.json`** sets **`engines.node` to `20.x`** so Vercel uses **Node 20 LTS** for installs and builds (avoids occasional Next.js / tooling issues on newer runtimes). If your machine runs Node 24+, you may see `EBADENGINE` from npm — use **nvm `20`** locally or ignore the warning.
+
+## Build script (`next-build-with-heap.mjs`)
+
+Both apps run **`node ../../scripts/next-build-with-heap.mjs`** instead of `cross-env … next build` so **`NODE_OPTIONS=--max-old-space-size=…` is always set** in the process that spawns Next (Turbo/npm workspace runs don’t always propagate env from the root). Override heap with **`NEXT_BUILD_HEAP_MB`** if needed.
+
 ## Environment variables
 
 Add the same variables as `apps/<app>/.env.local` in **Vercel → Settings → Environment Variables** (Production / Preview). Do not commit secrets.
