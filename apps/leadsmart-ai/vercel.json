@@ -1,8 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nextjs",
   "installCommand": "cd ../.. && npm ci",
-  "buildCommand": "cd ../.. && NEXT_DIST_IN_MONOREPO_ROOT= NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT= npm run build -w leadsmart-ai && (test -f apps/leadsmart-ai/.next/routes-manifest.json || test -f .next/routes-manifest.json)",
+  "buildCommand": "cd ../.. && NEXT_DIST_IN_MONOREPO_ROOT= NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT= npm run build -w leadsmart-ai && node scripts/vercel-sync-next-output.mjs leadsmart-ai",
   "build": {
     "env": {
       "NODE_OPTIONS": "--max-old-space-size=12288"

@@ -35,7 +35,9 @@ Prefer fixing **Root Directory** to **`apps/<app>`** instead of repo root.
 
 **Repo-root `vercel.json`:** The file **`vercel.json`** at the **repository root** sets **`buildCommand`** to **`npm run build`** so Vercel does **not** auto-select **`turbo run build`** (which leaves **`.next`** under **`apps/<app>`**). It is **ignored** when **Root Directory** is **`apps/<app>`** (that folder’s **`vercel.json`** applies instead).
 
-**`next.config.js` `distDir`:** Each app sets an **absolute** `distDir` (either **`apps/<app>/.next`** or **`<repo>/.next`** when **`NEXT_DIST_IN_MONOREPO_ROOT=1`**) so **`routes-manifest.json`** is written to a predictable path for Vercel + Turborepo.
+**`next.config.js` `distDir`:** Only **`NEXT_DIST_IN_MONOREPO_ROOT=1`** (repo-root deploys) sets **`distDir`** to **`<repo>/.next`**. Normal app deploys use the default **`apps/<app>/.next`**.
+
+**`scripts/vercel-sync-next-output.mjs`:** After **`npm run build -w …`** on Vercel, if **`routes-manifest.json`** exists under **`apps/<app>/.next`** but **not** at **`<repo>/.next`**, the script **copies** the full **`.next`** folder to the **repository root**. Some Vercel project layouts resolve **`/vercel/path0`** as the **monorepo root** while Next writes under **`apps/<app>`** — this keeps **`routes-manifest.json`** where the Next builder expects it.
 
 ### LeadSmart works, Property Tools does not (same repo)
 
