@@ -13,6 +13,8 @@ import FloatingCTA from "./FloatingCTA";
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
   const isPublicReport = pathname.startsWith("/report/");
+  /** Marketing homepage: full-bleed landing (no sidebar / app chrome). */
+  const isMarketingHome = pathname === "/";
 
   if (isPublicReport) {
     return (
@@ -20,6 +22,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <main className="min-h-screen">{children}</main>
       </div>
     );
+  }
+
+  if (isMarketingHome) {
+    return <div className="min-h-screen bg-white">{children}</div>;
   }
 
   return (
