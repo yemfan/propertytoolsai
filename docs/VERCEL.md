@@ -48,7 +48,7 @@ Prefer fixing **Root Directory** to **`apps/<app>`** instead of repo root.
 1. **Root Directory** = **`apps/leadsmart-ai`** (or **`apps/property-tools`**).
 2. Leave **Install Command** / **Build Command** **empty** in the dashboard so **`apps/<app>/vercel.json`** applies:
    - `installCommand`: `cd ../.. && npm ci`
-   - `buildCommand`: `cd ../.. && npm run build -w <workspace-name>`
+   - `buildCommand`: clears **`NEXT_DIST_IN_MONOREPO_ROOT`** for this step, then **`npm run build -w <workspace-name>`** — so a stray dashboard env cannot send **`.next`** to the repo root (which breaks **`routes-manifest.json`** under **`/vercel/path0/.next`**).
 
 The build log should **not** show `turbo build` from the repo root unless you intend to build everything.
 

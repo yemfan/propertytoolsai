@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "cd ../.. && npm ci",
-  "buildCommand": "cd ../.. && npm run build -w property-tools",
+  "buildCommand": "cd ../.. && NEXT_DIST_IN_MONOREPO_ROOT= NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT= npm run build -w property-tools",
   "build": {
     "env": {
       "NODE_OPTIONS": "--max-old-space-size=12288"
