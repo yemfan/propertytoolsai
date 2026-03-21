@@ -34,12 +34,22 @@ process.env.NODE_OPTIONS = [process.env.NODE_OPTIONS, `--max-old-space-size=${he
   .filter(Boolean)
   .join(" ");
 
+// Next 16 defaults to Turbopack for `next build`. Vercel’s Linux CI can hit Turbopack-only
+// issues; webpack is the stable path. Opt out with NEXT_BUILD_USE_WEBPACK=0 on Vercel.
+const extra = process.argv.slice(2);
+const useWebpack =
+  process.env.NEXT_BUILD_USE_WEBPACK === "1" ||
+  (process.env.VERCEL === "1" && process.env.NEXT_BUILD_USE_WEBPACK !== "0");
+const buildArgs = [nextBin, "build", ...extra];
+if (useWebpack && !buildArgs.includes("--webpack")) {
+  buildArgs.push("--webpack");
+}
+
 console.log(
-  `[next-build] appRoot=${appRoot} name=${pkg.name} cwd=${process.cwd()} node=${process.version} NODE_OPTIONS=${process.env.NODE_OPTIONS}`
+  `[next-build] appRoot=${appRoot} name=${pkg.name} cwd=${process.cwd()} node=${process.version} bundler=${useWebpack ? "webpack" : "turbopack"} VERCEL=${process.env.VERCEL ?? ""} NODE_OPTIONS=${process.env.NODE_OPTIONS}`
 );
 
-const extra = process.argv.slice(2);
-const r = spawnSync(process.execPath, [nextBin, "build", ...extra], {
+const r = spawnSync(process.execPath, buildArgs, {
   stdio: "inherit",
   cwd: appRoot,
   env: {
@@ -51,5 +61,11 @@ const r = spawnSync(process.execPath, [nextBin, "build", ...extra], {
 if (r.error) {
   console.error("[next-build] spawn failed:", r.error);
   process.exit(1);
+}
+if (r.signal) {
+  console.error("[next-build] next build killed by signal:", r.signal);
+}
+if (r.status != null && r.status !== 0) {
+  console.error("[next-build] next build exited with code:", r.status);
 }
 process.exit(r.status ?? 1);
