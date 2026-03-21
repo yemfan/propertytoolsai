@@ -12,6 +12,12 @@ const nextConfig = {
   turbopack: {
     root: monorepoRoot,
   },
+  experimental: {
+    // ~1500+ prerendered routes — lower peak RSS on Vercel CI
+    staticGenerationMaxConcurrency: 1,
+    staticGenerationMinPagesPerWorker: 1,
+    webpackMemoryOptimizations: true,
+  },
 };
 
 export default nextConfig;
