@@ -16,6 +16,8 @@
     "build": "cross-env TURBO_TELEMETRY_DISABLED=1 npm run clean:next && cross-env NODE_OPTIONS=--max-old-space-size=12288 TURBO_TELEMETRY_DISABLED=1 turbo build --concurrency=1",
     "build:leadsmart": "cross-env NODE_OPTIONS=--max-old-space-size=12288 npm run build -w leadsmart-ai",
     "build:property-tools": "cross-env NODE_OPTIONS=--max-old-space-size=12288 npm run build -w property-tools",
+    "build:vercel-leadsmart-root": "cross-env NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT=1 NODE_OPTIONS=--max-old-space-size=12288 npm run build -w leadsmart-ai",
+    "build:vercel-property-tools-root": "cross-env NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT=1 NODE_OPTIONS=--max-old-space-size=12288 npm run build -w property-tools",
     "lint": "turbo lint",
     "smoke:db:all": "node scripts/smoke-db-all.mjs"
   },

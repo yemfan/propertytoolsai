@@ -20,7 +20,14 @@ then **Root Directory is set to the repo root** (`/vercel/path0`). Vercel looks 
 
 Redeploy (clear build cache once if needed).
 
-**Fix (fallback — if you cannot change Root Directory):** In **Vercel → Settings → Environment Variables** for that project, add **`NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT`** = **`1`**. This makes **`next build`** write **`.next`** at the **monorepo root** (where Vercel expects it when Root Directory is wrong). **Only enable this** for the matching app’s project; do not build both apps into the same root `.next`. Prefer fixing Root Directory instead.
+**Fix (fallback — if you cannot change Root Directory):** Override **Build Command** — do **not** use the default **`npm run build`** from the repo root (that runs **Turbo** for every workspace and still outputs to **`apps/<app>/.next`**, not **`/.next`**). Use one of:
+
+- **`npm run build:vercel-leadsmart-root`** (leadsmart-ai Vercel project only)
+- **`npm run build:vercel-property-tools-root`** (property-tools Vercel project only)
+
+Those root scripts set **`NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT=1`** and **`npm run build -w …`** for **one** app so **`.next`** lands at **`/vercel/path0/.next`**. **Only use** the script that matches that project. Prefer fixing **Root Directory** to **`apps/<app>`** instead.
+
+**Alternative:** Set **`NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT=1`** in Vercel env and **Build Command** to **`npm run build -w leadsmart-ai`** (or **`property-tools`**) — same idea; the **`build:vercel-*-root`** scripts bundle that for you.
 
 ## Option A — Recommended: one Vercel project per app
 
@@ -45,11 +52,17 @@ Vercel shows this when it **cannot read** `routes-manifest.json` inside the Next
 
 ## Option B — Repo-root Vercel project (not recommended for Next.js)
 
-If **Root Directory** is the **repository root**, Vercel still expects **`.next` at `/vercel/path0/.next`**, but **`next build`** for this repo writes to **`apps/<app>/.next`**. That mismatch causes the error above.
+If **Root Directory** is the **repository root**, Vercel still expects **`.next` at `/vercel/path0/.next`**, but a normal workspace **`next build`** writes to **`apps/<app>/.next`**. That mismatch causes the error above.
 
-**Do not** use a repo-root Root Directory for these Next apps unless you add a **separate** Vercel-supported layout. Prefer **Option A** (Root Directory = **`apps/leadsmart-ai`** or **`apps/property-tools`**).
+**Do not** use a repo-root Root Directory for these Next apps unless you must. Prefer **Option A** (Root Directory = **`apps/leadsmart-ai`** or **`apps/property-tools`**).
 
-If you must trigger the build from the root `package.json`, you can still set **Root Directory** to **`apps/leadsmart-ai`** and only override **Build Command** in the dashboard to `cd ../.. && npm run build:leadsmart` — but the default **`vercel.json`** commands are usually enough.
+If Root Directory **must** stay the repo root:
+
+- **Install Command:** `npm ci` (or your usual root install).
+- **Build Command:** **`npm run build:vercel-leadsmart-root`** or **`npm run build:vercel-property-tools-root`** (see root **`package.json`**). **Do not** use **`npm run build`** — that invokes **Turbo** and does not fix the **`.next`** path for a single app.
+- **Environment:** **`NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT=1`** is already applied by those scripts; you can also set it in the dashboard if you prefer a custom command.
+
+If you **can** set **Root Directory** to **`apps/leadsmart-ai`**, you only need **`vercel.json`** there (`cd ../.. && npm run build -w …`) — no **`build:vercel-*-root`** scripts.
 
 ## Node.js version
 
