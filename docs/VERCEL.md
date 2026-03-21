@@ -37,6 +37,15 @@ Optional (recommended on Vercel):
 | `TURBO_TELEMETRY_DISABLED=1` | Quiets Turborepo’s telemetry banner (root `build` also sets this via `cross-env`). |
 | `NEXT_TELEMETRY_DISABLED=1` | Quiets Next.js telemetry; apps also load this from committed `.env.production`. |
 
+## Troubleshooting `next build` exit code 1
+
+The lines at the **bottom** of the log (`npm error Lifecycle script build failed`, `command sh -c next build`) only mean Next failed — they do **not** show the cause.
+
+1. Scroll **up** in the Vercel build log and find the **first** message that is not `npm error` — e.g. `Failed to compile`, `Type error`, `Error occurred prerendering`, `Cannot find module '…lightningcss…'`, `JavaScript heap out of memory`, `Killed`, etc.
+2. **`Cannot find module '…lightningcss.linux-x64-gnu.node'`** — The repo root `package.json` includes `optionalDependencies` for Linux `lightningcss` binaries so `npm ci` on Vercel (Linux) installs them. Ensure that commit is deployed and run **Redeploy** (clear build cache if needed).
+3. **Heap / OOM** — Both apps prerender many static routes (`property-tools` is especially heavy). `apps/*/vercel.json` sets `NODE_OPTIONS=--max-old-space-size=8192` for the build step when Root Directory is that app. The **root** `package.json` `build` / `build:leadsmart` / `build:property-tools` scripts also set `NODE_OPTIONS` so **`turbo build` from the repo root** gets a larger heap on Vercel. You can add the same **`NODE_OPTIONS`** in **Project → Settings → Environment Variables** if needed.
+4. **Turbo building both apps** — If the log shows `leadsmart-ai:build:` and `property-tools:build:`, the project is running the **root** `turbo build`. To build **only** `leadsmart-ai`, use **Root Directory** `apps/leadsmart-ai` (Option A above) or **Build Command** `npm run build:leadsmart` from the repo root (Option B).
+
 ## Understanding build logs
 
 - **`https://turborepo.dev/docs/telemetry`** — Turborepo’s own telemetry notice (separate from Next.js). The root `npm run build` sets `TURBO_TELEMETRY_DISABLED=1` to reduce noise.
