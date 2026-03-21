@@ -4,7 +4,7 @@
   "buildCommand": "cd ../.. && npm run build -w property-tools",
   "build": {
     "env": {
-      "NODE_OPTIONS": "--max-old-space-size=8192"
+      "NODE_OPTIONS": "--max-old-space-size=12288"
     }
   }
 }
