@@ -1,29 +1,20 @@
 {
-  "name": "propertytoolsai",
-  "version": "0.1.0",
   "private": true,
-  "type": "module",
+  "packageManager": "npm@11.9.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "next": "16.1.6",
-    "nodemailer": "^8.0.2",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "recharts": "^3.8.0"
+    "dev": "turbo dev",
+    "dev:property-tools": "npm run dev -w property-tools -- --port 3001",
+    "dev:leadsmart": "npm run dev -w leadsmart-ai -- --port 3000",
+    "clean:next": "node -e \"const fs=require('fs');const path=require('path');for(const app of ['leadsmart-ai','property-tools']){const p=path.join('apps',app,'.next');try{fs.rmSync(p,{recursive:true,force:true});console.log('cleaned',p);}catch(e){console.warn('skip',p,e?.message||e);}}\"",
+    "build": "npm run clean:next && turbo build --concurrency=1",
+    "lint": "turbo lint",
+    "smoke:db:all": "node scripts/smoke-db-all.mjs"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.2.1",
-    "@types/node": "^20.4.2",
-    "@types/nodemailer": "^7.0.11",
-    "@types/react": "^18.2.7",
-    "autoprefixer": "^10.4.27",
-    "postcss": "^8.5.8",
-    "tailwindcss": "^4.2.1",
-    "typescript": "^5.1.6"
+    "turbo": "^2.8.20"
   }
 }

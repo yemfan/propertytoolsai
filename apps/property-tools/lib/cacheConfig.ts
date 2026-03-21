@@ -1,0 +1,5 @@
+export const CACHE_DURATION_DAYS = 180;
+
+export const CACHE_DURATION_MS =
+  CACHE_DURATION_DAYS * 24 * 60 * 60 * 1000;
+

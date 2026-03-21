@@ -1,0 +1,260 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
+
+type Mode = "login" | "signup";
+
+export default function AuthModal(props: {
+  open: boolean;
+  onClose: () => void;
+  /** Called after successful login or signup (when session exists). */
+  onAuthenticated?: () => void;
+  initialMode?: Mode;
+}) {
+  const [mode, setMode] = useState<Mode>(props.initialMode ?? "login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (props.open) {
+      setMode(props.initialMode ?? "login");
+      setError(null);
+      setInfo(null);
+    }
+  }, [props.open, props.initialMode]);
+
+  if (!props.open) return null;
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setInfo(null);
+    if (!email.trim() || !password) {
+      setError("Email and password are required.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const supabase = supabaseBrowser();
+      const { error: err } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (err) {
+        setError(err.message);
+        return;
+      }
+      props.onAuthenticated?.();
+      props.onClose();
+    } catch (e: any) {
+      setError(e?.message ?? "Sign in failed.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSignup(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setInfo(null);
+    if (!email.trim() || !password || password.length < 6) {
+      setError("Valid email and password (6+ chars) are required.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const supabase = supabaseBrowser();
+      const { data, error: err } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { full_name: fullName.trim() || undefined },
+        },
+      });
+      if (err) {
+        setError(err.message);
+        return;
+      }
+      const userId = data?.user?.id;
+      if (userId) {
+        await supabase.from("user_profiles").upsert(
+          {
+            user_id: userId,
+            role: "user",
+            full_name: fullName.trim() || null,
+          },
+          { onConflict: "user_id" }
+        );
+        props.onAuthenticated?.();
+        props.onClose();
+      } else {
+        setInfo("Check your email to confirm your account, then sign in.");
+      }
+    } catch (e: any) {
+      setError(e?.message ?? "Sign up failed.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/45 p-3 sm:items-center">
+      <div
+        className="absolute inset-0"
+        aria-hidden
+        onClick={() => !loading && props.onClose()}
+      />
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                {mode === "login" ? "Sign in" : "Create account"}
+              </h2>
+              <p className="mt-1 text-xs text-slate-600">
+                {mode === "login"
+                  ? "Use your email to access saved work and higher limits."
+                  : "Free account — unlock more tool runs and sync across devices."}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              onClick={() => !loading && props.onClose()}
+            >
+              Close
+            </button>
+          </div>
+          <div className="mt-4 flex rounded-xl bg-slate-100 p-1">
+            <button
+              type="button"
+              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
+                mode === "login" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"
+              }`}
+              onClick={() => {
+                setMode("login");
+                setError(null);
+                setInfo(null);
+              }}
+            >
+              Log in
+            </button>
+            <button
+              type="button"
+              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
+                mode === "signup" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"
+              }`}
+              onClick={() => {
+                setMode("signup");
+                setError(null);
+                setInfo(null);
+              }}
+            >
+              Sign up
+            </button>
+          </div>
+        </div>
+
+        <div className="px-5 py-4">
+          {mode === "login" ? (
+            <form onSubmit={handleLogin} className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  autoComplete="email"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+              {error ? (
+                <p className="text-xs font-medium text-red-600 whitespace-pre-line">{error}</p>
+              ) : null}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+              >
+                {loading ? "Signing in…" : "Sign in"}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSignup} className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700">Name</label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  autoComplete="name"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  autoComplete="email"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  autoComplete="new-password"
+                  required
+                  minLength={6}
+                />
+              </div>
+              {error ? (
+                <p className="text-xs font-medium text-red-600 whitespace-pre-line">{error}</p>
+              ) : null}
+              {info ? (
+                <p className="text-xs font-medium text-emerald-700 whitespace-pre-line">{info}</p>
+              ) : null}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+              >
+                {loading ? "Creating account…" : "Create free account"}
+              </button>
+            </form>
+          )}
+
+          <p className="mt-4 text-center text-[11px] text-slate-500">
+            Agent?{" "}
+            <a className="font-semibold text-blue-700 hover:underline" href="/agent-signup">
+              Agent signup
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,332 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+
+type Opportunity = {
+  id: string;
+  property_address: string;
+  lead_type: string;
+  intent_score: number;
+  usage_count: number;
+  estimated_value: number | null;
+  status: string;
+  assigned_agent_id: string | null;
+  price: number;
+  created_at: string;
+};
+
+export default function OpportunitiesPage() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [metrics, setMetrics] = useState<{
+    availableCount: number;
+    soldCount: number;
+    conversionRate: number;
+    revenuePerLead: number;
+    soldRevenue: number;
+    toolUsageSummary: Record<string, number>;
+  } | null>(null);
+
+  const [location, setLocation] = useState("");
+  const [leadType, setLeadType] = useState("");
+  const [minPrice, setMinPrice] = useState<string>("");
+  const [maxPrice, setMaxPrice] = useState<string>("");
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(50);
+  const [total, setTotal] = useState(0);
+
+  const [buyingId, setBuyingId] = useState<string | null>(null);
+  const [buyError, setBuyError] = useState<string | null>(null);
+
+  const queryParams = useMemo(() => {
+    const params = new URLSearchParams();
+    if (location.trim()) params.set("location", location.trim());
+    if (leadType.trim()) params.set("leadType", leadType.trim());
+    if (minPrice.trim()) params.set("minPrice", minPrice.trim());
+    if (maxPrice.trim()) params.set("maxPrice", maxPrice.trim());
+    params.set("page", String(page));
+    params.set("pageSize", String(pageSize));
+    return params;
+  }, [location, leadType, minPrice, maxPrice, page, pageSize]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSummary() {
+      setError(null);
+      try {
+        const res = await fetch("/api/marketplace/summary", { credentials: "include" });
+        const json = (await res.json().catch(() => ({}))) as any;
+        if (!res.ok || json?.ok === false) throw new Error(json?.error ?? "Failed to load summary.");
+        if (!cancelled) setMetrics(json.metrics ?? null);
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message ?? "Failed to load summary.");
+      }
+    }
+
+    async function loadOpps() {
+      setLoading(true);
+      setBuyError(null);
+      try {
+        const res = await fetch(`/api/marketplace/opportunities?${queryParams.toString()}`, {
+          credentials: "include",
+        });
+        const json = (await res.json().catch(() => ({}))) as any;
+        if (!res.ok || json?.ok === false) throw new Error(json?.error ?? "Failed to load opportunities.");
+        if (!cancelled) {
+          setOpportunities((json.opportunities ?? []) as Opportunity[]);
+          setTotal(Number(json.total ?? 0));
+        }
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message ?? "Failed to load opportunities.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadSummary();
+    loadOpps();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [queryParams]);
+
+  async function handleBuy(id: string) {
+    setBuyError(null);
+    setBuyingId(id);
+    try {
+      const res = await fetch(`/api/marketplace/opportunities/${id}/buy`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const json = (await res.json().catch(() => ({}))) as any;
+      if (!res.ok || json?.ok === false) {
+        const msg = json?.error ?? "Purchase failed";
+        const status = Number(json?.status_code ?? 0);
+        if (status === 402) {
+          setBuyError(msg);
+          return;
+        }
+        throw new Error(msg);
+      }
+
+      // Refresh the list after purchase.
+      const res2 = await fetch(`/api/marketplace/opportunities?${queryParams.toString()}`, {
+        credentials: "include",
+      });
+      const json2 = (await res2.json().catch(() => ({}))) as any;
+      if (json2?.ok !== true) throw new Error(json2?.error ?? "Failed to refresh opportunities.");
+      setOpportunities((json2.opportunities ?? []) as Opportunity[]);
+      setTotal(Number(json2.total ?? 0));
+    } catch (e: any) {
+      setBuyError(e?.message ?? "Could not complete purchase.");
+    } finally {
+      setBuyingId(null);
+    }
+  }
+
+  const leadTypeOptions = useMemo(() => {
+    return ["seller", "buyer", "refinance"];
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="ui-page-title text-brand-text">Lead Marketplace</h1>
+          <p className="ui-page-subtitle text-brand-text/80 mt-1">
+            Buy exclusive leads generated from tool usage.
+          </p>
+        </div>
+        <div className="text-xs text-slate-500">
+          Pricing is dynamic based on intent score + usage frequency.
+        </div>
+      </div>
+
+      {metrics ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <div className="ui-card-subtitle text-slate-500">Available</div>
+            <div className="text-2xl font-bold text-slate-900">{metrics.availableCount}</div>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <div className="ui-card-subtitle text-slate-500">Sold</div>
+            <div className="text-2xl font-bold text-slate-900">{metrics.soldCount}</div>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <div className="ui-card-subtitle text-slate-500">Conversion</div>
+            <div className="text-2xl font-bold text-slate-900">
+              {(metrics.conversionRate * 100).toFixed(1)}%
+            </div>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <div className="ui-card-subtitle text-slate-500">Revenue / lead</div>
+            <div className="text-2xl font-bold text-slate-900">${Math.round(metrics.revenuePerLead).toLocaleString()}</div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-slate-700">Location</label>
+            <input
+              value={location}
+              onChange={(e) => {
+                setPage(1);
+                setLocation(e.target.value);
+              }}
+              placeholder="e.g. Austin, TX"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+          </div>
+
+          <div className="w-full sm:w-44">
+            <label className="block text-xs font-medium text-slate-700">Lead Type</label>
+            <select
+              value={leadType}
+              onChange={(e) => {
+                setPage(1);
+                setLeadType(e.target.value);
+              }}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            >
+              <option value="">All</option>
+              {leadTypeOptions.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="w-full sm:w-44">
+            <label className="block text-xs font-medium text-slate-700">Min Price</label>
+            <input
+              value={minPrice}
+              onChange={(e) => {
+                setPage(1);
+                setMinPrice(e.target.value);
+              }}
+              placeholder="10"
+              inputMode="numeric"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+          </div>
+
+          <div className="w-full sm:w-44">
+            <label className="block text-xs font-medium text-slate-700">Max Price</label>
+            <input
+              value={maxPrice}
+              onChange={(e) => {
+                setPage(1);
+                setMaxPrice(e.target.value);
+              }}
+              placeholder="100"
+              inputMode="numeric"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+          </div>
+        </div>
+      </div>
+
+      {error ? <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">{error}</div> : null}
+
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="p-6 text-sm text-slate-600">Loading opportunities…</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="ui-table-header text-left text-slate-600 px-4 py-3">Address</th>
+                  <th className="ui-table-header text-left text-slate-600 px-4 py-3">Lead Type</th>
+                  <th className="ui-table-header text-left text-slate-600 px-4 py-3">Intent Score</th>
+                  <th className="ui-table-header text-left text-slate-600 px-4 py-3">Price</th>
+                  <th className="ui-table-header text-left text-slate-600 px-4 py-3">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {opportunities.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-6 text-sm text-slate-600">
+                      No available opportunities match your filters.
+                    </td>
+                  </tr>
+                ) : (
+                  opportunities.map((o) => (
+                    <tr key={o.id} className="border-t border-slate-100">
+                      <td className="ui-table-cell px-4 py-3 text-slate-900">
+                        {o.property_address}
+                      </td>
+                      <td className="ui-table-cell px-4 py-3 text-slate-700">
+                        {o.lead_type}
+                      </td>
+                      <td className="ui-table-cell px-4 py-3 text-slate-700">
+                        <span className="font-semibold">{o.intent_score}</span>
+                      </td>
+                      <td className="ui-table-cell px-4 py-3 text-slate-900 font-semibold">
+                        ${o.price}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          disabled={buyingId === o.id}
+                          onClick={() => handleBuy(o.id)}
+                          className="inline-flex items-center justify-center rounded-xl bg-brand-primary px-3 py-2 text-xs font-semibold text-white hover:bg-[#005ca8] disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {buyingId === o.id ? "Buying..." : "Buy Lead"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {buyError ? (
+        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
+          {buyError}{" "}
+          <Link className="text-brand-primary font-semibold underline" href="/pricing">
+            Go to pricing
+          </Link>
+        </div>
+      ) : null}
+
+      <div className="flex items-center justify-between gap-3 pt-2">
+        <div className="text-xs text-slate-500">
+          Showing {opportunities.length} of {total} opportunities
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            className="text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            Prev
+          </button>
+          <button
+            type="button"
+            disabled={opportunities.length < pageSize}
+            onClick={() => setPage((p) => p + 1)}
+            className="text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+

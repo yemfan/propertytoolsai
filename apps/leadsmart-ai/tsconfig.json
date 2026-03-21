@@ -1,0 +1,40 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@repo/ui": ["../../packages/ui/src"],
+      "@repo/tools": ["../../packages/tools/src"],
+      "@repo/ai": ["../../packages/ai/src"],
+      "@repo/lib": ["../../packages/lib/src"],
+      "@repo/types": ["../../packages/types/src"],
+      "@repo/lead-marketplace": ["../../packages/lead-marketplace/src/index.ts"],
+      "@repo/lead-marketplace/scoring": ["../../packages/lead-marketplace/src/scoring.ts"],
+      "@repo/lead-marketplace/pricing": ["../../packages/lead-marketplace/src/pricing.ts"],
+      "@repo/lead-marketplace/engine": ["../../packages/lead-marketplace/src/engine.ts"]
+    },
+    "target": "ES2017"
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

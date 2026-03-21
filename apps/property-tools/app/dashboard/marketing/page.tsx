@@ -1,0 +1,174 @@
+import Link from "next/link";
+import { supabaseServer } from "@/lib/supabaseServer";
+import { getCurrentAgentContext } from "@/lib/dashboardService";
+
+export default async function MarketingPage() {
+  const { agentId } = await getCurrentAgentContext();
+
+  // Follow-up automation status.
+  const { count: pendingCount } = await supabaseServer
+    .from("lead_sequences")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "active");
+
+  const { count: sentCount } = await supabaseServer
+    .from("lead_sequences")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "completed");
+
+  const homeValueSmartLink = `/home-value-widget?agentId=${encodeURIComponent(agentId)}`;
+
+  // Traffic funnel snapshot (last 30 days)
+  const sinceIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { count: trafficViews } = await supabaseServer
+    .from("traffic_events")
+    .select("id", { count: "exact", head: true })
+    .eq("event_type", "page_view")
+    .gte("created_at", sinceIso);
+
+  const { count: trafficConversions } = await supabaseServer
+    .from("traffic_events")
+    .select("id", { count: "exact", head: true })
+    .eq("event_type", "conversion")
+    .gte("created_at", sinceIso);
+
+  const conversionRate =
+    Number(trafficViews ?? 0) > 0
+      ? (((Number(trafficConversions ?? 0) / Number(trafficViews ?? 0)) * 100).toFixed(2) as any)
+      : "0.00";
+
+  const { data: sourceRows } = await supabaseServer
+    .from("traffic_events")
+    .select("source,event_type")
+    .gte("created_at", sinceIso)
+    .limit(2000);
+
+  const bySource = new Map<string, { views: number; conversions: number }>();
+  (sourceRows ?? []).forEach((row: any) => {
+    const k = String(row?.source ?? "unknown");
+    const rec = bySource.get(k) ?? { views: 0, conversions: 0 };
+    if (row?.event_type === "page_view") rec.views += 1;
+    if (row?.event_type === "conversion") rec.conversions += 1;
+    bySource.set(k, rec);
+  });
+  const topSources = Array.from(bySource.entries())
+    .map(([source, v]) => ({
+      source,
+      views: v.views,
+      conversions: v.conversions,
+      conversionRate: v.views ? Number(((v.conversions / v.views) * 100).toFixed(2)) : 0,
+    }))
+    .sort((a, b) => b.conversions - a.conversions)
+    .slice(0, 5);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h1 className="ui-page-title text-brand-text">Marketing</h1>
+        <p className="ui-page-subtitle text-brand-text/80">
+          Share links, track email follow-ups, and manage campaign status.
+        </p>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-5">
+        <div className="space-y-2">
+          <div className="ui-card-title text-brand-text">Shareable Links</div>
+          <div className="text-xs text-brand-text/80">Use these to route homeowners into your funnel.</div>
+
+          <div className="space-y-3">
+            <div>
+              <div className="text-xs font-semibold text-slate-700 mb-1">Home Value Smart Link</div>
+              <div className="flex gap-2 flex-wrap items-center">
+                <input
+                  readOnly
+                  className="flex-1 min-w-[260px] border border-slate-300 rounded-xl px-3 py-2 text-sm font-mono bg-white"
+                  value={homeValueSmartLink}
+                />
+                <Link
+                  href="/dashboard/settings"
+                  className="text-sm font-semibold px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50"
+                >
+                  Update Branding
+                </Link>
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500">
+                Prepend your live domain, e.g. <span className="font-mono">https://propertytoolsai.com</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs font-semibold text-slate-700 mb-1">Smart Property Links</div>
+              <div className="text-xs text-slate-600">
+                Generate trackable “open report” links for specific clients and addresses.
+              </div>
+              <div className="mt-2">
+                <Link
+                  href="/dashboard/send"
+                  className="inline-flex items-center justify-center rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-[#005ca8]"
+                >
+                  Open Smart Link Generator
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-100 pt-5 space-y-3">
+          <div className="ui-card-title text-slate-900">Follow-up Automation</div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+              <div className="ui-card-subtitle text-slate-600">Pending</div>
+              <div className="mt-2 text-3xl font-extrabold text-slate-900">{pendingCount ?? 0}</div>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+              <div className="ui-card-subtitle text-slate-600">Sent</div>
+              <div className="mt-2 text-3xl font-extrabold text-slate-900">{sentCount ?? 0}</div>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+              <div className="ui-card-subtitle text-slate-600">Run Cron</div>
+              <div className="mt-2 text-sm text-slate-700">
+                Ensure your Vercel cron hits <span className="font-mono">/api/cron/send-emails</span>.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-100 pt-5 space-y-3">
+          <div className="ui-card-title text-slate-900">Traffic & Conversion (30d)</div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+              <div className="ui-card-subtitle text-slate-600">Page Views</div>
+              <div className="mt-2 text-3xl font-extrabold text-slate-900">{trafficViews ?? 0}</div>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+              <div className="ui-card-subtitle text-slate-600">Conversions</div>
+              <div className="mt-2 text-3xl font-extrabold text-slate-900">{trafficConversions ?? 0}</div>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+              <div className="ui-card-subtitle text-slate-600">Conversion Rate</div>
+              <div className="mt-2 text-3xl font-extrabold text-slate-900">{conversionRate}%</div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="text-xs font-semibold text-slate-700 mb-2">Top Sources</div>
+            {topSources.length ? (
+              <div className="space-y-1">
+                {topSources.map((s) => (
+                  <div key={s.source} className="text-xs text-slate-700 flex items-center justify-between gap-2">
+                    <span className="font-medium">{s.source}</span>
+                    <span className="text-slate-500">
+                      {s.conversions}/{s.views} ({s.conversionRate}%)
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-xs text-slate-500">No traffic events yet.</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+

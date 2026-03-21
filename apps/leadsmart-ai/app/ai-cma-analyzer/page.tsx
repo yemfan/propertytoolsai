@@ -1,0 +1,555 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import RequireAuthGate from "../../components/RequireAuthGate";
+
+type PropertyInputs = {
+  address: string;
+  bedrooms: number;
+  bathrooms: number;
+  squareFeet: number;
+  yearBuilt: number | undefined;
+  lotSize: number | undefined;
+  propertyType: string;
+};
+
+type Comparable = {
+  address: string;
+  beds: number;
+  baths: number;
+  sqft: number;
+  soldPrice: number;
+  soldDate: string;
+};
+
+const SAMPLE_COMPS: Comparable[] = [
+  {
+    address: "123 Oakridge Dr",
+    beds: 3,
+    baths: 2,
+    sqft: 1850,
+    soldPrice: 815000,
+    soldDate: "2025-12-10",
+  },
+  {
+    address: "456 Pinecrest Ave",
+    beds: 4,
+    baths: 3,
+    sqft: 2100,
+    soldPrice: 842000,
+    soldDate: "2025-11-22",
+  },
+  {
+    address: "789 Maple Ln",
+    beds: 3,
+    baths: 2,
+    sqft: 1750,
+    soldPrice: 799000,
+    soldDate: "2025-11-05",
+  },
+  {
+    address: "102 Cedar Ct",
+    beds: 4,
+    baths: 3,
+    sqft: 2250,
+    soldPrice: 861000,
+    soldDate: "2025-10-18",
+  },
+  {
+    address: "305 Birch Way",
+    beds: 3,
+    baths: 2,
+    sqft: 1900,
+    soldPrice: 828000,
+    soldDate: "2025-10-01",
+  },
+];
+
+export default function AiCmaAnalyzerPage() {
+  return (
+    <RequireAuthGate>
+      <AiCmaAnalyzerPageInner />
+    </RequireAuthGate>
+  );
+}
+
+function AiCmaAnalyzerPageInner() {
+  const [inputs, setInputs] = useState<PropertyInputs>({
+    address: "",
+    bedrooms: 3,
+    bathrooms: 2,
+    squareFeet: 1900,
+    yearBuilt: 1998,
+    lotSize: 6000,
+    propertyType: "Single-family",
+  });
+
+  const [comps] = useState<Comparable[]>(SAMPLE_COMPS);
+
+  const priceStats = useMemo(() => {
+    if (!comps.length) return null;
+
+    const prices = comps.map((c) => c.soldPrice).sort((a, b) => a - b);
+    const avgPrice =
+      prices.reduce((sum, p) => sum + p, 0) / prices.length;
+    const medianPrice =
+      prices.length % 2 === 1
+        ? prices[(prices.length - 1) / 2]
+        : (prices[prices.length / 2 - 1] +
+            prices[prices.length / 2]) /
+          2;
+
+    const avgPpsf =
+      comps.reduce(
+        (sum, c) => sum + c.soldPrice / Math.max(c.sqft, 1),
+        0
+      ) / comps.length;
+
+    const suggestedLow = avgPrice * 0.97;
+    const suggestedHigh = avgPrice * 1.03;
+
+    const spread = suggestedHigh - suggestedLow;
+    const spreadRatio = spread / Math.max(avgPrice, 1);
+    const compCountFactor = Math.min(comps.length / 8, 1);
+    const rawConfidence =
+      70 * (1 - spreadRatio) + 30 * compCountFactor;
+
+    return {
+      avgPrice,
+      medianPrice,
+      avgPpsf,
+      suggestedLow,
+      suggestedHigh,
+      confidenceScore: Math.max(0, Math.min(100, rawConfidence)),
+    };
+  }, [comps]);
+
+  const handleAnalyzeProperty = () => {
+    alert(
+      "CMA generated using sample comparable sales. API-driven comps and market data will be added in a future update."
+    );
+  };
+
+  const handleExportPdf = () => {
+    alert(
+      "PDF export coming soon. For now, use your browser's Print to PDF to save this CMA."
+    );
+  };
+
+  const marketTrends = useMemo(
+    () => ({
+      medianPrice: priceStats?.medianPrice ?? 0,
+      averageDom: 21,
+      status: "Seller" as "Seller" | "Buyer" | "Balanced",
+    }),
+    [priceStats]
+  );
+
+  const confidenceScore = priceStats?.confidenceScore ?? 0;
+
+  const aiSummary = useMemo(() => {
+    if (!priceStats) {
+      return "Once comparable sales and live market data are available, this section will summarize how the subject property fits within the local market and provide an estimated value range.";
+    }
+
+    const { avgPrice, medianPrice, suggestedLow, suggestedHigh } =
+      priceStats;
+    const midpoint = (suggestedLow + suggestedHigh) / 2;
+
+    const statusText =
+      marketTrends.status === "Seller"
+        ? "Current conditions appear to favor sellers, with relatively low inventory and solid buyer demand."
+        : marketTrends.status === "Buyer"
+        ? "Current conditions appear to favor buyers, with more inventory and longer days on market."
+        : "Market conditions appear balanced between buyers and sellers.";
+
+    return `Based on recent comparable sales, similar properties in this area are closing around an average of $${avgPrice.toLocaleString(
+      undefined,
+      { maximumFractionDigits: 0 }
+    )} with a median of $${medianPrice.toLocaleString(
+      undefined,
+      { maximumFractionDigits: 0 }
+    )}. For the subject property, an estimated market value in the range of $${suggestedLow.toLocaleString(
+      undefined,
+      { maximumFractionDigits: 0 }
+    )} to $${suggestedHigh.toLocaleString(
+      undefined,
+      { maximumFractionDigits: 0 }
+    )} (midpoint roughly $${midpoint.toLocaleString(
+      undefined,
+      { maximumFractionDigits: 0 }
+    )}) appears reasonable given the current set of comparables. ${statusText} As always, verify property condition, neighborhood trends, and any unique features before final pricing decisions.`;
+  }, [priceStats, marketTrends.status]);
+
+  return (
+    <div className="container mx-auto px-4 py-10">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-2 text-gray-600 hover:text-blue-600 text-sm font-medium mb-6"
+      >
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+        Back to Home
+      </Link>
+
+      {/* Hero section */}
+      <section className="mb-8">
+        <h1 className="text-3xl font-bold text-blue-600 mb-3">
+          AI CMA Analyzer – Comparative Market Analysis Tool
+        </h1>
+        <p className="text-gray-600 max-w-3xl">
+          Estimate property value using comparable home sales and AI market
+          analysis. Perfect for real estate agents, home sellers, and buyers.
+        </p>
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        {/* Left column: address + property details + report generator */}
+        <div className="space-y-6">
+          {/* Address Input */}
+          <section className="bg-white shadow-md rounded-lg p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Property Address
+            </h2>
+            <div className="space-y-3">
+              <label className="block text-sm">
+                <span className="text-gray-700">Address</span>
+                <input
+                  type="text"
+                  className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="123 Main St, Los Angeles, CA"
+                  value={inputs.address}
+                  onChange={(e) =>
+                    setInputs((prev) => ({
+                      ...prev,
+                      address: e.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <button
+                type="button"
+                onClick={handleAnalyzeProperty}
+                className="inline-flex items-center justify-center rounded-md bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+              >
+                Analyze Property
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              In a future update, this field will pull live comparable sales
+              and market data via API integrations.
+            </p>
+          </section>
+
+          {/* Property Details */}
+          <section className="bg-white shadow-md rounded-lg p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Property Details
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <NumberInput
+                label="Bedrooms"
+                value={inputs.bedrooms}
+                onChange={(v) =>
+                  setInputs((prev) => ({ ...prev, bedrooms: v }))
+                }
+                min={0}
+              />
+              <NumberInput
+                label="Bathrooms"
+                value={inputs.bathrooms}
+                onChange={(v) =>
+                  setInputs((prev) => ({ ...prev, bathrooms: v }))
+                }
+                min={0}
+                step={0.5}
+              />
+              <NumberInput
+                label="Square Feet"
+                value={inputs.squareFeet}
+                onChange={(v) =>
+                  setInputs((prev) => ({ ...prev, squareFeet: v }))
+                }
+                min={0}
+              />
+              <NumberInput
+                label="Year Built"
+                value={inputs.yearBuilt ?? ""}
+                onChange={(v) =>
+                  setInputs((prev) => ({ ...prev, yearBuilt: v }))
+                }
+                min={1800}
+              />
+              <NumberInput
+                label="Lot Size (sqft)"
+                value={inputs.lotSize ?? ""}
+                onChange={(v) =>
+                  setInputs((prev) => ({ ...prev, lotSize: v }))
+                }
+                min={0}
+              />
+            </div>
+            <label className="block text-sm mt-3">
+              <span className="text-gray-700">Property Type</span>
+              <select
+                className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={inputs.propertyType}
+                onChange={(e) =>
+                  setInputs((prev) => ({
+                    ...prev,
+                    propertyType: e.target.value,
+                  }))
+                }
+              >
+                <option>Single-family</option>
+                <option>Condo</option>
+                <option>Townhome</option>
+                <option>Multi-family (2–4 units)</option>
+                <option>Multi-family (5+ units)</option>
+              </select>
+            </label>
+          </section>
+
+          {/* Report Generator */}
+          <section className="bg-white shadow-md rounded-lg p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              CMA Report Generator
+            </h2>
+            <p className="text-sm text-gray-600">
+              Generate a CMA report you can share with clients or save for
+              your records. Future versions will support full branded PDFs
+              with your logo and contact information.
+            </p>
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              className="inline-flex items-center justify-center rounded-md border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+            >
+              Download CMA Report (PDF)
+            </button>
+          </section>
+        </div>
+
+        {/* Right column: comps, price analysis, trends, AI analysis */}
+        <div className="space-y-6">
+          {/* Comparable Sales Table */}
+          <section className="bg-white shadow-md rounded-lg p-6 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Comparable Sales
+              </h2>
+              <span className="text-xs text-gray-500">
+                Sample data – API integration coming soon
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-xs sm:text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 text-left text-gray-600">
+                    <th className="px-3 py-2 font-semibold">Address</th>
+                    <th className="px-3 py-2 font-semibold">Beds</th>
+                    <th className="px-3 py-2 font-semibold">Baths</th>
+                    <th className="px-3 py-2 font-semibold">Sqft</th>
+                    <th className="px-3 py-2 font-semibold">Sold Price</th>
+                    <th className="px-3 py-2 font-semibold">
+                      Price per Sqft
+                    </th>
+                    <th className="px-3 py-2 font-semibold">Sold Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comps.map((comp, idx) => {
+                    const ppsf =
+                      comp.soldPrice / Math.max(comp.sqft, 1);
+                    return (
+                      <tr
+                        key={idx}
+                        className="border-t border-gray-100 hover:bg-gray-50"
+                      >
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {comp.address}
+                        </td>
+                        <td className="px-3 py-2">{comp.beds}</td>
+                        <td className="px-3 py-2">{comp.baths}</td>
+                        <td className="px-3 py-2">
+                          {comp.sqft.toLocaleString()}
+                        </td>
+                        <td className="px-3 py-2">
+                          ${comp.soldPrice.toLocaleString()}
+                        </td>
+                        <td className="px-3 py-2">
+                          ${ppsf.toFixed(0)}/sqft
+                        </td>
+                        <td className="px-3 py-2">
+                          {new Date(
+                            comp.soldDate
+                          ).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* Price Analysis Section */}
+          <section className="bg-white shadow-md rounded-lg p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Price Analysis
+            </h2>
+            {priceStats ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <MetricCard
+                    label="Average Sold Price"
+                    value={`$${priceStats.avgPrice.toLocaleString(
+                      undefined,
+                      { maximumFractionDigits: 0 }
+                    )}`}
+                  />
+                  <MetricCard
+                    label="Median Sold Price"
+                    value={`$${priceStats.medianPrice.toLocaleString(
+                      undefined,
+                      { maximumFractionDigits: 0 }
+                    )}`}
+                  />
+                  <MetricCard
+                    label="Average Price per Sqft"
+                    value={`$${priceStats.avgPpsf.toFixed(0)}/sqft`}
+                  />
+                  <MetricCard
+                    label="Estimated Market Value Range"
+                    value={`$${priceStats.suggestedLow.toLocaleString(
+                      undefined,
+                      { maximumFractionDigits: 0 }
+                    )} – $${priceStats.suggestedHigh.toLocaleString(
+                      undefined,
+                      { maximumFractionDigits: 0 }
+                    )}`}
+                  />
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500">
+                Price analysis will appear here once comparable sales are
+                available.
+              </p>
+            )}
+          </section>
+
+          {/* Market Trends Section */}
+          <section className="bg-white shadow-md rounded-lg p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Market Trends
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+              <MetricCard
+                label="Median Price (Area)"
+                value={
+                  marketTrends.medianPrice
+                    ? `$${marketTrends.medianPrice.toLocaleString(
+                        undefined,
+                        { maximumFractionDigits: 0 }
+                      )}`
+                    : "N/A"
+                }
+              />
+              <MetricCard
+                label="Average DOM"
+                value={`${marketTrends.averageDom} days`}
+              />
+              <MetricCard
+                label="Market Status"
+                value={`${marketTrends.status} Market`}
+              />
+            </div>
+          </section>
+
+          {/* AI Market Analysis + Confidence */}
+          <section className="bg-white shadow-md rounded-lg p-6 space-y-4 text-sm text-gray-700">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-gray-900">
+                AI Market Analysis
+              </h2>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                  Confidence
+                </span>
+                <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                  {confidenceScore.toFixed(0)} / 100
+                </span>
+              </div>
+            </div>
+            <p>{aiSummary}</p>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type NumberInputProps = {
+  label: string;
+  value: number | string;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+};
+
+function NumberInput({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  step,
+}: NumberInputProps) {
+  return (
+    <label className="block text-sm">
+      <span className="text-gray-700">{label}</span>
+      <input
+        type="number"
+        className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+    </label>
+  );
+}
+
+type MetricCardProps = {
+  label: string;
+  value: string;
+};
+
+function MetricCard({ label, value }: MetricCardProps) {
+  return (
+    <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+      <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+        {label}
+      </div>
+      <div className="mt-1 text-lg font-semibold text-gray-900">
+        {value}
+      </div>
+    </div>
+  );
+}
+
