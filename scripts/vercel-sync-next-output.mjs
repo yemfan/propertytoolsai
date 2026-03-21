@@ -1,12 +1,12 @@
 /**
- * After `npm run build -w <app>` from the monorepo root on Vercel, Next may write
- * `apps/<app>/.next/` while the deployment step looks for `.next/` at the *repository*
- * root (`/vercel/path0/.next` when Root Directory is unset or the repo root).
+ * Ensures `routes-manifest.json` exists where Vercel's Next builder looks:
+ * often `<repo>/.next/` even when `next build` wrote `apps/<workspace>/.next/`.
  *
- * When `routes-manifest.json` exists under `apps/<app>/.next` but not at `<repo>/.next`,
- * copy the full `.next` tree to the repo root so Vercel's Next.js builder can find it.
+ * If `<repo>/.next/routes-manifest.json` is missing but the app build exists,
+ * copies the full `apps/<workspace>/.next` tree to `<repo>/.next`.
  *
- * Skips when NEXT_DIST_IN_MONOREPO_ROOT=1 (build already emits at repo root) or not VERCEL.
+ * Also handles the case where `NEXT_DIST_IN_MONOREPO_ROOT=1` was set but distDir
+ * still landed under `apps/<app>/.next` (env not applied to the Next process).
  */
 import { existsSync, cpSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -18,11 +18,6 @@ if (!workspace) {
 }
 
 if (process.env.VERCEL !== "1") {
-  process.exit(0);
-}
-
-if (process.env.NEXT_DIST_IN_MONOREPO_ROOT === "1") {
-  console.log("[vercel-sync-next-output] NEXT_DIST_IN_MONOREPO_ROOT=1 — output already at repo root.");
   process.exit(0);
 }
 

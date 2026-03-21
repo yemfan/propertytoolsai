@@ -80,11 +80,13 @@ if (process.env.VERCEL === "1") {
 
   console.log(`[vercel-monorepo-root-build] VERCEL=1 → npm run ${script} (app=${app})`);
   run(`npm run ${script}`);
+  // Even with NEXT_DIST_IN_MONOREPO_ROOT=1, Next may still emit under apps/<app>/.next on some CI setups.
+  run(`node "${join(root, "scripts", "vercel-sync-next-output.mjs")}" ${app}`);
   const repoNextManifest = join(root, ".next", "routes-manifest.json");
   if (!existsSync(repoNextManifest)) {
     console.error(
-      `[vercel-monorepo-root-build] Expected ${repoNextManifest} after repo-root build. ` +
-        "If Root Directory is apps/<app>, do not use repo-root builds — set Root Directory to apps/<app> and use apps/<app>/vercel.json.",
+      `[vercel-monorepo-root-build] Missing ${repoNextManifest} after build + sync. ` +
+        "Prefer Vercel Root Directory = apps/leadsmart-ai or apps/property-tools with apps/<app>/vercel.json.",
     );
     process.exit(1);
   }
