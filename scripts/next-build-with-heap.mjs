@@ -18,6 +18,11 @@ process.env.NODE_OPTIONS = [process.env.NODE_OPTIONS, `--max-old-space-size=${he
   .filter(Boolean)
   .join(" ");
 
+// If this line is missing in Vercel logs, the deploy is not running the current `main` (old `cross-env next build` script).
+console.log(
+  `[next-build-with-heap] cwd=${appRoot} node=${process.version} NODE_OPTIONS=${process.env.NODE_OPTIONS}`
+);
+
 const extra = process.argv.slice(2);
 const r = spawnSync(process.execPath, [nextBin, "build", ...extra], {
   stdio: "inherit",
