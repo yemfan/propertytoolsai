@@ -1,39 +1,46 @@
 # Deploying on Vercel (monorepo)
 
 The repo root `package.json` **`build`** script runs **Turbo for every app** (`property-tools` + `leadsmart-ai`).  
-A Vercel project that uses the **repository root** as its Root Directory will run that full monorepo build.
+For **Vercel**, each Next.js site should be its **own project** with **Root Directory** set to that app folder — **not** the repository root.
+
+## Critical: Root Directory must be the app folder (fixes `.next` not found)
+
+If Vercel reports:
+
+> The Next.js output directory `.next` was not found at **`/vercel/path0/.next`**
+
+then **Root Directory is set to the repo root** (`/vercel/path0`). Vercel looks for **`.next` next to the project root**. This monorepo puts the build at **`apps/<name>/.next`**, not at **`/.next`**.
+
+**Fix (required):**
+
+1. **Vercel** → your project → **Settings** → **General** → **Root Directory**
+2. Set **`apps/leadsmart-ai`** (or **`apps/property-tools`** for the other project). **Do not** leave this empty or `.` if you want a working Next.js deploy.
+3. **Build & Development** → **Output Directory** → leave **empty** (default).
+4. **Build Command** / **Install Command** → leave **empty** so **`apps/<app>/vercel.json`** is used (`cd ../.. && npm ci` and `cd ../.. && npm run build -w …`).
+
+Redeploy (clear build cache once if needed).
 
 ## Option A — Recommended: one Vercel project per app
 
-1. **Vercel** → Project → **Settings** → **General** → **Root Directory**
-2. Set to **`apps/leadsmart-ai`** (or **`apps/property-tools`** for the other site).
-3. Leave **Install Command** / **Build Command** empty so **`apps/<app>/vercel.json`** applies:
+1. **Root Directory** = **`apps/leadsmart-ai`** (or **`apps/property-tools`**).
+2. Leave **Install Command** / **Build Command** **empty** in the dashboard so **`apps/<app>/vercel.json`** applies:
    - `installCommand`: `cd ../.. && npm ci`
    - `buildCommand`: `cd ../.. && npm run build -w <workspace-name>`
 
-Redeploy. The build log should **not** show `turbo build` from the repo root unless you intend to build everything.
+The build log should **not** show `turbo build` from the repo root unless you intend to build everything.
 
-### “Output Directory” / Routes Manifest / missing `.next`
+### “Output Directory” / Routes Manifest / other `.next` errors
 
-If Vercel says the Next.js output is **missing** or **misconfigured**:
+1. **Output Directory** must stay **empty** unless you customized **`distDir`** in **`next.config.js`** (this repo does not).
+2. **Turborepo** — Root **`turbo.json`** `build.outputs` includes `.next/**`, `!.next/cache/**`, and `dist/**`. If you run **`turbo build`** from the repo root, use **`npx turbo run build --filter=leadsmart-ai`** when you only need one app.
 
-1. **Project → Settings → General → Build & Development**
-   - **Output Directory** must be **empty** (default). Next.js writes to **`apps/<app>/.next`** when Root Directory is **`apps/<app>`**. Do **not** set `out`, `dist`, or `.next` unless you customized **`distDir`** in **`next.config.js`** (this repo does not).
-   - **Build Command** should be **empty** so **`apps/<app>/vercel.json`** is used (`cd ../.. && npm run build -w …`). It must **not** point at a script that skips **`next build`**.
-2. **Turborepo** — Root **`turbo.json`** declares **`build.outputs`** as **`.next/**`** and **`!.next/cache/**`** so cached builds restore the Next output correctly. If you run **`turbo build`** from the repo root, a failed or skipped workspace can leave another app without `.next`; prefer **per-app** Vercel projects (Option A) or filter: **`npx turbo run build --filter=leadsmart-ai`**.
+## Option B — Repo-root Vercel project (not recommended for Next.js)
 
-## Option B — Root Directory stays `.` (repo root)
+If **Root Directory** is the **repository root**, Vercel still expects **`.next` at `/vercel/path0/.next`**, but **`next build`** for this repo writes to **`apps/<app>/.next`**. That mismatch causes the error above.
 
-Override in **Project → Settings → Build & Development**:
+**Do not** use a repo-root Root Directory for these Next apps unless you add a **separate** Vercel-supported layout. Prefer **Option A** (Root Directory = **`apps/leadsmart-ai`** or **`apps/property-tools`**).
 
-| Field | Value |
-|--------|--------|
-| **Install Command** | `npm ci` |
-| **Build Command** | `npm run build:leadsmart` |
-
-(`build:leadsmart` is defined in the root `package.json` and runs only `leadsmart-ai`.)
-
-For **property-tools** only: `npm run build:property-tools`.
+If you must trigger the build from the root `package.json`, you can still set **Root Directory** to **`apps/leadsmart-ai`** and only override **Build Command** in the dashboard to `cd ../.. && npm run build:leadsmart` — but the default **`vercel.json`** commands are usually enough.
 
 ## Node.js version
 
