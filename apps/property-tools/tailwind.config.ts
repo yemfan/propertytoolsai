@@ -1,3 +1,7 @@
+/**
+ * Legacy reference — Tailwind v4 theme is defined in `app/globals.css` (`@theme` + utilities).
+ * Kept for editors/tools that read this file; PostCSS does not require it for builds.
+ */
 import type { Config } from "tailwindcss";
 
 const config: Config = {

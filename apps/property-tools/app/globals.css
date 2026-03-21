@@ -1,5 +1,22 @@
 @import "tailwindcss";
-@config "../tailwind.config.ts";
+
+/* Tailwind v4 theme in CSS (avoids @config + TS on PostCSS/webpack — Linux/Vercel stability) */
+@theme {
+  --color-brand-primary: #0072ce;
+  --color-brand-success: #28a745;
+  --color-brand-accent: #ff8c42;
+  --color-brand-surface: #f5f5f5;
+  --color-brand-text: #333333;
+}
+
+@layer utilities {
+  .font-heading {
+    font-family: var(--font-heading), system-ui, sans-serif;
+  }
+  .font-body {
+    font-family: var(--font-body), system-ui, sans-serif;
+  }
+}
 
 :root {
   --color-primary: #0072ce;
@@ -25,13 +42,8 @@ h2,
 h3,
 h4,
 h5,
-h6,
-.font-heading {
+h6 {
   font-family: var(--font-heading), system-ui, sans-serif;
-}
-
-.font-body {
-  font-family: var(--font-body), system-ui, sans-serif;
 }
 
 .brand-logo-text {
