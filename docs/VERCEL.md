@@ -35,6 +35,8 @@ Prefer fixing **Root Directory** to **`apps/<app>`** instead of repo root.
 
 **Repo-root `vercel.json`:** The file **`vercel.json`** at the **repository root** sets **`buildCommand`** to **`npm run build`** so Vercel does **not** auto-select **`turbo run build`** (which leaves **`.next`** under **`apps/<app>`**). It is **ignored** when **Root Directory** is **`apps/<app>`** (that folder’s **`vercel.json`** applies instead).
 
+**`next.config.js` `distDir`:** Each app sets an **absolute** `distDir` (either **`apps/<app>/.next`** or **`<repo>/.next`** when **`NEXT_DIST_IN_MONOREPO_ROOT=1`**) so **`routes-manifest.json`** is written to a predictable path for Vercel + Turborepo.
+
 ### LeadSmart works, Property Tools does not (same repo)
 
 1. **Mirror LeadSmart’s layout** — In the **Property Tools** Vercel project, set **Root Directory** to **`apps/property-tools`** (same pattern as **`apps/leadsmart-ai`**). Leave **Install / Build** empty so **`apps/property-tools/vercel.json`** runs.

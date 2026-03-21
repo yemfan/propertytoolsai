@@ -1,7 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
   "installCommand": "cd ../.. && npm ci",
-  "buildCommand": "cd ../.. && NEXT_DIST_IN_MONOREPO_ROOT= NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT= npm run build -w property-tools",
+  "buildCommand": "cd ../.. && NEXT_DIST_IN_MONOREPO_ROOT= NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT= npm run build -w property-tools && (test -f apps/property-tools/.next/routes-manifest.json || test -f .next/routes-manifest.json)",
   "build": {
     "env": {
       "NODE_OPTIONS": "--max-old-space-size=12288"

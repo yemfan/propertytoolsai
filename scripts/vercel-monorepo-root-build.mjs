@@ -14,6 +14,7 @@
  * and deployment URLs (so "Property Tools AI" / property.tools match property-tools).
  */
 import { execSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -79,6 +80,14 @@ if (process.env.VERCEL === "1") {
 
   console.log(`[vercel-monorepo-root-build] VERCEL=1 → npm run ${script} (app=${app})`);
   run(`npm run ${script}`);
+  const repoNextManifest = join(root, ".next", "routes-manifest.json");
+  if (!existsSync(repoNextManifest)) {
+    console.error(
+      `[vercel-monorepo-root-build] Expected ${repoNextManifest} after repo-root build. ` +
+        "If Root Directory is apps/<app>, do not use repo-root builds — set Root Directory to apps/<app> and use apps/<app>/vercel.json.",
+    );
+    process.exit(1);
+  }
   process.exit(0);
 }
 
