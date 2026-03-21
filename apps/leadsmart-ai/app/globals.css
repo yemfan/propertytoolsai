@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Tailwind v4: load theme (brand colors, fonts) — path is relative to this file */
+@config "../tailwind.config.ts";
 
 :root {
   --color-primary: #0072ce;
