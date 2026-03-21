@@ -13,7 +13,7 @@
     "dev:property-tools": "npm run dev -w property-tools -- --port 3001",
     "dev:leadsmart": "npm run dev -w leadsmart-ai -- --port 3000",
     "clean:next": "node -e \"const fs=require('fs');const path=require('path');for(const app of ['leadsmart-ai','property-tools']){const p=path.join('apps',app,'.next');try{fs.rmSync(p,{recursive:true,force:true});console.log('cleaned',p);}catch(e){console.warn('skip',p,e?.message||e);}}\"",
-    "build": "cross-env TURBO_TELEMETRY_DISABLED=1 npm run clean:next && cross-env NODE_OPTIONS=--max-old-space-size=12288 TURBO_TELEMETRY_DISABLED=1 turbo build --concurrency=1",
+    "build": "node scripts/vercel-monorepo-root-build.mjs",
     "build:leadsmart": "cross-env NODE_OPTIONS=--max-old-space-size=12288 npm run build -w leadsmart-ai",
     "build:property-tools": "cross-env NODE_OPTIONS=--max-old-space-size=12288 npm run build -w property-tools",
     "build:vercel-leadsmart-root": "cross-env NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT=1 NODE_OPTIONS=--max-old-space-size=12288 npm run build -w leadsmart-ai",
