@@ -2,7 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { getLandingCopy, ROLE_STORAGE_KEY, type UserRole } from "@/components/marketing/landingCopy";
+import { LandingButton, LandingCard, LandingSectionLabel } from "@/components/marketing/LandingPrimitives";
+import { trackLandingEvent } from "@/lib/marketing/landingTrack";
 
 const nav = [
   { href: "#problem", label: "Problem" },
@@ -13,81 +16,24 @@ const nav = [
   { href: "#pricing", label: "Pricing" },
 ];
 
-const problemPoints = [
-  {
-    title: "Leads go cold in the inbox",
-    body: "Homeowners submit a form—and you’re too busy showing homes to follow up the same day.",
-  },
-  {
-    title: "Tools don’t talk to each other",
-    body: "CMA here, CRM there, texts somewhere else. Nothing tells you who’s ready to list.",
-  },
-  {
-    title: "Pipeline visibility is a guess",
-    body: "You don’t know which sellers are heating up until it’s too late.",
-  },
-];
-
-const solutionPillars = [
-  {
-    title: "Capture & qualify 24/7",
-    body: "AI-assisted home value funnels turn curiosity into conversations—even while you sleep.",
-  },
-  {
-    title: "One place for every lead",
-    body: "CRM built for agents: stages, tasks, notes, and history in one timeline.",
-  },
-  {
-    title: "Nudges that feel human",
-    body: "Email & SMS sequences you can customize so follow-up stays personal at scale.",
-  },
-];
-
-const steps = [
-  {
-    n: "01",
-    title: "Launch your funnel",
-    body: "Share your LeadSmart link or embed home value tools on your site and socials.",
-  },
-  {
-    n: "02",
-    title: "Leads sync automatically",
-    body: "Every submission lands in your CRM with source, property context, and next steps.",
-  },
-  {
-    n: "03",
-    title: "Convert with confidence",
-    body: "Use AI CMAs, alerts, and playbooks to book listing appointments faster.",
-  },
-];
-
-const showcase = [
-  { title: "AI CMA & reports", desc: "Professional comps and narratives sellers actually read." },
-  { title: "Lead routing & CRM", desc: "Pipeline stages, reminders, and team-ready workflows." },
-  { title: "SMS & nurture", desc: "Templates and automations that stay compliant and on-brand." },
-  { title: "Open house & events", desc: "QR signups that flow straight into follow-up sequences." },
-  { title: "Growth analytics", desc: "See what channels and campaigns drive real conversations." },
-  { title: "Agent dashboard", desc: "One command center for today’s hottest opportunities." },
-];
-
 const plans = [
   {
     name: "Free",
     price: "$0",
     period: "/mo",
-    blurb: "Try core flows",
-    features: ["Limited CMA/day", "Basic alerts", "Explore the CRM"],
-    cta: "Get started",
-    href: "/signup",
+    blurb: "Prove the funnel",
+    features: ["Core capture flows", "Starter CRM", "Explore automations"],
+    cta: "Get Started Free",
+    href: "/agent-signup",
     highlight: false,
   },
   {
-    name: "Pro Agent",
+    name: "Pro",
     price: "$49",
     period: "/mo",
     blurb: "For active producers",
-    features: ["Higher CMA limits", "Full CRM & leads", "Engagement tracking"],
-    cta: "Start Pro",
+    features: ["Higher limits", "Full CRM & scoring", "Engagement analytics"],
+    cta: "Upgrade to Pro",
     href: "/pricing",
     highlight: true,
   },
@@ -95,61 +41,202 @@ const plans = [
     name: "Premium",
     price: "$99",
     period: "/mo",
-    blurb: "Teams & power users",
-    features: ["Expanded limits", "Automation", "Team access"],
+    blurb: "Teams & scale",
+    features: ["Expanded automation", "Team seats", "Priority support"],
     cta: "View Premium",
     href: "/pricing",
     highlight: false,
   },
 ];
 
+function RoleToggle({ role, onChange }: { role: UserRole; onChange: (r: UserRole) => void }) {
+  return (
+    <div
+      className="inline-flex rounded-2xl border border-slate-200 bg-slate-100/80 p-1 shadow-inner"
+      role="group"
+      aria-label="Choose audience"
+    >
+      <button
+        type="button"
+        onClick={() => onChange("agent")}
+        className={`rounded-xl px-3 py-1.5 text-xs font-bold transition sm:px-4 sm:text-sm ${
+          role === "agent" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+        }`}
+      >
+        Agent
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("broker")}
+        className={`rounded-xl px-3 py-1.5 text-xs font-bold transition sm:px-4 sm:text-sm ${
+          role === "broker" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+        }`}
+      >
+        Loan broker
+      </button>
+    </div>
+  );
+}
+
+function HeroVisual() {
+  return (
+    <div className="landing-hero-float relative mx-auto w-full max-w-xl lg:mx-0">
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 to-white/5 p-4 shadow-2xl shadow-black/40 backdrop-blur-sm sm:p-6">
+        <div className="mb-4 flex items-center justify-between gap-2 border-b border-white/10 pb-3">
+          <div className="flex gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-red-400/90" />
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-400/90" />
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/90" />
+          </div>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Live pipeline</span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2 rounded-xl border border-white/10 bg-slate-950/40 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-sky-300/90">Funnel</p>
+            {["Traffic", "Qualified", "Booked"].map((label, i) => (
+              <div key={label} className="flex items-center gap-2">
+                <div
+                  className="h-8 flex-1 rounded-lg bg-gradient-to-r from-sky-500/80 to-[#0072ce]/90"
+                  style={{ width: `${100 - i * 22}%`, minWidth: "3rem" }}
+                />
+                <span className="w-14 text-right text-[10px] font-medium text-slate-400">{label}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-col justify-between rounded-xl border border-white/10 bg-slate-950/40 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-300/90">This week</p>
+            <div className="mt-2 flex h-24 items-end gap-1.5">
+              {[40, 65, 45, 80, 55, 90, 70].map((h, idx) => (
+                <div
+                  key={idx}
+                  className="flex-1 rounded-t bg-gradient-to-t from-[#0072ce] to-sky-400/90 opacity-90"
+                  style={{ height: `${h}%` }}
+                />
+              ))}
+            </div>
+            <p className="mt-2 text-[10px] text-slate-500">Replies · nurture · appointments</p>
+          </div>
+        </div>
+      </div>
+      <div className="pointer-events-none absolute -right-6 -top-6 hidden h-24 w-24 rounded-full bg-sky-500/20 blur-2xl sm:block" />
+      <div className="pointer-events-none absolute -bottom-8 -left-8 hidden h-28 w-28 rounded-full bg-[#0072ce]/25 blur-2xl sm:block" />
+    </div>
+  );
+}
+
 export default function LeadSmartLanding() {
+  const [role, setRole] = useState<UserRole>("agent");
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  const copy = getLandingCopy(role);
+
+  const signupHref = role === "broker" ? "/agent-signup?from=broker" : "/agent-signup";
+  const demoHref = "/home-value-funnel";
+
+  useEffect(() => {
+    let initial: UserRole = "agent";
+    try {
+      const saved = localStorage.getItem(ROLE_STORAGE_KEY);
+      if (saved === "broker" || saved === "agent") initial = saved;
+      setRole(initial);
+      trackLandingEvent("landing_view", { role: initial });
+    } catch {
+      trackLandingEvent("landing_view", { role: "agent" });
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(ROLE_STORAGE_KEY, role);
+    } catch {
+      /* ignore */
+    }
+  }, [role, hydrated]);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const onCta = useCallback((label: string, href: string) => {
+    trackLandingEvent("landing_cta_click", { label, href, role });
+  }, [role]);
+
+  const onNav = useCallback(
+    (label: string, href: string) => {
+      trackLandingEvent("landing_nav_click", { label, href, role });
+    },
+    [role]
+  );
+
+  const setRoleTracked = useCallback((r: UserRole) => {
+    setRole(r);
+    trackLandingEvent("landing_role_change", { role: r });
+  }, []);
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      {/* Nav */}
-      <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex shrink-0 items-center gap-2">
-            <Image
-              src="/images/lslogo.png"
-              alt="LeadSmart AI"
-              width={160}
-              height={48}
-              className="h-10 w-auto sm:h-11"
-              priority
-            />
-          </Link>
+      {/* Sticky marketing header */}
+      <header
+        className={`sticky top-0 z-50 border-b transition-[box-shadow,background-color] duration-200 ${
+          scrolled ? "border-slate-200/90 bg-white/95 shadow-md shadow-slate-900/5 backdrop-blur-md" : "border-slate-200/60 bg-white/90 backdrop-blur-md"
+        }`}
+      >
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-5">
+            <Link href="/" className="flex shrink-0 items-center gap-2" onClick={() => onNav("logo", "/")}>
+              <Image
+                src="/images/lslogo.png"
+                alt="LeadSmart AI"
+                width={160}
+                height={48}
+                className="h-9 w-auto sm:h-10"
+                priority
+              />
+            </Link>
+            <div className="hidden sm:block">
+              <RoleToggle role={role} onChange={setRoleTracked} />
+            </div>
+          </div>
 
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
+          <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Primary">
             {nav.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                onClick={() => onNav(item.label, item.href)}
+                className="rounded-xl px-2.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
               >
                 {item.label}
               </a>
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
+            <LandingButton
+              href={signupHref}
+              variant="primary"
+              className="hidden px-4 py-2.5 text-sm shadow-lg shadow-blue-900/20 sm:inline-flex"
+              onClick={() => onCta("header_get_started", signupHref)}
+            >
+              Get Started Free
+            </LandingButton>
             <Link
               href="/login"
-              className="hidden rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 sm:inline-flex"
+              className="hidden rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 lg:inline-flex"
+              onClick={() => onCta("header_login", "/login")}
             >
               Log in
             </Link>
-            <Link
-              href="/agent-signup"
-              className="inline-flex items-center justify-center rounded-xl bg-[#0072ce] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#005ca8]"
-            >
-              Start free
-            </Link>
             <button
               type="button"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+              className="rounded-xl p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
               aria-label="Open menu"
               onClick={() => setOpen((v) => !v)}
             >
@@ -164,6 +251,10 @@ export default function LeadSmartLanding() {
           </div>
         </div>
 
+        <div className="border-t border-slate-100 px-4 py-3 sm:hidden sm:px-6">
+          <RoleToggle role={role} onChange={setRoleTracked} />
+        </div>
+
         {open ? (
           <div className="border-t border-slate-100 bg-white px-4 py-4 lg:hidden">
             <div className="mx-auto flex max-w-6xl flex-col gap-1">
@@ -172,14 +263,28 @@ export default function LeadSmartLanding() {
                   key={item.href}
                   href={item.href}
                   className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                  onClick={() => setOpen(false)}
+                  onClick={() => {
+                    setOpen(false);
+                    onNav(item.label, item.href);
+                  }}
                 >
                   {item.label}
                 </a>
               ))}
+              <LandingButton
+                href={signupHref}
+                variant="primary"
+                className="mt-2 w-full justify-center"
+                onClick={() => {
+                  setOpen(false);
+                  onCta("mobile_get_started", signupHref);
+                }}
+              >
+                Get Started Free
+              </LandingButton>
               <Link
                 href="/login"
-                className="mt-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-800"
+                className="rounded-lg px-3 py-2.5 text-center text-sm font-semibold text-slate-800"
                 onClick={() => setOpen(false)}
               >
                 Log in
@@ -192,66 +297,77 @@ export default function LeadSmartLanding() {
       <main>
         {/* Hero */}
         <section id="hero" className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(0,114,206,0.35),transparent)]" />
-          <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24 lg:py-28">
-            <p className="mb-4 inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-sky-200/90">
-              Built for listing agents
-            </p>
-            <h1 className="font-heading max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-              Turn clicks into signed listings—before your competitor does.
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-300 sm:text-xl">
-              LeadSmart AI combines AI home-value funnels, automated follow-up, and an agent-first CRM so
-              you capture more seller leads and book more listing appointments—without living in spreadsheets.
-            </p>
-            <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link
-                href="/agent-signup"
-                className="inline-flex items-center justify-center rounded-xl bg-[#0072ce] px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-blue-900/30 transition hover:bg-[#005ca8]"
-              >
-                Start free as an agent
-              </Link>
-              <Link
-                href="/pricing"
-                className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/5 px-6 py-3.5 text-base font-semibold text-white backdrop-blur transition hover:bg-white/10"
-              >
-                View pricing
-              </Link>
-              <Link
-                href="/home-value-funnel"
-                className="text-center text-sm font-medium text-sky-200/90 underline-offset-4 hover:underline sm:ml-2"
-              >
-                Try the home value funnel →
-              </Link>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_-30%,rgba(0,114,206,0.4),transparent)]" />
+          <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-22 lg:grid-cols-2 lg:gap-16 lg:py-28">
+            <div className="landing-animate">
+              <p className="mb-4 inline-flex rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-sky-200/95">
+                {copy.hero.eyebrow}
+              </p>
+              <h1 className="font-heading text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-[2.75rem] xl:text-6xl">
+                {copy.hero.headline}
+              </h1>
+              <p className="landing-animate landing-delay-1 mt-5 max-w-xl text-lg leading-relaxed text-slate-300 sm:text-xl">
+                {copy.hero.subhead}
+              </p>
+              <p className="landing-animate landing-delay-2 mt-4 max-w-xl text-sm leading-relaxed text-slate-400 sm:text-base">
+                {copy.hero.supporting}
+              </p>
+              <div className="landing-animate landing-delay-3 mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <LandingButton
+                  href={signupHref}
+                  variant="ghost"
+                  className="border-white/25 bg-[#0072ce] px-7 py-3.5 text-base shadow-lg shadow-blue-950/40 hover:bg-[#005ca8]"
+                  onClick={() => onCta("hero_primary", signupHref)}
+                >
+                  {copy.hero.primaryCta}
+                </LandingButton>
+                <LandingButton
+                  href={demoHref}
+                  variant="ghost"
+                  className="border-white/30 bg-white/5 px-7 py-3.5 text-base hover:bg-white/10"
+                  onClick={() => {
+                    trackLandingEvent("landing_demo_click", { href: demoHref, role });
+                    onCta("hero_demo", demoHref);
+                  }}
+                >
+                  {copy.hero.secondaryCta}
+                </LandingButton>
+                <Link
+                  href="#product"
+                  className="text-center text-sm font-semibold text-sky-200/90 underline-offset-4 hover:underline sm:ml-1"
+                  onClick={() => onNav("hero_product_anchor", "#product")}
+                >
+                  Explore product →
+                </Link>
+              </div>
+              <p className="landing-animate landing-delay-4 mt-8 text-sm text-slate-500">{copy.hero.trustLine}</p>
             </div>
-            <p className="mt-8 text-sm text-slate-400">
-              No credit card to explore · Setup in minutes · Works alongside your existing site
-            </p>
+            <div className="landing-animate landing-delay-2 justify-self-center lg:justify-self-end">
+              <HeroVisual />
+            </div>
           </div>
         </section>
 
         {/* Problem */}
         <section id="problem" className="scroll-mt-24 border-b border-slate-100 bg-slate-50 py-16 sm:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <LandingSectionLabel>Problem</LandingSectionLabel>
             <div className="max-w-2xl">
-              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                The old way is leaking listings
-              </h2>
-              <p className="mt-4 text-lg text-slate-600">
-                Buyers get attention. Sellers need speed, proof, and persistence—most agent stacks weren’t
-                built for that.
-              </p>
+              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{copy.problem.title}</h2>
+              <p className="mt-4 text-lg text-slate-600">{copy.problem.subtitle}</p>
             </div>
             <div className="mt-12 grid gap-6 md:grid-cols-3">
-              {problemPoints.map((p) => (
-                <div
-                  key={p.title}
-                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md"
-                >
+              {copy.problem.points.map((p) => (
+                <LandingCard key={p.title}>
                   <h3 className="font-heading text-lg font-semibold text-slate-900">{p.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-slate-600">{p.body}</p>
-                </div>
+                </LandingCard>
               ))}
+            </div>
+            <div className="mt-10 flex justify-center">
+              <LandingButton href={signupHref} variant="primary" onClick={() => onCta("problem_cta", signupHref)}>
+                Fix my follow-up →
+              </LandingButton>
             </div>
           </div>
         </section>
@@ -260,42 +376,38 @@ export default function LeadSmartLanding() {
         <section id="solution" className="scroll-mt-24 py-16 sm:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="mx-auto max-w-2xl text-center">
-              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                One system for capture, nurture, and close
-              </h2>
-              <p className="mt-4 text-lg text-slate-600">
-                LeadSmart AI is the operating layer for modern listing agents—so every lead gets a next
-                step, automatically.
-              </p>
+              <LandingSectionLabel>Solution</LandingSectionLabel>
+              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{copy.solution.title}</h2>
+              <p className="mt-4 text-lg text-slate-600">{copy.solution.subtitle}</p>
             </div>
-            <div className="mt-14 grid gap-8 md:grid-cols-3">
-              {solutionPillars.map((s) => (
-                <div key={s.title} className="text-center md:text-left">
-                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-100 text-lg font-bold text-[#0072ce] md:mx-0">
+            <ul className="mt-14 grid gap-6 sm:grid-cols-2">
+              {copy.solution.bullets.map((s) => (
+                <LandingCard key={s.title}>
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-100 text-sm font-bold text-[#0072ce]">
                     ✓
                   </div>
-                  <h3 className="font-heading text-xl font-semibold text-slate-900">{s.title}</h3>
+                  <h3 className="font-heading text-lg font-semibold text-slate-900">{s.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.body}</p>
-                </div>
+                </LandingCard>
               ))}
-            </div>
+            </ul>
           </div>
         </section>
 
         {/* How it works */}
         <section id="how-it-works" className="scroll-mt-24 border-y border-slate-100 bg-slate-50 py-16 sm:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <h2 className="font-heading text-center text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-              How it works
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-center text-lg text-slate-600">
-              Three steps from link to listing conversation.
-            </p>
+            <div className="text-center">
+              <LandingSectionLabel>How it works</LandingSectionLabel>
+              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Attract → Capture → Close</h2>
+              <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">Three steps. One system. Zero busywork.</p>
+            </div>
             <ol className="mt-14 grid gap-10 md:grid-cols-3">
-              {steps.map((s) => (
-                <li key={s.n} className="relative">
-                  <span className="font-heading text-5xl font-extrabold text-slate-200">{s.n}</span>
-                  <h3 className="font-heading -mt-2 text-xl font-semibold text-slate-900">{s.title}</h3>
+              {copy.steps.map((s, idx) => (
+                <li key={s.phase} className="relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <span className="font-heading text-xs font-bold uppercase tracking-widest text-[#0072ce]">{s.phase}</span>
+                  <div className="mt-2 font-heading text-4xl font-extrabold text-slate-200">{String(idx + 1).padStart(2, "0")}</div>
+                  <h3 className="font-heading -mt-1 text-xl font-semibold text-slate-900">{s.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.body}</p>
                 </li>
               ))}
@@ -307,32 +419,31 @@ export default function LeadSmartLanding() {
         <section id="product" className="scroll-mt-24 py-16 sm:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="mx-auto max-w-2xl text-center">
-              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Everything you need to run seller growth
-              </h2>
-              <p className="mt-4 text-lg text-slate-600">
-                Purpose-built modules agents use every week—not generic “all-in-one” bloat.
-              </p>
+              <LandingSectionLabel>Product</LandingSectionLabel>
+              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{copy.showcase.title}</h2>
+              <p className="mt-4 text-lg text-slate-600">{copy.showcase.subtitle}</p>
             </div>
-            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {showcase.map((f) => (
+            <div className="mt-12 grid gap-4 sm:grid-cols-2">
+              {copy.showcase.items.map((f) => (
                 <div
                   key={f.title}
-                  className="group rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/80 p-5 shadow-sm transition hover:border-[#0072ce]/30 hover:shadow-md"
+                  className="group rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/90 p-6 shadow-sm transition hover:border-[#0072ce]/30 hover:shadow-md"
                 >
-                  <h3 className="font-heading font-semibold text-slate-900 group-hover:text-[#005ca8]">
-                    {f.title}
-                  </h3>
+                  <h3 className="font-heading font-semibold text-slate-900 group-hover:text-[#005ca8]">{f.title}</h3>
                   <p className="mt-2 text-sm text-slate-600">{f.desc}</p>
                 </div>
               ))}
             </div>
-            <div className="mt-10 flex justify-center">
+            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <LandingButton href={signupHref} variant="primary" onClick={() => onCta("product_cta", signupHref)}>
+                Get Started Free
+              </LandingButton>
               <Link
                 href="/dashboard"
                 className="text-sm font-semibold text-[#0072ce] hover:underline"
+                onClick={() => onCta("product_dashboard", "/dashboard")}
               >
-                Already an agent? Go to dashboard →
+                Already a customer? Open dashboard →
               </Link>
             </div>
           </div>
@@ -341,68 +452,59 @@ export default function LeadSmartLanding() {
         {/* Social proof */}
         <section id="proof" className="scroll-mt-24 border-y border-slate-100 bg-slate-950 py-16 text-white sm:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-              <div>
-                <h2 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-                  Built for agents who measure pipeline in conversations
-                </h2>
-                <p className="mt-4 text-slate-300">
-                  Teams use LeadSmart AI to centralize seller intent, tighten follow-up SLAs, and show
-                  sellers a polished, data-backed story—fast.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-4 sm:gap-6">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-                  <div className="font-heading text-xl font-bold text-sky-300">Same-day</div>
-                  <p className="mt-1 text-sm text-slate-400">Structured first-touch vs. inbox chaos</p>
+            <div className="mx-auto max-w-2xl text-center lg:mx-0 lg:max-w-none lg:text-left">
+              <p className="mb-3 inline-flex rounded-full border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-sky-200/90">
+                Social proof
+              </p>
+              <h2 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">{copy.proof.title}</h2>
+              <p className="mt-4 text-slate-300">{copy.proof.subtitle}</p>
+            </div>
+            <div className="mt-10 grid gap-6 lg:grid-cols-3">
+              {copy.proof.stats.map((st) => (
+                <div key={st.label} className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                  <div className="font-heading text-2xl font-bold text-sky-300">{st.value}</div>
+                  <p className="mt-1 text-sm text-slate-400">{st.label}</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-                  <div className="font-heading text-3xl font-bold text-sky-300">24/7</div>
-                  <p className="mt-1 text-sm text-slate-400">Capture on your funnels</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:col-span-2">
-                  <blockquote className="text-sm leading-relaxed text-slate-200">
-                    “We finally see which homeowners are engaging before the appointment—instead of guessing
-                    from scattered texts.”
-                  </blockquote>
-                  <p className="mt-3 text-xs font-medium uppercase tracking-wide text-slate-500">
-                    — Agent team feedback (anonymized)
-                  </p>
-                </div>
-              </div>
+              ))}
+            </div>
+            <div className="mt-8 grid gap-4 lg:grid-cols-2">
+              {copy.proof.quotes.map((q, qi) => (
+                <blockquote
+                  key={`quote-${qi}`}
+                  className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm leading-relaxed text-slate-200"
+                >
+                  “{q.text}”
+                  <footer className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">— {q.attribution}</footer>
+                </blockquote>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* Pricing preview */}
+        {/* Pricing */}
         <section id="pricing" className="scroll-mt-24 py-16 sm:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="mx-auto max-w-2xl text-center">
-              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Simple pricing that scales with your production
-              </h2>
-              <p className="mt-4 text-lg text-slate-600">
-                Start free. Upgrade when you’re ready to run more CMAs, leads, and automations.
-              </p>
+              <LandingSectionLabel>Pricing</LandingSectionLabel>
+              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{copy.pricing.title}</h2>
+              <p className="mt-4 text-lg text-slate-600">{copy.pricing.subtitle}</p>
             </div>
             <div className="mt-12 grid gap-6 lg:grid-cols-3">
-              {plans.map((p) => (
+              {plans.map((p) => {
+                const tierHref = p.name === "Free" ? signupHref : p.href;
+                return (
                 <div
                   key={p.name}
                   className={`flex flex-col rounded-2xl border p-6 shadow-sm ${
-                    p.highlight
-                      ? "border-[#0072ce] bg-sky-50/50 ring-2 ring-[#0072ce]/20"
-                      : "border-slate-200 bg-white"
+                    p.highlight ? "border-[#0072ce] bg-sky-50/50 ring-2 ring-[#0072ce]/20" : "border-slate-200 bg-white"
                   }`}
                 >
                   {p.highlight ? (
                     <span className="mb-3 inline-flex w-fit rounded-full bg-[#0072ce] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                      Most popular
+                      Best upgrade
                     </span>
                   ) : (
-                    <span className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      {p.blurb}
-                    </span>
+                    <span className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{p.blurb}</span>
                   )}
                   <h3 className="font-heading text-lg font-semibold text-slate-900">{p.name}</h3>
                   <div className="mt-2 flex items-baseline gap-1">
@@ -418,22 +520,22 @@ export default function LeadSmartLanding() {
                     ))}
                   </ul>
                   <Link
-                    href={p.href}
-                    className={`mt-8 inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                      p.highlight
-                        ? "bg-[#0072ce] text-white hover:bg-[#005ca8]"
-                        : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+                    href={tierHref}
+                    className={`mt-8 inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                      p.highlight ? "bg-[#0072ce] text-white hover:bg-[#005ca8]" : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
                     }`}
+                    onClick={() => onCta(`pricing_${p.name}`, tierHref)}
                   >
                     {p.cta}
                   </Link>
                 </div>
-              ))}
+                );
+              })}
             </div>
             <p className="mt-8 text-center text-sm text-slate-500">
-              Usage limits and trials may apply. See full details on{" "}
-              <Link href="/pricing" className="font-semibold text-[#0072ce] hover:underline">
-                the pricing page
+              Limits and trials may apply. Compare everything on{" "}
+              <Link href="/pricing" className="font-semibold text-[#0072ce] hover:underline" onClick={() => onCta("pricing_page", "/pricing")}>
+                pricing
               </Link>
               .
             </p>
@@ -443,24 +545,22 @@ export default function LeadSmartLanding() {
         {/* Final CTA */}
         <section id="cta" className="scroll-mt-24 bg-gradient-to-r from-[#0072ce] to-[#005ca8] py-16 sm:py-20">
           <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
-            <h2 className="font-heading text-3xl font-bold text-white sm:text-4xl">
-              Ready to fill your calendar with listing conversations?
-            </h2>
-            <p className="mt-4 text-lg text-sky-100">
-              Join agents using LeadSmart AI to turn seller intent into pipeline you can actually work.
-            </p>
-            <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <h2 className="font-heading text-3xl font-bold text-white sm:text-4xl">{copy.finalCta.title}</h2>
+            <p className="mt-4 text-lg text-sky-100">{copy.finalCta.subtitle}</p>
+            <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
               <Link
-                href="/agent-signup"
-                className="inline-flex w-full items-center justify-center rounded-xl bg-white px-8 py-3.5 text-base font-semibold text-[#005ca8] shadow-lg transition hover:bg-slate-100 sm:w-auto"
+                href={signupHref}
+                className="inline-flex w-full items-center justify-center rounded-2xl bg-white px-8 py-3.5 text-base font-semibold text-[#005ca8] shadow-lg transition hover:bg-slate-100 sm:w-auto"
+                onClick={() => onCta("final_primary", signupHref)}
               >
-                Create your free agent account
+                {copy.finalCta.primary}
               </Link>
               <Link
-                href="/signup"
-                className="inline-flex w-full items-center justify-center rounded-xl border border-white/40 bg-transparent px-8 py-3.5 text-base font-semibold text-white transition hover:bg-white/10 sm:w-auto"
+                href="/contact"
+                className="inline-flex w-full items-center justify-center rounded-2xl border border-white/45 bg-transparent px-8 py-3.5 text-base font-semibold text-white transition hover:bg-white/10 sm:w-auto"
+                onClick={() => onCta("final_contact", "/contact")}
               >
-                Sign up as a user
+                {copy.finalCta.secondary}
               </Link>
             </div>
           </div>
@@ -472,21 +572,11 @@ export default function LeadSmartLanding() {
         <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
           <div className="grid gap-10 md:grid-cols-4">
             <div className="md:col-span-1">
-              <Image
-                src="/images/lslogo.png"
-                alt="LeadSmart AI"
-                width={140}
-                height={40}
-                className="h-9 w-auto opacity-90"
-              />
-              <p className="mt-3 text-sm text-slate-600">
-                AI-powered funnels and CRM for real estate agents who sell listings, not software.
-              </p>
+              <Image src="/images/lslogo.png" alt="LeadSmart AI" width={140} height={40} className="h-9 w-auto opacity-90" />
+              <p className="mt-3 text-sm text-slate-600">{copy.footerTagline}</p>
             </div>
             <div>
-              <h3 className="font-heading text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Product
-              </h3>
+              <h3 className="font-heading text-xs font-semibold uppercase tracking-wide text-slate-500">Product</h3>
               <ul className="mt-3 space-y-2 text-sm">
                 <li>
                   <Link href="/pricing" className="text-slate-700 hover:text-[#0072ce]">
@@ -506,9 +596,7 @@ export default function LeadSmartLanding() {
               </ul>
             </div>
             <div>
-              <h3 className="font-heading text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Agents
-              </h3>
+              <h3 className="font-heading text-xs font-semibold uppercase tracking-wide text-slate-500">Get started</h3>
               <ul className="mt-3 space-y-2 text-sm">
                 <li>
                   <Link href="/agent-signup" className="text-slate-700 hover:text-[#0072ce]">
@@ -516,25 +604,28 @@ export default function LeadSmartLanding() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/login" className="text-slate-700 hover:text-[#0072ce]">
-                    Log in
+                  <Link href="/signup" className="text-slate-700 hover:text-[#0072ce]">
+                    User signup
                   </Link>
                 </li>
                 <li>
-                  <Link href="/signup" className="text-slate-700 hover:text-[#0072ce]">
-                    User signup
+                  <Link href="/login" className="text-slate-700 hover:text-[#0072ce]">
+                    Log in
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h3 className="font-heading text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Legal
-              </h3>
+              <h3 className="font-heading text-xs font-semibold uppercase tracking-wide text-slate-500">Legal</h3>
               <ul className="mt-3 space-y-2 text-sm">
                 <li>
                   <Link href="/terms" className="text-slate-700 hover:text-[#0072ce]">
                     Terms
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/privacy" className="text-slate-700 hover:text-[#0072ce]">
+                    Privacy
                   </Link>
                 </li>
                 <li>

@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import LeadSmartLanding from "@/components/marketing/LeadSmartLanding";
 
 export const metadata: Metadata = {
-  title: "LeadSmart AI — AI CRM & Lead Generation for Real Estate Agents",
+  title: "LeadSmart AI — AI Growth Engine for Agents & Mortgage Pros",
   description:
-    "Capture seller leads with AI home value funnels, automate follow-up, and run your pipeline in one agent-first CRM. Start free.",
+    "Turn online traffic into closed deals. AI capture, lead scoring, and automated follow-up for real estate agents and loan brokers. Start free.",
   openGraph: {
-    title: "LeadSmart AI — Listings start with better leads",
+    title: "LeadSmart AI — Turn traffic into pipeline",
     description:
-      "AI-powered funnels, CRM, and nurture for listing agents. Start free and convert more homeowners into appointments.",
+      "Capture high-intent leads from home value & mortgage tools, automate nurture, and close more deals. Built for agents and brokers.",
   },
 };
 

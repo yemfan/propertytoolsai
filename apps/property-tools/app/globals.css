@@ -134,3 +134,88 @@ a:hover {
 .text-accent {
   color: var(--color-accent);
 }
+
+/* Revenue KPI dashboard — motion (respects reduced motion) */
+@keyframes revenue-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes revenue-pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes revenue-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.revenue-enter {
+  animation: revenue-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.revenue-delay-1 {
+  animation-delay: 0.06s;
+}
+.revenue-delay-2 {
+  animation-delay: 0.12s;
+}
+.revenue-delay-3 {
+  animation-delay: 0.18s;
+}
+.revenue-delay-4 {
+  animation-delay: 0.24s;
+}
+.revenue-delay-5 {
+  animation-delay: 0.3s;
+}
+.revenue-delay-6 {
+  animation-delay: 0.36s;
+}
+.revenue-delay-7 {
+  animation-delay: 0.42s;
+}
+.revenue-delay-8 {
+  animation-delay: 0.48s;
+}
+
+.revenue-live-dot {
+  animation: revenue-pulse-dot 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .revenue-enter,
+  .revenue-delay-1,
+  .revenue-delay-2,
+  .revenue-delay-3,
+  .revenue-delay-4,
+  .revenue-delay-5,
+  .revenue-delay-6,
+  .revenue-delay-7,
+  .revenue-delay-8 {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .revenue-live-dot {
+    animation: none !important;
+  }
+}
