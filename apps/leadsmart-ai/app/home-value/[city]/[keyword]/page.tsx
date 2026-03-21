@@ -10,16 +10,13 @@ import {
   getMarketSnapshot,
   getNearbyCities,
   isValidKeywordSlugForCity,
-  TRAFFIC_CITIES,
 } from "@/lib/trafficSeo";
 
+/** Empty at build: large keyword matrix — bulk SSG OOMs Vercel. On demand + ISR (same as property-tools). */
+export const revalidate = 86400;
+
 export function generateStaticParams() {
-  return TRAFFIC_CITIES.flatMap((city) =>
-    getKeywordPagesForCity("home-value", city.slug).map((k) => ({
-      city: city.slug,
-      keyword: k.keywordSlug,
-    }))
-  );
+  return [];
 }
 
 function resolveKeyword(citySlug: string, keywordSlug: string) {

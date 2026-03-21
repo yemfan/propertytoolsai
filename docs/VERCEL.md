@@ -37,11 +37,11 @@ Optional (recommended on Vercel):
 | `TURBO_TELEMETRY_DISABLED=1` | Quiets Turborepo’s telemetry banner (root `build` also sets this via `cross-env`). |
 | `NEXT_TELEMETRY_DISABLED=1` | Quiets Next.js telemetry; apps also load this from committed `.env.production`. |
 
-## `property-tools`: fewer pages at **build** time
+## Fewer pages at **build** time (`leadsmart-ai` + `property-tools`)
 
-`property-tools` previously prerendered **~2500+** static HTML routes (programmatic SEO + keyword matrix), which can **OOM** Vercel’s build VM even with a large `NODE_OPTIONS` heap.
+Both apps previously prerendered **hundreds to thousands** of static HTML routes (local SEO keyword matrix, and on `property-tools` programmatic `/tool/...` pages), which can **OOM** Vercel’s build VM even with a large `NODE_OPTIONS` heap.
 
-Heavy routes now use **`generateStaticParams()` → `[]`**, **`revalidate` (ISR)**, and (for `/tool/...`) **`dynamicParams: true`** so URLs are **rendered on first request** and cached at the edge — not all at build time. The **sitemap** still lists those URLs for SEO.
+Heavy routes use **`generateStaticParams()` → `[]`**, **`revalidate` (ISR)**, and (on `property-tools` `/tool/...`) **`dynamicParams: true`** so URLs are **rendered on first request** and cached at the edge — not all at build time. **Sitemaps** still list those URLs for SEO.
 
 ## Troubleshooting `next build` exit code 1
 
