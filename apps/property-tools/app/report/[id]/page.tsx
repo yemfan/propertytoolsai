@@ -7,11 +7,12 @@ export default async function OpenHouseReportPage({
   params,
   searchParams,
 }: {
-  params: { id: string };
-  searchParams?: { lead_id?: string };
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ lead_id?: string }>;
 }) {
-  const reportId = params.id;
-  const leadIdFromQuery = searchParams?.lead_id ?? null;
+  const { id: reportId } = await params;
+  const sp = searchParams != null ? await searchParams : {};
+  const leadIdFromQuery = sp.lead_id ?? null;
 
   const { data, error } = await supabaseServer
     .from("reports")
