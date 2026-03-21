@@ -30,9 +30,11 @@ For **property-tools** only: `npm run build:property-tools`.
 
 The repo root **`package.json`** sets **`engines.node` to `20.x`** so Vercel uses **Node 20 LTS** for installs and builds (avoids occasional Next.js / tooling issues on newer runtimes). If your machine runs Node 24+, you may see `EBADENGINE` from npm — use **nvm `20`** locally or ignore the warning.
 
-## Build script (`next-build-with-heap.mjs`)
+## Build script (`apps/*/scripts/next-build.mjs`)
 
-Both apps run **`node ../../scripts/next-build-with-heap.mjs`** so **`NODE_OPTIONS=--max-old-space-size=…` is always set** before spawning Next. The script resolves **`apps/<name>`** using **`npm_package_name`** and the repo root (from the script path), not only `process.cwd()` — Turbo/Vercel sometimes run with a cwd that would break `next` resolution. Override heap with **`NEXT_BUILD_HEAP_MB`** if needed.
+Each app runs **`node ./scripts/next-build.mjs`** (see that app’s **`package.json`** **`build`** script). The script is **self-contained under the app folder** (it does **not** call repo root `scripts/next-build-with-heap.mjs`) so Vercel **Root Directory** = `apps/<name>` never misses files outside that tree. It sets **`NODE_OPTIONS=--max-old-space-size=…`**, resolves the **`next`** CLI from **`node_modules`**, and runs **`next build`** with **`cwd`** = the app. Override heap with **`NEXT_BUILD_HEAP_MB`** if needed.
+
+The repo root still has **`scripts/next-build-with-heap.mjs`** for reference / manual use; the deployed apps do not depend on it.
 
 ## Environment variables
 
@@ -57,8 +59,8 @@ The lines at the **bottom** of the log (`npm error Lifecycle script build failed
 
 1. Scroll **up** in the Vercel build log and find the **first** message that is not `npm error` — e.g. `Failed to compile`, `Type error`, `Error occurred prerendering`, `Cannot find module '…lightningcss…'`, `JavaScript heap out of memory`, `Killed`, etc.
 2. **`Cannot find module '…lightningcss.linux-x64-gnu.node'`** — The repo root `package.json` includes `optionalDependencies` for Linux `lightningcss` binaries so `npm ci` on Vercel (Linux) installs them. Ensure that commit is deployed and run **Redeploy** (clear build cache if needed).
-3. **Heap / OOM** — Each app’s **`next.config.js`** lowers **static generation concurrency** and enables **webpack memory optimizations**. The **`build` script** runs **`scripts/next-build-with-heap.mjs`**, which sets **`NODE_OPTIONS`** before spawning `next build`. `apps/*/vercel.json` can also set heap when Root Directory is that app. The **root** `package.json` scripts set `NODE_OPTIONS` for **`turbo build`**. You can mirror **`NODE_OPTIONS`** in **Project → Settings → Environment Variables** if needed.
-4. **Build log still shows `cross-env … next build`** — That is the **old** script (before `next-build-with-heap.mjs`). Fix: (a) confirm the **commit SHA** on the deployment matches GitHub `main`; (b) **Redeploy** with **Clear cache**; (c) in **Project → Settings → General**, ensure **Build Command** is **empty** (use `apps/<app>/vercel.json`) or `cd ../.. && npm run build -w <workspace>` — **remove** any manual `cross-env …` override. A current log should show **`[next-build-with-heap] cwd=...`** before Next runs.
+3. **Heap / OOM** — Each app’s **`next.config.js`** lowers **static generation concurrency** and enables **webpack memory optimizations**. The **`build` script** runs **`apps/<app>/scripts/next-build.mjs`**, which sets **`NODE_OPTIONS`** before spawning `next build`. `apps/*/vercel.json` can also set heap when Root Directory is that app. The **root** `package.json` scripts set `NODE_OPTIONS` for **`turbo build`**. You can mirror **`NODE_OPTIONS`** in **Project → Settings → Environment Variables** if needed.
+4. **Build log still shows `cross-env … next build`** — That is the **old** script. Fix: (a) confirm the **commit SHA** on the deployment matches GitHub `main`; (b) **Redeploy** with **Clear cache**; (c) in **Project → Settings → General**, ensure **Build Command** is **empty** (use `apps/<app>/vercel.json`) or `cd ../.. && npm run build -w <workspace>` — **remove** any manual `cross-env …` override. A current log should show **`[next-build] appRoot=...`** before Next runs.
 5. **Turbo building both apps** — If the log shows `leadsmart-ai:build:` and `property-tools:build:`, the project is running the **root** `turbo build`. To build **only** `leadsmart-ai`, use **Root Directory** `apps/leadsmart-ai` (Option A above) or **Build Command** `npm run build:leadsmart` from the repo root (Option B).
 
 ## Understanding build logs

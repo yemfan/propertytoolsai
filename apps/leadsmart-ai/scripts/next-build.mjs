@@ -1,20 +1,45 @@
 #!/usr/bin/env node
 /**
- * Launcher: resolves repo `scripts/next-build-with-heap.mjs` from this file's path.
- * Do not use `node ../../scripts/...` in package.json — Turbo/Vercel cwd may be repo root.
+ * Runs `next build` with NODE_OPTIONS heap (Vercel + Turbo + npm workspaces).
+ * Self-contained under `apps/<name>/scripts` — does not depend on repo root `scripts/`
+ * (Vercel Root Directory builds may not include those files).
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(scriptDir, "..");
-const repoRoot = path.resolve(scriptDir, "..", "..", "..");
-const heap = path.join(repoRoot, "scripts", "next-build-with-heap.mjs");
 const pkg = JSON.parse(readFileSync(path.join(appRoot, "package.json"), "utf8"));
 
-const r = spawnSync(process.execPath, [heap, ...process.argv.slice(2)], {
+const require = createRequire(path.join(appRoot, "package.json"));
+let nextBin;
+try {
+  const nextPkg = require.resolve("next/package.json");
+  nextBin = path.join(path.dirname(nextPkg), "dist", "bin", "next");
+} catch (e) {
+  console.error("[next-build] Failed to resolve `next` from", appRoot, e);
+  process.exit(1);
+}
+
+if (!existsSync(nextBin)) {
+  console.error("[next-build] next binary missing at", nextBin);
+  process.exit(1);
+}
+
+const heapMb = process.env.NEXT_BUILD_HEAP_MB ?? "12288";
+process.env.NODE_OPTIONS = [process.env.NODE_OPTIONS, `--max-old-space-size=${heapMb}`]
+  .filter(Boolean)
+  .join(" ");
+
+console.log(
+  `[next-build] appRoot=${appRoot} name=${pkg.name} cwd=${process.cwd()} node=${process.version} NODE_OPTIONS=${process.env.NODE_OPTIONS}`
+);
+
+const extra = process.argv.slice(2);
+const r = spawnSync(process.execPath, [nextBin, "build", ...extra], {
   stdio: "inherit",
   cwd: appRoot,
   env: {
@@ -22,4 +47,9 @@ const r = spawnSync(process.execPath, [heap, ...process.argv.slice(2)], {
     npm_package_name: pkg.name,
   },
 });
+
+if (r.error) {
+  console.error("[next-build] spawn failed:", r.error);
+  process.exit(1);
+}
 process.exit(r.status ?? 1);
