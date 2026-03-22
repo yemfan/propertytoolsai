@@ -15,6 +15,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const isPublicReport = pathname.startsWith("/report/");
   /** Marketing homepage: full-bleed landing (no sidebar / app chrome). */
   const isMarketingHome = pathname === "/";
+  /**
+   * Auth / onboarding: no sidebar — otherwise `<Link href="/dashboard/...">` in the sidebar
+   * prefetches dashboard RSC, runs `getCurrentAgentContext`, and redirects users without an
+   * `agents` row back here → prefetch/navigation loop and opaque “digest” server errors.
+   */
+  const isAuthShell =
+    pathname === "/agent-signup" ||
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/onboarding";
 
   if (isPublicReport) {
     return (
@@ -26,6 +36,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   if (isMarketingHome) {
     return <div className="min-h-screen bg-white">{children}</div>;
+  }
+
+  if (isAuthShell) {
+    return <div className="min-h-screen bg-slate-50">{children}</div>;
   }
 
   return (

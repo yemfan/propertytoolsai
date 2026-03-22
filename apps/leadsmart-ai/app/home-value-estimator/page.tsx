@@ -29,6 +29,9 @@ type ApiResponse = {
   low: number | null;
   high: number | null;
   summary: string;
+  confidence?: string;
+  confidenceScore?: number;
+  recommendations?: string[];
 };
 
 export default function HomeValueEstimatorPage() {
@@ -49,62 +52,54 @@ export default function HomeValueEstimatorPage() {
     setResult(null);
 
     try {
-      // Pull comps (with sold_price/sold_date) from the warehouse-backed API.
-      // MLS CSV import populates `property_snapshots` for sold history, and
-      // `getComparables()` maps that into `property_comps`.
-      const res = await fetch(
-        `/api/property/${encodeURIComponent(address.trim())}`,
-        { method: "GET" }
-      );
+      // Server-side hybrid engine + comps (warehouse / MLS CSV sold history).
+      const res = await fetch("/api/property/estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          address: address.trim(),
+          refresh: true,
+          includeComps: true,
+        }),
+      });
 
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.ok === false) {
-        throw new Error(json?.error ?? "Failed to fetch property comps.");
+        throw new Error(json?.error ?? "Failed to estimate home value.");
       }
 
       const property = json?.property as any;
       const compsRaw = (json?.comps ?? []) as any[];
 
-      const comps: Comparable[] = compsRaw
-        .map((c) => {
-          const compProp = c?.comp_property;
-          const salePriceNum = Number(c?.sold_price ?? 0);
-          const sqftNum = Number(compProp?.sqft ?? 0);
-          if (!salePriceNum || !sqftNum) return null;
-
-          const pricePerSqft = salePriceNum / sqftNum;
-          const soldDateStr = c?.sold_date
-            ? new Date(c.sold_date).toLocaleDateString()
-            : "—";
-
-          return {
-            address: compProp?.address ?? "—",
-            salePrice: salePriceNum,
-            sqft: sqftNum,
-            pricePerSqft,
-            distanceMiles: Number(c?.distance_miles ?? 0),
-            soldDate: soldDateStr,
-          } satisfies Comparable;
-        })
-        .filter(Boolean) as Comparable[];
+      const comps: Comparable[] = compsRaw.map((c) => ({
+        address: String(c?.address ?? "—"),
+        salePrice: Number(c?.salePrice ?? 0),
+        sqft: Number(c?.sqft ?? 0),
+        pricePerSqft: Number(c?.pricePerSqft ?? 0),
+        distanceMiles: Number(c?.distanceMiles ?? 0),
+        soldDate: String(c?.soldDate ?? "—"),
+      }));
 
       const avgPricePerSqft =
-        comps.length > 0
-          ? comps.reduce((sum, c) => sum + c.pricePerSqft, 0) / comps.length
-          : null;
+        json?.medianPricePerSqft != null
+          ? Number(json.medianPricePerSqft)
+          : json?.avgPricePerSqft != null
+            ? Number(json.avgPricePerSqft)
+            : comps.length > 0
+              ? comps.reduce((sum, c) => sum + c.pricePerSqft, 0) / comps.length
+              : null;
+
+      const est = json?.estimate ?? {};
+      const estimatedValue =
+        est.estimatedValue != null ? Number(est.estimatedValue) : null;
+      const low = est.low != null ? Number(est.low) : null;
+      const high = est.high != null ? Number(est.high) : null;
+      const summary = String(
+        est.summary ??
+          "We couldn’t find enough comparable sold data yet. Import MLS CSV sold history first."
+      );
 
       const subjectSqft = Number(property?.sqft ?? 0) || comps[0]?.sqft || 1500;
-      const estimatedValue =
-        avgPricePerSqft != null ? avgPricePerSqft * subjectSqft : null;
-      const low = estimatedValue != null ? estimatedValue * 0.92 : null;
-      const high = estimatedValue != null ? estimatedValue * 1.08 : null;
-
-      const summary =
-        estimatedValue != null
-          ? `Based on recent comparable sold properties, the estimated value of this property is approximately $${Math.round(
-              estimatedValue
-            ).toLocaleString()}.`
-          : "We couldn’t find enough comparable sold data yet. Import MLS CSV sold history first.";
 
       const data: ApiResponse = {
         property: {
@@ -112,9 +107,9 @@ export default function HomeValueEstimatorPage() {
           beds: Number(property?.beds ?? 0),
           baths: Number(property?.baths ?? 0),
           sqft: subjectSqft,
-          lotSize: Number(property?.lot_size ?? 0),
-          yearBuilt: Number(property?.year_built ?? 0),
-          propertyType: String(property?.property_type ?? "—"),
+          lotSize: Number(property?.lotSize ?? property?.lot_size ?? 0),
+          yearBuilt: Number(property?.yearBuilt ?? property?.year_built ?? 0),
+          propertyType: String(property?.propertyType ?? property?.property_type ?? "—"),
         },
         comps,
         avgPricePerSqft,
@@ -122,6 +117,12 @@ export default function HomeValueEstimatorPage() {
         low,
         high,
         summary,
+        confidence: est.confidence,
+        confidenceScore:
+          est.confidenceScore != null ? Number(est.confidenceScore) : undefined,
+        recommendations: Array.isArray(json?.recommendations)
+          ? json.recommendations
+          : undefined,
       };
 
       setResult(data);
@@ -194,8 +195,18 @@ export default function HomeValueEstimatorPage() {
                 {formatCurrency(result.low)} – {formatCurrency(result.high)}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                Range uses ±8% around the point estimate.
+                Range reflects model confidence — not a formal appraisal.
               </p>
+              {result.confidence && (
+                <p className="text-xs text-gray-600 mt-2">
+                  Confidence:{" "}
+                  <span className="font-semibold capitalize">
+                    {result.confidence}
+                  </span>
+                  {result.confidenceScore != null &&
+                    ` (${result.confidenceScore}/100)`}
+                </p>
+              )}
             </div>
             <div className="bg-white shadow rounded-lg p-4 border border-gray-100">
               <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
@@ -271,10 +282,25 @@ export default function HomeValueEstimatorPage() {
             )}
           </div>
 
+          {result.recommendations && result.recommendations.length > 0 && (
+            <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 text-sm text-amber-950">
+              <h2 className="text-sm font-semibold mb-2">Suggested next steps</h2>
+              <ul className="list-disc list-inside space-y-1 text-xs">
+                {result.recommendations.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2 bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-900">
-              <h2 className="text-sm font-semibold mb-2">AI Summary</h2>
+              <h2 className="text-sm font-semibold mb-2">Estimate summary</h2>
               <p>{result.summary}</p>
+              <p className="text-xs mt-2 opacity-90">
+                This is an automated estimate for planning purposes only, not an
+                appraisal.
+              </p>
             </div>
             <div className="bg-white border border-gray-100 rounded-lg p-4 text-sm shadow-sm">
               <h2 className="text-sm font-semibold mb-2">

@@ -21,14 +21,16 @@ Checkout is allowed when **any** of these is true:
 
 After login, users with a **professional role** (same list as above) or an **`agents`** row are sent to the **agent dashboard** (same behavior as before, extended beyond `role === "agent"`).
 
-## Billing portal (`/portal`)
+## Billing (Stripe Customer Portal)
 
-After login, users with **`user_profiles.role`** in `agent`, `broker`, or `admin`, or anyone with an **`agents`** row, are redirected to **`/portal`** (unless `?redirect=` is set). The page shows plan status and opens **Stripe Customer Billing Portal** (`POST /api/stripe/portal`). Stripe `return_url` returns to `/portal`. Customer id is resolved from `agents.stripe_customer_id` or `user_profiles.stripe_customer_id`.
+**PropertyTools AI** does not expose a `/portal` page in the nav; **`/portal` redirects to `/dashboard`**. Stripe Billing Portal (`POST /api/stripe/portal`) uses `return_url` → `/dashboard`. Customer id is resolved from `agents.stripe_customer_id` or `user_profiles.stripe_customer_id`.
+
+**LeadSmart AI** may still use **`/portal`** and `shouldLandOnPortalAfterLogin` for post-login routing (see `apps/leadsmart-ai/lib/portalLanding.ts`).
 
 ## Implementation
 
 - `apps/property-tools/lib/paidSubscriptionEligibility.ts`
 - `apps/leadsmart-ai/lib/paidSubscriptionEligibility.ts` (mirrored)
-- `apps/*/lib/portalLanding.ts` — `shouldLandOnPortalAfterLogin`
+- `apps/leadsmart-ai/lib/portalLanding.ts` — `shouldLandOnPortalAfterLogin` (LeadSmart only)
 - `apps/*/lib/stripeCustomerForUser.ts` — shared Stripe customer lookup
 - Stripe: `POST /api/create-checkout-session` and `POST /api/stripe/checkout` (property-tools)

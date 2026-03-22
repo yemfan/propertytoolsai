@@ -1,19 +1,54 @@
 "use client";
 
+import { useEffect } from "react";
+
 export default function PaywallModal(props: {
   open: boolean;
   onClose: () => void;
   message?: string;
   ctaLabel?: string;
   ctaHref?: string;
+  /** When set, dialog closes first, then this runs (e.g. `startCheckout` → Stripe). */
+  onPrimaryClick?: () => void | Promise<void>;
 }) {
+  useEffect(() => {
+    if (!props.open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") props.onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [props.open, props.onClose]);
+
   if (!props.open) return null;
+
+  async function handlePrimary() {
+    props.onClose();
+    if (props.onPrimaryClick) {
+      await props.onPrimaryClick();
+    }
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3">
-      <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex items-start justify-between gap-3">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center">
+      <button
+        type="button"
+        className="absolute inset-0 z-0 cursor-pointer border-0 bg-transparent p-0"
+        aria-label="Close dialog"
+        onClick={props.onClose}
+      />
+      <div
+        className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="leadsmart-paywall-title"
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-5">
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-slate-900">Upgrade to continue</div>
+            <div id="leadsmart-paywall-title" className="text-sm font-semibold text-slate-900">
+              Upgrade to continue
+            </div>
             <div className="text-xs text-slate-600 mt-1">
               {props.message ?? "You’ve reached your free limit. Upgrade to continue."}
             </div>
@@ -27,12 +62,23 @@ export default function PaywallModal(props: {
           </button>
         </div>
         <div className="p-5 space-y-3">
-          <a
-            href={props.ctaHref ?? "/pricing"}
-            className="w-full inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            {props.ctaLabel ?? "Start Free Trial"}
-          </a>
+          {props.onPrimaryClick ? (
+            <button
+              type="button"
+              className="w-full inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+              onClick={() => void handlePrimary()}
+            >
+              {props.ctaLabel ?? "Start Free Trial"}
+            </button>
+          ) : (
+            <a
+              href={props.ctaHref ?? "/pricing?checkout_plan=pro"}
+              className="w-full inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+              onClick={() => props.onClose()}
+            >
+              {props.ctaLabel ?? "Start Free Trial"}
+            </a>
+          )}
           <p className="text-[11px] text-slate-500">
             Unlock CRM, alerts, dashboard insights, and higher usage limits.
           </p>

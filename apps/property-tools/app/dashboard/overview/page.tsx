@@ -211,7 +211,7 @@ export default async function OverviewPage() {
           <div>
             <div className="text-sm font-semibold text-brand-text">Quick Actions</div>
             <div className="text-xs text-brand-text/80 mt-1">
-              Launch the most common workflows without leaving the portal.
+              Launch the most common workflows without leaving your dashboard.
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">

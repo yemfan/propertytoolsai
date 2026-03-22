@@ -115,7 +115,7 @@ function SmartCmaBuilderPageInner() {
 
   useEffect(() => {
     // Populate lead dropdown from the authenticated agent's CRM.
-    // The portal already uses /api/leads elsewhere, so we reuse it here.
+    // Reuse the same `/api/leads` CRM endpoint used elsewhere in the app.
     let cancelled = false;
     async function load() {
       setLeadOptionsLoading(true);
@@ -761,8 +761,7 @@ function SmartCmaBuilderPageInner() {
       open={paywallOpen}
       onClose={() => setPaywallOpen(false)}
       message="You’ve reached your limit. Upgrade to continue."
-      ctaLabel="Upgrade"
-      ctaHref="/pricing"
+      ctaLabel="Upgrade Now"
     />
     {paywallOpen ? (
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">

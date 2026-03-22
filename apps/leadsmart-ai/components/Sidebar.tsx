@@ -147,6 +147,7 @@ export default function Sidebar() {
 
         <Link
           href="/dashboard/comparison-report"
+          prefetch={false}
           className="block px-3 py-2 rounded-lg hover:bg-gray-100"
         >
           AI Comparison Report

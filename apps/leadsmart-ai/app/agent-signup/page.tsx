@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { safeInternalRedirect } from "@/lib/loginUrl";
 import { supabaseBrowser } from "../../lib/supabaseBrowser";
 
 function AgentSignupForm() {
@@ -110,7 +111,8 @@ function AgentSignupForm() {
       );
       if (upsertAgentErr) throw upsertAgentErr;
 
-      router.push("/dashboard");
+      const after = safeInternalRedirect(searchParams.get("redirect"));
+      router.push(after ?? "/dashboard");
     } catch (e: any) {
       const msg = String(e?.message ?? "");
       if (/rate limit|too many requests/i.test(msg)) {

@@ -43,6 +43,15 @@ export default function AuthModal({
     }
   }, [open, initialMode]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !loading) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, loading, onClose]);
+
   if (!open) return null;
 
   async function submit(e: React.FormEvent) {
@@ -121,12 +130,19 @@ export default function AuthModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
-        onClick={() => (loading ? null : onClose())}
+      <button
+        type="button"
+        className="absolute inset-0 z-0 cursor-pointer border-0 bg-slate-900/40 p-0 backdrop-blur-sm"
+        aria-label="Close"
+        onClick={() => !loading && onClose()}
       />
 
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+      <div
+        className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
         <div className="p-4 sm:p-5 bg-slate-50 border-b border-slate-200">
           <div className="text-sm font-bold text-slate-900">{header.title}</div>
           <p className="mt-1 text-xs text-slate-700 whitespace-pre-line">

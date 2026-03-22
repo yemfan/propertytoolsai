@@ -95,6 +95,7 @@ export function AccessProvider({ children }: { children: ReactNode }) {
         open={paywallOpen}
         onClose={() => setPaywallOpen(false)}
         message={paywallMessage}
+        ctaLabel="Upgrade Now"
       />
     </AccessContext.Provider>
   );

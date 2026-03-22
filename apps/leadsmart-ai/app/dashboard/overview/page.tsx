@@ -20,7 +20,17 @@ export default async function OverviewPage() {
     .eq("agent_id", ctx.agentId)
     .limit(500);
   const leadRows = (leads as any[]) ?? [];
-  const leadIds = leadRows.map((l) => Number(l.id));
+  /** Match `leads.id` / `lead_events.lead_id` type (bigint vs uuid) — never pass NaN to `.in()`. */
+  const leadIds = leadRows
+    .map((l) => {
+      const raw = (l as any).id;
+      if (raw == null) return null;
+      if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+      const s = String(raw).trim();
+      if (/^\d+$/.test(s)) return Number(s);
+      return s;
+    })
+    .filter((x): x is string | number => x != null);
 
   const totalLeads = leadRows.length;
   const hotLeads = leadRows.filter((l) => String(l.rating ?? "").toLowerCase() === "hot").length;

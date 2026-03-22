@@ -131,7 +131,7 @@ export default function AgentSignupPage() {
         <div className="space-y-1 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0072ce]">Agents</p>
           <h1 className="font-heading text-xl font-bold text-slate-900 md:text-2xl">Start free as agent</h1>
-          <p className="text-sm text-slate-600">Agent portal, CMA tools, and lead workflows.</p>
+          <p className="text-sm text-slate-600">Agent dashboard, CMA tools, and lead workflows.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">

@@ -28,6 +28,15 @@ export default function AuthModal(props: {
     }
   }, [props.open, props.initialMode]);
 
+  useEffect(() => {
+    if (!props.open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !loading) props.onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [props.open, loading, props.onClose]);
+
   if (!props.open) return null;
 
   async function handleLogin(e: React.FormEvent) {
@@ -104,12 +113,18 @@ export default function AuthModal(props: {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/45 p-3 sm:items-center">
-      <div
-        className="absolute inset-0"
-        aria-hidden
+      <button
+        type="button"
+        className="absolute inset-0 z-0 cursor-pointer border-0 bg-transparent p-0"
+        aria-label="Close dialog"
         onClick={() => !loading && props.onClose()}
       />
-      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+      <div
+        className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
         <div className="border-b border-slate-100 px-5 py-4">
           <div className="flex items-start justify-between gap-3">
             <div>

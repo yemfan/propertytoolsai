@@ -21,14 +21,19 @@ export async function GET(req: Request) {
 
     const user = userData.user;
 
-    // Resolve agent_id via agents.auth_user_id (fallback to user.id).
     const { data: agentRow } = await supabase
       .from("agents")
       .select("id,auth_user_id")
       .eq("auth_user_id", user.id)
       .maybeSingle();
 
-    const agentId = (agentRow as any)?.id ?? user.id;
+    const agentId = (agentRow as any)?.id;
+    if (agentId == null) {
+      return NextResponse.json(
+        { error: "Complete agent signup before using the CRM.", code: "NO_AGENT_ROW" },
+        { status: 403 }
+      );
+    }
 
     let q = supabase
       .from("leads")

@@ -12,10 +12,7 @@ export async function proxy(req: NextRequest) {
   });
 
   const { pathname } = req.nextUrl;
-  const isProtected =
-    pathname.startsWith("/dashboard") ||
-    pathname === "/portal" ||
-    pathname.startsWith("/portal/");
+  const isProtected = pathname.startsWith("/dashboard");
 
   const publicEnv = getSupabasePublicEnv();
   if (!publicEnv) {
@@ -70,5 +67,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/portal", "/portal/:path*"],
+  matcher: ["/dashboard/:path*"],
 };

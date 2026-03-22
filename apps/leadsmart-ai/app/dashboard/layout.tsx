@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { ERROR_DASHBOARD_NO_AGENT_ROW, getCurrentAgentContext } from "@/lib/dashboardService";
 import { isRedirectError } from "@/lib/isRedirectError";
 import TopBar from "@/components/dashboard/TopBar";
 import { supabaseServer } from "@/lib/supabaseServer";
@@ -37,6 +37,9 @@ export default async function DashboardLayout({
       const msg = e instanceof Error ? e.message : "";
       if (msg === "Not authenticated") {
         redirect("/login?redirect=/dashboard");
+      }
+      if (msg === ERROR_DASHBOARD_NO_AGENT_ROW) {
+        redirect("/agent-signup?redirect=/dashboard");
       }
       throw e;
     }

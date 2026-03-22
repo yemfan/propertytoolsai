@@ -114,11 +114,13 @@ export default function PricingPage() {
   const [leadUsage, setLeadUsage] = useState<{ count: number; limit: number | null; plan: string } | null>(null);
   const [cmaUsage, setCmaUsage] = useState<{ used: number; limit: number; reached: boolean; warning: boolean } | null>(null);
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [paywallDismissed, setPaywallDismissed] = useState(false);
   const [paywallMsg, setPaywallMsg] = useState("You’ve reached your limit. Upgrade to continue.");
   const [error, setError] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const trialCheckoutSentRef = useRef(false);
+  const checkoutPlanAutoRef = useRef(false);
   const checkoutErrorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -139,6 +141,14 @@ export default function PricingPage() {
       sub.subscription.unsubscribe();
     };
   }, []);
+
+  const limitsForcePaywall = Boolean(
+    (leadUsage && leadUsage.limit != null && leadUsage.count >= leadUsage.limit) || cmaUsage?.reached
+  );
+
+  useEffect(() => {
+    if (!limitsForcePaywall) setPaywallDismissed(false);
+  }, [limitsForcePaywall]);
 
   /** After login at `/pricing?trial_checkout=1`, open Stripe (Pro + trial period). */
   useEffect(() => {
@@ -248,7 +258,9 @@ export default function PricingPage() {
       } = await supabaseBrowser().auth.getSession();
       if (!session) {
         setLoadingPlan(null);
-        window.location.assign(loginUrl({ redirect: "/pricing", reason: "checkout" }));
+        window.location.assign(
+          loginUrl({ redirect: `/pricing?checkout_plan=${plan}`, reason: "checkout" })
+        );
         return;
       }
       const headers = await mergeAuthHeaders();
@@ -279,6 +291,20 @@ export default function PricingPage() {
       setLoadingPlan(null);
     }
   }
+
+  /** Deep link: `/pricing?checkout_plan=pro` opens Stripe Checkout after sign-in. */
+  useEffect(() => {
+    if (!authReady || !loggedIn || checkoutPlanAutoRef.current) return;
+    if (typeof window === "undefined") return;
+    const plan = new URLSearchParams(window.location.search).get("checkout_plan");
+    if (plan !== "pro" && plan !== "premium") return;
+    checkoutPlanAutoRef.current = true;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("checkout_plan");
+    const q = url.searchParams.toString();
+    window.history.replaceState({}, "", `${url.pathname}${q ? `?${q}` : ""}`);
+    void startCheckout(plan as "pro" | "premium");
+  }, [authReady, loggedIn]);
 
   async function startTrial() {
     setError(null);
@@ -560,11 +586,14 @@ export default function PricingPage() {
       </Card>
 
       <PaywallModal
-        open={paywallOpen || Boolean((leadUsage && leadUsage.limit != null && leadUsage.count >= leadUsage.limit) || cmaUsage?.reached)}
-        onClose={() => setPaywallOpen(false)}
+        open={(paywallOpen || limitsForcePaywall) && !paywallDismissed}
+        onClose={() => {
+          setPaywallOpen(false);
+          setPaywallDismissed(true);
+        }}
         message={paywallMsg}
         ctaLabel="Upgrade Now"
-        ctaHref="/pricing"
+        onPrimaryClick={() => startCheckout("pro")}
       />
     </div>
   );

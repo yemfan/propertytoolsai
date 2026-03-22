@@ -1,5 +1,6 @@
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { getLeadLimit } from "@/lib/planLimits";
+import { throwIfSupabaseError } from "@/lib/supabaseThrow";
 
 export type LeadStatus = "new" | "contacted" | "qualified" | "closed";
 
@@ -71,6 +72,12 @@ type AgentRow = {
   plan_type: "free" | "pro" | "elite" | string;
 };
 
+/**
+ * Thrown when the user is signed in but has no `agents` row. Never use `auth.users.id`
+ * as `agent_id` — CRM tables use `agents.id` (often bigint); a UUID causes Postgres 22P02.
+ */
+export const ERROR_DASHBOARD_NO_AGENT_ROW = "DASHBOARD_NO_AGENT_ROW";
+
 export async function getCurrentAgentContext(): Promise<{
   userId: string;
   agentId: string;
@@ -99,9 +106,14 @@ export async function getCurrentAgentContext(): Promise<{
     throw new Error(m || (code ? `Agent lookup failed (${code})` : "Agent lookup failed"));
   }
 
+  const agentIdRaw = (agent as any)?.id;
+  if (agentIdRaw == null || agentIdRaw === "") {
+    throw new Error(ERROR_DASHBOARD_NO_AGENT_ROW);
+  }
+
   return {
     userId: user.id,
-    agentId: (agent as any)?.id ?? user.id,
+    agentId: String(agentIdRaw),
     planType: ((agent as any)?.plan_type ?? "free") as AgentRow["plan_type"],
     email: user.email ?? null,
   };
@@ -129,7 +141,7 @@ export async function getLeadUsageThisMonth(): Promise<{
     .eq("agent_id", agentId)
     .gte("created_at", start.toISOString());
 
-  if (error) throw error;
+  throwIfSupabaseError(error, "Could not load lead usage");
 
   const limit = getLeadLimit(planType);
   return { used: count ?? 0, limit, planType };
@@ -167,7 +179,7 @@ export async function getLeads(params?: {
   }
 
   const { data, error } = await q;
-  if (error) throw error;
+  throwIfSupabaseError(error, "Could not load leads");
   const leads = (data as LeadRow[]) ?? [];
   const leadIds = leads.map((l) => l.id).filter(Boolean);
   let scoreMap: Record<string, any> = {};
@@ -211,7 +223,7 @@ export async function getContacts(limit = 200): Promise<ContactRow[]> {
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (error) throw error;
+  throwIfSupabaseError(error, "Could not load contacts");
   return (data as ContactRow[]) ?? [];
 }
 
@@ -226,7 +238,7 @@ export async function getReports(limit = 200): Promise<PropertyReportRow[]> {
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (error) throw error;
+  throwIfSupabaseError(error, "Could not load reports");
   return (data as PropertyReportRow[]) ?? [];
 }
 
@@ -240,7 +252,7 @@ export async function updateLeadStatus(id: string, status: LeadStatus) {
     .eq("id", id)
     .eq("agent_id", agentId);
 
-  if (error) throw error;
+  throwIfSupabaseError(error, "Could not update lead status");
 }
 
 export async function updateLeadNotes(id: string, notes: string) {
@@ -253,7 +265,7 @@ export async function updateLeadNotes(id: string, notes: string) {
     .eq("id", id)
     .eq("agent_id", agentId);
 
-  if (error) throw error;
+  throwIfSupabaseError(error, "Could not update lead notes");
 }
 
 export async function updateLeadFollowUpSettings(
@@ -288,6 +300,6 @@ export async function updateLeadFollowUpSettings(
     .eq("id", id)
     .eq("agent_id", agentId);
 
-  if (error) throw error;
+  throwIfSupabaseError(error, "Could not update follow-up settings");
 }
 
