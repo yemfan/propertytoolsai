@@ -8,8 +8,9 @@ const monorepoRoot = path.join(__dirname, "../..");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Repo-root Vercel deploys only (see root `build:vercel-*-root`). App deploys use default `.next` under this package.
+  // Relative to this app dir — see `apps/property-tools/next.config.js` (absolute distDir breaks Windows).
   ...(process.env.NEXT_DIST_IN_MONOREPO_ROOT === "1" && {
-    distDir: path.join(monorepoRoot, ".next"),
+    distDir: "../../.next",
   }),
   // Trace serverless bundles from repo root (required for npm workspaces on Vercel)
   outputFileTracingRoot: monorepoRoot,

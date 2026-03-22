@@ -14,7 +14,7 @@
  * and deployment URLs (so "Property Tools AI" / property.tools match property-tools).
  */
 import { execSync } from "node:child_process";
-import { cpSync, existsSync, rmSync } from "node:fs";
+import { cpSync, existsSync, readdirSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -120,6 +120,21 @@ if (process.env.VERCEL === "1") {
       repoManifest,
       "— `next build` did not finish. Scroll up for TypeScript / OOM / prerender errors.",
     );
+    for (const label of [
+      ["repo .next", repoNextDir],
+      ["app .next", appNextDir],
+    ]) {
+      if (existsSync(label[1])) {
+        try {
+          console.error(
+            `[vercel-monorepo-root-build] ${label[0]} exists; top-level entries:`,
+            readdirSync(label[1]).slice(0, 20).join(", "),
+          );
+        } catch {
+          /* ignore */
+        }
+      }
+    }
     console.error(
       "[vercel-monorepo-root-build] Prefer Vercel Root Directory = apps/" + app + " (see docs/VERCEL.md).",
     );

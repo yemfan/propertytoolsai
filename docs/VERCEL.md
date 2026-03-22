@@ -35,7 +35,7 @@ Prefer fixing **Root Directory** to **`apps/<app>`** instead of repo root.
 
 **Repo-root `vercel.json`:** The file **`vercel.json`** at the **repository root** sets **`buildCommand`** to **`npm run build`** so Vercel does **not** auto-select **`turbo run build`** (which leaves **`.next`** under **`apps/<app>`**). It is **ignored** when **Root Directory** is **`apps/<app>`** (that folder’s **`vercel.json`** applies instead).
 
-**`next.config.js` `distDir`:** Only **`NEXT_DIST_IN_MONOREPO_ROOT=1`** (repo-root deploys) sets **`distDir`** to **`<repo>/.next`**. Normal app deploys use the default **`apps/<app>/.next`**.
+**`next.config.js` `distDir`:** Only **`NEXT_DIST_IN_MONOREPO_ROOT=1`** (repo-root deploys) sets **`distDir`** to **`../../.next`** (relative to **`apps/<app>`**, resolves to **`<repo>/.next`**). It must stay **relative** — an absolute path breaks Next’s internal **`path.join(appDir, distDir)`** on Windows and can yield a failed build with no **`routes-manifest.json`**. Normal app deploys use the default **`apps/<app>/.next`**.
 
 **`scripts/vercel-sync-next-output.mjs`:** **Optional / diagnostic.** Repo-root **`npm run build`** does **not** invoke it — **`vercel-monorepo-root-build.mjs`** writes **`.next`** at the repo root via **`NEXT_DIST_IN_MONOREPO_ROOT=1`**, with a **copy fallback** only if needed. You can still run this script manually. **App-level** **`apps/<app>/vercel.json`** never runs it.
 
