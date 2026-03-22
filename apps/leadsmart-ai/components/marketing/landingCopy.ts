@@ -158,6 +158,18 @@ const agentCopy: LandingCopy = {
       },
     ],
   },
+  valueStack: {
+    title: "Why Agents Choose LeadSmart AI",
+    benefits: [
+      "More qualified buyer & seller conversations",
+      "Faster response time on every lead",
+      "Higher conversion from traffic you already have",
+      "Less manual follow-up and admin",
+      "A pipeline you can see and act on daily",
+    ],
+    closingLine1: "This isn’t just a tool.",
+    closingLine2: "It’s your unfair advantage.",
+  },
   proof: {
     title: "Agents Are Already Seeing Results",
     quotes: [
