@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { forwardRef, type ButtonHTMLAttributes } from "react";
+import { forwardRef, type ButtonHTMLAttributes, type MouseEventHandler } from "react";
 import { cn } from "@/lib/utils";
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -24,18 +24,20 @@ const baseClass =
   "inline-flex items-center justify-center rounded-md text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { className, variant = "default", size = "default", href, type = "button", ...props },
+  { className, variant = "default", size = "default", href, type = "button", onClick, ...props },
   ref
 ) {
   const classes = cn(baseClass, variantClass[variant], sizeClass[size], className);
 
   if (href) {
     return (
-      <Link href={href} className={classes}>
+      <Link href={href} className={classes} onClick={onClick as unknown as MouseEventHandler<HTMLAnchorElement> | undefined}>
         {props.children}
       </Link>
     );
   }
 
-  return <button ref={ref} type={type} className={classes} {...props} />;
+  return (
+    <button ref={ref} type={type} className={classes} onClick={onClick} {...props} />
+  );
 });

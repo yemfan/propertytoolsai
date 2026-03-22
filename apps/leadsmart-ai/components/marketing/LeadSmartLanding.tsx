@@ -6,9 +6,25 @@ import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import ExitIntentPopup from "@/components/marketing/ExitIntentPopup";
+import VslSection from "@/components/VslSection";
 
 const primaryCtaHref = "/onboarding";
 const demoCtaHref = "/home-value-funnel";
+
+/** VSL: MP4 > Vimeo > YouTube (`NEXT_PUBLIC_*` env vars). */
+function getVslConfig(): {
+  videoType: "youtube" | "vimeo" | "html5";
+  videoIdOrUrl: string;
+} {
+  const mp4 = process.env.NEXT_PUBLIC_VSL_MP4_URL?.trim();
+  if (mp4) return { videoType: "html5", videoIdOrUrl: mp4 };
+  const vimeo = process.env.NEXT_PUBLIC_VSL_VIMEO_ID?.trim();
+  if (vimeo) return { videoType: "vimeo", videoIdOrUrl: vimeo };
+  return {
+    videoType: "youtube",
+    videoIdOrUrl: process.env.NEXT_PUBLIC_VSL_YOUTUBE_ID?.trim() ?? "",
+  };
+}
 
 /** LeadSmart brand palette (see app/globals.css --color-primary / success / accent) */
 const BRAND = {
@@ -161,6 +177,15 @@ export default function LeadSmartLanding() {
           </div>
           </div>
         </section>
+
+        <VslSection
+          {...getVslConfig()}
+          title="See the full system: traffic → reply → booked appointment"
+          subtitle="Watch how LeadSmart AI qualifies and follows up so you show up first — without living in your inbox."
+          ctaText="Get My First Leads"
+          ctaHref={primaryCtaHref}
+          trustText="No credit card required to start · Cancel anytime"
+        />
 
         {/* PROBLEM — emotional + direct */}
         <section

@@ -11,7 +11,9 @@ export type LandingEventName =
   | "landing_ecosystem_tools_click"
   | "landing_exit_intent_open"
   | "landing_exit_intent_dismiss"
-  | "landing_exit_intent_submit";
+  | "landing_exit_intent_submit"
+  | "vsl_play_clicked"
+  | "vsl_cta_clicked";
 
 export function trackLandingEvent(
   event: LandingEventName,

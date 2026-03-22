@@ -7,6 +7,13 @@ const monorepoRoot = path.join(__dirname, "../..");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "img.youtube.com", pathname: "/**" },
+      { protocol: "https", hostname: "i.ytimg.com", pathname: "/**" },
+      { protocol: "https", hostname: "i.vimeocdn.com", pathname: "/**" },
+    ],
+  },
   // Repo-root Vercel deploys only (see root `build:vercel-*-root`). App deploys use default `.next` under this package.
   // Relative to this app dir — see `apps/property-tools/next.config.js` (absolute distDir breaks Windows).
   ...(process.env.NEXT_DIST_IN_MONOREPO_ROOT === "1" && {
