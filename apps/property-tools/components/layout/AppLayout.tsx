@@ -1,12 +1,23 @@
 "use client";
 
 import { ReactNode, useState } from "react";
+import { usePathname } from "next/navigation";
 import { AccessProvider } from "@/components/AccessProvider";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  const isMarketingHome = pathname === "/";
+
+  if (isMarketingHome) {
+    return (
+      <AccessProvider>
+        <div className="min-h-screen bg-white text-slate-900">{children}</div>
+      </AccessProvider>
+    );
+  }
 
   return (
     <AccessProvider>

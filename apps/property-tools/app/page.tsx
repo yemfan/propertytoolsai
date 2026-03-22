@@ -1,25 +1,17 @@
-import Card from "@/components/ui/Card";
-import QuickActions from "@/components/dashboard/QuickActions";
-import ToolGrid from "@/components/dashboard/ToolGrid";
-import NextSteps from "@/components/NextSteps";
+import type { Metadata } from "next";
+import PropertyToolsPage from "@/components/landing/PropertyToolsPage";
 
-export default function DashboardPage() {
-  return (
-    <div className="space-y-8">
-      <QuickActions />
+export const metadata: Metadata = {
+  title: "PropertyTools AI — Free AI Real Estate Tools",
+  description:
+    "Instantly check your home value, compare properties, and estimate your mortgage — free AI-powered tools for buyers, sellers, and investors.",
+  openGraph: {
+    title: "PropertyTools AI — Smarter Tools to Buy, Sell, or Finance a Home",
+    description:
+      "Home value estimator, mortgage calculator, AI property comparison, and refinance analyzer — start free.",
+  },
+};
 
-      <NextSteps />
-
-      <ToolGrid />
-
-      <Card className="p-5">
-        <h3 className="text-base font-bold text-slate-900">Activity Snapshot</h3>
-        <p className="mt-2 text-sm text-slate-600">
-          Tool usage, saved scenarios, and recent calculations will appear here as your workspace
-          grows.
-        </p>
-      </Card>
-    </div>
-  );
+export default function HomePage() {
+  return <PropertyToolsPage />;
 }
-

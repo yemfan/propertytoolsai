@@ -1,0 +1,40 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Blog | PropertyTools AI",
+  description: "Real estate investing, cap rate, mortgages, and property analysis articles.",
+};
+
+const POSTS: { href: string; title: string }[] = [
+  { href: "/blog/what-is-cap-rate", title: "What is cap rate?" },
+  { href: "/blog/how-to-calculate-cap-rate", title: "How to calculate cap rate" },
+  { href: "/blog/cap-rate-vs-cash-on-cash-return", title: "Cap rate vs cash-on-cash return" },
+  { href: "/blog/cap-rate-calculator-how-to-use-it", title: "How to use a cap rate calculator" },
+  { href: "/blog/why-cap-rate-matters-for-real-estate-investors", title: "Why cap rate matters" },
+  { href: "/blog/how-cap-rate-affects-property-value", title: "How cap rate affects property value" },
+];
+
+export default function BlogIndexPage() {
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
+      <header className="space-y-2">
+        <p className="text-sm font-semibold uppercase tracking-wide text-[#0072ce]">Blog</p>
+        <h1 className="font-heading text-3xl font-bold text-slate-900">Articles &amp; guides</h1>
+        <p className="text-slate-600">Education for buyers, sellers, and investors.</p>
+      </header>
+      <ul className="mt-10 space-y-3">
+        {POSTS.map((p) => (
+          <li key={p.href}>
+            <Link
+              href={p.href}
+              className="block rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm transition hover:border-[#0072ce]/30 hover:text-[#0072ce]"
+            >
+              {p.title}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

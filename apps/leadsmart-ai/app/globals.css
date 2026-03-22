@@ -173,6 +173,9 @@ a:hover {
 .landing-delay-4 {
   animation-delay: 0.24s;
 }
+.landing-delay-5 {
+  animation-delay: 0.3s;
+}
 
 .landing-hero-float {
   animation: landing-float 5s ease-in-out infinite;
@@ -183,7 +186,8 @@ a:hover {
   .landing-delay-1,
   .landing-delay-2,
   .landing-delay-3,
-  .landing-delay-4 {
+  .landing-delay-4,
+  .landing-delay-5 {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

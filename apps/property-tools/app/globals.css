@@ -25,6 +25,10 @@
   --color-text: #333333;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html, body {
   height: 100%;
 }

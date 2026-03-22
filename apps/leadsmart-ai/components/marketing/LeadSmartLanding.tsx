@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { getLandingCopy, ROLE_STORAGE_KEY, type UserRole } from "@/components/marketing/landingCopy";
-import { LandingButton, LandingCard, LandingSectionLabel } from "@/components/marketing/LandingPrimitives";
+import { LandingButton, LandingSectionLabel } from "@/components/marketing/LandingPrimitives";
 import { trackLandingEvent } from "@/lib/marketing/landingTrack";
 
 const nav = [
@@ -12,41 +12,9 @@ const nav = [
   { href: "#solution", label: "Solution" },
   { href: "#how-it-works", label: "How it works" },
   { href: "#product", label: "Product" },
+  { href: "#value-stack", label: "Why us" },
   { href: "#proof", label: "Results" },
   { href: "#pricing", label: "Pricing" },
-];
-
-const plans = [
-  {
-    name: "Free",
-    price: "$0",
-    period: "/mo",
-    blurb: "Prove the funnel",
-    features: ["Core capture flows", "Starter CRM", "Explore automations"],
-    cta: "Get Started Free",
-    href: "/agent-signup",
-    highlight: false,
-  },
-  {
-    name: "Pro",
-    price: "$49",
-    period: "/mo",
-    blurb: "For active producers",
-    features: ["Higher limits", "Full CRM & scoring", "Engagement analytics"],
-    cta: "Upgrade to Pro",
-    href: "/pricing",
-    highlight: true,
-  },
-  {
-    name: "Premium",
-    price: "$99",
-    period: "/mo",
-    blurb: "Teams & scale",
-    features: ["Expanded automation", "Team seats", "Priority support"],
-    cta: "View Premium",
-    href: "/pricing",
-    highlight: false,
-  },
 ];
 
 function RoleToggle({ role, onChange }: { role: UserRole; onChange: (r: UserRole) => void }) {
@@ -298,7 +266,7 @@ export default function LeadSmartLanding() {
         {/* Hero */}
         <section id="hero" className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_-30%,rgba(0,114,206,0.4),transparent)]" />
-          <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-22 lg:grid-cols-2 lg:gap-16 lg:py-28">
+          <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:gap-16 lg:py-28">
             <div className="landing-animate">
               <p className="mb-4 inline-flex rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-sky-200/95">
                 {copy.hero.eyebrow}
@@ -306,13 +274,20 @@ export default function LeadSmartLanding() {
               <h1 className="font-heading text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-[2.75rem] xl:text-6xl">
                 {copy.hero.headline}
               </h1>
-              <p className="landing-animate landing-delay-1 mt-5 max-w-xl text-lg leading-relaxed text-slate-300 sm:text-xl">
-                {copy.hero.subhead}
+              <p className="landing-animate landing-delay-1 mt-5 max-w-xl text-lg font-medium leading-relaxed text-white sm:text-xl">
+                {copy.hero.line1}
               </p>
-              <p className="landing-animate landing-delay-2 mt-4 max-w-xl text-sm leading-relaxed text-slate-400 sm:text-base">
-                {copy.hero.supporting}
-              </p>
-              <div className="landing-animate landing-delay-3 mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              {copy.hero.line2 ? (
+                <p className="landing-animate landing-delay-2 mt-4 max-w-xl text-lg leading-relaxed text-slate-300 sm:text-xl">
+                  {copy.hero.line2}
+                </p>
+              ) : null}
+              {copy.hero.line3 ? (
+                <p className="landing-animate landing-delay-3 mt-4 max-w-xl text-sm leading-relaxed text-slate-400 sm:text-base">
+                  {copy.hero.line3}
+                </p>
+              ) : null}
+              <div className="landing-animate landing-delay-4 mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <LandingButton
                   href={signupHref}
                   variant="ghost"
@@ -332,15 +307,10 @@ export default function LeadSmartLanding() {
                 >
                   {copy.hero.secondaryCta}
                 </LandingButton>
-                <Link
-                  href="#product"
-                  className="text-center text-sm font-semibold text-sky-200/90 underline-offset-4 hover:underline sm:ml-1"
-                  onClick={() => onNav("hero_product_anchor", "#product")}
-                >
-                  Explore product →
-                </Link>
               </div>
-              <p className="landing-animate landing-delay-4 mt-8 text-sm text-slate-500">{copy.hero.trustLine}</p>
+              <p className="landing-animate landing-delay-5 mt-6 max-w-xl text-sm text-slate-400">
+                {copy.hero.trustLine}
+              </p>
             </div>
             <div className="landing-animate landing-delay-2 justify-self-center lg:justify-self-end">
               <HeroVisual />
@@ -352,19 +322,31 @@ export default function LeadSmartLanding() {
         <section id="problem" className="scroll-mt-24 border-b border-slate-100 bg-slate-50 py-16 sm:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <LandingSectionLabel>Problem</LandingSectionLabel>
-            <div className="max-w-2xl">
-              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{copy.problem.title}</h2>
-              <p className="mt-4 text-lg text-slate-600">{copy.problem.subtitle}</p>
+            <div className="max-w-3xl">
+              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.25rem]">
+                {copy.problem.title}
+              </h2>
+              <p className="mt-3 font-heading text-2xl font-bold tracking-tight text-[#0072ce] sm:text-3xl">
+                {copy.problem.subtitle}
+              </p>
+              <p className="mt-8 text-lg font-medium text-slate-800">{copy.problem.intro}</p>
+              <p className="mt-6 text-sm font-bold uppercase tracking-wide text-slate-500">{copy.problem.painLabel}</p>
+              <ul className="mt-3 space-y-3 text-lg text-slate-800">
+                {copy.problem.pains.map((line) => (
+                  <li key={line} className="flex gap-3">
+                    <span className="shrink-0 select-none" aria-hidden>
+                      ❌
+                    </span>
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                <p className="text-lg text-slate-600">{copy.problem.closingLead}</p>
+                <p className="mt-3 font-heading text-xl font-bold text-slate-900 sm:text-2xl">{copy.problem.closingEmphasis}</p>
+              </div>
             </div>
-            <div className="mt-12 grid gap-6 md:grid-cols-3">
-              {copy.problem.points.map((p) => (
-                <LandingCard key={p.title}>
-                  <h3 className="font-heading text-lg font-semibold text-slate-900">{p.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{p.body}</p>
-                </LandingCard>
-              ))}
-            </div>
-            <div className="mt-10 flex justify-center">
+            <div className="mt-10 flex justify-center sm:justify-start">
               <LandingButton href={signupHref} variant="primary" onClick={() => onCta("problem_cta", signupHref)}>
                 Fix my follow-up →
               </LandingButton>
@@ -375,22 +357,31 @@ export default function LeadSmartLanding() {
         {/* Solution */}
         <section id="solution" className="scroll-mt-24 py-16 sm:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <div className="mx-auto max-w-2xl text-center">
+            <div className="mx-auto max-w-3xl text-center">
               <LandingSectionLabel>Solution</LandingSectionLabel>
-              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{copy.solution.title}</h2>
-              <p className="mt-4 text-lg text-slate-600">{copy.solution.subtitle}</p>
+              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.25rem]">
+                {copy.solution.title}
+              </h2>
+              <p className="mt-6 text-xl font-semibold text-slate-800 sm:text-2xl">{copy.solution.punch1}</p>
+              <p className="mt-3 font-heading text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                {copy.solution.punch2Prefix}
+                <span className="text-[#0072ce]">{copy.solution.punch2Emphasis}</span>
+                {copy.solution.punch2Suffix}
+              </p>
             </div>
-            <ul className="mt-14 grid gap-6 sm:grid-cols-2">
-              {copy.solution.bullets.map((s) => (
-                <LandingCard key={s.title}>
-                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-100 text-sm font-bold text-[#0072ce]">
-                    ✓
-                  </div>
-                  <h3 className="font-heading text-lg font-semibold text-slate-900">{s.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.body}</p>
-                </LandingCard>
+            <ul className="mx-auto mt-12 max-w-2xl space-y-4 text-left text-lg text-slate-800">
+              {copy.solution.wins.map((line) => (
+                <li key={line} className="flex gap-3">
+                  <span className="shrink-0 select-none text-emerald-600" aria-hidden>
+                    ✔
+                  </span>
+                  <span>{line}</span>
+                </li>
               ))}
             </ul>
+            <p className="mx-auto mt-10 max-w-2xl text-center font-heading text-xl font-bold text-slate-900 sm:text-2xl">
+              {copy.solution.closing}
+            </p>
           </div>
         </section>
 
@@ -399,16 +390,17 @@ export default function LeadSmartLanding() {
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="text-center">
               <LandingSectionLabel>How it works</LandingSectionLabel>
-              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Attract → Capture → Close</h2>
-              <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">Three steps. One system. Zero busywork.</p>
+              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.25rem]">
+                {copy.howItWorks.title}
+              </h2>
             </div>
-            <ol className="mt-14 grid gap-10 md:grid-cols-3">
-              {copy.steps.map((s, idx) => (
+            <ol className="mt-14 grid gap-8 md:grid-cols-3 md:gap-10">
+              {copy.howItWorks.steps.map((s, idx) => (
                 <li key={s.phase} className="relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <span className="font-heading text-xs font-bold uppercase tracking-widest text-[#0072ce]">{s.phase}</span>
-                  <div className="mt-2 font-heading text-4xl font-extrabold text-slate-200">{String(idx + 1).padStart(2, "0")}</div>
-                  <h3 className="font-heading -mt-1 text-xl font-semibold text-slate-900">{s.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.body}</p>
+                  <div className="font-heading text-sm font-bold text-[#0072ce]">
+                    {idx + 1}. {s.phase}
+                  </div>
+                  <p className="mt-4 text-base leading-relaxed text-slate-700">{s.body}</p>
                 </li>
               ))}
             </ol>
@@ -418,10 +410,14 @@ export default function LeadSmartLanding() {
         {/* Product showcase */}
         <section id="product" className="scroll-mt-24 py-16 sm:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <div className="mx-auto max-w-2xl text-center">
+            <div className="mx-auto max-w-3xl text-center">
               <LandingSectionLabel>Product</LandingSectionLabel>
-              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{copy.showcase.title}</h2>
-              <p className="mt-4 text-lg text-slate-600">{copy.showcase.subtitle}</p>
+              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.25rem]">
+                {copy.showcase.title}
+              </h2>
+              {copy.showcase.subtitle ? (
+                <p className="mt-4 text-lg text-slate-600">{copy.showcase.subtitle}</p>
+              ) : null}
             </div>
             <div className="mt-12 grid gap-4 sm:grid-cols-2">
               {copy.showcase.items.map((f) => (
@@ -429,8 +425,17 @@ export default function LeadSmartLanding() {
                   key={f.title}
                   className="group rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/90 p-6 shadow-sm transition hover:border-[#0072ce]/30 hover:shadow-md"
                 >
-                  <h3 className="font-heading font-semibold text-slate-900 group-hover:text-[#005ca8]">{f.title}</h3>
-                  <p className="mt-2 text-sm text-slate-600">{f.desc}</p>
+                  <div className="flex gap-4">
+                    <span className="text-2xl leading-none" aria-hidden>
+                      {f.icon}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-heading text-lg font-semibold text-slate-900 group-hover:text-[#005ca8]">
+                        {f.title}
+                      </h3>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-600">{f.desc}</p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -449,32 +454,72 @@ export default function LeadSmartLanding() {
           </div>
         </section>
 
+        {/* Value stack */}
+        <section
+          id="value-stack"
+          className="scroll-mt-24 border-y border-slate-200 bg-gradient-to-b from-slate-50 via-white to-slate-50 py-16 sm:py-20"
+        >
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <div className="mx-auto max-w-3xl text-center">
+              <LandingSectionLabel>Value</LandingSectionLabel>
+              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.25rem]">
+                {copy.valueStack.title}
+              </h2>
+            </div>
+            <ul className="mx-auto mt-10 max-w-xl space-y-4">
+              {copy.valueStack.benefits.map((line) => (
+                <li key={line} className="flex items-start gap-3 text-lg font-medium text-slate-800">
+                  <span className="mt-0.5 shrink-0 text-emerald-600" aria-hidden>
+                    ✔
+                  </span>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mx-auto mt-12 max-w-2xl rounded-2xl border-2 border-[#0072ce]/25 bg-gradient-to-br from-sky-50/80 to-white p-8 text-center shadow-[0_20px_50px_-24px_rgba(0,114,206,0.35)] sm:p-10">
+              <p className="font-heading text-xl font-semibold text-slate-800 sm:text-2xl">{copy.valueStack.closingLine1}</p>
+              <p className="mt-4 font-heading text-2xl font-extrabold tracking-tight text-[#0072ce] sm:text-3xl">
+                {copy.valueStack.closingLine2}
+              </p>
+            </div>
+            <div className="mt-10 flex justify-center">
+              <LandingButton href={signupHref} variant="primary" onClick={() => onCta("value_stack_cta", signupHref)}>
+                Get Started Free
+              </LandingButton>
+            </div>
+          </div>
+        </section>
+
         {/* Social proof */}
         <section id="proof" className="scroll-mt-24 border-y border-slate-100 bg-slate-950 py-16 text-white sm:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <div className="mx-auto max-w-2xl text-center lg:mx-0 lg:max-w-none lg:text-left">
+            <div className="mx-auto max-w-3xl text-center lg:mx-0 lg:max-w-none lg:text-left">
               <p className="mb-3 inline-flex rounded-full border border-white/20 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-sky-200/90">
                 Social proof
               </p>
-              <h2 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">{copy.proof.title}</h2>
-              <p className="mt-4 text-slate-300">{copy.proof.subtitle}</p>
+              <h2 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl lg:text-[2.25rem]">{copy.proof.title}</h2>
+              {copy.proof.subtitle ? <p className="mt-4 text-slate-300">{copy.proof.subtitle}</p> : null}
             </div>
-            <div className="mt-10 grid gap-6 lg:grid-cols-3">
-              {copy.proof.stats.map((st) => (
-                <div key={st.label} className="rounded-2xl border border-white/10 bg-white/5 p-5">
-                  <div className="font-heading text-2xl font-bold text-sky-300">{st.value}</div>
-                  <p className="mt-1 text-sm text-slate-400">{st.label}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-8 grid gap-4 lg:grid-cols-2">
+            {copy.proof.stats?.length ? (
+              <div className="mt-10 grid gap-6 lg:grid-cols-3">
+                {copy.proof.stats.map((st) => (
+                  <div key={st.label} className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                    <div className="font-heading text-2xl font-bold text-sky-300">{st.value}</div>
+                    <p className="mt-1 text-sm text-slate-400">{st.label}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <div
+              className={`grid gap-4 ${copy.proof.stats?.length ? "mt-8" : "mt-10"} md:grid-cols-3`}
+            >
               {copy.proof.quotes.map((q, qi) => (
                 <blockquote
                   key={`quote-${qi}`}
-                  className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm leading-relaxed text-slate-200"
+                  className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] to-white/[0.02] p-6 text-center lg:text-left"
                 >
-                  “{q.text}”
-                  <footer className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">— {q.attribution}</footer>
+                  <p className="text-base font-medium leading-relaxed text-slate-100 sm:text-lg">“{q.text}”</p>
+                  <footer className="mt-5 text-sm font-semibold text-sky-300/95">— {q.attribution}</footer>
                 </blockquote>
               ))}
             </div>
@@ -484,58 +529,66 @@ export default function LeadSmartLanding() {
         {/* Pricing */}
         <section id="pricing" className="scroll-mt-24 py-16 sm:py-20">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <div className="mx-auto max-w-2xl text-center">
+            <div className="mx-auto max-w-3xl text-center">
               <LandingSectionLabel>Pricing</LandingSectionLabel>
-              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{copy.pricing.title}</h2>
-              <p className="mt-4 text-lg text-slate-600">{copy.pricing.subtitle}</p>
+              <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.25rem]">
+                {copy.pricing.title}
+              </h2>
+              {copy.pricing.subtitle ? (
+                <p className="mt-4 text-lg text-slate-600">{copy.pricing.subtitle}</p>
+              ) : null}
             </div>
-            <div className="mt-12 grid gap-6 lg:grid-cols-3">
-              {plans.map((p) => {
-                const tierHref = p.name === "Free" ? signupHref : p.href;
-                return (
-                <div
-                  key={p.name}
-                  className={`flex flex-col rounded-2xl border p-6 shadow-sm ${
-                    p.highlight ? "border-[#0072ce] bg-sky-50/50 ring-2 ring-[#0072ce]/20" : "border-slate-200 bg-white"
-                  }`}
+            <div className="mx-auto mt-12 grid max-w-4xl gap-6 md:grid-cols-2">
+              <div className="flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                <h3 className="font-heading text-xl font-bold text-slate-900">{copy.pricing.freePlanName}</h3>
+                <p className="mt-1 text-sm font-medium text-slate-500">$0 — get started today</p>
+                <ul className="mt-6 flex-1 space-y-3 text-slate-700">
+                  {copy.pricing.freeFeatures.map((f) => (
+                    <li key={f} className="flex gap-3 text-sm sm:text-base">
+                      <span className="shrink-0 text-emerald-600" aria-hidden>
+                        ✔
+                      </span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href={signupHref}
+                  className="mt-8 inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+                  onClick={() => onCta("pricing_free", signupHref)}
                 >
-                  {p.highlight ? (
-                    <span className="mb-3 inline-flex w-fit rounded-full bg-[#0072ce] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                      Best upgrade
-                    </span>
-                  ) : (
-                    <span className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{p.blurb}</span>
-                  )}
-                  <h3 className="font-heading text-lg font-semibold text-slate-900">{p.name}</h3>
-                  <div className="mt-2 flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-slate-900">{p.price}</span>
-                    <span className="text-slate-500">{p.period}</span>
-                  </div>
-                  <ul className="mt-6 flex-1 space-y-2 text-sm text-slate-600">
-                    {p.features.map((f) => (
-                      <li key={f} className="flex gap-2">
-                        <span className="text-emerald-500">✓</span>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href={tierHref}
-                    className={`mt-8 inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                      p.highlight ? "bg-[#0072ce] text-white hover:bg-[#005ca8]" : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
-                    }`}
-                    onClick={() => onCta(`pricing_${p.name}`, tierHref)}
-                  >
-                    {p.cta}
-                  </Link>
-                </div>
-                );
-              })}
+                  {copy.pricing.freeCta}
+                </Link>
+              </div>
+              <div className="flex flex-col rounded-2xl border-2 border-[#0072ce] bg-gradient-to-br from-sky-50/80 to-white p-6 shadow-md ring-2 ring-[#0072ce]/15 sm:p-8">
+                <span className="mb-2 inline-flex w-fit rounded-full bg-[#0072ce] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                  Most popular
+                </span>
+                <h3 className="font-heading text-xl font-bold text-slate-900">{copy.pricing.premiumPlanName}</h3>
+                <ul className="mt-6 flex-1 space-y-3 text-slate-700">
+                  {copy.pricing.premiumFeatures.map((f) => (
+                    <li key={f} className="flex gap-3 text-sm sm:text-base">
+                      <span className="shrink-0 text-emerald-600" aria-hidden>
+                        ✔
+                      </span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/pricing"
+                  className="mt-8 inline-flex w-full items-center justify-center rounded-2xl bg-[#0072ce] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#005ca8]"
+                  onClick={() => onCta("pricing_premium", "/pricing")}
+                >
+                  {copy.pricing.premiumCta}
+                </Link>
+              </div>
             </div>
-            <p className="mt-8 text-center text-sm text-slate-500">
-              Limits and trials may apply. Compare everything on{" "}
+            <p className="mt-10 text-center font-heading text-xl font-bold text-slate-900 sm:text-2xl">{copy.pricing.footnote}</p>
+            <p className="mt-4 text-center text-sm text-slate-500">
+              Limits and trials may apply. Full comparison on{" "}
               <Link href="/pricing" className="font-semibold text-[#0072ce] hover:underline" onClick={() => onCta("pricing_page", "/pricing")}>
-                pricing
+                the pricing page
               </Link>
               .
             </p>
@@ -545,8 +598,11 @@ export default function LeadSmartLanding() {
         {/* Final CTA */}
         <section id="cta" className="scroll-mt-24 bg-gradient-to-r from-[#0072ce] to-[#005ca8] py-16 sm:py-20">
           <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
-            <h2 className="font-heading text-3xl font-bold text-white sm:text-4xl">{copy.finalCta.title}</h2>
-            <p className="mt-4 text-lg text-sky-100">{copy.finalCta.subtitle}</p>
+            <h2 className="font-heading text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-[2.25rem]">
+              {copy.finalCta.title}
+            </h2>
+            <p className="mt-5 text-lg text-sky-100 sm:text-xl">{copy.finalCta.line1}</p>
+            <p className="mt-3 text-lg font-semibold text-white sm:text-xl">{copy.finalCta.line2}</p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
               <Link
                 href={signupHref}
@@ -555,13 +611,15 @@ export default function LeadSmartLanding() {
               >
                 {copy.finalCta.primary}
               </Link>
-              <Link
-                href="/contact"
-                className="inline-flex w-full items-center justify-center rounded-2xl border border-white/45 bg-transparent px-8 py-3.5 text-base font-semibold text-white transition hover:bg-white/10 sm:w-auto"
-                onClick={() => onCta("final_contact", "/contact")}
-              >
-                {copy.finalCta.secondary}
-              </Link>
+              {copy.finalCta.secondary ? (
+                <Link
+                  href="/contact"
+                  className="inline-flex w-full items-center justify-center rounded-2xl border border-white/45 bg-transparent px-8 py-3.5 text-base font-semibold text-white transition hover:bg-white/10 sm:w-auto"
+                  onClick={() => onCta("final_contact", "/contact")}
+                >
+                  {copy.finalCta.secondary}
+                </Link>
+              ) : null}
             </div>
           </div>
         </section>
@@ -569,75 +627,35 @@ export default function LeadSmartLanding() {
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-slate-50">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-          <div className="grid gap-10 md:grid-cols-4">
-            <div className="md:col-span-1">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+          <div className="flex flex-col items-center justify-between gap-6 sm:flex-row sm:items-start">
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-4">
               <Image src="/images/lslogo.png" alt="LeadSmart AI" width={140} height={40} className="h-9 w-auto opacity-90" />
-              <p className="mt-3 text-sm text-slate-600">{copy.footerTagline}</p>
+              <p className="text-sm font-medium text-slate-800">LeadSmart AI © 2026</p>
             </div>
-            <div>
-              <h3 className="font-heading text-xs font-semibold uppercase tracking-wide text-slate-500">Product</h3>
-              <ul className="mt-3 space-y-2 text-sm">
-                <li>
-                  <Link href="/pricing" className="text-slate-700 hover:text-[#0072ce]">
-                    Pricing
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/home-value-funnel" className="text-slate-700 hover:text-[#0072ce]">
-                    Home value funnel
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/dashboard" className="text-slate-700 hover:text-[#0072ce]">
-                    Dashboard
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-heading text-xs font-semibold uppercase tracking-wide text-slate-500">Get started</h3>
-              <ul className="mt-3 space-y-2 text-sm">
-                <li>
-                  <Link href="/agent-signup" className="text-slate-700 hover:text-[#0072ce]">
-                    Agent signup
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/signup" className="text-slate-700 hover:text-[#0072ce]">
-                    User signup
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/login" className="text-slate-700 hover:text-[#0072ce]">
-                    Log in
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-heading text-xs font-semibold uppercase tracking-wide text-slate-500">Legal</h3>
-              <ul className="mt-3 space-y-2 text-sm">
-                <li>
-                  <Link href="/terms" className="text-slate-700 hover:text-[#0072ce]">
-                    Terms
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/privacy" className="text-slate-700 hover:text-[#0072ce]">
-                    Privacy
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/contact" className="text-slate-700 hover:text-[#0072ce]">
-                    Contact
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-10 border-t border-slate-200 pt-8 text-center text-xs text-slate-500">
-            © {new Date().getFullYear()} LeadSmart AI. All rights reserved.
+            <nav
+              aria-label="Footer"
+              className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-600"
+            >
+              <Link href="#hero" className="hover:text-[#0072ce]">
+                Home
+              </Link>
+              <Link href="#product" className="hover:text-[#0072ce]">
+                Features
+              </Link>
+              <Link href="#pricing" className="hover:text-[#0072ce]">
+                Pricing
+              </Link>
+              <Link href="/contact" className="hover:text-[#0072ce]">
+                Contact
+              </Link>
+              <Link href="/privacy" className="hover:text-[#0072ce]">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="hover:text-[#0072ce]">
+                Terms of Service
+              </Link>
+            </nav>
           </div>
         </div>
       </footer>

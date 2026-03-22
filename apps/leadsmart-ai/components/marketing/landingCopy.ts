@@ -4,292 +4,330 @@ export type LandingCopy = {
   hero: {
     eyebrow: string;
     headline: string;
-    subhead: string;
-    supporting: string;
+    line1: string;
+    /** Optional — brokers often use headline + single line only */
+    line2?: string;
+    line3?: string;
     primaryCta: string;
     secondaryCta: string;
+    /** Shown under hero CTAs */
     trustLine: string;
   };
   problem: {
     title: string;
     subtitle: string;
-    points: { title: string; body: string }[];
+    intro: string;
+    painLabel: string;
+    pains: string[];
+    closingLead: string;
+    closingEmphasis: string;
   };
   solution: {
     title: string;
-    subtitle: string;
-    bullets: { title: string; body: string }[];
+    punch1: string;
+    punch2Prefix: string;
+    punch2Emphasis: string;
+    punch2Suffix: string;
+    wins: string[];
+    closing: string;
   };
-  steps: { phase: string; title: string; body: string }[];
+  howItWorks: {
+    title: string;
+    steps: { phase: string; body: string }[];
+  };
   showcase: {
     title: string;
-    subtitle: string;
-    items: { title: string; desc: string }[];
+    /** Optional — omitted when empty */
+    subtitle?: string;
+    items: { icon: string; title: string; desc: string }[];
+  };
+  valueStack: {
+    title: string;
+    benefits: string[];
+    closingLine1: string;
+    closingLine2: string;
   };
   proof: {
     title: string;
-    subtitle: string;
-    stats: { value: string; label: string }[];
+    subtitle?: string;
+    /** Optional stat tiles — omit for quote-only social proof */
+    stats?: { value: string; label: string }[];
     quotes: { text: string; attribution: string }[];
   };
   pricing: {
     title: string;
-    subtitle: string;
+    subtitle?: string;
+    freePlanName: string;
+    premiumPlanName: string;
+    freeFeatures: string[];
+    premiumFeatures: string[];
+    /** e.g. Plans starting at $29/month */
+    footnote: string;
+    freeCta: string;
+    premiumCta: string;
   };
   finalCta: {
     title: string;
-    subtitle: string;
+    line1: string;
+    line2: string;
     primary: string;
-    secondary: string;
+    /** Optional second button (e.g. Talk to sales) */
+    secondary?: string;
   };
-  footerTagline: string;
 };
 
 const agentCopy: LandingCopy = {
   hero: {
     eyebrow: "The AI Growth Engine for Real Estate Agents",
     headline: "Turn Online Traffic into Closed Deals — Fast",
-    subhead: "Capture high-intent sellers from home-value and listing tools, qualify automatically, and keep follow-up consistent—without hiring a full-time ISA team.",
-    supporting:
-      "LeadSmart AI runs the funnel: traffic → lead → nurture → booked appointment. You focus on conversations that close.",
+    line1: "Stop losing deals from cold leads and missed follow-ups.",
+    line2: "Capture, qualify, and convert high-intent buyers automatically with AI.",
+    line3: "No setup. No tech skills required. Start generating leads in minutes.",
     primaryCta: "Get Started Free",
     secondaryCta: "See Demo",
-    trustLine: "No credit card to start · Live in minutes · Built for production agents",
+    trustLine: "Trusted by agents generating high-intent buyer and seller leads daily",
   },
   problem: {
-    title: "Your pipeline isn’t broken—your follow-up is",
-    subtitle:
-      "Most agents don’t lose deals to skill. They lose them to speed, noise, and forgotten leads.",
-    points: [
-      {
-        title: "Painfully low conversion",
-        body: "Traffic hits your site, fills a form, then goes quiet—because nobody responds in the conversion window that actually matters.",
-      },
-      {
-        title: "Leads that look good on paper",
-        body: "Names and emails without intent scoring means you chase the wrong people while hot sellers go cold.",
-      },
-      {
-        title: "Inconsistent follow-up",
-        body: "Inbox fire drills, sticky notes, and “I’ll call tomorrow” guarantees tomorrow never happens for half your pipeline.",
-      },
+    title: "You don’t have a traffic problem.",
+    subtitle: "You have a conversion problem.",
+    intro: "You’re already getting visitors…",
+    painLabel: "But:",
+    pains: [
+      "They don’t respond",
+      "They’re not serious",
+      "You forget to follow up",
+      "Deals fall through the cracks",
     ],
+    closingLead: "Every day this continues…",
+    closingEmphasis: "You’re losing real money.",
   },
   solution: {
-    title: "AI that captures, qualifies, and follows up—like a revenue team",
-    subtitle: "One growth engine that turns intent into pipeline you can work today—not someday.",
-    bullets: [
+    title: "LeadSmart AI turns your traffic into a deal-closing machine.",
+    punch1: "We don’t just give you leads.",
+    punch2Prefix: "We help you ",
+    punch2Emphasis: "CLOSE",
+    punch2Suffix: " them.",
+    wins: [
+      "Capture high-intent users from home value & mortgage tools",
+      "Automatically qualify and score every lead",
+      "Instantly follow up using AI",
+      "Prioritize serious buyers and sellers",
+      "Route leads to the right agent at the right time",
+    ],
+    closing: "All on autopilot.",
+  },
+  howItWorks: {
+    title: "Simple. Automated. Powerful.",
+    steps: [
       {
-        title: "Automated capture & routing",
-        body: "High-intent flows (home value, CMA, mortgage calculators) feed your CRM with context—not just fields.",
+        phase: "Attract",
+        body: "Users visit your tools (home value, mortgage, property comparison)",
       },
       {
-        title: "Qualification without the grunt work",
-        body: "Signals and scoring surface who’s warming up so you spend time on closable conversations.",
+        phase: "Capture",
+        body: "We convert them into high-intent leads",
       },
       {
-        title: "Follow-up that doesn’t feel robotic",
-        body: "Sequences across email & SMS keep sellers moving—so deals don’t die in the gap between interest and appointment.",
-      },
-      {
-        title: "Outcomes you can measure",
-        body: "See what channels and campaigns create real replies and booked calls—not vanity clicks.",
+        phase: "Close",
+        body: "AI follows up, nurtures, and helps you close the deal",
       },
     ],
   },
-  steps: [
-    {
-      phase: "Attract",
-      title: "Drive traffic with tools sellers actually use",
-      body: "Deploy AI-assisted valuation and comparison experiences that pull in serious homeowners—not tire-kickers.",
-    },
-    {
-      phase: "Capture",
-      title: "Turn interest into qualified pipeline",
-      body: "Every submission lands in one place with source, property context, and next-best-action—automatically.",
-    },
-    {
-      phase: "Close",
-      title: "Book more listing appointments",
-      body: "Alerts, playbooks, and persistent nurture push the right leads toward a calendar slot—while you’re on showings.",
-    },
-  ],
   showcase: {
-    title: "Everything in one command center",
-    subtitle: "Built for agents who sell listings—not spreadsheets.",
+    title: "Everything You Need to Turn Interest into Income",
     items: [
       {
-        title: "Agent dashboard",
-        desc: "Today’s hottest opportunities, pipeline health, and tasks—without tab overload.",
+        icon: "📊",
+        title: "Smart Dashboard",
+        desc: "See all your leads, scores, and activity in one place",
       },
       {
-        title: "Lead scoring & signals",
-        desc: "See who’s engaging before you pick up the phone—prioritize like a top producer.",
+        icon: "🧠",
+        title: "AI Lead Scoring",
+        desc: "Instantly identify who is ready to buy or sell",
       },
       {
-        title: "Auto follow-up",
-        desc: "Email & SMS sequences that stay compliant, on-brand, and relentless on your behalf.",
+        icon: "📩",
+        title: "Automated Follow-Up",
+        desc: "Never miss a lead again — AI responds instantly",
       },
       {
-        title: "AI comparison & CMA tools",
-        desc: "Reports sellers read and trust—so you win the narrative before the listing appointment.",
+        icon: "🏡",
+        title: "AI Property Comparison",
+        desc: "Help clients choose the best property with data-driven insights",
       },
     ],
   },
   proof: {
-    title: "Trusted by teams who count conversations—not clicks",
-    subtitle:
-      "Agents use LeadSmart AI to tighten response time, reduce lead decay, and show up with proof—not promises.",
-    stats: [
-      { value: "<24h", label: "Structured first touch vs. inbox chaos" },
-      { value: "24/7", label: "Capture while you’re on appointments" },
-      { value: "1 pipeline", label: "Leads, tasks, and nurture in one place" },
-    ],
+    title: "Agents Are Already Seeing Results",
     quotes: [
       {
-        text: "We stopped losing sellers to silence. The handoff from tool to follow-up is finally instant—and trackable.",
-        attribution: "Listing team lead · Southwest market",
+        text: "Got 12 qualified leads in just one week",
+        attribution: "Real Estate Agent",
       },
       {
-        text: "I can see who’s heating up before I call. That alone paid for the upgrade in the first month.",
-        attribution: "Top producer · referral-heavy book",
+        text: "My response rate doubled overnight",
+        attribution: "Loan Broker",
+      },
+      {
+        text: "These are the first leads that actually convert",
+        attribution: "Investor",
       },
     ],
   },
   pricing: {
-    title: "Start free. Scale when it’s printing ROI.",
-    subtitle: "Upgrade for higher limits, full CRM, automations, and team-ready workflows.",
+    title: "Start Free. Upgrade When You’re Ready.",
+    freePlanName: "Free Plan",
+    premiumPlanName: "Premium Plan",
+    freeFeatures: ["Basic tools", "Limited leads", "Standard features"],
+    premiumFeatures: [
+      "Unlimited lead capture",
+      "Advanced AI tools",
+      "Full automation",
+      "Priority lead routing",
+    ],
+    footnote: "Plans starting at $29/month",
+    freeCta: "Get Started Free",
+    premiumCta: "View plans & upgrade",
   },
   finalCta: {
-    title: "Ready to turn traffic into signed business?",
-    subtitle: "Join agents using LeadSmart AI to replace chaos with a pipeline you can run every morning in five minutes.",
+    title: "Stop Wasting Traffic. Start Closing Deals.",
+    line1: "Every visitor you don’t convert is a lost opportunity.",
+    line2: "Let AI work for you — 24/7.",
     primary: "Get Started Free",
-    secondary: "Talk to sales",
   },
-  footerTagline: "AI growth engine for agents who measure pipeline in booked conversations.",
 };
 
 const brokerCopy: LandingCopy = {
   hero: {
     eyebrow: "The AI Growth Engine for Financing Brokers",
     headline: "Turn Mortgage Traffic into Closed Deals — Fast",
-    subhead:
-      "Capture borrowers from calculators and pre-qual flows, automate follow-up, and keep your pipeline warm—without another spreadsheet.",
-    supporting:
-      "LeadSmart AI connects high-intent mortgage traffic to structured nurture so you stay top-of-mind through rate checks and paperwork.",
+    line1: "Capture and convert high-intent loan clients automatically with AI.",
     primaryCta: "Get Started Free",
     secondaryCta: "See Demo",
-    trustLine: "No credit card to start · LOS-friendly workflows · Built for broker production",
+    trustLine: "Trusted by brokers turning mortgage traffic into qualified applications daily",
   },
   problem: {
-    title: "Mortgage marketing creates noise—not always revenue",
-    subtitle: "Traffic is easy. Consistent conversion and follow-up separate brokers who scale from those who stall.",
-    points: [
-      {
-        title: "Low conversion from digital traffic",
-        body: "Borrowers compare rates everywhere. If your follow-up isn’t immediate and structured, you’re not in the final three.",
-      },
-      {
-        title: "Unqualified “leads” waste LO time",
-        body: "Without intent signals, your team chases files that were never going to close this quarter.",
-      },
-      {
-        title: "Follow-up that depends on memory",
-        body: "Rate drops, document requests, and referrals slip through when nurture isn’t automated and measurable.",
-      },
+    title: "You don’t have a traffic problem.",
+    subtitle: "You have a conversion problem.",
+    intro: "Borrowers are already hitting your site and tools…",
+    painLabel: "But:",
+    pains: [
+      "They ghost after the first touch",
+      "Too many tire-kickers burn LO time",
+      "Follow-up slips when pipelines get busy",
+      "Funded deals fall through the cracks",
     ],
+    closingLead: "Every day this continues…",
+    closingEmphasis: "You’re leaving revenue on the table.",
   },
   solution: {
-    title: "AI that turns mortgage intent into funded pipeline",
-    subtitle: "Automate capture, qualification, and nurture—so your LOs work the hottest files first.",
-    bullets: [
+    title: "LeadSmart AI turns your traffic into a deal-closing machine.",
+    punch1: "We don’t just give you applications.",
+    punch2Prefix: "We help you ",
+    punch2Emphasis: "FUND",
+    punch2Suffix: " them.",
+    wins: [
+      "Capture high-intent borrowers from mortgage & home-financing tools",
+      "Automatically qualify and score every opportunity",
+      "Instantly follow up using AI",
+      "Prioritize serious borrowers and referral partners",
+      "Route files to the right LO at the right time",
+    ],
+    closing: "All on autopilot.",
+  },
+  howItWorks: {
+    title: "Simple. Automated. Powerful.",
+    steps: [
       {
-        title: "Capture from tools borrowers already use",
-        body: "Calculators and pre-qual experiences feed your pipeline with structured context—not just form dumps.",
+        phase: "Attract",
+        body: "Borrowers hit your tools (rates, pre-qual, home value, property comparison)",
       },
       {
-        title: "Qualify before the first call",
-        body: "Scoring and engagement signals help your team prioritize speed-to-contact on real opportunity.",
+        phase: "Capture",
+        body: "We convert them into high-intent opportunities",
       },
       {
-        title: "Nurture that survives busy weeks",
-        body: "Sequences keep borrowers moving through milestones so deals don’t stall in silence.",
-      },
-      {
-        title: "Revenue visibility",
-        body: "See which campaigns create applications and funded loans—not vanity form fills.",
+        phase: "Close",
+        body: "AI follows up, nurtures, and helps your team fund more deals",
       },
     ],
   },
-  steps: [
-    {
-      phase: "Attract",
-      title: "Bring in high-intent borrowers",
-      body: "Mortgage and home-financing tools that convert curiosity into structured leads.",
-    },
-    {
-      phase: "Capture",
-      title: "Route & record every opportunity",
-      body: "Submissions sync to your CRM with loan context and next steps—automatically.",
-    },
-    {
-      phase: "Close",
-      title: "Fund more deals",
-      body: "Persistent, compliant follow-up keeps files advancing—so you’re there when they’re ready to lock.",
-    },
-  ],
   showcase: {
-    title: "Built for broker teams who run on throughput",
-    subtitle: "Dashboard, scoring, and automation—without enterprise bloat.",
+    title: "Everything You Need to Turn Interest into Income",
     items: [
       {
-        title: "Broker dashboard",
-        desc: "Pipeline snapshot: applications in flight, follow-ups due, and team performance.",
+        icon: "📊",
+        title: "Smart Dashboard",
+        desc: "See pipelines, scores, and team activity in one place",
       },
       {
-        title: "Lead scoring",
-        desc: "Surface borrowers who are re-engaging, comparing, or ready for human touch.",
+        icon: "🧠",
+        title: "AI Lead Scoring",
+        desc: "Instantly spot who’s ready to move forward",
       },
       {
-        title: "Auto follow-up",
-        desc: "SMS & email cadences tuned for mortgage milestones and compliance.",
+        icon: "📩",
+        title: "Automated Follow-Up",
+        desc: "Never miss a borrower — AI responds instantly and stays compliant",
       },
       {
-        title: "AI comparison tools",
-        desc: "Side-by-side scenarios borrowers understand—so you win trust before the application.",
+        icon: "🏡",
+        title: "AI Property Comparison",
+        desc: "Help clients compare scenarios with clear, data-backed insights",
       },
     ],
   },
-  proof: {
-    title: "Brokers who measure funded loans—not leads",
-    subtitle: "Teams use LeadSmart AI to tighten speed-to-contact and reduce drop-off between intent and application.",
-    stats: [
-      { value: "Speed", label: "First touch while intent is hot" },
-      { value: "24/7", label: "Capture after hours and weekends" },
-      { value: "1 system", label: "Marketing → nurture → handoff" },
+  valueStack: {
+    title: "Why Brokers Choose LeadSmart AI",
+    benefits: [
+      "More qualified opportunities",
+      "Faster response time",
+      "Higher pull-through & fund rates",
+      "Less manual work for your team",
+      "More predictable pipeline revenue",
     ],
+    closingLine1: "This isn’t just a tool.",
+    closingLine2: "It’s your unfair advantage.",
+  },
+  proof: {
+    title: "Agents Are Already Seeing Results",
     quotes: [
       {
-        text: "We finally know which campaigns create conversations—not just form fills. LO time went to the right files.",
-        attribution: "Branch manager · purchase-heavy market",
+        text: "Got 12 qualified leads in just one week",
+        attribution: "Real Estate Agent",
       },
       {
-        text: "Follow-up used to die in busy weeks. Now nurture keeps borrowers warm until we’re ready to move.",
-        attribution: "Mortgage advisor · refi + purchase mix",
+        text: "My response rate doubled overnight",
+        attribution: "Loan Broker",
+      },
+      {
+        text: "These are the first leads that actually convert",
+        attribution: "Investor",
       },
     ],
   },
   pricing: {
-    title: "Start free. Upgrade when volume demands it.",
-    subtitle: "Unlock higher limits, automation, and team features when you’re ready to scale.",
+    title: "Start Free. Upgrade When You’re Ready.",
+    freePlanName: "Free Plan",
+    premiumPlanName: "Premium Plan",
+    freeFeatures: ["Basic tools", "Limited leads", "Standard features"],
+    premiumFeatures: [
+      "Unlimited lead capture",
+      "Advanced AI tools",
+      "Full automation",
+      "Priority lead routing",
+    ],
+    footnote: "Plans starting at $29/month",
+    freeCta: "Get Started Free",
+    premiumCta: "View plans & upgrade",
   },
   finalCta: {
-    title: "Ready to fund more loans from the same traffic?",
-    subtitle: "Join brokers using LeadSmart AI to replace leaky follow-up with a system that runs 24/7.",
+    title: "Stop Wasting Traffic. Start Closing Deals.",
+    line1: "Every borrower you don’t convert is a lost opportunity.",
+    line2: "Let AI work for you — 24/7.",
     primary: "Get Started Free",
-    secondary: "Talk to sales",
   },
-  footerTagline: "AI growth engine for financing teams who measure pipeline in funded business.",
 };
 
 export function getLandingCopy(role: UserRole): LandingCopy {

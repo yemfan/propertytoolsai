@@ -39,6 +39,8 @@ Prefer fixing **Root Directory** to **`apps/<app>`** instead of repo root.
 
 **`scripts/vercel-sync-next-output.mjs`:** After **`npm run build -w …`** on Vercel, if **`routes-manifest.json`** exists under **`apps/<app>/.next`** but **not** at **`<repo>/.next`**, the script **copies** the full **`.next`** folder to the **repository root**. Some Vercel project layouts resolve **`/vercel/path0`** as the **monorepo root** while Next writes under **`apps/<app>`** — this keeps **`routes-manifest.json`** where the Next builder expects it.
 
+The script resolves the **monorepo root** from **`scripts/vercel-sync-next-output.mjs`** (parent directory = repo root) and walks up from **`process.cwd()`** as a fallback — it does **not** rely on **`cwd`** alone, so hooks that run with a different working directory still find **`apps/<app>/.next`**. If both **`routes-manifest.json`** locations are missing, the log lists **which** `.next` folders exist (and whether `routes-manifest.json` is present) so you can tell if **`next build` failed** vs. a path mismatch.
+
 ### LeadSmart works, Property Tools does not (same repo)
 
 1. **Mirror LeadSmart’s layout** — In the **Property Tools** Vercel project, set **Root Directory** to **`apps/property-tools`** (same pattern as **`apps/leadsmart-ai`**). Leave **Install / Build** empty so **`apps/property-tools/vercel.json`** runs.

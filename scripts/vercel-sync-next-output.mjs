@@ -5,11 +5,13 @@
  * If `<repo>/.next/routes-manifest.json` is missing but the app build exists,
  * copies the full `apps/<workspace>/.next` tree to `<repo>/.next`.
  *
- * Also handles the case where `NEXT_DIST_IN_MONOREPO_ROOT=1` was set but distDir
- * still landed under `apps/<app>/.next` (env not applied to the Next process).
+ * IMPORTANT: Do not use `process.cwd()` alone — Vercel sometimes runs hooks with a
+ * different cwd than the monorepo root. We resolve the repo root from this script's
+ * path (`scripts/…` → parent = repo root) and walk up from cwd as a fallback.
  */
-import { existsSync, cpSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, cpSync, rmSync, readdirSync, statSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const workspace = process.argv[2];
 if (!workspace) {
@@ -21,33 +23,107 @@ if (process.env.VERCEL !== "1") {
   process.exit(0);
 }
 
-const root = process.cwd();
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * @returns {string} Directory that contains `apps/<workspace>/package.json`
+ */
+function findMonorepoRoot(ws) {
+  const fromScript = resolve(scriptDir, "..");
+  if (existsSync(join(fromScript, "apps", ws, "package.json"))) {
+    return fromScript;
+  }
+  let dir = resolve(process.cwd());
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, "apps", ws, "package.json"))) {
+      return dir;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  console.warn(
+    "[vercel-sync-next-output] Could not find apps/" +
+      ws +
+      "/package.json — using script parent as repo root:",
+    fromScript,
+  );
+  return fromScript;
+}
+
+function logDirHint(label, dir) {
+  if (!existsSync(dir)) {
+    console.error(`[vercel-sync-next-output] ${label}: (missing) ${dir}`);
+    return;
+  }
+  try {
+    const st = statSync(dir);
+    if (!st.isDirectory()) {
+      console.error(`[vercel-sync-next-output] ${label}: (not a directory) ${dir}`);
+      return;
+    }
+    const entries = readdirSync(dir);
+    const hasManifest = entries.includes("routes-manifest.json");
+    console.error(
+      `[vercel-sync-next-output] ${label}: ${dir} (${entries.length} entries, routes-manifest=${hasManifest})`,
+    );
+  } catch (e) {
+    console.error(`[vercel-sync-next-output] ${label}: ${dir} (${String(e?.message ?? e)})`);
+  }
+}
+
+const root = findMonorepoRoot(workspace);
 const appManifest = join(root, "apps", workspace, ".next", "routes-manifest.json");
 const repoManifest = join(root, ".next", "routes-manifest.json");
+const appNextDir = join(root, "apps", workspace, ".next");
+const repoNextDir = join(root, ".next");
+
+console.log("[vercel-sync-next-output] repoRoot=", root, "workspace=", workspace, "cwd=", process.cwd());
 
 if (existsSync(repoManifest)) {
   console.log("[vercel-sync-next-output] OK:", repoManifest);
   process.exit(0);
 }
 
-if (!existsSync(appManifest)) {
-  console.error("[vercel-sync-next-output] Missing app build output:", appManifest);
-  process.exit(1);
+if (existsSync(appManifest)) {
+  if (existsSync(repoNextDir)) {
+    rmSync(repoNextDir, { recursive: true, force: true });
+  }
+  cpSync(appNextDir, repoNextDir, { recursive: true });
+  console.log("[vercel-sync-next-output] Copied", appNextDir, "->", repoNextDir);
+  if (!existsSync(repoManifest)) {
+    console.error("[vercel-sync-next-output] Copy failed; still missing:", repoManifest);
+    logDirHint("repo .next", repoNextDir);
+    process.exit(1);
+  }
+  process.exit(0);
 }
 
-const src = join(root, "apps", workspace, ".next");
-const dest = join(root, ".next");
-
-if (existsSync(dest)) {
-  rmSync(dest, { recursive: true, force: true });
+// NEXT_DIST_IN_MONOREPO_ROOT=1 should write to <root>/.next — manifest might be missing if build failed mid-flight
+if (existsSync(repoNextDir) && !existsSync(repoManifest)) {
+  console.error(
+    "[vercel-sync-next-output] Found",
+    repoNextDir,
+    "but routes-manifest.json is missing — next build may have failed or exited before finishing.",
+  );
+  logDirHint("repo .next", repoNextDir);
 }
 
-cpSync(src, dest, { recursive: true });
-console.log("[vercel-sync-next-output] Copied", src, "->", dest);
+console.error("[vercel-sync-next-output] Missing routes-manifest.json in both locations:");
+console.error("  ", repoManifest);
+console.error("  ", appManifest);
+logDirHint("apps/<ws>/.next", appNextDir);
+logDirHint("repo .next", repoNextDir);
 
-if (!existsSync(repoManifest)) {
-  console.error("[vercel-sync-next-output] Copy failed; still missing:", repoManifest);
-  process.exit(1);
-}
+console.error(
+  [
+    "",
+    "[vercel-sync-next-output] Fix:",
+    "  1) Scroll up in the build log — if `next build` failed (TS, OOM), fix that first.",
+    "  2) Prefer Vercel Root Directory = apps/" + workspace + " (see docs/VERCEL.md).",
+    "  3) Remove dashboard env NEXT_DIST_IN_MONOREPO_ROOT / NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT unless using repo-root build.",
+    "  4) Repo-root deploy: set VERCEL_MONOREPO_APP=" + workspace + " and use `npm run build` from the repository root.",
+  ].join("\n"),
+);
 
-process.exit(0);
+process.exit(1);
