@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,8 +16,18 @@ export default function LeadSmartLanding() {
         {/* NAV */}
         <header className="sticky top-0 z-50 border-b border-gray-200/80 bg-white/80 backdrop-blur-md">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-            <Link href="/" className="font-heading text-lg font-bold !text-gray-900 hover:!text-[#0072ce]">
-              LeadSmart AI
+            <Link
+              href="/"
+              className="flex items-center gap-2.5 font-heading text-lg font-bold !text-gray-900 transition hover:opacity-90"
+            >
+              <Image
+                src="/images/lslogo.png"
+                alt="LeadSmart AI"
+                width={160}
+                height={48}
+                className="h-9 w-auto sm:h-10"
+                priority
+              />
             </Link>
             <nav className="hidden gap-6 text-sm md:flex">
               <a href="#how" className="font-medium !text-gray-700 hover:!text-[#0072ce]">
@@ -200,7 +211,16 @@ export default function LeadSmartLanding() {
         {/* Footer */}
         <footer className="border-t border-gray-200 bg-white px-6 py-10">
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 sm:flex-row">
-            <p className="text-sm font-semibold text-gray-800">LeadSmart AI © {new Date().getFullYear()}</p>
+            <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <Image
+                src="/images/lslogo.png"
+                alt=""
+                width={140}
+                height={40}
+                className="h-8 w-auto opacity-90"
+              />
+              <p className="text-sm font-semibold text-gray-800">© {new Date().getFullYear()} LeadSmart AI</p>
+            </div>
             <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
               <Link href="/contact" className="!text-gray-600 hover:!text-[#0072ce]">
                 Contact
