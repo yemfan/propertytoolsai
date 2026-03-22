@@ -1,13 +1,13 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseAuthCookieOptions } from "@/lib/authCookieOptions";
+import { requireSupabasePublicEnv } from "@/lib/supabasePublicEnv";
 
 export function supabaseServerClient() {
   // In some Next.js versions/configs, `cookies()` can be a Promise.
   // We must not access properties on it synchronously.
   const cookieStorePromise = cookies();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const { url: supabaseUrl, anonKey } = requireSupabasePublicEnv();
   const cookieOptions = supabaseAuthCookieOptions();
 
   return createServerClient(supabaseUrl, anonKey, {

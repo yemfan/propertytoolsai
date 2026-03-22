@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseAuthCookieOptions } from "./lib/authCookieOptions";
+import { getSupabasePublicEnv } from "./lib/supabasePublicEnv";
 
 // Proxy (Next.js 16+): edge session refresh + dashboard protection.
 // - Refresh Supabase cookies via getUser() so Server Components see the session.
@@ -10,11 +11,31 @@ export async function proxy(req: NextRequest) {
     request: req,
   });
 
+  const { pathname } = req.nextUrl;
+  const isProtected =
+    pathname.startsWith("/dashboard") ||
+    pathname === "/portal" ||
+    pathname.startsWith("/portal/");
+
+  const publicEnv = getSupabasePublicEnv();
+  if (!publicEnv) {
+    console.warn(
+      "[property-tools proxy] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY — add apps/property-tools/.env.local (see .env.example)."
+    );
+    if (isProtected) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
+  }
+
   const cookieOptions = supabaseAuthCookieOptions();
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    publicEnv.url,
+    publicEnv.anonKey,
     {
       ...(cookieOptions ? { cookieOptions } : {}),
       cookies: {
@@ -37,12 +58,6 @@ export async function proxy(req: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const { pathname } = req.nextUrl;
-  const isProtected =
-    pathname.startsWith("/dashboard") ||
-    pathname === "/portal" ||
-    pathname.startsWith("/portal/");
 
   if (isProtected && !user) {
     const url = req.nextUrl.clone();

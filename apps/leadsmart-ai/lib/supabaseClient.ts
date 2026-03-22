@@ -1,11 +1,14 @@
-import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabaseAuthCookieOptions } from "@/lib/authCookieOptions";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-const cookieOptions = supabaseAuthCookieOptions();
-
-export const supabase: SupabaseClient = createBrowserClient(url, anon, {
-  ...(cookieOptions ? { cookieOptions } : {}),
+/**
+ * Lazy cookie-backed browser client (same as `supabaseBrowser()`).
+ * Prefer importing `supabaseBrowser` directly in new code.
+ */
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    const client = supabaseBrowser();
+    const value = (client as unknown as Record<string | symbol, unknown>)[prop];
+    return typeof value === "function" ? (value as (...a: unknown[]) => unknown).bind(client) : value;
+  },
 });

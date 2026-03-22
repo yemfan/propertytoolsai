@@ -100,8 +100,8 @@ export default function PropertyToolsPage() {
             <Image
               src="/images/ptlogo.png"
               alt="PropertyTools AI"
-              width={200}
-              height={56}
+              width={540}
+              height={162}
               className="h-9 w-auto md:h-10"
               priority
             />

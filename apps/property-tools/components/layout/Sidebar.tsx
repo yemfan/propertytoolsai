@@ -57,8 +57,8 @@ export default function Sidebar({
           <Image
             src="/images/ptlogo.png"
             alt="PropertyTools AI"
-            width={216}
-            height={48}
+            width={540}
+            height={162}
             className="h-12 w-auto"
             priority
           />

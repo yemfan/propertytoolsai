@@ -1,5 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { supabaseAuthCookieOptions } from "@/lib/authCookieOptions";
+import { requireSupabasePublicEnv } from "@/lib/supabasePublicEnv";
 
 /**
  * Browser Supabase client — must use `@supabase/ssr` so the session is stored in
@@ -8,8 +9,7 @@ import { supabaseAuthCookieOptions } from "@/lib/authCookieOptions";
  * and protected routes redirect to /login on every navigation.
  */
 export function supabaseBrowser() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const { url: supabaseUrl, anonKey } = requireSupabasePublicEnv();
   const cookieOptions = supabaseAuthCookieOptions();
   return createBrowserClient(supabaseUrl, anonKey, {
     ...(cookieOptions ? { cookieOptions } : {}),

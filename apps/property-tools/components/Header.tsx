@@ -26,8 +26,8 @@ export default function Header() {
             <Image
               src="/images/ptlogo.png"
               alt="PropertyTools AI logo"
-              width={360}
-              height={108}
+              width={540}
+              height={162}
               className="h-12 md:h-14 w-auto rounded object-contain"
               priority
             />
