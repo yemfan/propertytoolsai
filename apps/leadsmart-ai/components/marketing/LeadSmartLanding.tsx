@@ -10,6 +10,34 @@ import ExitIntentPopup from "@/components/marketing/ExitIntentPopup";
 const primaryCtaHref = "/onboarding";
 const demoCtaHref = "/home-value-funnel";
 
+/** LeadSmart brand palette (see app/globals.css --color-primary / success / accent) */
+const BRAND = {
+  primary: "#0072ce",
+  primaryDark: "#005ca8",
+  success: "#28a745",
+  accent: "#ff8c42",
+} as const;
+
+function BrandCheck({
+  tone,
+  size = "sm",
+}: {
+  tone: keyof typeof BRAND;
+  size?: "sm" | "md";
+}) {
+  const bg = BRAND[tone];
+  const box = size === "md" ? "h-7 w-7 text-xs" : "h-5 w-5 text-[10px]";
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center justify-center rounded-full font-bold text-white shadow-sm ring-2 ring-white/90 ${box}`}
+      style={{ backgroundColor: bg }}
+      aria-hidden
+    >
+      ✓
+    </span>
+  );
+}
+
 export default function LeadSmartLanding() {
   return (
     <>
@@ -81,29 +109,31 @@ export default function LeadSmartLanding() {
             </div>
 
             {/* Micro trust — directly under CTA */}
-            <div className="mt-6 border-t border-slate-200/90 pt-6">
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gray-400">
-                <span aria-hidden>🧠</span> Micro trust
+            <div className="mt-6 rounded-xl border border-slate-200/80 bg-gradient-to-r from-[#0072ce]/[0.06] via-white to-[#ff8c42]/[0.07] pt-6 pl-4 pr-3 pb-4 shadow-sm shadow-slate-900/[0.04] ring-1 ring-slate-900/[0.04]">
+              <div className="flex items-center gap-2 border-l-4 border-[#0072ce] pl-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#005ca8]">
+                  <span aria-hidden>🧠</span> Micro trust
+                </p>
+              </div>
+              <p className="mt-3 pl-1 text-sm font-semibold text-slate-800">
+                No setup required{" "}
+                <span className="text-[#0072ce]" aria-hidden>
+                  •
+                </span>{" "}
+                Works in minutes
               </p>
-              <p className="mt-2 text-sm font-semibold text-gray-700">No setup required • Works in minutes</p>
-              <ul className="mt-3 flex flex-col gap-2 text-sm text-gray-600 sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-2">
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-600" aria-hidden>
-                    ✓
-                  </span>
-                  AI follow-up in seconds — so hot leads don&apos;t go cold
+              <ul className="mt-3 flex flex-col gap-2.5 text-sm text-slate-700 sm:flex-row sm:flex-wrap sm:gap-x-5 sm:gap-y-2">
+                <li className="flex items-center gap-2.5">
+                  <BrandCheck tone="primary" />
+                  <span>AI follow-up in seconds — so hot leads don&apos;t go cold</span>
                 </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-600" aria-hidden>
-                    ✓
-                  </span>
-                  Built for agents already running ads &amp; SEO
+                <li className="flex items-center gap-2.5">
+                  <BrandCheck tone="success" />
+                  <span>Built for agents already running ads &amp; SEO</span>
                 </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-emerald-600" aria-hidden>
-                    ✓
-                  </span>
-                  Cancel anytime — no multi-year lock-in
+                <li className="flex items-center gap-2.5">
+                  <BrandCheck tone="accent" />
+                  <span>Cancel anytime — no multi-year lock-in</span>
                 </li>
               </ul>
             </div>
@@ -206,30 +236,24 @@ export default function LeadSmartLanding() {
             <div>
               <h2 className="font-heading text-2xl font-semibold md:text-3xl">How It Works</h2>
               <ul className="mt-6 space-y-4 text-gray-600">
-                <li className="flex gap-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0072ce] text-sm font-bold !text-white">
-                    1
-                  </span>
-                  <span>Attract traffic</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0072ce] text-sm font-bold !text-white">
-                    2
-                  </span>
-                  <span>Capture leads</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0072ce] text-sm font-bold !text-white">
-                    3
-                  </span>
-                  <span>AI follows up instantly</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0072ce] text-sm font-bold !text-white">
-                    4
-                  </span>
-                  <span>You close the deal</span>
-                </li>
+                {(
+                  [
+                    { n: 1, label: "Attract traffic", color: BRAND.primary },
+                    { n: 2, label: "Capture leads", color: BRAND.primaryDark },
+                    { n: 3, label: "AI follows up instantly", color: BRAND.success },
+                    { n: 4, label: "You close the deal", color: BRAND.accent },
+                  ] as const
+                ).map((step) => (
+                  <li key={step.n} className="flex gap-3">
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold !text-white shadow-md ring-2 ring-white/30"
+                      style={{ backgroundColor: step.color }}
+                    >
+                      {step.n}
+                    </span>
+                    <span className="pt-0.5">{step.label}</span>
+                  </li>
+                ))}
               </ul>
             </div>
             <div className="flex min-h-[16rem] items-center justify-center">
@@ -258,32 +282,32 @@ export default function LeadSmartLanding() {
             Close More Deals with Less Work
           </h2>
           <div className="mt-10 grid gap-8 text-center sm:grid-cols-2 md:grid-cols-4">
-            <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-6">
-              <p className="font-semibold">⚡ Instant Follow-Up</p>
+            <div className="rounded-xl border border-slate-200/90 border-t-4 border-t-[#0072ce] bg-gradient-to-b from-[#0072ce]/[0.06] to-slate-50/80 p-6 shadow-sm">
+              <p className="font-semibold text-slate-900">⚡ Instant Follow-Up</p>
               <p className="mt-2 text-sm text-gray-600">Respond in seconds</p>
             </div>
-            <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-6">
-              <p className="font-semibold">🧠 AI Scoring</p>
+            <div className="rounded-xl border border-slate-200/90 border-t-4 border-t-[#005ca8] bg-gradient-to-b from-[#005ca8]/[0.06] to-slate-50/80 p-6 shadow-sm">
+              <p className="font-semibold text-slate-900">🧠 AI Scoring</p>
               <p className="mt-2 text-sm text-gray-600">Prioritize hot leads</p>
             </div>
-            <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-6">
-              <p className="font-semibold">📊 Dashboard</p>
+            <div className="rounded-xl border border-slate-200/90 border-t-4 border-t-[#28a745] bg-gradient-to-b from-[#28a745]/[0.07] to-slate-50/80 p-6 shadow-sm">
+              <p className="font-semibold text-slate-900">📊 Dashboard</p>
               <p className="mt-2 text-sm text-gray-600">Track everything</p>
             </div>
-            <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-6">
-              <p className="font-semibold">🔄 Automation</p>
+            <div className="rounded-xl border border-slate-200/90 border-t-4 border-t-[#ff8c42] bg-gradient-to-b from-[#ff8c42]/[0.08] to-slate-50/80 p-6 shadow-sm">
+              <p className="font-semibold text-slate-900">🔄 Automation</p>
               <p className="mt-2 text-sm text-gray-600">Follow-up done for you</p>
             </div>
           </div>
         </section>
 
         {/* SOCIAL PROOF */}
-        <section className="bg-gray-50 px-6 py-16 text-center">
+        <section className="bg-gradient-to-b from-slate-50 to-white px-6 py-16 text-center">
           <h2 className="font-heading text-2xl font-semibold md:text-3xl">Real Results</h2>
           <div className="mx-auto mt-8 max-w-xl space-y-4 text-gray-600">
-            <p className="italic">&ldquo;Got 12 qualified leads in 7 days&rdquo;</p>
-            <p className="italic">&ldquo;Response rate doubled overnight&rdquo;</p>
-            <p className="italic">&ldquo;Finally leads that convert&rdquo;</p>
+            <p className="border-l-4 border-[#0072ce] pl-4 italic text-left">&ldquo;Got 12 qualified leads in 7 days&rdquo;</p>
+            <p className="border-l-4 border-[#28a745] pl-4 italic text-left">&ldquo;Response rate doubled overnight&rdquo;</p>
+            <p className="border-l-4 border-[#ff8c42] pl-4 italic text-left">&ldquo;Finally leads that convert&rdquo;</p>
           </div>
         </section>
 
