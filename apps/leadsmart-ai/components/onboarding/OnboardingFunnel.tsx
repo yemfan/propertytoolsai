@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BrandCheck } from "@/components/brand/BrandCheck";
 import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildDemoLeads, randomIncomingSnippet } from "./demoLeads";
@@ -611,9 +612,18 @@ export default function OnboardingFunnel() {
           <div className="mx-auto mt-8 max-w-sm rounded-xl border border-white/10 bg-black/30 p-4 text-sm text-slate-200">
             <p className="font-semibold text-white">What you unlocked in this preview</p>
             <ul className="mt-3 space-y-2 text-xs text-slate-300">
-              <li>✓ Realistic lead profiles matched to {fullProfile.city}</li>
-              <li>✓ Inbox + thread view (what you&apos;ll use daily)</li>
-              <li>✓ Simulated live “incoming lead” stream</li>
+              <li className="flex items-start gap-2">
+                <BrandCheck tone="primary" />
+                <span>Realistic lead profiles matched to {fullProfile.city}</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <BrandCheck tone="success" />
+                <span>Inbox + thread view (what you&apos;ll use daily)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <BrandCheck tone="accent" />
+                <span>Simulated live “incoming lead” stream</span>
+              </li>
             </ul>
           </div>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">

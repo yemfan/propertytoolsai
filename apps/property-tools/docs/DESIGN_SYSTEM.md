@@ -2,6 +2,14 @@
 
 Shared with **LeadSmart AI** for a consistent family look: same brand blues (`#0072ce` / `#005ca8`), success green, and accent orange via `app/globals.css` (`@theme` + `:root`).
 
+## Brand checkmarks (`components/brand/BrandCheck.tsx`)
+
+Colored circular ✓ chips using **primary**, **primaryDark**, **success**, and **accent** (`BRAND` constant). Use for bullet lists (hero trust, pipeline, pricing features). For long lists, `toneAt(index)` cycles tones. **LeadSmart AI** uses the same component under `apps/leadsmart-ai/components/brand/BrandCheck.tsx`.
+
+## Feature highlight cards (`components/ui/FeatureHighlightCard.tsx`)
+
+Top **4px brand accent** + **gradient** into `slate-50` — same pattern as LeadSmart **“Close More Deals with Less Work”** (`#features`). Props: `accent` (`primary` | `primaryDark` | `success` | `accent`), `title`, `description`. Used on the **homepage** (“Make Smarter Decisions with AI”) and **pricing** value-prop row.
+
 ## Surfaces (`components/ui/Card.tsx`)
 
 | Variant       | Use |

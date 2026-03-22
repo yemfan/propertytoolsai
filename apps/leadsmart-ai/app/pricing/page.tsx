@@ -1,9 +1,43 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { BrandCheck, toneAt } from "@/components/brand/BrandCheck";
 import PaywallModal from "@/components/PaywallModal";
+import { FeatureHighlightCard, type FeatureHighlightAccent } from "@/components/ui/FeatureHighlightCard";
 
 type Plan = "free" | "pro" | "premium";
+
+const PRICING_VALUE_HIGHLIGHTS: {
+  accent: FeatureHighlightAccent;
+  title: string;
+  description: string;
+}[] = [
+  {
+    accent: "primary",
+    title: "⚡ Instant AI CMA Reports",
+    description: "Professional comps and narrative in minutes, not hours.",
+  },
+  {
+    accent: "primaryDark",
+    title: "🤖 Lead Management & Automation",
+    description: "Pipeline, follow-ups, and engagement in one workflow.",
+  },
+  {
+    accent: "success",
+    title: "🔔 Alerts & Market Updates",
+    description: "Stay ahead when leads engage or limits approach.",
+  },
+  {
+    accent: "accent",
+    title: "📁 CRM & Reports in one place",
+    description: "Exports and context your team can actually use.",
+  },
+  {
+    accent: "primary",
+    title: "📈 Flexible plans for every agent",
+    description: "From solo to team — scale without replatforming.",
+  },
+];
 
 const plans: {
   key: Plan;
@@ -206,17 +240,15 @@ export default function PricingPage() {
       )}
 
       {/* Value props */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-        {[
-          "⚡ Instant AI CMA Reports",
-          "🤖 Lead Management & Automation",
-          "🔔 Alerts & Market Updates",
-          "📁 CRM & Reports in one place",
-          "📈 Flexible plans for every agent",
-        ].map((v) => (
-          <div key={v} className="bg-white border border-slate-200 rounded-xl p-4 text-sm font-medium text-slate-800">
-            {v}
-          </div>
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {PRICING_VALUE_HIGHLIGHTS.map((item) => (
+          <FeatureHighlightCard
+            key={item.title}
+            accent={item.accent}
+            title={item.title}
+            description={item.description}
+            className="p-4 sm:p-5"
+          />
         ))}
       </section>
 
@@ -241,7 +273,7 @@ export default function PricingPage() {
               </div>
               {leadsPct >= 90 && leadsPct < 100 ? (
                 <div className="mt-2 text-xs text-amber-700 font-semibold">
-                  You’re نزدیک your lead limit
+                  You’re close to your lead limit
                 </div>
               ) : null}
               {leadsPct >= 100 ? (
@@ -297,9 +329,9 @@ export default function PricingPage() {
             </div>
             <div className="mt-1 text-xs text-gray-500">{p.subtitle}</div>
             <ul className="mt-5 space-y-2 text-sm text-gray-700">
-              {p.features.map((f) => (
+              {p.features.map((f, i) => (
                 <li key={f} className="flex items-start gap-2">
-                  <span className="mt-0.5 text-blue-600">✓</span>
+                  <BrandCheck tone={toneAt(i)} />
                   <span>{f}</span>
                 </li>
               ))}

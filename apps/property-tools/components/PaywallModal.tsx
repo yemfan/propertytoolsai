@@ -1,5 +1,7 @@
 "use client";
 
+import { BrandCheck, toneAt } from "@/components/brand/BrandCheck";
+
 const DEFAULT_FEATURES = [
   "Unlimited home value & CMA-style reports (fair use)",
   "Higher daily limits on calculators",
@@ -56,11 +58,9 @@ export default function PaywallModal(props: {
         </div>
         <div className="space-y-4 px-5 py-5">
           <ul className="space-y-2 text-sm text-slate-700">
-            {features.map((f) => (
-              <li key={f} className="flex gap-2">
-                <span className="mt-0.5 text-emerald-600" aria-hidden>
-                  ✓
-                </span>
+            {features.map((f, i) => (
+              <li key={f} className="flex items-start gap-2">
+                <BrandCheck tone={toneAt(i)} />
                 <span>{f}</span>
               </li>
             ))}

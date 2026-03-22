@@ -5,29 +5,11 @@ import Link from "next/link";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { BrandCheck } from "@/components/brand/BrandCheck";
+import { FeatureHighlightCard } from "@/components/ui/FeatureHighlightCard";
 import { trackEvent } from "@/lib/marketing/trackEvent";
 
 const LEADSMART_URL = process.env.NEXT_PUBLIC_LEADSMART_URL ?? "https://leadsmart.ai";
-
-/** Brand palette (aligned with `app/globals.css` + leadsmart-ai) */
-const BRAND = {
-  primary: "#0072ce",
-  primaryDark: "#005ca8",
-  success: "#28a745",
-  accent: "#ff8c42",
-} as const;
-
-function BrandCheck({ tone }: { tone: keyof typeof BRAND }) {
-  return (
-    <span
-      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-sm ring-2 ring-white/90"
-      style={{ backgroundColor: BRAND[tone] }}
-      aria-hidden
-    >
-      ✓
-    </span>
-  );
-}
 
 const tools = [
   {
@@ -217,26 +199,36 @@ export default function PropertyToolsPage() {
         </p>
       </section>
 
-      {/* AI VALUE */}
-      <section id="ai-value" className="px-4 py-12 text-center sm:px-6 md:py-14">
-        <h2 className="font-heading text-2xl font-bold tracking-tight text-slate-900 md:text-[1.65rem]">
+      {/* AI VALUE — same top-accent card style as LeadSmart “Close More Deals with Less Work” */}
+      <section id="ai-value" className="px-4 py-12 text-center sm:px-6 md:py-16">
+        <h2 className="font-heading text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
           Make Smarter Decisions with AI
         </h2>
-        <div className="mx-auto mt-6 grid max-w-4xl grid-cols-1 gap-3 text-left sm:grid-cols-2 sm:gap-4">
-          {[
-            { tone: "primary" as const, text: "Real-time data insights" },
-            { tone: "accent" as const, text: "AI-powered recommendations" },
-            { tone: "success" as const, text: "Compare options instantly" },
-            { tone: "primary" as const, text: "No agent required (but available if needed)" },
-          ].map((row) => (
-            <div
-              key={row.text}
-              className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-gradient-to-r from-white to-slate-50/40 px-4 py-3 text-sm text-slate-800 shadow-sm md:text-base"
-            >
-              <BrandCheck tone={row.tone} />
-              <span>{row.text}</span>
-            </div>
-          ))}
+        <p className="mx-auto mt-3 max-w-2xl text-sm text-gray-600 md:text-base">
+          Free tools that turn scattered listing data into clear next steps — whether you&apos;re buying, selling, or
+          refinancing.
+        </p>
+        <div className="mx-auto mt-10 grid max-w-7xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+          <FeatureHighlightCard
+            accent="primary"
+            title="🏠 Instant home value"
+            description="Estimate range and context from your address and basics — no signup for core use."
+          />
+          <FeatureHighlightCard
+            accent="primaryDark"
+            title="📊 Side-by-side compare"
+            description="Stack properties on price, payment, and tradeoffs with AI-guided summaries."
+          />
+          <FeatureHighlightCard
+            accent="success"
+            title="💰 Mortgage clarity"
+            description="Payments, refinance scenarios, and affordability — in plain numbers."
+          />
+          <FeatureHighlightCard
+            accent="accent"
+            title="🤖 AI that explains"
+            description="Recommendations you can understand fast — without drowning in jargon."
+          />
         </div>
       </section>
 

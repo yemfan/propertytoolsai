@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BrandCheck, toneAt } from "@/components/brand/BrandCheck";
 
 type PlanKey = "free" | "pro" | "premium";
 
@@ -276,9 +277,9 @@ export default function PricingModal({
                 <div className="mt-1 text-xs text-gray-500">{p.subtitle}</div>
 
                 <ul className="mt-5 space-y-2 text-sm text-gray-700">
-                  {p.features.map((f) => (
+                  {p.features.map((f, i) => (
                     <li key={f} className="flex items-start gap-2">
-                      <span className="mt-0.5 text-blue-600">✓</span>
+                      <BrandCheck tone={toneAt(i)} />
                       <span>{f}</span>
                     </li>
                   ))}

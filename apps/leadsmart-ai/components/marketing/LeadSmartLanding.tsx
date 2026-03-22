@@ -5,6 +5,8 @@ import Link from "next/link";
 import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { FeatureHighlightCard } from "@/components/ui/FeatureHighlightCard";
+import { BrandCheck } from "@/components/brand/BrandCheck";
 import ExitIntentPopup from "@/components/marketing/ExitIntentPopup";
 import VslSection from "@/components/VslSection";
 
@@ -24,34 +26,6 @@ function getVslConfig(): {
     videoType: "youtube",
     videoIdOrUrl: process.env.NEXT_PUBLIC_VSL_YOUTUBE_ID?.trim() ?? "",
   };
-}
-
-/** LeadSmart brand palette (see app/globals.css --color-primary / success / accent) */
-const BRAND = {
-  primary: "#0072ce",
-  primaryDark: "#005ca8",
-  success: "#28a745",
-  accent: "#ff8c42",
-} as const;
-
-function BrandCheck({
-  tone,
-  size = "sm",
-}: {
-  tone: keyof typeof BRAND;
-  size?: "sm" | "md";
-}) {
-  const bg = BRAND[tone];
-  const box = size === "md" ? "h-7 w-7 text-xs" : "h-5 w-5 text-[10px]";
-  return (
-    <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-full font-bold text-white shadow-sm ring-2 ring-white/90 ${box}`}
-      style={{ backgroundColor: bg }}
-      aria-hidden
-    >
-      ✓
-    </span>
-  );
 }
 
 export default function LeadSmartLanding() {
@@ -234,21 +208,15 @@ export default function LeadSmartLanding() {
             </p>
             <ul className="mx-auto mt-10 max-w-md space-y-4 text-left text-base font-medium text-slate-800 md:max-w-lg md:text-lg">
               <li className="flex items-start gap-3 rounded-xl border border-emerald-100/80 bg-white/80 px-4 py-3 shadow-sm shadow-emerald-900/5">
-                <span className="mt-0.5 text-emerald-600" aria-hidden>
-                  ✓
-                </span>
+                <BrandCheck tone="primary" />
                 <span>No more chasing.</span>
               </li>
               <li className="flex items-start gap-3 rounded-xl border border-emerald-100/80 bg-white/80 px-4 py-3 shadow-sm shadow-emerald-900/5">
-                <span className="mt-0.5 text-emerald-600" aria-hidden>
-                  ✓
-                </span>
+                <BrandCheck tone="success" />
                 <span>No more guessing.</span>
               </li>
               <li className="flex items-start gap-3 rounded-xl border border-emerald-100/80 bg-white/80 px-4 py-3 shadow-sm shadow-emerald-900/5">
-                <span className="mt-0.5 text-emerald-600" aria-hidden>
-                  ✓
-                </span>
+                <BrandCheck tone="accent" />
                 <span>No more missed opportunities.</span>
               </li>
             </ul>
@@ -263,20 +231,17 @@ export default function LeadSmartLanding() {
               <ul className="mt-6 space-y-4 text-gray-600">
                 {(
                   [
-                    { n: 1, label: "Attract traffic", color: BRAND.primary },
-                    { n: 2, label: "Capture leads", color: BRAND.primaryDark },
-                    { n: 3, label: "AI follows up instantly", color: BRAND.success },
-                    { n: 4, label: "You close the deal", color: BRAND.accent },
+                    { n: 1, label: "Attract traffic", tone: "primary" as const },
+                    { n: 2, label: "Capture leads", tone: "primaryDark" as const },
+                    { n: 3, label: "AI follows up instantly", tone: "success" as const },
+                    { n: 4, label: "You close the deal", tone: "accent" as const },
                   ] as const
                 ).map((step) => (
                   <li key={step.n} className="flex gap-3">
-                    <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold !text-white shadow-md ring-2 ring-white/30"
-                      style={{ backgroundColor: step.color }}
-                    >
-                      {step.n}
+                    <BrandCheck tone={step.tone} size="md" />
+                    <span className="pt-0.5">
+                      <span className="font-semibold text-slate-800">{step.n}.</span> {step.label}
                     </span>
-                    <span className="pt-0.5">{step.label}</span>
                   </li>
                 ))}
               </ul>
@@ -306,33 +271,42 @@ export default function LeadSmartLanding() {
           <h2 className="text-center font-heading text-2xl font-semibold md:text-3xl">
             Close More Deals with Less Work
           </h2>
-          <div className="mt-10 grid gap-8 text-center sm:grid-cols-2 md:grid-cols-4">
-            <div className="rounded-xl border border-slate-200/90 border-t-4 border-t-[#0072ce] bg-gradient-to-b from-[#0072ce]/[0.06] to-slate-50/80 p-6 shadow-sm">
-              <p className="font-semibold text-slate-900">⚡ Instant Follow-Up</p>
-              <p className="mt-2 text-sm text-gray-600">Respond in seconds</p>
-            </div>
-            <div className="rounded-xl border border-slate-200/90 border-t-4 border-t-[#005ca8] bg-gradient-to-b from-[#005ca8]/[0.06] to-slate-50/80 p-6 shadow-sm">
-              <p className="font-semibold text-slate-900">🧠 AI Scoring</p>
-              <p className="mt-2 text-sm text-gray-600">Prioritize hot leads</p>
-            </div>
-            <div className="rounded-xl border border-slate-200/90 border-t-4 border-t-[#28a745] bg-gradient-to-b from-[#28a745]/[0.07] to-slate-50/80 p-6 shadow-sm">
-              <p className="font-semibold text-slate-900">📊 Dashboard</p>
-              <p className="mt-2 text-sm text-gray-600">Track everything</p>
-            </div>
-            <div className="rounded-xl border border-slate-200/90 border-t-4 border-t-[#ff8c42] bg-gradient-to-b from-[#ff8c42]/[0.08] to-slate-50/80 p-6 shadow-sm">
-              <p className="font-semibold text-slate-900">🔄 Automation</p>
-              <p className="mt-2 text-sm text-gray-600">Follow-up done for you</p>
-            </div>
+          <div className="mt-10 grid gap-6 text-center sm:grid-cols-2 md:grid-cols-4 md:gap-8">
+            <FeatureHighlightCard
+              accent="primary"
+              title="⚡ Instant Follow-Up"
+              description="Respond in seconds"
+            />
+            <FeatureHighlightCard
+              accent="primaryDark"
+              title="🧠 AI Scoring"
+              description="Prioritize hot leads"
+            />
+            <FeatureHighlightCard accent="success" title="📊 Dashboard" description="Track everything" />
+            <FeatureHighlightCard
+              accent="accent"
+              title="🔄 Automation"
+              description="Follow-up done for you"
+            />
           </div>
         </section>
 
         {/* SOCIAL PROOF */}
         <section className="bg-gradient-to-b from-slate-50 to-white px-6 py-16 text-center">
           <h2 className="font-heading text-2xl font-semibold md:text-3xl">Real Results</h2>
-          <div className="mx-auto mt-8 max-w-xl space-y-4 text-gray-600">
-            <p className="border-l-4 border-[#0072ce] pl-4 italic text-left">&ldquo;Got 12 qualified leads in 7 days&rdquo;</p>
-            <p className="border-l-4 border-[#28a745] pl-4 italic text-left">&ldquo;Response rate doubled overnight&rdquo;</p>
-            <p className="border-l-4 border-[#ff8c42] pl-4 italic text-left">&ldquo;Finally leads that convert&rdquo;</p>
+          <div className="mx-auto mt-8 max-w-xl space-y-4 text-left text-gray-600">
+            <p className="flex items-start gap-3 italic">
+              <BrandCheck tone="primary" />
+              <span>&ldquo;Got 12 qualified leads in 7 days&rdquo;</span>
+            </p>
+            <p className="flex items-start gap-3 italic">
+              <BrandCheck tone="success" />
+              <span>&ldquo;Response rate doubled overnight&rdquo;</span>
+            </p>
+            <p className="flex items-start gap-3 italic">
+              <BrandCheck tone="accent" />
+              <span>&ldquo;Finally leads that convert&rdquo;</span>
+            </p>
           </div>
         </section>
 
