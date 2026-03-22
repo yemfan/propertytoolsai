@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { isRedirectError, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { isRedirectError } from "@/lib/isRedirectError";
 import TopBar from "@/components/dashboard/TopBar";
 import { supabaseServer } from "@/lib/supabaseServer";
 
