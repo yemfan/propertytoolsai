@@ -2,9 +2,10 @@
  * Root `npm run build` entry for monorepo.
  *
  * - Local / non-Vercel: `clean:next` + `turbo build` (unchanged behavior).
- * - Vercel with Root Directory = repo root: build ONE Next app into `apps/<app>/.next`
- *   (default distDir — avoids fragile `NEXT_DIST_IN_MONOREPO_ROOT` partial writes),
- *   then copy the full tree to `<repo>/.next` so `/vercel/path0/.next` exists.
+ * - Vercel with Root Directory = repo root: build with `NEXT_DIST_IN_MONOREPO_ROOT=1` so
+ *   `.next` is written **directly** at `<repo>/.next` (correct output file tracing — copying
+ *   `apps/<app>/.next` → repo root breaks traces and can yield `ENOENT … /node_modules/...`).
+ *   If the repo-root build is missing a manifest, fall back to copying from `apps/<app>/.next`.
  *
  * Set in Vercel → Environment Variables (per project):
  *   VERCEL_MONOREPO_APP=leadsmart-ai   OR   property-tools
@@ -93,17 +94,30 @@ if (process.env.VERCEL === "1") {
     rmSync(repoNextDir, { recursive: true, force: true });
   }
 
-  console.log(`[vercel-monorepo-root-build] VERCEL=1 → npm run ${script} (app=${app})`);
-  // Force default distDir under apps/<app>/.next even if Vercel dashboard sets NEXT_DIST_* (avoids partial <root>/.next).
+  console.log(
+    `[vercel-monorepo-root-build] VERCEL=1 → npm run ${script} (app=${app}, NEXT_DIST_IN_MONOREPO_ROOT=1)`,
+  );
+  // Build straight into <repo>/.next so NFT traces match Vercel’s project root (do not rely on cpSync).
   run(`npm run ${script}`, {
-    NEXT_DIST_IN_MONOREPO_ROOT: "",
+    NEXT_DIST_IN_MONOREPO_ROOT: "1",
     NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT: "",
   });
+
+  if (existsSync(repoManifest)) {
+    console.log("[vercel-monorepo-root-build] OK:", repoManifest);
+    process.exit(0);
+  }
+
+  console.warn(
+    "[vercel-monorepo-root-build] No routes-manifest at repo root after NEXT_DIST build — falling back to apps/<app>/.next copy",
+  );
 
   if (!existsSync(appManifest)) {
     console.error(
       "[vercel-monorepo-root-build] Missing",
       appManifest,
+      "and",
+      repoManifest,
       "— `next build` did not finish. Scroll up for TypeScript / OOM / prerender errors.",
     );
     console.error(
@@ -128,7 +142,7 @@ if (process.env.VERCEL === "1") {
     process.exit(1);
   }
 
-  console.log("[vercel-monorepo-root-build] OK:", repoManifest);
+  console.log("[vercel-monorepo-root-build] OK (after copy):", repoManifest);
   process.exit(0);
 }
 
