@@ -20,7 +20,7 @@ export default function LeadSmartLanding() {
               href="/"
               className="flex items-center transition hover:opacity-90 focus-visible:outline focus-visible:ring-2 focus-visible:ring-[#0072ce]/40 rounded-md"
             >
-              <LeadSmartLogo className="h-9 w-auto min-w-[9rem] sm:h-10 sm:min-w-[10rem]" />
+              <LeadSmartLogo className="max-w-[min(100%,280px)] sm:max-w-[min(100%,320px)]" />
             </Link>
             <nav className="hidden gap-6 text-sm md:flex">
               <a href="#how" className="font-medium !text-gray-700 hover:!text-[#0072ce]">
@@ -205,7 +205,7 @@ export default function LeadSmartLanding() {
         <footer className="border-t border-gray-200 bg-white px-6 py-10">
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 sm:flex-row">
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <LeadSmartLogo compact className="h-8 w-auto min-w-[8rem] opacity-90" />
+              <LeadSmartLogo compact className="max-w-[220px] opacity-90" priority={false} />
               <p className="text-sm font-semibold text-gray-800">© {new Date().getFullYear()} LeadSmart AI</p>
             </div>
             <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">

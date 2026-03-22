@@ -65,7 +65,7 @@ function Shell({
       <div className="relative mx-auto flex min-h-screen max-w-lg flex-col px-4 py-8 sm:max-w-xl sm:px-6 sm:py-12">
         <header className="mb-6 flex items-center justify-between gap-3 onboarding-fade-up">
           <Link href="/" className="flex items-center opacity-90 transition hover:opacity-100">
-            <LeadSmartLogo compact className="h-8 w-auto min-w-[8rem]" />
+            <LeadSmartLogo compact className="max-w-[200px] sm:max-w-[240px]" priority={false} />
           </Link>
           <Link
             href="/pricing"

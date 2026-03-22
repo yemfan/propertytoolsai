@@ -1,5 +1,4 @@
 # Static images
 
-Optional: add **`lslogo.png`** (or `lslogo.svg`) here if you want to use raster artwork instead of the inline `LeadSmartLogo` component.
-
-Favicons referenced in `app/layout.tsx` (`ls32.png`, `ls180.png`) should also live in this folder for production.
+- **`ptlogo.png`** — main header/footer logo (`LeadSmartLogo` component). Copied from Property Tools; replace with LeadSmart-specific art anytime.
+- **`lslogo.png`** / **`ls32.png`** / **`ls180.png`** — optional; favicons in `app/layout.tsx` expect the `ls*` files when you add them.

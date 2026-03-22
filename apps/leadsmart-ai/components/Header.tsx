@@ -23,7 +23,7 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center py-2">
           <Link href="/" className="flex items-center text-brand-primary hover:opacity-90">
-            <LeadSmartLogo className="h-14 w-auto min-w-[11rem] sm:h-16 sm:min-w-[12rem]" />
+            <LeadSmartLogo className="max-w-[min(100%,360px)]" />
           </Link>
 
           <button
