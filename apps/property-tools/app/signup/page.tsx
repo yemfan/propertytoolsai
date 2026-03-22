@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import AuthPageShell from "@/components/layout/AuthPageShell";
+import Card from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -56,12 +61,10 @@ export default function SignupPage() {
       if (signUpErr) throw signUpErr;
       const userId = data?.user?.id;
       if (!userId) {
-        // Some Supabase configs require email confirmation; session might not exist yet.
         setSuccess("Check your email to confirm your account, then come back to log in.");
         return;
       }
 
-      // Create landing-page profile row for role detection.
       const { error: upsertErr1 } = await supabase.from("user_profiles").upsert(
         {
           user_id: userId,
@@ -105,77 +108,61 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-sm bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-5">
+    <AuthPageShell>
+      <Card className="p-6 sm:p-8">
         <div className="space-y-1 text-center">
-          <h1 className="text-xl font-bold text-gray-900">Create your account</h1>
-          <p className="text-xs text-gray-600">Get started on the main site. Agents unlock portal features.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0072ce]">PropertyTools AI</p>
+          <h1 className="font-heading text-xl font-bold text-slate-900 md:text-2xl">Create your account</h1>
+          <p className="text-sm text-slate-600">Get started on the main site. Agents unlock portal features.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-700">Name</label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-700">Name</label>
+            <Input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
           </div>
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-700">Email</label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-700">Phone</label>
-            <input
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-700">Phone</label>
+            <Input
               type="tel"
               inputMode="tel"
               value={phone}
               onChange={(e) => setPhone(formatUsPhone(e.target.value))}
-              placeholder="(Optional) Get instant alerts via SMS"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="(Optional) SMS alerts"
             />
           </div>
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-700">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-700">Password</label>
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
 
           {error ? (
-            <p className="text-[11px] text-red-600 font-medium whitespace-pre-line">{error}</p>
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-medium whitespace-pre-line text-red-700">
+              {error}
+            </p>
           ) : null}
           {success ? (
-            <p className="text-[11px] text-emerald-700 font-medium whitespace-pre-line">{success}</p>
+            <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-medium text-emerald-800">
+              {success}
+            </p>
           ) : null}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full inline-flex items-center justify-center rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? "Creating account..." : "Sign Up"}
-          </button>
+          <Button type="submit" disabled={loading} className="w-full" size="lg">
+            {loading ? "Creating account…" : "Sign up"}
+          </Button>
         </form>
 
-        <p className="text-[11px] text-gray-500 text-center">
-          Already have an account? <a className="text-blue-700 font-semibold" href="/login">Log in</a>
+        <p className="mt-6 text-center text-[11px] text-slate-500">
+          Already have an account?{" "}
+          <Link href="/login" className="font-semibold text-[#0072ce] hover:text-[#005ca8]">
+            Log in
+          </Link>
         </p>
-      </div>
-    </div>
+      </Card>
+    </AuthPageShell>
   );
 }
-

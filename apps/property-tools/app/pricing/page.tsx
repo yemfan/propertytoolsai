@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import PaywallModal from "@/components/PaywallModal";
+import Card from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 type Plan = "free" | "pro" | "premium";
 
@@ -168,35 +170,39 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+    <div className="relative mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6 lg:px-8">
+      <div
+        className="pointer-events-none absolute inset-x-0 -top-4 h-64 opacity-[0.35]"
+        aria-hidden
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse 70% 80% at 50% 0%, rgba(0,114,206,0.14), transparent 55%)",
+        }}
+      />
       {/* Hero */}
-      <section className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6 sm:p-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 max-w-4xl">
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 via-white to-sky-50/40 p-6 shadow-sm shadow-slate-900/[0.04] ring-1 ring-slate-900/[0.04] sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0072ce]">Pricing</p>
+        <h1 className="font-heading mt-2 max-w-4xl text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
           Grow your real estate business faster with AI tools built for agents
         </h1>
-        <p className="mt-3 text-sm sm:text-base text-slate-700 max-w-3xl">
-          Generate smarter CMAs, automate lead follow-ups, and close deals with less manual work.
-          From solo agents to growing teams, choose the plan that scales your pipeline.
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-700 sm:text-base">
+          Generate smarter CMAs, automate lead follow-ups, and close deals with less manual work. From solo agents to
+          growing teams, choose the plan that scales your pipeline.
         </p>
-        <div className="mt-5 flex flex-wrap gap-3">
-          <button
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button
             type="button"
+            size="lg"
             onClick={startTrial}
             disabled={trialLoading || Boolean(planInfo?.trial_used)}
-            className="inline-flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 disabled:opacity-60"
           >
-            {trialLoading ? "Starting..." : "🚀 Start Free Trial"}
-          </button>
-          <a
-            href="#plans"
-            className="inline-flex items-center justify-center rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 font-semibold px-5 py-2.5"
-          >
+            {trialLoading ? "Starting…" : "🚀 Start Free Trial"}
+          </Button>
+          <Button href="#plans" variant="outline" size="lg">
             📊 See Plans
-          </a>
+          </Button>
         </div>
-        <p className="mt-4 text-xs text-slate-600">
-          Trusted by 500+ agents, 10,000+ leads managed
-        </p>
+        <p className="mt-4 text-xs text-slate-600">Trusted by 500+ agents, 10,000+ leads managed</p>
       </section>
 
       {error && (
@@ -206,7 +212,7 @@ export default function PricingPage() {
       )}
 
       {/* Value props */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {[
           "⚡ Instant AI CMA Reports",
           "🤖 Lead Management & Automation",
@@ -214,15 +220,15 @@ export default function PricingPage() {
           "📁 CRM & Reports in one place",
           "📈 Flexible plans for every agent",
         ].map((v) => (
-          <div key={v} className="bg-white border border-slate-200 rounded-xl p-4 text-sm font-medium text-slate-800">
+          <Card key={v} className="p-4 text-sm font-medium text-slate-800">
             {v}
-          </div>
+          </Card>
         ))}
       </section>
 
       {/* Dynamic usage / upgrade hooks */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="p-4">
           <div className="text-sm font-semibold text-slate-900">Lead usage</div>
           <div className="mt-2 text-xs text-slate-700">
             {leadUsage
@@ -240,8 +246,8 @@ export default function PricingPage() {
                 />
               </div>
               {leadsPct >= 90 && leadsPct < 100 ? (
-                <div className="mt-2 text-xs text-amber-700 font-semibold">
-                  You’re نزدیک your lead limit
+                <div className="mt-2 text-xs font-semibold text-amber-700">
+                  You’re close to your lead limit
                 </div>
               ) : null}
               {leadsPct >= 100 ? (
@@ -251,9 +257,9 @@ export default function PricingPage() {
               ) : null}
             </>
           ) : null}
-        </div>
+        </Card>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
+        <Card className="p-4">
           <div className="text-sm font-semibold text-slate-900">CMA usage</div>
           <div className="mt-2 text-xs text-slate-700">
             {cmaUsage ? `You have used ${cmaUsage.used}/${cmaUsage.limit} CMA reports today` : "CMA usage: —"}
@@ -268,18 +274,16 @@ export default function PricingPage() {
               You’ve reached your CMA or Lead limit. Upgrade to Premium for unlimited access.
             </div>
           ) : null}
-        </div>
+        </Card>
       </section>
 
       {/* Pricing table */}
-      <section id="plans" className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <section id="plans" className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {plans.map((p) => (
-          <div
+          <Card
             key={p.key}
-            className={`rounded-2xl border bg-white shadow-sm p-6 ${
-              p.highlighted
-                ? "border-blue-200 ring-2 ring-blue-100"
-                : "border-gray-200"
+            className={`p-6 ${
+              p.highlighted ? "border-[#0072ce]/35 ring-2 ring-[#0072ce]/15" : ""
             }`}
           >
             <div className="flex items-center justify-between gap-2">
@@ -287,7 +291,7 @@ export default function PricingPage() {
                 {p.title}
               </div>
               {p.highlighted ? (
-                <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-1">
+                <span className="inline-flex items-center rounded-full bg-[#0072ce]/10 px-2 py-1 text-[10px] font-bold text-[#005ca8]">
                   Most Popular
                 </span>
               ) : null}
@@ -299,7 +303,7 @@ export default function PricingPage() {
             <ul className="mt-5 space-y-2 text-sm text-gray-700">
               {p.features.map((f) => (
                 <li key={f} className="flex items-start gap-2">
-                  <span className="mt-0.5 text-blue-600">✓</span>
+                  <span className="mt-0.5 text-[#0072ce]">✓</span>
                   <span>{f}</span>
                 </li>
               ))}
@@ -311,18 +315,18 @@ export default function PricingPage() {
                   type="button"
                   onClick={startTrial}
                   disabled={trialLoading || Boolean(planInfo?.trial_used)}
-                  className="w-full rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 disabled:opacity-60"
+                  className="w-full rounded-xl bg-slate-100 py-2.5 font-semibold text-slate-800 hover:bg-slate-200 disabled:opacity-60"
                 >
-                  {trialLoading ? "Starting..." : "Start Free Trial"}
+                  {trialLoading ? "Starting…" : "Start Free Trial"}
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => startCheckout(p.key as "pro" | "premium")}
                   disabled={loadingPlan === p.key}
-                  className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 disabled:opacity-60"
+                  className="w-full rounded-xl bg-[#0072ce] py-2.5 font-semibold text-white shadow-sm hover:bg-[#005ca8] disabled:opacity-60"
                 >
-                  {loadingPlan === p.key ? "Redirecting..." : p.cta}
+                  {loadingPlan === p.key ? "Redirecting…" : p.cta}
                 </button>
               )}
             </div>
@@ -331,57 +335,58 @@ export default function PricingPage() {
                 Hit your 500-lead cap? Upgrade to Premium for unlimited growth.
               </div>
             ) : null}
-          </div>
+          </Card>
         ))}
       </section>
 
       {/* CTA section */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-        <h2 className="text-2xl font-bold text-slate-900">
+      <Card className="p-6 sm:p-8">
+        <h2 className="font-heading text-2xl font-bold text-slate-900">
           Ready to save hours and close more listings?
         </h2>
-        <p className="mt-2 text-sm text-slate-700 max-w-3xl">
-          Start your 7-day free trial to unlock full access. Agents using PropertyTools AI spend less
-          time on manual analysis and more time on revenue-driving conversations.
+        <p className="mt-2 max-w-3xl text-sm text-slate-700">
+          Start your 7-day free trial to unlock full access. Agents using PropertyTools AI spend less time on manual
+          analysis and more time on revenue-driving conversations.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <button
+          <Button
             type="button"
+            size="lg"
             onClick={startTrial}
             disabled={trialLoading || Boolean(planInfo?.trial_used)}
-            className="inline-flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 disabled:opacity-60"
           >
             🚀 Start Free Trial
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="outline"
+            size="lg"
             onClick={() => startCheckout("pro")}
             disabled={loadingPlan === "pro"}
-            className="inline-flex items-center justify-center rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 font-semibold px-5 py-2.5 disabled:opacity-60"
           >
             💼 Upgrade Now
-          </button>
+          </Button>
         </div>
-      </section>
+      </Card>
 
       {/* Testimonials / social proof */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {[
           "“I generated 3 CMAs before breakfast and won two listing appointments this week.” — Sarah K., Listing Agent",
           "“Lead automation saves me 6–8 hours every week.” — Michael T., Solo Realtor",
           "“Premium removed lead cap anxiety as our team scaled.” — Ariana P., Team Lead",
         ].map((q) => (
-          <div key={q} className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+          <Card key={q} variant="muted" className="p-4 text-sm text-slate-700">
             {q}
-          </div>
+          </Card>
         ))}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+      <Card variant="muted" className="p-4 text-sm text-slate-700">
         <span className="font-semibold">500+ active agents</span> ·{" "}
         <span className="font-semibold">10,000+ leads managed</span> ·{" "}
         <span className="font-semibold">1,200+ CMA reports generated monthly</span>
-      </section>
+      </Card>
 
       <PaywallModal
         open={paywallOpen || Boolean((leadUsage && leadUsage.limit != null && leadUsage.count >= leadUsage.limit) || cmaUsage?.reached)}

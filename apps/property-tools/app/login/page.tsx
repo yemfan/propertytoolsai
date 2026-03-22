@@ -3,6 +3,11 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import AuthPageShell from "@/components/layout/AuthPageShell";
+import Card from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import Link from "next/link";
 
 export default function LoginPage() {
   return (
@@ -63,7 +68,6 @@ function LoginPageInner() {
             .maybeSingle());
 
           if (rowErr && missingUserId(rowErr)) {
-            // no-op for backwards compatibility: `user_profiles` always uses `user_id`
             rowErr = null;
           }
 
@@ -89,10 +93,8 @@ function LoginPageInner() {
       }
 
       if (isAgent) {
-        // For agents, always land directly on the agent portal.
         router.replace("/dashboard");
       } else {
-        // Non-agents go back to the public homepage.
         router.replace(redirectTo.startsWith("/dashboard") ? "/" : redirectTo);
       }
     } catch (e: any) {
@@ -103,66 +105,58 @@ function LoginPageInner() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-sm bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-5">
+    <AuthPageShell>
+      <Card className="p-6 sm:p-8">
         <div className="space-y-1 text-center">
-          <h1 className="text-xl font-bold text-gray-900">Log in to PropertyTools AI</h1>
-          <p className="text-xs text-gray-600">
-            Access your agent dashboard and manage your home value leads.
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0072ce]">PropertyTools AI</p>
+          <h1 className="font-heading text-xl font-bold text-slate-900 md:text-2xl">Log in</h1>
+          <p className="text-sm text-slate-600">Access your agent dashboard and home value leads.</p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-700">Email</label>
-            <input
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-700">Email</label>
+            <Input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               autoComplete="email"
               required
             />
           </div>
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-700">Password</label>
-            <input
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-700">Password</label>
+            <Input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               autoComplete="current-password"
               required
             />
           </div>
-          {error && (
-            <p className="text-[11px] text-red-600 font-medium whitespace-pre-line">
+          {error ? (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-medium whitespace-pre-line text-red-700">
               {error}
             </p>
-          )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full inline-flex items-center justify-center rounded-lg bg-[#2563eb] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? "Logging in..." : "Log in"}
-          </button>
+          ) : null}
+          <Button type="submit" disabled={loading} className="w-full" size="lg">
+            {loading ? "Logging in…" : "Log in"}
+          </Button>
         </form>
-        <div className="text-[11px] text-gray-500 text-center space-y-2">
+        <div className="mt-6 space-y-2 text-center text-[11px] text-slate-500">
           <p>
             New user?{" "}
-            <a className="text-blue-700 font-semibold" href="/signup">
+            <Link href="/signup" className="font-semibold text-[#0072ce] hover:text-[#005ca8]">
               Sign up
-            </a>
+            </Link>
           </p>
           <p>
             Real estate agent?{" "}
-            <a className="text-blue-700 font-semibold" href="/agent-signup">
+            <Link href="/agent-signup" className="font-semibold text-[#0072ce] hover:text-[#005ca8]">
               Start free as agent
-            </a>
+            </Link>
           </p>
         </div>
-      </div>
-    </div>
+      </Card>
+    </AuthPageShell>
   );
 }
-

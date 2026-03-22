@@ -1,3 +1,4 @@
+import Card from "@/components/ui/Card";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import MlsCsvImportClient from "./MlsCsvImportClient";
 
@@ -15,8 +16,8 @@ export default async function SettingsPage() {
         </p>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
-        <div className="ui-card-title text-brand-text mb-2">
+      <Card className="p-5">
+        <div className="ui-card-title mb-2 text-brand-text">
           Subscription
         </div>
         <dl className="text-sm text-gray-700 space-y-2">
@@ -37,11 +38,11 @@ export default async function SettingsPage() {
           Free plan is limited to 20 lead rows. Upgrade logic can be enforced
           in the data layer and RLS policies later.
         </p>
-      </div>
+      </Card>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
+      <Card className="space-y-3 p-5">
         <div className="ui-card-title text-brand-text">Agent Profile</div>
-        <dl className="text-sm text-gray-700 space-y-2">
+        <dl className="space-y-2 text-sm text-gray-700">
           <div className="flex justify-between gap-4">
             <dt className="text-gray-500">Name</dt>
             <dd className="font-semibold">{derivedName}</dd>
@@ -55,9 +56,9 @@ export default async function SettingsPage() {
             <dd className="text-gray-600">Not collected yet</dd>
           </div>
         </dl>
-      </div>
+      </Card>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
+      <Card className="space-y-3 p-5">
         <div className="ui-card-title text-brand-text">Branding (Email Signature)</div>
         <p className="text-xs text-gray-600">
           This name is used in Resend email bodies (open house / follow-ups).
@@ -75,9 +76,9 @@ export default async function SettingsPage() {
             Set this via server env var <span className="font-mono">AGENT_BRAND_NAME</span>.
           </p>
         </div>
-      </div>
+      </Card>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
+      <Card className="space-y-3 p-5">
         <div className="ui-card-title text-brand-text">
           Home Value Smart Link
         </div>
@@ -101,7 +102,7 @@ export default async function SettingsPage() {
             </span>
           </p>
         </div>
-      </div>
+      </Card>
 
       <div className="mt-2">
         <MlsCsvImportClient />

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Card from "@/components/ui/Card";
 import { getCurrentAgentContext, getLeadUsageThisMonth } from "@/lib/dashboardService";
 import { supabaseServer } from "@/lib/supabaseServer";
 import SendDailyBriefingButton from "@/components/dashboard/SendDailyBriefingButton";
@@ -107,63 +108,45 @@ export default async function OverviewPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="ui-page-title text-brand-text">Dashboard Overview</h1>
+        <h1 className="font-heading ui-page-title text-brand-text">Dashboard Overview</h1>
         <p className="ui-page-subtitle text-brand-text/80">
           Track your pipeline, marketing activity, and open house attendees in one place.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <Link
-          href="/dashboard/leads"
-          className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:border-brand-primary/40 hover:shadow-md transition"
-        >
-          <div className="ui-card-subtitle text-slate-500">
-            Total Leads
-          </div>
-          <div className="mt-2 text-3xl font-extrabold text-brand-text">
-            {metrics.totalLeads ?? 0}
-          </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Link href="/dashboard/leads" className="block">
+          <Card variant="interactive" className="h-full p-5">
+            <div className="ui-card-subtitle text-slate-500">Total Leads</div>
+            <div className="mt-2 font-heading text-3xl font-extrabold text-brand-text">{metrics.totalLeads ?? 0}</div>
+          </Card>
         </Link>
 
-        <Link
-          href="/dashboard/leads?filter=hot"
-          className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:border-brand-accent/40 hover:shadow-md transition"
-        >
-          <div className="ui-card-subtitle text-slate-500">
-            🔥 Hot leads
-          </div>
-          <div className="mt-2 text-3xl font-extrabold text-brand-text">
-            {metrics.hotLeads ?? 0}
-          </div>
+        <Link href="/dashboard/leads?filter=hot" className="block">
+          <Card variant="interactive" className="h-full p-5">
+            <div className="ui-card-subtitle text-slate-500">🔥 Hot leads</div>
+            <div className="mt-2 font-heading text-3xl font-extrabold text-brand-text">{metrics.hotLeads ?? 0}</div>
+          </Card>
         </Link>
 
-        <Link
-          href="/dashboard/leads?filter=high_engagement"
-          className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:border-brand-success/40 hover:shadow-md transition"
-        >
-          <div className="ui-card-subtitle text-slate-500">
-            👀 Leads viewed reports today
-          </div>
-          <div className="mt-2 text-3xl font-extrabold text-brand-text">
-            {metrics.leadsViewedReportsToday ?? 0}
-          </div>
+        <Link href="/dashboard/leads?filter=high_engagement" className="block">
+          <Card variant="interactive" className="h-full p-5">
+            <div className="ui-card-subtitle text-slate-500">👀 Leads viewed reports today</div>
+            <div className="mt-2 font-heading text-3xl font-extrabold text-brand-text">
+              {metrics.leadsViewedReportsToday ?? 0}
+            </div>
+          </Card>
         </Link>
 
-        <Link
-          href="/dashboard/leads?filter=inactive"
-          className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:border-brand-accent/40 hover:shadow-md transition"
-        >
-          <div className="ui-card-subtitle text-slate-500">
-            ⏳ Inactive 7+ days
-          </div>
-          <div className="mt-2 text-3xl font-extrabold text-brand-text">
-            {metrics.inactive7Days ?? 0}
-          </div>
+        <Link href="/dashboard/leads?filter=inactive" className="block">
+          <Card variant="interactive" className="h-full p-5">
+            <div className="ui-card-subtitle text-slate-500">⏳ Inactive 7+ days</div>
+            <div className="mt-2 font-heading text-3xl font-extrabold text-brand-text">{metrics.inactive7Days ?? 0}</div>
+          </Card>
         </Link>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 flex flex-wrap items-center gap-4">
+      <Card className="flex flex-wrap items-center gap-4 p-4">
         <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           Tasks today
         </div>
@@ -179,9 +162,9 @@ export default async function OverviewPage() {
             Completion rate: <span className="font-semibold">{tasksCompletionRate}%</span>
           </div>
         )}
-      </div>
+      </Card>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
+      <Card className="space-y-3 p-5">
         <div className="flex items-center justify-between gap-2">
           <div className="text-sm font-semibold text-brand-text">Today&apos;s AI Briefing</div>
           <SendDailyBriefingButton />
@@ -189,8 +172,8 @@ export default async function OverviewPage() {
         {briefing ? (
           <div className="space-y-4">
             <p className="text-sm text-slate-700 whitespace-pre-line">{String((briefing as any).summary ?? "")}</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="border border-slate-100 rounded-lg p-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3">
                 <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Top leads</div>
                 <div className="mt-2 text-xs text-slate-700 space-y-1">
                   {(((briefing as any).insights?.topHotLeads ?? []) as any[]).slice(0, 3).map((l, i) => (
@@ -199,8 +182,8 @@ export default async function OverviewPage() {
                   {!((briefing as any).insights?.topHotLeads ?? []).length ? <div>None yet</div> : null}
                 </div>
               </div>
-              <div className="border border-slate-100 rounded-lg p-3">
-                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions</div>
+              <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</div>
                 <ul className="mt-2 text-xs text-slate-700 list-disc pl-4 space-y-1">
                   {(((briefing as any).insights?.suggestedActions ?? []) as any[]).slice(0, 4).map((a, i) => (
                     <li key={`${a}-${i}`}>{a}</li>
@@ -221,9 +204,9 @@ export default async function OverviewPage() {
             No briefing generated yet for today. Click <span className="font-semibold">Generate now</span>.
           </p>
         )}
-      </div>
+      </Card>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-4">
+      <Card className="space-y-4 p-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <div className="text-sm font-semibold text-brand-text">Quick Actions</div>
@@ -234,19 +217,19 @@ export default async function OverviewPage() {
           <div className="flex gap-2 flex-wrap">
             <Link
               href="/smart-cma-builder?save=1"
-              className="inline-flex items-center justify-center rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-[#005ca8]"
+              className="inline-flex items-center justify-center rounded-xl bg-[#0072ce] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#005ca8]"
             >
               Create Report
             </Link>
             <Link
               href="/dashboard/leads"
-              className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-800 border border-slate-200 hover:bg-slate-50"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
             >
               Add Lead
             </Link>
             <Link
               href="/dashboard/open-houses"
-              className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-800 border border-slate-200 hover:bg-slate-50"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
             >
               Create Open House
             </Link>
@@ -288,7 +271,7 @@ export default async function OverviewPage() {
             )}
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

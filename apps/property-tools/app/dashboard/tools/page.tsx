@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Card from "@/components/ui/Card";
 
 const tools = [
   { href: "/home-value-estimator", label: "Home Value Estimator" },
@@ -27,20 +28,20 @@ export default function ToolsPage() {
         <p className="ui-page-subtitle text-brand-text/80">All PropertyTools AI tools in one place.</p>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <Card className="p-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {tools.map((t) => (
             <Link
               key={t.href}
               href={t.href}
-              className="rounded-xl border border-gray-200 bg-brand-surface hover:bg-white hover:border-brand-primary/40 p-4 transition-colors"
+              className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-900/[0.04] transition-all hover:border-[#0072ce]/30 hover:shadow-md"
             >
               <div className="ui-card-title text-brand-text">{t.label}</div>
               <div className="mt-2 text-xs font-semibold text-brand-primary">Open →</div>
             </Link>
           ))}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

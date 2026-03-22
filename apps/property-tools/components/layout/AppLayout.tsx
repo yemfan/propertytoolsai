@@ -21,7 +21,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <AccessProvider>
-    <div className="min-h-screen bg-[#F9FAFB] text-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50/90 via-[#f9fafb] to-slate-100/50 text-slate-900">
       {mobileOpen ? (
         <button
           type="button"

@@ -41,10 +41,10 @@ export default function ToolGrid() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {tools.map((tool) => (
           <Link key={tool.title} href={tool.href}>
-            <Card className="h-full p-5 transition-shadow hover:shadow-md">
-              <h3 className="text-base font-bold text-slate-900">{tool.title}</h3>
+            <Card variant="interactive" className="h-full p-5">
+              <h3 className="font-heading text-base font-bold text-slate-900">{tool.title}</h3>
               <p className="mt-2 text-sm text-slate-600">{tool.description}</p>
-              <div className="mt-4 text-sm font-semibold text-blue-600">Open tool</div>
+              <div className="mt-4 text-sm font-semibold text-[#0072ce]">Open tool →</div>
             </Card>
           </Link>
         ))}

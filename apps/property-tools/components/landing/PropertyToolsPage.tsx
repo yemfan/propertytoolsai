@@ -186,10 +186,7 @@ export default function PropertyToolsPage() {
         className="mx-auto grid max-w-7xl grid-cols-1 gap-4 bg-gradient-to-b from-white to-slate-50/50 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-4"
       >
         {tools.map((tool) => (
-          <Card
-            key={tool.id}
-            className="border border-slate-200/80 bg-white shadow-sm shadow-slate-900/[0.04] ring-1 ring-slate-900/[0.03] transition hover:-translate-y-0.5 hover:shadow-xl"
-          >
+          <Card key={tool.id} variant="interactive" className="h-full">
             <CardContent className="p-4 sm:p-5">
               <h3 className="font-heading text-lg font-semibold leading-snug text-slate-900">{tool.title}</h3>
               <p className="mt-1.5 text-sm leading-relaxed text-gray-600">{tool.desc}</p>

@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/*
+ * PropertyTools AI — UI system (aligned with leadsmart-ai)
+ * - Brand: #0072ce primary, #28a745 success, #ff8c42 accent (see @theme + :root)
+ * - Surfaces: Card variants in components/ui/Card.tsx (ring + shadow-sm; interactive = hover lift)
+ * - Marketing: gradient page shells in components/layout/*PageShell*.tsx
+ */
+
 /* Tailwind v4 theme in CSS (avoids @config + TS on PostCSS/webpack — Linux/Vercel stability) */
 @theme {
   --color-brand-primary: #0072ce;

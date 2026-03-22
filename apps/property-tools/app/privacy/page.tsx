@@ -1,15 +1,20 @@
-import Link from "next/link";
+import MarketingContentLayout from "@/components/layout/MarketingContentLayout";
 
 export default function PrivacyPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-16">
-      <h1 className="text-3xl font-bold text-slate-900 mb-4">Privacy Policy</h1>
-      <p className="text-slate-600 mb-6">
-        Your privacy matters. This page will outline how we collect, use, and protect your information.
+    <MarketingContentLayout
+      eyebrow="Legal"
+      title="Privacy Policy"
+      intro="Your privacy matters. Here’s how we think about data for PropertyTools AI."
+    >
+      <p>
+        We collect information you provide (such as email or property details when you use a tool) and technical data
+        needed to run the service securely (such as logs and analytics).
       </p>
-      <Link href="/" className="text-primary-600 hover:text-primary-700 font-medium">
-        ← Back to Home
-      </Link>
-    </div>
+      <p>
+        We use data to deliver features, improve our products, and communicate with you when you opt in. We do not sell
+        your personal information. For full details, refer to the complete policy your team maintains for production.
+      </p>
+    </MarketingContentLayout>
   );
 }
