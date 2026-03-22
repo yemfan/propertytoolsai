@@ -245,3 +245,65 @@ a.text-slate-800:focus-visible {
     animation: none !important;
   }
 }
+
+/* Marketing landing — subtle motion + depth (aligned with leadsmart-ai; respects reduced motion) */
+@keyframes landing-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.landing-animate {
+  animation: landing-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.landing-delay-1 {
+  animation-delay: 0.06s;
+}
+.landing-delay-2 {
+  animation-delay: 0.12s;
+}
+.landing-delay-3 {
+  animation-delay: 0.18s;
+}
+.landing-delay-4 {
+  animation-delay: 0.24s;
+}
+.landing-delay-5 {
+  animation-delay: 0.3s;
+}
+
+.landing-hero-float {
+  animation: landing-float 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-animate,
+  .landing-delay-1,
+  .landing-delay-2,
+  .landing-delay-3,
+  .landing-delay-4,
+  .landing-delay-5 {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .landing-hero-float {
+    animation: none !important;
+  }
+}
