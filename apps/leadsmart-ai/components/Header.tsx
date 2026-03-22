@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
+import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
 
 const navItems = [
   { href: "/", label: "Home" },
@@ -22,15 +22,8 @@ export default function Header() {
     <header className="bg-white shadow-md border-b border-gray-200">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center py-2">
-          <Link href="/" className="flex items-center text-brand-primary hover:text-[#005ca8]">
-            <Image
-              src="/images/lslogo.png"
-              alt="LeadSmart AI logo"
-              width={200}
-              height={150}
-              className="h-16 w-auto rounded object-contain"
-              priority
-            />
+          <Link href="/" className="flex items-center text-brand-primary hover:opacity-90">
+            <LeadSmartLogo className="h-14 w-auto min-w-[11rem] sm:h-16 sm:min-w-[12rem]" />
           </Link>
 
           <button

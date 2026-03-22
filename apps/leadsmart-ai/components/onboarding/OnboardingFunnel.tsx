@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildDemoLeads, randomIncomingSnippet } from "./demoLeads";
 import { clearOnboarding, loadOnboarding, saveOnboarding, stepToProgress } from "./storage";
@@ -64,8 +64,8 @@ function Shell({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(0,114,206,0.25),transparent)]" />
       <div className="relative mx-auto flex min-h-screen max-w-lg flex-col px-4 py-8 sm:max-w-xl sm:px-6 sm:py-12">
         <header className="mb-6 flex items-center justify-between gap-3 onboarding-fade-up">
-          <Link href="/" className="flex items-center gap-2 opacity-90 transition hover:opacity-100">
-            <Image src="/images/lslogo.png" alt="LeadSmart AI" width={120} height={36} className="h-8 w-auto" />
+          <Link href="/" className="flex items-center opacity-90 transition hover:opacity-100">
+            <LeadSmartLogo compact className="h-8 w-auto min-w-[8rem]" />
           </Link>
           <Link
             href="/pricing"

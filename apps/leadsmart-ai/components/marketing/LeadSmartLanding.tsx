@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import ExitIntentPopup from "@/components/marketing/ExitIntentPopup";
@@ -18,16 +18,9 @@ export default function LeadSmartLanding() {
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
             <Link
               href="/"
-              className="flex items-center gap-2.5 font-heading text-lg font-bold !text-gray-900 transition hover:opacity-90"
+              className="flex items-center transition hover:opacity-90 focus-visible:outline focus-visible:ring-2 focus-visible:ring-[#0072ce]/40 rounded-md"
             >
-              <Image
-                src="/images/lslogo.png"
-                alt="LeadSmart AI"
-                width={160}
-                height={48}
-                className="h-9 w-auto sm:h-10"
-                priority
-              />
+              <LeadSmartLogo className="h-9 w-auto min-w-[9rem] sm:h-10 sm:min-w-[10rem]" />
             </Link>
             <nav className="hidden gap-6 text-sm md:flex">
               <a href="#how" className="font-medium !text-gray-700 hover:!text-[#0072ce]">
@@ -212,13 +205,7 @@ export default function LeadSmartLanding() {
         <footer className="border-t border-gray-200 bg-white px-6 py-10">
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 sm:flex-row">
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <Image
-                src="/images/lslogo.png"
-                alt=""
-                width={140}
-                height={40}
-                className="h-8 w-auto opacity-90"
-              />
+              <LeadSmartLogo compact className="h-8 w-auto min-w-[8rem] opacity-90" />
               <p className="text-sm font-semibold text-gray-800">© {new Date().getFullYear()} LeadSmart AI</p>
             </div>
             <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
