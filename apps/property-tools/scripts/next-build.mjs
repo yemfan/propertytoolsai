@@ -29,10 +29,32 @@ if (!existsSync(nextBin)) {
   process.exit(1);
 }
 
-const heapMb = process.env.NEXT_BUILD_HEAP_MB ?? "12288";
-process.env.NODE_OPTIONS = [process.env.NODE_OPTIONS, `--max-old-space-size=${heapMb}`]
-  .filter(Boolean)
-  .join(" ");
+const defaultHeapMb = process.env.NEXT_BUILD_HEAP_MB ?? "12288";
+
+/**
+ * Vercel often sets NODE_OPTIONS in vercel.json; dashboards sometimes typo
+ * `--max_old_space_size` (invalid). Deduplicate and use the largest heap (MB).
+ */
+function mergeNodeOptionsHeap(base, fallbackMb) {
+  let maxMb = parseInt(fallbackMb, 10);
+  if (!Number.isFinite(maxMb) || maxMb < 64) maxMb = 12288;
+  const s = String(base ?? "").trim();
+  for (const re of [/--max-old-space-size=(\d+)/gi, /--max_old_space_size=(\d+)/gi]) {
+    for (const m of s.matchAll(re)) {
+      const n = parseInt(m[1], 10);
+      if (Number.isFinite(n)) maxMb = Math.max(maxMb, n);
+    }
+  }
+  const cleaned = s
+    .replace(/--max-old-space-size=\d+/gi, " ")
+    .replace(/--max_old_space_size=\d+/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const heap = `--max-old-space-size=${maxMb}`;
+  return cleaned ? `${cleaned} ${heap}` : heap;
+}
+
+process.env.NODE_OPTIONS = mergeNodeOptionsHeap(process.env.NODE_OPTIONS, defaultHeapMb);
 
 // Next 16 defaults to Turbopack for `next build`. Do NOT force `--webpack` on Vercel by
 // default: webpack + @tailwindcss/postcss + native lightningcss/oxide often fails in CI

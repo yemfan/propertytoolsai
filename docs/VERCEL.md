@@ -91,7 +91,7 @@ The repo root **`package.json`** sets **`engines.node` to `20.x`** so Vercel use
 
 ## Build script (`apps/*/scripts/next-build.mjs`)
 
-Each app runs **`node ./scripts/next-build.mjs`** (see that app’s **`package.json`** **`build`** script). The script is **self-contained under the app folder** (it does **not** call repo root `scripts/next-build-with-heap.mjs`) so Vercel **Root Directory** = `apps/<name>` never misses files outside that tree. It sets **`NODE_OPTIONS=--max-old-space-size=…`**, resolves the **`next`** CLI from **`node_modules`**, and runs **`next build`** with **`cwd`** = the app. Override heap with **`NEXT_BUILD_HEAP_MB`** if needed.
+Each app runs **`node ./scripts/next-build.mjs`** (see that app’s **`package.json`** **`build`** script). The script is **self-contained under the app folder** (it does **not** call repo root `scripts/next-build-with-heap.mjs`) so Vercel **Root Directory** = `apps/<name>` never misses files outside that tree. It **merges** **`NODE_OPTIONS`**: removes invalid **`--max_old_space_size`** (underscore — not a real Node flag), dedupes **`--max-old-space-size`**, and keeps the **largest** heap (from **`vercel.json`**, Vercel env, or **`NEXT_BUILD_HEAP_MB`**). Then it runs **`next build`** with **`cwd`** = the app.
 
 The repo root still has **`scripts/next-build-with-heap.mjs`** for reference / manual use; the deployed apps do not depend on it.
 
