@@ -122,6 +122,28 @@ a:hover {
   color: #005ca8;
 }
 
+/*
+ * Plain CSS above is unlayered and wins over Tailwind utilities — `a { color: primary }` was
+ * overriding `text-white` on Next.js <Link> CTAs (blue text on blue buttons) on propertytoolsai.com.
+ */
+a.text-white,
+a.text-white:hover,
+a.text-white:focus-visible {
+  color: #fff !important;
+}
+
+a.text-slate-900,
+a.text-slate-900:hover,
+a.text-slate-900:focus-visible {
+  color: #0f172a !important;
+}
+
+a.text-slate-800,
+a.text-slate-800:hover,
+a.text-slate-800:focus-visible {
+  color: #1e293b !important;
+}
+
 .btn-primary {
   background-color: var(--color-primary);
   color: #fff;
