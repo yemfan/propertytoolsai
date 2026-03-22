@@ -119,10 +119,11 @@ console.error(
   [
     "",
     "[vercel-sync-next-output] Fix:",
-    "  1) Scroll up in the build log — if `next build` failed (TS, OOM), fix that first.",
-    "  2) Prefer Vercel Root Directory = apps/" + workspace + " (see docs/VERCEL.md).",
-    "  3) Remove dashboard env NEXT_DIST_IN_MONOREPO_ROOT / NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT unless using repo-root build.",
-    "  4) Repo-root deploy: set VERCEL_MONOREPO_APP=" + workspace + " and use `npm run build` from the repository root.",
+    "  1) Scroll up — if `next build` failed (TS, OOM, prerender), fix that first; missing routes-manifest usually follows a failed build.",
+    "  2) Preferred: Vercel → Root Directory = apps/" + workspace + " → leave Build Command empty (apps/" + workspace + "/vercel.json runs workspace build only; no sync step).",
+    "  3) Remove dashboard env NEXT_DIST_IN_MONOREPO_ROOT and NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT unless you use repo-root build (they break apps/<app>/.next).",
+    "  4) Repo-root only: Root Directory = repo root, Build Command = `npm run build`, set VERCEL_MONOREPO_APP=" + workspace + " (this script still runs after build:vercel-*-root).",
+    "  5) If your dashboard Build Command manually runs this script while Root Directory is apps/" + workspace + ", remove that — it is not needed and can fail after a good build.",
   ].join("\n"),
 );
 

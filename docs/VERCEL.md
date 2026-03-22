@@ -37,7 +37,9 @@ Prefer fixing **Root Directory** to **`apps/<app>`** instead of repo root.
 
 **`next.config.js` `distDir`:** Only **`NEXT_DIST_IN_MONOREPO_ROOT=1`** (repo-root deploys) sets **`distDir`** to **`<repo>/.next`**. Normal app deploys use the default **`apps/<app>/.next`**.
 
-**`scripts/vercel-sync-next-output.mjs`:** After **`npm run build -w …`** on Vercel, if **`routes-manifest.json`** exists under **`apps/<app>/.next`** but **not** at **`<repo>/.next`**, the script **copies** the full **`.next`** folder to the **repository root**. Some Vercel project layouts resolve **`/vercel/path0`** as the **monorepo root** while Next writes under **`apps/<app>`** — this keeps **`routes-manifest.json`** where the Next builder expects it.
+**`scripts/vercel-sync-next-output.mjs`:** Used only from **repo-root** deploys (`npm run build` → `vercel-monorepo-root-build.mjs` → `build:vercel-*-root` + this script). **App-level** **`apps/<app>/vercel.json`** does **not** run it: with **Root Directory** = **`apps/<app>`**, Vercel reads **`.next`** next to that app; copying to **`<repo>/.next`** is unnecessary and was a common failure point if the sync ran with a mismatched layout.
+
+For **repo-root** builds, if **`routes-manifest.json`** exists under **`apps/<app>/.next`** but **not** at **`<repo>/.next`**, the script **copies** the full **`.next`** tree to the repository root so **`/vercel/path0/.next`** exists when **`path0`** is the monorepo root.
 
 The script resolves the **monorepo root** from **`scripts/vercel-sync-next-output.mjs`** (parent directory = repo root) and walks up from **`process.cwd()`** as a fallback — it does **not** rely on **`cwd`** alone, so hooks that run with a different working directory still find **`apps/<app>/.next`**. If both **`routes-manifest.json`** locations are missing, the log lists **which** `.next` folders exist (and whether `routes-manifest.json` is present) so you can tell if **`next build` failed** vs. a path mismatch.
 
@@ -54,9 +56,9 @@ The script resolves the **monorepo root** from **`scripts/vercel-sync-next-outpu
 1. **Root Directory** = **`apps/leadsmart-ai`** (or **`apps/property-tools`**).
 2. Leave **Install Command** / **Build Command** **empty** in the dashboard so **`apps/<app>/vercel.json`** applies:
    - `installCommand`: `cd ../.. && npm ci`
-   - `buildCommand`: clears **`NEXT_DIST_IN_MONOREPO_ROOT`** for this step, then **`npm run build -w <workspace-name>`** — so a stray dashboard env cannot send **`.next`** to the repo root (which breaks **`routes-manifest.json`** under **`/vercel/path0/.next`**).
+   - `buildCommand`: clears **`NEXT_DIST_IN_MONOREPO_ROOT`** / **`NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT`** for this step, then **`npm run build -w <workspace-name>`** only — **no** **`vercel-sync-next-output`** (Vercel reads **`apps/<app>/.next`** when Root Directory is **`apps/<app>`**).
 
-The build log should **not** show `turbo build` from the repo root unless you intend to build everything.
+The build log should **not** show `turbo build` from the repo root unless you intend to build everything. It should **not** run **`vercel-sync-next-output.mjs`** for Option A (only repo-root **`npm run build`** does).
 
 ### “Routes Manifest Could Not Be Found” / “Output Directory” / other `.next` errors
 
