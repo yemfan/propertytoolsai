@@ -95,12 +95,20 @@ export default function AccountMenu() {
               Account &amp; settings
             </Link>
             <Link
+              href="/portal"
+              role="menuitem"
+              className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+              onClick={() => setOpen(false)}
+            >
+              Billing portal
+            </Link>
+            <Link
               href="/pricing"
               role="menuitem"
               className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
               onClick={() => setOpen(false)}
             >
-              Plans &amp; billing
+              Plans &amp; pricing
             </Link>
           </div>
           <div className="border-t border-slate-100 py-1">

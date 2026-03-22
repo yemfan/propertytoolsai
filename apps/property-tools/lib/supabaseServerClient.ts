@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { supabaseAuthCookieOptions } from "@/lib/authCookieOptions";
 
 export function supabaseServerClient() {
   // In some Next.js versions/configs, `cookies()` can be a Promise.
@@ -7,8 +8,10 @@ export function supabaseServerClient() {
   const cookieStorePromise = cookies();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const cookieOptions = supabaseAuthCookieOptions();
 
   return createServerClient(supabaseUrl, anonKey, {
+    ...(cookieOptions ? { cookieOptions } : {}),
     cookies: {
       async getAll() {
         const cookieStore = await cookieStorePromise;

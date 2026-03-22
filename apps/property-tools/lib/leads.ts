@@ -1,3 +1,6 @@
+export type { LeadRecord, LeadRecordStatus } from "./leads/leadRecord";
+export { buildLeadRecordFromUnlockBody } from "./leads/leadRecord";
+
 export type CreateLeadInput = {
   name: string;
   email: string;
@@ -29,6 +32,9 @@ export type CreateLeadInput = {
   /** e.g. high | medium | low */
   confidence?: string;
   likely_intent?: string;
+  /** Home value funnel — optional */
+  timeline?: string;
+  buying_or_selling?: string;
 };
 
 export type ExpertLeadPayload = {
@@ -87,6 +93,8 @@ export async function createLead(data: CreateLeadInput): Promise<CreateLeadResul
       estimate_high: data.estimate_high,
       confidence: data.confidence,
       likely_intent: data.likely_intent,
+      timeframe: data.timeline,
+      buying_or_selling: data.buying_or_selling,
     }),
   });
   const json = (await res.json().catch(() => ({}))) as {

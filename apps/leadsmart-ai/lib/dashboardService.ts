@@ -79,7 +79,10 @@ export async function getCurrentAgentContext(): Promise<{
 }> {
   const supabase = supabaseServerClient();
   const { data: userData, error: userErr } = await supabase.auth.getUser();
-  if (userErr) throw userErr;
+  if (userErr) {
+    const m = typeof userErr.message === "string" ? userErr.message.trim() : "";
+    throw new Error(m || "Unable to verify your session");
+  }
   const user = userData.user;
   if (!user) throw new Error("Not authenticated");
 
@@ -90,7 +93,11 @@ export async function getCurrentAgentContext(): Promise<{
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
-  if (agentErr && (agentErr as any).code !== "PGRST116") throw agentErr;
+  if (agentErr && (agentErr as any).code !== "PGRST116") {
+    const m = typeof (agentErr as any).message === "string" ? String((agentErr as any).message).trim() : "";
+    const code = (agentErr as any).code;
+    throw new Error(m || (code ? `Agent lookup failed (${code})` : "Agent lookup failed"));
+  }
 
   return {
     userId: user.id,

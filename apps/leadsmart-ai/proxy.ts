@@ -1,15 +1,19 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { supabaseAuthCookieOptions } from "./lib/authCookieOptions";
 
 export async function proxy(req: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request: req,
   });
 
+  const cookieOptions = supabaseAuthCookieOptions();
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      ...(cookieOptions ? { cookieOptions } : {}),
       cookies: {
         getAll() {
           return req.cookies.getAll();
@@ -32,7 +36,10 @@ export async function proxy(req: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = req.nextUrl;
-  const isProtected = pathname.startsWith("/dashboard");
+  const isProtected =
+    pathname.startsWith("/dashboard") ||
+    pathname === "/portal" ||
+    pathname.startsWith("/portal/");
 
   if (isProtected && !user) {
     const url = req.nextUrl.clone();
@@ -45,5 +52,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/portal", "/portal/:path*"],
 };

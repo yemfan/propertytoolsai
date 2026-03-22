@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
+import { getStripeCustomerIdForUser } from "@/lib/stripeCustomerForUser";
 
 export async function POST(req: Request) {
   try {
@@ -12,14 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { data: agent, error } = await supabase
-      .from("agents")
-      .select("stripe_customer_id")
-      .eq("auth_user_id", user.id)
-      .maybeSingle();
-
-    if (error && (error as any).code !== "PGRST116") throw error;
-    const customer = (agent as any)?.stripe_customer_id as string | undefined;
+    const customer = await getStripeCustomerIdForUser(user.id);
     if (!customer) {
       return NextResponse.json(
         { error: "No Stripe customer found" },
@@ -30,7 +24,7 @@ export async function POST(req: Request) {
     const origin = new URL(req.url).origin;
     const portal = await stripe.billingPortal.sessions.create({
       customer,
-      return_url: `${origin}/dashboard`,
+      return_url: `${origin}/portal`,
     });
 
     // If called from a form POST, redirect; otherwise JSON.

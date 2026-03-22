@@ -1,113 +1,233 @@
 /**
- * Confidence score from data completeness, comps, address quality, market stability.
+ * Confidence engine — weighted blend of address quality, detail completeness,
+ * comp coverage, and market stability. Optional: data freshness feeds market stability.
  */
 
-import type { ConfidenceLevel, ConfidenceOutput, NormalizedProperty } from "./types";
+import type {
+  ConfidenceInputsSnapshot,
+  ConfidenceLevel,
+  ConfidenceOutput,
+  NormalizedProperty,
+} from "./types";
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
-export type ConfidenceInput = {
-  property: NormalizedProperty;
-  /** 0+ sold comps used in PPSF */
-  pricedCompCount: number;
-  /** Google / structured address */
-  addressQuality: "structured" | "partial" | "unknown";
-  /** City market trend volatility proxy */
+/** Canonical weighted model (each dimension 0–100). */
+export type ConfidenceInputs = {
+  addressQuality: number;
+  detailCompleteness: number;
+  compCoverage: number;
+  marketStability: number;
+};
+
+const W_ADDR = 0.15;
+const W_DETAIL = 0.35;
+const W_COMP = 0.35;
+const W_MARKET = 0.15;
+
+/**
+ * confidenceScore =
+ *   (addressQuality × 0.15) + (detailCompleteness × 0.35) + (compCoverage × 0.35) + (marketStability × 0.15)
+ */
+export function computeConfidenceScoreFromInputs(inputs: ConfidenceInputs): number {
+  const raw =
+    clamp(inputs.addressQuality, 0, 100) * W_ADDR +
+    clamp(inputs.detailCompleteness, 0, 100) * W_DETAIL +
+    clamp(inputs.compCoverage, 0, 100) * W_COMP +
+    clamp(inputs.marketStability, 0, 100) * W_MARKET;
+  return clamp(Math.round(raw), 0, 100);
+}
+
+/** 80–100 = High, 55–79 = Medium, 0–54 = Low */
+export function confidenceLevelFromScore(score: number): ConfidenceLevel {
+  const s = clamp(score, 0, 100);
+  if (s >= 80) return "high";
+  if (s >= 55) return "medium";
+  return "low";
+}
+
+// --- Derive 0–100 sub-scores from pipeline signals ---
+
+const KEY_FIELD_COUNT = 6;
+
+/** Map geocoding / parsing quality to 0–100. */
+export function scoreAddressQualityFromSignals(
+  addressQuality: "structured" | "partial" | "unknown"
+): number {
+  if (addressQuality === "structured") return 95;
+  if (addressQuality === "partial") return 68;
+  return 40;
+}
+
+/** From normalized property missing-field list (detail completeness / missing feature count). */
+export function scoreDetailCompletenessFromProperty(property: NormalizedProperty): number {
+  const missing = property.missingFields?.length ?? 0;
+  const cappedMissing = Math.min(missing, KEY_FIELD_COUNT);
+  return Math.round(100 * (1 - cappedMissing / KEY_FIELD_COUNT));
+}
+
+export function missingFeatureCount(property: NormalizedProperty): number {
+  return property.missingFields?.length ?? 0;
+}
+
+/** Comp density: priced comps used for PPSF. */
+export function scoreCompCoverageFromCounts(pricedCompCount: number): number {
+  if (pricedCompCount >= 8) return 98;
+  if (pricedCompCount >= 5) return 85;
+  if (pricedCompCount >= 3) return 72;
+  if (pricedCompCount >= 1) return 55;
+  return 28;
+}
+
+export type MarketStabilitySignals = {
   marketTrend: "up" | "down" | "stable";
-  /** median DOM from city data — higher = less stable signal */
   daysOnMarket: number | null;
+  /** When recent city/market data was available (higher = fresher). 0–100 */
+  dataFreshness: number;
 };
 
 /**
- * bandPct: half-width around point estimate for range display.
+ * Market stability + data freshness. Trend + DOM + freshness of market stats.
+ */
+export function scoreMarketStabilityFromSignals(s: MarketStabilitySignals): number {
+  let base = 72;
+  if (s.marketTrend === "stable") base = 86;
+  else if (s.marketTrend === "up") base = 76;
+  else base = 68;
+
+  const dom = s.daysOnMarket;
+  if (dom != null && dom > 0) {
+    if (dom <= 30) base += 7;
+    else if (dom >= 60) base -= 8;
+  }
+
+  // Blend in data freshness (e.g. cache age) — weighted lightly into this pillar
+  const blended = base * 0.85 + clamp(s.dataFreshness, 0, 100) * 0.15;
+  return clamp(Math.round(blended), 0, 100);
+}
+
+/**
+ * Map city-data fetch age to 0–100 freshness (maxAgeHours window from caller).
+ */
+export function scoreDataFreshnessFromAgeHours(ageHours: number | null | undefined): number {
+  if (ageHours == null || !Number.isFinite(ageHours)) return 70;
+  if (ageHours <= 6) return 100;
+  if (ageHours <= 24) return 90;
+  if (ageHours <= 72) return 78;
+  if (ageHours <= 168) return 62;
+  return 45;
+}
+
+function buildConfidenceExplanation(
+  level: ConfidenceLevel,
+  inputs: ConfidenceInputs,
+  missingCount: number
+): string {
+  const dq = inputs.detailCompleteness < 58;
+  const cq = inputs.compCoverage >= 55;
+  const aq = inputs.addressQuality < 55;
+  const mq = inputs.marketStability < 55;
+
+  if (level === "medium" && dq && cq) {
+    return "Confidence is medium because we found enough local market data, but some property details are missing.";
+  }
+  if (level === "high" && missingCount === 0 && cq) {
+    return "Confidence is high because the address is well resolved, property details are complete, and we have solid comparable sales.";
+  }
+  if (aq) {
+    return `Confidence is ${level} because the address could not be fully verified; add a complete street address and ZIP for a tighter estimate.`;
+  }
+  if (!cq) {
+    return `Confidence is ${level} because fewer comparable sales were available in this area; results lean more on broader market medians.`;
+  }
+  if (mq) {
+    return `Confidence is ${level} because local market conditions are shifting or less data is available for this neighborhood.`;
+  }
+  if (dq) {
+    return `Confidence is ${level} because some property details are still missing — refine beds, baths, and sqft when you can.`;
+  }
+  return `Confidence is ${level} based on address quality, detail completeness (${inputs.detailCompleteness}/100), comparable coverage (${inputs.compCoverage}/100), and market stability (${inputs.marketStability}/100).`;
+}
+
+// --- Legacy pipeline input (runEstimate) ---
+
+export type ConfidenceInput = {
+  property: NormalizedProperty;
+  pricedCompCount: number;
+  addressQuality: "structured" | "partial" | "unknown";
+  marketTrend: "up" | "down" | "stable";
+  daysOnMarket: number | null;
+  /** Hours since city/market snapshot (optional — improves data freshness). */
+  marketDataAgeHours?: number | null;
+};
+
+/** Weighted contribution of each pillar to the final 0–100 score (impact ≈ pillar × weight). */
+function factorsFromInputs(inputs: ConfidenceInputs): ConfidenceOutput["factors"] {
+  return [
+    {
+      key: "address",
+      label: `Address precision (${inputs.addressQuality}/100)`,
+      impact: Math.round(inputs.addressQuality * W_ADDR),
+    },
+    {
+      key: "detail",
+      label: `Property details (${inputs.detailCompleteness}/100)`,
+      impact: Math.round(inputs.detailCompleteness * W_DETAIL),
+    },
+    {
+      key: "comps",
+      label: `Comp density (${inputs.compCoverage}/100)`,
+      impact: Math.round(inputs.compCoverage * W_COMP),
+    },
+    {
+      key: "market",
+      label: `Market stability (${inputs.marketStability}/100)`,
+      impact: Math.round(inputs.marketStability * W_MARKET),
+    },
+  ];
+}
+
+/**
+ * Full confidence + range band for estimate engine.
  */
 export function computeConfidence(
   input: ConfidenceInput
 ): { confidence: ConfidenceOutput; rangeBandPct: number } {
-  const factors: ConfidenceOutput["factors"] = [];
-  let score = 55;
+  const addressQuality = scoreAddressQualityFromSignals(input.addressQuality);
+  const detailCompleteness = scoreDetailCompletenessFromProperty(input.property);
+  const compCoverage = scoreCompCoverageFromCounts(input.pricedCompCount);
+  const dataFreshness = scoreDataFreshnessFromAgeHours(input.marketDataAgeHours ?? null);
 
-  // Address
-  if (input.addressQuality === "structured") {
-    score += 12;
-    factors.push({ key: "addr", label: "Structured address (Places)", impact: 12 });
-  } else if (input.addressQuality === "partial") {
-    score += 5;
-    factors.push({ key: "addr", label: "Partial address parsing", impact: 5 });
-  } else {
-    factors.push({ key: "addr", label: "Limited address validation", impact: -5 });
-    score -= 5;
-  }
-
-  // Field completeness
-  const p = input.property;
-  const fields = [
-    p.sqft != null && p.sqft > 0,
-    p.beds != null,
-    p.baths != null,
-    p.yearBuilt != null,
-    p.lotSqft != null && p.lotSqft > 0,
-    p.propertyType != null && p.propertyType.length > 0,
-  ];
-  const complete = fields.filter(Boolean).length / fields.length;
-  score += Math.round(complete * 18);
-  factors.push({
-    key: "complete",
-    label: `Property fields (${Math.round(complete * 100)}% complete)`,
-    impact: Math.round(complete * 18),
+  const marketStability = scoreMarketStabilityFromSignals({
+    marketTrend: input.marketTrend,
+    daysOnMarket: input.daysOnMarket,
+    dataFreshness,
   });
 
-  // Comps
-  if (input.pricedCompCount >= 6) {
-    score += 15;
-    factors.push({ key: "comps", label: "Strong comparable coverage", impact: 15 });
-  } else if (input.pricedCompCount >= 3) {
-    score += 10;
-    factors.push({ key: "comps", label: "Moderate comparable coverage", impact: 10 });
-  } else if (input.pricedCompCount >= 1) {
-    score += 4;
-    factors.push({ key: "comps", label: "Limited comparable sales", impact: 4 });
-  } else {
-    score -= 8;
-    factors.push({ key: "comps", label: "No recent comp-based PPSF (market fallback)", impact: -8 });
-  }
+  const confidenceInputs: ConfidenceInputs = {
+    addressQuality,
+    detailCompleteness,
+    compCoverage,
+    marketStability,
+  };
 
-  // Market stability (DOM)
-  const dom = input.daysOnMarket;
-  if (dom != null && dom > 0) {
-    if (dom <= 30) {
-      score += 4;
-      factors.push({ key: "dom", label: "Fast-moving market (lower DOM)", impact: 4 });
-    } else if (dom >= 60) {
-      score -= 4;
-      factors.push({ key: "dom", label: "Slower market (higher DOM)", impact: -4 });
-    }
-  }
+  const score = computeConfidenceScoreFromInputs(confidenceInputs);
+  const level = confidenceLevelFromScore(score);
+  const missingCount = missingFeatureCount(input.property);
 
-  if (input.marketTrend === "stable") {
-    score += 3;
-    factors.push({ key: "trend", label: "Stable local trend", impact: 3 });
-  } else {
-    factors.push({ key: "trend", label: "Active market shift (wider band)", impact: -2 });
-    score -= 2;
-  }
-
-  score = clamp(Math.round(score), 18, 96);
-
-  let level: ConfidenceLevel = "medium";
-  if (score >= 72) level = "high";
-  else if (score < 45) level = "low";
-
-  // Map score → range width: higher confidence = tighter band
   const bandPct = clamp(0.14 - score / 1000, 0.045, 0.12);
+
+  const explanation = buildConfidenceExplanation(level, confidenceInputs, missingCount);
 
   const confidence: ConfidenceOutput = {
     level,
     score,
     bandPct,
-    factors,
+    factors: factorsFromInputs(confidenceInputs),
+    explanation,
+    inputs: confidenceInputs,
   };
 
   return { confidence, rangeBandPct: bandPct };

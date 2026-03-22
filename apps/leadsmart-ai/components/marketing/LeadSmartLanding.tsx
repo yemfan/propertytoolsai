@@ -61,10 +61,10 @@ export default function LeadSmartLanding() {
               </a>
             </nav>
             <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-              <HeaderAuthActions />
-              <Button size="sm" href={primaryCtaHref}>
+              <Button size="sm" href={primaryCtaHref} className="whitespace-nowrap">
                 Get My First Leads
               </Button>
+              <HeaderAuthActions />
             </div>
           </div>
         </header>

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import Link from "next/link";
 import { safeInternalRedirect } from "@/lib/loginUrl";
+import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
+import { shouldLandOnPortalAfterLogin } from "@/lib/portalLanding";
 
 export default function LoginPage() {
   return (
@@ -21,7 +23,7 @@ export default function LoginPage() {
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams?.get("redirect") || "/dashboard";
+  const redirectParam = searchParams?.get("redirect");
   const reason = searchParams?.get("reason");
 
   const [email, setEmail] = useState("");
@@ -50,7 +52,9 @@ function LoginPageInner() {
 
       const { data: userData } = await supabase.auth.getUser();
       const user = userData?.user;
-      let isAgent = false;
+      let role: string | null = null;
+      let hasAgentRow = false;
+      let isPro = false;
       if (user) {
         try {
           const missingUserId = (err: any) => {
@@ -74,15 +78,19 @@ function LoginPageInner() {
           }
 
           const r = (userRow as { role?: string } | null)?.role;
-          if (!rowErr && r === "agent") isAgent = true;
-          else if (!rowErr && r === "user") isAgent = false;
-          else {
-            const { data: agentRow } = await supabase
-              .from("agents")
-              .select("id")
-              .eq("auth_user_id", user.id)
-              .maybeSingle();
-            isAgent = !!agentRow;
+          role = r ?? null;
+
+          const { data: agentRow } = await supabase
+            .from("agents")
+            .select("id")
+            .eq("auth_user_id", user.id)
+            .maybeSingle();
+          hasAgentRow = !!agentRow;
+
+          if (!rowErr && r === "user" && !hasAgentRow) {
+            isPro = false;
+          } else {
+            isPro = isRealEstateProfessionalRole(r) || hasAgentRow;
           }
         } catch {
           const { data: agentRow } = await supabase
@@ -90,15 +98,26 @@ function LoginPageInner() {
             .select("id")
             .eq("auth_user_id", user.id)
             .maybeSingle();
-          isAgent = !!agentRow;
+          hasAgentRow = !!agentRow;
+          isPro = hasAgentRow;
         }
       }
 
-      const safe = safeInternalRedirect(redirectTo);
-      if (isAgent) {
-        router.replace(safe ?? "/dashboard");
+      const safe = redirectParam ? safeInternalRedirect(redirectParam) : null;
+      if (isPro) {
+        if (safe) {
+          router.replace(safe);
+        } else if (shouldLandOnPortalAfterLogin(role, hasAgentRow)) {
+          router.replace("/portal");
+        } else {
+          router.replace("/dashboard");
+        }
       } else {
-        router.replace(redirectTo.startsWith("/dashboard") ? "/" : (safe ?? "/"));
+        const fallback = redirectParam ?? "/dashboard";
+        const safeFallback = safeInternalRedirect(fallback);
+        router.replace(
+          fallback.startsWith("/dashboard") ? "/" : (safeFallback ?? "/")
+        );
       }
     } catch (e: any) {
       setError(e?.message ?? "Something went wrong. Please try again.");

@@ -24,6 +24,10 @@ export type AccessUsageState = {
   userId: string | null;
   /** Present when logged in (from Supabase user). */
   email: string | null;
+  /** `user_profiles.role` when logged in (e.g. agent, broker, user). */
+  accountRole?: string | null;
+  /** False when only professionals may subscribe (ALLOW_CONSUMER_PAID_SUBSCRIPTIONS=false). */
+  paidSubscriptionEligible?: boolean;
   /** Per-tool snapshot; limits may come from server + defaults */
   tools: Record<string, ToolUsageEntry>;
   /** Server epoch / ISO hints for UI */

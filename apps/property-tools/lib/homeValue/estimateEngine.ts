@@ -78,15 +78,21 @@ function lotMultiplier(sqft: number, lotSqft: number | null): { m: number; label
   return { m, label: "Lot / footprint ratio" };
 }
 
+/**
+ * House condition multipliers on the adjusted baseline (between fair 0.97 and good 1.0).
+ */
+export const HOUSE_CONDITION_MULTIPLIER: Record<PropertyCondition, number> = {
+  poor: 0.94,
+  fair: 0.97,
+  average: 0.985,
+  good: 1.0,
+  excellent: 1.05,
+};
+
 function conditionMultiplier(c: PropertyCondition): { m: number; label: string } {
-  const map: Record<PropertyCondition, number> = {
-    poor: 0.88,
-    fair: 0.94,
-    average: 1,
-    good: 1.04,
-    excellent: 1.08,
-  };
-  return { m: map[c], label: `Condition (${c})` };
+  const key = (c ?? "good") as PropertyCondition;
+  const m = HOUSE_CONDITION_MULTIPLIER[key] ?? HOUSE_CONDITION_MULTIPLIER.good;
+  return { m, label: `Condition (${key})` };
 }
 
 function renovationMultiplier(r: RenovationLevel): { m: number; label: string } {

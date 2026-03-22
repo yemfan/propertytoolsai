@@ -1,6 +1,15 @@
 export * from "./types";
+export * from "./estimateUiState";
+export * from "./homeValueTracking";
+export * from "./estimateDisplay";
+export * from "./normalizeEstimateRequestBody";
 export * from "./estimateEngine";
 export * from "./confidenceEngine";
 export * from "./recommendations";
 export * from "./normalizeProperty";
 export * from "./engagementScore";
+export * from "./intentInference";
+export * from "./intentSignals";
+export * from "./leadCapture";
+export * from "./leadSmartRouting";
+export { runHomeValueEstimatePipeline } from "./runEstimate";

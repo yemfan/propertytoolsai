@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
+import { shouldLandOnPortalAfterLogin } from "@/lib/portalLanding";
 
 type Mode = "login" | "signup";
 
@@ -64,8 +66,17 @@ export default function AuthModal({
         try {
           const meRes = await fetch("/api/me", { credentials: "include" });
           if (meRes.ok) {
-            const me = (await meRes.json()) as { role?: string };
-            if (me?.role === "agent") router.replace("/dashboard");
+            const me = (await meRes.json()) as {
+              role?: string;
+              has_agent_record?: boolean;
+            };
+            const role = me?.role ?? null;
+            const hasAgent = Boolean(me?.has_agent_record);
+            if (shouldLandOnPortalAfterLogin(role, hasAgent)) {
+              router.replace("/portal");
+            } else if (isRealEstateProfessionalRole(role) || hasAgent) {
+              router.replace("/dashboard");
+            }
           }
         } catch {
           // Best-effort: if /api/me fails, we just keep the current page refresh.

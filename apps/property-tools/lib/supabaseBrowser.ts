@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { supabaseAuthCookieOptions } from "@/lib/authCookieOptions";
 
 /**
  * Browser Supabase client — must use `@supabase/ssr` so the session is stored in
@@ -9,6 +10,9 @@ import { createBrowserClient } from "@supabase/ssr";
 export function supabaseBrowser() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  return createBrowserClient(supabaseUrl, anonKey);
+  const cookieOptions = supabaseAuthCookieOptions();
+  return createBrowserClient(supabaseUrl, anonKey, {
+    ...(cookieOptions ? { cookieOptions } : {}),
+  });
 }
 

@@ -8,12 +8,37 @@ import Card from "@/components/ui/Card";
 import ToolPageScaffold from "@/components/layout/ToolPageScaffold";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import LeadCaptureModal from "@/components/LeadCaptureModal";
+import HomeValueSection from "@/components/home-value/HomeValueSection";
+import HomeValueTrustDisclaimer from "@/components/home-value/HomeValueTrustDisclaimer";
 import { useAddressPrefill } from "@/hooks/useAddressPrefill";
 import { trackEvent, trackHomeValueUsed, trackPropertyViewed } from "@/lib/tracking";
 import {
-  computeHomeValueEngagementScore,
+  computeEngagementScore,
   crmIntentFromLikelyIntent,
+  HIGH_VALUE_PROPERTY_THRESHOLD_USD,
+  leadScoreBand,
 } from "@/lib/homeValue/engagementScore";
+import { fetchJson } from "@/lib/homeValue/fetchJson";
+import { trackToolEvent } from "@/lib/homeValue/toolEventsClient";
+import {
+  buildClientIntentSignals,
+  markCrossToolNavigationFromHomeValue,
+} from "@/lib/homeValue/intentSignalsClient";
+import {
+  buildRefineSnapshot,
+  canOpenFullReportGate,
+  hasRefinedSinceBaseline,
+  isUsefulEstimate,
+  shouldShowSoftLeadPrompt,
+} from "@/lib/homeValue/leadCapture";
+import { compSupportLabel, formatEstimateCurrency } from "@/lib/homeValue/estimateDisplay";
+import { deriveEstimateUiState } from "@/lib/homeValue/estimateUiState";
+import {
+  HOME_VALUE_ANALYTICS_EVENTS,
+  trackHomeValueAnalytics,
+  trackHomeValueToolEvent,
+} from "@/lib/homeValue/homeValueTracking";
+import type { LeadRecord } from "@/lib/leads/leadRecord";
 import type {
   HomeValueEstimateResponse,
   PropertyCondition,
@@ -23,6 +48,52 @@ import type {
 
 const HV_UNLOCK_KEY = "propertytoolsai:hv_report_unlocked";
 const HV_SESSION_KEY = "propertytoolsai:hv_session_id";
+const HV_SOFT_LEAD_DISMISS_KEY = "propertytoolsai:hv_soft_lead_banner_dismissed";
+/** Flat path — same handler as `/api/home-value/estimate`; avoids HTML 404s in some dev/build setups. */
+const API_ESTIMATE = "/api/home-value-estimate";
+
+/** Row from GET /api/home-value/session (subset we hydrate). */
+type HomeValueSessionRow = {
+  full_address: string;
+  city: string;
+  state: string;
+  zip: string;
+  lat: number | null;
+  lng: number | null;
+  beds: number | null;
+  baths: number | null;
+  sqft: number | null;
+  year_built: number | null;
+  lot_size: number | null;
+  property_type: string | null;
+  condition: string | null;
+  renovated_recently: boolean | null;
+  likely_intent: string | null;
+};
+
+const CONDITIONS: PropertyCondition[] = ["poor", "fair", "average", "good", "excellent"];
+
+function asCondition(v: string | null | undefined): PropertyCondition {
+  if (v && CONDITIONS.includes(v as PropertyCondition)) return v as PropertyCondition;
+  return "average";
+}
+
+function renovatedToLevel(r: boolean | null | undefined): RenovationLevel {
+  if (r === true) return "cosmetic";
+  return "none";
+}
+
+function asUserIntent(v: string | null | undefined): UserIntent | null {
+  if (v === "seller" || v === "buyer" || v === "investor") return v;
+  return null;
+}
+
+function effectiveUserIntent(
+  selected: UserIntent | null,
+  applied: UserIntent | undefined
+): UserIntent {
+  return selected ?? applied ?? "seller";
+}
 
 function readOrCreateSessionId(): string {
   if (typeof window === "undefined") return "";
@@ -40,7 +111,7 @@ function readOrCreateSessionId(): string {
 
 function asCurrency(value: number | null) {
   if (value == null || !Number.isFinite(value)) return "--";
-  return `$${Math.round(value).toLocaleString()}`;
+  return formatEstimateCurrency(value);
 }
 
 function readUnlocked() {
@@ -68,6 +139,11 @@ export function HomeValueToolInner() {
     skipLocalStorage: true,
   });
 
+  const [sessionId, setSessionId] = useState("");
+  useEffect(() => {
+    setSessionId(readOrCreateSessionId());
+  }, []);
+
   const [placeMeta, setPlaceMeta] = useState<{
     city: string | null;
     state: string | null;
@@ -84,7 +160,8 @@ export function HomeValueToolInner() {
   const [propertyType, setPropertyType] = useState("single family");
   const [condition, setCondition] = useState<PropertyCondition>("average");
   const [renovation, setRenovation] = useState<RenovationLevel>("none");
-  const [userIntent, setUserIntent] = useState<UserIntent>("seller");
+  /** null = auto (signal-based inference on the server). */
+  const [userIntent, setUserIntent] = useState<UserIntent | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,12 +169,146 @@ export function HomeValueToolInner() {
 
   const [reportUnlocked, setReportUnlocked] = useState(false);
   const [leadModalOpen, setLeadModalOpen] = useState(false);
+  const [phoneCaptured, setPhoneCaptured] = useState(false);
+  const [clickedCma, setClickedCma] = useState(false);
+  const [clickedExpert, setClickedExpert] = useState(false);
   const [phase, setPhase] = useState<"idle" | "ready">("idle");
+  /** Live refine request in flight (debounced silent estimate). */
+  const [refinePending, setRefinePending] = useState(false);
+
+  /** After each API response, skip one debounced refine (avoids duplicate fetch). */
+  const suppressRefineFromApi = useRef(false);
+  const hvStartedOnce = useRef(false);
+  const propertyDetailsAddr = useRef<string | null>(null);
+  const softGateTracked = useRef(false);
+  const prevRefinedTracked = useRef(false);
+  /** First refine snapshot after a successful estimate — used to detect “user refined details”. */
+  const [refineBaseline, setRefineBaseline] = useState<string | null>(null);
+
+  const [softLeadBannerDismissed, setSoftLeadBannerDismissed] = useState(false);
+
+  /** Prior visit with saved funnel row (GET /api/home-value/session hit a row). */
+  const [returningVisitor, setReturningVisitor] = useState(false);
+  /** Successful non-silent estimates this session (reset when property address changes). */
+  const [estimateRunCount, setEstimateRunCount] = useState(0);
 
   useEffect(() => {
     setReportUnlocked(readUnlocked());
+    try {
+      setSoftLeadBannerDismissed(sessionStorage.getItem(HV_SOFT_LEAD_DISMISS_KEY) === "1");
+    } catch {
+      /* ignore */
+    }
     void trackEvent("tool_used", { tool: "home_value", phase: "page_load" });
   }, []);
+
+  useEffect(() => {
+    if (hvStartedOnce.current) return;
+    hvStartedOnce.current = true;
+    void trackHomeValueAnalytics(HOME_VALUE_ANALYTICS_EVENTS.HOME_VALUE_STARTED, {
+      sessionId: sessionId || undefined,
+      source: "tool_page",
+    });
+  }, [sessionId]);
+
+  /** Restore form + estimate from Supabase when returning to the tab. */
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { res, data: json } = await fetchJson<{
+          ok?: boolean;
+          session?: HomeValueSessionRow | null;
+        }>(`/api/home-value/session?session_id=${encodeURIComponent(sessionId)}`);
+        if (cancelled || !res.ok || !json.ok || !json.session) return;
+        setReturningVisitor(true);
+        const s = json.session;
+        setAddress(String(s.full_address ?? ""));
+        setPlaceMeta({
+          city: s.city ?? null,
+          state: s.state ?? null,
+          zip: s.zip ?? null,
+          lat: s.lat != null ? Number(s.lat) : null,
+          lng: s.lng != null ? Number(s.lng) : null,
+        });
+        if (s.beds != null) setBeds(String(s.beds));
+        if (s.baths != null) setBaths(String(s.baths));
+        if (s.sqft != null) setSqft(String(s.sqft));
+        if (s.lot_size != null) setLotSqft(String(s.lot_size));
+        if (s.year_built != null) setYearBuilt(String(s.year_built));
+        if (s.property_type) setPropertyType(s.property_type);
+        setCondition(asCondition(s.condition));
+        setRenovation(renovatedToLevel(s.renovated_recently));
+        const li = asUserIntent(s.likely_intent);
+        if (li) setUserIntent(li);
+        else setUserIntent(null);
+        setPhase("ready");
+
+        const addrHydrate = String(s.full_address ?? "").trim();
+        const body = {
+          address: addrHydrate,
+          city: s.city ?? null,
+          state: s.state ?? null,
+          zip: s.zip ?? null,
+          lat: s.lat != null ? Number(s.lat) : null,
+          lng: s.lng != null ? Number(s.lng) : null,
+          beds: s.beds != null ? Number(s.beds) : undefined,
+          baths: s.baths != null ? Number(s.baths) : undefined,
+          sqft: s.sqft != null ? Number(s.sqft) : undefined,
+          lotSqft: s.lot_size != null ? Number(s.lot_size) : undefined,
+          yearBuilt: s.year_built != null ? Number(s.year_built) : undefined,
+          propertyType: s.property_type ?? undefined,
+          condition: asCondition(s.condition),
+          renovation: renovatedToLevel(s.renovated_recently),
+          intent: asUserIntent(s.likely_intent) ?? undefined,
+          intent_signals: buildClientIntentSignals({
+            address: addrHydrate,
+            reportUnlocked: readUnlocked(),
+            clickedCma: false,
+            clickedExpert: false,
+          }),
+          session_id: sessionId,
+        };
+        const { res: estRes, data: estJson } = await fetchJson<
+          HomeValueEstimateResponse | { ok: false; error?: string }
+        >(API_ESTIMATE, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (cancelled || !estRes.ok || !("ok" in estJson) || estJson.ok !== true) return;
+        suppressRefineFromApi.current = true;
+        setResult(estJson);
+        setEstimateRunCount(1);
+        if (estJson.sessionId) {
+          try {
+            sessionStorage.setItem(HV_SESSION_KEY, estJson.sessionId);
+            setSessionId(estJson.sessionId);
+          } catch {
+            /* ignore */
+          }
+        }
+        void trackToolEvent(sessionId, "home_value", "session_hydrated", {
+          has_estimate: Boolean(estJson.estimate?.point),
+        });
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
+
+  const prevNormalizedAddressRef = useRef<string | null>(null);
+  useEffect(() => {
+    const addr = (result?.normalizedProperty?.address ?? "").trim();
+    if (prevNormalizedAddressRef.current !== null && addr !== "" && prevNormalizedAddressRef.current !== addr) {
+      setEstimateRunCount(0);
+    }
+    if (addr) prevNormalizedAddressRef.current = addr;
+  }, [result?.normalizedProperty?.address]);
 
   const buildPayload = useCallback(() => {
     const b = Number(beds) || undefined;
@@ -105,6 +316,12 @@ export function HomeValueToolInner() {
     const s = Number(sqft) || undefined;
     const lot = lotSqft.trim() ? Number(lotSqft) : undefined;
     const yb = yearBuilt.trim() ? Number(yearBuilt) : undefined;
+    const intent_signals = buildClientIntentSignals({
+      address: address.trim(),
+      reportUnlocked,
+      clickedCma,
+      clickedExpert,
+    });
     return {
       address: address.trim(),
       city: placeMeta.city,
@@ -120,8 +337,9 @@ export function HomeValueToolInner() {
       propertyType: propertyType || undefined,
       condition,
       renovation,
-      intent: userIntent,
-      session_id: readOrCreateSessionId() || undefined,
+      intent: userIntent ?? undefined,
+      intent_signals,
+      session_id: sessionId || undefined,
     };
   }, [
     address,
@@ -135,10 +353,11 @@ export function HomeValueToolInner() {
     condition,
     renovation,
     userIntent,
+    sessionId,
+    reportUnlocked,
+    clickedCma,
+    clickedExpert,
   ]);
-
-  /** After each API response, skip one debounced refine (avoids duplicate fetch). */
-  const suppressRefineFromApi = useRef(false);
 
   const runEstimate = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -150,18 +369,21 @@ export function HomeValueToolInner() {
       if (!opts?.silent) setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/home-value-estimate", {
+        const { res, data: json } = await fetchJson<
+          HomeValueEstimateResponse | { ok: false; error?: string }
+        >(API_ESTIMATE, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(p),
         });
-        const json = (await res.json()) as HomeValueEstimateResponse | { ok: false; error?: string };
         if (!res.ok || !("ok" in json) || json.ok !== true) {
           throw new Error((json as { error?: string }).error ?? "Estimate failed");
         }
         if ("sessionId" in json && typeof (json as { sessionId?: string }).sessionId === "string") {
           try {
-            sessionStorage.setItem(HV_SESSION_KEY, (json as { sessionId: string }).sessionId);
+            const sid = (json as { sessionId: string }).sessionId;
+            sessionStorage.setItem(HV_SESSION_KEY, sid);
+            setSessionId(sid);
           } catch {
             /* ignore */
           }
@@ -179,7 +401,27 @@ export function HomeValueToolInner() {
           if (np.propertyType) setPropertyType(np.propertyType);
         }
         if (!opts?.silent) {
+          setEstimateRunCount((c) => c + 1);
           void trackEvent("tool_used", { tool: "home_value", phase: "estimate_complete" });
+          void trackToolEvent(p.session_id ?? sessionId, "home_value", "estimate_complete", {
+            point: json.estimate?.point,
+            confidence: json.confidence?.level,
+          });
+          const genMeta = {
+            city: json.normalizedProperty?.city ?? placeMeta.city,
+            state: json.normalizedProperty?.state ?? placeMeta.state,
+            zip: json.normalizedProperty?.zip ?? placeMeta.zip,
+            confidence: json.confidence?.level ?? null,
+            likelyIntent: json.intentInference?.applied,
+            sessionId: (p.session_id ?? sessionId) || undefined,
+            pricedCompCount: json.comps?.pricedCount,
+          };
+          void trackHomeValueAnalytics(HOME_VALUE_ANALYTICS_EVENTS.ESTIMATE_GENERATED, genMeta);
+          void trackHomeValueToolEvent(
+            p.session_id ?? sessionId,
+            HOME_VALUE_ANALYTICS_EVENTS.ESTIMATE_GENERATED,
+            genMeta
+          );
           const addr = p.address.trim();
           if (addr) void trackPropertyViewed({ address: addr, source: "home_value" });
           void trackHomeValueUsed({
@@ -200,7 +442,7 @@ export function HomeValueToolInner() {
         if (!opts?.silent) setLoading(false);
       }
     },
-    [buildPayload]
+    [buildPayload, sessionId, placeMeta]
   );
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -212,7 +454,14 @@ export function HomeValueToolInner() {
     }
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
-      void runEstimate({ silent: true });
+      void (async () => {
+        setRefinePending(true);
+        try {
+          await runEstimate({ silent: true });
+        } finally {
+          setRefinePending(false);
+        }
+      })();
     }, 450);
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -235,7 +484,170 @@ export function HomeValueToolInner() {
   const confidence = result?.confidence ?? null;
   const showFullReport = reportUnlocked || !estimate;
 
-  const openUnlock = () => setLeadModalOpen(true);
+  const refineSnapshot = useMemo(
+    () =>
+      buildRefineSnapshot({
+        beds,
+        baths,
+        sqft,
+        lotSqft,
+        yearBuilt,
+        propertyType,
+        condition,
+        renovation,
+      }),
+    [beds, baths, sqft, lotSqft, yearBuilt, propertyType, condition, renovation]
+  );
+
+  useEffect(() => {
+    setRefineBaseline(null);
+  }, [result?.normalizedProperty?.address]);
+
+  useEffect(() => {
+    if (!result?.estimate) setRefineBaseline(null);
+  }, [result?.estimate]);
+
+  useEffect(() => {
+    if (!result?.estimate) return;
+    setRefineBaseline((prev) => (prev == null ? refineSnapshot : prev));
+  }, [result?.estimate, refineSnapshot]);
+
+  const userRefinedDetails = hasRefinedSinceBaseline(refineBaseline, refineSnapshot);
+
+  const showSoftLeadBanner = shouldShowSoftLeadPrompt({
+    reportUnlocked,
+    hasPreview: Boolean(result?.estimate?.point),
+    useful: isUsefulEstimate(result),
+    refined: userRefinedDetails,
+    bannerDismissed: softLeadBannerDismissed,
+  });
+
+  const estimateUiState = useMemo(
+    () =>
+      deriveEstimateUiState({
+        addressTrimmed: address.trim(),
+        hasStructuredPlace: Boolean(
+          (placeMeta.lat != null && placeMeta.lng != null) || (placeMeta.city && placeMeta.state)
+        ),
+        loading,
+        refinePending,
+        hasEstimate: Boolean(result?.estimate?.point),
+        userRefined: userRefinedDetails,
+        reportUnlocked,
+        leadModalOpen,
+        hasRecommendations: Boolean(result?.recommendations?.length),
+      }),
+    [
+      address,
+      placeMeta.lat,
+      placeMeta.lng,
+      placeMeta.city,
+      placeMeta.state,
+      loading,
+      refinePending,
+      result?.estimate?.point,
+      result?.recommendations?.length,
+      userRefinedDetails,
+      reportUnlocked,
+      leadModalOpen,
+    ]
+  );
+
+  const appliedIntent = result?.intentInference?.applied;
+  const leadIntent = useMemo(
+    () => effectiveUserIntent(userIntent, appliedIntent),
+    [userIntent, appliedIntent]
+  );
+
+  const trackingMeta = useCallback(
+    () => ({
+      city: placeMeta.city,
+      state: placeMeta.state,
+      zip: placeMeta.zip,
+      confidence: result?.confidence?.level ?? null,
+      likelyIntent: leadIntent,
+      sessionId: sessionId || undefined,
+      pricedCompCount: result?.comps?.pricedCount,
+      estimateUiState,
+    }),
+    [
+      placeMeta.city,
+      placeMeta.state,
+      placeMeta.zip,
+      result?.confidence?.level,
+      leadIntent,
+      sessionId,
+      result?.comps?.pricedCount,
+      estimateUiState,
+    ]
+  );
+
+  useEffect(() => {
+    const addr = result?.normalizedProperty?.address?.trim();
+    if (!addr || propertyDetailsAddr.current === addr) return;
+    propertyDetailsAddr.current = addr;
+    const m = {
+      city: result?.normalizedProperty?.city ?? placeMeta.city,
+      state: result?.normalizedProperty?.state ?? placeMeta.state,
+      zip: result?.normalizedProperty?.zip ?? placeMeta.zip,
+      sessionId: sessionId || undefined,
+      confidence: result?.confidence?.level ?? null,
+      likelyIntent: leadIntent,
+      estimateUiState,
+    };
+    void trackHomeValueAnalytics(HOME_VALUE_ANALYTICS_EVENTS.PROPERTY_DETAILS_LOADED, m);
+    void trackHomeValueToolEvent(sessionId, HOME_VALUE_ANALYTICS_EVENTS.PROPERTY_DETAILS_LOADED, m);
+  }, [
+    result?.normalizedProperty?.address,
+    result?.normalizedProperty?.city,
+    result?.normalizedProperty?.state,
+    result?.normalizedProperty?.zip,
+    placeMeta.city,
+    placeMeta.state,
+    placeMeta.zip,
+    sessionId,
+    leadIntent,
+    result?.confidence?.level,
+    estimateUiState,
+  ]);
+
+  useEffect(() => {
+    if (userRefinedDetails && !prevRefinedTracked.current) {
+      prevRefinedTracked.current = true;
+      const m = trackingMeta();
+      void trackHomeValueAnalytics(HOME_VALUE_ANALYTICS_EVENTS.ESTIMATE_REFINED, m);
+      void trackHomeValueToolEvent(sessionId, HOME_VALUE_ANALYTICS_EVENTS.ESTIMATE_REFINED, m);
+    }
+    if (!userRefinedDetails) prevRefinedTracked.current = false;
+  }, [userRefinedDetails, sessionId, trackingMeta]);
+
+  useEffect(() => {
+    if (!showSoftLeadBanner || softGateTracked.current) return;
+    softGateTracked.current = true;
+    const m = trackingMeta();
+    void trackHomeValueAnalytics(HOME_VALUE_ANALYTICS_EVENTS.REPORT_GATE_SHOWN, m);
+    void trackHomeValueToolEvent(sessionId, HOME_VALUE_ANALYTICS_EVENTS.REPORT_GATE_SHOWN, m);
+  }, [showSoftLeadBanner, sessionId, trackingMeta]);
+
+  const openUnlock = () => {
+    if (!canOpenFullReportGate(result)) return;
+    void trackToolEvent(sessionId, "home_value", "report_gate_opened", {
+      estimate_point: estimate?.point,
+    });
+    const m = trackingMeta();
+    void trackHomeValueAnalytics(HOME_VALUE_ANALYTICS_EVENTS.REPORT_GATE_SHOWN, m);
+    void trackHomeValueToolEvent(sessionId, HOME_VALUE_ANALYTICS_EVENTS.REPORT_GATE_SHOWN, m);
+    setLeadModalOpen(true);
+  };
+
+  const dismissSoftLeadBanner = useCallback(() => {
+    setSoftLeadBannerDismissed(true);
+    try {
+      sessionStorage.setItem(HV_SOFT_LEAD_DISMISS_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const missingHint = useMemo(() => {
     const m = result?.normalizedProperty?.missingFields ?? [];
@@ -243,33 +655,53 @@ export function HomeValueToolInner() {
     return `Some details are missing — refine ${m.join(", ")} below for a tighter range.`;
   }, [result]);
 
+  const repeatSession = returningVisitor || estimateRunCount > 1;
+
   const engagementScore = useMemo(() => {
     const missing = result?.normalizedProperty?.missingFields ?? [];
-    const fieldsCompleteRatio = 1 - Math.min(1, missing.length / 6);
-    return computeHomeValueEngagementScore({
-      confidenceScore: result?.confidence?.score ?? 0,
-      fieldsCompleteRatio,
-      pricedCompCount: result?.comps?.pricedCount ?? 0,
-      hasEstimate: Boolean(result?.estimate),
-      requestedFullReport: true,
-      hasPhone: false,
-      likelyIntent: userIntent,
+    const refinedDetails = missing.length === 0;
+    const point = estimate?.point ?? 0;
+    return computeEngagementScore({
+      usedTool: Boolean(result?.estimate),
+      refinedDetails,
+      unlockedReport: reportUnlocked,
+      phoneProvided: phoneCaptured,
+      repeatSession,
+      clickedCma,
+      clickedExpert,
+      highValueProperty: point >= HIGH_VALUE_PROPERTY_THRESHOLD_USD,
     });
-  }, [result, userIntent]);
+  }, [
+    result?.estimate,
+    result?.normalizedProperty?.missingFields,
+    reportUnlocked,
+    phoneCaptured,
+    repeatSession,
+    clickedCma,
+    clickedExpert,
+    estimate?.point,
+  ]);
+
+  const engagementScoreBand = useMemo(() => leadScoreBand(engagementScore), [engagementScore]);
 
   return (
-    <>
+    <div data-estimate-ui-state={estimateUiState} className="contents">
       <ToolPageScaffold
-        title="Home Value Estimate"
-        subtitle="Pick an address for an instant estimate, refine details for a tighter range, then unlock the full report. Estimates use local market data and comparable sales when available."
+        title="Home value estimate"
+        subtitle="Not an appraisal — an automated estimate with a value range for informational use. Pick an address, refine details for a tighter band, then unlock the full breakdown when you’re ready."
         inputTitle="Property"
         inputDescription="Address & details"
         resultTitle="Estimate"
-        resultDescription="Value, range & confidence"
+        resultDescription="Range & confidence (not a single “exact” value)"
         inputContent={
           <Card className="p-5">
-            <div className="space-y-4">
-              <div>
+            <div className="space-y-6">
+              <HomeValueSection
+                id="hv-section-1"
+                title="1 · Hero & address"
+                description="Search and select a property — we’ll load public and enriched details when available."
+              >
+                <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Address</label>
                 <AddressAutocomplete
                   value={address}
@@ -304,18 +736,46 @@ export function HomeValueToolInner() {
                       lat: val.lat ?? null,
                       lng: val.lng ?? null,
                     });
+                    void trackHomeValueAnalytics(HOME_VALUE_ANALYTICS_EVENTS.ADDRESS_SELECTED, {
+                      city: val.city,
+                      state: val.state,
+                      zip: val.zip,
+                      sessionId: sessionId || undefined,
+                    });
+                    void trackHomeValueToolEvent(sessionId, HOME_VALUE_ANALYTICS_EVENTS.ADDRESS_SELECTED, {
+                      city: val.city,
+                      state: val.state,
+                      zip: val.zip,
+                    });
                     void runEstimate();
                   }}
                   wrapperClassName="w-full"
                   placeholder="Search for an address, city, or ZIP"
                 />
-              </div>
+                </div>
+              </HomeValueSection>
 
+              <HomeValueSection
+                id="hv-section-intent"
+                title="Intent"
+                description="Helps tailor next steps (optional — auto-detect available)."
+              >
               <div>
                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   I&apos;m mostly a…
                 </p>
                 <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setUserIntent(null)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      userIntent === null
+                        ? "border-[#0072ce] bg-[#0072ce]/10 text-[#005ca8]"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    Auto (signals)
+                  </button>
                   {(
                     [
                       ["seller", "Seller / owner"],
@@ -337,8 +797,26 @@ export function HomeValueToolInner() {
                     </button>
                   ))}
                 </div>
+                {userIntent === null && result?.intentInference ? (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Inferred:{" "}
+                    <span className="font-semibold capitalize">
+                      {result.intentInference.likely === "unknown"
+                        ? "general"
+                        : result.intentInference.likely}
+                    </span>{" "}
+                    (seller {result.intentInference.scores.seller} · buyer{" "}
+                    {result.intentInference.scores.buyer} · investor {result.intentInference.scores.investor})
+                  </p>
+                ) : null}
               </div>
+              </HomeValueSection>
 
+              <HomeValueSection
+                id="hv-section-3"
+                title="3 · Refine details"
+                description="Live recalculation — rounded values reduce false precision."
+              >
               <div className="border-t border-slate-100 pt-4">
                 <p className="mb-2 text-sm font-semibold text-slate-800">Refine (live recalc)</p>
                 <div className="grid grid-cols-3 gap-3">
@@ -443,6 +921,7 @@ export function HomeValueToolInner() {
               >
                 {loading ? "Estimating…" : phase === "ready" ? "Recalculate now" : "Run estimate"}
               </Button>
+              </HomeValueSection>
             </div>
           </Card>
         }
@@ -454,29 +933,71 @@ export function HomeValueToolInner() {
                 address. We&apos;ll pull comps when available and local median $/sqft.
               </div>
             ) : !showFullReport ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
+                <HomeValueSection
+                  id="hv-section-2"
+                  title="2 · Estimate preview"
+                  description="Automated estimate — not an appraisal. Values rounded to the nearest $1,000."
+                >
+                {showSoftLeadBanner ? (
+                  <div className="flex flex-col gap-2 rounded-xl border border-blue-200 bg-blue-50/90 p-3 text-sm text-slate-800 sm:flex-row sm:items-center sm:justify-between">
+                    <p>
+                      <span className="font-semibold">Save your estimate.</span> Unlock the full report for
+                      adjustments, confidence detail, and next steps — name &amp; email required.
+                    </p>
+                    <div className="flex shrink-0 gap-2">
+                      <Button type="button" variant="cta" className="px-3 py-2 text-xs" onClick={openUnlock}>
+                        Continue
+                      </Button>
+                      <button
+                        type="button"
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                        onClick={dismissSoftLeadBanner}
+                      >
+                        Not now
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
                 {missingHint ? (
                   <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">{missingHint}</p>
                 ) : null}
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Estimated value
+                    Estimated value (not an appraisal)
                   </div>
                   <div className="mt-1 text-3xl font-bold text-blue-700">
                     {asCurrency(estimate.point)}
                   </div>
                   <p className="mt-1 text-sm text-slate-600">
-                    Range {asCurrency(estimate.low)} – {asCurrency(estimate.high)}
+                    Estimated range {asCurrency(estimate.low)} – {asCurrency(estimate.high)}
                   </p>
                   {confidence ? (
-                    <p className="mt-2 text-sm text-slate-700">
-                      Confidence:{" "}
-                      <span className="font-semibold capitalize">{confidence.level}</span> (
-                      {confidence.score}/100) · {result?.comps.pricedCount ?? 0} comparable sales used
-                    </p>
+                    <div className="mt-2 space-y-1">
+                      <p className="text-sm text-slate-700">
+                        Confidence:{" "}
+                        <span className="font-semibold capitalize">{confidence.level}</span> (
+                        {confidence.score}/100) — how much we trust this band given data coverage.
+                      </p>
+                      <p className="text-xs text-slate-600">
+                        {compSupportLabel(result?.comps?.pricedCount ?? 0, result?.comps?.totalConsidered ?? 0)}
+                      </p>
+                      {confidence.explanation ? (
+                        <p className="text-xs text-slate-600">{confidence.explanation}</p>
+                      ) : null}
+                    </div>
                   ) : null}
+                  <div className="mt-3">
+                    <HomeValueTrustDisclaimer />
+                  </div>
                 </div>
+                </HomeValueSection>
 
+                <HomeValueSection
+                  id="hv-section-4"
+                  title="4 · Report gate"
+                  description="Full adjustment list and detail require a quick unlock."
+                >
                 <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                   <div className="pointer-events-none select-none blur-sm opacity-60" aria-hidden>
                     <p className="text-sm text-slate-700">{estimate.summary}</p>
@@ -499,26 +1020,38 @@ export function HomeValueToolInner() {
                 <Button className="w-full" variant="cta" type="button" onClick={openUnlock}>
                   Unlock full report
                 </Button>
+                </HomeValueSection>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-6">
+                <HomeValueSection
+                  id="hv-section-5"
+                  title="5 · Detailed report"
+                  description="Unlocked breakdown — still an estimate, not an appraisal."
+                >
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Estimated value
+                    Estimated value (not an appraisal)
                   </div>
                   <div className="mt-1 text-3xl font-bold text-blue-700">
                     {asCurrency(estimate.point)}
                   </div>
                   <p className="mt-1 text-sm text-slate-600">
-                    Range {asCurrency(estimate.low)} – {asCurrency(estimate.high)}
+                    Estimated range {asCurrency(estimate.low)} – {asCurrency(estimate.high)}
                   </p>
                 </div>
                 {confidence ? (
                   <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-800">
                     <p>
                       <span className="font-semibold">Confidence</span> {confidence.level} ({confidence.score}
-                      /100)
+                      /100) — model trust given address, details, and comps.
                     </p>
+                    <p className="mt-1 text-xs text-slate-600">
+                      {compSupportLabel(result?.comps?.pricedCount ?? 0, result?.comps?.totalConsidered ?? 0)}
+                    </p>
+                    {confidence.explanation ? (
+                      <p className="mt-2 text-xs leading-relaxed text-slate-600">{confidence.explanation}</p>
+                    ) : null}
                     <ul className="mt-2 space-y-1 text-xs text-slate-600">
                       {confidence.factors.slice(0, 5).map((f) => (
                         <li key={f.key}>
@@ -529,6 +1062,12 @@ export function HomeValueToolInner() {
                     </ul>
                   </div>
                 ) : null}
+                <HomeValueTrustDisclaimer />
+                <p className="text-xs text-slate-500">
+                  Lead score:{" "}
+                  <span className="font-semibold capitalize">{engagementScoreBand}</span> ({engagementScore}
+                  /100)
+                </p>
                 <div>
                   <p className="text-sm font-semibold text-slate-800">Adjustments</p>
                   <ul className="mt-2 list-inside list-disc text-sm text-slate-700">
@@ -540,15 +1079,60 @@ export function HomeValueToolInner() {
                   </ul>
                 </div>
                 <p className="text-sm text-slate-700">{estimate.summary}</p>
+                </HomeValueSection>
                 {result?.recommendations?.length ? (
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">Recommended next steps</p>
+                  <HomeValueSection
+                    id="hv-section-6"
+                    title="6 · Recommendations & next steps"
+                    description="Tools matched to your intent — not a guarantee of outcomes."
+                  >
                     <ul className="mt-2 space-y-2">
                       {result.recommendations.map((r) => (
                         <li key={r.href}>
                           <Link
                             href={r.href}
                             className="font-semibold text-[#0072ce] underline-offset-2 hover:underline"
+                            onClick={() => {
+                              const t = r.title.toLowerCase();
+                              const h = r.href.toLowerCase();
+                              if (h.includes("smart-cma") || t.includes("cma")) {
+                                setClickedCma(true);
+                                void trackHomeValueAnalytics(HOME_VALUE_ANALYTICS_EVENTS.CMA_CLICKED, {
+                                  ...trackingMeta(),
+                                  recommendationTitle: r.title,
+                                  href: r.href,
+                                });
+                                void trackHomeValueToolEvent(sessionId, HOME_VALUE_ANALYTICS_EVENTS.CMA_CLICKED, {
+                                  href: r.href,
+                                });
+                              }
+                              if (h.includes("/pricing") || t.includes("expert")) {
+                                setClickedExpert(true);
+                                void trackHomeValueAnalytics(HOME_VALUE_ANALYTICS_EVENTS.EXPERT_CTA_CLICKED, {
+                                  ...trackingMeta(),
+                                  href: r.href,
+                                });
+                                void trackHomeValueToolEvent(
+                                  sessionId,
+                                  HOME_VALUE_ANALYTICS_EVENTS.EXPERT_CTA_CLICKED,
+                                  { href: r.href }
+                                );
+                              }
+                              void trackHomeValueAnalytics(HOME_VALUE_ANALYTICS_EVENTS.RECOMMENDATION_CLICKED, {
+                                ...trackingMeta(),
+                                recommendationTitle: r.title,
+                                recommendationHref: r.href,
+                              });
+                              void trackHomeValueToolEvent(sessionId, HOME_VALUE_ANALYTICS_EVENTS.RECOMMENDATION_CLICKED, {
+                                recommendationTitle: r.title,
+                                href: r.href,
+                              });
+                              if (h.includes("mortgage-calculator")) markCrossToolNavigationFromHomeValue("mortgage");
+                              if (h.includes("ai-property-comparison"))
+                                markCrossToolNavigationFromHomeValue("comparison");
+                              if (h.includes("rental-property-analyzer") || h.includes("cap-rate-calculator"))
+                                markCrossToolNavigationFromHomeValue("rent_roi_cap");
+                            }}
                           >
                             {r.title}
                           </Link>
@@ -556,8 +1140,34 @@ export function HomeValueToolInner() {
                         </li>
                       ))}
                     </ul>
-                  </div>
+                  </HomeValueSection>
                 ) : null}
+                <HomeValueSection
+                  id="hv-section-7"
+                  title="7 · Expert help"
+                  description="Optional human support — separate from the automated estimate."
+                >
+                  <p className="text-sm text-slate-600">
+                    Want a licensed pro to review this band? Explore{" "}
+                    <Link
+                      href="/pricing"
+                      className="font-semibold text-[#0072ce] underline-offset-2 hover:underline"
+                      onClick={() => {
+                        setClickedExpert(true);
+                        void trackHomeValueAnalytics(HOME_VALUE_ANALYTICS_EVENTS.EXPERT_CTA_CLICKED, {
+                          ...trackingMeta(),
+                          href: "/pricing",
+                        });
+                        void trackHomeValueToolEvent(sessionId, HOME_VALUE_ANALYTICS_EVENTS.EXPERT_CTA_CLICKED, {
+                          href: "/pricing",
+                        });
+                      }}
+                    >
+                      expert match &amp; tools
+                    </Link>
+                    .
+                  </p>
+                </HomeValueSection>
               </div>
             )}
           </Card>
@@ -569,9 +1179,10 @@ export function HomeValueToolInner() {
         onOpenChange={setLeadModalOpen}
         source="home_value_estimator"
         tool="home_value_estimator"
-        intent={crmIntentFromLikelyIntent(userIntent)}
+        intent={crmIntentFromLikelyIntent(leadIntent)}
         propertyAddress={address.trim()}
-        sessionId={readOrCreateSessionId()}
+        sessionId={sessionId}
+        captureExtras="home_value"
         geo={{
           city: placeMeta.city,
           state: placeMeta.state,
@@ -579,28 +1190,97 @@ export function HomeValueToolInner() {
         }}
         title="Unlock full report"
         subtitle="Get adjustment detail, confidence factors, and next steps. Leads use source home_value_estimator and route to LeadSmart AI."
-        leadExtras={{
-          property_value: estimate?.point,
-          confidence_score: confidence?.score,
-          engagement_score: engagementScore,
-          metadata: {
-            engagement: "full_report_unlock",
-            likely_intent: userIntent,
-            inferred_intent: userIntent,
-            estimate_low: estimate?.low,
-            estimate_high: estimate?.high,
-            confidence_level: confidence?.level,
-            comps_priced: result?.comps.pricedCount,
-            market_source: result?.market?.source,
-            leadsmart_ready: true,
-          },
+        customSubmit={async ({ name, email, phone, timeline, buyingOrSelling }) => {
+          const phoneTrim = phone.trim();
+          const missing = result?.normalizedProperty?.missingFields ?? [];
+          const eng = computeEngagementScore({
+            usedTool: Boolean(result?.estimate),
+            refinedDetails: missing.length === 0,
+            unlockedReport: true,
+            phoneProvided: Boolean(phoneTrim),
+            repeatSession,
+            clickedCma,
+            clickedExpert,
+            highValueProperty: (estimate?.point ?? 0) >= HIGH_VALUE_PROPERTY_THRESHOLD_USD,
+          });
+          const engBand = leadScoreBand(eng);
+          try {
+            const { res, data: json } = await fetchJson<{
+              ok?: boolean;
+              error?: string;
+              leadId?: string;
+              leadRecord?: LeadRecord;
+            }>("/api/home-value/unlock-report", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name,
+                email,
+                phone: phoneTrim || undefined,
+                timeline: timeline?.trim() || undefined,
+                buying_or_selling: buyingOrSelling?.trim() || undefined,
+                source: "home_value_estimator",
+                tool: "home_value_estimator",
+                intent: crmIntentFromLikelyIntent(leadIntent),
+                property_address: address.trim(),
+                session_id: sessionId,
+                full_address: address.trim(),
+                city: placeMeta.city ?? undefined,
+                state: placeMeta.state ?? undefined,
+                zip: placeMeta.zip ?? undefined,
+                property_value: estimate?.point,
+                confidence_score: confidence?.score,
+                engagement_score: eng,
+                estimate_low: estimate?.low,
+                estimate_high: estimate?.high,
+                confidence: confidence?.level,
+                likely_intent: leadIntent,
+                metadata: {
+                  engagement: "full_report_unlock",
+                  likely_intent: leadIntent,
+                  inferred_intent: result?.intentInference?.likely ?? leadIntent,
+                  estimate_low: estimate?.low,
+                  estimate_high: estimate?.high,
+                  confidence_level: confidence?.level,
+                  comps_priced: result?.comps.pricedCount,
+                  market_source: result?.market?.source,
+                  leadsmart_ready: true,
+                  lead_score_band: engBand,
+                  engagement_score_band: engBand,
+                },
+              }),
+            });
+            if (!res.ok || !json.ok) {
+              return { ok: false, error: json.error ?? "Failed to unlock report" };
+            }
+            return { ok: true as const, leadId: json.leadId };
+          } catch (e) {
+            return {
+              ok: false,
+              error: e instanceof Error ? e.message : "Failed to unlock report",
+            };
+          }
         }}
-        onSuccess={() => {
+        onSuccess={({ phoneProvided }) => {
           persistUnlocked();
           setReportUnlocked(true);
+          if (phoneProvided) setPhoneCaptured(true);
+          const m = {
+            city: placeMeta.city,
+            state: placeMeta.state,
+            zip: placeMeta.zip,
+            confidence: confidence?.level ?? null,
+            likelyIntent: leadIntent,
+            sessionId: sessionId || undefined,
+            phoneProvided,
+          };
+          void trackHomeValueAnalytics(HOME_VALUE_ANALYTICS_EVENTS.LEAD_SUBMITTED, m);
+          void trackHomeValueAnalytics(HOME_VALUE_ANALYTICS_EVENTS.REPORT_UNLOCKED, m);
+          void trackHomeValueToolEvent(sessionId, HOME_VALUE_ANALYTICS_EVENTS.LEAD_SUBMITTED, m);
+          void trackHomeValueToolEvent(sessionId, HOME_VALUE_ANALYTICS_EVENTS.REPORT_UNLOCKED, m);
         }}
       />
-    </>
+    </div>
   );
 }
 

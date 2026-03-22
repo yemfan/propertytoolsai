@@ -17,9 +17,16 @@ export async function GET(req: Request) {
 
     if (error && (error as any).code !== "PGRST116") throw error;
 
+    const { data: agentRow } = await supabaseServer
+      .from("agents")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+
     return NextResponse.json({
       plan: (data as any)?.plan ?? "free",
       role: (data as any)?.role ?? "user",
+      has_agent_record: !!agentRow,
       subscription_status: (data as any)?.subscription_status ?? null,
       trial_ends_at: (data as any)?.trial_ends_at ?? null,
       trial_used: (data as any)?.trial_used ?? false,

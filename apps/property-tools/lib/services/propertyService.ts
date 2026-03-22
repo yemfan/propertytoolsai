@@ -30,7 +30,8 @@ export type PropertyReportInput = {
   metrics_json?: any;
 };
 
-const CACHE_TTL_DAYS = 7;
+/** Property cache is considered fresh for 180 days before refresh from external APIs. */
+const CACHE_TTL_DAYS = 180;
 
 function isFresh(lastUpdated: string) {
   const ageMs = Date.now() - new Date(lastUpdated).getTime();

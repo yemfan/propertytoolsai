@@ -2,15 +2,24 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { getUserFromRequest } from "@/lib/authFromRequest";
+import { getPaidSubscriptionEligibility } from "@/lib/paidSubscriptionEligibility";
 import { getStripePriceIdForPlan } from "@/lib/stripePriceIds";
 
 type Body = { plan: "pro" | "premium"; with_trial?: boolean };
+
+const PRO_ONLY_MSG =
+  "Paid plans are for licensed agents, brokers, and real estate teams. Sign up with a professional account or contact support.";
 
 export async function POST(req: Request) {
   try {
     const user = await getUserFromRequest(req);
     if (!user?.email) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const elig = await getPaidSubscriptionEligibility(user.id);
+    if (!elig.allowed) {
+      return NextResponse.json({ error: PRO_ONLY_MSG }, { status: 403 });
     }
 
     const body = (await req.json().catch(() => ({}))) as Partial<Body>;

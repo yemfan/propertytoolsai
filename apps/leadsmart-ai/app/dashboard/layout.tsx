@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { isRedirectError, redirect } from "next/navigation";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import TopBar from "@/components/dashboard/TopBar";
 import { supabaseServer } from "@/lib/supabaseServer";
@@ -31,8 +31,10 @@ export default async function DashboardLayout({
   const ctx = await (async () => {
     try {
       return await getCurrentAgentContext();
-    } catch (e: any) {
-      if (e?.message === "Not authenticated") {
+    } catch (e: unknown) {
+      if (isRedirectError(e)) throw e;
+      const msg = e instanceof Error ? e.message : "";
+      if (msg === "Not authenticated") {
         redirect("/login?redirect=/dashboard");
       }
       throw e;
@@ -60,7 +62,8 @@ export default async function DashboardLayout({
     if (status && !["active", "trialing"].includes(status)) {
       redirect("/pricing");
     }
-  } catch {
+  } catch (e) {
+    if (isRedirectError(e)) throw e;
     // If profiles/status isn't available yet, don't block dashboard rendering.
   }
 

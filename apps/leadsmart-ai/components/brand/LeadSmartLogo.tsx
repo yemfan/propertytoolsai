@@ -10,18 +10,17 @@ type Props = {
 };
 
 /**
- * Brand lockup from `public/images/ptlogo.png` (shared with Property Tools artwork).
- * Add or replace that file under `apps/leadsmart-ai/public/images/` as needed.
+ * LeadSmart horizontal lockup — source asset: repo `Images/LSLogoH.png` (copied to `public/images/lslogoh.png`).
  */
 export function LeadSmartLogo({ className, compact, priority }: Props) {
   const isPriority = priority ?? !compact;
 
   return (
     <Image
-      src="/images/ptlogo.png"
+      src="/images/lslogoh.png"
       alt="LeadSmart AI"
-      width={480}
-      height={144}
+      width={540}
+      height={162}
       priority={isPriority}
       className={cn(
         "w-auto object-contain object-left",

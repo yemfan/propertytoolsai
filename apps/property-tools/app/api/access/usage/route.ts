@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/authFromRequest";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { DEFAULT_LIMITS, resolveAccessTier, type AccessTier } from "@/lib/access";
+import { getPaidSubscriptionEligibility } from "@/lib/paidSubscriptionEligibility";
 
 export const runtime = "nodejs";
 
@@ -18,7 +19,7 @@ export async function GET(req: Request) {
     const { data, error } = await supabaseServer
       .from("user_profiles")
       .select(
-        "plan,subscription_status,estimator_usage_count,cma_usage_count,usage_reset_date"
+        "plan,subscription_status,estimator_usage_count,cma_usage_count,usage_reset_date,role"
       )
       .eq("user_id", user.id)
       .maybeSingle();
@@ -27,6 +28,8 @@ export async function GET(req: Request) {
 
     const plan = (data as any)?.plan ?? "free";
     const subscriptionStatus = (data as any)?.subscription_status ?? null;
+    const accountRole = (data as any)?.role ?? null;
+    const paidElig = await getPaidSubscriptionEligibility(user.id);
     const tier: AccessTier = resolveAccessTier({
       userId: user.id,
       plan,
@@ -51,6 +54,8 @@ export async function GET(req: Request) {
       subscriptionStatus,
       userId: user.id,
       email: user.email ?? null,
+      accountRole,
+      paidSubscriptionEligible: paidElig.allowed,
       usageResetDate: (data as any)?.usage_reset_date ?? null,
       tools: {
         estimator: {

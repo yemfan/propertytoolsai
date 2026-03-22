@@ -6,6 +6,28 @@ export type PropertyCondition = "poor" | "fair" | "average" | "good" | "excellen
 export type RenovationLevel = "none" | "cosmetic" | "major" | "full";
 export type UserIntent = "seller" | "buyer" | "investor";
 
+/** Inferred from behavioral signals (may be unknown when no signal fires). */
+export type LikelyIntent = "seller" | "buyer" | "investor" | "unknown";
+
+/**
+ * Client + server signals for intent scoring.
+ * All fields optional — absent means false / not observed.
+ */
+export type IntentSignals = {
+  /** Ran a home value estimate (usually forced true server-side). */
+  homeValueUsed?: boolean;
+  fullReportUnlocked?: boolean;
+  askedForCma?: boolean;
+  expertHelpClicked?: boolean;
+  revisitSameAddress?: boolean;
+  listingLikeAddress?: boolean;
+  mortgageAfterEstimate?: boolean;
+  comparisonToolUsed?: boolean;
+  rentOrRoiOrCapToolUsed?: boolean;
+  comparesMultipleProperties?: boolean;
+  priceVsValueFocus?: boolean;
+};
+
 /** Normalized property for estimation (warehouse + user overrides). Alias: structured address + facts. */
 export type NormalizedProperty = {
   address: string;
@@ -44,12 +66,24 @@ export type HomeValueEstimateOutput = {
 
 export type ConfidenceLevel = "high" | "medium" | "low";
 
+/** Four pillars (0–100 each) — matches the confidence engine weighted model. */
+export type ConfidenceInputsSnapshot = {
+  addressQuality: number;
+  detailCompleteness: number;
+  compCoverage: number;
+  marketStability: number;
+};
+
 export type ConfidenceOutput = {
   level: ConfidenceLevel;
   /** 0–100 */
   score: number;
   bandPct: number;
   factors: { key: string; label: string; impact: number }[];
+  /** Human-readable rationale for the level. */
+  explanation: string;
+  /** Resolved pillar scores (for UI/debug). */
+  inputs?: ConfidenceInputsSnapshot;
 };
 
 export type ToolkitRecommendation = {
@@ -76,8 +110,10 @@ export type HomeValueEstimateRequest = {
   propertyType?: string | null;
   condition?: PropertyCondition;
   renovation?: RenovationLevel;
-  /** Likely user intent for recommendations (client-only; optional on API) */
+  /** User-selected intent; omit for auto (signal-based inference). */
   intent?: UserIntent;
+  /** Behavioral signals — combined with server hints for LikelyIntent. */
+  intent_signals?: Partial<IntentSignals>;
   /** Force refresh of property ingestion */
   refresh?: boolean;
   /** Client funnel id (sessionStorage); used to upsert `home_value_sessions`. */
@@ -103,6 +139,14 @@ export type HomeValueEstimateResponse = {
     totalConsidered: number;
   };
   recommendations: ToolkitRecommendation[];
+  /** Signal scores + inferred bucket (analytics / UI). */
+  intentInference: {
+    likely: LikelyIntent;
+    scores: { seller: number; buyer: number; investor: number };
+    rationale: string[];
+    /** Recommendations + persistence use this (explicit user choice or inferred). */
+    applied: UserIntent;
+  };
   /** Echoed funnel id (server may assign if missing). */
   sessionId: string;
 };

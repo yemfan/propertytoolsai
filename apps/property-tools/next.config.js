@@ -7,6 +7,17 @@ const monorepoRoot = path.join(__dirname, "../..");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  /** Nested URL aliases to flat handler (avoids HTML 404 in some dev/build setups). */
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: "/api/home-value/estimate",
+          destination: "/api/home-value-estimate",
+        },
+      ],
+    };
+  },
   // Relative to this app dir so Next's `path.join(dir, distDir)` resolves correctly on all platforms.
   // An absolute `distDir` breaks on Windows (nested `.../apps/<app>/C:/.../.next`) and can confuse builds.
   ...(process.env.NEXT_DIST_IN_MONOREPO_ROOT === "1" && {

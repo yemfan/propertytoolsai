@@ -6,6 +6,15 @@ import { trackEvent } from "@/lib/tracking";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Submitted lead fields — phone and extras optional. */
+export type LeadCaptureSubmitPayload = {
+  name: string;
+  email: string;
+  phone: string;
+  timeline?: string;
+  buyingOrSelling?: string;
+};
+
 export type LeadCaptureModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -20,7 +29,7 @@ export type LeadCaptureModalProps = {
   geo?: { city?: string | null; state?: string | null; zip?: string | null };
   /** Override `full_address` column (defaults to `propertyAddress`) */
   fullAddress?: string;
-  onSuccess?: (payload: { leadId?: string }) => void;
+  onSuccess?: (payload: { leadId?: string; phoneProvided?: boolean }) => void;
   /** Override default headline / CTA (e.g. Expert CTA) */
   title?: string;
   subtitle?: string;
@@ -31,16 +40,14 @@ export type LeadCaptureModalProps = {
     "property_value" | "confidence_score" | "engagement_score" | "metadata"
   >;
   /** When set, replaces default `createLead` (e.g. expert-capture + matching) */
-  customSubmit?: (payload: {
-    name: string;
-    email: string;
-    phone: string;
-  }) => Promise<{
+  customSubmit?: (payload: LeadCaptureSubmitPayload) => Promise<{
     ok: boolean;
     error?: string;
     leadId?: string;
     matched_agent_ids?: string[];
   }>;
+  /** Extra optional fields for home value funnel */
+  captureExtras?: "home_value";
 };
 
 export default function LeadCaptureModal({
@@ -59,10 +66,13 @@ export default function LeadCaptureModal({
   submitLabel = "Unlock Full Report",
   leadExtras,
   customSubmit,
+  captureExtras,
 }: LeadCaptureModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [timeline, setTimeline] = useState("");
+  const [buyingOrSelling, setBuyingOrSelling] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,6 +80,8 @@ export default function LeadCaptureModal({
     setName("");
     setEmail("");
     setPhone("");
+    setTimeline("");
+    setBuyingOrSelling("");
     setSubmitting(false);
     setError(null);
   }, []);
@@ -98,8 +110,21 @@ export default function LeadCaptureModal({
 
     setSubmitting(true);
     try {
+      const extras =
+        captureExtras === "home_value"
+          ? {
+              timeline: timeline.trim() || undefined,
+              buyingOrSelling: buyingOrSelling.trim() || undefined,
+            }
+          : {};
+
       const result = customSubmit
-        ? await customSubmit({ name: n, email: em, phone: phone.trim() })
+        ? await customSubmit({
+            name: n,
+            email: em,
+            phone: phone.trim(),
+            ...extras,
+          })
         : await (() => {
             const meta =
               leadExtras?.metadata != null && typeof leadExtras.metadata === "object"
@@ -118,6 +143,9 @@ export default function LeadCaptureModal({
             intent,
             property_address: propertyAddress.trim() || undefined,
             tool,
+            timeline: captureExtras === "home_value" ? timeline.trim() || undefined : undefined,
+            buying_or_selling:
+              captureExtras === "home_value" ? buyingOrSelling.trim() || undefined : undefined,
             ...leadExtras,
             session_id: sessionId,
             full_address: fullAddress?.trim() || propertyAddress.trim() || undefined,
@@ -171,7 +199,10 @@ export default function LeadCaptureModal({
         });
       }
 
-      onSuccess?.({ leadId: result.leadId });
+      onSuccess?.({
+        leadId: result.leadId,
+        phoneProvided: Boolean(phone.trim()),
+      });
       onOpenChange(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -239,6 +270,45 @@ export default function LeadCaptureModal({
                   autoComplete="tel"
                 />
               </div>
+
+              {captureExtras === "home_value" ? (
+                <>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Timeline <span className="font-normal text-slate-400">(optional)</span>
+                    </label>
+                    <select
+                      value={timeline}
+                      onChange={(e) => setTimeline(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Select timeframe</option>
+                      <option value="asap">ASAP / under 30 days</option>
+                      <option value="1-3mo">1–3 months</option>
+                      <option value="3-6mo">3–6 months</option>
+                      <option value="6mo+">6+ months</option>
+                      <option value="browsing">Just browsing</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Are you buying or selling?{" "}
+                      <span className="font-normal text-slate-400">(optional)</span>
+                    </label>
+                    <select
+                      value={buyingOrSelling}
+                      onChange={(e) => setBuyingOrSelling(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="">Prefer not to say</option>
+                      <option value="buying">Buying</option>
+                      <option value="selling">Selling</option>
+                      <option value="both">Both</option>
+                      <option value="unsure">Not sure yet</option>
+                    </select>
+                  </div>
+                </>
+              ) : null}
 
               {error ? (
                 <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>
