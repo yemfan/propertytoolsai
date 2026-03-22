@@ -45,6 +45,10 @@ export default function RequireAuthGate({
         open={open}
         onClose={() => setOpen(false)}
         initialMode={initialMode}
+        onAuthenticated={() => {
+          setAuthed(true);
+          setOpen(false);
+        }}
       />
 
       {checking ? (

@@ -1,6 +1,6 @@
-# Homepage VSL (video sales letter)
+# Homepage VSL (demo video block)
 
-`components/VslSection.tsx` shows a **play overlay** (gradient + “Play 60-Second Demo”). After play, it embeds **one** source, resolved in `LeadSmartLanding` via env in this order:
+`components/VslSection.tsx` is mounted at **`#vsl`**. The hero **“Watch 60s Demo”** button links to `#vsl` so users land on the **LeadSmart AI Demo** overlay (gradient + “Play 60-Second Demo”). After play, it embeds **one** source, resolved in `LeadSmartLanding` via env in this order:
 
 1. **`NEXT_PUBLIC_VSL_MP4_URL`** — self-hosted MP4 (full URL). Renders as HTML5 `<video>` (`videoType: "html5"`).
 

@@ -14,11 +14,23 @@ export type SavedAddress = {
   zip?: string | null;
 };
 
+export type UseAddressPrefillOptions = {
+  /**
+   * When true, never hydrate from `propertytoolsai:lastAddress` (only URL `?address=` or empty).
+   * Use with Google Places so the field isn’t pre-filled from the app’s “last address” cache.
+   */
+  skipLocalStorage?: boolean;
+};
+
 /**
  * URL `?address=` wins over localStorage. LocalStorage is read once on mount
- * (not when the user clears the field).
+ * (not when the user clears the field), unless `skipLocalStorage` is set.
  */
-export function useAddressPrefill(queryAddress?: string | null) {
+export function useAddressPrefill(
+  queryAddress?: string | null,
+  options?: UseAddressPrefillOptions
+) {
+  const skipLocalStorage = options?.skipLocalStorage ?? false;
   const urlAddress = queryAddress?.trim() ?? "";
   const [address, setAddressState] = useState(urlAddress);
   const [hydrated, setHydrated] = useState(false);
@@ -40,6 +52,11 @@ export function useAddressPrefill(queryAddress?: string | null) {
       return;
     }
 
+    if (skipLocalStorage) {
+      setHydrated(true);
+      return;
+    }
+
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
@@ -53,7 +70,7 @@ export function useAddressPrefill(queryAddress?: string | null) {
     } finally {
       setHydrated(true);
     }
-  }, [urlAddress]);
+  }, [urlAddress, skipLocalStorage]);
 
   const setAddress = useCallback(
     (next: string | ((prev: string) => string)) => {

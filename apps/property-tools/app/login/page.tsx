@@ -8,6 +8,7 @@ import Card from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import Link from "next/link";
+import { safeInternalRedirect } from "@/lib/loginUrl";
 
 export default function LoginPage() {
   return (
@@ -21,6 +22,7 @@ function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams?.get("redirect") || "/dashboard";
+  const reason = searchParams?.get("reason");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -92,10 +94,11 @@ function LoginPageInner() {
         }
       }
 
+      const safe = safeInternalRedirect(redirectTo);
       if (isAgent) {
-        router.replace("/dashboard");
+        router.replace(safe ?? "/dashboard");
       } else {
-        router.replace(redirectTo.startsWith("/dashboard") ? "/" : redirectTo);
+        router.replace(redirectTo.startsWith("/dashboard") ? "/" : (safe ?? "/"));
       }
     } catch (e: any) {
       setError(e?.message ?? "Something went wrong. Please try again.");
@@ -112,6 +115,17 @@ function LoginPageInner() {
           <h1 className="font-heading text-xl font-bold text-slate-900 md:text-2xl">Log in</h1>
           <p className="text-sm text-slate-600">Access your agent dashboard and home value leads.</p>
         </div>
+        {reason === "trial" ? (
+          <p className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-center text-xs font-medium text-sky-950">
+            Sign in to continue. Next, we’ll open secure Stripe checkout for your Pro free trial (card on file; you are
+            not charged until the trial ends).
+          </p>
+        ) : null}
+        {reason === "checkout" ? (
+          <p className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-center text-xs font-medium text-sky-950">
+            Sign in to continue to checkout. We’ll return you to pricing right after.
+          </p>
+        ) : null}
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-slate-700">Email</label>

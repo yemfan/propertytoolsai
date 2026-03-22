@@ -1,29 +1,47 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Proxy (Next.js 16+): access control at the edge of the app (replaces middleware.ts).
-// - Protect dashboard pages
-// - Do NOT protect API routes here (API routes return proper 401/402 JSON and
-//   support bearer-token auth). Redirects here break API clients.
-export function proxy(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+export async function proxy(req: NextRequest) {
+  let supabaseResponse = NextResponse.next({
+    request: req,
+  });
 
-  const protectedPagePrefixes = ["/dashboard"];
-
-  const isProtected = protectedPagePrefixes.some((p) => pathname.startsWith(p));
-
-  if (!isProtected) return NextResponse.next();
-
-  // Supabase cookie name typically looks like: sb-<project_ref>-auth-token
-  const hasAuthCookie = req.cookies.getAll().some((c) =>
-    /sb-.*-auth-token/.test(c.name)
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({
+            request: req,
+          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
   );
 
-  if (hasAuthCookie) return NextResponse.next();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const url = req.nextUrl.clone();
-  url.pathname = "/login";
-  url.searchParams.set("redirect", pathname);
-  return NextResponse.redirect(url);
+  const { pathname } = req.nextUrl;
+  const isProtected = pathname.startsWith("/dashboard");
+
+  if (isProtected && !user) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  return supabaseResponse;
 }
 
 export const config = {

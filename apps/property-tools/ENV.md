@@ -29,6 +29,29 @@ Then fill in real values. For address autocomplete, set **`NEXT_PUBLIC_GOOGLE_MA
 
 **Duplicate keys:** If `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` appears more than once, the **last** line wins. An empty second line will clear the key and break address suggestions.
 
+## Google Places / address autocomplete “worked before, not now”
+
+The Home Value (and other) address fields use **Google Places** in the browser. Nothing in-repo proves your key is valid until the browser calls Google. Typical causes when it **stops** working:
+
+1. **Wrong app `.env.local`** — Next only loads `apps/property-tools/.env.local` for the **property-tools** app. A key only in `apps/leadsmart-ai/.env.local` does **not** apply when you run property-tools. Each app needs its own file (or copy the line over).
+2. **Port / referrer mismatch** — API keys restricted to **HTTP referrers** must list the exact dev URL you use, including port:
+   - `http://localhost:3000/*` **and** `http://localhost:3001/*` (and `127.0.0.1` variants if you use them).
+   - Root `npm run dev` (Turbo) may start **multiple** apps; Next picks the next free port (3000, 3001, 3002…). If your Google key only allows `3001` but the app is on `3002`, Places returns **REQUEST_DENIED** (red message under the field).
+3. **Restart dev after changing env** — `NEXT_PUBLIC_*` is inlined at dev server start. Change `.env.local` → stop `npm run dev` → start again.
+4. **Billing / APIs** — Google Cloud: **Maps JavaScript API** + **Places API** enabled, billing active, quotas not exceeded.
+
+**Quick check:** Under the address field you should see either suggestions, a gray hint (no matches), an amber “add API key” line, or a red error. Open DevTools → **Console** for `[AddressAutocomplete] getPlacePredictions status:` in development.
+
+## Stripe checkout (“No such price: prod_…”)
+
+`STRIPE_PRICE_ID_PRO` and `STRIPE_PRICE_ID_PREMIUM` must be **Price** IDs (`price_…`), not **Product** IDs (`prod_…`).
+
+1. [Stripe Dashboard](https://dashboard.stripe.com) → **Product catalog** → open your product.
+2. Under **Pricing**, copy the id next to the recurring price — it looks like `price_xxxxxxxx`.
+3. Put that value in `apps/property-tools/.env.local` and restart `npm run dev`.
+
+If you paste a Product id (`prod_…`), Stripe returns: `No such price: 'prod_…'`.
+
 ## Product analytics & lead capture
 
 Apply the migration in `supabase/migrations/20260315_product_events_and_lead_intent.sql` in the Supabase SQL editor (or your migration pipeline). It creates:

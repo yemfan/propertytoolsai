@@ -9,6 +9,26 @@ export type CreateLeadInput = {
   property_address?: string;
   /** Optional tool key for traffic_source suffix */
   tool?: string;
+  /** Saved to CRM as `property_value` when present */
+  property_value?: number;
+  /** 0–100 for scoring / LeadSmart routing */
+  confidence_score?: number;
+  /** 0–100 engagement / funnel depth for LeadSmart routing */
+  engagement_score?: number;
+  /** Extra structured context (stored in `notes` JSON on server) */
+  metadata?: Record<string, unknown>;
+  /** Funnel session id → `leads.session_id` + `tool_events` */
+  session_id?: string;
+  /** First-class address fields (LeadSmart schema) */
+  full_address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  estimate_low?: number;
+  estimate_high?: number;
+  /** e.g. high | medium | low */
+  confidence?: string;
+  likely_intent?: string;
 };
 
 export type ExpertLeadPayload = {
@@ -46,7 +66,28 @@ export async function createLead(data: CreateLeadInput): Promise<CreateLeadResul
   const res = await fetch(`${base}/api/leads/tool-capture`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      source: data.source,
+      intent: data.intent,
+      property_address: data.property_address,
+      tool: data.tool,
+      property_value: data.property_value,
+      confidence_score: data.confidence_score,
+      engagement_score: data.engagement_score,
+      metadata: data.metadata,
+      session_id: data.session_id,
+      full_address: data.full_address,
+      city: data.city,
+      state: data.state,
+      zip: data.zip,
+      estimate_low: data.estimate_low,
+      estimate_high: data.estimate_high,
+      confidence: data.confidence,
+      likely_intent: data.likely_intent,
+    }),
   });
   const json = (await res.json().catch(() => ({}))) as {
     ok?: boolean;

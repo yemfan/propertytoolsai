@@ -8,10 +8,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FeatureHighlightCard } from "@/components/ui/FeatureHighlightCard";
 import { BrandCheck } from "@/components/brand/BrandCheck";
 import ExitIntentPopup from "@/components/marketing/ExitIntentPopup";
+import HeaderAuthActions from "@/components/HeaderAuthActions";
 import VslSection from "@/components/VslSection";
 
 const primaryCtaHref = "/onboarding";
-const demoCtaHref = "/home-value-funnel";
+/** In-page anchor — hero “Watch 60s Demo” scrolls to VSL (LeadSmart AI Demo player). */
+const vslAnchorHref = "#vsl";
 
 /** VSL: MP4 > Vimeo > YouTube (`NEXT_PUBLIC_*` env vars). */
 function getVslConfig(): {
@@ -58,9 +60,12 @@ export default function LeadSmartLanding() {
                 Pricing
               </a>
             </nav>
-            <Button size="sm" href={primaryCtaHref}>
-              Get My First Leads
-            </Button>
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+              <HeaderAuthActions />
+              <Button size="sm" href={primaryCtaHref}>
+                Get My First Leads
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -93,7 +98,7 @@ export default function LeadSmartLanding() {
               <Button href={primaryCtaHref} className="min-h-11 px-6 text-base">
                 Get My First Leads
               </Button>
-              <Button variant="outline" href={demoCtaHref} className="min-h-11 px-6 text-base">
+              <Button variant="outline" href={vslAnchorHref} className="min-h-11 px-6 text-base">
                 Watch 60s Demo
               </Button>
             </div>

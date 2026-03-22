@@ -94,12 +94,9 @@ export default function VslSection({
   };
 
   return (
-    <section id={id} className="px-6 py-16 md:py-20">
+    <section id={id} className="scroll-mt-24 px-6 py-16 md:scroll-mt-28 md:py-20">
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="mb-3 inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-gray-600 shadow-sm">
-            Video Sales Letter
-          </p>
           <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">{title}</h2>
           <p className="mt-4 text-base text-gray-600 md:text-lg">{subtitle}</p>
         </div>

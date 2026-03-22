@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { createLead } from "@/lib/leads";
+import { createLead, type CreateLeadInput } from "@/lib/leads";
 import { trackEvent } from "@/lib/tracking";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -14,11 +14,22 @@ export type LeadCaptureModalProps = {
   tool?: string;
   intent?: "buy" | "sell" | "refinance";
   propertyAddress?: string;
+  /** Client funnel id (home value session) */
+  sessionId?: string;
+  /** Parsed geo for CRM columns */
+  geo?: { city?: string | null; state?: string | null; zip?: string | null };
+  /** Override `full_address` column (defaults to `propertyAddress`) */
+  fullAddress?: string;
   onSuccess?: (payload: { leadId?: string }) => void;
   /** Override default headline / CTA (e.g. Expert CTA) */
   title?: string;
   subtitle?: string;
   submitLabel?: string;
+  /** Extra CRM fields (home value, confidence, engagement metadata for LeadSmart) */
+  leadExtras?: Pick<
+    CreateLeadInput,
+    "property_value" | "confidence_score" | "engagement_score" | "metadata"
+  >;
   /** When set, replaces default `createLead` (e.g. expert-capture + matching) */
   customSubmit?: (payload: {
     name: string;
@@ -39,10 +50,14 @@ export default function LeadCaptureModal({
   tool = "home_value",
   intent = "sell",
   propertyAddress = "",
+  sessionId,
+  geo,
+  fullAddress,
   onSuccess,
   title = "Unlock full report",
   subtitle = "Get the detailed breakdown, range context, and next steps — free.",
   submitLabel = "Unlock Full Report",
+  leadExtras,
   customSubmit,
 }: LeadCaptureModalProps) {
   const [name, setName] = useState("");
@@ -85,7 +100,17 @@ export default function LeadCaptureModal({
     try {
       const result = customSubmit
         ? await customSubmit({ name: n, email: em, phone: phone.trim() })
-        : await createLead({
+        : await (() => {
+            const meta =
+              leadExtras?.metadata != null && typeof leadExtras.metadata === "object"
+                ? (leadExtras.metadata as Record<string, unknown>)
+                : null;
+            const parseOptNum = (k: string) => {
+              if (!meta || !(k in meta)) return undefined;
+              const v = Number(meta[k]);
+              return Number.isFinite(v) ? v : undefined;
+            };
+            return createLead({
             name: n,
             email: em,
             phone: phone.trim() || undefined,
@@ -93,7 +118,31 @@ export default function LeadCaptureModal({
             intent,
             property_address: propertyAddress.trim() || undefined,
             tool,
+            ...leadExtras,
+            session_id: sessionId,
+            full_address: fullAddress?.trim() || propertyAddress.trim() || undefined,
+            city: geo?.city ?? undefined,
+            state: geo?.state ?? undefined,
+            zip: geo?.zip ?? undefined,
+            estimate_low: parseOptNum("estimate_low"),
+            estimate_high: parseOptNum("estimate_high"),
+            confidence:
+              meta && "confidence_level" in meta && meta.confidence_level != null
+                ? String(meta.confidence_level)
+                : undefined,
+            likely_intent:
+              meta && "likely_intent" in meta && meta.likely_intent != null
+                ? String(meta.likely_intent)
+                : undefined,
+            engagement_score:
+              leadExtras?.engagement_score != null
+                ? Math.min(
+                    100,
+                    Math.round(Number(leadExtras.engagement_score)) + (phone.trim() ? 3 : 0)
+                  )
+                : undefined,
           });
+          })();
 
       if (!result.ok) {
         setError(result.error ?? "Something went wrong.");

@@ -1,13 +1,18 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
+import { useAccess } from "@/components/AccessProvider";
+import AccountMenu from "@/components/layout/AccountMenu";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { BrandCheck } from "@/components/brand/BrandCheck";
 import { FeatureHighlightCard } from "@/components/ui/FeatureHighlightCard";
 import { trackEvent } from "@/lib/marketing/trackEvent";
+import { mergeAuthHeaders } from "@/lib/mergeAuthHeaders";
+import { scrollToSection } from "@/lib/scrollToSection";
 
 const LEADSMART_URL = process.env.NEXT_PUBLIC_LEADSMART_URL ?? "https://leadsmart.ai";
 
@@ -39,6 +44,7 @@ const tools = [
 ] as const;
 
 export default function PropertyToolsPage() {
+  const { tier, openAuth, loading: accessLoading } = useAccess();
   const [email, setEmail] = useState("");
   const [leadStatus, setLeadStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [leadMessage, setLeadMessage] = useState<string | null>(null);
@@ -57,9 +63,11 @@ export default function PropertyToolsPage() {
     setLeadStatus("loading");
 
     try {
+      const headers = await mergeAuthHeaders({ "Content-Type": "application/json" });
       const res = await fetch("/api/leads/tool-capture", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
+        credentials: "include",
         body: JSON.stringify({
           name: trimmed.split("@")[0] || "Subscriber",
           email: trimmed,
@@ -75,7 +83,7 @@ export default function PropertyToolsPage() {
         return;
       }
       setLeadStatus("ok");
-      setLeadMessage("Check your inbox soon.");
+      setLeadMessage(null);
       setEmail("");
     } catch {
       setLeadStatus("error");
@@ -85,6 +93,63 @@ export default function PropertyToolsPage() {
 
   return (
     <main className="bg-white text-gray-900">
+      {/* Top bar — auth (homepage skips AppLayout Topbar) */}
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+          <Link href="/" className="flex shrink-0 items-center">
+            <Image
+              src="/images/ptlogo.png"
+              alt="PropertyTools AI"
+              width={200}
+              height={56}
+              className="h-9 w-auto md:h-10"
+              priority
+            />
+          </Link>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            {accessLoading ? (
+              <div className="flex items-center gap-2" aria-hidden>
+                <div className="h-9 w-[4.5rem] animate-pulse rounded-xl bg-slate-200 sm:w-24" />
+                <div className="h-9 w-20 animate-pulse rounded-xl bg-slate-200 sm:w-24" />
+              </div>
+            ) : tier === "guest" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => openAuth("login")}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 sm:text-sm"
+                >
+                  Log in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openAuth("signup")}
+                  className="rounded-xl bg-[#0072ce] px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#005ca8] sm:px-4 sm:text-sm"
+                >
+                  Sign up
+                </button>
+              </>
+            ) : (
+              <>
+                {tier === "premium" ? (
+                  <span className="hidden rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800 sm:inline">
+                    Premium
+                  </span>
+                ) : (
+                  <Link
+                    href="/pricing"
+                    className="inline-flex items-center justify-center rounded-xl bg-orange-500 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-600 sm:px-4 sm:text-sm"
+                  >
+                    Upgrade
+                  </Link>
+                )}
+                <AccountMenu />
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
       {/* HERO — brand radial glow + motion (leadsmart-ai style) */}
       <section
         id="hero"
@@ -168,14 +233,14 @@ export default function PropertyToolsPage() {
         className="mx-auto grid max-w-7xl grid-cols-1 gap-4 bg-gradient-to-b from-white to-slate-50/50 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-4"
       >
         {tools.map((tool) => (
-          <Card key={tool.id} variant="interactive" className="h-full">
-            <CardContent className="p-4 sm:p-5">
+          <Card key={tool.id} variant="interactive" className="flex h-full flex-col">
+            <CardContent className="flex flex-1 flex-col p-4 sm:p-5">
               <h3 className="font-heading text-lg font-semibold leading-snug text-slate-900">{tool.title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-gray-600">{tool.desc}</p>
+              <p className="mt-1.5 flex-1 text-sm leading-relaxed text-gray-600">{tool.desc}</p>
               <Button
                 href={tool.href}
                 size="sm"
-                className="mt-3 w-full text-sm"
+                className="mt-4 w-full shrink-0 text-sm"
                 onClick={() => trackEvent("tool_click", { tool: tool.id, href: tool.href })}
               >
                 Try Now
@@ -257,9 +322,16 @@ export default function PropertyToolsPage() {
       <section id="lead" className="px-4 py-12 text-center sm:px-6 md:py-14">
         <div className="mx-auto max-w-lg rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50/80 via-white to-[#0072ce]/[0.05] p-6 shadow-sm shadow-slate-900/[0.04] ring-1 ring-slate-900/[0.04] sm:p-8">
           <h2 className="font-heading text-2xl font-bold tracking-tight text-slate-900 md:text-[1.65rem]">
-            Get More Accurate Results
+            Stay in the loop
           </h2>
-          <p className="mt-2 text-sm text-gray-600 md:text-base">Enter your email to unlock detailed insights</p>
+          <p className="mt-2 text-sm text-gray-600 md:text-base">
+            Get tips and product updates by email. For a <span className="font-semibold text-slate-800">full home value breakdown</span>{" "}
+            (range + confidence), use the{" "}
+            <Link href="/home-value" className="font-semibold text-[#0072ce] underline-offset-2 hover:underline">
+              Home Value Estimator
+            </Link>{" "}
+            — after you run it, you can unlock the full report on that page.
+          </p>
           <form
             onSubmit={onLeadSubmit}
             className="mx-auto mt-5 flex max-w-md flex-col gap-2 sm:flex-row sm:items-stretch sm:justify-center sm:gap-2"
@@ -278,14 +350,27 @@ export default function PropertyToolsPage() {
               disabled={leadStatus === "loading"}
               className="shrink-0 text-sm sm:w-auto"
             >
-              {leadStatus === "loading" ? "Sending…" : "Get My Report"}
+              {leadStatus === "loading" ? "Sending…" : "Subscribe"}
             </Button>
           </form>
-          {leadMessage ? (
-            <p className={`mt-2 text-xs md:text-sm ${leadStatus === "ok" ? "text-emerald-600" : "text-red-600"}`}>
-              {leadMessage}
-            </p>
-          ) : null}
+          <div role="status" aria-live="polite" className="min-h-[1.25rem]">
+            {leadStatus === "ok" ? (
+              <div className="mt-4 space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-left text-sm text-emerald-900">
+                <p className="font-medium">You&apos;re subscribed — check your inbox.</p>
+                <p className="text-emerald-800/90">
+                  To see a <strong>full report</strong> (value range + confidence) for a property, open the{" "}
+                  <Link href="/home-value" className="font-semibold text-[#0072ce] underline-offset-2 hover:underline">
+                    Home Value Estimator
+                  </Link>
+                  , run an estimate, then use <strong>Unlock Full Report</strong> there.
+                </p>
+              </div>
+            ) : leadMessage ? (
+              <p className={`mt-2 text-xs md:text-sm ${leadStatus === "error" ? "text-red-600" : "text-slate-600"}`}>
+                {leadMessage}
+              </p>
+            ) : null}
+          </div>
         </div>
       </section>
 
@@ -353,15 +438,19 @@ export default function PropertyToolsPage() {
             Start Making Smarter Decisions Today
           </h2>
           <p className="mt-2 text-sm text-gray-200 md:text-base">Free. Fast. AI-powered.</p>
-          <Button
+          <a
             href="#tools"
-            variant="inverse"
-            size="sm"
-            className="mt-5 text-sm"
-            onClick={() => trackEvent("tool_click", { tool: "final_cta", href: "#tools" })}
+            className={`${buttonClasses("inverse", "sm", "mt-5 text-sm")}`}
+            onClick={(e) => {
+              trackEvent("tool_click", { tool: "final_cta", href: "#tools" });
+              if (typeof window !== "undefined" && window.location.pathname === "/") {
+                e.preventDefault();
+                scrollToSection("tools");
+              }
+            }}
           >
             Try a Tool Now
-          </Button>
+          </a>
         </div>
       </section>
 
@@ -369,8 +458,20 @@ export default function PropertyToolsPage() {
       <footer className="border-t border-slate-200/80 bg-slate-50/50 px-4 py-8 text-center text-xs text-gray-500 sm:px-6 md:text-sm">
         <p>© {new Date().getFullYear()} PropertyToolsAI</p>
         <nav className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs md:mt-4 md:gap-x-6 md:text-sm">
-          <Link href="#tools" className="font-medium text-slate-600 transition hover:text-[#0072ce]">
+          <a
+            href="#tools"
+            className="font-medium text-slate-600 transition hover:text-[#0072ce]"
+            onClick={(e) => {
+              if (typeof window !== "undefined" && window.location.pathname === "/") {
+                e.preventDefault();
+                scrollToSection("tools");
+              }
+            }}
+          >
             Tools
+          </a>
+          <Link href="/pricing" className="font-medium text-slate-600 transition hover:text-[#0072ce]">
+            Pricing
           </Link>
           <Link href="/blog" className="font-medium text-slate-600 transition hover:text-[#0072ce]">
             Blog

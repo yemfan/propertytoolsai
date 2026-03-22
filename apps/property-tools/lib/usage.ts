@@ -3,6 +3,7 @@
  * local daily counters for guests (localStorage).
  */
 
+import { mergeAuthHeaders } from "@/lib/mergeAuthHeaders";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import type { AccessTier } from "@/lib/access";
 
@@ -21,6 +22,8 @@ export type AccessUsageState = {
   plan: string | null;
   subscriptionStatus: string | null;
   userId: string | null;
+  /** Present when logged in (from Supabase user). */
+  email: string | null;
   /** Per-tool snapshot; limits may come from server + defaults */
   tools: Record<string, ToolUsageEntry>;
   /** Server epoch / ISO hints for UI */
@@ -79,9 +82,11 @@ export function getGuestUsage(tool: string): number {
  * For guests, merges localStorage daily counters into `tools.*.used`.
  */
 export async function getUsage(): Promise<AccessUsageState> {
+  const headers = await mergeAuthHeaders();
   const res = await fetch("/api/access/usage", {
     credentials: "include",
     cache: "no-store",
+    headers,
   });
   const json = (await res.json()) as AccessUsageState & { ok?: boolean; error?: string };
   if (!res.ok || json.ok === false) {

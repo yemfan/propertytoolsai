@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
@@ -10,10 +10,12 @@ export default function AuthModal({
   open,
   onClose,
   initialMode = "login",
+  onAuthenticated,
 }: {
   open: boolean;
   onClose: () => void;
   initialMode?: Mode;
+  onAuthenticated?: () => void;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -32,6 +34,13 @@ export default function AuthModal({
     []
   );
 
+  useEffect(() => {
+    if (open) {
+      setMode(initialMode ?? "login");
+      setError(null);
+    }
+  }, [open, initialMode]);
+
   if (!open) return null;
 
   async function submit(e: React.FormEvent) {
@@ -46,6 +55,7 @@ export default function AuthModal({
           password,
         });
         if (signInError) throw signInError;
+        onAuthenticated?.();
         onClose();
         router.refresh?.();
 
@@ -88,6 +98,7 @@ export default function AuthModal({
         );
       }
 
+      onAuthenticated?.();
       onClose();
       router.refresh?.();
     } catch (e: any) {

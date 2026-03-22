@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BrandCheck, toneAt } from "@/components/brand/BrandCheck";
+import { PRICING_TRIAL_CHECKOUT_PATH, loginUrl } from "@/lib/loginUrl";
+import { mergeAuthHeaders } from "@/lib/mergeAuthHeaders";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type PlanKey = "free" | "pro" | "premium";
 
@@ -166,17 +169,30 @@ export default function PricingModal({
 
   async function startTrial() {
     setError(null);
-    if (!(await requireAuthOrRedirect("/pricing"))) return;
+    const {
+      data: { session },
+    } = await supabaseBrowser().auth.getSession();
+    if (!session) {
+      router.push(loginUrl({ redirect: PRICING_TRIAL_CHECKOUT_PATH, reason: "trial" }));
+      onClose();
+      return;
+    }
+    if (!(await requireAuthOrRedirect(PRICING_TRIAL_CHECKOUT_PATH))) return;
     setTrialLoading(true);
     try {
-      const res = await fetch("/api/start-trial", { method: "POST", credentials: "include" });
+      const headers = await mergeAuthHeaders();
+      const res = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({ plan: "pro", with_trial: true }),
+      });
       const body = (await res.json().catch(() => ({}))) as any;
-      if (!res.ok || body?.ok === false) {
-        throw new Error(body?.error || "Failed to start trial");
-      }
-      window.location.href = "/dashboard";
+      if (!res.ok) throw new Error(body?.error || "Failed to open checkout");
+      if (!body.url) throw new Error("Missing checkout url");
+      window.location.href = body.url;
     } catch (e: any) {
-      setError(e?.message ?? "Could not start trial");
+      setError(e?.message ?? "Could not open trial checkout");
     } finally {
       setTrialLoading(false);
     }
@@ -184,19 +200,44 @@ export default function PricingModal({
 
   async function startCheckout(plan: "pro" | "premium") {
     setError(null);
-    if (!(await requireAuthOrRedirect("/pricing"))) return;
     setLoading(plan);
     try {
+      const {
+        data: { session },
+      } = await supabaseBrowser().auth.getSession();
+      if (!session) {
+        setLoading(null);
+        router.push(loginUrl({ redirect: "/pricing", reason: "checkout" }));
+        onClose();
+        return;
+      }
+      if (!(await requireAuthOrRedirect("/pricing"))) {
+        setLoading(null);
+        return;
+      }
+      const headers = await mergeAuthHeaders();
       const res = await fetch("/api/create-checkout-session", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ plan }),
         credentials: "include",
       });
-      const body = (await res.json().catch(() => ({}))) as any;
-      if (!res.ok || body?.ok === false) throw new Error(body?.error || "Failed to start checkout");
-      if (!body.url) throw new Error("Missing checkout url");
-      window.location.href = body.url;
+      const raw = await res.text();
+      let body: { error?: string; url?: string } = {};
+      try {
+        body = raw ? (JSON.parse(raw) as typeof body) : {};
+      } catch {
+        body = { error: raw.slice(0, 200) || `Request failed (${res.status})` };
+      }
+      if (!res.ok) {
+        throw new Error(
+          typeof body.error === "string" && body.error.length > 0
+            ? body.error
+            : `Checkout failed (${res.status})`
+        );
+      }
+      if (!body.url) throw new Error("Missing checkout URL — check Stripe configuration.");
+      window.location.assign(body.url);
     } catch (e: any) {
       setError(e?.message ?? "Checkout failed");
       setLoading(null);

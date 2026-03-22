@@ -50,6 +50,7 @@ export async function GET(req: Request) {
       plan,
       subscriptionStatus,
       userId: user.id,
+      email: user.email ?? null,
       usageResetDate: (data as any)?.usage_reset_date ?? null,
       tools: {
         estimator: {
@@ -89,6 +90,7 @@ function buildGuestPayload() {
     plan: null,
     subscriptionStatus: null,
     userId: null,
+    email: null,
     usageResetDate: null,
     tools: {
       estimator: {

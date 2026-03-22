@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { mergeAuthHeaders } from "@/lib/mergeAuthHeaders";
 
 export default function TrialSelfTest() {
   const [running, setRunning] = useState(false);
@@ -12,7 +13,8 @@ export default function TrialSelfTest() {
     const lines: string[] = [];
 
     async function call(path: string, init?: RequestInit) {
-      const res = await fetch(path, { credentials: "include", ...(init ?? {}) });
+      const headers = await mergeAuthHeaders(init?.headers);
+      const res = await fetch(path, { credentials: "include", ...(init ?? {}), headers });
       const json = (await res.json().catch(() => ({}))) as any;
       lines.push(`${path} -> ${res.status} ${json?.ok === false ? "FAIL" : "OK"} ${json?.error ?? ""}`.trim());
       return { res, json };

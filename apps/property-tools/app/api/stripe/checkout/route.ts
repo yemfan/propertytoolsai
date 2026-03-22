@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
+import { getStripePriceIdForPlan } from "@/lib/stripePriceIds";
 
 type Body = { plan: "pro" | "premium" };
-
-function getPriceId(plan: Body["plan"]) {
-  if (plan === "pro") return process.env.STRIPE_PRICE_ID_PRO!;
-  return process.env.STRIPE_PRICE_ID_PREMIUM!;
-}
 
 export async function POST(req: Request) {
   try {
@@ -24,7 +20,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
-    const price = getPriceId(body.plan);
+    const price = getStripePriceIdForPlan(body.plan);
     const origin = new URL(req.url).origin;
 
     const session = await stripe.checkout.sessions.create({

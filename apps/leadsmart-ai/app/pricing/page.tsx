@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BrandCheck, toneAt } from "@/components/brand/BrandCheck";
 import PaywallModal from "@/components/PaywallModal";
 import { FeatureHighlightCard, type FeatureHighlightAccent } from "@/components/ui/FeatureHighlightCard";
+import { PRICING_TRIAL_CHECKOUT_PATH, loginUrl } from "@/lib/loginUrl";
+import { mergeAuthHeaders } from "@/lib/mergeAuthHeaders";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import Link from "next/link";
 
 type Plan = "free" | "pro" | "premium";
 
@@ -110,6 +114,69 @@ export default function PricingPage() {
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [paywallMsg, setPaywallMsg] = useState("You’ve reached your limit. Upgrade to continue.");
   const [error, setError] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const trialCheckoutSentRef = useRef(false);
+  const checkoutErrorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const supabase = supabaseBrowser();
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!cancelled) {
+        setLoggedIn(!!session);
+        setAuthReady(true);
+      }
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(!!session);
+      setAuthReady(true);
+    });
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  /** After login at `/pricing?trial_checkout=1`, open Stripe (Pro + trial period). */
+  useEffect(() => {
+    if (!authReady) return;
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("trial_checkout") !== "1") return;
+    if (sp.get("canceled") === "1") {
+      setTrialLoading(false);
+      return;
+    }
+    if (!loggedIn) {
+      window.location.href = loginUrl({ redirect: PRICING_TRIAL_CHECKOUT_PATH, reason: "trial" });
+      return;
+    }
+    if (trialCheckoutSentRef.current) return;
+    trialCheckoutSentRef.current = true;
+
+    (async () => {
+      setTrialLoading(true);
+      setError(null);
+      try {
+        const headers = await mergeAuthHeaders();
+        const res = await fetch("/api/create-checkout-session", {
+          method: "POST",
+          headers,
+          credentials: "include",
+          body: JSON.stringify({ plan: "pro", with_trial: true }),
+        });
+        const body = (await res.json().catch(() => ({}))) as any;
+        if (!res.ok) throw new Error(body?.error || "Failed to open checkout");
+        if (!body.url) throw new Error("Missing checkout url");
+        window.location.href = body.url;
+      } catch (e: any) {
+        trialCheckoutSentRef.current = false;
+        setError(e?.message ?? "Could not open trial checkout");
+        setTrialLoading(false);
+      }
+    })();
+  }, [authReady, loggedIn]);
 
   useEffect(() => {
     let cancelled = false;
@@ -160,6 +227,11 @@ export default function PricingPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!error) return;
+    checkoutErrorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [error]);
+
   const leadsPct = useMemo(() => {
     if (!leadUsage || leadUsage.limit == null || leadUsage.limit <= 0) return 0;
     return Math.min(100, Math.round((leadUsage.count / leadUsage.limit) * 100));
@@ -169,15 +241,37 @@ export default function PricingPage() {
     setError(null);
     setLoadingPlan(plan);
     try {
+      const {
+        data: { session },
+      } = await supabaseBrowser().auth.getSession();
+      if (!session) {
+        setLoadingPlan(null);
+        window.location.assign(loginUrl({ redirect: "/pricing", reason: "checkout" }));
+        return;
+      }
+      const headers = await mergeAuthHeaders();
       const res = await fetch("/api/create-checkout-session", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ plan }),
+        credentials: "include",
       });
-      const body = (await res.json().catch(() => ({}))) as any;
-      if (!res.ok) throw new Error(body.error || "Failed to start checkout");
-      if (!body.url) throw new Error("Missing checkout url");
-      window.location.href = body.url;
+      const raw = await res.text();
+      let body: { error?: string; url?: string } = {};
+      try {
+        body = raw ? (JSON.parse(raw) as typeof body) : {};
+      } catch {
+        body = { error: raw.slice(0, 200) || `Request failed (${res.status})` };
+      }
+      if (!res.ok) {
+        throw new Error(
+          typeof body.error === "string" && body.error.length > 0
+            ? body.error
+            : `Checkout failed (${res.status})`
+        );
+      }
+      if (!body.url) throw new Error("Missing checkout URL — check Stripe configuration.");
+      window.location.assign(body.url);
     } catch (e: any) {
       setError(e?.message ?? "Checkout failed");
       setLoadingPlan(null);
@@ -188,14 +282,26 @@ export default function PricingPage() {
     setError(null);
     setTrialLoading(true);
     try {
-      const res = await fetch("/api/start-trial", { method: "POST" });
-      const body = (await res.json().catch(() => ({}))) as any;
-      if (!res.ok || body?.ok === false) {
-        throw new Error(body?.error || "Failed to start trial");
+      const {
+        data: { session },
+      } = await supabaseBrowser().auth.getSession();
+      if (!session) {
+        window.location.href = loginUrl({ redirect: PRICING_TRIAL_CHECKOUT_PATH, reason: "trial" });
+        return;
       }
-      window.location.href = "/dashboard";
+      const headers = await mergeAuthHeaders();
+      const res = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({ plan: "pro", with_trial: true }),
+      });
+      const body = (await res.json().catch(() => ({}))) as any;
+      if (!res.ok) throw new Error(body?.error || "Failed to open checkout");
+      if (!body.url) throw new Error("Missing checkout url");
+      window.location.href = body.url;
     } catch (e: any) {
-      setError(e?.message ?? "Could not start trial");
+      setError(e?.message ?? "Could not open trial checkout");
     } finally {
       setTrialLoading(false);
     }
@@ -203,6 +309,15 @@ export default function PricingPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+      {error ? (
+        <div
+          ref={checkoutErrorRef}
+          role="alert"
+          className="sticky top-2 z-20 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-medium text-red-800 shadow-md"
+        >
+          {error}
+        </div>
+      ) : null}
       {/* Hero */}
       <section className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6 sm:p-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 max-w-4xl">
@@ -219,7 +334,11 @@ export default function PricingPage() {
             disabled={trialLoading || Boolean(planInfo?.trial_used)}
             className="inline-flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 disabled:opacity-60"
           >
-            {trialLoading ? "Starting..." : "🚀 Start Free Trial"}
+            {trialLoading
+              ? "Starting..."
+              : authReady && !loggedIn
+                ? "Sign in to start free trial"
+                : "🚀 Start Free Trial"}
           </button>
           <a
             href="#plans"
@@ -228,16 +347,23 @@ export default function PricingPage() {
             📊 See Plans
           </a>
         </div>
+        {authReady && !loggedIn ? (
+          <p className="mt-3 max-w-2xl text-xs leading-relaxed text-slate-600">
+            The free trial is tied to your account.{" "}
+            <Link href="/signup" className="font-semibold text-blue-700 hover:underline">
+              Sign up
+            </Link>{" "}
+            or{" "}
+            <Link href={loginUrl({ redirect: PRICING_TRIAL_CHECKOUT_PATH, reason: "trial" })} className="font-semibold text-blue-700 hover:underline">
+              sign in
+            </Link>
+            — we’ll bring you back here to activate your trial.
+          </p>
+        ) : null}
         <p className="mt-4 text-xs text-slate-600">
           Trusted by 500+ agents, 10,000+ leads managed
         </p>
       </section>
-
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
-          {error}
-        </div>
-      )}
 
       {/* Value props */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -358,9 +484,13 @@ export default function PricingPage() {
                 </button>
               )}
             </div>
-            {p.key === "pro" ? (
+            {p.key === "pro" &&
+            leadUsage?.limit != null &&
+            leadsPct >= 90 ? (
               <div className="mt-3 text-[11px] text-amber-700 font-medium">
-                Hit your 500-lead cap? Upgrade to Premium for unlimited growth.
+                {leadsPct >= 100
+                  ? "You’ve reached your Pro lead limit. Upgrade to Premium for unlimited leads."
+                  : "You’re close to your Pro lead limit — Premium includes unlimited leads."}
               </div>
             ) : null}
           </div>
@@ -383,7 +513,11 @@ export default function PricingPage() {
             disabled={trialLoading || Boolean(planInfo?.trial_used)}
             className="inline-flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 disabled:opacity-60"
           >
-            🚀 Start Free Trial
+            {trialLoading
+              ? "Starting..."
+              : authReady && !loggedIn
+                ? "Sign in to start free trial"
+                : "🚀 Start Free Trial"}
           </button>
           <button
             type="button"
@@ -394,6 +528,11 @@ export default function PricingPage() {
             💼 Upgrade Now
           </button>
         </div>
+        {authReady && !loggedIn ? (
+          <p className="mt-3 max-w-2xl text-xs text-slate-600">
+            Upgrade requires an account — you’ll be asked to sign in before checkout.
+          </p>
+        ) : null}
       </section>
 
       {/* Testimonials / social proof */}
