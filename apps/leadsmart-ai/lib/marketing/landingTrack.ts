@@ -7,7 +7,11 @@ export type LandingEventName =
   | "landing_role_change"
   | "landing_cta_click"
   | "landing_nav_click"
-  | "landing_demo_click";
+  | "landing_demo_click"
+  | "landing_ecosystem_tools_click"
+  | "landing_exit_intent_open"
+  | "landing_exit_intent_dismiss"
+  | "landing_exit_intent_submit";
 
 export function trackLandingEvent(
   event: LandingEventName,

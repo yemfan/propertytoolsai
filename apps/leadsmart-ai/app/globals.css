@@ -118,6 +118,16 @@ a:hover {
   color: #005ca8;
 }
 
+/*
+ * Plain CSS above is intentionally unlayered (see file header). That beats Tailwind @layer utilities,
+ * so `a { color: primary }` was overriding `text-white` on Next.js <Link> CTAs → invisible blue-on-blue.
+ */
+a.text-white,
+a.text-white:hover,
+a.text-white:focus-visible {
+  color: #fff !important;
+}
+
 .btn-primary {
   background-color: var(--color-primary);
   color: #fff;
@@ -194,5 +204,81 @@ a:hover {
   }
   .landing-hero-float {
     animation: none !important;
+  }
+}
+
+/* Onboarding funnel */
+@keyframes onboarding-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes onboarding-pulse-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 114, 206, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(0, 114, 206, 0);
+  }
+}
+
+@keyframes onboarding-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes onboarding-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.onboarding-fade-up {
+  animation: onboarding-fade-up 0.45s ease-out both;
+}
+
+.onboarding-pulse-cta {
+  animation: onboarding-pulse-ring 2s ease-in-out infinite;
+}
+
+.onboarding-shimmer-bar {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 114, 206, 0.08) 0%,
+    rgba(0, 114, 206, 0.22) 50%,
+    rgba(0, 114, 206, 0.08) 100%
+  );
+  background-size: 200% 100%;
+  animation: onboarding-shimmer 1.8s ease-in-out infinite;
+}
+
+.onboarding-toast-in {
+  animation: onboarding-toast-in 0.4s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-fade-up,
+  .onboarding-pulse-cta,
+  .onboarding-shimmer-bar,
+  .onboarding-toast-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

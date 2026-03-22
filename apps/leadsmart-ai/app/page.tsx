@@ -4,11 +4,11 @@ import LeadSmartLanding from "@/components/marketing/LeadSmartLanding";
 export const metadata: Metadata = {
   title: "LeadSmart AI — AI Growth Engine for Agents & Mortgage Pros",
   description:
-    "Turn online traffic into closed deals. AI capture, lead scoring, and automated follow-up for real estate agents and loan brokers. Start free.",
+    "Turn online traffic into closed deals — automatically. AI captures, qualifies, and follows up with your leads instantly. First qualified lead in 24 hours or it’s free.",
   openGraph: {
-    title: "LeadSmart AI — Turn traffic into pipeline",
+    title: "LeadSmart AI — Turn traffic into closed deals, automatically",
     description:
-      "Capture high-intent leads from home value & mortgage tools, automate nurture, and close more deals. Built for agents and brokers.",
+      "Stop chasing cold leads. High-intent buyers and sellers, captured and nurtured by AI. Built for agents and brokers.",
   },
 };
 

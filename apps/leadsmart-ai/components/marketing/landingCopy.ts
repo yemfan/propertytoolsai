@@ -10,8 +10,16 @@ export type LandingCopy = {
     line3?: string;
     primaryCta: string;
     secondaryCta: string;
-    /** Shown under hero CTAs */
+    /** If set, hero secondary button uses this href (default: demo funnel). */
+    secondaryCtaHref?: string;
+    /** Tight reassurance line directly under hero buttons */
+    microProof: string;
+    /** Shown under micro-proof (longer guarantee / social line) */
     trustLine: string;
+  };
+  /** Slim strip below hero — social proof / trust signals */
+  trustBar: {
+    items: string[];
   };
   problem: {
     title: string;
@@ -23,6 +31,8 @@ export type LandingCopy = {
     closingEmphasis: string;
   };
   solution: {
+    /** e.g. "This is NOT a CRM." — shown above the main title */
+    negations?: string[];
     title: string;
     punch1: string;
     punch2Prefix: string;
@@ -33,7 +43,16 @@ export type LandingCopy = {
   };
   howItWorks: {
     title: string;
-    steps: { phase: string; body: string }[];
+    /** Short line under the title — sets up the visual flow */
+    subtitle?: string;
+    /** Large SVG funnel — top → bottom stages + outcome */
+    funnel?: {
+      caption?: string;
+      stages: [string, string, string];
+      hints?: [string, string, string];
+      outcome: string;
+    };
+    steps: { phase: string; body: string; icon?: string }[];
   };
   showcase: {
     title: string;
@@ -43,11 +62,30 @@ export type LandingCopy = {
   };
   valueStack: {
     title: string;
+    /** Optional line under the title */
+    subtitle?: string;
     benefits: string[];
     closingLine1: string;
     closingLine2: string;
   };
+  /** PropertyTools AI ecosystem — lead-generating tools */
+  productEcosystem: {
+    title: string;
+    /** Competitive angle — e.g. secret weapon vs other vendors */
+    tagline?: string;
+    line1: string;
+    /** Short punch line (often emphasized in UI) */
+    line2: string;
+    toolsIntro: string;
+    tools: { icon: string; name: string }[];
+    closing: string;
+    /** Optional link to PropertyTools consumer site */
+    toolsSiteHref?: string;
+    toolsSiteLabel?: string;
+  };
   proof: {
+    /** Small pill above the title (e.g. “Results”) */
+    eyebrow?: string;
     title: string;
     subtitle?: string;
     /** Optional stat tiles — omit for quote-only social proof */
@@ -63,10 +101,14 @@ export type LandingCopy = {
     premiumFeatures: string[];
     /** e.g. Plans starting at $29/month */
     footnote: string;
+    /** e.g. pay-per-lead — shown as an optional add-on line */
+    optionalOffer?: string;
     freeCta: string;
     premiumCta: string;
   };
   finalCta: {
+    /** e.g. “Urgency” — small label above headline */
+    eyebrow?: string;
     title: string;
     line1: string;
     line2: string;
@@ -79,13 +121,22 @@ export type LandingCopy = {
 const agentCopy: LandingCopy = {
   hero: {
     eyebrow: "The AI Growth Engine for Real Estate Agents",
-    headline: "Turn Online Traffic into Closed Deals — Fast",
-    line1: "Stop losing deals from cold leads and missed follow-ups.",
-    line2: "Capture, qualify, and convert high-intent buyers automatically with AI.",
-    line3: "No setup. No tech skills required. Start generating leads in minutes.",
-    primaryCta: "Get Started Free",
-    secondaryCta: "See Demo",
-    trustLine: "Trusted by agents generating high-intent buyer and seller leads daily",
+    headline: "Turn Online Traffic into Closed Deals — Automatically",
+    line1: "Stop chasing cold leads.",
+    line2: "Start closing high-intent buyers and sellers with AI.",
+    line3: "LeadSmart AI captures, qualifies, and follows up with your leads — instantly.",
+    primaryCta: "Get My First Leads Now",
+    secondaryCta: "See How It Works",
+    secondaryCtaHref: "#how-it-works",
+    microProof: "No setup required • Works in minutes • Cancel anytime",
+    trustLine: "Get your first qualified lead in 24 hours — or it’s free.",
+  },
+  trustBar: {
+    items: [
+      "Used by agents in Los Angeles",
+      "High-intent buyer & seller leads generated daily",
+      "3x faster response time with AI",
+    ],
   },
   problem: {
     title: "You don’t have a traffic problem.",
@@ -93,20 +144,21 @@ const agentCopy: LandingCopy = {
     intro: "You’re already getting visitors…",
     painLabel: "But:",
     pains: [
-      "They don’t respond",
+      "They don’t reply",
       "They’re not serious",
-      "You forget to follow up",
-      "Deals fall through the cracks",
+      "You follow up too late",
+      "Deals slip away",
     ],
-    closingLead: "Every day this continues…",
-    closingEmphasis: "You’re losing real money.",
+    closingLead: "Every missed follow-up = lost commission.",
+    closingEmphasis: "And it’s happening every day.",
   },
   solution: {
-    title: "LeadSmart AI turns your traffic into a deal-closing machine.",
+    negations: ["This is NOT a CRM.", "This is NOT a lead generator."],
+    title: "LeadSmart AI is a Deal Conversion Engine.",
     punch1: "We don’t just give you leads.",
-    punch2Prefix: "We help you ",
-    punch2Emphasis: "CLOSE",
-    punch2Suffix: " them.",
+    punch2Prefix: "We turn them into ",
+    punch2Emphasis: "clients",
+    punch2Suffix: " — automatically.",
     wins: [
       "Capture high-intent users from home value & mortgage tools",
       "Automatically qualify and score every lead",
@@ -117,65 +169,103 @@ const agentCopy: LandingCopy = {
     closing: "All on autopilot.",
   },
   howItWorks: {
-    title: "Simple. Automated. Powerful.",
+    title: "Simple flow — from click to client",
+    subtitle: "Three steps. No guesswork.",
+    funnel: {
+      caption: "Your pipeline, visualized",
+      stages: ["Traffic & tools", "Qualified leads", "AI nurture & follow-up"],
+      hints: ["Widest reach", "Scored & prioritized", "Runs 24/7 automatically"],
+      outcome: "Closed clients · more referrals",
+    },
     steps: [
       {
         phase: "Attract",
-        body: "Users visit your tools (home value, mortgage, property comparison)",
+        icon: "🌐",
+        body: "Buyers and sellers discover your home value, mortgage, and comparison tools — right on your site.",
       },
       {
         phase: "Capture",
-        body: "We convert them into high-intent leads",
+        icon: "🎯",
+        body: "We turn visitors into scored, high-intent leads the moment they engage.",
       },
       {
         phase: "Close",
-        body: "AI follows up, nurtures, and helps you close the deal",
+        icon: "🤝",
+        body: "AI follows up instantly, nurtures every thread, and helps you book conversations that become deals.",
       },
     ],
   },
   showcase: {
-    title: "Everything You Need to Turn Interest into Income",
+    title: "Everything You Need to Close More Deals",
+    subtitle: "Power in your pipeline — not a feature laundry list.",
     items: [
       {
         icon: "📊",
-        title: "Smart Dashboard",
-        desc: "See all your leads, scores, and activity in one place",
+        title: "Smart Lead Dashboard",
+        desc: "See who’s serious and ready to act",
       },
       {
         icon: "🧠",
         title: "AI Lead Scoring",
-        desc: "Instantly identify who is ready to buy or sell",
+        desc: "Know exactly which leads to prioritize",
       },
       {
-        icon: "📩",
-        title: "Automated Follow-Up",
-        desc: "Never miss a lead again — AI responds instantly",
+        icon: "⚡",
+        title: "Instant AI Follow-Up",
+        desc: "Respond in seconds — not hours",
       },
       {
         icon: "🏡",
         title: "AI Property Comparison",
-        desc: "Help clients choose the best property with data-driven insights",
+        desc: "Help clients decide faster (and trust you more)",
+      },
+      {
+        icon: "🔄",
+        title: "Automated Nurturing",
+        desc: "Stay top-of-mind without lifting a finger",
       },
     ],
   },
   valueStack: {
     title: "Why Agents Choose LeadSmart AI",
     benefits: [
-      "More qualified buyer & seller conversations",
-      "Faster response time on every lead",
-      "Higher conversion from traffic you already have",
-      "Less manual follow-up and admin",
-      "A pipeline you can see and act on daily",
+      "More qualified leads",
+      "Faster response time",
+      "Higher close rates",
+      "Less manual work",
+      "More predictable income",
     ],
     closingLine1: "This isn’t just a tool.",
     closingLine2: "It’s your unfair advantage.",
   },
+  productEcosystem: {
+    title: "Powered by PropertyToolsAI",
+    tagline: "This is your secret weapon vs competitors",
+    line1: "We don’t just help you manage leads.",
+    line2: "We generate them.",
+    toolsIntro: "Our tools attract high-intent users:",
+    tools: [
+      { icon: "🏡", name: "Home Value" },
+      { icon: "💰", name: "Mortgage Calculator" },
+      { icon: "📊", name: "Property Comparison" },
+    ],
+    closing: "Then convert them into leads — for you.",
+    toolsSiteHref: "https://www.propertytools.ai",
+    toolsSiteLabel: "Explore PropertyTools AI",
+  },
   proof: {
-    title: "Agents Are Already Seeing Results",
+    eyebrow: "Results",
+    title: "Real Results from Real Users",
+    subtitle: "This is your money section.",
+    stats: [
+      { value: "100+", label: "leads generated" },
+      { value: "3×", label: "faster response time" },
+      { value: "Higher", label: "close rates" },
+    ],
     quotes: [
       {
-        text: "Got 12 qualified leads in just one week",
-        attribution: "Real Estate Agent",
+        text: "Got 12 qualified leads in 7 days",
+        attribution: "Real Estate Agent (Arcadia)",
       },
       {
         text: "My response rate doubled overnight",
@@ -188,25 +278,23 @@ const agentCopy: LandingCopy = {
     ],
   },
   pricing: {
-    title: "Start Free. Upgrade When You’re Ready.",
+    title: "Start Free. Pay When You Grow.",
+    subtitle: "Simple & low friction.",
     freePlanName: "Free Plan",
-    premiumPlanName: "Premium Plan",
-    freeFeatures: ["Basic tools", "Limited leads", "Standard features"],
-    premiumFeatures: [
-      "Unlimited lead capture",
-      "Advanced AI tools",
-      "Full automation",
-      "Priority lead routing",
-    ],
-    footnote: "Plans starting at $29/month",
+    premiumPlanName: "Premium",
+    freeFeatures: ["Basic tools", "Limited leads", "Starter features"],
+    premiumFeatures: ["Unlimited leads", "Full AI automation", "Priority lead routing"],
+    footnote: "Starting at $29/month",
+    optionalOffer: "Pay per lead available",
     freeCta: "Get Started Free",
     premiumCta: "View plans & upgrade",
   },
   finalCta: {
-    title: "Stop Wasting Traffic. Start Closing Deals.",
-    line1: "Every visitor you don’t convert is a lost opportunity.",
-    line2: "Let AI work for you — 24/7.",
-    primary: "Get Started Free",
+    eyebrow: "Urgency",
+    title: "Stop Losing Deals to Slow Follow-Ups",
+    line1: "Your competitors are already responding faster.",
+    line2: "Don’t let another lead go cold.",
+    primary: "Get My First Leads Now",
   },
 };
 
@@ -216,8 +304,16 @@ const brokerCopy: LandingCopy = {
     headline: "Turn Mortgage Traffic into Closed Deals — Fast",
     line1: "Capture and convert high-intent loan clients automatically with AI.",
     primaryCta: "Get Started Free",
-    secondaryCta: "See Demo",
+    secondaryCta: "Watch How Agents Get Leads in 60 Seconds",
+    microProof: "No setup required • Works in minutes • Cancel anytime",
     trustLine: "Trusted by brokers turning mortgage traffic into qualified applications daily",
+  },
+  trustBar: {
+    items: [
+      "Used by financing teams in Los Angeles",
+      "High-intent borrower leads generated daily",
+      "3x faster response time with AI",
+    ],
   },
   problem: {
     title: "You don’t have a traffic problem.",
@@ -234,11 +330,12 @@ const brokerCopy: LandingCopy = {
     closingEmphasis: "You’re leaving revenue on the table.",
   },
   solution: {
-    title: "LeadSmart AI turns your traffic into a deal-closing machine.",
+    negations: ["This is NOT a CRM.", "This is NOT a lead generator."],
+    title: "LeadSmart AI is a Deal Conversion Engine.",
     punch1: "We don’t just give you applications.",
-    punch2Prefix: "We help you ",
-    punch2Emphasis: "FUND",
-    punch2Suffix: " them.",
+    punch2Prefix: "We turn them into ",
+    punch2Emphasis: "funded clients",
+    punch2Suffix: " — automatically.",
     wins: [
       "Capture high-intent borrowers from mortgage & home-financing tools",
       "Automatically qualify and score every opportunity",
@@ -249,44 +346,60 @@ const brokerCopy: LandingCopy = {
     closing: "All on autopilot.",
   },
   howItWorks: {
-    title: "Simple. Automated. Powerful.",
+    title: "Simple flow — from click to funded client",
+    subtitle: "Three steps. No guesswork.",
+    funnel: {
+      caption: "Your pipeline, visualized",
+      stages: ["Borrower traffic", "Scored opportunities", "AI follow-up"],
+      hints: ["Site & tools", "Ready for LOs", "Compliant & fast"],
+      outcome: "More funded loans",
+    },
     steps: [
       {
         phase: "Attract",
-        body: "Borrowers hit your tools (rates, pre-qual, home value, property comparison)",
+        icon: "🌐",
+        body: "Borrowers land on your rates, pre-qual, home value, and comparison tools.",
       },
       {
         phase: "Capture",
-        body: "We convert them into high-intent opportunities",
+        icon: "🎯",
+        body: "We convert engagement into scored, high-intent opportunities for your team.",
       },
       {
         phase: "Close",
-        body: "AI follows up, nurtures, and helps your team fund more deals",
+        icon: "🤝",
+        body: "AI follows up, stays compliant, and helps your LOs move files toward funding.",
       },
     ],
   },
   showcase: {
-    title: "Everything You Need to Turn Interest into Income",
+    title: "Everything You Need to Close More Deals",
+    subtitle: "Power in your pipeline — not a feature laundry list.",
     items: [
       {
         icon: "📊",
-        title: "Smart Dashboard",
-        desc: "See pipelines, scores, and team activity in one place",
+        title: "Smart Lead Dashboard",
+        desc: "See who’s serious and which files are ready to move",
       },
       {
         icon: "🧠",
         title: "AI Lead Scoring",
-        desc: "Instantly spot who’s ready to move forward",
+        desc: "Know exactly which opportunities to prioritize first",
       },
       {
-        icon: "📩",
-        title: "Automated Follow-Up",
-        desc: "Never miss a borrower — AI responds instantly and stays compliant",
+        icon: "⚡",
+        title: "Instant AI Follow-Up",
+        desc: "Respond in seconds — compliant and on-brand",
       },
       {
         icon: "🏡",
         title: "AI Property Comparison",
-        desc: "Help clients compare scenarios with clear, data-backed insights",
+        desc: "Help borrowers decide faster (and trust your guidance)",
+      },
+      {
+        icon: "🔄",
+        title: "Automated Nurturing",
+        desc: "Stay top-of-mind while your LOs focus on funding",
       },
     ],
   },
@@ -295,19 +408,41 @@ const brokerCopy: LandingCopy = {
     benefits: [
       "More qualified opportunities",
       "Faster response time",
-      "Higher pull-through & fund rates",
-      "Less manual work for your team",
-      "More predictable pipeline revenue",
+      "Higher pull-through & close rates",
+      "Less manual work",
+      "More predictable income",
     ],
     closingLine1: "This isn’t just a tool.",
     closingLine2: "It’s your unfair advantage.",
   },
+  productEcosystem: {
+    title: "Powered by PropertyToolsAI",
+    tagline: "This is your secret weapon vs competitors",
+    line1: "We don’t just help you manage leads.",
+    line2: "We generate them.",
+    toolsIntro: "Our tools attract high-intent users:",
+    tools: [
+      { icon: "🏡", name: "Home Value" },
+      { icon: "💰", name: "Mortgage Calculator" },
+      { icon: "📊", name: "Property Comparison" },
+    ],
+    closing: "Then convert them into leads — for you.",
+    toolsSiteHref: "https://www.propertytools.ai",
+    toolsSiteLabel: "Explore PropertyTools AI",
+  },
   proof: {
-    title: "Agents Are Already Seeing Results",
+    eyebrow: "Results",
+    title: "Real Results from Real Users",
+    subtitle: "This is your money section.",
+    stats: [
+      { value: "100+", label: "leads & opportunities generated" },
+      { value: "3×", label: "faster response time" },
+      { value: "Higher", label: "pull-through & close rates" },
+    ],
     quotes: [
       {
-        text: "Got 12 qualified leads in just one week",
-        attribution: "Real Estate Agent",
+        text: "Got 12 qualified leads in 7 days",
+        attribution: "Real Estate Agent (Arcadia)",
       },
       {
         text: "My response rate doubled overnight",
@@ -320,24 +455,22 @@ const brokerCopy: LandingCopy = {
     ],
   },
   pricing: {
-    title: "Start Free. Upgrade When You’re Ready.",
+    title: "Start Free. Pay When You Grow.",
+    subtitle: "Simple & low friction.",
     freePlanName: "Free Plan",
-    premiumPlanName: "Premium Plan",
-    freeFeatures: ["Basic tools", "Limited leads", "Standard features"],
-    premiumFeatures: [
-      "Unlimited lead capture",
-      "Advanced AI tools",
-      "Full automation",
-      "Priority lead routing",
-    ],
-    footnote: "Plans starting at $29/month",
+    premiumPlanName: "Premium",
+    freeFeatures: ["Basic tools", "Limited leads", "Starter features"],
+    premiumFeatures: ["Unlimited leads", "Full AI automation", "Priority lead routing"],
+    footnote: "Starting at $29/month",
+    optionalOffer: "Pay per lead available",
     freeCta: "Get Started Free",
     premiumCta: "View plans & upgrade",
   },
   finalCta: {
-    title: "Stop Wasting Traffic. Start Closing Deals.",
-    line1: "Every borrower you don’t convert is a lost opportunity.",
-    line2: "Let AI work for you — 24/7.",
+    eyebrow: "Urgency",
+    title: "Stop Losing Deals to Slow Follow-Ups",
+    line1: "Your competitors are already responding faster.",
+    line2: "Don’t let another opportunity go cold.",
     primary: "Get Started Free",
   },
 };

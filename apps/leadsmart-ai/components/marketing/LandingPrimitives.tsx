@@ -2,11 +2,11 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 const primary =
-  "inline-flex items-center justify-center rounded-2xl bg-[#0072ce] px-5 py-3 text-sm font-semibold text-white shadow-md shadow-blue-900/15 transition hover:bg-[#005ca8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0072ce]";
+  "inline-flex items-center justify-center rounded-2xl bg-[#0072ce] px-5 py-3 text-sm font-semibold !text-white shadow-md shadow-blue-900/15 transition hover:bg-[#005ca8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0072ce]";
 const secondary =
   "inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400";
 const ghost =
-  "inline-flex items-center justify-center rounded-2xl border border-white/25 bg-white/10 px-5 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/15";
+  "inline-flex items-center justify-center rounded-2xl border border-white/25 bg-white/10 px-5 py-3 text-sm font-semibold !text-white backdrop-blur transition hover:bg-white/15";
 
 type ButtonProps = {
   href: string;

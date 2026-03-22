@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { supabaseBrowser } from "../../lib/supabaseBrowser";
 
-export default function AgentSignupPage() {
+function AgentSignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -13,6 +15,13 @@ export default function AgentSignupPage() {
   const [brokerage, setBrokerage] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    const e = searchParams.get("email");
+    const n = searchParams.get("fullName");
+    if (e) setEmail((prev) => prev || decodeURIComponent(e));
+    if (n) setFullName((prev) => prev || decodeURIComponent(n));
+  }, [searchParams]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -126,6 +135,12 @@ export default function AgentSignupPage() {
         <div className="space-y-1 text-center">
           <h1 className="text-xl font-bold text-gray-900">Start Free as Agent</h1>
           <p className="text-xs text-gray-600">Get access to the agent portal and CMA tools.</p>
+          <p className="pt-2 text-[11px] text-gray-500">
+            Prefer a 2-minute interactive preview first?{" "}
+            <Link href="/onboarding" className="font-semibold text-blue-700 hover:underline">
+              Guided onboarding
+            </Link>
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -219,6 +234,20 @@ export default function AgentSignupPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function AgentSignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-gray-500">
+          Loading…
+        </div>
+      }
+    >
+      <AgentSignupForm />
+    </Suspense>
   );
 }
 
