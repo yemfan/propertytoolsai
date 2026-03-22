@@ -2,10 +2,9 @@
  * Root `npm run build` entry for monorepo.
  *
  * - Local / non-Vercel: `clean:next` + `turbo build` (unchanged behavior).
- * - Vercel with Root Directory = repo root: build ONE Next app and emit `.next`
- *   at the monorepo root (see `NEXT_DIST_IN_MONOREPO_ROOT` in each app's
- *   `next.config.js`). Default `turbo build` leaves output under `apps/<app>/.next`,
- *   which breaks Vercel's expectation of `/vercel/path0/.next`.
+ * - Vercel with Root Directory = repo root: build ONE Next app into `apps/<app>/.next`
+ *   (default distDir — avoids fragile `NEXT_DIST_IN_MONOREPO_ROOT` partial writes),
+ *   then copy the full tree to `<repo>/.next` so `/vercel/path0/.next` exists.
  *
  * Set in Vercel → Environment Variables (per project):
  *   VERCEL_MONOREPO_APP=leadsmart-ai   OR   property-tools
@@ -14,7 +13,7 @@
  * and deployment URLs (so "Property Tools AI" / property.tools match property-tools).
  */
 import { execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { cpSync, existsSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -26,8 +25,13 @@ function normalizeForMatch(s) {
   return (s || "").toLowerCase().replace(/[\s.\\/_-]+/g, "");
 }
 
-function run(cmd) {
-  execSync(cmd, { stdio: "inherit", cwd: root, env: process.env, shell: true });
+function run(cmd, envOverrides = {}) {
+  execSync(cmd, {
+    stdio: "inherit",
+    cwd: root,
+    shell: true,
+    env: Object.keys(envOverrides).length ? { ...process.env, ...envOverrides } : process.env,
+  });
 }
 
 function resolveMonorepoApp() {
@@ -78,18 +82,53 @@ if (process.env.VERCEL === "1") {
       ? "build:vercel-leadsmart-root"
       : "build:vercel-property-tools-root";
 
+  const appNextDir = join(root, "apps", app, ".next");
+  const repoNextDir = join(root, ".next");
+  const appManifest = join(appNextDir, "routes-manifest.json");
+  const repoManifest = join(repoNextDir, "routes-manifest.json");
+
+  // Stale repo-root `.next` (e.g. only `cache/` from a crashed NEXT_DIST build) confuses debugging.
+  if (existsSync(repoNextDir)) {
+    console.log("[vercel-monorepo-root-build] Removing repo .next before build (clean slate)");
+    rmSync(repoNextDir, { recursive: true, force: true });
+  }
+
   console.log(`[vercel-monorepo-root-build] VERCEL=1 → npm run ${script} (app=${app})`);
-  run(`npm run ${script}`);
-  // Even with NEXT_DIST_IN_MONOREPO_ROOT=1, Next may still emit under apps/<app>/.next on some CI setups.
-  run(`node "${join(root, "scripts", "vercel-sync-next-output.mjs")}" ${app}`);
-  const repoNextManifest = join(root, ".next", "routes-manifest.json");
-  if (!existsSync(repoNextManifest)) {
+  // Force default distDir under apps/<app>/.next even if Vercel dashboard sets NEXT_DIST_* (avoids partial <root>/.next).
+  run(`npm run ${script}`, {
+    NEXT_DIST_IN_MONOREPO_ROOT: "",
+    NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT: "",
+  });
+
+  if (!existsSync(appManifest)) {
     console.error(
-      `[vercel-monorepo-root-build] Missing ${repoNextManifest} after build + sync. ` +
-        "Prefer Vercel Root Directory = apps/leadsmart-ai or apps/property-tools with apps/<app>/vercel.json.",
+      "[vercel-monorepo-root-build] Missing",
+      appManifest,
+      "— `next build` did not finish. Scroll up for TypeScript / OOM / prerender errors.",
+    );
+    console.error(
+      "[vercel-monorepo-root-build] Prefer Vercel Root Directory = apps/" + app + " (see docs/VERCEL.md).",
     );
     process.exit(1);
   }
+
+  try {
+    if (existsSync(repoNextDir)) {
+      rmSync(repoNextDir, { recursive: true, force: true });
+    }
+    cpSync(appNextDir, repoNextDir, { recursive: true, force: true });
+    console.log("[vercel-monorepo-root-build] Copied", appNextDir, "->", repoNextDir);
+  } catch (e) {
+    console.error("[vercel-monorepo-root-build] Copy to repo .next failed:", e?.message ?? e);
+    process.exit(1);
+  }
+
+  if (!existsSync(repoManifest)) {
+    console.error("[vercel-monorepo-root-build] Still missing after copy:", repoManifest);
+    process.exit(1);
+  }
+
+  console.log("[vercel-monorepo-root-build] OK:", repoManifest);
   process.exit(0);
 }
 

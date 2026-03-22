@@ -16,8 +16,8 @@
     "build": "node scripts/vercel-monorepo-root-build.mjs",
     "build:leadsmart": "cross-env NODE_OPTIONS=--max-old-space-size=12288 npm run build -w leadsmart-ai",
     "build:property-tools": "cross-env NODE_OPTIONS=--max-old-space-size=12288 npm run build -w property-tools",
-    "build:vercel-leadsmart-root": "cross-env NEXT_DIST_IN_MONOREPO_ROOT=1 NODE_OPTIONS=--max-old-space-size=12288 npm run build -w leadsmart-ai",
-    "build:vercel-property-tools-root": "cross-env NEXT_DIST_IN_MONOREPO_ROOT=1 NODE_OPTIONS=--max-old-space-size=12288 npm run build -w property-tools",
+    "build:vercel-leadsmart-root": "cross-env NODE_OPTIONS=--max-old-space-size=12288 npm run build -w leadsmart-ai",
+    "build:vercel-property-tools-root": "cross-env NODE_OPTIONS=--max-old-space-size=12288 npm run build -w property-tools",
     "lint": "turbo lint",
     "smoke:db:all": "node scripts/smoke-db-all.mjs"
   },
