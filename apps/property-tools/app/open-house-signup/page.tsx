@@ -1,7 +1,9 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function OpenHouseSignupPage() {
   return (
@@ -25,6 +27,13 @@ function OpenHouseSignupPageInner() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(
     null
   );
+  const messageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (message && messageRef.current) {
+      messageRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [message]);
 
   const title = useMemo(() => {
     return propertyId
@@ -46,6 +55,10 @@ function OpenHouseSignupPageInner() {
     }
     if (!email.trim()) {
       setMessage({ type: "error", text: "Email is required." });
+      return;
+    }
+    if (!EMAIL_RE.test(email.trim())) {
+      setMessage({ type: "error", text: "Please enter a valid email address." });
       return;
     }
     if (!phone.trim()) {
@@ -116,7 +129,7 @@ function OpenHouseSignupPageInner() {
             ) : null}
           </div>
 
-          <form onSubmit={onSubmit} className="mt-6 space-y-4">
+          <form noValidate onSubmit={onSubmit} className="mt-6 space-y-4">
             <div>
               <label className="block text-sm font-semibold text-slate-800">
                 Name
@@ -182,13 +195,15 @@ function OpenHouseSignupPageInner() {
 
           {message ? (
             <div
+              ref={messageRef}
               className={
                 "mt-4 rounded-xl px-4 py-3 text-sm " +
                 (message.type === "success"
                   ? "bg-green-50 text-green-800 border border-green-200"
                   : "bg-red-50 text-red-800 border border-red-200")
               }
-              role="status"
+              role={message.type === "error" ? "alert" : "status"}
+              aria-live="polite"
             >
               {message.text}
             </div>

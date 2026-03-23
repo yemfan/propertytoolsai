@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { getCurrentAgentContext, isNumericCrmAgentId } from "@/lib/dashboardService";
 import { insertBusinessEvent, insertRevenueTransaction } from "@/lib/revenueKpi/db";
 
 export const runtime = "nodejs";
@@ -27,6 +27,13 @@ type Body = {
 export async function POST(req: Request) {
   try {
     const ctx = await getCurrentAgentContext();
+    if (!isNumericCrmAgentId(ctx.agentId)) {
+      return NextResponse.json(
+        { ok: false, error: "Agent profile required for revenue tracking.", needsAgentProfile: true },
+        { status: 403 }
+      );
+    }
+
     const body = (await req.json().catch(() => ({}))) as Body;
 
     const eventName = String(body.eventName ?? "").trim();

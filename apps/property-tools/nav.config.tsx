@@ -5,8 +5,8 @@ import {
   Calculator,
   DollarSign,
   Home,
+  House,
   Landmark,
-  LayoutDashboard,
   Sparkles,
   Star,
 } from "lucide-react";
@@ -15,6 +15,8 @@ import {
  * PropertyToolsAI sidebar + mobile drawer nav.
  * Repo folder: `apps/property-tools` (product: PropertyToolsAI).
  *
+ * Types: import `NavConfig` / `NavSection` from `@repo/ui` (not `@/packages/ui/...`).
+ *
  * Pretty paths like `/cma-report` are redirected in `next.config.js` to existing tools.
  */
 const navConfig = {
@@ -22,10 +24,10 @@ const navConfig = {
   sidebarTitle: "Tools",
   sections: [
     {
-      label: "Dashboard",
-      href: "/dashboard",
-      match: ["/dashboard"],
-      icon: <LayoutDashboard size={18} strokeWidth={2} aria-hidden />,
+      label: "Home",
+      href: "/",
+      match: ["/"],
+      icon: <House size={18} strokeWidth={2} aria-hidden />,
     },
     {
       label: "Home Value",

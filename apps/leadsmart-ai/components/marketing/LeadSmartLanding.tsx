@@ -9,6 +9,7 @@ import { FeatureHighlightCard } from "@/components/ui/FeatureHighlightCard";
 import { BrandCheck } from "@/components/brand/BrandCheck";
 import ExitIntentPopup from "@/components/marketing/ExitIntentPopup";
 import HeaderAuthActions from "@/components/HeaderAuthActions";
+import { SupportChatLauncher } from "@/components/support/CustomerSupportChat";
 import VslSection from "@/components/VslSection";
 
 const primaryCtaHref = "/onboarding";
@@ -61,6 +62,7 @@ export default function LeadSmartLanding() {
               </a>
             </nav>
             <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+              <SupportChatLauncher buttonClassName="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200/90 bg-white text-gray-600 shadow-sm transition hover:border-[#0072ce]/40 hover:bg-gray-50 hover:text-[#0072ce] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072ce]/40 sm:h-10 sm:w-10 sm:rounded-xl" />
               <Button size="sm" href={primaryCtaHref} className="whitespace-nowrap">
                 Get My First Leads
               </Button>

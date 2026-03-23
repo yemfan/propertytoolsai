@@ -1,0 +1,91 @@
+// LeadSmart / PropertyTools — customer support persistence (PostgreSQL / Supabase).
+// Tables: support_conversations, support_messages (snake_case). IDs are UUID.
+// Usage: set DATABASE_URL to Supabase Postgres, then `npx prisma generate` / `npx prisma migrate deploy`
+// @see https://www.prisma.io/docs/orm/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model SupportConversation {
+  id                String          @id @default(uuid()) @db.Uuid
+  publicId          String          @unique @default(cuid()) @map("public_id")
+  customerName      String          @map("customer_name")
+  customerEmail     String          @map("customer_email")
+  customerUserId    String?         @map("customer_user_id") @db.Uuid
+  subject           String?         @map("subject")
+  status            SupportStatus   @default(open) @map("status")
+  priority          SupportPriority @default(normal) @map("priority")
+
+  assignedAgentId   String?         @map("assigned_agent_id")
+  assignedAgentName String?         @map("assigned_agent_name")
+
+  source            String?         @default("website_chat") @map("source")
+  lastMessageAt     DateTime?       @map("last_message_at")
+  lastMessageBy     MessageSender?  @map("last_message_by")
+  unreadForCustomer Int             @default(0) @map("unread_for_customer")
+  unreadForSupport  Int             @default(0) @map("unread_for_support")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  messages SupportMessage[]
+
+  @@index([customerEmail], map: "idx_support_conversations_email")
+  @@index([status], map: "idx_support_conversations_status")
+  @@index([assignedAgentId], map: "idx_support_conversations_assigned_agent")
+  @@index([lastMessageAt(sort: Desc)], map: "idx_support_conversations_last_message_at")
+  @@map("support_conversations")
+}
+
+model SupportMessage {
+  id             String             @id @default(uuid()) @db.Uuid
+  conversationId String             @map("conversation_id") @db.Uuid
+  senderType     MessageSender      @map("sender_type")
+  senderName     String?            @map("sender_name")
+  senderEmail    String?            @map("sender_email")
+  body           String             @map("body")
+  messageType    SupportMessageType @default(text) @map("message_type")
+  isInternalNote Boolean            @default(false) @map("is_internal_note")
+  metadata       Json?              @map("metadata")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt], map: "idx_support_messages_conversation_created")
+  @@map("support_messages")
+}
+
+enum SupportStatus {
+  open
+  waiting_on_support
+  waiting_on_customer
+  resolved
+  closed
+}
+
+enum SupportPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum MessageSender {
+  customer
+  support
+  system
+  ai
+}
+
+enum SupportMessageType {
+  text
+  system_event
+  attachment
+}

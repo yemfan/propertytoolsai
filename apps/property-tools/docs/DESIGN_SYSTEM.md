@@ -25,6 +25,8 @@ Top **4px brand accent** + **gradient** into `slate-50` — same pattern as Lead
 - **`MarketingContentLayout`** — legal / simple content pages in a card on a gradient.
 - **`ToolPageScaffold`** — two-column tool UIs with `Section` headers.
 - **`AppShell`** — signed-in/tool chrome uses `bg-gray-50` + white sidebar; marketing home stays full-width white.
+- **`PropertyToolsShell`** — optional demo/layout: `PremiumSidebar` + `PremiumTopbar` from `@repo/ui` (no `GlobalSearchBar` / `AccountMenu`). Use `AppShell` for production.
+- **`/layout-preview`** — renders **`PremiumSidebar`** + **`PremiumTopbar`** from `@repo/ui` with production `nav.config` trees (PropertyTools + cross-import LeadSmart); `AppShell` skips chrome on this path; `robots: noindex`.
 
 ## Typography
 

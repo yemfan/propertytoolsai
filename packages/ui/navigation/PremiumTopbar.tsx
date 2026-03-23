@@ -4,6 +4,7 @@ import { Bell, ChevronDown, CreditCard, Search } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { MobileSidebar } from "./MobileSidebar";
+import { ProfileMenu } from "./ProfileMenu";
 import type { NavSection } from "./types";
 
 export type PremiumTopbarAction = {
@@ -33,6 +34,17 @@ export type PremiumTopbarProps = {
   profileSlot?: ReactNode;
   profileName?: string;
   profileEmail?: string;
+  /**
+   * Built-in profile UI: `"menu"` (default) uses {@link ProfileMenu}; `"chip"` uses the compact
+   * chevron row with {@link profileHref} / {@link onProfileClick}.
+   */
+  profileVariant?: "menu" | "chip";
+  /** Optional links for the built-in {@link ProfileMenu} (`profileVariant` `"menu"`). */
+  profileProfileHref?: string;
+  profileSettingsHref?: string;
+  profileBillingHref?: string;
+  profileBillingLabel?: string;
+  onProfileLogout?: () => void;
   /** When set with built-in profile chip, wraps it in {@link Link}. */
   profileHref?: string;
   onProfileClick?: () => void;
@@ -47,13 +59,13 @@ function cn(...parts: (string | false | undefined | null)[]) {
 
 function actionClasses(action: PremiumTopbarAction): string {
   const base = cn(
-    "inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-medium transition",
+    "inline-flex items-center justify-center rounded-xl px-3.5 py-2 text-sm font-medium transition-all duration-200",
     "disabled:cursor-not-allowed disabled:opacity-50",
     action.variant === "outline"
-      ? "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+      ? "border border-slate-200/90 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50"
       : action.variant === "ghost"
-        ? "text-gray-600 hover:bg-gray-100"
-        : "bg-gray-900 text-white hover:bg-gray-800"
+        ? "text-slate-600 hover:bg-slate-100/90 hover:text-slate-900"
+        : "bg-slate-900 text-white shadow-sm shadow-slate-900/10 hover:bg-slate-800"
   );
   return cn(base, action.className);
 }
@@ -96,7 +108,7 @@ function initials(name: string): string {
 
 /**
  * Sticky glass top bar: {@link MobileSidebar}, premium search row, credits, notifications,
- * {@link PremiumTopbarAction} buttons, and optional profile chip.
+ * {@link PremiumTopbarAction} buttons, and optional {@link ProfileMenu} or legacy chip.
  */
 export function PremiumTopbar({
   appName,
@@ -111,38 +123,60 @@ export function PremiumTopbar({
   profileSlot,
   profileName,
   profileEmail,
+  profileVariant = "menu",
+  profileProfileHref,
+  profileSettingsHref,
+  profileBillingHref,
+  profileBillingLabel,
+  onProfileLogout,
   profileHref,
   onProfileClick,
   below,
   className = "",
 }: PremiumTopbarProps) {
   const hasBuiltInProfile = Boolean(profileName?.trim());
+
   const defaultProfileChip =
-    hasBuiltInProfile && !profileSlot ? (
+    hasBuiltInProfile && !profileSlot && profileVariant === "chip" ? (
       <div className="inline-flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-3 py-2 shadow-sm transition hover:bg-gray-50">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-900 text-sm font-semibold text-white">
           {initials(profileName ?? "User")}
         </div>
         <div className="hidden min-w-0 text-left leading-tight sm:block">
-          <div className="truncate text-sm font-medium text-gray-900">{profileName}</div>
+          <div className="truncate text-sm font-medium text-slate-900">{profileName}</div>
           {profileEmail ? (
-            <div className="max-w-[140px] truncate text-xs text-gray-500">{profileEmail}</div>
+            <div className="max-w-[140px] truncate text-xs text-slate-500">{profileEmail}</div>
           ) : null}
         </div>
-        <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={2} aria-hidden />
+        <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
       </div>
+    ) : null;
+
+  const defaultProfileMenu =
+    hasBuiltInProfile && !profileSlot && profileVariant === "menu" ? (
+      <ProfileMenu
+        name={profileName ?? "User"}
+        email={profileEmail}
+        profileHref={profileProfileHref}
+        settingsHref={profileSettingsHref}
+        billingHref={profileBillingHref}
+        billingLabel={profileBillingLabel}
+        onLogout={onProfileLogout}
+      />
     ) : null;
 
   const profileInner = profileSlot ?? defaultProfileChip;
 
   let profileControl: ReactNode = null;
-  if (profileInner) {
+  if (defaultProfileMenu) {
+    profileControl = defaultProfileMenu;
+  } else if (profileInner) {
     if (onProfileClick) {
       profileControl = (
         <button
           type="button"
           onClick={onProfileClick}
-          className="rounded-2xl text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/40"
+          className="rounded-2xl text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40"
         >
           {profileInner}
         </button>
@@ -151,7 +185,7 @@ export function PremiumTopbar({
       profileControl = (
         <Link
           href={profileHref}
-          className="rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/40"
+          className="rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40"
         >
           {profileInner}
         </Link>
@@ -162,7 +196,7 @@ export function PremiumTopbar({
   }
 
   const notificationBtn = (
-    <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50">
+    <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200/90 bg-white text-slate-600 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50">
       <Bell className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
     </span>
   );
@@ -170,23 +204,23 @@ export function PremiumTopbar({
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 border-b border-gray-200/90 bg-white/80 backdrop-blur-xl",
+        "sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-xl backdrop-saturate-150",
         className
       )}
     >
-      <div className="flex h-16 items-center gap-3 px-4 md:px-6">
+      <div className="flex h-16 items-center gap-3 px-4 md:gap-4 md:px-6">
         <MobileSidebar appName={appName} sections={sections} />
 
         {leadingExtra ? <div className="hidden shrink-0 sm:block">{leadingExtra}</div> : null}
 
         <div className="min-w-0 flex-1">
           {searchSlot ?? (
-            <div className="flex h-11 min-w-0 items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50/90 px-4 shadow-sm transition-colors focus-within:border-gray-300 focus-within:bg-white">
-              <Search className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={2} aria-hidden />
+            <div className="flex h-11 min-w-0 items-center gap-3 rounded-2xl border border-slate-200/90 bg-slate-50/80 px-4 shadow-sm ring-1 ring-slate-900/[0.02] transition-all focus-within:border-slate-300 focus-within:bg-white focus-within:shadow-md focus-within:ring-slate-900/[0.04]">
+              <Search className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
               <input
                 type="search"
                 placeholder={searchPlaceholder}
-                className="min-w-0 flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
+                className="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
               />
             </div>
           )}
@@ -194,9 +228,9 @@ export function PremiumTopbar({
 
         <div className="hidden shrink-0 items-center gap-2 md:flex">
           {creditsLabel ? (
-            <div className="inline-flex max-w-[200px] items-center gap-2 truncate rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm">
-              <CreditCard className="h-[15px] w-[15px] shrink-0 text-gray-500" strokeWidth={2} aria-hidden />
-              <span className="truncate font-medium">{creditsLabel}</span>
+            <div className="inline-flex max-w-[200px] items-center gap-2 truncate rounded-2xl border border-slate-200/90 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm ring-1 ring-slate-900/[0.03]">
+              <CreditCard className="h-[15px] w-[15px] shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+              <span className="truncate font-medium tabular-nums tracking-tight">{creditsLabel}</span>
             </div>
           ) : null}
 
@@ -204,7 +238,7 @@ export function PremiumTopbar({
             notificationHref ? (
               <Link
                 href={notificationHref}
-                className="inline-flex rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/40"
+                className="inline-flex rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40"
                 aria-label="Notifications"
               >
                 {notificationBtn}
@@ -213,7 +247,7 @@ export function PremiumTopbar({
               <button
                 type="button"
                 onClick={onNotificationClick}
-                className="rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/40"
+                className="rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40"
                 aria-label="Notifications"
               >
                 {notificationBtn}
@@ -229,7 +263,9 @@ export function PremiumTopbar({
         </div>
       </div>
 
-      {below ? <div className="border-t border-gray-100 px-4 py-2 md:px-6">{below}</div> : null}
+      {below ? (
+        <div className="border-t border-slate-100/90 bg-slate-50/40 px-4 py-2 backdrop-blur-sm md:px-6">{below}</div>
+      ) : null}
     </header>
   );
 }

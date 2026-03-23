@@ -104,6 +104,42 @@ export async function listSerpHubPathsForSitemap(): Promise<string[]> {
   return data.map((r) => r.path as string);
 }
 
+/** Hub index: campaigns that have at least one published page (deduped, newest first). */
+export type SerpHubCampaignListItem = {
+  seed_keyword: string;
+  keyword_slug: string;
+  updated_at: string;
+};
+
+export async function listSerpHubCampaignsWithPublishedPages(limit = 80): Promise<SerpHubCampaignListItem[]> {
+  const { data: campaigns, error: cErr } = await supabaseServer
+    .from("serp_dominator_campaigns")
+    .select("id, seed_keyword, keyword_slug, updated_at")
+    .eq("status", "completed")
+    .order("updated_at", { ascending: false })
+    .limit(500);
+
+  if (cErr || !campaigns?.length) return [];
+
+  const ids = campaigns.map((c) => c.id as string);
+  const { data: pageRows, error: pErr } = await supabaseServer
+    .from("serp_dominator_pages")
+    .select("campaign_id")
+    .eq("status", "published")
+    .in("campaign_id", ids);
+
+  if (pErr || !pageRows?.length) return [];
+
+  const withPages = new Set(pageRows.map((r) => r.campaign_id as string));
+  const filtered = campaigns.filter((c) => withPages.has(c.id as string));
+
+  return filtered.slice(0, limit).map((c) => ({
+    seed_keyword: c.seed_keyword as string,
+    keyword_slug: c.keyword_slug as string,
+    updated_at: c.updated_at as string,
+  }));
+}
+
 export async function insertRankSnapshot(input: {
   keywordNormalized: string;
   pagePath: string;

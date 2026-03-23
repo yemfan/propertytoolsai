@@ -28,6 +28,8 @@ RLS: authenticated agents can **read** their own rows; **writes** go through Nex
 
 | Method | Path | Description |
 |--------|------|-------------|
+> **Note:** The PropertyToolsAI web app no longer ships a `/dashboard` UI; revenue API routes below were removed with that surface. This doc is kept for reference if you reintroduce an admin console.
+
 | `GET` | `/api/dashboard/revenue/summary?days=30` | KPIs, daily series, funnel, rules, alert feed |
 | `POST` | `/api/revenue/track` | Track event (auth required); body: `eventName`, `sessionId`, `properties` |
 | `POST` | `/api/dashboard/revenue/evaluate-alerts` | Run threshold checks (`{ days }`) |

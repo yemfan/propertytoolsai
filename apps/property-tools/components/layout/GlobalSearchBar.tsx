@@ -1,5 +1,6 @@
 "use client";
 
+import { Search } from "lucide-react";
 import { FormEvent, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
@@ -31,30 +32,23 @@ export default function GlobalSearchBar({
   return (
     <form
       onSubmit={onSubmit}
-      className={`relative min-w-0 flex-1 max-w-xl ${className}`}
+      className={`flex min-w-0 flex-1 max-w-xl ${className}`}
       role="search"
     >
       <label htmlFor="pt-global-search" className="sr-only">
         Search tools and guides
       </label>
-      <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
-        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
+      <div className="flex h-11 w-full min-w-0 items-center gap-3 rounded-2xl border border-gray-200/90 bg-gray-50/90 px-3.5 shadow-sm transition-colors focus-within:border-gray-300 focus-within:bg-white focus-within:shadow-md md:px-4">
+        <Search className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={2} aria-hidden />
+        <input
+          id="pt-global-search"
+          name="q"
+          type="search"
+          enterKeyHint="search"
+          placeholder={placeholder}
+          className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400"
+        />
       </div>
-      <input
-        id="pt-global-search"
-        name="q"
-        type="search"
-        enterKeyHint="search"
-        placeholder={placeholder}
-        className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-      />
     </form>
   );
 }

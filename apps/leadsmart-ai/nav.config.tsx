@@ -4,7 +4,8 @@ import {
   Bell,
   FileText,
   GitBranch,
-  LayoutDashboard,
+  Headphones,
+  House,
   MessageSquare,
   Settings,
   Sparkles,
@@ -25,10 +26,10 @@ const navConfig = {
   sidebarTitle: "Workspace",
   sections: [
     {
-      label: "Dashboard",
+      label: "Home",
       href: "/dashboard",
       match: ["/dashboard", "/dashboard/overview"],
-      icon: <LayoutDashboard size={18} strokeWidth={2} aria-hidden />,
+      icon: <House size={18} strokeWidth={2} aria-hidden />,
     },
     {
       label: "Leads",
@@ -176,6 +177,11 @@ const navConfig = {
           href: "/dashboard/notifications",
           icon: <Bell size={16} strokeWidth={2} aria-hidden />,
         },
+        {
+          label: "Support inbox",
+          href: "/dashboard/support",
+          icon: <Headphones size={16} strokeWidth={2} aria-hidden />,
+        },
       ],
     },
   ],
@@ -183,5 +189,7 @@ const navConfig = {
 
 /** Sidebar / topbar sections — same as `navConfig.sections`. */
 export const leadSmartNav = navConfig.sections;
+
+export { default as marketingNavConfig, leadSmartMarketingNav } from "./marketing.nav.config";
 
 export default navConfig;

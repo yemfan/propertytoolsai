@@ -113,7 +113,7 @@ export default function SignupPage() {
         <div className="space-y-1 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0072ce]">PropertyTools AI</p>
           <h1 className="font-heading text-xl font-bold text-slate-900 md:text-2xl">Create your account</h1>
-          <p className="text-sm text-slate-600">Get started on the main site. Agents unlock dashboard features.</p>
+          <p className="text-sm text-slate-600">Get started on the main site. Agents unlock premium tools and saved reports.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">

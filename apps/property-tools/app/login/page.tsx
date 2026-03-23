@@ -107,14 +107,12 @@ function LoginPageInner() {
         if (safe) {
           router.replace(safe);
         } else {
-          router.replace("/dashboard");
+          router.replace("/");
         }
       } else {
-        const fallback = redirectParam ?? "/dashboard";
+        const fallback = redirectParam ?? "/";
         const safeFallback = safeInternalRedirect(fallback);
-        router.replace(
-          fallback.startsWith("/dashboard") ? "/" : (safeFallback ?? "/")
-        );
+        router.replace(fallback.startsWith("/dashboard") ? "/" : (safeFallback ?? "/"));
       }
     } catch (e: any) {
       setError(e?.message ?? "Something went wrong. Please try again.");
@@ -129,7 +127,7 @@ function LoginPageInner() {
         <div className="space-y-1 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0072ce]">PropertyTools AI</p>
           <h1 className="font-heading text-xl font-bold text-slate-900 md:text-2xl">Log in</h1>
-          <p className="text-sm text-slate-600">Access your agent dashboard and home value leads.</p>
+          <p className="text-sm text-slate-600">Sign in to use calculators, save progress, and manage your plan.</p>
         </div>
         {reason === "trial" ? (
           <p className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-center text-xs font-medium text-sky-950">

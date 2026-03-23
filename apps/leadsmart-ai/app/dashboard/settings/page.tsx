@@ -1,10 +1,12 @@
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import MlsCsvImportClient from "./MlsCsvImportClient";
+import HomeValueSmartLinkCopyShare from "@/components/dashboard/HomeValueSmartLinkCopyShare";
 
 export default async function SettingsPage() {
   const ctx = await getCurrentAgentContext();
   const agentBrandName = process.env.AGENT_BRAND_NAME || "LeadSmart AI";
-  const derivedName = ctx.email ? ctx.email.split("@")[0] : ctx.agentId;
+  const widgetAgentKey = ctx.agentId || ctx.userId;
+  const derivedName = ctx.email ? ctx.email.split("@")[0] : widgetAgentKey;
 
   return (
     <div className="space-y-4">
@@ -26,7 +28,7 @@ export default async function SettingsPage() {
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-gray-500">Agent ID</dt>
-            <dd className="font-mono text-xs">{ctx.agentId}</dd>
+            <dd className="font-mono text-xs">{ctx.agentId || "— (complete agent signup)"}</dd>
           </div>
           <div className="flex justify-between gap-4">
             <dt className="text-gray-500">User ID</dt>
@@ -94,10 +96,13 @@ export default async function SettingsPage() {
             value={`/home-value-widget?agentId=${ctx.agentId}`}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono bg-gray-50 text-gray-800"
           />
+          <div className="mt-2">
+            <HomeValueSmartLinkCopyShare relativePath={`/home-value-widget?agentId=${encodeURIComponent(widgetAgentKey)}`} />
+          </div>
           <p className="text-[11px] text-gray-500">
             Prepend your live domain, e.g.{" "}
             <span className="font-mono text-gray-700">
-              https://leadsmart-ai.com/home-value-widget?agentId={ctx.agentId}
+              https://leadsmart-ai.com/home-value-widget?agentId={widgetAgentKey}
             </span>
           </p>
         </div>

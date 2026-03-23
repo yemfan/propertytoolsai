@@ -108,7 +108,7 @@ export async function POST(req: Request) {
       if (insertUserErr) throw insertUserErr;
     }
 
-    // 4) Ensure an `agents` row exists so `/dashboard` can resolve agent context.
+    // 4) Ensure an `agents` row exists for API routes that scope by agent id.
     const { data: agentRow, error: agentSelectErr } = await supabaseAdmin
       .from("agents")
       .select("id")

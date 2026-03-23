@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown, CreditCard, Home, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -27,6 +28,15 @@ export default function AccountMenu() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
   async function onLogout() {
     setOpen(false);
     try {
@@ -44,6 +54,7 @@ export default function AccountMenu() {
 
   const email = usage.email?.trim() || "";
   const initial = email ? email[0]!.toUpperCase() : "?";
+  const shortEmail = email.length > 22 ? `${email.slice(0, 20)}…` : email;
   const status = usage.subscriptionStatus ? String(usage.subscriptionStatus) : "";
 
   return (
@@ -51,65 +62,70 @@ export default function AccountMenu() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 max-w-[10rem] items-center gap-2 rounded-full border border-slate-200 bg-white pl-1 pr-2.5 text-left text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
+        className="inline-flex h-11 max-w-[200px] items-center gap-2 rounded-2xl border border-slate-200/90 bg-white px-2 py-1 text-left shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40 sm:max-w-[240px] sm:gap-2.5 sm:px-2.5"
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-800">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-800 to-slate-900 text-xs font-bold text-white shadow-inner shadow-white/10 ring-2 ring-slate-100">
           {initial}
         </span>
-        <span className="hidden min-w-0 truncate sm:block">Account</span>
-        <svg className="h-4 w-4 shrink-0 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        <span className="hidden min-w-0 flex-1 sm:block">
+          <span className="block truncate text-sm font-semibold text-slate-900">Account</span>
+          <span className="block truncate text-xs text-slate-500">{shortEmail || "Signed in"}</span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
       </button>
 
       {open ? (
         <div
-          className="absolute right-0 z-50 mt-2 w-[min(100vw-2rem,18rem)] rounded-xl border border-slate-200 bg-white py-1 shadow-lg ring-1 ring-slate-900/5"
+          className="absolute right-0 z-50 mt-2 w-[min(100vw-2rem,19rem)] rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-xl shadow-slate-900/10 ring-1 ring-slate-900/[0.04]"
           role="menu"
         >
-          <div className="border-b border-slate-100 px-4 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Signed in as</p>
+          <div className="border-b border-slate-100 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Signed in as</p>
             <p className="mt-1 break-all text-sm font-semibold text-slate-900">{email || "Your account"}</p>
             <p className="mt-1 text-xs text-slate-600">
               {tierLabel(tier, usage.plan)}
               {status ? <span className="text-slate-400"> · {status}</span> : null}
             </p>
           </div>
-          <div className="py-1">
+          <div className="mt-1 space-y-0.5">
             <Link
-              href="/dashboard"
+              href="/"
               role="menuitem"
-              className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               onClick={() => setOpen(false)}
             >
-              Dashboard
-            </Link>
-            <Link
-              href="/dashboard/settings"
-              role="menuitem"
-              className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
-              onClick={() => setOpen(false)}
-            >
-              Account &amp; settings
+              <Home className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+              Home
             </Link>
             <Link
               href="/pricing"
               role="menuitem"
-              className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               onClick={() => setOpen(false)}
             >
+              <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+              Account &amp; billing
+            </Link>
+            <Link
+              href="/pricing"
+              role="menuitem"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              onClick={() => setOpen(false)}
+            >
+              <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
               Plans &amp; pricing
             </Link>
           </div>
-          <div className="border-t border-slate-100 py-1">
+          <div className="mt-1 border-t border-slate-100 pt-1">
             <button
               type="button"
               role="menuitem"
-              className="block w-full px-4 py-2.5 text-left text-sm font-semibold text-red-700 hover:bg-red-50"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
               onClick={() => void onLogout()}
             >
+              <LogOut className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
               Log out
             </button>
           </div>

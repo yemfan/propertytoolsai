@@ -11,7 +11,8 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 const variantClass: Record<NonNullable<ButtonProps["variant"]>, string> = {
   default:
     "bg-[#0072ce] !text-white shadow hover:bg-[#005ca8] focus-visible:ring-[#0072ce]",
-  outline: "border border-gray-300 bg-white !text-gray-900 shadow-sm hover:bg-gray-50",
+  outline:
+    "border border-slate-200/90 bg-white !text-slate-900 shadow-sm ring-1 ring-slate-900/[0.03] hover:border-slate-300 hover:bg-slate-50",
   secondary: "bg-white !text-gray-900 shadow-sm hover:bg-gray-100",
 };
 

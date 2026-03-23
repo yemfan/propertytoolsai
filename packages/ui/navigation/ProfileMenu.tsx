@@ -1,0 +1,181 @@
+"use client";
+
+import { ChevronDown, CreditCard, LogOut, Settings, User } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+
+function cn(...parts: (string | false | undefined | null)[]) {
+  return parts.filter(Boolean).join(" ");
+}
+
+function initials(name: string): string {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?"
+  );
+}
+
+function isExternal(href: string): boolean {
+  return /^https?:\/\//i.test(href);
+}
+
+export type ProfileMenuProps = {
+  name: string;
+  email?: string;
+  className?: string;
+  /** Profile / account landing — omit to hide row */
+  profileHref?: string;
+  settingsHref?: string;
+  billingHref?: string;
+  billingLabel?: string;
+  onLogout?: () => void;
+};
+
+function MenuLink({
+  href,
+  className,
+  onClick,
+  children,
+}: {
+  href: string;
+  className: string;
+  onClick?: () => void;
+  children: ReactNode;
+}) {
+  if (isExternal(href)) {
+    return (
+      <a href={href} className={className} role="menuitem" onClick={onClick}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={href} className={className} role="menuitem" onClick={onClick}>
+      {children}
+    </Link>
+  );
+}
+
+/**
+ * Avatar + name chip with dropdown (outside click + Escape). Pass `profileLinks`-style
+ * hrefs from the parent; omit optional rows to hide them.
+ */
+export function ProfileMenu({
+  name,
+  email,
+  className = "",
+  profileHref,
+  settingsHref,
+  billingHref,
+  billingLabel = "Billing",
+  onLogout,
+}: ProfileMenuProps) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  const close = () => setOpen(false);
+
+  return (
+    <div className={cn("relative", className)} ref={rootRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-3 rounded-2xl border border-slate-200/90 bg-white px-3 py-2 text-left shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300/90 hover:bg-slate-50/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40"
+        aria-expanded={open}
+        aria-haspopup="menu"
+      >
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-800 to-slate-900 text-sm font-semibold text-white shadow-inner shadow-white/10 ring-2 ring-slate-100">
+          {initials(name)}
+        </div>
+        <div className="hidden min-w-0 text-left leading-tight sm:block">
+          <div className="truncate text-sm font-medium text-slate-900">{name}</div>
+          {email ? <div className="max-w-[140px] truncate text-xs text-slate-500">{email}</div> : null}
+        </div>
+        <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
+      </button>
+
+      {open ? (
+        <div
+          className="absolute right-0 z-50 mt-2 w-[15.5rem] rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-xl shadow-slate-900/10 ring-1 ring-slate-900/[0.04]"
+          role="menu"
+        >
+          <div className="border-b border-slate-100 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Signed in</p>
+            <p className="truncate text-sm font-medium text-slate-900">{name}</p>
+            {email ? <p className="truncate text-xs text-slate-500">{email}</p> : null}
+          </div>
+          <div className="mt-1 space-y-0.5">
+            {profileHref ? (
+              <MenuLink
+                href={profileHref}
+                onClick={close}
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                <User className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+                Profile
+              </MenuLink>
+            ) : null}
+            {settingsHref ? (
+              <MenuLink
+                href={settingsHref}
+                onClick={close}
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+                Settings
+              </MenuLink>
+            ) : null}
+            {billingHref ? (
+              <MenuLink
+                href={billingHref}
+                onClick={close}
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+                {billingLabel}
+              </MenuLink>
+            ) : null}
+          </div>
+          {onLogout ? (
+            <div className="mt-1 border-t border-slate-100 pt-1">
+              <button
+                type="button"
+                role="menuitem"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                onClick={() => {
+                  close();
+                  onLogout();
+                }}
+              >
+                <LogOut className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                Log out
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}

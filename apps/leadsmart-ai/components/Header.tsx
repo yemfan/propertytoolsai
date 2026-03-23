@@ -16,6 +16,7 @@ const navItems = [
   { href: "/contact", label: "Contact" },
 ];
 
+/** @deprecated Replaced by `@repo/ui` `Topbar` in `AppShell`. Not mounted. */
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
 

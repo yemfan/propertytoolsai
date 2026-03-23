@@ -277,7 +277,7 @@ Contact: ${name} <${email}>
 Phone: ${formattedPhone ?? "—"}
 Property: ${propertyAddress ?? "—"}
 
-Open your CRM: ${process.env.NEXT_PUBLIC_SITE_URL || ""}/dashboard/leads
+Sign in to PropertyTools AI: ${process.env.NEXT_PUBLIC_SITE_URL || ""}/login
 
 Lead ID: ${leadId}`,
             });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { getUserFromRequest } from "@/lib/authFromRequest";
-import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { getCurrentAgentContext, isNumericCrmAgentId } from "@/lib/dashboardService";
 import { sendInitialSmsAfterPurchase } from "@/lib/smsAutoFollow";
 
 export const runtime = "nodejs";
@@ -14,6 +14,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     }
 
     const { agentId } = await getCurrentAgentContext();
+    if (!isNumericCrmAgentId(agentId)) {
+      return NextResponse.json(
+        { ok: false, error: "Agent profile required.", needsAgentProfile: true },
+        { status: 403 }
+      );
+    }
     const { id: opportunityId } = await ctx.params;
     if (!opportunityId) {
       return NextResponse.json({ ok: false, error: "Opportunity id is required" }, { status: 400 });

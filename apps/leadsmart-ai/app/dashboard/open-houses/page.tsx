@@ -3,7 +3,8 @@ import { getCurrentAgentContext, getLeads } from "@/lib/dashboardService";
 import OpenHousesClient from "./OpenHousesClient";
 
 export default async function OpenHousesPage() {
-  const { agentId } = await getCurrentAgentContext();
+  const { agentId, userId } = await getCurrentAgentContext();
+  const signupAgentKey = agentId || userId;
 
   const { data: propertiesData, error: propertiesErr } = await supabaseServer
     .from("properties_warehouse")
@@ -21,7 +22,7 @@ export default async function OpenHousesPage() {
 
   return (
     <OpenHousesClient
-      agentId={agentId}
+      agentId={signupAgentKey}
       properties={properties}
       leads={openHouseLeads as any}
     />

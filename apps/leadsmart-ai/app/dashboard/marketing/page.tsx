@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import HomeValueSmartLinkCopyShare from "@/components/dashboard/HomeValueSmartLinkCopyShare";
 
 export default async function MarketingPage() {
-  const { agentId } = await getCurrentAgentContext();
+  const { agentId, userId } = await getCurrentAgentContext();
+  const widgetAgentKey = agentId || userId;
 
   // Follow-up automation status.
   const { count: pendingCount } = await supabaseServer
@@ -16,7 +18,7 @@ export default async function MarketingPage() {
     .select("id", { count: "exact", head: true })
     .eq("status", "completed");
 
-  const homeValueSmartLink = `/home-value-widget?agentId=${encodeURIComponent(agentId)}`;
+  const homeValueSmartLink = `/home-value-widget?agentId=${encodeURIComponent(widgetAgentKey)}`;
 
   // Traffic funnel snapshot (last 30 days)
   const sinceIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -91,8 +93,12 @@ export default async function MarketingPage() {
                   Update Branding
                 </Link>
               </div>
+              <div className="mt-2">
+                <HomeValueSmartLinkCopyShare relativePath={homeValueSmartLink} />
+              </div>
               <div className="mt-1 text-[11px] text-slate-500">
-                Prepend your live domain, e.g. <span className="font-mono">https://leadsmart-ai.com</span>
+                The field shows the path only. <strong>Copy link</strong> and <strong>Share</strong> use this browser’s full URL (your live
+                domain + <span className="font-mono">{homeValueSmartLink}</span>).
               </div>
             </div>
 

@@ -22,6 +22,8 @@ const nextConfig = {
   /** Nav-friendly URLs → existing tool routes */
   async redirects() {
     return [
+      { source: "/dashboard", destination: "/", permanent: false },
+      { source: "/dashboard/:path*", destination: "/", permanent: false },
       { source: "/cma-report", destination: "/smart-cma-builder", permanent: false },
       {
         source: "/market-value-trends",

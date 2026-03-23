@@ -23,6 +23,8 @@ export { Topbar } from "./Topbar";
 export type { TopbarAction, TopbarProps } from "./Topbar";
 export { PremiumTopbar } from "./PremiumTopbar";
 export type { PremiumTopbarAction, PremiumTopbarProps } from "./PremiumTopbar";
+export { ProfileMenu } from "./ProfileMenu";
+export type { ProfileMenuProps } from "./ProfileMenu";
 
 /** @deprecated use {@link Topbar} */
 export { Topbar as AppTopbar } from "./Topbar";

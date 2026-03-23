@@ -1,11 +1,35 @@
 "use client";
 
+import { Bell, CreditCard, ChevronDown, Home, House, LogOut, Search, Settings } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Topbar } from "@repo/ui";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { leadSmartNav } from "@/nav.config";
+import { SupportChatLauncher } from "@/components/support/CustomerSupportChat";
+
+function displayLabelFromEmail(email: string | null | undefined): string {
+  if (!email?.trim()) return "Account";
+  const local = email.split("@")[0] ?? "";
+  if (!local) return "Account";
+  return local
+    .replace(/[._-]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function initialsFromEmail(email: string | null | undefined): string {
+  const label = displayLabelFromEmail(email);
+  return label
+    .split(/\s+/)
+    .map((p) => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "?";
+}
 
 function ProfileMenu({
   email,
@@ -25,61 +49,84 @@ function ProfileMenu({
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
-  const initial = email?.trim()?.[0]?.toUpperCase() ?? "?";
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  const name = displayLabelFromEmail(email);
+  const initials = initialsFromEmail(email);
 
   return (
     <div className="relative" ref={rootRef}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 items-center gap-2 rounded-full border border-slate-200 bg-white pl-1 pr-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
+        className="inline-flex h-11 max-w-[220px] items-center gap-2.5 rounded-2xl border border-slate-200/90 bg-white px-2.5 py-1.5 text-left shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40 sm:gap-3 sm:px-3"
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-800">
-          {initial}
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-800 to-slate-900 text-xs font-bold text-white shadow-inner shadow-white/10 ring-2 ring-slate-100">
+          {initials}
         </span>
-        <span className="hidden max-w-[8rem] truncate sm:inline">Profile</span>
-        <svg className="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        <span className="hidden min-w-0 flex-1 sm:block">
+          <span className="block truncate text-sm font-semibold text-slate-900">{name}</span>
+          <span className="block truncate text-xs text-slate-500">{email || "Signed in"}</span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
       </button>
 
       {open ? (
         <div
-          className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-slate-200 bg-white py-1 shadow-lg ring-1 ring-slate-900/5"
+          className="absolute right-0 z-50 mt-2 w-60 rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-xl shadow-slate-900/10 ring-1 ring-slate-900/[0.04]"
           role="menu"
         >
-          <div className="border-b border-slate-100 px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Signed in</p>
+          <div className="border-b border-slate-100 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Signed in</p>
             <p className="truncate text-sm font-medium text-slate-900">{email || "Account"}</p>
           </div>
           <Link
-            href="/dashboard/settings"
-            className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+            href="/dashboard"
+            className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             role="menuitem"
             onClick={() => setOpen(false)}
           >
-            Settings
+            <House className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+            Home
+          </Link>
+          <Link
+            href="/dashboard/settings"
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+            Account &amp; settings
           </Link>
           <Link
             href="/pricing"
-            className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             role="menuitem"
             onClick={() => setOpen(false)}
           >
-            Billing &amp; credits
+            <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+            Plans &amp; pricing
           </Link>
-          <div className="border-t border-slate-100 py-1">
+          <div className="mt-1 border-t border-slate-100 pt-1">
             <button
               type="button"
-              className="w-full px-3 py-2 text-left text-sm font-semibold text-red-600 hover:bg-red-50"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
               role="menuitem"
               onClick={() => {
                 setOpen(false);
                 onLogout();
               }}
             >
+              <LogOut className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
               Log out
             </button>
           </div>
@@ -137,68 +184,91 @@ export default function TopBar({ email }: { email: string | null | undefined }) 
     router.push(`/dashboard/leads${params.toString() ? `?${params}` : ""}`);
   }
 
-  const search = (
-    <form onSubmit={onSearch} className="relative w-full max-w-xl" role="search">
-      <label htmlFor="ls-dashboard-search" className="sr-only">
+  const creditsLabel =
+    typeof tokens === "number"
+      ? `${tokens} credits${plan ? ` · ${plan}` : ""}`
+      : plan
+        ? `— · ${plan}`
+        : "Credits";
+
+  const searchField = (inputId: string) => (
+    <form
+      onSubmit={onSearch}
+      className="relative w-full max-w-xl min-w-0"
+      role="search"
+    >
+      <label htmlFor={inputId} className="sr-only">
         Search leads
       </label>
-      <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
-        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
+      <div className="flex h-11 min-w-0 items-center gap-3 rounded-2xl border border-slate-200/90 bg-slate-50/80 px-3.5 shadow-sm ring-1 ring-slate-900/[0.02] transition-all focus-within:border-slate-300 focus-within:bg-white focus-within:shadow-md focus-within:ring-slate-900/[0.04] md:px-4">
+        <Search className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
+        <input
+          id={inputId}
+          name="q"
+          type="search"
+          placeholder="Search leads, clients, addresses..."
+          className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+        />
       </div>
-      <input
-        id="ls-dashboard-search"
-        name="q"
-        type="search"
-        placeholder="Search leads, clients, addresses..."
-        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-      />
     </form>
   );
 
   return (
     <Topbar
-      className="z-20 border-slate-200 bg-white/95"
       appName="LeadSmart AI"
       sections={leadSmartNav}
       searchPlaceholder="Search leads, clients, addresses..."
       leadingExtra={
-        <div className="hidden min-w-0 flex-col md:flex md:max-w-[11rem]">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">LeadSmart AI</span>
-          <span className="truncate text-sm font-semibold text-slate-900">Command center</span>
+        <Link
+          href="/dashboard"
+          className="flex min-w-0 shrink-0 items-center gap-1.5 rounded-2xl p-1 outline-none transition hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
+        >
+          <Home className="h-7 w-7 shrink-0 text-[#0072ce] sm:h-8 sm:w-8" strokeWidth={2} aria-hidden />
+          <span className="hidden min-[400px]:flex min-w-0 flex-col leading-tight">
+            <span className="truncate text-sm font-bold tracking-tight text-[#0072ce]">LeadSmart</span>
+            <span className="truncate text-xs font-semibold text-slate-800">AI</span>
+          </span>
+        </Link>
+      }
+      searchSlot={<div className="hidden min-[480px]:block w-full">{searchField("ls-dashboard-search")}</div>}
+      below={
+        <div className="min-[480px]:hidden px-3 pb-3 pt-2">
+          {searchField("ls-dashboard-search-mobile")}
         </div>
       }
-      searchSlot={search}
-      rightActions={[
-        { label: "Notifications", href: "/dashboard/notifications", variant: "ghost" },
-        { label: "Billing", href: "/settings/billing", variant: "outline" },
-        { label: "Upgrade", href: "/pricing" },
-      ]}
+      rightActions={[{ label: "Plans & pricing", href: "/pricing", variant: "outline" }]}
       trailing={
         <>
           <Link
             href="/pricing"
-            title="Billing and credits"
-            className="flex h-9 min-w-[2.25rem] items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 sm:hidden"
+            className="hidden sm:inline-flex h-10 items-center justify-center rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-xs font-semibold text-white shadow-md shadow-amber-500/20 transition hover:from-amber-600 hover:to-orange-600 md:text-sm"
           >
+            Upgrade
+          </Link>
+          <SupportChatLauncher />
+          <Link
+            href="/dashboard/notifications"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200/90 bg-white text-slate-600 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50"
+            aria-label="Notifications"
+          >
+            <Bell className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+          </Link>
+
+          <Link
+            href="/pricing"
+            title="Billing and credits"
+            className="inline-flex h-10 max-w-[140px] items-center gap-2 truncate rounded-2xl border border-slate-200/90 bg-white px-3 text-xs font-semibold text-slate-800 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50 sm:hidden"
+          >
+            <CreditCard className="h-3.5 w-3.5 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
             <span className="tabular-nums">{typeof tokens === "number" ? tokens : "—"}</span>
           </Link>
 
           <Link
             href="/pricing"
-            className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-100 sm:flex"
+            className="hidden max-w-[220px] items-center gap-2 truncate rounded-2xl border border-slate-200/90 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50 sm:inline-flex"
           >
-            <span className="text-slate-500">Credits</span>
-            <span className="tabular-nums text-slate-900">
-              {typeof tokens === "number" ? tokens : "—"}
-            </span>
-            {plan ? <span className="text-slate-400">· {plan}</span> : null}
+            <CreditCard className="h-[15px] w-[15px] shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+            <span className="truncate font-medium tabular-nums tracking-tight text-slate-900">{creditsLabel}</span>
           </Link>
 
           <ProfileMenu email={email} onLogout={onLogout} />

@@ -7,6 +7,7 @@ export default function AdminPortalPage() {
       title="Admin portal"
       description="Platform administration and operational tools. Open the full dashboard for day-to-day work."
       links={[
+        { href: "/admin/support", label: "Support inbox", description: "Customer conversations and replies" },
         { href: "/dashboard/overview", label: "Operations dashboard", description: "Overview, leads, and tools" },
         { href: "/dashboard/settings", label: "Account & settings", description: "Profile and preferences" },
         { href: "/pricing", label: "Plans & billing", description: "Subscriptions and upgrades" },

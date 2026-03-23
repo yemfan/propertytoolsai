@@ -34,10 +34,11 @@ export async function findLeadsForPortalUser(
   const email = (user.email ?? "").trim().toLowerCase();
   if (!email) return [];
 
+  // AI score fields live on `lead_scores`, not on `leads` (avoids 42703 if columns are missing).
   const { data, error } = await supabaseServer
     .from("leads")
     .select(
-      "id,agent_id,name,email,phone,property_address,lead_status,source,report_id,price_min,price_max,search_location,ai_lead_score,ai_intent,ai_timeline,ai_confidence,last_activity_at,next_contact_at,created_at"
+      "id,agent_id,name,email,phone,property_address,lead_status,source,report_id,price_min,price_max,search_location,last_activity_at,next_contact_at,created_at"
     )
     .ilike("email", email)
     .order("created_at", { ascending: false })
@@ -48,12 +49,45 @@ export async function findLeadsForPortalUser(
     return [];
   }
 
-  const rows = (data ?? []) as ClientPortalLead[];
-  if (preferredLeadId) {
-    const hit = rows.find((r) => String(r.id) === String(preferredLeadId));
-    if (hit) return [hit, ...rows.filter((r) => String(r.id) !== String(preferredLeadId))];
+  type LeadRow = Omit<
+    ClientPortalLead,
+    "ai_lead_score" | "ai_intent" | "ai_timeline" | "ai_confidence"
+  >;
+  const rows = (data ?? []) as LeadRow[];
+
+  const leadIds = rows.map((r) => r.id).filter(Boolean);
+  const scoreMap: Record<string, Record<string, unknown>> = {};
+  if (leadIds.length) {
+    const { data: scoreRows, error: scoresErr } = await supabaseServer
+      .from("lead_scores")
+      .select("lead_id,score,intent,timeline,confidence,updated_at")
+      .in("lead_id", leadIds as string[])
+      .order("updated_at", { ascending: false })
+      .limit(5000);
+    if (!scoresErr) {
+      for (const row of scoreRows ?? []) {
+        const key = String((row as { lead_id?: string }).lead_id ?? "");
+        if (!key || scoreMap[key]) continue;
+        scoreMap[key] = row as Record<string, unknown>;
+      }
+    }
   }
-  return rows;
+
+  const hydrated: ClientPortalLead[] = rows.map((l) => {
+    const s = scoreMap[String(l.id)];
+    return {
+      ...l,
+      ai_lead_score: s ? Number(s.score ?? 0) : null,
+      ai_intent: (s?.intent as string) ?? null,
+      ai_timeline: (s?.timeline as string) ?? null,
+      ai_confidence: s ? Number(s.confidence ?? 0) : null,
+    };
+  });
+  if (preferredLeadId) {
+    const hit = hydrated.find((r) => String(r.id) === String(preferredLeadId));
+    if (hit) return [hit, ...hydrated.filter((r) => String(r.id) !== String(preferredLeadId))];
+  }
+  return hydrated;
 }
 
 export async function assertLeadAccessForUser(

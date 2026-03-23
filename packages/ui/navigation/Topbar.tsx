@@ -1,5 +1,6 @@
 "use client";
 
+import { Search } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { MobileSidebar } from "./MobileSidebar";
@@ -32,12 +33,12 @@ export type TopbarProps = {
 
 function actionClasses(action: TopbarAction): string {
   const base = [
-    "inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50",
+    "inline-flex items-center justify-center rounded-xl px-3.5 py-2 text-sm font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
     action.variant === "outline"
-      ? "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+      ? "border border-slate-200/90 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50"
       : action.variant === "ghost"
-        ? "text-gray-600 hover:bg-gray-100"
-        : "bg-gray-900 text-white hover:bg-gray-800",
+        ? "text-slate-600 hover:bg-slate-100/90 hover:text-slate-900"
+        : "bg-slate-900 text-white shadow-sm shadow-slate-900/10 hover:bg-slate-800",
   ].join(" ");
   return [base, action.className].filter(Boolean).join(" ");
 }
@@ -84,24 +85,27 @@ export function Topbar({
 }: TopbarProps) {
   return (
     <header
-      className={`sticky top-0 z-40 border-b border-gray-200/80 bg-white/90 backdrop-blur ${className}`}
+      className={`sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-xl backdrop-saturate-150 ${className}`}
     >
-      <div className="flex h-16 items-center gap-3 px-4 md:px-6">
+      <div className="flex h-[60px] items-center gap-3 px-4 md:gap-4 md:px-6">
         <MobileSidebar appName={appName} sections={sections} />
 
         {leadingExtra ? <div className="min-w-0 shrink-0">{leadingExtra}</div> : null}
 
         <div className="min-w-0 flex-1">
           {searchSlot ?? (
-            <input
-              type="search"
-              placeholder={searchPlaceholder}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 outline-none ring-0 placeholder:text-gray-400 focus:border-gray-300 focus:bg-white"
-            />
+            <div className="flex h-11 min-w-0 items-center gap-3 rounded-2xl border border-gray-200/90 bg-gray-50/90 px-3.5 shadow-sm transition-colors focus-within:border-gray-300 focus-within:bg-white focus-within:shadow-md md:px-4">
+              <Search className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={2} aria-hidden />
+              <input
+                type="search"
+                placeholder={searchPlaceholder}
+                className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-gray-900 outline-none ring-0 placeholder:text-gray-400"
+              />
+            </div>
           )}
         </div>
 
-        <div className="flex max-w-[45vw] shrink-0 items-center gap-1.5 overflow-x-auto sm:max-w-none sm:gap-2 md:max-w-none">
+        <div className="flex max-w-[48vw] shrink-0 items-center gap-2 overflow-x-auto sm:max-w-none md:max-w-none [&>*]:shrink-0">
           {rightActions.map((action, i) => (
             <ActionButton key={`${action.label}-${i}`} action={action} />
           ))}
@@ -109,7 +113,9 @@ export function Topbar({
         </div>
       </div>
 
-      {below ? <div className="border-t border-gray-100 px-4 py-2 md:px-6">{below}</div> : null}
+      {below ? (
+        <div className="border-t border-slate-100/90 bg-slate-50/40 px-4 py-2.5 backdrop-blur-md md:px-6">{below}</div>
+      ) : null}
     </header>
   );
 }

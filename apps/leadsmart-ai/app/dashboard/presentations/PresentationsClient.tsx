@@ -50,10 +50,8 @@ type PresentationHistoryRow = {
 };
 
 export default function PresentationsClient({
-  agentId,
   initialPresentations,
 }: {
-  agentId: string;
   initialPresentations: PresentationHistoryRow[];
 }) {
   const [address, setAddress] = useState("");
@@ -91,7 +89,7 @@ export default function PresentationsClient({
       const res = await fetch("/api/generate-presentation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: address.trim(), agent_id: agentId }),
+        body: JSON.stringify({ address: address.trim() }),
       });
 
       const json = (await res.json().catch(() => ({}))) as any;

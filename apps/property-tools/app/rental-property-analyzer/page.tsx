@@ -1,7 +1,10 @@
 "use client";
 
 import AddressAutocomplete from "@/components/AddressAutocomplete";
+import JsonLd from "@/components/JsonLd";
+import ResultCard from "@/components/ResultCard";
 import { useAddressPrefill } from "@/hooks/useAddressPrefill";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import RequireAuthGate from "../../components/RequireAuthGate";
 
@@ -477,109 +480,138 @@ function RentalPropertyAnalyzerPageInner() {
     }
   };
 
+  const resultCardDetails = [
+    `Annual cash flow: $${metrics.annualCashFlow.toFixed(0)}`,
+    `Cap rate: ${metrics.capRate.toFixed(1)}%`,
+    `Cash on cash: ${metrics.cashOnCash.toFixed(1)}%`,
+    `ROI (year 1 est.): ${metrics.roi.toFixed(1)}%`,
+    `Deal score: ${dealScore.score.toFixed(0)} (${dealScore.label})`,
+  ].join("\n");
+
   return (
-    <div className="w-full max-w-6xl py-6">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-blue-600">
-          Rental Property Analyzer – Just Enter an Address
-        </h1>
-        <p className="text-gray-600 mb-4 max-w-2xl mx-auto">
-          Estimate cash flow, cap rate, cash-on-cash return, and ROI
-          instantly. Perfect for real estate investors evaluating buy-and-hold
-          rentals.
-        </p>
-        <div className="flex flex-col sm:flex-row justify-center gap-2">
-          <AddressAutocomplete
-            value={address}
-            onChange={setAddress}
-            onBlur={() => {
-              const t = address.trim();
-              if (t)
-                saveSelectedAddress({
-                  formattedAddress: t,
-                  lat: null,
-                  lng: null,
-                  placeId: null,
-                  city: null,
-                  state: null,
-                  zip: null,
-                });
-            }}
-            onSelect={(val) => {
-              saveSelectedAddress({
-                formattedAddress: val.formattedAddress,
-                lat: val.lat,
-                lng: val.lng,
-                placeId: val.placeId ?? null,
-                city: val.city ?? null,
-                state: val.state ?? null,
-                zip: val.zip ?? null,
-              });
-              if (val.zip?.trim()) setZip(val.zip.trim());
-            }}
-            placeholder="Enter property address (or paste a Zillow/Redfin URL)"
-            className="border border-gray-300 px-3 py-2 rounded w-full sm:w-72 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            type="text"
-            value={zip}
-            onChange={(e) => setZip(e.target.value)}
-            placeholder="ZIP (optional)"
-            className="border border-gray-300 px-3 py-2 rounded w-full sm:w-32 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="button"
-            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded text-sm font-semibold hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed"
-            onClick={handleFindOnZillow}
-            disabled={loading}
-            title="Open Zillow search in a new tab"
-          >
-            Find on Zillow
-          </button>
-          <button
-            className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-semibold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
-            onClick={handleAnalyze}
-            disabled={loading}
-          >
-            {loading ? "Analyzing..." : "Analyze Property"}
-          </button>
-        </div>
-        {error ? (
-          <p className="mt-2 text-xs text-rose-600">{error}</p>
-        ) : null}
-        {lastLookup ? (
-          <details className="mt-2 mx-auto max-w-3xl text-left">
-            <summary className="text-xs text-gray-500 cursor-pointer select-none">
-              Show lookup details
-            </summary>
-            <pre className="mt-2 overflow-x-auto rounded border border-gray-200 bg-gray-50 p-3 text-[11px] leading-snug text-gray-700">
-              {JSON.stringify(
-                {
-                  endpoint: lastLookup.endpoint,
-                  status: lastLookup.status,
-                  ok: lastLookup.ok,
-                  received: lastLookup.received,
-                },
-                null,
-                2
-              )}
-            </pre>
-          </details>
-        ) : null}
-        <p className="mt-2 text-xs text-gray-500">
-          API integration (Zillow/Redfin/etc.) will auto-fill property
-          details using the address and ZIP; values below are fully editable.
-        </p>
-      </div>
+    <div className="w-full max-w-6xl py-10">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: "Rental Property Analyzer",
+          applicationCategory: "FinanceApplication",
+          operatingSystem: "All",
+          browserRequirements: "Requires JavaScript",
+          url: "https://propertytoolsai.com/rental-property-analyzer",
+          description:
+            "Analyze rental property cash flow, cap rate, cash-on-cash return, and ROI from an address.",
+        }}
+      />
+      <Link
+        href="/"
+        className="inline-flex items-center gap-2 text-gray-600 hover:text-blue-600 text-sm font-medium mb-6"
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Home
+      </Link>
 
-      <div className="mb-6">
-        <DealScoreCard dealScore={dealScore} />
-      </div>
+      <h1 className="text-3xl font-bold text-blue-600 mb-2">Rental Property Analyzer</h1>
+      <p className="text-gray-600 mb-8">
+        Just enter an address. Estimate cash flow, cap rate, cash-on-cash return, and ROI for buy-and-hold
+        rentals—then refine every assumption below.
+      </p>
 
-      <div className="bg-white shadow-md rounded p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-900">
-          Property Details & Assumptions
-        </h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white shadow-md rounded-lg p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">Property address</h2>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+              <AddressAutocomplete
+                value={address}
+                onChange={setAddress}
+                onBlur={() => {
+                  const t = address.trim();
+                  if (t)
+                    saveSelectedAddress({
+                      formattedAddress: t,
+                      lat: null,
+                      lng: null,
+                      placeId: null,
+                      city: null,
+                      state: null,
+                      zip: null,
+                    });
+                }}
+                onSelect={(val) => {
+                  saveSelectedAddress({
+                    formattedAddress: val.formattedAddress,
+                    lat: val.lat,
+                    lng: val.lng,
+                    placeId: val.placeId ?? null,
+                    city: val.city ?? null,
+                    state: val.state ?? null,
+                    zip: val.zip ?? null,
+                  });
+                  if (val.zip?.trim()) setZip(val.zip.trim());
+                }}
+                placeholder="Enter property address (or paste a Zillow/Redfin URL)"
+                className="border border-gray-300 px-3 py-2 rounded w-full sm:w-72 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="text"
+                value={zip}
+                onChange={(e) => setZip(e.target.value)}
+                placeholder="ZIP (optional)"
+                className="border border-gray-300 px-3 py-2 rounded w-full sm:w-32 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                onClick={handleFindOnZillow}
+                disabled={loading}
+                title="Open Zillow search in a new tab"
+              >
+                Find on Zillow
+              </button>
+              <button
+                type="button"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                onClick={handleAnalyze}
+                disabled={loading}
+              >
+                {loading ? "Analyzing..." : "Analyze Property"}
+              </button>
+            </div>
+            {error ? <p className="text-xs text-rose-600">{error}</p> : null}
+            {lastLookup ? (
+              <details className="text-left">
+                <summary className="text-xs text-gray-500 cursor-pointer select-none">
+                  Show lookup details
+                </summary>
+                <pre className="mt-2 overflow-x-auto rounded border border-gray-200 bg-gray-50 p-3 text-[11px] leading-snug text-gray-700">
+                  {JSON.stringify(
+                    {
+                      endpoint: lastLookup.endpoint,
+                      status: lastLookup.status,
+                      ok: lastLookup.ok,
+                      received: lastLookup.received,
+                    },
+                    null,
+                    2
+                  )}
+                </pre>
+              </details>
+            ) : null}
+            <p className="text-xs text-gray-500">
+              Listing or MLS integrations can auto-fill property details from the address and ZIP; values below are
+              fully editable.
+            </p>
+          </div>
+
+          <DealScoreCard dealScore={dealScore} />
+
+          <div className="bg-white shadow-md rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900">
+              Property Details & Assumptions
+            </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           {(
             Object.entries(propertyData) as [keyof PropertyData, any][]
@@ -635,6 +667,18 @@ function RentalPropertyAnalyzerPageInner() {
             );
           })}
         </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-1">
+          <div className="lg:sticky lg:top-24">
+            <ResultCard
+              title="Monthly cash flow"
+              value={`$${metrics.monthlyCashFlow.toFixed(0)}/mo`}
+              details={resultCardDetails}
+            />
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
@@ -688,14 +732,14 @@ function RentalPropertyAnalyzerPageInner() {
         />
       </div>
 
-      <div className="bg-yellow-50 border border-yellow-100 p-6 rounded mb-6 text-sm text-gray-800">
+      <div className="bg-yellow-50 border border-yellow-100 p-6 rounded-lg mb-6 text-sm text-gray-800">
         <h2 className="text-xl font-semibold mb-2 text-gray-900">
           AI Market Summary
         </h2>
         <p>{aiSummary}</p>
       </div>
 
-      <div className="bg-white shadow-md rounded p-6 mb-6 text-sm">
+      <div className="bg-white shadow-md rounded-lg p-6 mb-6 text-sm">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold text-gray-900">
             Nearby Comparable Rentals
@@ -748,9 +792,22 @@ function RentalPropertyAnalyzerPageInner() {
         </div>
       </div>
 
-      <div className="text-center">
+      <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">
+        <h2 className="text-xl font-semibold text-gray-900">Analyze a rental with one address</h2>
+        <p>
+          Enter a street address or paste a listing URL, then adjust value, rent, financing, and expenses. Metrics
+          update instantly so you can stress-test assumptions before you make an offer.
+        </p>
+        <p>
+          This tool is for education and screening—not tax, legal, or investment advice. Always verify rents,
+          taxes, insurance, and loan terms with local professionals.
+        </p>
+      </section>
+
+      <div className="mt-10">
         <button
-          className="bg-blue-600 text-white px-6 py-3 rounded text-sm sm:text-base font-semibold hover:bg-blue-700"
+          type="button"
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg text-sm sm:text-base font-semibold hover:bg-blue-700"
           onClick={handleDownloadReport}
         >
           Download Full Rental Property Report (PDF)

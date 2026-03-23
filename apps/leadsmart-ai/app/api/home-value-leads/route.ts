@@ -4,6 +4,25 @@ import { getLeadLimit } from "@/lib/planLimits";
 import { scheduleEmailSequenceForLead } from "@/lib/emailSequences";
 import { runLeadMarketplacePipeline } from "@/lib/leadScorePipeline";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function resolveHomeValueAgentId(raw: string | undefined): Promise<string | null> {
+  const t = (raw ?? "").trim();
+  if (!t) return null;
+  if (/^\d+$/.test(t)) return t;
+  if (UUID_RE.test(t)) {
+    const { data, error } = await supabaseServer
+      .from("agents")
+      .select("id")
+      .eq("auth_user_id", t)
+      .maybeSingle();
+    if (error || (data as any)?.id == null) return null;
+    return String((data as any).id);
+  }
+  return null;
+}
+
 type LeadPayload = {
   name?: string;
   address: string;
@@ -21,8 +40,9 @@ function formatUsPhone(input: string) {
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as LeadPayload;
-    const { name, address, email, phone, agentId } = body;
+    const { name, address, email, phone, agentId: agentIdRaw } = body;
     const formattedPhone = phone ? formatUsPhone(phone) : null;
+    const resolvedAgentId = await resolveHomeValueAgentId(agentIdRaw);
 
     if (!address || !email) {
       return NextResponse.json(
@@ -32,11 +52,11 @@ export async function POST(req: Request) {
     }
 
     // Enforce monthly lead limits for the agent (if agentId provided)
-    if (agentId) {
+    if (resolvedAgentId) {
       const { data: agent, error: agentErr } = await supabaseServer
         .from("agents")
         .select("plan_type")
-        .eq("id", agentId)
+        .eq("id", resolvedAgentId)
         .maybeSingle();
       if (agentErr && (agentErr as any).code !== "PGRST116") throw agentErr;
 
@@ -49,7 +69,7 @@ export async function POST(req: Request) {
       const { count, error: countErr } = await supabaseServer
         .from("leads")
         .select("id", { count: "exact", head: true })
-        .eq("agent_id", agentId)
+        .eq("agent_id", resolvedAgentId)
         .gte("created_at", start.toISOString());
 
       if (countErr) throw countErr;
@@ -83,7 +103,7 @@ Name: ${name || "(not provided)"}
 Email: ${email}
 Phone: ${phone || "(not provided)"}
 Address: ${address}
-Agent ID: ${agentId || "(not provided)"}
+Agent ID: ${resolvedAgentId || agentIdRaw || "(not provided)"}
 Timestamp: ${new Date().toISOString()}`,
           }),
         });
@@ -103,7 +123,7 @@ Timestamp: ${new Date().toISOString()}`,
         .from("contacts")
         .upsert(
           {
-            agent_id: agentId ?? null,
+            agent_id: resolvedAgentId ?? null,
             name: name || address,
             email,
             phone: formattedPhone ?? null,
@@ -117,7 +137,7 @@ Timestamp: ${new Date().toISOString()}`,
     const { data: lead, error: leadError } = await supabaseServer
       .from("leads")
       .insert({
-        agent_id: agentId ?? null,
+        agent_id: resolvedAgentId ?? null,
         property_address: address,
         name: name || address,
         email,

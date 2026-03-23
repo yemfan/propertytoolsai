@@ -9,7 +9,6 @@ import { consumeTokensForTool } from "@/lib/consumeTokens";
 
 type Body = {
   address: string;
-  agent_id: string;
 };
 
 export const runtime = "nodejs";
@@ -43,16 +42,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Secure: derive agent_id from the logged-in user.
+    // `presentations.agent_id` is Auth user UUID (see schema); never use CRM `agents.id` bigint here.
     const ctx = await getCurrentAgentContext();
-    const agentId = ctx.agentId;
-
-    if (body.agent_id && body.agent_id !== agentId) {
-      return NextResponse.json(
-        { success: false, message: "agent_id mismatch" },
-        { status: 403 }
-      );
-    }
+    const presentationAgentId = ctx.userId;
 
     // 1) Ensure property warehouse rows + snapshots exist.
     await getPropertyData(address, true);
@@ -100,7 +92,7 @@ export async function POST(req: Request) {
     const { data: inserted, error } = await supabaseServer
       .from("presentations")
       .insert({
-        agent_id: agentId,
+        agent_id: presentationAgentId,
         property_address: property.address,
         data: presentationData,
       })

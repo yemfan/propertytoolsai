@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Legacy URL — the app uses `/dashboard`; nothing should link here. */
+/** Legacy URL — send users to the public home. */
 export default function PortalRedirectPage() {
-  redirect("/dashboard");
+  redirect("/");
 }

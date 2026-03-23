@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
 
+/**
+ * Shared nav primitives for `PremiumSidebar`, `MobileSidebar`, `Topbar`, etc.
+ * Apps build `NavSection[]` in `nav.config.tsx` (see `apps/property-tools`, `apps/leadsmart-ai`).
+ */
 export type NavLeafItem = {
   label: string;
   href: string;
@@ -10,6 +14,8 @@ export type NavLeafItem = {
    * Use for roots like `/dashboard` so `/dashboard/leads` does not match.
    */
   match?: string[];
+  /** Pass `false` to avoid Next.js prefetch (e.g. dashboard entry from marketing shell). */
+  prefetch?: boolean;
 };
 
 export type NavGroupItem = {

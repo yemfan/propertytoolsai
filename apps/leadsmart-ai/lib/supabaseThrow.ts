@@ -11,5 +11,12 @@ export function throwIfSupabaseError(
   if (!error) return;
   const msg = typeof error.message === "string" ? error.message.trim() : "";
   const code = error.code;
-  throw new Error(msg || (code ? `${fallbackMessage} (${code})` : fallbackMessage));
+  const details = typeof (error as { details?: string }).details === "string"
+    ? String((error as { details?: string }).details).trim()
+    : "";
+  const hint = typeof (error as { hint?: string }).hint === "string"
+    ? String((error as { hint?: string }).hint).trim()
+    : "";
+  const parts = [msg, code, details, hint].filter(Boolean);
+  throw new Error(parts.length ? parts.join(" — ") : fallbackMessage);
 }

@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       mode: "subscription",
       customer_email: user.email,
       line_items: [{ price, quantity: 1 }],
-      success_url: `${origin}/dashboard?success=true`,
+      success_url: `${origin}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl,
       allow_promotion_codes: true,
       subscription_data: subscriptionData,

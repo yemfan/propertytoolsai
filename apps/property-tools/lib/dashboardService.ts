@@ -1,5 +1,21 @@
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { getLeadLimit } from "@/lib/planLimits";
+import { toErrorFromSupabase } from "@/lib/supabaseError";
+
+/**
+ * CRM tables (`leads`, `communications`, …) use `agent_id` → `public.agents.id` (bigint).
+ * When no `agents` row exists, `agentId` is `""` — never use `userId` (UUID) as `agentId` for CRM bigint columns.
+ * Only digit-only strings are safe for bigint `agent_id` filters (avoids 22P02 / empty PostgREST messages).
+ */
+export function isNumericCrmAgentId(agentId: unknown): boolean {
+  const s = String(agentId ?? "").trim();
+  return /^\d+$/.test(s);
+}
+
+/** @deprecated use !isNumericCrmAgentId(agentId) for CRM queries */
+export function isAuthUserIdFallbackAsAgentId(agentId: string): boolean {
+  return !isNumericCrmAgentId(agentId);
+}
 
 export type LeadStatus = "new" | "contacted" | "qualified" | "closed";
 
@@ -79,7 +95,13 @@ export async function getCurrentAgentContext(): Promise<{
 }> {
   const supabase = supabaseServerClient();
   const { data: userData, error: userErr } = await supabase.auth.getUser();
-  if (userErr) throw userErr;
+  if (userErr) {
+    const raw =
+      typeof (userErr as { message?: string }).message === "string"
+        ? (userErr as { message: string }).message.trim()
+        : "";
+    throw new Error(raw || "Not authenticated");
+  }
   const user = userData.user;
   if (!user) throw new Error("Not authenticated");
 
@@ -90,11 +112,22 @@ export async function getCurrentAgentContext(): Promise<{
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
-  if (agentErr && (agentErr as any).code !== "PGRST116") throw agentErr;
+  if (agentErr && (agentErr as { code?: string }).code !== "PGRST116") {
+    const raw =
+      typeof (agentErr as { message?: string }).message === "string"
+        ? (agentErr as { message: string }).message.trim()
+        : "";
+    throw new Error(raw || "Unable to load agent profile");
+  }
+
+  const rawAgentPk = (agent as any)?.id;
+  const agentId =
+    rawAgentPk != null && rawAgentPk !== "" ? String(rawAgentPk) : "";
 
   return {
     userId: user.id,
-    agentId: (agent as any)?.id ?? user.id,
+    /** Numeric `public.agents.id` for CRM tables (`leads`, `tasks`, …). Empty if no `agents` row. */
+    agentId,
     planType: ((agent as any)?.plan_type ?? "free") as AgentRow["plan_type"],
     email: user.email ?? null,
   };
@@ -116,15 +149,19 @@ export async function getLeadUsageThisMonth(): Promise<{
   const now = new Date();
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0));
 
+  const limit = getLeadLimit(planType);
+  if (!isNumericCrmAgentId(agentId)) {
+    return { used: 0, limit, planType };
+  }
+
   const { count, error } = await supabase
     .from("leads")
     .select("id", { count: "exact", head: true })
     .eq("agent_id", agentId)
     .gte("created_at", start.toISOString());
 
-  if (error) throw error;
+  if (error) throw toErrorFromSupabase(error, "Could not load lead usage");
 
-  const limit = getLeadLimit(planType);
   return { used: count ?? 0, limit, planType };
 }
 
@@ -136,6 +173,9 @@ export async function getLeads(params?: {
   offset?: number;
 }): Promise<LeadRow[]> {
   const { agentId, planType } = await getCurrentAgentContext();
+  if (!isNumericCrmAgentId(agentId)) {
+    return [];
+  }
   const supabase = supabaseServerClient();
 
   let q = supabase
@@ -160,7 +200,7 @@ export async function getLeads(params?: {
   }
 
   const { data, error } = await q;
-  if (error) throw error;
+  if (error) throw toErrorFromSupabase(error, "Could not load leads");
   const leads = (data as LeadRow[]) ?? [];
   const leadIds = leads.map((l) => l.id).filter(Boolean);
   let scoreMap: Record<string, any> = {};
@@ -195,6 +235,9 @@ export async function getLeads(params?: {
 
 export async function getContacts(limit = 200): Promise<ContactRow[]> {
   const { agentId } = await getCurrentAgentContext();
+  if (!isNumericCrmAgentId(agentId)) {
+    return [];
+  }
   const supabase = supabaseServerClient();
 
   const { data, error } = await supabase
@@ -204,12 +247,15 @@ export async function getContacts(limit = 200): Promise<ContactRow[]> {
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (error) throw error;
+  if (error) throw toErrorFromSupabase(error, "Could not load contacts");
   return (data as ContactRow[]) ?? [];
 }
 
 export async function getReports(limit = 200): Promise<PropertyReportRow[]> {
   const { agentId } = await getCurrentAgentContext();
+  if (!isNumericCrmAgentId(agentId)) {
+    return [];
+  }
   const supabase = supabaseServerClient();
 
   const { data, error } = await supabase
@@ -219,12 +265,15 @@ export async function getReports(limit = 200): Promise<PropertyReportRow[]> {
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (error) throw error;
+  if (error) throw toErrorFromSupabase(error, "Could not load property reports");
   return (data as PropertyReportRow[]) ?? [];
 }
 
 export async function updateLeadStatus(id: string, status: LeadStatus) {
   const { agentId } = await getCurrentAgentContext();
+  if (!isNumericCrmAgentId(agentId)) {
+    throw new Error("No agent profile is linked to this account. Complete onboarding to use the CRM.");
+  }
   const supabase = supabaseServerClient();
 
   const { error } = await supabase
@@ -233,11 +282,14 @@ export async function updateLeadStatus(id: string, status: LeadStatus) {
     .eq("id", id)
     .eq("agent_id", agentId);
 
-  if (error) throw error;
+  if (error) throw toErrorFromSupabase(error, "Could not update lead status");
 }
 
 export async function updateLeadNotes(id: string, notes: string) {
   const { agentId } = await getCurrentAgentContext();
+  if (!isNumericCrmAgentId(agentId)) {
+    throw new Error("No agent profile is linked to this account. Complete onboarding to use the CRM.");
+  }
   const supabase = supabaseServerClient();
 
   const { error } = await supabase
@@ -246,7 +298,7 @@ export async function updateLeadNotes(id: string, notes: string) {
     .eq("id", id)
     .eq("agent_id", agentId);
 
-  if (error) throw error;
+  if (error) throw toErrorFromSupabase(error, "Could not update lead notes");
 }
 
 export async function updateLeadFollowUpSettings(
@@ -258,6 +310,9 @@ export async function updateLeadFollowUpSettings(
   }
 ) {
   const { agentId } = await getCurrentAgentContext();
+  if (!isNumericCrmAgentId(agentId)) {
+    throw new Error("No agent profile is linked to this account. Complete onboarding to use the CRM.");
+  }
   const supabase = supabaseServerClient();
 
   const updatePayload: any = {};
@@ -281,6 +336,6 @@ export async function updateLeadFollowUpSettings(
     .eq("id", id)
     .eq("agent_id", agentId);
 
-  if (error) throw error;
+  if (error) throw toErrorFromSupabase(error, "Could not update lead follow-up settings");
 }
 

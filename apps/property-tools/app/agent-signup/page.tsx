@@ -66,7 +66,7 @@ export default function AgentSignupPage() {
 
       const userId = data?.user?.id;
       if (!userId) {
-        setSuccess("Check your email to confirm your account, then log in to access the dashboard.");
+        setSuccess("Check your email to confirm your account, then log in to use PropertyTools AI.");
         return;
       }
 
@@ -95,7 +95,7 @@ export default function AgentSignupPage() {
         }
       }
 
-      // 2) Create agent row so `/dashboard` can resolve agentId.
+      // 2) Create agent row for CRM / API features that scope by agent id.
       // Keep inserts limited to known columns (auth_user_id + plan_type).
       const { error: upsertAgentErr } = await supabase.from("agents").upsert(
         {
@@ -106,7 +106,7 @@ export default function AgentSignupPage() {
       );
       if (upsertAgentErr) throw upsertAgentErr;
 
-      router.push("/dashboard");
+      router.push("/");
     } catch (e: any) {
       const msg = String(e?.message ?? "");
       if (/rate limit|too many requests/i.test(msg)) {
@@ -131,7 +131,7 @@ export default function AgentSignupPage() {
         <div className="space-y-1 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0072ce]">Agents</p>
           <h1 className="font-heading text-xl font-bold text-slate-900 md:text-2xl">Start free as agent</h1>
-          <p className="text-sm text-slate-600">Agent dashboard, CMA tools, and lead workflows.</p>
+          <p className="text-sm text-slate-600">CMA tools, calculators, and lead-ready workflows.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">

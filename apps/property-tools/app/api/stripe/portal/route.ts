@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     const origin = new URL(req.url).origin;
     const portal = await stripe.billingPortal.sessions.create({
       customer,
-      return_url: `${origin}/dashboard`,
+      return_url: `${origin}/pricing`,
     });
 
     // If called from a form POST, redirect; otherwise JSON.

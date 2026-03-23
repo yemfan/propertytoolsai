@@ -6,10 +6,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import type { AccessTier } from "@/lib/access";
+import { isPremiumPlan } from "@/lib/access";
 import type { AccessUsageState } from "@/lib/usage";
 import { getUsage } from "@/lib/usage";
 import AuthModal from "@/components/AuthModal";
@@ -37,7 +40,12 @@ export function useAccess() {
 }
 
 export function AccessProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [usage, setUsage] = useState<AccessUsageState | null>(null);
+  const usageRef = useRef<AccessUsageState | null>(null);
+  usageRef.current = usage;
+
   const [loading, setLoading] = useState(true);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
@@ -62,6 +70,46 @@ export function AccessProvider({ children }: { children: ReactNode }) {
 
   const tier: AccessTier = usage?.tier ?? "guest";
 
+  const closePaywall = useCallback(() => {
+    setPaywallOpen(false);
+    setPaywallMessage(undefined);
+  }, []);
+
+  const openPaywall = useCallback((message?: string) => {
+    if (isPremiumPlan(usageRef.current?.plan ?? null)) return;
+    setPaywallMessage(message);
+    setPaywallOpen(true);
+  }, []);
+
+  /** Paid Pro/Premium subscribers resolve to `tier === "premium"` — never keep the upgrade modal open. */
+  useEffect(() => {
+    if (tier === "premium") {
+      closePaywall();
+    }
+  }, [tier, closePaywall]);
+
+  /** After Stripe return (`/?checkout=success`), reload usage and dismiss the dialog. */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("checkout") !== "success") return;
+
+    let cancelled = false;
+    void (async () => {
+      await refresh();
+      if (cancelled) return;
+      closePaywall();
+      const url = new URL(window.location.href);
+      url.searchParams.delete("checkout");
+      const next = `${url.pathname}${url.search}`;
+      router.replace(next);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname, refresh, router, closePaywall]);
+
   const value = useMemo<AccessContextValue>(
     () => ({
       tier,
@@ -73,13 +121,10 @@ export function AccessProvider({ children }: { children: ReactNode }) {
         setAuthOpen(true);
       },
       closeAuth: () => setAuthOpen(false),
-      openPaywall: (message) => {
-        setPaywallMessage(message);
-        setPaywallOpen(true);
-      },
-      closePaywall: () => setPaywallOpen(false),
+      openPaywall,
+      closePaywall,
     }),
-    [tier, usage, loading, refresh]
+    [tier, usage, loading, refresh, openPaywall, closePaywall]
   );
 
   return (
@@ -93,7 +138,7 @@ export function AccessProvider({ children }: { children: ReactNode }) {
       />
       <PaywallModal
         open={paywallOpen}
-        onClose={() => setPaywallOpen(false)}
+        onClose={closePaywall}
         message={paywallMessage}
         ctaLabel="Upgrade Now"
       />

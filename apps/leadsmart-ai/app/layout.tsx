@@ -1,8 +1,8 @@
 import "./globals.css";
 import { ReactNode } from "react";
 import { Montserrat, Roboto } from "next/font/google";
-import AuthProvider from "../components/AuthProvider";
-import AppShell from "../components/AppShell";
+import AuthProvider from "@/components/AuthProvider";
+import AppShell from "@/components/AppShell";
 
 const fontHeading = Montserrat({
   subsets: ["latin"],

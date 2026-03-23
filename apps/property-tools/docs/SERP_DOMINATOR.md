@@ -4,7 +4,7 @@ For a **single seed keyword**, generate **five page types** to own more SERP rea
 
 ## URLs
 
-- Hub: `/serp-hub`
+- Hub: `/serp-hub` — lists **published** keyword clusters from the DB with links to all five page types (ISR ~2 min).
 - Pages: `/serp-hub/{keywordSlug}/{pageType}`  
   `pageType` ∈ `tool` | `landing` | `blog` | `comparison` | `faq`
 

@@ -8,10 +8,11 @@ Shared UI for the monorepo.
 |------|--------|
 | `navigation/types.ts` | `NavConfig`, link/group types |
 | `navigation/Sidebar.tsx` | Desktop sidebar |
-| `navigation/PremiumSidebar.tsx` | Premium SaaS rail (default collapsed), tooltips, animated groups |
+| `navigation/PremiumSidebar.tsx` | Premium SaaS rail (`defaultCollapsed`), gray palette, simple tooltips, `+`/`−` groups, ←/→ header, ✦ collapsed footer; nav icons from each app’s `nav.config` + `lucide-react` |
 | `navigation/MobileSidebar.tsx` | Mobile drawer + overlay |
 | `navigation/Topbar.tsx` | Top bar + mobile drawer + search/actions slots |
-| `navigation/PremiumTopbar.tsx` | Glass bar + Lucide search/credits/bell/profile |
+| `navigation/PremiumTopbar.tsx` | Glass bar + Lucide search/credits/bell/profile menu or chip |
+| `navigation/ProfileMenu.tsx` | Avatar dropdown (optional profile/settings/billing/log out) |
 | `navigation/index.ts` | Public API (`@repo/ui`) |
 
 **App paths in this repo**
@@ -21,4 +22,4 @@ Shared UI for the monorepo.
 | `apps/propertytoolsai` | `apps/property-tools` |
 | `apps/leadsmartai` | `apps/leadsmart-ai` |
 
-Nav config: `nav.config.tsx` at each app root. Shell: `components/AppShell.tsx`.
+Nav config: `nav.config.tsx` at each app root; LeadSmart also uses `marketing.nav.config.tsx` for the public tools shell. Shell: `components/AppShell.tsx`. Details: **`navigation/README.md`**.

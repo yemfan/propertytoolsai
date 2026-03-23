@@ -20,7 +20,7 @@ export default function TopBar({
     } catch (e) {
       console.error("Logout failed", e);
     } finally {
-      router.push("/login?redirect=/dashboard");
+      router.push("/login?redirect=/");
       router.refresh?.();
     }
   }

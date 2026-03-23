@@ -1,5 +1,12 @@
 # Propertytoolsai (monorepo)
 
+| Common name | Folder |
+|-------------|--------|
+| PropertyToolsAI | `apps/property-tools` |
+| LeadSmart AI | `apps/leadsmart-ai` |
+
+Shared navigation UI: **`packages/ui/navigation/`** (`PremiumSidebar`, `Topbar`, `PremiumTopbar`, …). See **`packages/ui/navigation/README.md`**.
+
 ## Property Tools app — environment
 
 Secrets live in **`apps/property-tools/.env.local`** (not in the repo root).

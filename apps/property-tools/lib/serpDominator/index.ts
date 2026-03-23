@@ -11,10 +11,11 @@ export {
   upsertSerpPage,
   getSerpPageByPath,
   listSerpHubPathsForSitemap,
+  listSerpHubCampaignsWithPublishedPages,
   insertRankSnapshot,
   listRankSnapshotsForKeyword,
 } from "./db";
-export type { SerpPageRow } from "./db";
+export type { SerpPageRow, SerpHubCampaignListItem } from "./db";
 export { runSerpDominatorCampaign } from "./pipeline";
 export type { SerpCampaignResult } from "./pipeline";
 export { expandSeedsToSerpClusters, runDiscoveryThenSerp } from "./integratePageGenerator";

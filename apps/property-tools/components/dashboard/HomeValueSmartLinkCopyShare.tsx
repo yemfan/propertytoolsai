@@ -1,0 +1,94 @@
+"use client";
+
+import { useCallback, useState } from "react";
+import { Copy, Share2 } from "lucide-react";
+
+function absoluteUrl(relativePath: string): string {
+  if (typeof window === "undefined") return relativePath;
+  const path = relativePath.startsWith("/") ? relativePath : `/${relativePath}`;
+  return `${window.location.origin}${path}`;
+}
+
+type Props = {
+  /** Path starting with `/`, e.g. `/home-value-widget?agentId=...` */
+  relativePath: string;
+  /** Optional compact icon-only layout */
+  compact?: boolean;
+};
+
+export default function HomeValueSmartLinkCopyShare({ relativePath, compact = false }: Props) {
+  const [copied, setCopied] = useState(false);
+  const [shareHint, setShareHint] = useState(false);
+
+  const copyLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(absoluteUrl(relativePath));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }, [relativePath]);
+
+  const shareLink = useCallback(async () => {
+    const url = absoluteUrl(relativePath);
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: "Home Value",
+          text: "Get your home value estimate",
+          url,
+        });
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          await copyLink();
+        }
+      }
+      return;
+    }
+    await copyLink();
+    setShareHint(true);
+    setTimeout(() => setShareHint(false), 2500);
+  }, [relativePath, copyLink]);
+
+  const btnBase =
+    "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072ce] focus-visible:ring-offset-2 disabled:opacity-60";
+
+  if (compact) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className={btnBase} onClick={copyLink} aria-label="Copy full link">
+          <Copy className="h-4 w-4 shrink-0" />
+          <span className="sr-only sm:not-sr-only">{copied ? "Copied!" : "Copy"}</span>
+        </button>
+        <button type="button" className={btnBase} onClick={shareLink} aria-label="Share link">
+          <Share2 className="h-4 w-4 shrink-0" />
+          <span className="sr-only sm:not-sr-only">Share</span>
+        </button>
+        {(copied || shareHint) && (
+          <span className="text-xs font-medium text-emerald-600" role="status">
+            {copied ? "Full URL copied" : "Link copied — use Share on a phone for more options"}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+      <button type="button" className={btnBase} onClick={copyLink}>
+        <Copy className="h-4 w-4 shrink-0" />
+        {copied ? "Copied!" : "Copy link"}
+      </button>
+      <button type="button" className={btnBase} onClick={shareLink}>
+        <Share2 className="h-4 w-4 shrink-0" />
+        Share
+      </button>
+      {shareHint && !copied && (
+        <span className="text-xs text-slate-600" role="status">
+          Copied full URL. On mobile, Share opens your apps (Messages, email, etc.).
+        </span>
+      )}
+    </div>
+  );
+}

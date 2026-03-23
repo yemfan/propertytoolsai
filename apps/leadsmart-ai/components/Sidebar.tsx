@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+/** @deprecated Replaced by `@repo/ui` `PremiumSidebar` + `leadSmartMarketingNav`. Not mounted. */
 export default function Sidebar() {
   return (
     <aside className="relative min-h-screen w-64 border-r bg-white p-6 shadow-sm">

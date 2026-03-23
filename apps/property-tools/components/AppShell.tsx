@@ -2,35 +2,44 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { PremiumSidebar, Topbar } from "@repo/ui";
+import { PremiumSidebar, Topbar, type NavSection } from "@repo/ui";
 import { AccessProvider, useAccess } from "@/components/AccessProvider";
 import AccountMenu from "@/components/layout/AccountMenu";
 import GlobalSearchBar from "@/components/layout/GlobalSearchBar";
+import { isPremiumPlan } from "@/lib/access";
+import { stripUnlockPremiumNavItem } from "@/lib/nav/stripUnlockPremiumNav";
 import navConfig, { propertyToolsNav } from "@/nav.config";
 
 const APP_NAME = "PropertyTools AI";
 
 const sidebarFooter = (
-  <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 via-white to-slate-50/80 p-3.5 text-sm leading-snug text-slate-600 shadow-sm">
-    Save results and unlock premium AI tools.
+  <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 text-sm leading-snug text-white shadow-lg shadow-slate-900/25 ring-1 ring-white/10">
+    <p className="font-medium text-white/95">Save results &amp; go premium</p>
+    <p className="mt-1 text-xs text-white/70">Unlock AI comparisons and saved reports.</p>
   </div>
 );
 
-function PropertyToolsTopChrome() {
-  const { tier } = useAccess();
+function PropertyToolsTopChrome({
+  navSections,
+  hideUnlockPremium,
+}: {
+  navSections: NavSection[];
+  hideUnlockPremium: boolean;
+}) {
+  const { tier, openPaywall } = useAccess();
   const isGuest = tier === "guest";
 
   return (
     <Topbar
       appName={APP_NAME}
-      sections={propertyToolsNav}
+      sections={navSections}
       searchPlaceholder="Search address, city, zip..."
       leadingExtra={
         <Link
           href="/"
-          className="flex min-w-0 shrink-0 items-center gap-2 rounded-lg outline-none ring-blue-500/30 focus-visible:ring-2"
+          className="flex min-w-0 shrink-0 items-center gap-2 rounded-2xl p-1 outline-none transition hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
         >
           <Image
             src="/images/ptlogo.png"
@@ -55,24 +64,25 @@ function PropertyToolsTopChrome() {
           ? [
               { label: "Login", href: "/login", variant: "ghost" as const },
               { label: "Sign Up", href: "/signup", variant: "outline" as const },
-              { label: "Unlock Premium", href: "/pricing" },
+              { label: "Unlock Premium", onClick: () => openPaywall() },
             ]
           : []
       }
       trailing={
         isGuest ? null : (
           <>
-            {tier === "premium" ? (
-              <span className="hidden rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800 sm:inline">
+            {hideUnlockPremium ? (
+              <span className="hidden rounded-full border border-emerald-200/80 bg-emerald-50/90 px-3 py-1.5 text-[11px] font-semibold text-emerald-900 shadow-sm sm:inline">
                 Premium
               </span>
             ) : (
-              <Link
-                href="/pricing"
-                className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:from-amber-600 hover:to-orange-600 sm:text-sm"
+              <button
+                type="button"
+                onClick={() => openPaywall()}
+                className="inline-flex h-10 items-center justify-center rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-xs font-semibold text-white shadow-md shadow-amber-500/20 transition hover:from-amber-600 hover:to-orange-600 sm:text-sm"
               >
-                <span className="hidden sm:inline">Unlock </span>premium
-              </Link>
+                Unlock Premium
+              </button>
             )}
             <AccountMenu />
           </>
@@ -106,22 +116,45 @@ export default function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
+  /** Full-bleed design preview (`app/layout-preview`) — avoids double sidebar/topbar. */
+  if (pathname === "/layout-preview") {
+    return (
+      <AccessProvider>
+        <div className="min-h-screen">{children}</div>
+      </AccessProvider>
+    );
+  }
+
   return (
     <AccessProvider>
-      <div className="min-h-screen bg-gray-50 text-gray-900 md:flex md:min-h-screen md:flex-row">
-        <PremiumSidebar
-          appName={APP_NAME}
-          sections={propertyToolsNav}
-          defaultCollapsed
-          workspaceLabel={navConfig.sidebarTitle ?? "Tools"}
-          footerCollapsedLabel="Unlock premium tools"
-          footer={sidebarFooter}
-        />
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <PropertyToolsTopChrome />
-          <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>
-        </div>
-      </div>
+      <AppShellAuthedLayout>{children}</AppShellAuthedLayout>
     </AccessProvider>
+  );
+}
+
+/** Uses {@link useAccess} — must render inside {@link AccessProvider}. */
+function AppShellAuthedLayout({ children }: { children: ReactNode }) {
+  const { usage } = useAccess();
+  const hideUnlockPremium = Boolean(usage?.userId && isPremiumPlan(usage.plan));
+  const navSections = useMemo(
+    () => (hideUnlockPremium ? stripUnlockPremiumNavItem(propertyToolsNav) : propertyToolsNav),
+    [hideUnlockPremium]
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900 md:flex md:min-h-screen md:flex-row">
+      <PremiumSidebar
+        appName={APP_NAME}
+        sections={navSections}
+        defaultCollapsed
+        workspaceLabel={navConfig.sidebarTitle ?? "Tools"}
+        footerCollapsedLabel="Unlock premium tools"
+        footer={hideUnlockPremium ? undefined : sidebarFooter}
+      />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <PropertyToolsTopChrome navSections={navSections} hideUnlockPremium={hideUnlockPremium} />
+        <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
+      </div>
+    </div>
   );
 }

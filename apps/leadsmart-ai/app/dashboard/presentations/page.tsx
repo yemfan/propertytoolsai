@@ -8,15 +8,12 @@ export default async function PresentationsPage() {
   const { data } = await supabaseServer
     .from("presentations")
     .select("id,property_address,created_at")
-    .eq("agent_id", ctx.agentId)
+    .eq("agent_id", ctx.userId)
     .order("created_at", { ascending: false })
     .limit(20);
 
   return (
-    <PresentationsClient
-      agentId={ctx.agentId}
-      initialPresentations={((data ?? []) as any) ?? []}
-    />
+    <PresentationsClient initialPresentations={((data ?? []) as any) ?? []} />
   );
 }
 

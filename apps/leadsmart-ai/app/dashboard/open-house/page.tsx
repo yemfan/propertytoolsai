@@ -4,7 +4,8 @@ import { getCurrentAgentContext } from "@/lib/dashboardService";
 
 export default async function OpenHouseDashboardPage() {
   // Admin-style view: show QR codes for recent known properties.
-  const { agentId } = await getCurrentAgentContext();
+  const { agentId, userId } = await getCurrentAgentContext();
+  const signupAgentKey = agentId || userId;
 
   const { data, error } = await supabaseServer
     .from("properties_warehouse")
@@ -27,6 +28,6 @@ export default async function OpenHouseDashboardPage() {
     );
   }
 
-  return <OpenHouseQrList properties={(data ?? []) as any} agentId={agentId} />;
+  return <OpenHouseQrList properties={(data ?? []) as any} agentId={signupAgentKey} />;
 }
 
