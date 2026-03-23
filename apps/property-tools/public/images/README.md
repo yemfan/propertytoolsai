@@ -2,7 +2,7 @@
 
 Canonical files served by the app:
 
-- **`ptlogoicon48.png`** — Favicon / Apple touch icon (`app/layout.tsx` `metadata.icons`). Same asset as **`PTLogoIcon48.png`** in `Propertytoolsai/Images/`.
+- **`ptlogoicon48.png`** — Favicon / Apple touch icon (`app/layout.tsx` `metadata.icons`). **Must be this exact lowercase name** (Linux/Vercel are case-sensitive). Same asset as **`PTLogoIcon48.png`** in `Propertytoolsai/Images/`.
 - **`ptlogo.png`** — Header, sidebar, and marketing homepage logo (`AppShell`, `Header`, `PropertyToolsPage`). Same asset as **`PTLogo.png`** in `Propertytoolsai/Images/`.
 
 URLs use lowercase names so they work on case-sensitive hosts (e.g. Linux/Vercel).
