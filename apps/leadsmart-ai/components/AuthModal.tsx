@@ -8,6 +8,21 @@ import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 
 type Mode = "login" | "signup";
 
+const SIGNUP_ROLE_OPTIONS = [
+  { value: "", label: "Not Assigned" },
+  { value: "agent", label: "Real Estate Agent" },
+  { value: "broker", label: "Loan Broker" },
+  { value: "support", label: "System Support" },
+] as const;
+
+function signupRoleToDbRole(value: string): string {
+  return value === "" ? "user" : value;
+}
+
+function isSignupRoleAssigned(value: string): boolean {
+  return value !== "";
+}
+
 export default function AuthModal({
   open,
   onClose,
@@ -40,6 +55,8 @@ export default function AuthModal({
     if (open) {
       setMode(initialMode ?? "login");
       setError(null);
+      setSignupRole("");
+      setPhone("");
     }
   }, [open, initialMode]);
 
@@ -96,10 +113,31 @@ export default function AuthModal({
         return;
       }
 
+      if (isSignupRoleAssigned(signupRole)) {
+        const p = phone.trim();
+        if (!p) {
+          setError("Phone number is required when a role is selected.");
+          return;
+        }
+        const digits = p.replace(/\D/g, "");
+        if (digits.length < 10) {
+          setError("Enter a valid phone number (at least 10 digits).");
+          return;
+        }
+      }
+
+      const dbRole = signupRoleToDbRole(signupRole);
+      const phoneForProfile = phone.trim() || null;
+
       const { data, error: signUpErr } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { full_name: fullName.trim() } },
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            phone: phoneForProfile ?? undefined,
+          },
+        },
       });
       if (signUpErr) throw signUpErr;
 
@@ -109,8 +147,9 @@ export default function AuthModal({
         await supabase.from("user_profiles").upsert(
           {
             user_id: userId,
-            role: "user",
+            role: dbRole,
             full_name: fullName.trim(),
+            phone: phoneForProfile,
           },
           { onConflict: "user_id" }
         );
@@ -206,6 +245,49 @@ export default function AuthModal({
                 required
               />
             </div>
+
+            {mode === "signup" ? (
+              <>
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-slate-700">
+                    Role
+                  </label>
+                  <select
+                    value={signupRole}
+                    onChange={(e) => setSignupRole(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    aria-label="Role"
+                  >
+                    {SIGNUP_ROLE_OPTIONS.map((opt) => (
+                      <option key={opt.value || "none"} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium text-slate-700">
+                    Phone number
+                    {isSignupRoleAssigned(signupRole) ? (
+                      <span className="text-red-600"> *</span>
+                    ) : (
+                      <span className="font-normal text-slate-500"> (optional)</span>
+                    )}
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoComplete="tel"
+                    placeholder={
+                      isSignupRoleAssigned(signupRole) ? "Required for your role" : ""
+                    }
+                    required={isSignupRoleAssigned(signupRole)}
+                  />
+                </div>
+              </>
+            ) : null}
 
             <div className="space-y-1">
               <label className="block text-xs font-medium text-slate-700">

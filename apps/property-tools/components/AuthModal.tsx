@@ -16,6 +16,7 @@ export default function AuthModal(props: {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -25,6 +26,7 @@ export default function AuthModal(props: {
       setMode(props.initialMode ?? "login");
       setError(null);
       setInfo(null);
+      setPhone("");
     }
   }, [props.open, props.initialMode]);
 
@@ -75,6 +77,15 @@ export default function AuthModal(props: {
       setError("Valid email and password (6+ chars) are required.");
       return;
     }
+    const p = phone.trim();
+    if (p) {
+      const digits = p.replace(/\D/g, "");
+      if (digits.length < 10) {
+        setError("If you add a phone number, use at least 10 digits.");
+        return;
+      }
+    }
+    const phoneForProfile = p || null;
     setLoading(true);
     try {
       const supabase = supabaseBrowser();
@@ -82,7 +93,10 @@ export default function AuthModal(props: {
         email: email.trim(),
         password,
         options: {
-          data: { full_name: fullName.trim() || undefined },
+          data: {
+            full_name: fullName.trim() || undefined,
+            phone: phoneForProfile ?? undefined,
+          },
         },
       });
       if (err) {
@@ -96,6 +110,7 @@ export default function AuthModal(props: {
             user_id: userId,
             role: "user",
             full_name: fullName.trim() || null,
+            phone: phoneForProfile,
           },
           { onConflict: "user_id" }
         );
@@ -236,6 +251,18 @@ export default function AuthModal(props: {
                   className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                   autoComplete="email"
                   required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700">
+                  Phone number <span className="font-normal text-slate-500">(optional)</span>
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  autoComplete="tel"
                 />
               </div>
               <div>
