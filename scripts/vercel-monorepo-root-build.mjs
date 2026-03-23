@@ -94,6 +94,16 @@ if (process.env.VERCEL === "1") {
     rmSync(repoNextDir, { recursive: true, force: true });
   }
 
+  // With `NEXT_DIST_IN_MONOREPO_ROOT`, output is `<repo>/.next`. A leftover `apps/<app>/.next`
+  // (local dev, Turbo cache, or restored build cache) makes `next build` mix two generated
+  // `.next/types` trees and TypeScript fails (LayoutRoutes mismatch).
+  if (existsSync(appNextDir)) {
+    console.log(
+      `[vercel-monorepo-root-build] Removing apps/${app}/.next before repo-root dist build (avoid stale types)`,
+    );
+    rmSync(appNextDir, { recursive: true, force: true });
+  }
+
   console.log(
     `[vercel-monorepo-root-build] VERCEL=1 → npm run ${script} (app=${app}, NEXT_DIST_IN_MONOREPO_ROOT=1)`,
   );
