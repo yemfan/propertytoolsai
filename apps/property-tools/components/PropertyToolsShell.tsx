@@ -12,21 +12,8 @@ const APP_NAME = "PropertyTools AI";
  */
 export default function PropertyToolsShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 md:flex md:min-h-screen md:flex-row">
-      <PremiumSidebar
-        appName={APP_NAME}
-        sections={propertyToolsNav}
-        defaultCollapsed
-        workspaceLabel={navConfig.sidebarTitle ?? "Tools"}
-        footerCollapsedLabel="Unlock premium tools"
-        footer={
-          <div className="rounded-2xl bg-gradient-to-br from-gray-900 to-gray-700 p-4 text-sm text-white shadow-sm">
-            Unlock premium AI tools and save your results.
-          </div>
-        }
-      />
-
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+    <div className="flex min-h-screen flex-col bg-gray-50 text-gray-900">
+      <div className="shrink-0">
         <PremiumTopbar
           appName={APP_NAME}
           sections={propertyToolsNav}
@@ -41,8 +28,18 @@ export default function PropertyToolsShell({ children }: { children: ReactNode }
           profileName="Guest User"
           profileEmail="Sign in to save results"
         />
+      </div>
 
-        <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        <PremiumSidebar
+          appName={APP_NAME}
+          sections={propertyToolsNav}
+          defaultCollapsed
+          workspaceLabel={navConfig.sidebarTitle ?? "Tools"}
+          branding="none"
+          height="stretch"
+        />
+        <main className="min-h-0 min-w-0 flex-1 p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

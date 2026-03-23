@@ -100,7 +100,7 @@ function PropertyToolsTopChrome({
 }
 
 /**
- * PropertyToolsAI chrome: {@link PremiumSidebar} (md+) + {@link MobileSidebar} (inside {@link Topbar}) + {@link Topbar}.
+ * PropertyToolsAI chrome: full-width {@link Topbar} first, then {@link PremiumSidebar} (md+) + main; {@link MobileSidebar} is inside the top bar.
  * Repo path: `apps/property-tools`. Nav: {@link propertyToolsNav} from `nav.config.tsx`.
  */
 export default function AppShell({ children }: { children: ReactNode }) {
@@ -149,16 +149,20 @@ function AppShellAuthedLayout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900 md:flex md:min-h-screen md:flex-row">
-      <PremiumSidebar
-        appName={APP_NAME}
-        sections={navSections}
-        defaultCollapsed
-        workspaceLabel={navConfig.sidebarTitle ?? "Tools"}
-      />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900">
+      <div className="shrink-0">
         <PropertyToolsTopChrome navSections={navSections} hideUnlockPremium={hideUnlockPremium} />
-        <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        <PremiumSidebar
+          appName={APP_NAME}
+          sections={navSections}
+          defaultCollapsed
+          workspaceLabel={navConfig.sidebarTitle ?? "Tools"}
+          branding="none"
+          height="stretch"
+        />
+        <main className="min-h-0 min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
       </div>
     </div>
   );

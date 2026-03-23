@@ -64,21 +64,8 @@ function SampleTable() {
 function PropertyToolsPreview() {
   return (
     <div className="overflow-hidden rounded-[28px] border border-gray-200 bg-gray-50 shadow-xl">
-      <div className="flex min-h-[760px] flex-col md:flex-row">
-        <PremiumSidebar
-          appName="PropertyTools AI"
-          sections={propertyToolsNav}
-          defaultCollapsed
-          workspaceLabel={navConfig.sidebarTitle ?? "Tools"}
-          footerCollapsedLabel="Unlock premium tools"
-          footer={
-            <div className="rounded-2xl bg-gradient-to-br from-gray-900 to-gray-700 p-4 text-sm text-white shadow-sm">
-              Unlock premium AI tools and save your results.
-            </div>
-          }
-        />
-
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="flex min-h-[760px] flex-col">
+        <div className="shrink-0">
           <PremiumTopbar
             appName="PropertyTools AI"
             sections={propertyToolsNav}
@@ -93,8 +80,19 @@ function PropertyToolsPreview() {
             profileName="Guest User"
             profileEmail="Sign in to save results"
           />
+        </div>
 
-          <main className="space-y-6 p-4 md:p-6">
+        <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+          <PremiumSidebar
+            appName="PropertyTools AI"
+            sections={propertyToolsNav}
+            defaultCollapsed
+            workspaceLabel={navConfig.sidebarTitle ?? "Tools"}
+            branding="none"
+            height="stretch"
+          />
+
+          <main className="min-h-0 min-w-0 flex-1 space-y-6 overflow-y-auto p-4 md:p-6">
             <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="grid gap-6 lg:grid-cols-[1.3fr_0.9fr] lg:items-center">
                 <div>

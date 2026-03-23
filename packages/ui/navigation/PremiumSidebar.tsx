@@ -20,6 +20,16 @@ export type PremiumSidebarProps = {
   footer?: ReactNode;
   /** Shown under the app name when expanded (e.g. nav config `sidebarTitle`). */
   workspaceLabel?: string;
+  /**
+   * `"full"` (default): app initial / name + workspace label in the sidebar header.
+   * `"none"`: no app branding in the sidebar — only collapse control + nav (e.g. brand lives in the top bar).
+   */
+  branding?: "full" | "none";
+  /**
+   * `"viewport"` (default): `h-screen` desktop sidebar (full viewport).
+   * `"stretch"`: `h-full` — use when the sidebar sits **below** a top bar inside a flex column.
+   */
+  height?: "viewport" | "stretch";
   /** Desktop starts collapsed (icon rail). Default `true`. */
   defaultCollapsed?: boolean;
   /** Tooltip when sidebar is collapsed and a custom footer is shown. */
@@ -98,6 +108,8 @@ export function PremiumSidebar({
   sections,
   footer,
   workspaceLabel = "Workspace",
+  branding = "full",
+  height = "viewport",
   defaultCollapsed = true,
   footerCollapsedLabel = "Quick tip",
   className = "",
@@ -133,12 +145,16 @@ export function PremiumSidebar({
     });
   }, [pathname, sections]);
 
+  const showBranding = branding !== "none";
+  const useStretchHeight = height === "stretch";
   const titleInitial = appName.trim().charAt(0).toUpperCase() || "A";
 
   return (
     <aside
+      aria-label={appName}
       className={cn(
-        "hidden md:flex md:h-screen md:shrink-0 md:flex-col md:overflow-hidden",
+        "hidden md:flex md:shrink-0 md:flex-col md:overflow-hidden",
+        useStretchHeight ? "md:h-full md:min-h-0" : "md:h-screen",
         "border-r border-slate-200/90 bg-gradient-to-b from-white via-white to-slate-50/80 backdrop-blur-md",
         "shadow-[1px_0_0_rgba(15,23,42,0.04)]",
         "transition-[width] duration-300 ease-[cubic-bezier(0.33,1,0.68,1)]",
@@ -147,57 +163,96 @@ export function PremiumSidebar({
         className
       )}
     >
-      {/* Header */}
-      <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200/80 bg-white/80 px-4 backdrop-blur-sm">
-        <div className="min-w-0 flex-1 pr-2">
-          {collapsed ? (
-            <div
+      {/* Header: full branding (default) or slim collapse-only row when branding is hidden */}
+      {showBranding ? (
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200/80 bg-white/80 px-4 backdrop-blur-sm">
+          <div className="min-w-0 flex-1 pr-2">
+            {collapsed ? (
+              <div
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold tracking-tight text-white shadow-sm shadow-slate-900/15",
+                  "transition-transform duration-200"
+                )}
+                aria-hidden
+              >
+                {titleInitial}
+              </div>
+            ) : (
+              <div className="min-w-0">
+                <div className="truncate text-[15px] font-semibold tracking-tight text-slate-900">{appName}</div>
+                <div className="truncate text-[11px] font-medium uppercase tracking-wider text-slate-400">{workspaceLabel}</div>
+              </div>
+            )}
+          </div>
+
+          {!collapsed ? (
+            <button
+              type="button"
+              onClick={() => setCollapsed(true)}
               className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold tracking-tight text-white shadow-sm shadow-slate-900/15",
-                "transition-transform duration-200"
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-500 shadow-sm",
+                "transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800",
+                focusRing
               )}
-              aria-hidden
+              aria-expanded
+              aria-label="Collapse sidebar"
             >
-              {titleInitial}
-            </div>
+              <ChevronLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
+            </button>
           ) : (
-            <div className="min-w-0">
-              <div className="truncate text-[15px] font-semibold tracking-tight text-slate-900">{appName}</div>
-              <div className="truncate text-[11px] font-medium uppercase tracking-wider text-slate-400">{workspaceLabel}</div>
-            </div>
+            <button
+              type="button"
+              onClick={() => setCollapsed(false)}
+              className={cn(
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-500 shadow-sm",
+                "transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800",
+                focusRing
+              )}
+              aria-expanded={false}
+              aria-label="Expand sidebar"
+            >
+              <ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden />
+            </button>
           )}
         </div>
-
-        {!collapsed ? (
-          <button
-            type="button"
-            onClick={() => setCollapsed(true)}
-            className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-500 shadow-sm",
-              "transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800",
-              focusRing
-            )}
-            aria-expanded
-            aria-label="Collapse sidebar"
-          >
-            <ChevronLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setCollapsed(false)}
-            className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-500 shadow-sm",
-              "transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800",
-              focusRing
-            )}
-            aria-expanded={false}
-            aria-label="Expand sidebar"
-          >
-            <ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden />
-          </button>
-        )}
-      </div>
+      ) : (
+        <div
+          className={cn(
+            "flex h-11 shrink-0 items-center border-b border-slate-200/80 bg-white/80 px-2 backdrop-blur-sm",
+            collapsed ? "justify-center" : "justify-end"
+          )}
+        >
+          {!collapsed ? (
+            <button
+              type="button"
+              onClick={() => setCollapsed(true)}
+              className={cn(
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-500 shadow-sm",
+                "transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800",
+                focusRing
+              )}
+              aria-expanded
+              aria-label="Collapse sidebar"
+            >
+              <ChevronLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCollapsed(false)}
+              className={cn(
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-500 shadow-sm",
+                "transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800",
+                focusRing
+              )}
+              aria-expanded={false}
+              aria-label="Expand sidebar"
+            >
+              <ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Nav */}
       <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 [scrollbar-gutter:stable] [scrollbar-color:rgba(148,163,184,0.5)_transparent]">
