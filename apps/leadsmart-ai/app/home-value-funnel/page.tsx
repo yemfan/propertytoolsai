@@ -6,6 +6,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { estimateHomeValue } from "@/lib/property";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import PricingModal from "@/components/PricingModal";
+import { useAuth } from "@/components/AuthProvider";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 export default function HomePage() {
@@ -19,6 +20,7 @@ export default function HomePage() {
 function HomePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { openAgentSignup } = useAuth();
   const [agent, setAgent] = useState<string | null>(null);
   const [source, setSource] = useState<string | null>(null);
 
@@ -64,9 +66,12 @@ function HomePageInner() {
     setUpgradeError(null);
     setUpgradeMessage(null);
 
-    // If not logged in, send them to the normal agent signup flow.
+    // If not logged in, open agent signup in a modeless panel (same pattern as login modal).
     if (!isAuthed) {
-      router.push("/agent-signup");
+      openAgentSignup({
+        email: email.trim() || undefined,
+        fullName: name.trim() || undefined,
+      });
       return;
     }
 

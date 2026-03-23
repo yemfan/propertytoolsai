@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { BrandCheck } from "@/components/brand/BrandCheck";
 import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildDemoLeads, randomIncomingSnippet } from "./demoLeads";
 import { clearOnboarding, loadOnboarding, saveOnboarding, stepToProgress } from "./storage";
@@ -119,6 +120,49 @@ export default function OnboardingFunnel() {
     setEngagementPoints(s.engagementPoints);
     setHydrated(true);
   }, []);
+
+  /** If the visitor is already signed in, merge account name/email into step 1 when fields are empty. */
+  useEffect(() => {
+    if (!hydrated) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const supabase = supabaseBrowser();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.user || cancelled) return;
+        const user = session.user;
+        const { data: prof } = await supabase
+          .from("user_profiles")
+          .select("full_name")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        const row = prof as { full_name?: string | null } | null;
+        const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+        const metaName = typeof meta.full_name === "string" ? meta.full_name.trim() : "";
+        const authEmail = user.email?.trim() ?? "";
+        const fromProfile = row?.full_name?.trim() ?? "";
+        const displayName = fromProfile || metaName || (authEmail ? authEmail.split("@")[0] : "");
+
+        setProfile((p) => {
+          const hasName = Boolean(p.fullName?.trim());
+          const hasEmail = Boolean(p.email?.trim());
+          if (hasName && hasEmail) return p;
+          return {
+            ...p,
+            fullName: hasName ? p.fullName : displayName || p.fullName,
+            email: hasEmail ? p.email : authEmail || p.email,
+          };
+        });
+      } catch (e) {
+        console.error("[OnboardingFunnel] session prefill", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -242,9 +286,8 @@ export default function OnboardingFunnel() {
             className="mt-8 space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
-              const fd = new FormData(e.currentTarget);
-              const fullName = String(fd.get("fullName") ?? "").trim();
-              const email = String(fd.get("email") ?? "").trim();
+              const fullName = (profile.fullName ?? "").trim();
+              const email = (profile.email ?? "").trim();
               if (!fullName || !email) return;
               setProfile((p) => ({ ...p, fullName, email }));
               go(2, "signup_complete");
@@ -254,7 +297,8 @@ export default function OnboardingFunnel() {
               <label className="block text-xs font-semibold text-slate-300">Full name</label>
               <input
                 name="fullName"
-                defaultValue={profile.fullName ?? ""}
+                value={profile.fullName ?? ""}
+                onChange={(e) => setProfile((p) => ({ ...p, fullName: e.target.value }))}
                 required
                 autoComplete="name"
                 className="mt-1.5 w-full rounded-xl border border-white/15 bg-slate-950/50 px-4 py-3 text-white placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
@@ -266,7 +310,8 @@ export default function OnboardingFunnel() {
               <input
                 name="email"
                 type="email"
-                defaultValue={profile.email ?? ""}
+                value={profile.email ?? ""}
+                onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))}
                 required
                 autoComplete="email"
                 className="mt-1.5 w-full rounded-xl border border-white/15 bg-slate-950/50 px-4 py-3 text-white placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"

@@ -1,0 +1,83 @@
+-- Demo seed for product_entitlements (run manually in SQL editor after migrations).
+-- Replace USER_UUID_HERE with a real auth.users id (same as public.profiles.id).
+
+-- Starter (matches app "Start free" defaults)
+-- insert into public.product_entitlements (
+--   user_id,
+--   product,
+--   plan,
+--   is_active,
+--   cma_reports_per_day,
+--   max_leads,
+--   max_contacts,
+--   alerts_level,
+--   reports_download_level,
+--   team_access,
+--   source
+-- ) values (
+--   'USER_UUID_HERE'::uuid,
+--   'leadsmart_agent',
+--   'starter',
+--   true,
+--   2,
+--   5,
+--   50,
+--   'basic',
+--   'limited',
+--   false,
+--   'free_start'
+-- );
+
+-- Growth (paid subscription — deactivate any other active leadsmart_agent row first)
+-- insert into public.product_entitlements (
+--   user_id,
+--   product,
+--   plan,
+--   is_active,
+--   cma_reports_per_day,
+--   max_leads,
+--   max_contacts,
+--   alerts_level,
+--   reports_download_level,
+--   team_access,
+--   source
+-- ) values (
+--   'USER_UUID_HERE'::uuid,
+--   'leadsmart_agent',
+--   'growth',
+--   true,
+--   5,
+--   500,
+--   500,
+--   'full',
+--   'full',
+--   false,
+--   'subscription'
+-- );
+
+-- Elite (subscription)
+-- insert into public.product_entitlements (
+--   user_id,
+--   product,
+--   plan,
+--   is_active,
+--   cma_reports_per_day,
+--   max_leads,
+--   max_contacts,
+--   alerts_level,
+--   reports_download_level,
+--   team_access,
+--   source
+-- ) values (
+--   'USER_UUID_HERE'::uuid,
+--   'leadsmart_agent',
+--   'elite',
+--   true,
+--   10,
+--   null,
+--   null,
+--   'advanced',
+--   'unlimited',
+--   true,
+--   'subscription'
+-- );

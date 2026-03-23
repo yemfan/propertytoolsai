@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { safeInternalRedirect } from "@/lib/loginUrl";
@@ -18,10 +18,20 @@ export default function LoginPage() {
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectParam = searchParams?.get("redirect");
+  const redirectParam = searchParams?.get("redirect") ?? searchParams?.get("next");
   const reason = searchParams?.get("reason");
 
   const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    const q = searchParams?.get("email");
+    if (!q) return;
+    try {
+      setEmail(decodeURIComponent(q).trim());
+    } catch {
+      setEmail(q.trim());
+    }
+  }, [searchParams]);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

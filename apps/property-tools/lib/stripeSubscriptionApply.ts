@@ -44,7 +44,33 @@ function planFromPriceId(priceId: string | null | undefined): "pro" | "premium" 
   if (!priceId) return null;
   if (priceId === process.env.STRIPE_PRICE_ID_PRO) return "pro";
   if (priceId === process.env.STRIPE_PRICE_ID_PREMIUM) return "premium";
+  // Account billing checkout may use dedicated price envs (see lib/billingAccountPriceKeys.ts)
+  if (process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM && priceId === process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM) {
+    return "premium";
+  }
+  if (
+    (process.env.STRIPE_PRICE_ID_AGENT_STARTER && priceId === process.env.STRIPE_PRICE_ID_AGENT_STARTER) ||
+    (process.env.STRIPE_PRICE_ID_AGENT_PRO && priceId === process.env.STRIPE_PRICE_ID_AGENT_PRO) ||
+    (process.env.STRIPE_PRICE_ID_LOAN_BROKER_PRO && priceId === process.env.STRIPE_PRICE_ID_LOAN_BROKER_PRO)
+  ) {
+    return "pro";
+  }
   return null;
+}
+
+/**
+ * Map Checkout / Subscription metadata (`plan`, `billing_plan`) to app plan.
+ * Account checkout uses `billing_plan` (e.g. consumer_premium).
+ */
+function planFromMetadataHint(hintRaw: string | null | undefined): "pro" | "premium" | "free" {
+  const hint = String(hintRaw ?? "")
+    .trim()
+    .toLowerCase();
+  if (!hint) return "free";
+  if (hint === "pro" || hint === "premium") return hint;
+  if (hint === "consumer_premium" || hint === "elite" || hint.includes("premium")) return "premium";
+  if (hint === "agent_starter" || hint === "agent_pro" || hint === "loan_broker_pro") return "pro";
+  return "free";
 }
 
 /**
@@ -58,8 +84,14 @@ export function resolvePaidPlanFromStripe(
   const priceId = subscription.items.data[0]?.price?.id;
   const fromEnv = planFromPriceId(priceId);
   if (fromEnv) return fromEnv;
-  const hint = String(checkoutPlanMeta ?? subscription.metadata?.plan ?? "").toLowerCase();
-  if (hint === "pro" || hint === "premium") return hint;
+
+  const combinedHint =
+    checkoutPlanMeta ??
+    subscription.metadata?.plan ??
+    (subscription.metadata as Record<string, string | undefined>)?.billing_plan ??
+    "";
+  const fromMeta = planFromMetadataHint(combinedHint);
+  if (fromMeta !== "free") return fromMeta;
   return "free";
 }
 

@@ -2,6 +2,7 @@ import type { NavConfig } from "@repo/ui";
 import {
   BarChart3,
   Bell,
+  CreditCard,
   FileText,
   GitBranch,
   Headphones,
@@ -38,6 +39,13 @@ const navConfig = {
       roles: ["admin"],
       match: ["/admin/platform-overview"],
       icon: <LayoutDashboard size={18} strokeWidth={2} aria-hidden />,
+    },
+    {
+      label: "Billing",
+      href: "/admin/billing",
+      roles: ["admin"],
+      match: ["/admin/billing"],
+      icon: <CreditCard size={18} strokeWidth={2} aria-hidden />,
     },
     {
       label: "Leads",

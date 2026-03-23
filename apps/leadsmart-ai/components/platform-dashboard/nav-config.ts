@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  CreditCard,
   GitCompare,
   LayoutDashboard,
   LineChart,
@@ -53,6 +54,7 @@ const admin: PlatformNavSection[] = [
   {
     items: [
       { href: "/admin/platform-overview", label: "Platform Overview", icon: LayoutDashboard },
+      { href: "/admin/billing", label: "Billing", icon: CreditCard },
       { href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
       { href: "/admin/support", label: "System Logs", icon: Shield },
       { href: "/dashboard/settings", label: "Settings", icon: Settings },

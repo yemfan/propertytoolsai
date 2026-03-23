@@ -83,12 +83,13 @@ export default async function CheckoutSuccessPage({
       customerId: (session.customer as string | null) ?? null,
       subscriptionId: subscription.id,
       subscription,
-      checkoutPlanMeta: session.metadata?.plan ?? null,
+      checkoutPlanMeta: session.metadata?.plan ?? session.metadata?.billing_plan ?? null,
     });
   } catch (e) {
     console.error("checkout-success persist failed", e);
     redirect("/pricing?checkout_error=sync_failed");
   }
 
-  redirect("/?checkout=success");
+  /** `checkout=success` triggers {@link AccessProvider} to refetch tier and close the paywall. */
+  redirect("/billing/success?checkout=success");
 }

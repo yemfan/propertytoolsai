@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, CreditCard, Home, LogOut, Settings } from "lucide-react";
+import { ChevronDown, CreditCard, Home, LogOut, Package } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -108,13 +108,13 @@ export default function AccountMenu() {
               Home
             </Link>
             <Link
-              href="/pricing"
+              href="/account/billing"
               role="menuitem"
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               onClick={() => setOpen(false)}
             >
-              <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-              Account &amp; billing
+              <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+              Billing
             </Link>
             <Link
               href="/pricing"
@@ -122,7 +122,7 @@ export default function AccountMenu() {
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               onClick={() => setOpen(false)}
             >
-              <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+              <Package className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
               Plans &amp; pricing
             </Link>
           </div>

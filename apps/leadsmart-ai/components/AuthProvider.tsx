@@ -13,12 +13,18 @@ import type { User } from "@supabase/supabase-js";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import AuthModal from "@/components/AuthModal";
 
+import type { SignupOverlayPrefill } from "@/lib/hooks/useSignupProfilePrefill";
+import AgentSignupModal from "@/components/AgentSignupModal";
+
 type AuthContextValue = {
   user: User | null;
   loading: boolean;
   refresh: () => Promise<void>;
   openAuth: (mode?: "login" | "signup") => void;
   closeAuth: () => void;
+  /** Modeless agent signup panel (same app shell as login modal). */
+  openAgentSignup: (prefill?: SignupOverlayPrefill) => void;
+  closeAgentSignup: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -36,6 +42,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [agentSignupOpen, setAgentSignupOpen] = useState(false);
+  const [agentSignupPrefill, setAgentSignupPrefill] = useState<SignupOverlayPrefill | null>(null);
 
   const refresh = useCallback(async () => {
     const supabase = supabaseBrowser();
@@ -76,6 +84,14 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         setAuthOpen(true);
       },
       closeAuth: () => setAuthOpen(false),
+      openAgentSignup: (prefill) => {
+        setAgentSignupPrefill(prefill ?? null);
+        setAgentSignupOpen(true);
+      },
+      closeAgentSignup: () => {
+        setAgentSignupOpen(false);
+        setAgentSignupPrefill(null);
+      },
     }),
     [user, loading, refresh]
   );
@@ -88,6 +104,14 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         initialMode={authMode}
         onClose={() => setAuthOpen(false)}
         onAuthenticated={() => void refresh()}
+      />
+      <AgentSignupModal
+        open={agentSignupOpen}
+        overlayPrefill={agentSignupPrefill}
+        onClose={() => {
+          setAgentSignupOpen(false);
+          setAgentSignupPrefill(null);
+        }}
       />
     </AuthContext.Provider>
   );

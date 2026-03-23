@@ -32,7 +32,7 @@ export async function POST(req: Request) {
           customerId,
           subscriptionId,
           subscription: sub,
-          checkoutPlanMeta: session.metadata?.plan ?? null,
+          checkoutPlanMeta: session.metadata?.plan ?? session.metadata?.billing_plan ?? null,
         });
       }
     }
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
         customerId: (sub.customer as string) ?? null,
         subscriptionId: sub.id,
         subscription: sub,
-        checkoutPlanMeta: sub.metadata?.plan ?? null,
+        checkoutPlanMeta: sub.metadata?.plan ?? sub.metadata?.billing_plan ?? null,
       });
     }
 

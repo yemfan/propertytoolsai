@@ -10,7 +10,10 @@ export function safeInternalRedirect(path: string | null | undefined): string | 
  */
 export const PRICING_TRIAL_CHECKOUT_PATH = "/pricing?trial_checkout=1";
 
-/** Builds `/login?redirect=…&reason=…` for post-auth return (open-redirect safe paths only). */
+/**
+ * Builds `/login?redirect=…&reason=…` for post-auth return (open-redirect safe paths only).
+ * The login page also accepts `next` as an alias for `redirect` (same semantics).
+ */
 export function loginUrl(opts: { redirect: string; reason?: "trial" | "checkout" }) {
   const p = new URLSearchParams();
   const path = opts.redirect.startsWith("/") ? opts.redirect : `/${opts.redirect}`;

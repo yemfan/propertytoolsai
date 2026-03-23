@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
 import {
+  UNAUTHORIZED_PATH,
+  BROKER_PORTAL_ROLES,
   matchesPortalKind,
   resolveRoleHomePath,
   type PortalKind,
@@ -93,6 +95,18 @@ export function ensurePortalAccess(kind: PortalKind, ctx: UserPortalContext | nu
   if (!ctx) {
     redirect(`/login?redirect=/${kind}`);
   }
+
+  // Admin / support trees: wrong role → explicit unauthorized (not bounced to another dashboard).
+  if (kind === "admin") {
+    if (!matchesPortalKind(ctx.role, "admin")) {
+      redirect(UNAUTHORIZED_PATH);
+    }
+    if (!ctx.isPro) {
+      redirect("/client/dashboard");
+    }
+    return;
+  }
+
   if (!ctx.isPro) {
     redirect("/client/dashboard");
   }

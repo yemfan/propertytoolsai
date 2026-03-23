@@ -22,6 +22,18 @@ export const BROKER_DASHBOARD_PATH = "/dashboard/broker";
 /** Support / platform ops — does not require an `agents` row. */
 export const ADMIN_SUPPORT_HOME_PATH = "/admin/support";
 
+/** Agent hub shell (platform dashboard) — requires `agent` or `admin` role. */
+export const AGENT_DASHBOARD_HOME_PATH = "/agent/dashboard";
+
+/** Conversion page for signed-in users who need an agent workspace. */
+export const START_FREE_AGENT_PATH = "/start-free/agent";
+
+/** Strict RBAC denial (admin/support-only areas). */
+export const UNAUTHORIZED_PATH = "/unauthorized";
+
+/** Loan officer / mortgage broker workspace entry. */
+export const LOAN_BROKER_HOME_PATH = "/loan-broker/dashboard";
+
 /**
  * Where to send a signed-in professional after login / “Dashboard” in account menu.
  * (Hub pages `/agent`, `/broker`, `/admin` are link indexes only — not the main work surface.)

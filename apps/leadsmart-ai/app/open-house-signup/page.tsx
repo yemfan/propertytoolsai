@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useSignupProfilePrefill, type SignupPrefillConsumer } from "@/lib/hooks/useSignupProfilePrefill";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -18,10 +19,20 @@ function OpenHouseSignupPageInner() {
   const propertyId = searchParams?.get("property_id") ?? "";
   const agentId = searchParams?.get("agent_id") ?? "";
 
+  const { values: prefill, loading: prefillLoading } = useSignupProfilePrefill("consumer");
+  const pv = prefill as SignupPrefillConsumer;
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    if (prefillLoading) return;
+    setName((n) => (n.trim() ? n : pv.fullName));
+    setEmail((e) => (e.trim() ? e : pv.email));
+    setPhone((p) => (p.trim() ? p : pv.phone));
+  }, [prefillLoading, pv]);
 
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(

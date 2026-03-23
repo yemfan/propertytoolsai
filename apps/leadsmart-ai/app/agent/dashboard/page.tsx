@@ -1,4 +1,5 @@
-﻿import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { requireAgentAccess } from "@/lib/auth/requireAgentAccess";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 
@@ -19,7 +20,9 @@ export const metadata = {
   description: "Leads, pipeline, and AI actions for real estate agents.",
 };
 
-export default function AgentDashboardPage() {
+export default async function AgentDashboardPage() {
+  await requireAgentAccess();
+
   return (
     <DashboardShell
       title="Agent Dashboard"

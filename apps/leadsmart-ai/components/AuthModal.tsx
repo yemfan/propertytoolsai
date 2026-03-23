@@ -71,6 +71,36 @@ export default function AuthModal({
     setSignupRole("");
     setPhone("");
     setSignupStep("form");
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const supabase = supabaseBrowser();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (cancelled || !session?.user) return;
+        const u = session.user;
+        const { data: prof } = await supabase
+          .from("user_profiles")
+          .select("full_name, phone")
+          .eq("user_id", u.id)
+          .maybeSingle();
+        const row = prof as { full_name?: string | null; phone?: string | null } | null;
+        const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
+        const metaName = typeof meta.full_name === "string" ? meta.full_name.trim() : "";
+        const metaPhone = typeof meta.phone === "string" ? meta.phone.trim() : "";
+        setEmail(u.email?.trim() ?? "");
+        setFullName(row?.full_name?.trim() || metaName || "");
+        setPhone(row?.phone?.trim() || metaPhone || "");
+      } catch (e) {
+        console.error("[AuthModal] session prefill", e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [open, initialMode]);
 
   useEffect(() => {

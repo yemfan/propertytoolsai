@@ -1,0 +1,54 @@
+import Link from "next/link";
+import { ShieldAlert } from "lucide-react";
+import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
+import { fetchUserPortalContext } from "@/lib/rolePortalServer";
+import { supabaseServerClient } from "@/lib/supabaseServerClient";
+
+export const metadata = {
+  title: "Access denied | LeadSmart AI",
+  robots: { index: false, follow: false },
+};
+
+function homeHref(ctx: Awaited<ReturnType<typeof fetchUserPortalContext>>): string {
+  if (!ctx) return "/login";
+  const r = String(ctx.role ?? "").toLowerCase().trim();
+  if (r === "consumer" || r === "user" || r === "") {
+    return "/client/dashboard";
+  }
+  return resolveRoleHomePath(ctx.role, ctx.hasAgentRow);
+}
+
+export default async function UnauthorizedPage() {
+  const supabase = supabaseServerClient();
+  const ctx = await fetchUserPortalContext(supabase);
+  const href = homeHref(ctx);
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-800">
+          <ShieldAlert className="h-6 w-6" aria-hidden />
+        </div>
+        <h1 className="mt-5 text-xl font-bold text-slate-900">You don’t have access</h1>
+        <p className="mt-3 text-sm leading-relaxed text-slate-600">
+          This page is restricted to authorized staff or roles. If you believe this is a mistake, contact your
+          administrator or sign in with the correct account.
+        </p>
+        <div className="mt-8 flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <Link
+            href={href}
+            className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            {ctx ? "Go to my dashboard" : "Log in"}
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            Home
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
