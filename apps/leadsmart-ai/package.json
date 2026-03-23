@@ -21,6 +21,7 @@
     "smoke:ai-sms-responder": "tsx scripts/smoke-ai-sms-responder.ts",
     "smoke:sms-conversations-unique": "tsx scripts/smoke-sms-conversations-unique.ts",
     "smoke:traffic-generation": "tsx scripts/smoke-traffic-generation.ts",
+    "smoke:billing-entitlements": "tsx scripts/smoke-billing-entitlements-schema.ts",
     "smoke:migrations-20260326": "tsx scripts/smoke-migrations-20260326.ts",
     "smoke:leadsmart-ai-layer": "tsx scripts/smoke-leadsmart-ai-layer.ts",
     "smoke:comparison-reports": "tsx scripts/smoke-comparison-reports.ts",
