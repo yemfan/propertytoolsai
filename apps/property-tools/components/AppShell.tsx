@@ -15,13 +15,6 @@ import navConfig, { propertyToolsNav } from "@/nav.config";
 
 const APP_NAME = "PropertyTools AI";
 
-const sidebarFooter = (
-  <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 text-sm leading-snug text-white shadow-lg shadow-slate-900/25 ring-1 ring-white/10">
-    <p className="font-medium text-white/95">Save results &amp; go premium</p>
-    <p className="mt-1 text-xs text-white/70">Unlock AI comparisons and saved reports.</p>
-  </div>
-);
-
 function PropertyToolsTopChrome({
   navSections,
   hideUnlockPremium,
@@ -162,8 +155,6 @@ function AppShellAuthedLayout({ children }: { children: ReactNode }) {
         sections={navSections}
         defaultCollapsed
         workspaceLabel={navConfig.sidebarTitle ?? "Tools"}
-        footerCollapsedLabel="Unlock premium tools"
-        footer={hideUnlockPremium ? undefined : sidebarFooter}
       />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <PropertyToolsTopChrome navSections={navSections} hideUnlockPremium={hideUnlockPremium} />
