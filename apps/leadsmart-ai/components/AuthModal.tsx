@@ -56,14 +56,21 @@ export default function AuthModal({
     []
   );
 
+  /**
+   * Reset post-signup agent step whenever the modal closes — otherwise `signupStep` stays
+   * `agentStartFree` and the next open paints the agent dialog before `open===true` effects run
+   * (looks like “Start free” popup on first click / first visit in-session).
+   */
   useEffect(() => {
-    if (open) {
-      setMode(initialMode ?? "login");
-      setError(null);
-      setSignupRole("");
-      setPhone("");
+    if (!open) {
       setSignupStep("form");
+      return;
     }
+    setMode(initialMode ?? "login");
+    setError(null);
+    setSignupRole("");
+    setPhone("");
+    setSignupStep("form");
   }, [open, initialMode]);
 
   useEffect(() => {
