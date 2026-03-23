@@ -8,6 +8,10 @@ import type { NavSection } from "./types";
 import { isNavGroup } from "./types";
 import { isLinkActive } from "./matchPath";
 
+function cn(...parts: (string | false | undefined | null)[]) {
+  return parts.filter(Boolean).join(" ");
+}
+
 export type MobileSidebarProps = {
   appName: string;
   sections: NavSection[];
