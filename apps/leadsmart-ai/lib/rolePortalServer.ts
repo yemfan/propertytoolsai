@@ -1,7 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
-import { getProfessionalPortalPath, type PortalKind } from "@/lib/rolePortalPaths";
+import {
+  matchesPortalKind,
+  resolveRoleHomePath,
+  type PortalKind,
+} from "@/lib/rolePortalPaths";
 
 function missingUserIdColumn(err: unknown): boolean {
   const msg = String((err as { message?: string })?.message ?? "");
@@ -74,12 +78,15 @@ export async function fetchUserPortalContext(
   return { userId, role, hasAgentRow, isPro };
 }
 
-/** `null` = treat as signed-out (show public landing). */
+/**
+ * `null` = show public marketing home (`LeadSmartLanding`).
+ * Signed-in professionals redirect to their dashboard; everyone else stays on marketing home.
+ */
 export async function resolvePostAuthHomePath(supabase: SupabaseClient): Promise<string | null> {
   const ctx = await fetchUserPortalContext(supabase);
   if (!ctx) return null;
-  if (!ctx.isPro) return "/client/dashboard";
-  return getProfessionalPortalPath(ctx.role, ctx.hasAgentRow);
+  if (!ctx.isPro) return null;
+  return resolveRoleHomePath(ctx.role, ctx.hasAgentRow);
 }
 
 export function ensurePortalAccess(kind: PortalKind, ctx: UserPortalContext | null): void {
@@ -89,8 +96,7 @@ export function ensurePortalAccess(kind: PortalKind, ctx: UserPortalContext | nu
   if (!ctx.isPro) {
     redirect("/client/dashboard");
   }
-  const path = getProfessionalPortalPath(ctx.role, ctx.hasAgentRow);
-  if (path !== `/${kind}`) {
-    redirect(path);
+  if (!matchesPortalKind(ctx.role, kind)) {
+    redirect(resolveRoleHomePath(ctx.role, ctx.hasAgentRow));
   }
 }

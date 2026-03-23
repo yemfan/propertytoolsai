@@ -34,6 +34,7 @@ export async function GET(req: Request) {
       userId: user.id,
       plan,
       subscriptionStatus,
+      accountRole,
     });
 
     const estimatorUsed = Number((data as any)?.estimator_usage_count ?? 0);

@@ -14,6 +14,7 @@ export const REAL_ESTATE_PROFESSIONAL_ROLES = new Set([
   "owner",
   "partner",
   "admin",
+  "support",
 ]);
 
 export function isRealEstateProfessionalRole(role: string | null | undefined): boolean {

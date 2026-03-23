@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/authFromRequest";
 import { supabaseServer } from "@/lib/supabaseServer";
-import { isPremiumPlan, isPremiumSubscriptionStatus } from "@/lib/access";
+import { resolveAccessTier } from "@/lib/access";
 import { calculatePropertyScore, type PropertyInput } from "@/lib/propertyScoring";
 import { runPropertyComparisonAi } from "@/lib/propertyComparisonAi";
 
 export const runtime = "nodejs";
 
-function isPremiumTier(plan: string | null, subscriptionStatus: string | null): boolean {
-  return isPremiumSubscriptionStatus(subscriptionStatus) || isPremiumPlan(plan);
-}
 
 export async function POST(req: Request) {
   try {
@@ -23,13 +20,20 @@ export async function POST(req: Request) {
 
     const { data: profile } = await supabaseServer
       .from("user_profiles")
-      .select("plan,subscription_status")
+      .select("plan,subscription_status,role")
       .eq("user_id", user.id)
       .maybeSingle();
 
     const plan = (profile as any)?.plan ?? "free";
     const subscriptionStatus = (profile as any)?.subscription_status ?? null;
-    const premium = isPremiumTier(plan, subscriptionStatus);
+    const accountRole = (profile as any)?.role ?? null;
+    const premium =
+      resolveAccessTier({
+        userId: user.id,
+        plan,
+        subscriptionStatus,
+        accountRole,
+      }) === "premium";
 
     const body = (await req.json().catch(() => ({}))) as {
       properties?: unknown;

@@ -87,16 +87,16 @@ export default function ExpertCTA({
   return (
     <>
       <div
-        className={`rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-5 shadow-sm ${className}`}
+        className={`rounded-lg border border-gray-200 bg-white p-6 shadow-md ${className}`}
       >
-        <p className="text-sm font-semibold text-slate-900">Want expert advice on this deal?</p>
-        <p className="mt-1 text-xs text-slate-600">
+        <p className="text-sm font-semibold text-gray-900">Want expert advice on this deal?</p>
+        <p className="mt-1 text-xs text-gray-600">
           A licensed agent can review your comparison and AI insight and reach out with next steps.
         </p>
         <button
           type="button"
           onClick={onTalkClick}
-          className="mt-4 w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 sm:w-auto sm:px-8"
+          className="mt-4 w-full rounded-lg bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 sm:w-auto sm:px-8"
         >
           Talk to an Expert
         </button>

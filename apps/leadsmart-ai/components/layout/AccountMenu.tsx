@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
-import { getProfessionalPortalPath } from "@/lib/rolePortalPaths";
+import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 
 type MePayload = { role?: string; has_agent_record?: boolean };
 
@@ -62,10 +62,9 @@ export default function AccountMenu() {
     if (!pro) {
       return { workspaceHref: "/client/dashboard", settingsHref: "/client/dashboard" } as const;
     }
-    const portal = getProfessionalPortalPath(role, hasAgent);
-    const settings =
-      hasAgent ? "/dashboard/settings" : "/portal";
-    return { workspaceHref: portal, settingsHref: settings } as const;
+    const home = resolveRoleHomePath(role, hasAgent);
+    const settings = hasAgent ? "/dashboard/settings" : "/portal";
+    return { workspaceHref: home, settingsHref: settings } as const;
   }, [me]);
 
   async function onLogout() {

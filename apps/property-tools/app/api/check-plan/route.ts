@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveAccessTier } from "@/lib/access";
 import { getUserFromRequest } from "@/lib/authFromRequest";
 import { supabaseServer } from "@/lib/supabaseServer";
 
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
 
     const { data: profile, error } = await supabaseServer
       .from("user_profiles")
-      .select("plan,subscription_status,trial_ends_at,trial_used")
+      .select("plan,subscription_status,trial_ends_at,trial_used,role")
       .eq("user_id", user.id)
       .maybeSingle();
     if (error && (error as any).code !== "PGRST116") throw error;
@@ -40,7 +41,14 @@ export async function POST(req: Request) {
         .eq("user_id", user.id);
     }
 
-    const fullAccess = status === "active" || status === "trialing";
+    const accountRole = (profile as any)?.role ?? null;
+    const accessTier = resolveAccessTier({
+      userId: user.id,
+      plan,
+      subscriptionStatus: status,
+      accountRole,
+    });
+    const fullAccess = accessTier === "premium";
 
     return NextResponse.json({
       ok: true,
@@ -49,6 +57,7 @@ export async function POST(req: Request) {
       trial_ends_at: trialEndsAt ? trialEndsAt.toISOString() : null,
       trial_used: Boolean((profile as any)?.trial_used ?? false),
       access: fullAccess ? "full" : "limited",
+      account_role: accountRole,
     });
   } catch (e: any) {
     return NextResponse.json(

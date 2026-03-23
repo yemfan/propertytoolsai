@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import PropertyComparisonClient from "@/components/property-comparison/PropertyComparisonClient";
+import JsonLd from "@/components/JsonLd";
 
 export const metadata = {
   title: "AI Property Comparison | PropertyTools AI",
@@ -9,14 +10,31 @@ export const metadata = {
 
 export default function AiPropertyComparisonPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-600">
-          Loading comparison…
-        </div>
-      }
-    >
-      <PropertyComparisonClient />
-    </Suspense>
+    <>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: "AI Property Comparison",
+          applicationCategory: "FinanceApplication",
+          operatingSystem: "All",
+          browserRequirements: "Requires JavaScript",
+          url: "https://propertytoolsai.com/ai-property-comparison",
+          description:
+            "Compare investment properties side-by-side with scoring and AI-powered recommendations.",
+        }}
+      />
+      <Suspense
+        fallback={
+          <div className="w-full max-w-6xl py-10">
+            <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-gray-600 shadow-md">
+              Loading comparison…
+            </div>
+          </div>
+        }
+      >
+        <PropertyComparisonClient />
+      </Suspense>
+    </>
   );
 }

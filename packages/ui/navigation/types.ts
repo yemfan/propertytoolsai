@@ -22,6 +22,11 @@ export type NavGroupItem = {
   label: string;
   icon?: ReactNode;
   items: NavLeafItem[];
+  /**
+   * Initial expanded state before any user toggle. Active-route auto-expand still applies.
+   * Omit or `false` → start collapsed (until user opens or a child route matches).
+   */
+  defaultOpen?: boolean;
 };
 
 export type NavSection = NavLeafItem | NavGroupItem;

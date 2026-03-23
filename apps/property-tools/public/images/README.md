@@ -2,17 +2,21 @@
 
 Canonical files served by the app:
 
-- **`pticon.png`** — Favicon / Apple touch icon (`app/layout.tsx` `metadata.icons`).
-- **`ptlogo.png`** — Header, sidebar, and marketing homepage logo (`Header`, `Sidebar`, `PropertyToolsPage`).
+- **`ptlogoicon48.png`** — Favicon / Apple touch icon (`app/layout.tsx` `metadata.icons`). Same asset as **`PTLogoIcon48.png`** in `Propertytoolsai/Images/`.
+- **`ptlogo.png`** — Header, sidebar, and marketing homepage logo (`AppShell`, `Header`, `PropertyToolsPage`). Same asset as **`PTLogo.png`** in `Propertytoolsai/Images/`.
 
-**Source art (repo):** copy from `Propertytoolsai/Images/` when updating:
+URLs use lowercase names so they work on case-sensitive hosts (e.g. Linux/Vercel).
 
-| Served as     | Typical source file     |
-|---------------|-------------------------|
-| `ptlogo.png`  | `Images/PTLogo.png`     |
-| `pticon.png`  | `Images/icon.png` (favicon) |
+**Update from repo `Images/`:**
 
-Run from repo root (example):
+| Served as            | Source file (`Propertytoolsai/Images/`) |
+|----------------------|----------------------------------------|
+| `ptlogo.png`         | `PTLogo.png`                           |
+| `ptlogoicon48.png`   | `PTLogoIcon48.png`                     |
 
-`Copy-Item Images/PTLogo.png apps/property-tools/public/images/ptlogo.png -Force`  
-`Copy-Item Images/icon.png apps/property-tools/public/images/pticon.png -Force`
+Example (from repo root):
+
+```powershell
+Copy-Item Images/PTLogo.png apps/property-tools/public/images/ptlogo.png -Force
+Copy-Item Images/PTLogoIcon48.png apps/property-tools/public/images/ptlogoicon48.png -Force
+```

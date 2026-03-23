@@ -6,7 +6,7 @@
  * gray palette + compact header aligned with the in-app PremiumSidebar reference design.
  * Consumes the same `NavSection` trees as PropertyTools + LeadSmart `nav.config`.
  */
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
@@ -104,7 +104,15 @@ export function PremiumSidebar({
 }: PremiumSidebarProps) {
   const pathname = usePathname() ?? "";
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const s of sections) {
+      if (isNavGroup(s) && s.defaultOpen) {
+        initial[s.label] = true;
+      }
+    }
+    return initial;
+  });
   /** Only auto-expand the group for the active route when the URL changes — not on every `sections` re-render (would undo manual collapse). */
   const lastAutoExpandPath = useRef<string | null>(null);
 
@@ -249,9 +257,18 @@ export function PremiumSidebar({
                 title={collapsed ? `${section.label} — click to expand sidebar` : undefined}
                 aria-expanded={!collapsed && isOpen}
                 aria-controls={groupPanelId}
+                aria-label={
+                  collapsed
+                    ? `${section.label} — expand sidebar`
+                    : isOpen
+                      ? `Collapse ${section.label}`
+                      : `Expand ${section.label}`
+                }
                 onClick={() => {
                   if (collapsed) {
                     setCollapsed(false);
+                    // Reveal this group’s links immediately after expanding the rail.
+                    setOpenGroups((prev) => ({ ...prev, [section.label]: true }));
                     return;
                   }
                   // Expanded sidebar: toggle this section — click again when open collapses it.
@@ -274,8 +291,14 @@ export function PremiumSidebar({
                 {!collapsed ? (
                   <>
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">{section.label}</span>
-                    <span className="shrink-0 text-xs font-medium text-slate-400 tabular-nums" aria-hidden>
-                      {isOpen ? "−" : "+"}
+                    <span
+                      className={cn(
+                        "shrink-0 text-slate-400 transition-transform duration-200 ease-out",
+                        isOpen ? "rotate-0" : "-rotate-90"
+                      )}
+                      aria-hidden
+                    >
+                      <ChevronDown className="h-4 w-4" strokeWidth={2} />
                     </span>
                   </>
                 ) : null}

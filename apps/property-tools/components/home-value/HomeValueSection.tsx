@@ -14,11 +14,11 @@ type Props = {
 export default function HomeValueSection({ id, title, description, children, className = "" }: Props) {
   return (
     <section id={id} className={`scroll-mt-20 ${className}`} aria-labelledby={`${id}-heading`}>
-      <div className="mb-3 border-b border-slate-100 pb-2">
-        <h2 id={`${id}-heading`} className="text-sm font-bold uppercase tracking-wide text-slate-500">
+      <div className="mb-3 border-b border-gray-200 pb-2">
+        <h2 id={`${id}-heading`} className="text-sm font-semibold text-gray-900">
           {title}
         </h2>
-        {description ? <p className="mt-0.5 text-xs text-slate-500">{description}</p> : null}
+        {description ? <p className="mt-0.5 text-xs text-gray-600">{description}</p> : null}
       </div>
       {children}
     </section>

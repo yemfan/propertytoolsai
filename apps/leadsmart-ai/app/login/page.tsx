@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { safeInternalRedirect } from "@/lib/loginUrl";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
-import { getProfessionalPortalPath } from "@/lib/rolePortalPaths";
+import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 
 export default function LoginPage() {
   return (
@@ -103,7 +103,7 @@ function LoginPageInner() {
         if (safe) {
           router.replace(safe);
         } else {
-          router.replace(getProfessionalPortalPath(role, hasAgentRow));
+          router.replace(resolveRoleHomePath(role, hasAgentRow));
         }
       } else {
         const fallback = redirectParam ?? "/dashboard";

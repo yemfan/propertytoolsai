@@ -20,9 +20,9 @@ export const metadata = {
   title: "PropertyTools AI",
   description: "Professional real estate calculators for buyers, investors, and agents",
   icons: {
-    icon: "/images/pticon.png",
-    apple: "/images/pticon.png",
-    shortcut: "/images/pticon.png",
+    icon: "/images/ptlogoicon48.png",
+    apple: "/images/ptlogoicon48.png",
+    shortcut: "/images/ptlogoicon48.png",
   },
 };
 

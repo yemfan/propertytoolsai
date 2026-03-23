@@ -5,10 +5,11 @@ import Link from "next/link";
 import { ReactNode, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { PremiumSidebar, Topbar, type NavSection } from "@repo/ui";
+import AuthProvider, { useAuth } from "@/components/AuthProvider";
 import { AccessProvider, useAccess } from "@/components/AccessProvider";
 import AccountMenu from "@/components/layout/AccountMenu";
 import GlobalSearchBar from "@/components/layout/GlobalSearchBar";
-import { isPremiumPlan } from "@/lib/access";
+import { hasPremiumToolAccess } from "@/lib/access";
 import { stripUnlockPremiumNavItem } from "@/lib/nav/stripUnlockPremiumNav";
 import navConfig, { propertyToolsNav } from "@/nav.config";
 
@@ -28,8 +29,9 @@ function PropertyToolsTopChrome({
   navSections: NavSection[];
   hideUnlockPremium: boolean;
 }) {
-  const { tier, openPaywall } = useAccess();
-  const isGuest = tier === "guest";
+  const { user, loading: authLoading, openAuth } = useAuth();
+  const { openPaywall } = useAccess();
+  const isLoggedOut = !user;
 
   return (
     <Topbar
@@ -60,16 +62,20 @@ function PropertyToolsTopChrome({
         </div>
       }
       rightActions={
-        isGuest
-          ? [
-              { label: "Login", href: "/login", variant: "ghost" as const },
-              { label: "Sign Up", href: "/signup", variant: "outline" as const },
-              { label: "Unlock Premium", onClick: () => openPaywall() },
-            ]
-          : []
+        authLoading
+          ? []
+          : isLoggedOut
+            ? [
+                { label: "Login", onClick: () => openAuth("login"), variant: "ghost" as const },
+                { label: "Sign Up", onClick: () => openAuth("signup"), variant: "outline" as const },
+                { label: "Unlock Premium", onClick: () => openPaywall() },
+              ]
+            : []
       }
       trailing={
-        isGuest ? null : (
+        authLoading ? (
+          <div className="h-9 w-28 animate-pulse rounded-xl bg-slate-100 sm:w-36" aria-hidden />
+        ) : isLoggedOut ? null : (
           <>
             {hideUnlockPremium ? (
               <span className="hidden rounded-full border border-emerald-200/80 bg-emerald-50/90 px-3 py-1.5 text-[11px] font-semibold text-emerald-900 shadow-sm sm:inline">
@@ -110,32 +116,40 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   if (isMarketingHome) {
     return (
-      <AccessProvider>
-        <div className="min-h-screen bg-white text-slate-900">{children}</div>
-      </AccessProvider>
+      <AuthProvider>
+        <AccessProvider>
+          <div className="min-h-screen bg-white text-slate-900">{children}</div>
+        </AccessProvider>
+      </AuthProvider>
     );
   }
 
   /** Full-bleed design preview (`app/layout-preview`) — avoids double sidebar/topbar. */
   if (pathname === "/layout-preview") {
     return (
-      <AccessProvider>
-        <div className="min-h-screen">{children}</div>
-      </AccessProvider>
+      <AuthProvider>
+        <AccessProvider>
+          <div className="min-h-screen">{children}</div>
+        </AccessProvider>
+      </AuthProvider>
     );
   }
 
   return (
-    <AccessProvider>
-      <AppShellAuthedLayout>{children}</AppShellAuthedLayout>
-    </AccessProvider>
+    <AuthProvider>
+      <AccessProvider>
+        <AppShellAuthedLayout>{children}</AppShellAuthedLayout>
+      </AccessProvider>
+    </AuthProvider>
   );
 }
 
 /** Uses {@link useAccess} — must render inside {@link AccessProvider}. */
 function AppShellAuthedLayout({ children }: { children: ReactNode }) {
   const { usage } = useAccess();
-  const hideUnlockPremium = Boolean(usage?.userId && isPremiumPlan(usage.plan));
+  const hideUnlockPremium = Boolean(
+    usage?.userId && hasPremiumToolAccess({ tier: usage.tier, plan: usage.plan })
+  );
   const navSections = useMemo(
     () => (hideUnlockPremium ? stripUnlockPremiumNavItem(propertyToolsNav) : propertyToolsNav),
     [hideUnlockPremium]

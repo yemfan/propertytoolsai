@@ -4,7 +4,6 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
 import ToolPageScaffold from "@/components/layout/ToolPageScaffold";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import LeadCaptureModal from "@/components/LeadCaptureModal";
@@ -689,12 +688,11 @@ export function HomeValueToolInner() {
       <ToolPageScaffold
         title="Home value estimate"
         subtitle="Not an appraisal — an automated estimate with a value range for informational use. Pick an address, refine details for a tighter band, then unlock the full breakdown when you’re ready."
-        inputTitle="Property"
-        inputDescription="Address & details"
+        inputTitle="Property details"
+        inputDescription="Address, intent, and home facts — refine for a tighter estimate."
         resultTitle="Estimate"
-        resultDescription="Range & confidence (not a single “exact” value)"
+        resultDescription="Value range, confidence, and report (when unlocked)."
         inputContent={
-          <Card className="p-5">
             <div className="space-y-6">
               <HomeValueSection
                 id="hv-section-1"
@@ -923,10 +921,9 @@ export function HomeValueToolInner() {
               </Button>
               </HomeValueSection>
             </div>
-          </Card>
         }
         resultContent={
-          <Card id="home-value-results" className="scroll-mt-4 p-5">
+          <div id="home-value-results" className="scroll-mt-4">
             {!estimate ? (
               <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
                 Select an address from suggestions or tap <strong>Run estimate</strong> after typing a full
@@ -1170,7 +1167,7 @@ export function HomeValueToolInner() {
                 </HomeValueSection>
               </div>
             )}
-          </Card>
+          </div>
         }
       />
 

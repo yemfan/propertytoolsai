@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, X } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -17,7 +17,15 @@ export type MobileSidebarProps = {
 export function MobileSidebar({ appName, sections, className = "" }: MobileSidebarProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname() ?? "";
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const s of sections) {
+      if (isNavGroup(s) && s.defaultOpen) {
+        initial[s.label] = true;
+      }
+    }
+    return initial;
+  });
   const lastAutoExpandPath = useRef<string | null>(null);
 
   useLayoutEffect(() => {
@@ -136,18 +144,25 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
                     <button
                       type="button"
                       aria-expanded={isGroupOpen}
+                      aria-label={isGroupOpen ? `Collapse ${section.label}` : `Expand ${section.label}`}
                       onClick={() =>
                         setOpenGroups((prev) => ({
                           ...prev,
                           [section.label]: !isGroupOpen,
                         }))
                       }
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100/60 rounded-t-xl"
+                      className="flex w-full items-center gap-2 rounded-t-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100/60"
                     >
                       {section.icon ? <span className="shrink-0 text-slate-500">{section.icon}</span> : null}
                       <span className="min-w-0 flex-1 truncate">{section.label}</span>
-                      <span className="shrink-0 text-xs font-medium text-slate-400 tabular-nums" aria-hidden>
-                        {isGroupOpen ? "−" : "+"}
+                      <span
+                        className={cn(
+                          "shrink-0 text-slate-400 transition-transform duration-200 ease-out",
+                          isGroupOpen ? "rotate-0" : "-rotate-90"
+                        )}
+                        aria-hidden
+                      >
+                        <ChevronDown className="h-4 w-4" strokeWidth={2} />
                       </span>
                     </button>
                     {isGroupOpen ? (

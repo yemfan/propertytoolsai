@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
-import { getProfessionalPortalPath } from "@/lib/rolePortalPaths";
+import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 
 type Mode = "login" | "signup";
 
@@ -82,7 +82,7 @@ export default function AuthModal({
             const role = me?.role ?? null;
             const hasAgent = Boolean(me?.has_agent_record);
             if (isRealEstateProfessionalRole(role) || hasAgent) {
-              router.replace(getProfessionalPortalPath(role, hasAgent));
+              router.replace(resolveRoleHomePath(role, hasAgent));
             }
           }
         } catch {

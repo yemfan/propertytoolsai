@@ -1,16 +1,17 @@
+import Link from "next/link";
 import { ReactNode } from "react";
-import Section from "@/components/ui/Section";
 
 /**
- * Shared layout for tool pages — brand title, Section headers, max width aligned with dashboard.
+ * Shared layout for tool pages — matches calculator pages (e.g. mortgage, refinance):
+ * back link, blue title, gray intro, 2/3 + 1/3 grid with white shadow panels and sticky results.
  */
 export default function ToolPageScaffold({
   title,
   subtitle,
   inputTitle = "Inputs",
-  inputDescription = "Tool parameters",
+  inputDescription,
   resultTitle = "Results",
-  resultDescription = "Output preview",
+  resultDescription,
   inputContent,
   resultContent,
 }: {
@@ -24,20 +25,46 @@ export default function ToolPageScaffold({
   resultContent: ReactNode;
 }) {
   return (
-    <div className="w-full max-w-6xl space-y-8">
-      <div className="border-b border-slate-200/80 pb-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0072ce]">Tool</p>
-        <h1 className="font-heading mt-2 text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">{title}</h1>
-        <p className="mt-2 max-w-3xl text-base leading-relaxed text-slate-600">{subtitle}</p>
-      </div>
+    <div className="w-full max-w-6xl py-10">
+      <Link
+        href="/"
+        className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-blue-600"
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Home
+      </Link>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <Section title={inputTitle} description={inputDescription}>
-          {inputContent}
-        </Section>
-        <Section title={resultTitle} description={resultDescription}>
-          {resultContent}
-        </Section>
+      <h1 className="mb-2 text-3xl font-bold text-blue-600">{title}</h1>
+      <p className="mb-8 text-gray-600">{subtitle}</p>
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <div className="space-y-4 rounded-lg bg-white p-6 shadow-md">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">{inputTitle}</h2>
+              {inputDescription ? (
+                <p className="mt-1 text-sm text-gray-600">{inputDescription}</p>
+              ) : null}
+            </div>
+            {inputContent}
+          </div>
+        </div>
+
+        <div className="lg:col-span-1">
+          <div className="lg:sticky lg:top-24">
+            <div className="space-y-4 rounded-lg bg-white p-6 shadow-md">
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">{resultTitle}</h2>
+                {resultDescription ? (
+                  <p className="mt-1 text-sm text-gray-600">{resultDescription}</p>
+                ) : null}
+              </div>
+              {resultContent}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -4,8 +4,10 @@ import { ChevronDown, CreditCard, Home, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { useAccess } from "@/components/AccessProvider";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import type { AccessTier } from "@/lib/access";
 
 function tierLabel(tier: string, plan: string | null) {
   if (tier === "premium") return "Premium";
@@ -15,7 +17,8 @@ function tierLabel(tier: string, plan: string | null) {
 }
 
 export default function AccountMenu() {
-  const { tier, usage, loading, refresh } = useAccess();
+  const { user, loading: authLoading } = useAuth();
+  const { usage, refresh } = useAccess();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -50,12 +53,17 @@ export default function AccountMenu() {
     }
   }
 
-  if (loading || !usage?.userId) return null;
+  if (authLoading) {
+    return <div className="h-11 w-[7.5rem] animate-pulse rounded-2xl bg-slate-100/90 sm:w-36" aria-hidden />;
+  }
 
-  const email = usage.email?.trim() || "";
+  if (!user) return null;
+
+  const tier: AccessTier = usage?.tier ?? "free";
+  const email = (user.email?.trim() || usage?.email?.trim() || "").trim();
   const initial = email ? email[0]!.toUpperCase() : "?";
   const shortEmail = email.length > 22 ? `${email.slice(0, 20)}…` : email;
-  const status = usage.subscriptionStatus ? String(usage.subscriptionStatus) : "";
+  const status = usage?.subscriptionStatus ? String(usage.subscriptionStatus) : "";
 
   return (
     <div className="relative" ref={rootRef}>
@@ -85,7 +93,7 @@ export default function AccountMenu() {
             <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Signed in as</p>
             <p className="mt-1 break-all text-sm font-semibold text-slate-900">{email || "Your account"}</p>
             <p className="mt-1 text-xs text-slate-600">
-              {tierLabel(tier, usage.plan)}
+              {tierLabel(tier, usage?.plan ?? null)}
               {status ? <span className="text-slate-400"> · {status}</span> : null}
             </p>
           </div>

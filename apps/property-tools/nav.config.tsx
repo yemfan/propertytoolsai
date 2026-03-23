@@ -31,6 +31,7 @@ const navConfig = {
     },
     {
       label: "Home Value",
+      defaultOpen: true,
       icon: <Home size={18} strokeWidth={2} aria-hidden />,
       items: [
         {
@@ -52,6 +53,7 @@ const navConfig = {
     },
     {
       label: "Financing",
+      defaultOpen: true,
       icon: <DollarSign size={18} strokeWidth={2} aria-hidden />,
       items: [
         {
@@ -94,6 +96,7 @@ const navConfig = {
     },
     {
       label: "AI Tools",
+      defaultOpen: true,
       icon: <Sparkles size={18} strokeWidth={2} aria-hidden />,
       items: [
         {
@@ -116,6 +119,7 @@ const navConfig = {
     },
     {
       label: "Recommended",
+      defaultOpen: true,
       icon: <Star size={18} strokeWidth={2} aria-hidden />,
       items: [
         {

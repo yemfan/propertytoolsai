@@ -28,7 +28,7 @@ const navConfig = {
     {
       label: "Home",
       href: "/dashboard",
-      match: ["/dashboard", "/dashboard/overview"],
+      match: ["/dashboard", "/dashboard/overview", "/dashboard/broker"],
       icon: <House size={18} strokeWidth={2} aria-hidden />,
     },
     {

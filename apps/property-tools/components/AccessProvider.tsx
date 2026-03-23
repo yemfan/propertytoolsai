@@ -1,5 +1,9 @@
 "use client";
 
+/**
+ * PropertyTools tier, usage limits, and paywall — layered on {@link AuthProvider} (LeadSmart-style session).
+ * Role/plan resolution: `GET /api/access/usage` + `lib/access.ts` (incl. PREMIUM_GRANT_ROLES).
+ */
 import {
   createContext,
   useCallback,
@@ -12,16 +16,18 @@ import {
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { AccessTier } from "@/lib/access";
-import { isPremiumPlan } from "@/lib/access";
+import { hasPremiumToolAccess } from "@/lib/access";
 import type { AccessUsageState } from "@/lib/usage";
 import { getUsage } from "@/lib/usage";
-import AuthModal from "@/components/AuthModal";
+import { useAuth } from "@/components/AuthProvider";
 import PaywallModal from "@/components/PaywallModal";
 
 type AccessContextValue = {
   tier: AccessTier;
   usage: AccessUsageState | null;
+  /** Auth session loading and/or usage fetch in flight */
   loading: boolean;
+  /** Refreshes Supabase session + usage/tier from API */
   refresh: () => Promise<void>;
   openAuth: (mode?: "login" | "signup") => void;
   closeAuth: () => void;
@@ -42,33 +48,40 @@ export function useAccess() {
 export function AccessProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, loading: authLoading, refresh: refreshAuth, openAuth, closeAuth } = useAuth();
+
   const [usage, setUsage] = useState<AccessUsageState | null>(null);
   const usageRef = useRef<AccessUsageState | null>(null);
   usageRef.current = usage;
 
-  const [loading, setLoading] = useState(true);
-  const [authOpen, setAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [usageLoading, setUsageLoading] = useState(true);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [paywallMessage, setPaywallMessage] = useState<string | undefined>();
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refreshUsage = useCallback(async () => {
+    setUsageLoading(true);
     try {
       const state = await getUsage();
       setUsage(state);
     } catch {
       setUsage(null);
     } finally {
-      setLoading(false);
+      setUsageLoading(false);
     }
   }, []);
 
+  /** Reload usage when Supabase session identity changes (login/logout/switch). */
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void refreshUsage();
+  }, [user?.id, refreshUsage]);
+
+  const refresh = useCallback(async () => {
+    await refreshAuth();
+    await refreshUsage();
+  }, [refreshAuth, refreshUsage]);
 
   const tier: AccessTier = usage?.tier ?? "guest";
+  const loading = authLoading || usageLoading;
 
   const closePaywall = useCallback(() => {
     setPaywallOpen(false);
@@ -76,19 +89,18 @@ export function AccessProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openPaywall = useCallback((message?: string) => {
-    if (isPremiumPlan(usageRef.current?.plan ?? null)) return;
+    const u = usageRef.current;
+    if (hasPremiumToolAccess({ tier: u?.tier ?? null, plan: u?.plan ?? null })) return;
     setPaywallMessage(message);
     setPaywallOpen(true);
   }, []);
 
-  /** Paid Pro/Premium subscribers resolve to `tier === "premium"` — never keep the upgrade modal open. */
   useEffect(() => {
     if (tier === "premium") {
       closePaywall();
     }
   }, [tier, closePaywall]);
 
-  /** After Stripe return (`/?checkout=success`), reload usage and dismiss the dialog. */
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
@@ -116,26 +128,17 @@ export function AccessProvider({ children }: { children: ReactNode }) {
       usage,
       loading,
       refresh,
-      openAuth: (mode = "login") => {
-        setAuthMode(mode);
-        setAuthOpen(true);
-      },
-      closeAuth: () => setAuthOpen(false),
+      openAuth,
+      closeAuth,
       openPaywall,
       closePaywall,
     }),
-    [tier, usage, loading, refresh, openPaywall, closePaywall]
+    [tier, usage, loading, refresh, openAuth, closeAuth, openPaywall, closePaywall]
   );
 
   return (
     <AccessContext.Provider value={value}>
       {children}
-      <AuthModal
-        open={authOpen}
-        initialMode={authMode}
-        onClose={() => setAuthOpen(false)}
-        onAuthenticated={() => void refresh()}
-      />
       <PaywallModal
         open={paywallOpen}
         onClose={closePaywall}

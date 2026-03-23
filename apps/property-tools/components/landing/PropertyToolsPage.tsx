@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useAccess } from "@/components/AccessProvider";
+import { useAuth } from "@/components/AuthProvider";
 import AccountMenu from "@/components/layout/AccountMenu";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -44,7 +45,9 @@ const tools = [
 ] as const;
 
 export default function PropertyToolsPage() {
+  const { user, loading: authLoading } = useAuth();
   const { tier, openAuth, loading: accessLoading } = useAccess();
+  const headerLoading = authLoading || accessLoading;
   const [email, setEmail] = useState("");
   const [leadStatus, setLeadStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [leadMessage, setLeadMessage] = useState<string | null>(null);
@@ -107,12 +110,12 @@ export default function PropertyToolsPage() {
             />
           </Link>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            {accessLoading ? (
+            {headerLoading ? (
               <div className="flex items-center gap-2" aria-hidden>
                 <div className="h-9 w-[4.5rem] animate-pulse rounded-xl bg-slate-200 sm:w-24" />
                 <div className="h-9 w-20 animate-pulse rounded-xl bg-slate-200 sm:w-24" />
               </div>
-            ) : tier === "guest" ? (
+            ) : !user ? (
               <>
                 <button
                   type="button"

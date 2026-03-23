@@ -12,7 +12,7 @@ Shared **Next.js App Router** chrome for PropertyTools AI (`apps/property-tools`
 |--------|------|
 | `types` | `NavSection`, `NavLeafItem`, `NavGroupItem`, `NavConfig`, `isNavGroup` |
 | `matchPath` | `isLinkActive` (supports `match[]`, prefix rules) |
-| `PremiumSidebar` | Desktop `md+` collapsed rail, tooltips, `+`/`−` groups |
+| `PremiumSidebar` | Desktop `md+` collapsed rail, tooltips, chevron groups (collapsible), optional `defaultOpen` on `NavGroupItem` |
 | `MobileSidebar` | Hamburger + drawer, body scroll lock, Escape |
 | `Topbar` | Sticky bar with `MobileSidebar`, search slot, actions, `trailing` |
 | `PremiumTopbar` | Glass bar + optional credits, bell, `ProfileMenu` |

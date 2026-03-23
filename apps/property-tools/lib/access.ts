@@ -80,14 +80,50 @@ export function isPremiumPlan(plan: string | null | undefined): boolean {
 }
 
 /**
+ * `user_profiles.role` values that grant PropertyTools premium tool access without a paid
+ * subscription (same Supabase project as LeadSmart AI).
+ */
+export const PREMIUM_GRANT_ROLES = new Set([
+  "agent",
+  "broker",
+  "broker_owner",
+  "managing_broker",
+  "team_lead",
+  "brokerage_admin",
+  "owner",
+  "partner",
+  "admin",
+  "support",
+]);
+
+export function isPremiumGrantRole(role: string | null | undefined): boolean {
+  const r = String(role ?? "")
+    .toLowerCase()
+    .trim();
+  return r !== "" && PREMIUM_GRANT_ROLES.has(r);
+}
+
+/** UI + paywall: premium tier (subscription, elite plan, or role grant) or paid elite/premium plan. */
+export function hasPremiumToolAccess(input: {
+  tier?: AccessTier | null;
+  plan?: string | null;
+}): boolean {
+  if (input.tier === "premium") return true;
+  return isPremiumPlan(input.plan);
+}
+
+/**
  * Resolve tier from auth + profile fields (server or client).
  */
 export function resolveAccessTier(input: {
   userId: string | null | undefined;
   plan?: string | null;
   subscriptionStatus?: string | null;
+  /** From `user_profiles.role` — agents/brokers/admins/support get premium on PropertyTools. */
+  accountRole?: string | null;
 }): AccessTier {
   if (!input.userId) return "guest";
+  if (isPremiumGrantRole(input.accountRole)) return "premium";
   if (isPremiumSubscriptionStatus(input.subscriptionStatus)) return "premium";
   if (isPremiumPlan(input.plan)) return "premium";
   return "free";
