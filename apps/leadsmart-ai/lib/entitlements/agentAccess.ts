@@ -8,10 +8,32 @@ import {
   resolveRoleHomePath,
 } from "@/lib/rolePortalPaths";
 import type { UserPortalContext } from "@/lib/rolePortalServer";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getActiveAgentEntitlement } from "./getEntitlements";
 
 /**
- * Workspace access: active `leadsmart_agent` entitlement OR platform admin (ops preview).
+ * Paid agent SKU on `billing_subscriptions` (Stripe-synced) — use when `product_entitlements`
+ * row is missing or delayed but checkout already wrote billing.
+ */
+async function hasActivePaidAgentBilling(userId: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("billing_subscriptions")
+    .select("id")
+    .eq("user_id", userId)
+    .in("plan", ["agent_starter", "agent_pro"])
+    .in("status", ["active", "trialing", "past_due"])
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[hasAgentWorkspaceAccess] billing_subscriptions check failed", error.message);
+    return false;
+  }
+  return !!data;
+}
+
+/**
+ * Workspace access: active `leadsmart_agent` entitlement OR active paid agent billing row OR platform admin.
  */
 export async function hasAgentWorkspaceAccess(
   supabase: SupabaseClient,
@@ -23,7 +45,10 @@ export async function hasAgentWorkspaceAccess(
     return true;
   }
   const ent = await getActiveAgentEntitlement(supabase, userId);
-  return !!ent && ent.is_active === true;
+  if (ent?.is_active === true) {
+    return true;
+  }
+  return hasActivePaidAgentBilling(userId);
 }
 
 /**

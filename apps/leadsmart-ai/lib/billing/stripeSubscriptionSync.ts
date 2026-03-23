@@ -1,6 +1,9 @@
 import type Stripe from "stripe";
 import type { InternalPlan } from "@/lib/billing/stripe-plan-map";
-import { mapStripePriceToPlan } from "@/lib/billing/stripe-plan-map";
+import {
+  mapStripePriceToPlan,
+  resolveInternalPlanFromStripeSubscription,
+} from "@/lib/billing/stripe-plan-map";
 import { planRowFromCatalog } from "@/lib/entitlements/planCatalog";
 import type { AgentPlan } from "@/lib/entitlements/types";
 import { PRODUCT_LEADSMART_AGENT } from "@/lib/entitlements/product";
@@ -147,9 +150,20 @@ export async function syncStripeSubscription(subscription: Stripe.Subscription) 
   const profile = await getProfileByCustomerEmail(customerEmail);
   const metadataUserId =
     typeof subscription.metadata?.user_id === "string" ? subscription.metadata.user_id : null;
-  const userId = profile?.id ?? metadataUserId ?? null;
+  /** Prefer Stripe metadata from Checkout (authoritative) over email → profiles lookup. */
+  const userId = metadataUserId ?? profile?.id ?? null;
 
-  const internalPlan = mapStripePriceToPlan(priceId);
+  const fromPriceOnly = mapStripePriceToPlan(priceId);
+  const internalPlan = resolveInternalPlanFromStripeSubscription(priceId, subscription.metadata);
+  if (internalPlan !== fromPriceOnly) {
+    console.info("[syncStripeSubscription] internal_plan from subscription metadata (price map was different)", {
+      subscriptionId: subscription.id,
+      priceId,
+      fromPriceOnly,
+      resolvedPlan: internalPlan,
+      metadata: subscription.metadata,
+    });
+  }
 
   /** Stripe API returns these on `Subscription`; some TS versions omit them from the type. */
   const subPeriod = subscription as unknown as {

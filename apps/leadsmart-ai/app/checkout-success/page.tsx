@@ -1,5 +1,10 @@
 import { redirect } from "next/navigation";
 import type Stripe from "stripe";
+import {
+  mapStripePriceToPlan,
+  resolveInternalPlanFromStripeSubscription,
+} from "@/lib/billing/stripe-plan-map";
+import { syncStripeSubscription } from "@/lib/billing/stripe-sync";
 import { stripe } from "@/lib/stripe";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import {
@@ -52,6 +57,38 @@ export default async function CheckoutSuccessPage({
 
   const subscription = await stripe.subscriptions.retrieve(subId);
 
+  const priceId = subscription.items.data[0]?.price?.id ?? null;
+  const internalPlanFromPrice = mapStripePriceToPlan(priceId);
+  const internalPlanResolved = resolveInternalPlanFromStripeSubscription(priceId, subscription.metadata);
+
+  console.info("[checkout-success] Stripe snapshot", {
+    checkoutSessionId: session.id,
+    sessionMode: session.mode,
+    paymentStatus: session.payment_status,
+    paymentStatusDetail:
+      session.payment_status === "paid"
+        ? "paid — card or other method succeeded"
+        : session.payment_status === "no_payment_required"
+          ? "no_payment_required — e.g. trial or 100% discount"
+          : session.payment_status === "unpaid"
+            ? "unpaid — may still be OK if subscription is active/trialing (see subscriptionStatus)"
+            : session.payment_status,
+    subscriptionId: subscription.id,
+    subscriptionStatus: subscription.status,
+    subscriptionStatusMeansPaid:
+      subscription.status === "active" || subscription.status === "trialing",
+    priceId,
+    internalPlanFromPriceOnly: internalPlanFromPrice,
+    internalPlanResolvedForSync: internalPlanResolved,
+    sessionMetadata: session.metadata ?? {},
+    subscriptionMetadata: subscription.metadata ?? {},
+    shouldSyncLegacyProfiles: checkoutSuccessShouldSyncSubscription({
+      paymentStatus: session.payment_status,
+      subscriptionStatus: subscription.status,
+    }),
+    authUserId: user.id,
+  });
+
   const metaUserId =
     (session.metadata?.user_id as string | undefined) ??
     (subscription.metadata?.user_id as string | undefined) ??
@@ -85,8 +122,22 @@ export default async function CheckoutSuccessPage({
       subscription,
       checkoutPlanMeta: session.metadata?.plan ?? null,
     });
+    console.info("[checkout-success] persistAgentAndProfileFromSubscription ok", {
+      subscriptionId: subscription.id,
+    });
+
+    /**
+     * Must run here (not only via webhook): entitlements + `billing_subscriptions` are updated
+     * by `syncStripeSubscription`. Without this, the user can land on the dashboard before the
+     * webhook fires and still see the upgrade modal.
+     */
+    await syncStripeSubscription(subscription);
+    console.info("[checkout-success] syncStripeSubscription ok (billing_subscriptions + entitlements)", {
+      subscriptionId: subscription.id,
+      internalPlan: internalPlanResolved,
+    });
   } catch (e) {
-    console.error("checkout-success persist failed", e);
+    console.error("[checkout-success] persist or billing sync failed", e);
     redirect("/pricing?checkout_error=sync_failed");
   }
 
