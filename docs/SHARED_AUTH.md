@@ -1,8 +1,18 @@
 # Shared login: Property Tools ↔ LeadSmart AI
 
-Both apps use **Supabase Auth** with cookie-backed sessions (`@supabase/ssr`). To sign up **once** and stay signed in on **both** sites:
+Both apps use **Supabase Auth** with cookie-backed sessions (`@supabase/ssr`).
 
-## 1. Same Supabase project (required)
+## Default: separate sessions per site
+
+By default, each app uses its **own auth cookie name** (storage key), so **logging in on Property Tools does not log you in on LeadSmart** (and vice versa), even if they use the **same** Supabase project and the same parent domain.
+
+Deploying this behavior **once** will **sign users out** until they log in again (old cookies used the shared default key).
+
+## Optional: one login on both subdomains (SSO)
+
+To sign up **once** and stay signed in on **both** sites on subdomains of the same parent domain:
+
+### 1. Same Supabase project (required)
 
 Use **identical** values in **both** apps’ `.env.local`:
 
@@ -12,7 +22,18 @@ Use **identical** values in **both** apps’ `.env.local`:
 
 If these differ, users get two separate accounts.
 
-## 2. Supabase Dashboard → URL configuration
+### 2. Opt in to shared session cookies
+
+Set **both** of these in **both** apps (same values):
+
+```bash
+NEXT_PUBLIC_AUTH_COOKIE_DOMAIN=.example.com
+NEXT_PUBLIC_SUPABASE_SHARED_AUTH=true
+```
+
+Without `NEXT_PUBLIC_SUPABASE_SHARED_AUTH=true`, the apps keep **isolated** sessions even if `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN` is set.
+
+### 3. Supabase Dashboard → URL configuration
 
 In **Authentication → URL configuration**, add every URL users hit:
 
@@ -22,16 +43,7 @@ In **Authentication → URL configuration**, add every URL users hit:
   `https://leadsmart.example.com/**`  
   plus `http://localhost:3000/**`, `http://localhost:3001/**` for local dev as needed.
 
-## 3. Shared session cookies (production subdomains)
-
-Browsers only send cookies to hosts that match the cookie **domain**. By default, auth cookies are **host-only** (`app1.com` ≠ `app2.com`).
-
-Set this in **both** apps (same value):
-
-```bash
-# Parent domain with a leading dot — covers all subdomains
-NEXT_PUBLIC_AUTH_COOKIE_DOMAIN=.example.com
-```
+### 4. Deploy URLs
 
 Deploy both apps under that parent, e.g.:
 
@@ -40,7 +52,7 @@ Deploy both apps under that parent, e.g.:
 
 Do **not** use a public suffix like `.vercel.app` as the cookie domain (it would be insecure and unreliable). Use your **own** domain.
 
-## 4. Local development (two ports)
+## Local development (two ports)
 
 `http://localhost:3000` and `http://localhost:3001` are **different origins**. Cookies **cannot** be shared between them. Options:
 
