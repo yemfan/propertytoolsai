@@ -24,7 +24,7 @@ Top **4px brand accent** + **gradient** into `slate-50` — same pattern as Lead
 - **`AuthPageShell`** — login, signup, agent signup (radial brand glow + gradient).
 - **`MarketingContentLayout`** — legal / simple content pages in a card on a gradient.
 - **`ToolPageScaffold`** — two-column tool UIs with `Section` headers.
-- **`AppLayout`** — app shell uses a subtle `bg-gradient-to-br` (not flat gray).
+- **`AppShell`** — signed-in/tool chrome uses `bg-gray-50` + white sidebar; marketing home stays full-width white.
 
 ## Typography
 
@@ -34,7 +34,7 @@ Top **4px brand accent** + **gradient** into `slate-50` — same pattern as Lead
 
 ## Consistency checklist for new pages
 
-1. Page background: gradient or `bg-white`, not raw `gray-50` unless intentional.
+1. Page background: gradient or `bg-white`; **`AppShell`** tool area intentionally uses `gray-50`.
 2. Primary actions: `Button` default (brand blue), not ad-hoc `blue-600`.
 3. Cards: use `Card` + variants instead of one-off `border rounded-xl bg-white`.
 4. Links: `text-[#0072ce]` hover `#005ca8` (see `globals.css` `a` rules).

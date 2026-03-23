@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { safeInternalRedirect } from "@/lib/loginUrl";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
-import { shouldLandOnPortalAfterLogin } from "@/lib/portalLanding";
+import { getProfessionalPortalPath } from "@/lib/rolePortalPaths";
 
 export default function LoginPage() {
   return (
@@ -102,10 +102,8 @@ function LoginPageInner() {
       if (isPro) {
         if (safe) {
           router.replace(safe);
-        } else if (shouldLandOnPortalAfterLogin(role, hasAgentRow)) {
-          router.replace("/portal");
         } else {
-          router.replace("/dashboard");
+          router.replace(getProfessionalPortalPath(role, hasAgentRow));
         }
       } else {
         const fallback = redirectParam ?? "/dashboard";

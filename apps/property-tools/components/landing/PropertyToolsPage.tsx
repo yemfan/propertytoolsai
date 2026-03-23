@@ -93,7 +93,7 @@ export default function PropertyToolsPage() {
 
   return (
     <main className="bg-white text-gray-900">
-      {/* Top bar — auth (homepage skips AppLayout Topbar) */}
+      {/* Top bar — auth (homepage skips AppShell top bar) */}
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link href="/" className="flex shrink-0 items-center">

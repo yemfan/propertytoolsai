@@ -2,15 +2,27 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
+import { getProfessionalPortalPath } from "@/lib/rolePortalPaths";
+
+type MePayload = { role?: string; has_agent_record?: boolean };
+
+/** Match login / home redirect: consumers are `role === user` with no `agents` row. */
+function isProfessionalUser(role: string | null | undefined, hasAgentRecord: boolean): boolean {
+  const r = String(role ?? "user").toLowerCase().trim();
+  if (r === "user" && !hasAgentRecord) return false;
+  return isRealEstateProfessionalRole(r) || hasAgentRecord;
+}
 
 export default function AccountMenu() {
   const { user, loading, refresh } = useAuth();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const [me, setMe] = useState<MePayload | null>(null);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -19,6 +31,42 @@ export default function AccountMenu() {
     if (open) document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
+
+  useEffect(() => {
+    if (!user) {
+      setMe(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/me", { credentials: "include" });
+        const json = (await res.json().catch(() => ({}))) as MePayload;
+        if (!cancelled && res.ok) setMe(json);
+      } catch {
+        if (!cancelled) setMe(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const { workspaceHref, settingsHref } = useMemo(() => {
+    if (!me) {
+      return { workspaceHref: "/", settingsHref: "/client/dashboard" } as const;
+    }
+    const role = me.role ?? "user";
+    const hasAgent = Boolean(me.has_agent_record);
+    const pro = isProfessionalUser(role, hasAgent);
+    if (!pro) {
+      return { workspaceHref: "/client/dashboard", settingsHref: "/client/dashboard" } as const;
+    }
+    const portal = getProfessionalPortalPath(role, hasAgent);
+    const settings =
+      hasAgent ? "/dashboard/settings" : "/portal";
+    return { workspaceHref: portal, settingsHref: settings } as const;
+  }, [me]);
 
   async function onLogout() {
     setOpen(false);
@@ -67,7 +115,7 @@ export default function AccountMenu() {
           </div>
           <div className="py-1">
             <Link
-              href="/dashboard"
+              href={workspaceHref}
               role="menuitem"
               className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
               onClick={() => setOpen(false)}
@@ -75,7 +123,7 @@ export default function AccountMenu() {
               Dashboard
             </Link>
             <Link
-              href="/dashboard/settings"
+              href={settingsHref}
               role="menuitem"
               className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
               onClick={() => setOpen(false)}

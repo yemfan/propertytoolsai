@@ -11,6 +11,9 @@ export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const isProtected =
     pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/broker") ||
+    pathname.startsWith("/agent") ||
     pathname === "/portal" ||
     pathname.startsWith("/portal/");
 
@@ -67,5 +70,15 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/portal", "/portal/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/admin",
+    "/admin/:path*",
+    "/broker",
+    "/broker/:path*",
+    "/agent",
+    "/agent/:path*",
+    "/portal",
+    "/portal/:path*",
+  ],
 };

@@ -1,5 +1,6 @@
- "use client";
+"use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 type Comparable = {
@@ -136,144 +137,120 @@ export default function HomeValueEstimatorPage() {
   const formatCurrency = (value: number | null) =>
     value == null ? "—" : `$${Math.round(value).toLocaleString()}`;
 
+  const inputClass =
+    "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-brand-text placeholder:text-brand-text/40 focus:outline-none focus:ring-2 focus:ring-brand-primary/30";
+
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
-      <div className="bg-white shadow rounded-xl p-6 border border-gray-100">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Home Value Estimator
-        </h1>
-        <p className="text-sm text-gray-600 mb-4">
-          Enter a property address to estimate its current market value based on
-          recent comparable sales.
+    <div className="mx-auto max-w-5xl space-y-4 px-4 py-6 sm:px-6 sm:py-8">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-2 text-sm font-medium text-brand-text/70 hover:text-brand-primary"
+      >
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Home
+      </Link>
+
+      <div>
+        <h1 className="ui-page-title text-brand-text">Home Value Estimator</h1>
+        <p className="ui-page-subtitle mt-1 max-w-2xl text-brand-text/80">
+          Enter a property address to estimate its current market value based on recent comparable sales.
         </p>
-        <div className="flex flex-col md:flex-row gap-3 items-stretch">
+      </div>
+
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col items-stretch gap-3 md:flex-row">
           <input
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="123 Main St, City, State"
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`flex-1 ${inputClass}`}
           />
           <button
+            type="button"
             onClick={handleEstimate}
             disabled={loading}
-            className="inline-flex items-center justify-center bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed min-w-[140px]"
+            className="inline-flex min-w-[140px] items-center justify-center rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading && (
-              <span className="mr-2 inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            )}
-            {loading ? "Estimating..." : "Estimate Value"}
+            {loading ? (
+              <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : null}
+            {loading ? "Estimating..." : "Estimate value"}
           </button>
         </div>
-        {error && (
-          <p className="mt-2 text-xs text-red-600 font-medium">{error}</p>
-        )}
+        {error ? <p className="mt-3 text-xs font-medium text-red-600">{error}</p> : null}
       </div>
 
-      {result && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white shadow rounded-lg p-4 border border-gray-100">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-                Estimated Home Value
-              </h2>
-              <p className="text-2xl font-bold text-blue-700">
-                {formatCurrency(result.estimatedValue)}
-              </p>
-              {result.avgPricePerSqft && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Avg. price/sqft: $
-                  {result.avgPricePerSqft.toFixed(0).toLocaleString()}
+      {result ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+              <p className="ui-card-subtitle text-brand-text/60">Estimated home value</p>
+              <p className="mt-1 text-2xl font-bold text-brand-primary">{formatCurrency(result.estimatedValue)}</p>
+              {result.avgPricePerSqft ? (
+                <p className="ui-meta mt-2 text-brand-text/55">
+                  Avg. price/sqft: ${result.avgPricePerSqft.toFixed(0).toLocaleString()}
                 </p>
-              )}
+              ) : null}
             </div>
-            <div className="bg-white shadow rounded-lg p-4 border border-gray-100">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-                Estimated Range
-              </h2>
-              <p className="text-sm font-semibold text-gray-800">
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+              <p className="ui-card-subtitle text-brand-text/60">Estimated range</p>
+              <p className="ui-card-title mt-1 text-brand-text">
                 {formatCurrency(result.low)} – {formatCurrency(result.high)}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Range reflects model confidence — not a formal appraisal.
-              </p>
-              {result.confidence && (
-                <p className="text-xs text-gray-600 mt-2">
+              <p className="ui-meta mt-2 text-brand-text/55">Range reflects model confidence — not a formal appraisal.</p>
+              {result.confidence ? (
+                <p className="ui-meta mt-2 text-brand-text/70">
                   Confidence:{" "}
-                  <span className="font-semibold capitalize">
-                    {result.confidence}
-                  </span>
-                  {result.confidenceScore != null &&
-                    ` (${result.confidenceScore}/100)`}
+                  <span className="font-semibold capitalize">{result.confidence}</span>
+                  {result.confidenceScore != null ? ` (${result.confidenceScore}/100)` : null}
                 </p>
-              )}
+              ) : null}
             </div>
-            <div className="bg-white shadow rounded-lg p-4 border border-gray-100">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-                Property Snapshot
-              </h2>
-              <p className="text-sm text-gray-800 font-medium">
-                {result.property.address}
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+              <p className="ui-card-subtitle text-brand-text/60">Property snapshot</p>
+              <p className="ui-card-title mt-1 text-brand-text">{result.property.address}</p>
+              <p className="ui-meta mt-2 text-brand-text/70">
+                {result.property.beds} beds • {result.property.baths} baths • {result.property.sqft.toLocaleString()}{" "}
+                sqft
               </p>
-              <p className="text-xs text-gray-600 mt-1">
-                {result.property.beds} beds • {result.property.baths} baths •{" "}
-                {result.property.sqft.toLocaleString()} sqft
-              </p>
-              <p className="text-xs text-gray-600">
-                {result.property.propertyType} • Built{" "}
-                {result.property.yearBuilt}
+              <p className="ui-meta text-brand-text/70">
+                {result.property.propertyType} • Built {result.property.yearBuilt}
               </p>
             </div>
           </div>
 
-          <div className="bg-white shadow rounded-xl p-6 border border-gray-100">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Comparable Sales (Last 6 Months, &lt;= 0.5 Miles)
-              </h2>
-              <span className="text-xs text-gray-500">
-                {result.comps.length} comps used
-              </span>
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="ui-card-title text-brand-text">Comparable sales (last 6 months, ≤ 0.5 mi)</h2>
+              <span className="ui-meta text-brand-text/55">{result.comps.length} comps used</span>
             </div>
             {result.comps.length === 0 ? (
-              <p className="text-sm text-gray-600">
-                No comparable sales matched the current filters.
-              </p>
+              <p className="ui-table-cell text-brand-text/80">No comparable sales matched the current filters.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-xs border-collapse">
+              <div className="overflow-x-auto rounded-lg border border-gray-100">
+                <table className="min-w-full border-collapse">
                   <thead>
-                    <tr className="bg-gray-50 text-left text-gray-600">
-                      <th className="px-3 py-2 font-semibold">Address</th>
-                      <th className="px-3 py-2 font-semibold">Sale Price</th>
-                      <th className="px-3 py-2 font-semibold">Sqft</th>
-                      <th className="px-3 py-2 font-semibold">Price/Sqft</th>
-                      <th className="px-3 py-2 font-semibold">Distance</th>
-                      <th className="px-3 py-2 font-semibold">Sold Date</th>
+                    <tr className="border-b border-gray-200 bg-brand-surface text-left">
+                      <th className="ui-table-header px-3 py-2 text-brand-text/80">Address</th>
+                      <th className="ui-table-header px-3 py-2 text-brand-text/80">Sale price</th>
+                      <th className="ui-table-header px-3 py-2 text-brand-text/80">Sqft</th>
+                      <th className="ui-table-header px-3 py-2 text-brand-text/80">Price/sqft</th>
+                      <th className="ui-table-header px-3 py-2 text-brand-text/80">Distance</th>
+                      <th className="ui-table-header px-3 py-2 text-brand-text/80">Sold date</th>
                     </tr>
                   </thead>
                   <tbody>
                     {result.comps.map((c, idx) => (
-                      <tr
-                        key={idx}
-                        className="border-t border-gray-100 hover:bg-gray-50"
-                      >
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          {c.address}
-                        </td>
-                        <td className="px-3 py-2">
-                          ${c.salePrice.toLocaleString()}
-                        </td>
-                        <td className="px-3 py-2">
-                          {c.sqft.toLocaleString()}
-                        </td>
-                        <td className="px-3 py-2">
-                          ${c.pricePerSqft.toFixed(0)}
-                        </td>
-                        <td className="px-3 py-2">
-                          {c.distanceMiles.toFixed(2)} mi
-                        </td>
-                        <td className="px-3 py-2">{c.soldDate}</td>
+                      <tr key={idx} className="border-t border-gray-100 hover:bg-brand-surface/60">
+                        <td className="ui-table-cell whitespace-nowrap px-3 py-2 text-brand-text">{c.address}</td>
+                        <td className="ui-table-cell px-3 py-2 text-brand-text">${c.salePrice.toLocaleString()}</td>
+                        <td className="ui-table-cell px-3 py-2 text-brand-text">{c.sqft.toLocaleString()}</td>
+                        <td className="ui-table-cell px-3 py-2 text-brand-text">${c.pricePerSqft.toFixed(0)}</td>
+                        <td className="ui-table-cell px-3 py-2 text-brand-text">{c.distanceMiles.toFixed(2)} mi</td>
+                        <td className="ui-table-cell px-3 py-2 text-brand-text">{c.soldDate}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -282,60 +259,56 @@ export default function HomeValueEstimatorPage() {
             )}
           </div>
 
-          {result.recommendations && result.recommendations.length > 0 && (
-            <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 text-sm text-amber-950">
-              <h2 className="text-sm font-semibold mb-2">Suggested next steps</h2>
-              <ul className="list-disc list-inside space-y-1 text-xs">
+          {result.recommendations && result.recommendations.length > 0 ? (
+            <div className="rounded-xl border border-amber-200/80 bg-amber-50/90 p-5 text-sm text-amber-950 shadow-sm">
+              <h2 className="ui-card-title text-amber-950">Suggested next steps</h2>
+              <ul className="mt-2 list-inside list-disc space-y-1 text-xs">
                 {result.recommendations.map((r, i) => (
                   <li key={i}>{r}</li>
                 ))}
               </ul>
             </div>
-          )}
+          ) : null}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-900">
-              <h2 className="text-sm font-semibold mb-2">Estimate summary</h2>
-              <p>{result.summary}</p>
-              <p className="text-xs mt-2 opacity-90">
-                This is an automated estimate for planning purposes only, not an
-                appraisal.
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded-xl border border-brand-primary/20 bg-brand-surface p-5 md:col-span-2 shadow-sm">
+              <h2 className="ui-card-title text-brand-text">Estimate summary</h2>
+              <p className="ui-table-cell mt-2 text-brand-text/90">{result.summary}</p>
+              <p className="ui-meta mt-3 text-brand-text/65">
+                This is an automated estimate for planning purposes only, not an appraisal.
               </p>
             </div>
-            <div className="bg-white border border-gray-100 rounded-lg p-4 text-sm shadow-sm">
-              <h2 className="text-sm font-semibold mb-2">
-                Get a Personalized Review
-              </h2>
-              <p className="text-xs text-gray-600 mb-3">
-                Share your contact info and a local real estate professional can
-                provide a more detailed valuation.
+            <div className="rounded-xl border border-gray-200 bg-white p-5 text-sm shadow-sm">
+              <h2 className="ui-card-title text-brand-text">Get a personalized review</h2>
+              <p className="ui-meta mt-1 text-brand-text/70">
+                Share your contact info and a local real estate professional can provide a more detailed valuation.
               </p>
-              <div className="space-y-2">
+              <div className="mt-3 space-y-2">
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email"
-                  className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClass}
                 />
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="Phone (optional)"
-                  className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={inputClass}
                 />
                 <button
                   type="button"
-                  className="w-full bg-blue-600 text-white text-xs font-semibold py-2 rounded hover:bg-blue-700"
+                  className="w-full rounded-lg bg-brand-primary py-2 text-xs font-semibold text-white hover:opacity-90"
                 >
-                  Request Expert Valuation
+                  Request expert valuation
                 </button>
               </div>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

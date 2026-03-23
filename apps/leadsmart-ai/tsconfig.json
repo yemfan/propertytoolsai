@@ -17,7 +17,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@repo/ui": ["../../packages/ui/src"],
+      "@repo/ui": ["../../packages/ui/navigation/index.ts"],
       "@repo/tools": ["../../packages/tools/src"],
       "@repo/ai": ["../../packages/ai/src"],
       "@repo/lib": ["../../packages/lib/src"],

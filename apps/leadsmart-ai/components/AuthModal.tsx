@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
-import { shouldLandOnPortalAfterLogin } from "@/lib/portalLanding";
+import { getProfessionalPortalPath } from "@/lib/rolePortalPaths";
 
 type Mode = "login" | "signup";
 
@@ -81,10 +81,8 @@ export default function AuthModal({
             };
             const role = me?.role ?? null;
             const hasAgent = Boolean(me?.has_agent_record);
-            if (shouldLandOnPortalAfterLogin(role, hasAgent)) {
-              router.replace("/portal");
-            } else if (isRealEstateProfessionalRole(role) || hasAgent) {
-              router.replace("/dashboard");
+            if (isRealEstateProfessionalRole(role) || hasAgent) {
+              router.replace(getProfessionalPortalPath(role, hasAgent));
             }
           }
         } catch {

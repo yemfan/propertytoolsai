@@ -7,6 +7,7 @@ const monorepoRoot = path.join(__dirname, "../..");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ["@repo/ui"],
   /** Nested URL aliases to flat handler (avoids HTML 404 in some dev/build setups). */
   async rewrites() {
     return {
@@ -17,6 +18,26 @@ const nextConfig = {
         },
       ],
     };
+  },
+  /** Nav-friendly URLs → existing tool routes */
+  async redirects() {
+    return [
+      { source: "/cma-report", destination: "/smart-cma-builder", permanent: false },
+      {
+        source: "/market-value-trends",
+        destination: "/market-report/los-angeles-ca",
+        permanent: false,
+      },
+      { source: "/rent-estimator", destination: "/rental-property-analyzer", permanent: false },
+      { source: "/roi-cash-flow", destination: "/cash-flow-calculator", permanent: false },
+      { source: "/rent-vs-buy", destination: "/rent-vs-buy-calculator", permanent: false },
+      {
+        source: "/ai-recommended-properties",
+        destination: "/serp-hub",
+        permanent: false,
+      },
+      { source: "/smart-next-steps", destination: "/guides", permanent: false },
+    ];
   },
   // Relative to this app dir so Next's `path.join(dir, distDir)` resolves correctly on all platforms.
   // An absolute `distDir` breaks on Windows (nested `.../apps/<app>/C:/.../.next`) and can confuse builds.

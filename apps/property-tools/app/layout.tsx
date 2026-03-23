@@ -1,7 +1,7 @@
 import "./globals.css";
 import { ReactNode } from "react";
 import { Montserrat, Roboto } from "next/font/google";
-import AppLayout from "@/components/layout/AppLayout";
+import AppShell from "@/components/AppShell";
 
 const fontHeading = Montserrat({
   subsets: ["latin"],
@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className={`${fontHeading.variable} ${fontBody.variable} bg-brand-surface text-brand-text font-body`}>
-        <AppLayout>{children}</AppLayout>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

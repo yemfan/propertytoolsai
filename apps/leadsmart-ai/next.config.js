@@ -7,6 +7,7 @@ const monorepoRoot = path.join(__dirname, "../..");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ["@repo/ui"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "img.youtube.com", pathname: "/**" },
@@ -29,6 +30,38 @@ const nextConfig = {
     staticGenerationMaxConcurrency: 1,
     staticGenerationMinPagesPerWorker: 1,
     webpackMemoryOptimizations: true,
+  },
+  /** Short nav-style paths → `/dashboard/*` (app lives under dashboard) */
+  async redirects() {
+    const toDashboard = [
+      ["/leads", "/dashboard/leads"],
+      ["/leads/new", "/dashboard/leads"],
+      ["/leads/assigned", "/dashboard/contacts"],
+      ["/leads/activity", "/dashboard/automation"],
+      ["/opportunities/marketplace", "/dashboard/opportunities"],
+      ["/opportunities/purchased", "/dashboard/opportunities"],
+      ["/opportunities/alerts", "/dashboard/notifications"],
+      ["/pipeline/contacted", "/dashboard/contacts"],
+      ["/pipeline/qualified", "/dashboard/contacts"],
+      ["/pipeline/active-deal", "/dashboard/contacts"],
+      ["/pipeline/closed-lost", "/dashboard/contacts"],
+      ["/ai-tools/follow-up", "/dashboard/automation"],
+      ["/ai-tools/property-comparison", "/dashboard/comparison-report"],
+      ["/ai-tools/offer-assistant", "/deal-assistant"],
+      ["/ai-tools/deal-closer", "/dashboard/tools"],
+      ["/reports/performance", "/dashboard/performance"],
+      ["/reports/lead-sources", "/dashboard/reports"],
+      ["/reports/conversion", "/dashboard/growth"],
+      ["/settings/profile", "/dashboard/settings"],
+      ["/settings/team", "/dashboard/settings"],
+      ["/settings/billing", "/pricing"],
+      ["/settings/notifications", "/dashboard/notifications"],
+    ];
+    return toDashboard.map(([source, destination]) => ({
+      source,
+      destination,
+      permanent: false,
+    }));
   },
 };
 

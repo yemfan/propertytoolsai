@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import LeadSmartLanding from "@/components/marketing/LeadSmartLanding";
+import { resolvePostAuthHomePath } from "@/lib/rolePortalServer";
+import { supabaseServerClient } from "@/lib/supabaseServerClient";
 
 export const metadata: Metadata = {
   title: "LeadSmart AI — The AI Deal Engine for Real Estate",
@@ -12,6 +15,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HomePage() {
-  return <LeadSmartLanding />;
+export default async function HomePage() {
+  const supabase = supabaseServerClient();
+  const path = await resolvePostAuthHomePath(supabase);
+  if (path === null) {
+    return <LeadSmartLanding />;
+  }
+  redirect(path);
 }
