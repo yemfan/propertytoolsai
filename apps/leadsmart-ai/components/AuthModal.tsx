@@ -7,6 +7,8 @@ import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility"
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 
 type Mode = "login" | "signup";
+/** After signup as Real Estate Agent — show Start free CTA before closing. */
+type SignupStep = "form" | "agentStartFree";
 
 const SIGNUP_ROLE_OPTIONS = [
   { value: "", label: "Not Assigned" },
@@ -43,6 +45,7 @@ export default function AuthModal({
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [signupStep, setSignupStep] = useState<SignupStep>("form");
 
   const header = useMemo(
     () => ({
@@ -59,6 +62,7 @@ export default function AuthModal({
       setError(null);
       setSignupRole("");
       setPhone("");
+      setSignupStep("form");
     }
   }, [open, initialMode]);
 
@@ -72,6 +76,70 @@ export default function AuthModal({
   }, [open, loading, onClose]);
 
   if (!open) return null;
+
+  function finishAndCloseAgentStartFree() {
+    setSignupStep("form");
+    onClose();
+    router.refresh?.();
+  }
+
+  /** After signup as agent — “Start free” upsell before entering the app. */
+  if (signupStep === "agentStartFree") {
+    const dashboardHref = resolveRoleHomePath("agent", false);
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <button
+          type="button"
+          className="absolute inset-0 z-0 cursor-pointer border-0 bg-slate-900/40 p-0 backdrop-blur-sm"
+          aria-label="Close"
+          onClick={() => finishAndCloseAgentStartFree()}
+        />
+        <div
+          className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="agent-start-free-title"
+        >
+          <div className="border-b border-slate-200 bg-gradient-to-br from-blue-600 to-indigo-700 p-5 text-white">
+            <div id="agent-start-free-title" className="text-lg font-bold">
+              You&apos;re in — welcome, agent
+            </div>
+            <p className="mt-2 text-sm text-blue-100">
+              Start free with LeadSmart: explore the CRM, AI tools, and your pipeline — no credit card required to
+              get started.
+            </p>
+          </div>
+          <div className="space-y-3 p-5">
+            <a
+              href="/pricing"
+              className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+              onClick={() => finishAndCloseAgentStartFree()}
+            >
+              Start free (view plans)
+            </a>
+            <button
+              type="button"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              onClick={() => {
+                finishAndCloseAgentStartFree();
+                router.push(dashboardHref);
+              }}
+            >
+              Go to dashboard
+            </button>
+            <button
+              type="button"
+              className="w-full rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              onClick={() => finishAndCloseAgentStartFree()}
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -158,6 +226,14 @@ export default function AuthModal({
       }
 
       onAuthenticated?.();
+
+      // New agents: show “Start free” dialog before closing (email-confirm signups skip — no userId yet).
+      if (userId && dbRole === "agent") {
+        setSignupStep("agentStartFree");
+        router.refresh?.();
+        return;
+      }
+
       onClose();
       router.refresh?.();
     } catch (e: any) {

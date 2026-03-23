@@ -2,6 +2,7 @@ import "./globals.css";
 import { ReactNode } from "react";
 import { Montserrat, Roboto } from "next/font/google";
 import AppShell from "@/components/AppShell";
+import { getSiteUrl } from "@/lib/siteUrl";
 
 const fontHeading = Montserrat({
   subsets: ["latin"],
@@ -16,12 +17,12 @@ const fontBody = Roboto({
 });
 
 export const metadata = {
-  metadataBase: new URL("https://propertytoolsai.com"),
+  metadataBase: new URL(getSiteUrl()),
   title: "PropertyTools AI",
   description: "Professional real estate calculators for buyers, investors, and agents",
   icons: {
-    icon: "/images/ptlogoicon48.png",
-    apple: "/images/ptlogoicon48.png",
+    icon: [{ url: "/images/ptlogoicon48.png", type: "image/png", sizes: "48x48" }],
+    apple: [{ url: "/images/ptlogoicon48.png", sizes: "180x180" }],
     shortcut: "/images/ptlogoicon48.png",
   },
 };

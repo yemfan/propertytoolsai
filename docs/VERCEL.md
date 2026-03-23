@@ -49,6 +49,10 @@ The script resolves the **monorepo root** from its path and walks up from **`pro
 
 3. **Repo-root Property Tools project only** — If **Root Directory** stays the **repository root**, set **`VERCEL_MONOREPO_APP=property-tools`** (or rely on URL / project-name inference after the latest script update).
 
+### Favicon / logo / metadata URLs (Property Tools)
+
+Next.js uses **`metadataBase`** (from **`apps/property-tools/app/layout.tsx`**) to turn relative icon paths into absolute URLs. Set **`NEXT_PUBLIC_SITE_URL`** to your live origin (e.g. **`https://propertytoolsai.com`**) in the Vercel **Environment Variables** for Property Tools so production metadata matches your domain. If it is unset, **`VERCEL_URL`** is used on preview deployments so **favicons load from the same preview host**. Static files under **`apps/property-tools/public/images/`** must still be committed (e.g. **`ptlogo.png`**, **`ptlogoicon48.png`**).
+
 ## Option A — Recommended: one Vercel project per app
 
 1. **Root Directory** = **`apps/leadsmart-ai`** (or **`apps/property-tools`**).
