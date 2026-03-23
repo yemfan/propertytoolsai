@@ -23,6 +23,8 @@
     "smoke:migrations-20260326": "tsx scripts/smoke-migrations-20260326.ts",
     "smoke:leadsmart-ai-layer": "tsx scripts/smoke-leadsmart-ai-layer.ts",
     "smoke:20260319-schema": "tsx scripts/smoke-20260319-schema.ts",
+    "smoke:profiles-20260315": "tsx scripts/smoke-profiles-20260315.ts",
+    "smoke:profiles-invite-audit-20260325": "tsx scripts/smoke-profiles-invite-audit-20260325.ts",
     "smoke:seo-optimization": "tsx scripts/smoke-seo-optimization.ts",
     "smoke:cluster-generator": "tsx scripts/smoke-cluster-generator.ts",
     "smoke:keyword-discovery": "tsx scripts/smoke-keyword-discovery.ts",
@@ -52,7 +54,8 @@
     "resend": "^6.9.4",
     "stripe": "^18.5.0",
     "tailwindcss": "^4.2.1",
-    "twilio": "^5.13.0"
+    "twilio": "^5.13.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/google.maps": "^3.58.1",

@@ -3,8 +3,8 @@
 import { Bell, CreditCard, ChevronDown, Home, House, LogOut, Search, Settings } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useRef, useState } from "react";
-import { Topbar } from "@repo/ui";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Topbar, filterNavSectionsByRole } from "@repo/ui";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { leadSmartNav } from "@/nav.config";
 import { SupportChatLauncher } from "@/components/support/CustomerSupportChat";
@@ -136,7 +136,17 @@ function ProfileMenu({
   );
 }
 
-export default function TopBar({ email }: { email: string | null | undefined }) {
+export default function TopBar({
+  email,
+  appRole,
+}: {
+  email: string | null | undefined;
+  appRole?: string | null;
+}) {
+  const navSections = useMemo(
+    () => filterNavSectionsByRole(leadSmartNav, appRole),
+    [appRole]
+  );
   const router = useRouter();
   const [tokens, setTokens] = useState<number | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
@@ -216,7 +226,7 @@ export default function TopBar({ email }: { email: string | null | undefined }) 
   return (
     <Topbar
       appName="LeadSmart AI"
-      sections={leadSmartNav}
+      sections={navSections}
       searchPlaceholder="Search leads, clients, addresses..."
       leadingExtra={
         <Link

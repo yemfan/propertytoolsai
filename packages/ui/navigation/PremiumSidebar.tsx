@@ -125,8 +125,10 @@ export function PremiumSidebar({
     }
     return initial;
   });
-  /** Only auto-expand the group for the active route when the URL changes — not on every `sections` re-render (would undo manual collapse). */
+  /** Only auto-expand the group for the active route when the URL changes — not when `sections` identity changes (avoids fighting manual collapse). */
   const lastAutoExpandPath = useRef<string | null>(null);
+  const sectionsRef = useRef(sections);
+  sectionsRef.current = sections;
 
   useLayoutEffect(() => {
     if (lastAutoExpandPath.current === pathname) return;
@@ -134,7 +136,7 @@ export function PremiumSidebar({
 
     setOpenGroups((prev) => {
       const next = { ...prev };
-      for (const section of sections) {
+      for (const section of sectionsRef.current) {
         if (isNavGroup(section)) {
           if (section.items.some((item) => isLinkActive(pathname, item))) {
             next[section.label] = true;
@@ -143,7 +145,7 @@ export function PremiumSidebar({
       }
       return next;
     });
-  }, [pathname, sections]);
+  }, [pathname]);
 
   const showBranding = branding !== "none";
   const useStretchHeight = height === "stretch";
@@ -326,10 +328,10 @@ export function PremiumSidebar({
                     setOpenGroups((prev) => ({ ...prev, [section.label]: true }));
                     return;
                   }
-                  // Expanded sidebar: toggle this section — click again when open collapses it.
+                  // Expanded sidebar: toggle from previous state (avoid stale `isOpen` closure).
                   setOpenGroups((prev) => ({
                     ...prev,
-                    [section.label]: !isOpen,
+                    [section.label]: !(prev[section.label] ?? false),
                   }));
                 }}
                 className={cn(

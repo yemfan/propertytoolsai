@@ -46,6 +46,15 @@ function MarketingTopChrome() {
  * - Marketing / tools: `PremiumSidebar` + `Topbar` (`MobileSidebar` inside top bar) from `@repo/ui`
  * - Dashboard uses `DashboardShell` in `app/dashboard/layout.tsx`
  */
+function isPlatformDashboardPath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/agent/dashboard") ||
+    pathname.startsWith("/loan-broker/") ||
+    pathname.startsWith("/support/dashboard") ||
+    pathname.startsWith("/admin")
+  );
+}
+
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
   const isPublicReport = pathname.startsWith("/report/");
@@ -80,6 +89,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
         {children}
       </div>
     );
+  }
+
+  /** Full-bleed role dashboards ship their own shell (sidebar + top bar). */
+  if (isPlatformDashboardPath(pathname)) {
+    return <div className="min-h-screen bg-slate-50 text-slate-900">{children}</div>;
   }
 
   return (

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PremiumSidebar, Topbar, type NavSection } from "@repo/ui";
 import AuthProvider, { useAuth } from "@/components/AuthProvider";
@@ -10,6 +10,8 @@ import { AccessProvider, useAccess } from "@/components/AccessProvider";
 import AccountMenu from "@/components/layout/AccountMenu";
 import GlobalSearchBar from "@/components/layout/GlobalSearchBar";
 import { hasPremiumToolAccess } from "@/lib/access";
+import { getNavSectionsForRole } from "@/lib/auth/navByRole";
+import { parseUserRole, type UserRole } from "@/lib/auth/roles";
 import { stripUnlockPremiumNavItem } from "@/lib/nav/stripUnlockPremiumNav";
 import navConfig, { propertyToolsNav } from "@/nav.config";
 
@@ -139,14 +141,35 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
 /** Uses {@link useAccess} — must render inside {@link AccessProvider}. */
 function AppShellAuthedLayout({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const [rbacRole, setRbacRole] = useState<UserRole>("consumer");
+
+  useEffect(() => {
+    if (!user) {
+      setRbacRole("consumer");
+      return;
+    }
+    let cancelled = false;
+    void fetch("/api/auth/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.role) return;
+        setRbacRole(parseUserRole(String(data.role)));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   const { usage } = useAccess();
   const hideUnlockPremium = Boolean(
     usage?.userId && hasPremiumToolAccess({ tier: usage.tier, plan: usage.plan })
   );
-  const navSections = useMemo(
-    () => (hideUnlockPremium ? stripUnlockPremiumNavItem(propertyToolsNav) : propertyToolsNav),
-    [hideUnlockPremium]
-  );
+  const navSections = useMemo(() => {
+    const base = user ? getNavSectionsForRole(rbacRole) : propertyToolsNav;
+    return hideUnlockPremium ? stripUnlockPremiumNavItem(base) : base;
+  }, [hideUnlockPremium, rbacRole, user]);
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900">

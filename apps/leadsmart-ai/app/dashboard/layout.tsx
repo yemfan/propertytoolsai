@@ -25,13 +25,17 @@ export default async function DashboardLayout({
     }
   })();
 
+  let appRole: string | null = null;
+
   // Feature gating: dashboard requires active/trialing subscription.
   try {
     const { data } = await supabaseServer
       .from("user_profiles")
-      .select("subscription_status,trial_ends_at")
+      .select("subscription_status,trial_ends_at,role")
       .eq("user_id", ctx.userId)
       .maybeSingle();
+    const roleRaw = (data as { role?: string } | null)?.role;
+    appRole = typeof roleRaw === "string" && roleRaw.trim() ? roleRaw.trim() : null;
     let status = String((data as any)?.subscription_status ?? "").toLowerCase();
     const trialEndsAt = (data as any)?.trial_ends_at
       ? new Date(String((data as any).trial_ends_at))
@@ -51,6 +55,10 @@ export default async function DashboardLayout({
     // If profiles/status isn't available yet, don't block dashboard rendering.
   }
 
-  return <DashboardShell email={ctx?.email}>{children}</DashboardShell>;
+  return (
+    <DashboardShell email={ctx?.email} appRole={appRole}>
+      {children}
+    </DashboardShell>
+  );
 }
 

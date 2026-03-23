@@ -8,6 +8,7 @@ export type {
   NavSection,
 } from "./types";
 export { isNavGroup } from "./types";
+export { filterNavSectionsByRole } from "./filterNavByRole";
 export { isGroupActive, isLinkActive, isSectionActive } from "./matchPath";
 export { CollapsibleNavGroup } from "./CollapsibleNavGroup";
 export type { CollapsibleNavGroupProps } from "./CollapsibleNavGroup";

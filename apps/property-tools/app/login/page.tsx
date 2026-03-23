@@ -1,15 +1,10 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { supabaseBrowser } from "@/lib/supabaseBrowser";
-import AuthPageShell from "@/components/layout/AuthPageShell";
-import Card from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import Link from "next/link";
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { safeInternalRedirect } from "@/lib/loginUrl";
-import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
 
 export default function LoginPage() {
   return (
@@ -20,171 +15,115 @@ export default function LoginPage() {
 }
 
 function LoginPageInner() {
-  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
   const searchParams = useSearchParams();
+  const nextParam = searchParams?.get("next");
   const redirectParam = searchParams?.get("redirect");
   const reason = searchParams?.get("reason");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    if (!email.trim() || !password.trim()) {
-      setError("Email and password are required.");
-      return;
-    }
-    setLoading(true);
+
     try {
-      const supabase = supabaseBrowser();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      setLoading(true);
+      setError("");
+
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
-        password: password,
+        password,
       });
-      if (signInError) {
-        setError(signInError.message);
-        return;
+
+      if (signInError) throw signInError;
+
+      if (!data.user?.email_confirmed_at) {
+        await supabase.auth.signOut();
+        throw new Error("Please verify your email before logging in.");
       }
 
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData?.user;
-      let role: string | null = null;
-      let hasAgentRow = false;
-      let isPro = false;
-      if (user) {
-        try {
-          const missingUserId = (err: any) => {
-            const msg = String(err?.message ?? "");
-            return (
-              /user_id.*does not exist/i.test(msg) ||
-              /column\s+.*user_id.*does not exist/i.test(msg)
-            );
-          };
-
-          let userRow: any = null;
-          let rowErr: any = null;
-          ({ data: userRow, error: rowErr } = await supabase
-            .from("user_profiles")
-            .select("role")
-            .eq("user_id", user.id)
-            .maybeSingle());
-
-          if (rowErr && missingUserId(rowErr)) {
-            rowErr = null;
-          }
-
-          const r = (userRow as { role?: string } | null)?.role;
-          role = r ?? null;
-
-          const { data: agentRow } = await supabase
-            .from("agents")
-            .select("id")
-            .eq("auth_user_id", user.id)
-            .maybeSingle();
-          hasAgentRow = !!agentRow;
-
-          if (!rowErr && r === "user" && !hasAgentRow) {
-            isPro = false;
-          } else {
-            isPro = isRealEstateProfessionalRole(r) || hasAgentRow;
-          }
-        } catch {
-          const { data: agentRow } = await supabase
-            .from("agents")
-            .select("id")
-            .eq("auth_user_id", user.id)
-            .maybeSingle();
-          hasAgentRow = !!agentRow;
-          isPro = hasAgentRow;
-        }
-      }
-
-      const safe = redirectParam ? safeInternalRedirect(redirectParam) : null;
-      if (isPro) {
-        if (safe) {
-          router.replace(safe);
-        } else {
-          router.replace("/");
-        }
-      } else {
-        const fallback = redirectParam ?? "/";
-        const safeFallback = safeInternalRedirect(fallback);
-        router.replace(fallback.startsWith("/dashboard") ? "/" : (safeFallback ?? "/"));
-      }
-    } catch (e: any) {
-      setError(e?.message ?? "Something went wrong. Please try again.");
+      const target = nextParam ?? redirectParam;
+      const safe = target ? safeInternalRedirect(target) : null;
+      window.location.href = safe ?? "/dashboard-router";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to log in");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <AuthPageShell>
-      <Card className="p-6 sm:p-8">
-        <div className="space-y-1 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0072ce]">PropertyTools AI</p>
-          <h1 className="font-heading text-xl font-bold text-slate-900 md:text-2xl">Log in</h1>
-          <p className="text-sm text-slate-600">Sign in to use calculators, save progress, and manage your plan.</p>
-        </div>
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-md rounded-3xl border bg-white p-8 shadow-sm">
+        <h1 className="text-3xl font-semibold tracking-tight text-gray-900">Welcome Back</h1>
+        <p className="mt-2 text-sm text-gray-500">Log in to access your dashboard</p>
+
         {reason === "trial" ? (
-          <p className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-center text-xs font-medium text-sky-950">
-            Sign in to continue. Next, we’ll open secure Stripe checkout for your Pro free trial (card on file; you are
-            not charged until the trial ends).
-          </p>
+          <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
+            Sign in to continue. Next, we will open secure Stripe checkout for your Pro free trial.
+          </div>
         ) : null}
         {reason === "checkout" ? (
-          <p className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-center text-xs font-medium text-sky-950">
-            Sign in to continue to checkout. We’ll return you to pricing right after.
-          </p>
-        ) : null}
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-700">Email</label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
+          <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
+            Sign in to continue to checkout. We will return you to pricing right after.
           </div>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-700">Password</label>
-            <Input
+        ) : null}
+        {reason === "password_reset" ? (
+          <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            Your password was updated. Sign in with your new password.
+          </div>
+        ) : null}
+
+        <form onSubmit={handleLogin} className="mt-8 space-y-4">
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:border-gray-400"
+            placeholder="Email"
+            autoComplete="email"
+          />
+          <div>
+            <input
               type="password"
+              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:border-gray-400"
+              placeholder="Password"
               autoComplete="current-password"
-              required
             />
+            <div className="mt-2 flex justify-end">
+              <Link href="/forgot-password" className="text-sm font-medium text-gray-900 underline">
+                Forgot password?
+              </Link>
+            </div>
           </div>
+
           {error ? (
-            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-medium whitespace-pre-line text-red-700">
-              {error}
-            </p>
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
           ) : null}
-          <Button type="submit" disabled={loading} className="w-full" size="lg">
-            {loading ? "Logging in…" : "Log in"}
-          </Button>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-2xl bg-gray-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+          >
+            {loading ? "Logging in..." : "Log In"}
+          </button>
         </form>
-        <div className="mt-6 space-y-2 text-center text-[11px] text-slate-500">
-          <p>
-            New user?{" "}
-            <Link href="/signup" className="font-semibold text-[#0072ce] hover:text-[#005ca8]">
-              Sign up
-            </Link>
-          </p>
-          <p>
-            Real estate agent?{" "}
-            <Link href="/agent-signup" className="font-semibold text-[#0072ce] hover:text-[#005ca8]">
-              Start free as agent
-            </Link>
-          </p>
+
+        <div className="mt-6 text-center text-sm text-gray-500">
+          Do not have an account?{" "}
+          <Link href="/signup" className="font-medium text-gray-900 underline">
+            Sign up
+          </Link>
         </div>
-      </Card>
-    </AuthPageShell>
+      </div>
+    </div>
   );
 }

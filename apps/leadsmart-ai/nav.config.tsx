@@ -6,6 +6,7 @@ import {
   GitBranch,
   Headphones,
   House,
+  LayoutDashboard,
   MessageSquare,
   Settings,
   Sparkles,
@@ -30,6 +31,13 @@ const navConfig = {
       href: "/dashboard",
       match: ["/dashboard", "/dashboard/overview", "/dashboard/broker"],
       icon: <House size={18} strokeWidth={2} aria-hidden />,
+    },
+    {
+      label: "Platform Overview",
+      href: "/admin/platform-overview",
+      roles: ["admin"],
+      match: ["/admin/platform-overview"],
+      icon: <LayoutDashboard size={18} strokeWidth={2} aria-hidden />,
     },
     {
       label: "Leads",

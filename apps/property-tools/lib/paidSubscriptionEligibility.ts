@@ -15,6 +15,7 @@ export const REAL_ESTATE_PROFESSIONAL_ROLES = new Set([
   "owner",
   "partner",
   "admin",
+  "loan_broker",
 ]);
 
 export function isRealEstateProfessionalRole(role: string | null | undefined): boolean {
@@ -39,13 +40,22 @@ export async function getPaidSubscriptionEligibility(
 ): Promise<PaidSubscriptionEligibility> {
   const allowConsumer = process.env.ALLOW_CONSUMER_PAID_SUBSCRIPTIONS !== "false";
 
+  const { data: rbacProfile } = await supabaseServer
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+
   const { data: profile } = await supabaseServer
     .from("user_profiles")
     .select("role")
     .eq("user_id", userId)
     .maybeSingle();
 
-  const role = (profile as { role?: string } | null)?.role ?? null;
+  const role =
+    (rbacProfile as { role?: string } | null)?.role ??
+    (profile as { role?: string } | null)?.role ??
+    null;
 
   if (isRealEstateProfessionalRole(role)) {
     return { allowed: true, reason: "professional_role" };

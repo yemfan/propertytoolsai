@@ -10,6 +10,11 @@ export type NavLeafItem = {
   icon?: ReactNode;
   badge?: string;
   /**
+   * When set, only users whose `user_profiles.role` matches one of these strings (case-insensitive)
+   * see this item. Omit for all authenticated users.
+   */
+  roles?: string[];
+  /**
    * When set, active only on these pathnames (exact, optional trailing slash).
    * Use for roots like `/dashboard` so `/dashboard/leads` does not match.
    */
@@ -22,6 +27,11 @@ export type NavGroupItem = {
   label: string;
   icon?: ReactNode;
   items: NavLeafItem[];
+  /**
+   * When set, only users whose role matches one of these strings see the whole group.
+   * Child items may still declare their own `roles` for finer control.
+   */
+  roles?: string[];
   /**
    * Initial expanded state before any user toggle. Active-route auto-expand still applies.
    * Omit or `false` → start collapsed (until user opens or a child route matches).

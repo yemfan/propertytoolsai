@@ -31,13 +31,15 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
     return initial;
   });
   const lastAutoExpandPath = useRef<string | null>(null);
+  const sectionsRef = useRef(sections);
+  sectionsRef.current = sections;
 
   useLayoutEffect(() => {
     if (lastAutoExpandPath.current === pathname) return;
     lastAutoExpandPath.current = pathname;
     setOpenGroups((prev) => {
       const next = { ...prev };
-      for (const section of sections) {
+      for (const section of sectionsRef.current) {
         if (isNavGroup(section)) {
           if (section.items.some((item) => isLinkActive(pathname, item))) {
             next[section.label] = true;
@@ -46,7 +48,7 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
       }
       return next;
     });
-  }, [pathname, sections]);
+  }, [pathname]);
 
   useEffect(() => {
     if (!open) return;
@@ -152,7 +154,7 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
                       onClick={() =>
                         setOpenGroups((prev) => ({
                           ...prev,
-                          [section.label]: !isGroupOpen,
+                          [section.label]: !(prev[section.label] ?? false),
                         }))
                       }
                       className="flex w-full items-center gap-2 rounded-t-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100/60"
