@@ -1,4 +1,5 @@
 import type { User } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { mapLegacyUserProfileRoleToRbac } from "./mapLegacyRole";
 import type { ProfileRow } from "./profileTypes";
@@ -8,6 +9,25 @@ export type SessionUserWithProfile = {
   user: User;
   profile: ProfileRow;
 };
+
+/**
+ * Authenticated Supabase user from the App Router cookie session.
+ * Throws on auth transport errors; returns `null` when there is no session.
+ */
+export async function getCurrentUser() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    throw error;
+  }
+
+  return user;
+}
 
 function normalizeProfileRow(row: Record<string, unknown>): ProfileRow {
   const id = String(row.id ?? "");
@@ -19,6 +39,9 @@ function normalizeProfileRow(row: Record<string, unknown>): ProfileRow {
     role,
     created_at: String(row.created_at ?? new Date().toISOString()),
     updated_at: String(row.updated_at ?? new Date().toISOString()),
+    agent_id: row.agent_id != null ? String(row.agent_id) : null,
+    broker_id: row.broker_id != null ? String(row.broker_id) : null,
+    support_id: row.support_id != null ? String(row.support_id) : null,
   };
 }
 
@@ -36,7 +59,7 @@ export async function getCurrentUserWithProfile(): Promise<SessionUserWithProfil
 
   const { data: profileRow, error: profileErr } = await supabase
     .from("profiles")
-    .select("id,email,full_name,role,created_at,updated_at")
+    .select("id,email,full_name,role,agent_id,broker_id,support_id,created_at,updated_at")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -73,6 +96,9 @@ export async function getCurrentUserWithProfile(): Promise<SessionUserWithProfil
     role: rbacRole,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    agent_id: null,
+    broker_id: null,
+    support_id: null,
   };
 
   return { user, profile: synthetic };

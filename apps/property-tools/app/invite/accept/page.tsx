@@ -54,7 +54,7 @@ export default function AcceptInvitePage() {
 
       setSuccess("Your account is ready.");
       setTimeout(() => {
-        window.location.href = "/dashboard-router";
+        window.location.href = "/dashboard";
       }, 1000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to complete invite");

@@ -69,7 +69,7 @@ export default function ResetPasswordPage() {
       setConfirmPassword("");
 
       window.setTimeout(() => {
-        window.location.href = "/dashboard-router";
+        window.location.href = "/dashboard";
       }, 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to reset password");

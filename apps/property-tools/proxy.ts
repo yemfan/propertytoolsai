@@ -4,6 +4,7 @@ import { supabaseAuthCookieOptions } from "./lib/authCookieOptions";
 import { getSupabasePublicEnv } from "./lib/supabasePublicEnv";
 
 const PROTECTED_PREFIXES = [
+  "/dashboard",
   "/dashboard-router",
   "/rbac",
   "/agent",
@@ -82,7 +83,7 @@ export async function proxy(req: NextRequest) {
 
   if (authPage && user) {
     const url = req.nextUrl.clone();
-    url.pathname = "/dashboard-router";
+    url.pathname = "/dashboard";
     url.search = "";
     return NextResponse.redirect(url);
   }
@@ -92,6 +93,8 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
+    "/dashboard",
+    "/dashboard/:path*",
     "/dashboard-router",
     "/dashboard-router/:path*",
     "/rbac",

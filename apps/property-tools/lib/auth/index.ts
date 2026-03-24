@@ -2,5 +2,8 @@ export * from "./roles";
 export * from "./profileTypes";
 export * from "./mapLegacyRole";
 export * from "./getCurrentUser";
+export * from "./getCurrentProfile";
 export * from "./getCurrentUserRole";
 export * from "./requireRole";
+export * from "./redirectToRoleHome";
+export * from "./requireRolePage";

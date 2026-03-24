@@ -1,16 +1,10 @@
-import { requireRole } from "@/lib/auth/requireRole";
-import { RbacPageShell } from "@/components/rbac/RbacPageShell";
+import { requireRolePage } from "@/lib/auth/requireRolePage";
+import { SupportDashboardClient } from "./SupportDashboardClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function SupportDashboardPage() {
-  const user = await requireRole(["support", "admin"]);
+  await requireRolePage(["support", "admin"]);
 
-  return (
-    <RbacPageShell
-      title="Support dashboard"
-      description="Support workspace (from dashboard-router)."
-      roleLabel={user.role}
-    />
-  );
+  return <SupportDashboardClient />;
 }

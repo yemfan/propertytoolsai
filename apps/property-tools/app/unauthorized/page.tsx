@@ -18,7 +18,7 @@ export default function UnauthorizedPage() {
 
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <Link
-            href="/dashboard-router"
+            href="/dashboard"
             className="rounded-2xl bg-gray-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-gray-800"
           >
             Go to My Dashboard

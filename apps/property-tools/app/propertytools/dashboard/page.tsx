@@ -3,7 +3,7 @@ import { getCurrentUserWithProfile } from "@/lib/auth/getCurrentUser";
 
 export const dynamic = "force-dynamic";
 
-/** Default landing for `consumer` (and unknown) roles from `/dashboard-router`. */
+/** Default landing for `consumer` (and unknown) roles from `/dashboard`. */
 export default async function PropertyToolsConsumerDashboardPage() {
   const ctx = await getCurrentUserWithProfile();
   if (!ctx) {

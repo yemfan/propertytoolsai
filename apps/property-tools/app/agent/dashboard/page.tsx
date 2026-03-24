@@ -1,16 +1,10 @@
-import { requireRole } from "@/lib/auth/requireRole";
-import { RbacPageShell } from "@/components/rbac/RbacPageShell";
+import { requireRolePage } from "@/lib/auth/requireRolePage";
+import AgentDashboardClient from "./AgentDashboardClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function AgentDashboardPage() {
-  const user = await requireRole(["agent", "admin"]);
+  await requireRolePage(["agent", "admin"]);
 
-  return (
-    <RbacPageShell
-      title="Agent dashboard"
-      description="Agent workspace (from dashboard-router)."
-      roleLabel={user.role}
-    />
-  );
+  return <AgentDashboardClient />;
 }

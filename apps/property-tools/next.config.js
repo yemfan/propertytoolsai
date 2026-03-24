@@ -8,22 +8,13 @@ const monorepoRoot = path.join(__dirname, "../..");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@repo/ui"],
-  /** Nested URL aliases to flat handler (avoids HTML 404 in some dev/build setups). */
+  /** Nested URL aliases — prefer real route files under `app/api/...` when present. */
   async rewrites() {
-    return {
-      beforeFiles: [
-        {
-          source: "/api/home-value/estimate",
-          destination: "/api/home-value-estimate",
-        },
-      ],
-    };
+    return { beforeFiles: [] };
   },
   /** Nav-friendly URLs → existing tool routes */
   async redirects() {
     return [
-      { source: "/dashboard", destination: "/", permanent: false },
-      { source: "/dashboard/:path*", destination: "/", permanent: false },
       { source: "/cma-report", destination: "/smart-cma-builder", permanent: false },
       {
         source: "/market-value-trends",

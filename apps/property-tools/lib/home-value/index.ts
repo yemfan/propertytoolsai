@@ -6,3 +6,10 @@ export * from "@/lib/homeValue/estimateUiState";
 export * from "@/lib/homeValue/homeValueTracking";
 export * from "@/lib/homeValue/estimateDisplay";
 export * from "@/lib/homeValue/normalizeEstimateRequestBody";
+export * from "./estimate-engine";
+export { useHomeValueEstimate } from "./useHomeValueEstimate";
+export type {
+  HomeValueEstimateUiStatus,
+  HomeValueRefinements,
+  UnlockReportInput,
+} from "./useHomeValueEstimate";

@@ -10,8 +10,8 @@ export function getNavSectionsForRole(role: UserRole): NavSection[] {
   const items: NavLeafItem[] = [
     {
       label: "Role hub",
-      href: "/dashboard-router",
-      match: ["/dashboard-router"],
+      href: "/dashboard",
+      match: ["/dashboard", "/dashboard-router"],
       icon: <LayoutDashboard size={16} strokeWidth={2} aria-hidden />,
     },
   ];

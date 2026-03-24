@@ -24,7 +24,7 @@ export default function BillingSuccessPage() {
             View Billing
           </Link>
           <Link
-            href="/dashboard-router"
+            href="/dashboard"
             className="rounded-2xl border border-gray-200 px-5 py-3 text-sm font-medium text-gray-900 transition hover:bg-gray-50"
           >
             Go to Dashboard

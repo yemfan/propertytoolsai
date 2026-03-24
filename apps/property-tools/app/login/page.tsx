@@ -47,7 +47,7 @@ function LoginPageInner() {
 
       const target = nextParam ?? redirectParam;
       const safe = target ? safeInternalRedirect(target) : null;
-      window.location.href = safe ?? "/dashboard-router";
+      window.location.href = safe ?? "/dashboard";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to log in");
     } finally {
