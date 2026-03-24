@@ -2,7 +2,14 @@ import Link from "next/link";
 
 const LEADSMART_URL = process.env.NEXT_PUBLIC_LEADSMART_URL ?? "https://leadsmart.ai";
 
-const tools = [
+type ToolCard = {
+  title: string;
+  description: string;
+  href: string;
+  featured?: boolean;
+};
+
+const tools: ToolCard[] = [
   {
     title: "Home Value Estimate",
     description: "Get an instant estimate of your property's value.",
@@ -34,7 +41,7 @@ const tools = [
     description: "Compare properties side by side using AI.",
     href: "/ai-property-comparison",
   },
-] as const;
+];
 
 /** Internal SEO-style links → real routes (see `growth/seo` for city + tool combos). */
 const exploreLinks = [
