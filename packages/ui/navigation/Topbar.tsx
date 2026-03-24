@@ -105,11 +105,21 @@ export function Topbar({
           )}
         </div>
 
-        <div className="flex max-w-[48vw] shrink-0 items-center gap-2 overflow-x-auto sm:max-w-none md:max-w-none [&>*]:shrink-0">
-          {rightActions.map((action, i) => (
-            <ActionButton key={`${action.label}-${i}`} action={action} />
-          ))}
-          {trailing}
+        {/*
+          Keep `trailing` (profile / account menus) outside `overflow-x-auto` — otherwise
+          absolutely positioned dropdowns are clipped and look like an empty menu.
+        */}
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="flex max-w-[48vw] min-w-0 shrink items-center gap-2 overflow-x-auto sm:max-w-none md:max-w-none [&>*]:shrink-0">
+            {rightActions.map((action, i) => (
+              <ActionButton key={`${action.label}-${i}`} action={action} />
+            ))}
+          </div>
+          {trailing ? (
+            <div className="flex shrink-0 items-center gap-2 overflow-visible [&>*]:shrink-0">
+              {trailing}
+            </div>
+          ) : null}
         </div>
       </div>
 

@@ -81,11 +81,24 @@ export default function AccountMenu() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/me", { credentials: "include" });
+        const { data: sessionData } = await supabaseBrowser().auth.getSession();
+        const token = sessionData.session?.access_token;
+        const res = await fetch("/api/me", {
+          credentials: "include",
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
         const json = (await res.json().catch(() => ({}))) as MePayload;
-        if (!cancelled && res.ok) setMe(json);
+        if (cancelled) return;
+        if (res.ok) {
+          setMe(json);
+        } else {
+          /** e.g. 500 or session not visible server-side — keep links usable */
+          setMe({ role: "user", has_agent_record: false });
+        }
       } catch {
-        if (!cancelled) setMe(null);
+        if (!cancelled) {
+          setMe({ role: "user", has_agent_record: false });
+        }
       }
     })();
     return () => {

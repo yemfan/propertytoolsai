@@ -75,10 +75,40 @@ export async function POST(req: Request) {
         ? `${origin}/loan-broker/dashboard`
         : `${origin}/agent/pricing`;
 
+    try {
+      const priceRow = await stripe.prices.retrieve(parsed.data.priceId);
+      if (!priceRow.active) {
+        return NextResponse.json(
+          {
+            success: false,
+            ok: false,
+            error:
+              "This Stripe price is inactive. Activate it in Stripe Dashboard or update your price ID env vars.",
+          },
+          { status: 400 }
+        );
+      }
+      if (priceRow.type !== "recurring") {
+        return NextResponse.json(
+          {
+            success: false,
+            ok: false,
+            error: "Checkout requires a recurring subscription price.",
+          },
+          { status: 400 }
+        );
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Invalid Stripe price";
+      return NextResponse.json({ success: false, ok: false, error: msg }, { status: 400 });
+    }
+
     const session = await stripe.checkout.sessions.create({
+      ui_mode: "hosted",
       mode: "subscription",
       payment_method_types: ["card"],
       customer_email: user.email,
+      client_reference_id: user.id.slice(0, 200),
       line_items: [
         {
           price: parsed.data.priceId,
@@ -110,8 +140,9 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error(err);
+    const message = err instanceof Error ? err.message : "Failed to create checkout session";
     return NextResponse.json(
-      { success: false, ok: false, error: "Failed to create checkout session" },
+      { success: false, ok: false, error: message },
       { status: 500 }
     );
   }

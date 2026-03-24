@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import PropertyToolsPage from "@/components/landing/PropertyToolsPage";
+import PropertyToolsHomePage from "@/components/landing/PropertyToolsHomePage";
 
 export const metadata: Metadata = {
   title: "PropertyTools AI — Free AI Real Estate Tools",
@@ -13,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <PropertyToolsPage />;
+  return <PropertyToolsHomePage />;
 }

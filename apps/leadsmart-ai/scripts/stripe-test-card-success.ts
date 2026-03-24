@@ -32,7 +32,7 @@ async function main() {
 
   const stripe = new Stripe(key, {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- pinned in lib/stripe.ts
-    apiVersion: "2025-02-24.acacia" as any,
+    apiVersion: "2025-08-27.basil",
   });
 
   console.log("Creating PaymentMethod with test Visa 4242424242424242…\n");
@@ -73,7 +73,7 @@ async function main() {
       status: pi.status,
       amount: pi.amount,
       currency: pi.currency,
-      charges: pi.charges?.data?.map((c) => ({ id: c.id, paid: c.paid, status: c.status })),
+      latest_charge: (pi as { latest_charge?: string | null }).latest_charge ?? null,
     },
     null,
     2

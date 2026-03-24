@@ -5,7 +5,12 @@ import { getUserFromRequest } from "@/lib/authFromRequest";
 import { getPaidSubscriptionEligibility } from "@/lib/paidSubscriptionEligibility";
 import { getStripePriceIdForPlan } from "@/lib/stripePriceIds";
 
-type Body = { plan: "pro" | "premium"; with_trial?: boolean };
+type Body = {
+  plan: "pro" | "premium";
+  with_trial?: boolean;
+  /** Where to send the user if they cancel Checkout (default: consumer `/pricing`). */
+  cancel_surface?: "consumer" | "agent";
+};
 
 const PRO_ONLY_MSG =
   "Paid plans are for licensed agents, brokers, and real estate teams. Sign up with a professional account or contact support.";
@@ -31,10 +36,35 @@ export async function POST(req: Request) {
     const trialDays = Number(process.env.STRIPE_TRIAL_DAYS ?? 7);
 
     const price = getStripePriceIdForPlan(body.plan);
+
+    try {
+      const priceRow = await stripe.prices.retrieve(price);
+      if (!priceRow.active) {
+        return NextResponse.json(
+          {
+            error:
+              "This Stripe price is inactive. In Dashboard → Products, activate the price or update STRIPE_PRICE_ID_* env vars.",
+          },
+          { status: 400 }
+        );
+      }
+      if (priceRow.type !== "recurring") {
+        return NextResponse.json(
+          { error: "Stripe price must be recurring for subscription checkout." },
+          { status: 400 }
+        );
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Invalid Stripe price";
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
+
     const origin = new URL(req.url).origin;
+    const cancelBase =
+      body.cancel_surface === "agent" ? `${origin}/agent/pricing` : `${origin}/pricing`;
     const cancelUrl = withTrial
-      ? `${origin}/pricing?trial_checkout=1&canceled=1`
-      : `${origin}/pricing?checkout_canceled=1`;
+      ? `${cancelBase}?trial_checkout=1&canceled=1`
+      : `${cancelBase}?checkout_canceled=1`;
 
     const subscriptionData: Stripe.Checkout.SessionCreateParams.SubscriptionData = {
       metadata: {
@@ -47,8 +77,11 @@ export async function POST(req: Request) {
     }
 
     const session = await stripe.checkout.sessions.create({
+      ui_mode: "hosted",
       mode: "subscription",
+      payment_method_types: ["card"],
       customer_email: user.email,
+      client_reference_id: user.id.slice(0, 200),
       line_items: [{ price, quantity: 1 }],
       success_url: `${origin}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl,
@@ -61,7 +94,7 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url, success: true, ok: true });
   } catch (e: any) {
     console.error("create-checkout-session error", e);
     const msg = String(e?.message ?? "Server error");

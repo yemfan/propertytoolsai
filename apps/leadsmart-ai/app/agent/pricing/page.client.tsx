@@ -140,7 +140,7 @@ export default function AgentPricingClientPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, cancel_surface: "agent" }),
       });
 
       const json = (await res.json()) as { success?: boolean; error?: string; url?: string };

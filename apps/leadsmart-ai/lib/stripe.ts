@@ -4,13 +4,15 @@ import Stripe from "stripe";
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const dummyStripeKey = "sk_test_dummy_dummy_dummy_dummy_dummy_dummy_dummy";
 
+/** Keep in sync with `stripe` package `LatestApiVersion` (see `node_modules/stripe/types/lib.d.ts`). */
+const STRIPE_API_VERSION: Stripe.LatestApiVersion = "2025-08-27.basil";
+
 /**
  * Stripe client for server routes and webhooks.
- * `apiVersion` pins your Stripe API version; types in `stripe` may lag — use `as const` / assertion when needed.
+ * Mismatched/old API versions can cause odd Hosted Checkout failures (e.g. session confirm errors).
  *
  * @see https://docs.stripe.com/api/versioning
  */
 export const stripe = new Stripe(stripeSecretKey ?? dummyStripeKey, {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Stripe types only ship LatestApiVersion; acacia is valid at runtime.
-  apiVersion: "2025-02-24.acacia" as any,
+  apiVersion: STRIPE_API_VERSION,
 });

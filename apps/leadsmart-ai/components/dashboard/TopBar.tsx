@@ -3,7 +3,8 @@
 import { Bell, CreditCard, ChevronDown, Home, House, LogOut, Search, Settings } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { FormEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Topbar, filterNavSectionsByRole } from "@repo/ui";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { leadSmartNav } from "@/nav.config";
@@ -40,10 +41,40 @@ function ProfileMenu({
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [placement, setPlacement] = useState<{ top: number; right: number } | null>(null);
+
+  const updatePlacement = useCallback(() => {
+    const el = buttonRef.current;
+    if (!el || typeof window === "undefined") return;
+    const r = el.getBoundingClientRect();
+    setPlacement({
+      top: r.bottom + 8,
+      right: window.innerWidth - r.right,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPlacement(null);
+      return;
+    }
+    updatePlacement();
+    window.addEventListener("resize", updatePlacement);
+    window.addEventListener("scroll", updatePlacement, true);
+    return () => {
+      window.removeEventListener("resize", updatePlacement);
+      window.removeEventListener("scroll", updatePlacement, true);
+    };
+  }, [open, updatePlacement]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (rootRef.current?.contains(t)) return;
+      if (menuRef.current?.contains(t)) return;
+      setOpen(false);
     }
     if (open) document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
@@ -61,9 +92,69 @@ function ProfileMenu({
   const name = displayLabelFromEmail(email);
   const initials = initialsFromEmail(email);
 
+  const menuPanel = (
+    <div
+      ref={menuRef}
+      className="fixed z-[200] w-[min(100vw-2rem,15rem)] rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-xl shadow-slate-900/10 ring-1 ring-slate-900/[0.04]"
+      role="menu"
+      style={
+        placement
+          ? { top: placement.top, right: placement.right }
+          : { visibility: "hidden", pointerEvents: "none" }
+      }
+    >
+      <div className="border-b border-slate-100 px-3 py-2.5">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Signed in</p>
+        <p className="truncate text-sm font-medium text-slate-900">{email || "Account"}</p>
+      </div>
+      <Link
+        href="/dashboard"
+        className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        role="menuitem"
+        onClick={() => setOpen(false)}
+      >
+        <House className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+        Home
+      </Link>
+      <Link
+        href="/dashboard/settings"
+        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        role="menuitem"
+        onClick={() => setOpen(false)}
+      >
+        <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+        Account &amp; settings
+      </Link>
+      <Link
+        href="/pricing"
+        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        role="menuitem"
+        onClick={() => setOpen(false)}
+      >
+        <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+        Plans &amp; pricing
+      </Link>
+      <div className="mt-1 border-t border-slate-100 pt-1">
+        <button
+          type="button"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+          role="menuitem"
+          onClick={() => {
+            setOpen(false);
+            onLogout();
+          }}
+        >
+          <LogOut className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+          Log out
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="relative" ref={rootRef}>
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="inline-flex h-11 max-w-[220px] items-center gap-2.5 rounded-2xl border border-slate-200/90 bg-white px-2.5 py-1.5 text-left shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40 sm:gap-3 sm:px-3"
@@ -80,58 +171,9 @@ function ProfileMenu({
         <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
       </button>
 
-      {open ? (
-        <div
-          className="absolute right-0 z-50 mt-2 w-60 rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-xl shadow-slate-900/10 ring-1 ring-slate-900/[0.04]"
-          role="menu"
-        >
-          <div className="border-b border-slate-100 px-3 py-2.5">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Signed in</p>
-            <p className="truncate text-sm font-medium text-slate-900">{email || "Account"}</p>
-          </div>
-          <Link
-            href="/dashboard"
-            className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-          >
-            <House className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-            Home
-          </Link>
-          <Link
-            href="/dashboard/settings"
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-          >
-            <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-            Account &amp; settings
-          </Link>
-          <Link
-            href="/pricing"
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-          >
-            <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-            Plans &amp; pricing
-          </Link>
-          <div className="mt-1 border-t border-slate-100 pt-1">
-            <button
-              type="button"
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                onLogout();
-              }}
-            >
-              <LogOut className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-              Log out
-            </button>
-          </div>
-        </div>
-      ) : null}
+      {open && placement && typeof document !== "undefined"
+        ? createPortal(menuPanel, document.body)
+        : null}
     </div>
   );
 }
@@ -170,6 +212,7 @@ export default function TopBar({
         const { data } = await supabase.auth.getSession();
         const token = data?.session?.access_token;
         const res = await fetch("/api/me", {
+          credentials: "include",
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
         const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
