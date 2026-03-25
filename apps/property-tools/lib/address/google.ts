@@ -73,8 +73,45 @@ export const googleProvider: AddressSearchProvider = {
   providerName: "google",
 
   async searchAddresses(query: string): Promise<AddressPrediction[]> {
-    void query;
-    return [];
+    const q = query.trim();
+    if (!q) return [];
+
+    const url = new URL("/api/address/autocomplete", window.location.origin);
+    url.searchParams.set("q", q);
+
+    const res = await fetch(url.toString(), {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) throw new Error("Google address search failed");
+
+    const json = (await res.json()) as { predictions?: unknown[] };
+    const predictions = Array.isArray(json?.predictions) ? json.predictions : [];
+
+    return predictions.map((item, index) => {
+      const it = (item ?? {}) as Record<string, unknown>;
+      const placeId = typeof it.place_id === "string" ? it.place_id : `google-${index}`;
+      const description = typeof it.description === "string" ? it.description : "";
+      const sf =
+        it.structured_formatting && typeof it.structured_formatting === "object"
+          ? (it.structured_formatting as Record<string, unknown>)
+          : null;
+      const mainText = sf && typeof sf.main_text === "string" ? sf.main_text : undefined;
+      const secondaryText = sf && typeof sf.secondary_text === "string" ? sf.secondary_text : undefined;
+
+      const terms = Array.isArray(it.terms) ? (it.terms as Array<Record<string, unknown>>) : [];
+      const city = typeof terms[1]?.value === "string" ? terms[1].value : undefined;
+      const state = typeof terms[2]?.value === "string" ? terms[2].value : undefined;
+
+      return {
+        id: placeId,
+        label: description || mainText || "",
+        street: mainText,
+        city,
+        state,
+        raw: item,
+      };
+    });
   },
 
   normalizeSelection(prediction: AddressPrediction): AddressSelection {

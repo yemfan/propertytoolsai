@@ -92,32 +92,17 @@ function parseTypedAddress(input: string): AddressSelection | null {
   };
 }
 
-async function reverseGeocodeMapbox(lat: number, lng: number): Promise<AddressSelection> {
-  const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN!;
-  const url = new URL("https://api.mapbox.com/search/geocode/v6/reverse");
-  url.searchParams.set("longitude", String(lng));
-  url.searchParams.set("latitude", String(lat));
-  url.searchParams.set("access_token", token);
+async function reverseGeocodeCurrentLocation(lat: number, lng: number): Promise<AddressSelection> {
+  const url = new URL("/api/address/reverse", window.location.origin);
+  url.searchParams.set("lat", String(lat));
+  url.searchParams.set("lng", String(lng));
 
-  const res = await fetch(url.toString(), { cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to reverse geocode location");
-
+  const res = await fetch(url.toString(), { method: "GET", cache: "no-store" });
   const json = await res.json();
-  const feature = json?.features?.[0];
-  if (!feature) throw new Error("No address found for your location");
-
-  const props = feature.properties ?? {};
-  const context = props.context ?? {};
-
-  return {
-    fullAddress: props.full_address || props.name || "Current location",
-    street: props.address_line1 || props.name || "",
-    city: context.place?.name || context.locality?.name || "Unknown",
-    state: context.region?.region_code || context.region?.name || "CA",
-    zip: context.postcode?.name || "",
-    lat,
-    lng,
-  };
+  if (!res.ok || !json?.address) {
+    throw new Error(json?.error || "Failed to reverse geocode location");
+  }
+  return json.address as AddressSelection;
 }
 
 export function useHomeValueEstimate() {
@@ -283,7 +268,7 @@ export function useHomeValueEstimate() {
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
 
-      const selected = await reverseGeocodeMapbox(lat, lng);
+      const selected = await reverseGeocodeCurrentLocation(lat, lng);
 
       setPendingAddress(selected);
       setAddressInput(selected.fullAddress);
