@@ -11,7 +11,7 @@ import { buildInternalLinksForPage } from "./internalLinks";
 import { CLUSTER_TOPICS, getClusterTopicBySlug, getAllClusterTopicSlugs } from "./topics";
 import type { ClusterPagePayload } from "./types";
 
-function useClusterAi(): boolean {
+function clusterAiEnabledByDefault(): boolean {
   return process.env.CLUSTER_AI !== "false";
 }
 
@@ -61,7 +61,7 @@ export async function generateClusterPage(
 
   const primaryKeyword = topic.keywords[0] ?? topic.name;
   const place = `${loc.city}, ${loc.state}`;
-  const useAi = options?.useAi ?? useClusterAi();
+  const useAi = options?.useAi ?? clusterAiEnabledByDefault();
 
   let payload: ClusterPagePayload;
   let title: string;

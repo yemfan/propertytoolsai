@@ -10,7 +10,9 @@ export const runtime = "nodejs";
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const sessionId = String(searchParams.get("session_id") ?? "").trim();
+    const sessionId = String(
+      searchParams.get("session_id") ?? searchParams.get("sessionId") ?? ""
+    ).trim();
     if (!sessionId) {
       return NextResponse.json({ ok: false, error: "session_id is required" }, { status: 400 });
     }

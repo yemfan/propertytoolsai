@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { scheduleLeadScoreRefresh } from "@/lib/lead-scoring/service";
 
 // 1x1 transparent GIF
 const GIF_BASE64 =
@@ -77,6 +78,10 @@ export async function GET(req: Request) {
           } as any);
         }
       }
+    }
+
+    if (leadId) {
+      scheduleLeadScoreRefresh(leadId);
     }
 
     const buf = Buffer.from(GIF_BASE64, "base64");

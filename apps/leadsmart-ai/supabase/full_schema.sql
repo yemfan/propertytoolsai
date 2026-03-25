@@ -480,16 +480,7 @@ end $$;
 -- Ensure `user_id` exists for role detection + upsert conflict handling.
 -- Some older DBs may have created `public.users` without this column.
 alter table public.users add column if not exists user_id uuid;
-do $$
-begin
-  if exists (
-    select 1 from information_schema.columns
-    where table_schema = 'public' and table_name = 'users' and column_name = 'id'
-  ) then
-    -- Best-effort: migrate existing auth id stored in an `id` column.
-    update public.users set user_id = id where user_id is null;
-  end if;
-end $$;
+-- user_id is uuid (auth); do not assign from bigint id — populate when linking accounts.
 create unique index if not exists idx_users_user_id on public.users(user_id);
 
 -- =========================

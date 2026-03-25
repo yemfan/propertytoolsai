@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { recordLeadEvent, scoreLead } from "@/lib/leadScoring";
+import { scheduleLeadScoreRefresh } from "@/lib/lead-scoring/service";
 
 export async function POST(req: Request) {
   try {
@@ -136,6 +137,8 @@ export async function POST(req: Request) {
     try {
       await scoreLead(String(leadId), true);
     } catch {}
+
+    scheduleLeadScoreRefresh(leadId);
 
     return NextResponse.json({ ok: true, updated: true, newRating });
   } catch (e: any) {

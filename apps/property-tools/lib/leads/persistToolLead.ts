@@ -6,6 +6,7 @@ import { sendEmail } from "@/lib/email";
 import { scheduleEmailSequenceForLead } from "@/lib/emailSequences";
 import { recordLeadEvent, scoreLead } from "@/lib/leadScoring";
 import { runLeadMarketplacePipeline } from "@/lib/leadScorePipeline";
+import { scheduleLeadScoreRefresh } from "@/lib/lead-scoring/service";
 import { supabaseServer } from "@/lib/supabaseServer";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -254,6 +255,7 @@ export async function persistToolLead(
       });
       await runLeadMarketplacePipeline(leadId);
       await scoreLead(leadId, true);
+      scheduleLeadScoreRefresh(leadId);
     } catch (e) {
       console.warn("persistToolLead post-insert hooks", e);
     }

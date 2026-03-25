@@ -1,121 +1,95 @@
 "use client";
 
-import { useState } from "react";
-import type { UnlockReportInput } from "@/lib/home-value/useHomeValueEstimate";
+import type { LeadForm } from "@/lib/home-value/types";
 
-type Props = {
-  expanded: boolean;
-  onRequestOpen: () => void;
-  onSubmit: (input: UnlockReportInput) => Promise<{ ok: boolean; error?: string }>;
-  submitting: boolean;
+export function ReportGate({
+  open,
+  form,
+  onFormChange,
+  onUnlock,
+  isBusy,
+  error,
+}: {
+  open: boolean;
+  form: LeadForm;
+  onFormChange: (patch: Partial<LeadForm>) => void;
+  onUnlock: () => void;
+  isBusy: boolean;
   error?: string | null;
-};
-
-export function ReportGate({ expanded, onRequestOpen, onSubmit, submitting, error }: Props) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onSubmit({ name, email, phone });
-  };
+}) {
+  if (!open) return null;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 text-white shadow-2xl shadow-slate-900/20">
-      <div className="relative px-6 py-8 md:px-10 md:py-10">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#0072ce]/25 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-white/5 blur-3xl" />
-
-        <div className="relative">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">Full report</p>
-          <h3 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">Unlock adjustment detail &amp; next steps</h3>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/75">
-            See how each factor influenced your range, confidence drivers, and comparable-sale context. Share your contact
-            and we&apos;ll save this estimate to your lead profile for follow-up — no spam, unsubscribe anytime.
+    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="max-w-xl">
+          <div className="inline-flex rounded-full border border-slate-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-600">
+            Unlock Full Report
+          </div>
+          <h2 className="mt-4 text-2xl font-semibold tracking-tight text-gray-900 md:text-3xl">
+            Get the Detailed Valuation Report
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-gray-600 md:text-base">
+            Unlock the refined estimate, confidence explanation, market snapshot, and next-step recommendations.
           </p>
 
-          {!expanded ? (
-            <div className="mt-8 space-y-4">
-              <ul className="space-y-2 text-sm text-white/70">
-                <li className="flex items-center gap-2">
-                  <span className="text-[#0072ce]">✓</span> Line-by-line valuation adjustments
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-[#0072ce]">✓</span> What&apos;s driving confidence
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-[#0072ce]">✓</span> Personalized toolkit recommendations
-                </li>
-              </ul>
-              <button
-                type="button"
-                onClick={onRequestOpen}
-                className="inline-flex min-h-[48px] items-center justify-center rounded-xl bg-white px-8 text-sm font-semibold text-slate-900 shadow-lg transition hover:bg-slate-100"
-              >
-                Continue with email
-              </button>
+          <ul className="mt-5 space-y-2 text-sm text-gray-700">
+            <li>• Full value range and confidence summary</li>
+            <li>• Local market benchmark and comp signal</li>
+            <li>• Suggested next steps for seller, buyer, or investor intent</li>
+          </ul>
+        </div>
+
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-gray-50 p-5">
+          <div className="grid gap-3">
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">Name</label>
+              <input
+                value={form.name}
+                onChange={(e) => onFormChange({ name: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-gray-400"
+                placeholder="Your name"
+                autoComplete="name"
+              />
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="mt-8 max-w-md space-y-4">
-              <div>
-                <label htmlFor="hv-lead-name" className="block text-xs font-medium text-white/70">
-                  Full name
-                </label>
-                <input
-                  id="hv-lead-name"
-                  required
-                  autoComplete="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#0072ce] focus:ring-2 focus:ring-[#0072ce]/40"
-                  placeholder="Jane Smith"
-                />
-              </div>
-              <div>
-                <label htmlFor="hv-lead-email" className="block text-xs font-medium text-white/70">
-                  Email
-                </label>
-                <input
-                  id="hv-lead-email"
-                  required
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#0072ce] focus:ring-2 focus:ring-[#0072ce]/40"
-                  placeholder="you@email.com"
-                />
-              </div>
-              <div>
-                <label htmlFor="hv-lead-phone" className="block text-xs font-medium text-white/70">
-                  Phone <span className="font-normal text-white/45">(optional)</span>
-                </label>
-                <input
-                  id="hv-lead-phone"
-                  type="tel"
-                  autoComplete="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#0072ce] focus:ring-2 focus:ring-[#0072ce]/40"
-                  placeholder="(555) 555-5555"
-                />
-              </div>
-              {error ? <p className="text-sm text-amber-200">{error}</p> : null}
-              <button
-                type="submit"
-                disabled={submitting}
-                className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-[#0072ce] px-8 text-sm font-semibold text-white shadow-lg shadow-[#0072ce]/30 transition hover:bg-[#0062b8] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {submitting ? "Unlocking…" : "Unlock full report"}
-              </button>
-              <p className="text-[0.65rem] leading-relaxed text-white/45">
-                By continuing you agree we may contact you about this estimate. This is not an appraisal.
-              </p>
-            </form>
-          )}
+
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">Email</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => onFormChange({ email: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-gray-400"
+                placeholder="you@example.com"
+                autoComplete="email"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">Phone (optional)</label>
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => onFormChange({ phone: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-gray-400"
+                placeholder="(555) 555-5555"
+                autoComplete="tel"
+              />
+            </div>
+
+            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+            <button
+              type="button"
+              onClick={onUnlock}
+              disabled={!form.name.trim() || !form.email.trim() || isBusy}
+              className="mt-2 rounded-2xl bg-gray-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+            >
+              {isBusy ? "Unlocking..." : "Unlock Full Report"}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

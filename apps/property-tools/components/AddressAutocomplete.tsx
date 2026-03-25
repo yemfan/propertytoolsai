@@ -3,16 +3,10 @@
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
+import type { GoogleAutocompleteValue } from "@/lib/address/google";
 
-export type AddressAutocompleteValue = {
-  formattedAddress: string;
-  lat: number | null;
-  lng: number | null;
-  placeId?: string | null;
-  city?: string | null;
-  state?: string | null;
-  zip?: string | null;
-};
+/** @deprecated Import {@link GoogleAutocompleteValue} from `@/lib/address` instead. */
+export type AddressAutocompleteValue = GoogleAutocompleteValue;
 
 type Props = {
   value: string;

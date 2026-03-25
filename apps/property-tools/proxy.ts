@@ -1,71 +1,59 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { supabaseAuthCookieOptions } from "./lib/authCookieOptions";
-import { getSupabasePublicEnv } from "./lib/supabasePublicEnv";
+import { supabaseAuthCookieOptions } from "@/lib/authCookieOptions";
+import { getRoleHomePath, parseUserRole } from "@/lib/auth/roles";
+import { getSupabasePublicEnv } from "@/lib/supabasePublicEnv";
+import { safeInternalRedirect } from "@/lib/loginUrl";
 
-const PROTECTED_PREFIXES = [
-  "/dashboard",
-  "/dashboard-router",
-  "/rbac",
-  "/agent",
-  "/loan-broker",
-  "/support",
-  "/admin",
-  "/propertytools/dashboard",
-];
-
-const AUTH_PAGES = ["/login", "/signup"];
+function getRequiredRole(pathname: string): "agent" | "loan_broker" | "support" | "admin" | null {
+  if (pathname.startsWith("/agent")) return "agent";
+  if (pathname.startsWith("/loan-broker")) return "loan_broker";
+  if (pathname.startsWith("/support")) return "support";
+  if (pathname.startsWith("/admin")) return "admin";
+  return null;
+}
 
 function isProtectedPath(pathname: string) {
-  return PROTECTED_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  return (
+    pathname.startsWith("/agent") ||
+    pathname.startsWith("/loan-broker") ||
+    pathname.startsWith("/support") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/dashboard-router") ||
+    pathname.startsWith("/rbac") ||
+    pathname.startsWith("/propertytools/dashboard")
   );
 }
 
-function isAuthPage(pathname: string) {
-  return AUTH_PAGES.includes(pathname);
-}
-
 /**
- * Proxy (Next.js 16+): Supabase cookie session refresh + auth gate for RBAC routes.
- * @see docs/RBAC.md
+ * Next.js 16+ request proxy: Supabase session + RBAC (replaces legacy middleware.ts).
  */
-export async function proxy(req: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request: req });
-  const { pathname, search } = req.nextUrl;
-  const protectedPath = isProtectedPath(pathname);
-  const authPage = isAuthPage(pathname);
-
+export async function proxy(request: NextRequest) {
   const publicEnv = getSupabasePublicEnv();
   if (!publicEnv) {
-    console.warn(
-      "[property-tools proxy] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY — add apps/property-tools/.env.local (see .env.example)."
-    );
-    if (protectedPath) {
-      const url = req.nextUrl.clone();
+    if (isProtectedPath(request.nextUrl.pathname)) {
+      const url = request.nextUrl.clone();
       url.pathname = "/login";
-      url.searchParams.set("next", pathname + (req.nextUrl.search ?? ""));
+      url.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search || ""}`);
       return NextResponse.redirect(url);
     }
-    return supabaseResponse;
+    return NextResponse.next();
   }
 
+  let response = NextResponse.next({ request });
   const cookieOptions = supabaseAuthCookieOptions();
 
   const supabase = createServerClient(publicEnv.url, publicEnv.anonKey, {
     ...(cookieOptions ? { cookieOptions } : {}),
     cookies: {
       getAll() {
-        return req.cookies.getAll();
+        return request.cookies.getAll();
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
-        supabaseResponse = NextResponse.next({
-          request: req,
-        });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
-        );
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        response = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
       },
     },
   });
@@ -74,21 +62,61 @@ export async function proxy(req: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (protectedPath && !user) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("next", `${pathname}${search || ""}`);
-    return NextResponse.redirect(url);
-  }
+  const pathname = request.nextUrl.pathname;
+  const isAuthPage = pathname === "/login" || pathname === "/signup";
 
-  if (authPage && user) {
-    const url = req.nextUrl.clone();
+  if (isAuthPage && user) {
+    const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";
     return NextResponse.redirect(url);
   }
 
-  return supabaseResponse;
+  const protectedPath = isProtectedPath(pathname);
+  if (!protectedPath) {
+    return response;
+  }
+
+  if (!user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("next", `${pathname}${request.nextUrl.search || ""}`);
+    return NextResponse.redirect(url);
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!profile?.role) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  const role = parseUserRole(profile.role as string);
+
+  if (pathname === "/dashboard") {
+    const redirectTarget =
+      safeInternalRedirect(request.nextUrl.searchParams.get("redirect")) ??
+      safeInternalRedirect(request.nextUrl.searchParams.get("next"));
+    if (redirectTarget) {
+      return NextResponse.redirect(new URL(redirectTarget, request.url));
+    }
+    return NextResponse.redirect(new URL(getRoleHomePath(role), request.url));
+  }
+
+  const requiredRole = getRequiredRole(pathname);
+  if (requiredRole) {
+    const allowed = role === requiredRole || role === "admin";
+    if (!allowed) {
+      return NextResponse.redirect(new URL(getRoleHomePath(role), request.url));
+    }
+  }
+
+  return response;
 }
 
 export const config = {
@@ -99,14 +127,14 @@ export const config = {
     "/dashboard-router/:path*",
     "/rbac",
     "/rbac/:path*",
-    "/admin",
-    "/admin/:path*",
     "/agent",
     "/agent/:path*",
     "/loan-broker",
     "/loan-broker/:path*",
     "/support",
     "/support/:path*",
+    "/admin",
+    "/admin/:path*",
     "/propertytools/dashboard",
     "/propertytools/dashboard/:path*",
     "/login",

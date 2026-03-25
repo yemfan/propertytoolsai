@@ -3,6 +3,46 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 const SUPPORT_CONVERSATIONS_SELECT =
   "public_id,customer_name,subject,status,priority,unread_for_support,updated_at,last_message_at,assigned_agent_name,created_at";
 
+/** When `created_at` is not on the table yet (legacy DB). */
+const SUPPORT_CONVERSATIONS_SELECT_WITHOUT_CREATED_AT =
+  "public_id,customer_name,subject,status,priority,unread_for_support,updated_at,last_message_at,assigned_agent_name";
+
+function isMissingCreatedAtError(error: { message?: string; code?: string }): boolean {
+  const msg = (error.message ?? "").toLowerCase();
+  const code = String(error.code ?? "");
+  if (!msg.includes("created_at")) return false;
+  if (msg.includes("does not exist") || msg.includes("undefined column")) return true;
+  if (code === "42703") return true;
+  return false;
+}
+
+/** Date filter using best available timestamps when `created_at` is absent. */
+function rowMatchesDateBounds(
+  row: SupportConversationRow,
+  start?: string,
+  end?: string
+): boolean {
+  const s = start?.trim();
+  const e = end?.trim();
+  if (!s && !e) return true;
+
+  const ts = row.created_at ?? row.last_message_at ?? row.updated_at;
+  if (typeof ts !== "string" || ts.length < 10) return false;
+
+  const t = new Date(ts).getTime();
+  if (!Number.isFinite(t)) return false;
+
+  if (s) {
+    const startMs = Date.parse(`${s}T00:00:00.000Z`);
+    if (Number.isFinite(startMs) && t < startMs) return false;
+  }
+  if (e) {
+    const endMs = Date.parse(`${e}T23:59:59.999Z`);
+    if (Number.isFinite(endMs) && t > endMs) return false;
+  }
+  return true;
+}
+
 export type SupportDashboardResponse = {
   kpis: {
     openTickets: number;
@@ -112,24 +152,46 @@ export async function getSupportDashboardOverview({
   start?: string;
   end?: string;
 } = {}): Promise<SupportDashboardResponse> {
+  const s = start?.trim();
+  const e = end?.trim();
+
   let query = supabaseAdmin
     .from("support_conversations")
     .select(SUPPORT_CONVERSATIONS_SELECT)
     .order("last_message_at", { ascending: false });
 
-  const s = start?.trim();
-  const e = end?.trim();
   if (s) query = query.gte("created_at", `${s}T00:00:00.000Z`);
   if (e) query = query.lte("created_at", `${e}T23:59:59.999Z`);
 
   const { data: conversations, error } = await query;
 
-  if (error) {
+  let rows: SupportConversationRow[];
+
+  if (error && isMissingCreatedAtError(error)) {
+    console.warn(
+      "[getSupportDashboardOverview] support_conversations — no created_at, using legacy select + in-memory date filter",
+      error.message
+    );
+    const legacyQuery = supabaseAdmin
+      .from("support_conversations")
+      .select(SUPPORT_CONVERSATIONS_SELECT_WITHOUT_CREATED_AT)
+      .order("last_message_at", { ascending: false });
+    const legacy = await legacyQuery;
+    if (legacy.error) {
+      console.warn("[getSupportDashboardOverview] support_conversations", legacy.error.message);
+      return emptySupportDashboardResponse();
+    }
+    let legacyRows = (legacy.data ?? []) as SupportConversationRow[];
+    if (s || e) {
+      legacyRows = legacyRows.filter((r) => rowMatchesDateBounds(r, start, end));
+    }
+    rows = legacyRows;
+  } else if (error) {
     console.warn("[getSupportDashboardOverview] support_conversations", error.message);
     return emptySupportDashboardResponse();
+  } else {
+    rows = (conversations ?? []) as SupportConversationRow[];
   }
-
-  const rows = (conversations ?? []) as SupportConversationRow[];
   const todayStart = todayStartIso();
   const dateFiltered = hasCreatedAtFilter(start, end);
 

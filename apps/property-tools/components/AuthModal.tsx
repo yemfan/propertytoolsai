@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
@@ -295,9 +296,9 @@ export default function AuthModal(props: {
 
           <p className="mt-4 text-center text-[11px] text-slate-500">
             Agent?{" "}
-            <a className="font-semibold text-blue-700 hover:underline" href="/agent-signup">
+            <Link className="font-semibold text-blue-700 hover:underline" href="/agent-signup">
               Agent signup
-            </a>
+            </Link>
           </p>
         </div>
       </div>

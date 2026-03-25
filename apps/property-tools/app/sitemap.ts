@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { getClusterGuidePathsForSitemap } from "@/lib/clusterGenerator/db";
 import { listSerpHubPathsForSitemap } from "@/lib/serpDominator/db";
 import { getProgrammaticSeoUrlPaths } from "@/lib/programmaticSeo";
+import { getSeoSitemapEntries } from "@/lib/seo-generator/sitemap";
 import { getKeywordPagesForCity, TRAFFIC_CITIES } from "@/lib/trafficSeo";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -29,6 +30,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/",
     "/guides",
     "/home-value",
+    "/affordability",
+    "/match",
     "/landing/home-value",
     "/landing/mortgage-calculator",
     "/content/video-scripts",
@@ -46,7 +49,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...getKeywordPagesForCity("market-report", c.slug).map((k) => `/market-report/${c.slug}/${k.keywordSlug}`),
   ]);
 
-  return [
+  let programmaticCitySeo: MetadataRoute.Sitemap = [];
+  try {
+    programmaticCitySeo = await getSeoSitemapEntries();
+  } catch {
+    programmaticCitySeo = [];
+  }
+
+  const pathEntries: MetadataRoute.Sitemap = [
     ...staticRoutes,
     ...seoRoutes,
     ...keywordRoutes,
@@ -56,8 +66,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ].map((path) => ({
     url: `${base}${path}`,
     lastModified: now,
-    changeFrequency: "weekly",
+    changeFrequency: "weekly" as const,
     priority: path === "/" ? 1 : 0.7,
   }));
+
+  return [...pathEntries, ...programmaticCitySeo];
 }
 

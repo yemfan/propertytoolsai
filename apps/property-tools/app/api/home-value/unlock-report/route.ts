@@ -1,84 +1,145 @@
 import { NextResponse } from "next/server";
-import { getUserFromRequest } from "@/lib/authFromRequest";
-import { insertToolEvent } from "@/lib/homeValue/funnelPersistence";
-import { buildLeadRecordFromUnlockBody } from "@/lib/leads/leadRecord";
-import { persistToolLead, type ToolLeadBody } from "@/lib/leads/persistToolLead";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { generateHomeValueReportPdf } from "@/lib/home-value/report-pdf";
+import { createLeadFromHomeValue } from "@/lib/home-value/lead";
+import { sendHomeValueReportEmail } from "@/lib/home-value/email";
+import { autoAssignLeadToAgent } from "@/lib/home-value/assignment";
+import { queueHomeValueSequence } from "@/lib/home-value/followup-sequence";
+import { createAgentNotification } from "@/lib/home-value/agent-notification";
 
-export const runtime = "nodejs";
-
-/**
- * POST /api/home-value/unlock-report
- * Same CRM shape as /api/leads/tool-capture, plus `report_unlocked` tool_event.
- */
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as ToolLeadBody;
-    const authUser = await getUserFromRequest(req);
-    const userId = authUser?.id ?? null;
+    const body = await req.json();
+    const { sessionId, name, email, phone } = body;
 
-    const merged: ToolLeadBody = {
-      ...body,
-      source: body.source ?? "home_value_estimator",
-      tool: body.tool ?? "home_value_estimator",
-    };
-
-    const sessionId = String(merged.session_id ?? "").trim();
-
-    const result = await persistToolLead(merged, { userId });
-    if (result.ok === false) {
+    if (!sessionId || !name || !email) {
       return NextResponse.json(
-        { ok: false, error: result.error },
-        { status: result.status ?? 500 }
+        { success: false, error: "Missing required fields" },
+        { status: 400 }
       );
     }
 
-    if (sessionId && result.leadId) {
-      try {
-        await insertToolEvent({
-          sessionId,
-          userId,
-          toolName: "home_value",
-          eventName: "report_unlocked",
-          metadata: {
-            lead_id: result.leadId,
-            source: merged.source,
-          },
-        });
-      } catch (e) {
-        console.warn("unlock-report tool_events", e);
-      }
+    const { data: session, error: sessionError } = await supabaseAdmin
+      .from("home_value_sessions")
+      .select("*")
+      .eq("session_id", sessionId)
+      .single();
+
+    if (sessionError || !session) {
+      return NextResponse.json(
+        { success: false, error: "Session not found" },
+        { status: 404 }
+      );
     }
 
-    const leadRecord =
-      result.leadId != null
-        ? buildLeadRecordFromUnlockBody({
-            leadId: result.leadId,
-            name: merged.name,
-            email: merged.email,
-            phone: merged.phone,
-            fullAddress: merged.full_address ?? merged.property_address,
-            city: merged.city ?? null,
-            state: merged.state ?? null,
-            zip: merged.zip ?? null,
-            propertyValue: merged.property_value,
-            estimateLow: merged.estimate_low,
-            estimateHigh: merged.estimate_high,
-            confidence: merged.confidence,
-            confidenceScore: merged.confidence_score,
-            likelyIntent: merged.likely_intent,
-            engagementScore: merged.engagement_score,
-            timeline: merged.timeline ?? merged.timeframe,
-            buyingOrSelling: merged.buying_or_selling,
-            status: "new",
-            createdAt: new Date().toISOString(),
-          })
-        : undefined;
+    const lead = await createLeadFromHomeValue({
+      name,
+      email,
+      phone,
+      address: session.property_address,
+      estimateValue: session.estimate_value,
+      confidence: session.confidence,
+      sessionId,
+      zip: session.zip,
+      city: session.city,
+    });
 
-    return NextResponse.json({ ok: true, leadId: result.leadId, leadRecord });
-  } catch (e: any) {
-    console.error("POST /api/home-value/unlock-report", e);
+    const assignment = await autoAssignLeadToAgent({
+      leadId: lead.id,
+      zip: session.zip,
+      city: session.city,
+    });
+
+    if (assignment?.agentId) {
+      await createAgentNotification({
+        agentId: assignment.agentId,
+        leadId: lead.id,
+        type: "new_home_value_lead",
+        title: "New Home Value Lead Assigned",
+        message: `${name} unlocked a home value report for ${session.property_address}.`,
+        actionUrl: `/agent/leads/${lead.id}`,
+        metadata: {
+          source: "home_value_estimate",
+          property_address: session.property_address,
+          estimate_value: session.estimate_value,
+        },
+      });
+    }
+
+    await queueHomeValueSequence({
+      leadId: lead.id,
+      customerName: name,
+      customerEmail: email,
+      customerPhone: phone ?? null,
+      propertyAddress: session.property_address,
+      estimateValue: session.estimate_value,
+      assignedAgentName: assignment?.fullName ?? null,
+      assignedAgentId: assignment?.agentId ?? null,
+    });
+
+    const pdf = await generateHomeValueReportPdf({
+      sessionId,
+      address: session.property_address,
+      estimateValue: session.estimate_value,
+      rangeLow: session.range_low,
+      rangeHigh: session.range_high,
+      confidence: session.confidence,
+      medianPpsf: session.median_ppsf,
+      localTrendPct: session.local_trend_pct,
+      compCount: session.comp_count,
+      actions: session.recommendations?.actions ?? [],
+    });
+
+    const pdfUrl = `/reports/home-value/${pdf.filename}`;
+
+    await supabaseAdmin.from("home_value_reports").upsert({
+      session_id: sessionId,
+      lead_id: lead.id,
+      property_address: session.property_address,
+      estimate_value: session.estimate_value,
+      range_low: session.range_low,
+      range_high: session.range_high,
+      confidence: session.confidence,
+      report_json: session,
+      pdf_url: pdfUrl,
+      emailed_at: new Date().toISOString(),
+    });
+
+    await sendHomeValueReportEmail({
+      to: email,
+      name,
+      address: session.property_address,
+      reportUrl: pdfUrl,
+    });
+
+    return NextResponse.json({
+      success: true,
+      leadId: lead.id,
+      assignedAgent: assignment ?? null,
+      report: {
+        estimate: {
+          value: session.estimate_value,
+          rangeLow: session.range_low,
+          rangeHigh: session.range_high,
+          confidence: session.confidence,
+          confidenceScore: session.confidence_score,
+        },
+        market: {
+          medianPpsf: session.median_ppsf,
+          localTrendPct: session.local_trend_pct,
+          compCount: session.comp_count,
+          city: session.city,
+        },
+        recommendations: session.recommendations ?? {
+          actions: [],
+        },
+        pdfUrl,
+      },
+    });
+  } catch (error) {
+    console.error("unlock-report error:", error);
     return NextResponse.json(
-      { ok: false, error: e?.message ?? "Server error" },
+      { success: false, error: "Failed to unlock report" },
       { status: 500 }
     );
   }

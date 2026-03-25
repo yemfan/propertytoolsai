@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { recordLeadEvent, scoreLead } from "@/lib/leadScoring";
+import { scheduleLeadScoreRefresh } from "@/lib/lead-scoring/service";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -85,6 +86,7 @@ export async function GET(req: Request) {
         metadata: safeTarget ? { url: safeTarget } : {},
       });
       await scoreLead(String(leadId), true);
+      scheduleLeadScoreRefresh(String(leadId));
     } catch {}
   }
 

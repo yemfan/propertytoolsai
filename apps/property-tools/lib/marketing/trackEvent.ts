@@ -4,7 +4,6 @@
  */
 export function trackEvent(name: string, payload?: Record<string, unknown>) {
   if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-    // eslint-disable-next-line no-console
     console.debug("[trackEvent]", name, payload ?? {});
   }
 

@@ -1,5 +1,5 @@
 import type { NavLeafItem, NavSection } from "@repo/ui";
-import { Building2, Headphones, LayoutDashboard, Shield, Users, Wallet } from "lucide-react";
+import { Building2, Headphones, LayoutDashboard, Shield, TrendingUp, Users, Wallet } from "lucide-react";
 import { propertyToolsNav } from "@/nav.config";
 import type { UserRole } from "./roles";
 
@@ -22,6 +22,12 @@ export function getNavSectionsForRole(role: UserRole): NavSection[] {
       href: "/admin/platform-overview",
       match: ["/admin/platform-overview"],
       icon: <Shield size={16} strokeWidth={2} aria-hidden />,
+    });
+    items.push({
+      label: "Performance",
+      href: "/admin/performance",
+      match: ["/admin/performance"],
+      icon: <TrendingUp size={16} strokeWidth={2} aria-hidden />,
     });
     items.push({
       label: "User management",

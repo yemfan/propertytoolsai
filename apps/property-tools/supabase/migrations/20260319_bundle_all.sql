@@ -337,6 +337,21 @@ create index if not exists idx_daily_briefings_agent_id_created_at
 --
 -- This migration just ensures the common dashboard filter indexes exist.
 
+-- Defensive: indexes below require public.leads.created_at (42703 if missing).
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name = 'leads'
+  ) then
+    execute 'alter table public.leads add column if not exists created_at timestamptz';
+    execute 'update public.leads set created_at = coalesce(created_at, now()) where created_at is null';
+    execute 'alter table public.leads alter column created_at set default now()';
+  end if;
+end $$;
+
 -- Leads filtering (rating / engagement / last activity) + agent scoping
 create index if not exists idx_leads_agent_id_created_at
   on public.leads(agent_id, created_at desc);

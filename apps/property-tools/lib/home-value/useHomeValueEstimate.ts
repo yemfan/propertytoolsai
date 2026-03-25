@@ -1,462 +1,421 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { mergeAuthHeaders } from "@/lib/mergeAuthHeaders";
-import {
-  computeEngagementScore,
-  crmIntentFromLikelyIntent,
-  HIGH_VALUE_PROPERTY_THRESHOLD_USD,
-  leadScoreBand,
-} from "@/lib/homeValue/engagementScore";
-import { fetchJson } from "@/lib/homeValue/fetchJson";
-import type { HomeValueEstimateResponse, PropertyCondition, RenovationLevel } from "@/lib/homeValue/types";
+import { useEffect, useMemo, useState } from "react";
+import { getHomeValueHistory, saveHomeValueHistory, type HomeValueHistoryItem } from "./history";
+import type {
+  AddressSelection,
+  EstimateDetails,
+  EstimateRequest,
+  EstimateResponse,
+  EstimateUiState,
+  LeadForm,
+  SessionResponse,
+  UnlockReportResponse,
+} from "./types";
+
+function generateSessionId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `sess_${Math.random().toString(36).slice(2, 11)}`;
+}
 
 const HV_SESSION_KEY = "propertytoolsai:hv_session_id";
-const HV_UNLOCK_KEY = "propertytoolsai:hv_report_unlocked";
+const LEGACY_SESSION_STORAGE_KEY = "home_value_session_id";
 
-const REFINE_DEBOUNCE_MS = 480;
-
-export type HomeValueEstimateUiStatus =
-  | "idle"
-  | "address_selected"
-  | "estimating"
-  | "preview_ready"
-  | "refining"
-  | "report_locked"
-  | "unlocking"
-  | "report_unlocked"
-  | "error";
-
-export type HomeValueRefinements = {
-  beds: number;
-  baths: number;
-  sqft: number;
-  yearBuilt: number | null;
-  condition: PropertyCondition;
-  renovatedRecently: boolean;
-};
-
-const defaultRefinements = (): HomeValueRefinements => ({
-  beds: 3,
-  baths: 2,
-  sqft: 1800,
-  yearBuilt: null,
-  condition: "average",
-  renovatedRecently: false,
-});
-
-function readOrCreateSessionId(): string {
+export function readOrCreateHomeValueSessionId(): string {
   if (typeof window === "undefined") return "";
   try {
     let id = sessionStorage.getItem(HV_SESSION_KEY);
-    if (!id) {
-      id = crypto.randomUUID();
-      sessionStorage.setItem(HV_SESSION_KEY, id);
-    }
+    if (!id) id = localStorage.getItem(LEGACY_SESSION_STORAGE_KEY);
+    if (!id) id = generateSessionId();
+    sessionStorage.setItem(HV_SESSION_KEY, id);
+    localStorage.setItem(LEGACY_SESSION_STORAGE_KEY, id);
     return id;
   } catch {
-    return crypto.randomUUID();
+    return generateSessionId();
   }
 }
 
-function readUnlocked(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return sessionStorage.getItem(HV_UNLOCK_KEY) === "1";
-  } catch {
-    return false;
+export function dbPropertyTypeToHomeValueUi(t: string | null | undefined): EstimateDetails["propertyType"] | undefined {
+  if (!t || !String(t).trim()) return undefined;
+  const x = String(t).toLowerCase();
+  if (/condo|apartment|coop/.test(x)) return "condo";
+  if (/town|row/.test(x)) return "townhome";
+  if (/multi|duplex|triplex|fourplex/.test(x)) return "multi_family";
+  return "single_family";
+}
+
+async function apiRequest<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+    cache: "no-store",
+  });
+
+  const json = await res.json();
+  if (!res.ok || json?.success === false) {
+    throw new Error(json?.error || "Request failed");
   }
+  return json as T;
 }
 
-function persistUnlocked() {
-  try {
-    sessionStorage.setItem(HV_UNLOCK_KEY, "1");
-  } catch {
-    /* ignore */
+function parseTypedAddress(input: string): AddressSelection | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const parts = trimmed.split(",").map((p) => p.trim()).filter(Boolean);
+
+  if (parts.length >= 3) {
+    const street = parts[0];
+    const city = parts[1];
+    const stateZip = parts[2].split(/\s+/).filter(Boolean);
+
+    return {
+      fullAddress: trimmed,
+      street,
+      city,
+      state: stateZip[0] || "CA",
+      zip: stateZip[1] || "",
+    };
   }
-}
 
-function renovationFromBoolean(recent: boolean): RenovationLevel {
-  return recent ? "cosmetic" : "none";
-}
-
-function buildEstimateBody(
-  address: string,
-  sessionId: string,
-  refinements: HomeValueRefinements,
-  prior: HomeValueEstimateResponse | null
-): Record<string, unknown> {
-  const np = prior?.normalizedProperty;
   return {
-    address: address.trim(),
-    session_id: sessionId,
-    city: np?.city ?? undefined,
-    state: np?.state ?? undefined,
-    zip: np?.zip ?? undefined,
-    lat: np?.lat ?? undefined,
-    lng: np?.lng ?? undefined,
-    beds: refinements.beds,
-    baths: refinements.baths,
-    sqft: refinements.sqft,
-    yearBuilt: refinements.yearBuilt,
-    condition: refinements.condition,
-    renovation: renovationFromBoolean(refinements.renovatedRecently),
-    intent_signals: { homeValueUsed: true },
+    fullAddress: trimmed,
+    street: trimmed,
+    city: "Unknown",
+    state: "CA",
+    zip: "",
   };
 }
 
-export type UnlockReportInput = {
-  name: string;
-  email: string;
-  phone: string;
-};
+async function reverseGeocodeMapbox(lat: number, lng: number): Promise<AddressSelection> {
+  const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN!;
+  const url = new URL("https://api.mapbox.com/search/geocode/v6/reverse");
+  url.searchParams.set("longitude", String(lng));
+  url.searchParams.set("latitude", String(lat));
+  url.searchParams.set("access_token", token);
+
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to reverse geocode location");
+
+  const json = await res.json();
+  const feature = json?.features?.[0];
+  if (!feature) throw new Error("No address found for your location");
+
+  const props = feature.properties ?? {};
+  const context = props.context ?? {};
+
+  return {
+    fullAddress: props.full_address || props.name || "Current location",
+    street: props.address_line1 || props.name || "",
+    city: context.place?.name || context.locality?.name || "Unknown",
+    state: context.region?.region_code || context.region?.name || "CA",
+    zip: context.postcode?.name || "",
+    lat,
+    lng,
+  };
+}
 
 export function useHomeValueEstimate() {
-  const [sessionId, setSessionId] = useState("");
-  const [address, setAddress] = useState("");
-  const [addressTouched, setAddressTouched] = useState(false);
-  const [refinements, setRefinementsState] = useState<HomeValueRefinements>(defaultRefinements);
-  const [result, setResult] = useState<HomeValueEstimateResponse | null>(null);
-  const [status, setStatus] = useState<HomeValueEstimateUiStatus>("idle");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [uiState, setUiState] = useState<EstimateUiState>("idle");
+  const [error, setError] = useState("");
   const [unlockError, setUnlockError] = useState<string | null>(null);
-  const [reportUnlocked, setReportUnlocked] = useState(false);
-
-  const resultRef = useRef<HomeValueEstimateResponse | null>(null);
-  const refinementsRef = useRef(refinements);
-  const addressRef = useRef(address);
-  const sessionIdRef = useRef(sessionId);
-  const reportGateExpandedRef = useRef(false);
-  const refineTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const skipNextRefineDebounce = useRef(false);
-  const requestSeq = useRef(0);
-
-  useEffect(() => {
-    resultRef.current = result;
-  }, [result]);
-  useEffect(() => {
-    refinementsRef.current = refinements;
-  }, [refinements]);
-  useEffect(() => {
-    addressRef.current = address;
-  }, [address]);
-  useEffect(() => {
-    sessionIdRef.current = sessionId;
-  }, [sessionId]);
+  const [sessionId, setSessionId] = useState("");
+  const [addressInput, setAddressInput] = useState("");
+  const [address, setAddress] = useState<AddressSelection | null>(null);
+  const [pendingAddress, setPendingAddress] = useState<AddressSelection | null>(null);
+  const [details, setDetails] = useState<EstimateDetails>({
+    propertyType: "single_family",
+    condition: "good",
+  });
+  const [estimateResult, setEstimateResult] = useState<EstimateResponse | null>(null);
+  const [unlockResult, setUnlockResult] = useState<UnlockReportResponse | null>(null);
+  const [leadForm, setLeadForm] = useState<LeadForm>({
+    name: "",
+    email: "",
+    phone: "",
+  });
+  const [history, setHistory] = useState<HomeValueHistoryItem[]>([]);
 
   useEffect(() => {
-    setSessionId(readOrCreateSessionId());
-    const u = readUnlocked();
-    setReportUnlocked(u);
-  }, []);
+    setHistory(getHomeValueHistory());
+    const nextSessionId = readOrCreateHomeValueSessionId();
+    setSessionId(nextSessionId);
 
-  useEffect(() => {
-    const a = address.trim();
-    if (a.length >= 8) {
-      if (status === "idle") setStatus("address_selected");
-    } else if (status === "address_selected") {
-      setStatus("idle");
-    }
-  }, [address, status]);
-
-  const runEstimate = useCallback(async (opts?: { silent?: boolean }) => {
-    const silent = opts?.silent ?? false;
-    const addr = addressRef.current.trim();
-    const sid = sessionIdRef.current;
-    const ref = refinementsRef.current;
-
-    if (addr.length < 8) {
-      setErrorMessage("Enter a full street address with city, state, or ZIP.");
-      setStatus("error");
-      return;
-    }
-    if (!sid) {
-      setErrorMessage("Session not ready — please refresh.");
-      setStatus("error");
-      return;
-    }
-    if (ref.sqft < 300) {
-      setErrorMessage("Living area should be at least 300 sq ft.");
-      setStatus("error");
-      return;
-    }
-
-    const seq = ++requestSeq.current;
-    if (!silent) {
-      setErrorMessage(null);
-      setStatus("estimating");
-    } else {
-      setStatus((s) => (s === "report_unlocked" ? s : "estimating"));
-    }
-
-    try {
-      const headers = await mergeAuthHeaders();
-      const body = buildEstimateBody(addr, sid, ref, resultRef.current);
-      const { res, data: raw } = await fetchJson<Record<string, unknown>>("/api/home-value/estimate", {
-        method: "POST",
-        headers,
-        credentials: "include",
-        body: JSON.stringify(body),
-      });
-
-      if (seq !== requestSeq.current) return;
-
-      if (!res.ok) {
-        throw new Error(typeof raw.error === "string" ? raw.error : "Could not compute estimate.");
-      }
-      if (raw.ok === false) {
-        throw new Error(typeof raw.error === "string" ? raw.error : "Could not compute estimate.");
-      }
-      if (!raw.estimate || typeof raw.sessionId !== "string") {
-        throw new Error("Unexpected response from server.");
-      }
-
-      const next = raw as unknown as HomeValueEstimateResponse;
-      setResult(next);
-      resultRef.current = next;
-
+    void (async () => {
       try {
-        sessionStorage.setItem(HV_SESSION_KEY, String(next.sessionId));
-        setSessionId(String(next.sessionId));
-        sessionIdRef.current = String(next.sessionId);
+        const data = await apiRequest<SessionResponse>(
+          `/api/home-value/session?sessionId=${encodeURIComponent(nextSessionId)}`,
+          { method: "GET" }
+        );
+
+        if (data?.session?.address?.fullAddress) {
+          setAddress(data.session.address);
+          setAddressInput(data.session.address.fullAddress);
+          setDetails((prev) => ({ ...prev, ...(data.session.details ?? {}) }));
+
+          if (data.session.estimate) {
+            setEstimateResult({
+              success: true,
+              sessionId: data.session.sessionId,
+              property: {
+                fullAddress: data.session.address.fullAddress,
+                city: data.session.address.city,
+                state: data.session.address.state,
+                zip: data.session.address.zip,
+                lat: data.session.address.lat ?? 0,
+                lng: data.session.address.lng ?? 0,
+                beds: data.session.details?.beds,
+                baths: data.session.details?.baths,
+                sqft: data.session.details?.sqft,
+                yearBuilt: data.session.details?.yearBuilt,
+                lotSize: data.session.details?.lotSize,
+                propertyType: data.session.details?.propertyType,
+              },
+              estimate: data.session.estimate,
+              supportingData: { medianPpsf: 0 },
+              comps: [],
+              recommendations: { actions: [] },
+            });
+            setUiState("preview_ready");
+          }
+        }
       } catch {
-        /* ignore */
+        // ignore missing session
       }
-
-      skipNextRefineDebounce.current = true;
-
-      if (!silent) {
-        setRefinementsState((prev) => {
-          const merged = {
-            ...prev,
-            beds: next.normalizedProperty.beds ?? prev.beds,
-            baths: next.normalizedProperty.baths ?? prev.baths,
-            sqft: Math.max(300, next.normalizedProperty.sqft ?? prev.sqft),
-            yearBuilt: next.normalizedProperty.yearBuilt ?? prev.yearBuilt,
-          };
-          refinementsRef.current = merged;
-          return merged;
-        });
-      }
-
-      const unlocked = readUnlocked();
-      setReportUnlocked(unlocked);
-      if (unlocked) {
-        setStatus("report_unlocked");
-      } else if (reportGateExpandedRef.current) {
-        setStatus("report_locked");
-      } else {
-        setStatus("preview_ready");
-      }
-    } catch (e) {
-      if (seq !== requestSeq.current) return;
-      setErrorMessage(e instanceof Error ? e.message : "Something went wrong.");
-      setStatus("error");
-    }
+    })();
   }, []);
 
-  const scheduleRefine = useCallback(() => {
-    if (!resultRef.current) return;
-    if (skipNextRefineDebounce.current) {
-      skipNextRefineDebounce.current = false;
+  async function runEstimate(nextAddress?: AddressSelection, nextDetails?: EstimateDetails) {
+    try {
+      setError("");
+      setUnlockError(null);
+      setUiState(estimateResult ? "refining" : "estimating");
+
+      const payload: EstimateRequest = {
+        sessionId,
+        address: nextAddress ?? address!,
+        details: nextDetails ?? details,
+        source: "tool_page",
+      };
+
+      const result = await apiRequest<EstimateResponse>("/api/home-value/estimate", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      setEstimateResult(result);
+      const historyAddress = nextAddress ?? address;
+      if (historyAddress) {
+        const item = {
+          sessionId,
+          address: historyAddress,
+          savedAt: new Date().toISOString(),
+          estimateValue: result.estimate.value,
+          rangeLow: result.estimate.rangeLow,
+          rangeHigh: result.estimate.rangeHigh,
+          confidence: result.estimate.confidence,
+        };
+
+        saveHomeValueHistory(item);
+        setHistory(getHomeValueHistory());
+      }
+      setUiState("report_locked");
+    } catch (err) {
+      setUiState("error");
+      setError(err instanceof Error ? err.message : "Failed to generate estimate");
+    }
+  }
+
+  function prepareAddressSelection(selectedAddress: AddressSelection) {
+    setPendingAddress({
+      ...selectedAddress,
+    });
+    setAddressInput(selectedAddress.fullAddress);
+    setUiState("address_selected");
+  }
+
+  async function confirmSelectedAddress(addressToConfirm?: AddressSelection) {
+    const finalAddress = addressToConfirm ?? pendingAddress;
+    if (!finalAddress) return;
+
+    setAddress(finalAddress);
+    setPendingAddress(null);
+    await runEstimate(finalAddress, details);
+  }
+
+  function clearPendingAddress() {
+    setPendingAddress(null);
+  }
+
+  async function startEstimateFromTypedInput() {
+    const parsed = parseTypedAddress(addressInput);
+    if (!parsed) {
+      setError("Please enter a valid address.");
+      setUiState("error");
       return;
     }
-    setStatus((s) => {
-      if (s === "unlocking") return s;
-      if (s === "report_unlocked") return "refining";
-      if (s === "report_locked") return "refining";
-      return "refining";
-    });
-    if (refineTimer.current) clearTimeout(refineTimer.current);
-    refineTimer.current = setTimeout(() => {
-      refineTimer.current = null;
-      void runEstimate({ silent: true });
-    }, REFINE_DEBOUNCE_MS);
-  }, [runEstimate]);
 
-  useEffect(() => {
-    return () => {
-      if (refineTimer.current) clearTimeout(refineTimer.current);
-    };
-  }, []);
+    setPendingAddress(parsed);
+    setUiState("address_selected");
+  }
 
-  const setRefinements = useCallback(
-    (patch: Partial<HomeValueRefinements>) => {
-      setRefinementsState((r) => {
-        const next = { ...r, ...patch };
-        refinementsRef.current = next;
-        return next;
-      });
-      scheduleRefine();
-    },
-    [scheduleRefine]
-  );
-
-  const submitAddress = useCallback(() => {
-    setAddressTouched(true);
-    void runEstimate();
-  }, [runEstimate]);
-
-  const retry = useCallback(() => {
-    setErrorMessage(null);
-    void runEstimate();
-  }, [runEstimate]);
-
-  const openReportGate = useCallback(() => {
-    reportGateExpandedRef.current = true;
-    if (resultRef.current) setStatus("report_locked");
-  }, []);
-
-  const unlockReport = useCallback(async (input: UnlockReportInput) => {
-    const res = resultRef.current;
-    if (!res) return { ok: false as const, error: "No estimate loaded." };
-    setUnlockError(null);
-    setStatus("unlocking");
-
-    const phoneTrim = input.phone.trim();
-    const missing = res.normalizedProperty.missingFields ?? [];
-    const eng = computeEngagementScore({
-      usedTool: true,
-      refinedDetails: missing.length === 0,
-      unlockedReport: true,
-      phoneProvided: Boolean(phoneTrim),
-      repeatSession: false,
-      clickedCma: false,
-      clickedExpert: false,
-      highValueProperty: res.estimate.point >= HIGH_VALUE_PROPERTY_THRESHOLD_USD,
-    });
-    const engBand = leadScoreBand(eng);
-    const leadIntent = res.intentInference.applied;
-
+  async function useMyLocation() {
     try {
-      const headers = await mergeAuthHeaders();
-      const { res: httpRes, data: json } = await fetchJson<{
-        ok?: boolean;
-        error?: string;
-        leadId?: string;
-      }>("/api/home-value/unlock-report", {
+      setError("");
+
+      if (!("geolocation" in navigator)) {
+        throw new Error("Geolocation is not supported in this browser");
+      }
+
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        });
+      });
+
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      const selected = await reverseGeocodeMapbox(lat, lng);
+
+      setPendingAddress(selected);
+      setAddressInput(selected.fullAddress);
+      setUiState("address_selected");
+    } catch (err) {
+      setUiState("error");
+      setError(err instanceof Error ? err.message : "Failed to use your location");
+    }
+  }
+
+  async function unlockReport() {
+    try {
+      setError("");
+      setUnlockError(null);
+      setUiState("unlocking");
+
+      const result = await apiRequest<UnlockReportResponse>("/api/home-value/unlock-report", {
         method: "POST",
-        headers,
-        credentials: "include",
         body: JSON.stringify({
-          name: input.name.trim(),
-          email: input.email.trim(),
-          phone: phoneTrim || undefined,
-          source: "home_value_estimator",
-          tool: "home_value_estimator",
-          intent: crmIntentFromLikelyIntent(leadIntent),
-          property_address: addressRef.current.trim(),
-          session_id: res.sessionId,
-          full_address: addressRef.current.trim(),
-          city: res.normalizedProperty.city ?? undefined,
-          state: res.normalizedProperty.state ?? undefined,
-          zip: res.normalizedProperty.zip ?? undefined,
-          property_value: res.estimate.point,
-          confidence_score: res.confidence.score,
-          engagement_score: eng,
-          estimate_low: res.estimate.low,
-          estimate_high: res.estimate.high,
-          confidence: res.confidence.level,
-          likely_intent: leadIntent,
-          metadata: {
-            engagement: "full_report_unlock",
-            likely_intent: leadIntent,
-            inferred_intent: res.intentInference.likely,
-            estimate_low: res.estimate.low,
-            estimate_high: res.estimate.high,
-            confidence_level: res.confidence.level,
-            comps_priced: res.comps.pricedCount,
-            market_source: res.market.source,
-            leadsmart_ready: true,
-            lead_score_band: engBand,
-            engagement_score_band: engBand,
-          },
+          sessionId,
+          name: leadForm.name,
+          email: leadForm.email,
+          phone: leadForm.phone,
         }),
       });
 
-      if (!httpRes.ok || !json.ok) {
-        const err = typeof json.error === "string" ? json.error : "Failed to unlock report.";
-        setUnlockError(err);
-        setStatus("report_locked");
-        return { ok: false as const, error: err };
+      setUnlockResult(result);
+      setUiState("report_unlocked");
+    } catch (err) {
+      setUiState("report_locked");
+      setUnlockError(err instanceof Error ? err.message : "Failed to unlock report");
+    }
+  }
+
+  async function restoreFromHistory(sessionIdToLoad: string) {
+    try {
+      setError("");
+      const data = await apiRequest<SessionResponse>(
+        `/api/home-value/session?sessionId=${encodeURIComponent(sessionIdToLoad)}`,
+        { method: "GET" }
+      );
+
+      if (data?.session?.address) {
+        setAddress(data.session.address);
+        setAddressInput(data.session.address.fullAddress);
+        setDetails((prev) => ({ ...prev, ...(data.session.details ?? {}) }));
+
+        if (data.session.estimate) {
+          setEstimateResult({
+            success: true,
+            sessionId: data.session.sessionId,
+            property: {
+              fullAddress: data.session.address.fullAddress,
+              city: data.session.address.city,
+              state: data.session.address.state,
+              zip: data.session.address.zip,
+              lat: data.session.address.lat ?? 0,
+              lng: data.session.address.lng ?? 0,
+              beds: data.session.details?.beds,
+              baths: data.session.details?.baths,
+              sqft: data.session.details?.sqft,
+              yearBuilt: data.session.details?.yearBuilt,
+              lotSize: data.session.details?.lotSize,
+              propertyType: data.session.details?.propertyType,
+            },
+            estimate: data.session.estimate,
+            supportingData: { medianPpsf: 0 },
+            comps: [],
+            recommendations: { actions: [] },
+          });
+          setUiState("preview_ready");
+        }
       }
-
-      persistUnlocked();
-      setReportUnlocked(true);
-      reportGateExpandedRef.current = false;
-      setStatus("report_unlocked");
-      return { ok: true as const, leadId: json.leadId };
-    } catch (e) {
-      const err = e instanceof Error ? e.message : "Failed to unlock report.";
-      setUnlockError(err);
-      setStatus("report_locked");
-      return { ok: false as const, error: err };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to restore session");
+      setUiState("error");
     }
-  }, []);
+  }
 
-  const reset = useCallback(() => {
-    requestSeq.current += 1;
-    if (refineTimer.current) clearTimeout(refineTimer.current);
-    refineTimer.current = null;
-    reportGateExpandedRef.current = false;
-    skipNextRefineDebounce.current = false;
-    setAddress("");
-    setAddressTouched(false);
-    const fresh = defaultRefinements();
-    setRefinementsState(fresh);
-    refinementsRef.current = fresh;
-    setResult(null);
-    resultRef.current = null;
-    setErrorMessage(null);
-    setUnlockError(null);
-    setStatus("idle");
-    try {
-      sessionStorage.removeItem(HV_UNLOCK_KEY);
-    } catch {
-      /* ignore */
-    }
-    setReportUnlocked(false);
-    const id = crypto.randomUUID();
-    try {
-      sessionStorage.setItem(HV_SESSION_KEY, id);
-    } catch {
-      /* ignore */
-    }
-    setSessionId(id);
-    sessionIdRef.current = id;
-  }, []);
+  function refreshHistory() {
+    setHistory(getHomeValueHistory());
+  }
 
-  const derived = useMemo(
-    () => ({
-      addressError:
-        addressTouched && address.trim().length > 0 && address.trim().length < 8
-          ? "Use a full address (street, city, state or ZIP)."
-          : null,
-      showPreview: Boolean(
-        result && ["preview_ready", "refining", "report_locked", "report_unlocked", "estimating"].includes(status)
-      ),
-    }),
-    [address, addressTouched, result, status]
-  );
+  const nextActions = useMemo(() => {
+    if (unlockResult?.report?.recommendations?.actions?.length) {
+      return unlockResult.report.recommendations.actions;
+    }
+    if (estimateResult?.recommendations?.actions?.length) {
+      return estimateResult.recommendations.actions;
+    }
+    return [
+      "Get a detailed CMA report",
+      "Compare this home with recent local sales",
+      "Estimate mortgage affordability",
+    ];
+  }, [unlockResult, estimateResult]);
+
+  async function startEstimate(selectedAddress: AddressSelection) {
+    prepareAddressSelection(selectedAddress);
+    await confirmSelectedAddress(selectedAddress);
+  }
+
+  const busyHero = uiState === "estimating" && !estimateResult;
+  const busyRefine = uiState === "estimating" || uiState === "refining";
 
   return {
-    sessionId,
-    address,
-    setAddress,
-    addressTouched,
-    setAddressTouched,
-    refinements,
-    setRefinements,
-    result,
-    status,
-    errorMessage,
+    uiState,
+    error,
     unlockError,
-    reportUnlocked,
-    derived,
-    submitAddress,
-    retry,
-    openReportGate,
+    addressInput,
+    setAddressInput,
+    address,
+    pendingAddress,
+    details,
+    setDetails,
+    estimateResult,
+    unlockResult,
+    leadForm,
+    setLeadForm,
+    startEstimate,
+    prepareAddressSelection,
+    confirmSelectedAddress,
+    clearPendingAddress,
+    startEstimateFromTypedInput,
+    useMyLocation,
+    runEstimate,
     unlockReport,
-    reset,
+    restoreFromHistory,
+    refreshHistory,
+    nextActions,
+    busyHero,
+    busyRefine,
+    history,
   };
 }

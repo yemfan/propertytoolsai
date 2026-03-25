@@ -1,116 +1,129 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabaseServer";
-import { sendEmail } from "@/lib/email";
-import { generateFollowUpMessage } from "@/lib/followupAI";
+import { logLeadActivity } from "@/lib/activity/logLeadActivity";
+import { addConversationMessage } from "@/lib/home-value/conversation";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
-function addNext(now: Date, freq: string) {
-  const d = new Date(now.toISOString());
-  if (freq === "daily") d.setUTCDate(d.getUTCDate() + 1);
-  else if (freq === "monthly") d.setUTCMonth(d.getUTCMonth() + 1);
-  else d.setUTCDate(d.getUTCDate() + 7);
-  return d.toISOString();
+type FollowupJob = {
+  id: string;
+  lead_id: string;
+  channel: string;
+  subject?: string | null;
+  message: string;
+  recipient_email?: string | null;
+  recipient_phone?: string | null;
+  recipient_name?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+async function sendEmailFollowup(input: {
+  to: string;
+  subject: string;
+  message: string;
+}) {
+  // Replace with your provider later
+  console.log("EMAIL", input);
+  return { success: true };
 }
 
-export async function GET() {
-  try {
-    const now = new Date();
-    const nowIso = now.toISOString();
+async function sendSmsFollowup(input: {
+  to: string;
+  message: string;
+}) {
+  // Replace with your SMS provider later
+  console.log("SMS", input);
+  return { success: true };
+}
 
-    const { data: leads, error } = await supabaseServer
-      .from("leads")
-      .select(
-        "id,agent_id,name,email,phone,property_address,rating,contact_frequency,contact_method,next_contact_at,automation_disabled"
-      )
-      .lte("next_contact_at", nowIso)
-      .limit(100);
+export async function POST() {
+  try {
+    const now = new Date().toISOString();
+
+    const { data: jobs, error } = await supabaseAdmin
+      .from("lead_followups")
+      .select("*")
+      .eq("status", "pending")
+      .lte("scheduled_for", now)
+      .order("scheduled_for", { ascending: true })
+      .limit(50);
 
     if (error) throw error;
 
-    let processed = 0;
-    let sent = 0;
-    let failed = 0;
-    let skipped = 0;
+    const rows = (jobs ?? []) as FollowupJob[];
 
-    for (const lead of (leads as any[]) ?? []) {
-      processed++;
-      const leadId = String(lead.id);
-      const agentId = lead.agent_id ? String(lead.agent_id) : null;
-      if (lead.automation_disabled) {
-        skipped++;
-        continue;
-      }
-      const method = String(lead.contact_method ?? "email");
-      const freq = String(lead.contact_frequency ?? "weekly");
-      const rating = (String(lead.rating ?? "warm") as any) as "hot" | "warm" | "cold";
-      const name = String(lead.name ?? "there");
-      const address = String(lead.property_address ?? "");
-
-      const content = await generateFollowUpMessage({
-        rating,
-        name,
-        address,
-        intent: "unknown",
-      });
-
-      // Email
-      if ((method === "email" || method === "both") && lead.email) {
-        try {
-          await sendEmail({
-            to: String(lead.email),
-            subject: "Quick follow-up",
-            text: content,
+    for (const job of rows) {
+      try {
+        if (job.channel === "email" && job.recipient_email) {
+          await sendEmailFollowup({
+            to: job.recipient_email,
+            subject: job.subject || "Follow-up",
+            message: job.message,
           });
-
-          await supabaseServer.from("communications").insert({
-            lead_id: leadId,
-            agent_id: agentId,
-            type: "email",
-            content,
-            status: "sent",
-          } as any);
-
-          sent++;
-        } catch (e: any) {
-          failed++;
-          await supabaseServer.from("communications").insert({
-            lead_id: leadId,
-            agent_id: agentId,
-            type: "email",
-            content,
-            status: "failed",
-          } as any);
+        } else if (job.channel === "sms" && job.recipient_phone) {
+          await sendSmsFollowup({
+            to: job.recipient_phone,
+            message: job.message,
+          });
+        } else {
+          throw new Error("Missing recipient for follow-up");
         }
-      }
 
-      // SMS (stub)
-      if (method === "sms" || method === "both") {
-        // TODO: integrate Twilio (or similar). For now log as failed to avoid silent spam.
-        await supabaseServer.from("communications").insert({
-          lead_id: leadId,
-          agent_id: agentId,
-          type: "sms",
-          content,
-          status: "failed",
-        } as any);
-      }
+        await supabaseAdmin
+          .from("lead_followups")
+          .update({
+            status: "sent",
+            sent_at: new Date().toISOString(),
+          })
+          .eq("id", job.id);
 
-      const nextAt = addNext(now, freq);
-      await supabaseServer
-        .from("leads")
-        .update({
-          last_contacted_at: nowIso,
-          next_contact_at: nextAt,
-        })
-        .eq("id", leadId);
+        await addConversationMessage({
+          leadId: job.lead_id,
+          direction: "outbound",
+          channel: job.channel === "sms" ? "sms" : "email",
+          subject: job.subject || null,
+          message: job.message,
+          senderName: "Automated follow-up",
+          senderEmail: null,
+          recipientName: job.recipient_name ?? null,
+          recipientEmail: job.recipient_email ?? null,
+          status: "sent",
+          relatedFollowupId: job.id,
+        });
+
+        const meta = job.metadata && typeof job.metadata === "object" ? job.metadata : {};
+        await logLeadActivity({
+          leadId: job.lead_id,
+          eventType: "followup_sent",
+          title: "Automated follow-up sent",
+          description: job.subject || "Follow-up delivered",
+          source: "followup_cron",
+          actorType: "system",
+          relatedFollowupId: job.id,
+          metadata: {
+            channel: job.channel,
+            ...meta,
+          },
+        });
+      } catch (jobError) {
+        console.error("Follow-up send failed", job.id, jobError);
+
+        await supabaseAdmin
+          .from("lead_followups")
+          .update({
+            status: "failed",
+          })
+          .eq("id", job.id);
+      }
     }
 
-    return NextResponse.json({ ok: true, processed, sent, failed });
-  } catch (e: any) {
-    console.error("lead-followups cron error", e);
+    return NextResponse.json({
+      success: true,
+      processed: rows.length,
+    });
+  } catch (error) {
+    console.error("process-followups error:", error);
     return NextResponse.json(
-      { ok: false, error: e?.message ?? "Server error" },
+      { success: false, error: "Failed to process follow-ups" },
       { status: 500 }
     );
   }
 }
-

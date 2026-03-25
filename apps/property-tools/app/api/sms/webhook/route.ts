@@ -3,6 +3,7 @@ import { supabaseServer } from "@/lib/supabaseServer";
 import { sendSMS } from "@/lib/twilioSms";
 import { generateSmsReply } from "@/lib/smsResponderAI";
 import { logSmsMessage } from "@/lib/smsAutoFollow";
+import { scheduleLeadScoreRefresh } from "@/lib/lead-scoring/service";
 
 function digitsOnly(input: string) {
   return input.replace(/\D/g, "");
@@ -172,6 +173,8 @@ export async function POST(req: Request) {
         .update({ sms_last_inbound_at: new Date().toISOString() } as any)
         .eq("id", leadId);
     } catch {}
+
+    scheduleLeadScoreRefresh(leadId);
 
     const unsubscribe = isUnsubscribeMessage(body);
     const highIntent = isHighIntentMessage(body);

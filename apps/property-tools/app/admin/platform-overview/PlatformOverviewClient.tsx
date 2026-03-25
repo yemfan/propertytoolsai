@@ -11,6 +11,8 @@ import { SectionCard } from "@/components/dashboard/SectionCard";
 import type { PlatformOverviewResponse } from "@/lib/dashboard/admin";
 import { getPresetDateRange, type DateRange } from "@/lib/dashboard/dateRange";
 import { useDashboardData } from "@/lib/dashboard/useDashboardData";
+import { PipelinePredictionPanel } from "@/components/admin/PipelinePredictionPanel";
+import { SeoRevenuePanel } from "@/components/seo/SeoRevenuePanel";
 
 function FunnelBar({
   label,
@@ -72,21 +74,26 @@ export function PlatformOverviewClient() {
         </>
       }
     >
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-        <p className="text-sm font-medium text-slate-800">Quick links</p>
-        <Link
-          href="/admin/users"
-          className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-medium text-slate-900 transition hover:border-[#0072ce]/40 hover:bg-white"
-        >
-          <span>User management</span>
-          <span className="text-slate-400" aria-hidden>
-            →
-          </span>
-        </Link>
-        <p className="mt-2 text-xs text-slate-500">
-          Invite staff, change roles, and activate or deactivate accounts.
-        </p>
+      <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+          <p className="text-sm font-medium text-slate-800">Quick links</p>
+          <Link
+            href="/admin/users"
+            className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-medium text-slate-900 transition hover:border-[#0072ce]/40 hover:bg-white"
+          >
+            <span>User management</span>
+            <span className="text-slate-400" aria-hidden>
+              →
+            </span>
+          </Link>
+          <p className="mt-2 text-xs text-slate-500">
+            Invite staff, change roles, and activate or deactivate accounts.
+          </p>
+        </div>
+        <SeoRevenuePanel />
       </div>
+
+      <PipelinePredictionPanel />
 
       <SectionCard title="Date Range">
         <p className="mb-3 text-xs text-gray-500">

@@ -34,6 +34,8 @@ export type LeadRow = {
   lead_status: LeadStatus;
   notes: string | null;
   engagement_score?: number | null;
+  lead_score?: number | null;
+  lead_temperature?: string | null;
   last_activity_at?: string | null;
   rating?: LeadRating | string | null;
   contact_frequency?: ContactFrequency | string | null;
@@ -181,9 +183,10 @@ export async function getLeads(params?: {
   let q = supabase
     .from("leads")
     .select(
-      "id,agent_id,name,email,phone,property_address,source,lead_status,notes,engagement_score,last_activity_at,nurture_score,rating,contact_frequency,contact_method,last_contacted_at,next_contact_at,search_location,search_radius,price_min,price_max,beds,baths,created_at"
+      "id,agent_id,name,email,phone,property_address,source,lead_status,notes,engagement_score,lead_score,lead_temperature,last_activity_at,nurture_score,rating,contact_frequency,contact_method,last_contacted_at,next_contact_at,search_location,search_radius,price_min,price_max,beds,baths,created_at"
     )
     .eq("agent_id", agentId)
+    .order("lead_score", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
 
   if (params?.lead_status) q = q.eq("lead_status", params.lead_status);
