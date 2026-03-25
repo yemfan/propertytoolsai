@@ -34,7 +34,6 @@ export default function PropertyToolsShell({ children }: { children: ReactNode }
         <PremiumSidebar
           appName={APP_NAME}
           sections={propertyToolsNav}
-          defaultCollapsed
           workspaceLabel={navConfig.sidebarTitle ?? "Tools"}
           branding="none"
           height="stretch"

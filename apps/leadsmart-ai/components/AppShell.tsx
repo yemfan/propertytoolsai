@@ -101,9 +101,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <PremiumSidebar
         appName={APP_NAME}
         sections={leadSmartMarketingNav}
-        defaultCollapsed
         workspaceLabel={marketingNavConfig.sidebarTitle ?? "Tools"}
-        footerCollapsedLabel="Free tools"
         footer={marketingSidebarFooter}
       />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">

@@ -163,7 +163,6 @@ function AppShellAuthedLayout({ children }: { children: ReactNode }) {
         <PremiumSidebar
           appName={APP_NAME}
           sections={navSections}
-          defaultCollapsed
           workspaceLabel={navConfig.sidebarTitle ?? "Tools"}
           branding="none"
           height="stretch"

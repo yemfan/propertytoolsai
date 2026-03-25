@@ -86,7 +86,6 @@ function PropertyToolsPreview() {
           <PremiumSidebar
             appName="PropertyTools AI"
             sections={propertyToolsNav}
-            defaultCollapsed
             workspaceLabel={navConfig.sidebarTitle ?? "Tools"}
             branding="none"
             height="stretch"
@@ -165,9 +164,7 @@ function LeadSmartPreview() {
         <PremiumSidebar
           appName="LeadSmart AI"
           sections={leadSmartNav}
-          defaultCollapsed
           workspaceLabel="Workspace"
-          footerCollapsedLabel="Hot leads"
           footer={
             <div className="rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-500 p-4 text-sm text-white shadow-sm">
               3 hot leads need follow-up now.

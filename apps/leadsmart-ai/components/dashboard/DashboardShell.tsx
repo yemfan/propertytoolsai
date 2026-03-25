@@ -39,9 +39,7 @@ export default function AppDashboardShell({
       <PremiumSidebar
         appName={APP_NAME}
         sections={navSections}
-        defaultCollapsed
         workspaceLabel={navConfig.sidebarTitle ?? "Workspace"}
-        footerCollapsedLabel="Upgrade & credits"
         footer={sidebarFooter}
       />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">

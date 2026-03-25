@@ -16,9 +16,7 @@ export default function LeadSmartShell({ children }: { children: ReactNode }) {
       <PremiumSidebar
         appName={APP_NAME}
         sections={leadSmartNav}
-        defaultCollapsed
         workspaceLabel={navConfig.sidebarTitle ?? "Workspace"}
-        footerCollapsedLabel="Upgrade & credits"
         footer={
           <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 text-sm leading-snug text-white shadow-lg shadow-slate-900/25 ring-1 ring-white/10">
             <p className="font-medium text-white/95">Grow with AI follow-ups</p>

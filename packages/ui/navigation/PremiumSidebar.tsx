@@ -434,20 +434,7 @@ export function PremiumSidebar({
 
       {footer ? (
         <div className="shrink-0 border-t border-slate-200/80 bg-white/60 px-3 py-3 backdrop-blur-sm">
-          {collapsed ? (
-            <RailTooltip label={footerCollapsedLabel} collapsed={collapsed}>
-              <div className="flex justify-center">
-                <div
-                  className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 text-sm text-white shadow-md shadow-slate-900/20 ring-1 ring-white/10"
-                  aria-hidden
-                >
-                  ✦
-                </div>
-              </div>
-            </RailTooltip>
-          ) : (
-            <div className="transition-opacity duration-200">{footer}</div>
-          )}
+          <div className="transition-opacity duration-200">{footer}</div>
         </div>
       ) : null}
     </aside>
