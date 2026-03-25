@@ -3,10 +3,10 @@
 /**
  * Premium collapsed SaaS sidebar (desktop `md+`):
  * default-collapsed icon rail, hover tooltips, animated groups, `isLinkActive` + `match[]`,
- * gray palette + compact header aligned with the in-app PremiumSidebar reference design.
+ * gray palette; header toggles rail with ChevronRight (collapsed) / ChevronDown (expanded).
  * Consumes the same `NavSection` trees as PropertyTools + LeadSmart `nav.config`.
  */
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
@@ -30,10 +30,6 @@ export type PremiumSidebarProps = {
    * `"stretch"`: `h-full` — use when the sidebar sits **below** a top bar inside a flex column.
    */
   height?: "viewport" | "stretch";
-  /** Desktop starts collapsed (icon rail). Default `true`. */
-  defaultCollapsed?: boolean;
-  /** Tooltip when sidebar is collapsed and a custom footer is shown. */
-  footerCollapsedLabel?: string;
   className?: string;
 };
 
@@ -110,12 +106,10 @@ export function PremiumSidebar({
   workspaceLabel = "Workspace",
   branding = "full",
   height = "viewport",
-  defaultCollapsed = true,
-  footerCollapsedLabel = "Quick tip",
   className = "",
 }: PremiumSidebarProps) {
   const pathname = usePathname() ?? "";
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const collapsed = false;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     for (const s of sections) {
@@ -125,6 +119,7 @@ export function PremiumSidebar({
     }
     return initial;
   });
+  const storageKey = "premium-sidebar-used-groups";
   /** Only auto-expand the group for the active route when the URL changes — not when `sections` identity changes (avoids fighting manual collapse). */
   const lastAutoExpandPath = useRef<string | null>(null);
   const sectionsRef = useRef(sections);
@@ -147,6 +142,46 @@ export function PremiumSidebar({
     });
   }, [pathname]);
 
+  useLayoutEffect(() => {
+    const used = new Set<string>();
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          for (const value of parsed) {
+            if (typeof value === "string") used.add(value);
+          }
+        }
+      }
+    } catch {
+      // Ignore storage read errors; keep default open behavior only.
+    }
+
+    let changed = false;
+    for (const section of sectionsRef.current) {
+      if (!isNavGroup(section)) continue;
+      if (section.items.some((item) => isLinkActive(pathname, item))) {
+        if (!used.has(section.label)) changed = true;
+        used.add(section.label);
+      }
+    }
+
+    if (changed) {
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(Array.from(used)));
+      } catch {
+        // Ignore storage write errors.
+      }
+    }
+
+    setOpenGroups((prev) => {
+      const next = { ...prev };
+      for (const label of used) next[label] = true;
+      return next;
+    });
+  }, [pathname, storageKey]);
+
   const showBranding = branding !== "none";
   const useStretchHeight = height === "stretch";
   const titleInitial = appName.trim().charAt(0).toUpperCase() || "A";
@@ -167,8 +202,13 @@ export function PremiumSidebar({
     >
       {/* Header: full branding (default) or slim collapse-only row when branding is hidden */}
       {showBranding ? (
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200/80 bg-white/80 px-4 backdrop-blur-sm">
-          <div className="min-w-0 flex-1 pr-2">
+        <div
+          className={cn(
+            "flex h-16 w-full shrink-0 items-center justify-between gap-2 border-b border-slate-200/80 bg-white/80 px-4 text-left backdrop-blur-sm",
+            "transition-colors"
+          )}
+        >
+          <div className="min-w-0 flex-1 pr-1">
             {collapsed ? (
               <div
                 className={cn(
@@ -186,73 +226,35 @@ export function PremiumSidebar({
               </div>
             )}
           </div>
-
-          {!collapsed ? (
-            <button
-              type="button"
-              onClick={() => setCollapsed(true)}
-              className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-500 shadow-sm",
-                "transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800",
-                focusRing
-              )}
-              aria-expanded
-              aria-label="Collapse sidebar"
-            >
-              <ChevronLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setCollapsed(false)}
-              className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-500 shadow-sm",
-                "transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800",
-                focusRing
-              )}
-              aria-expanded={false}
-              aria-label="Expand sidebar"
-            >
-              <ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden />
-            </button>
-          )}
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-500 shadow-sm"
+            aria-hidden
+          >
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" strokeWidth={2} />
+            ) : (
+              <ChevronDown className="h-4 w-4" strokeWidth={2} />
+            )}
+          </span>
         </div>
       ) : (
         <div
           className={cn(
-            "flex h-11 shrink-0 items-center border-b border-slate-200/80 bg-white/80 px-2 backdrop-blur-sm",
-            collapsed ? "justify-center" : "justify-end"
+            "flex h-11 w-full shrink-0 items-center border-b border-slate-200/80 bg-white/80 px-2 backdrop-blur-sm",
+            collapsed ? "justify-center" : "justify-end",
+            "transition-colors"
           )}
         >
-          {!collapsed ? (
-            <button
-              type="button"
-              onClick={() => setCollapsed(true)}
-              className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-500 shadow-sm",
-                "transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800",
-                focusRing
-              )}
-              aria-expanded
-              aria-label="Collapse sidebar"
-            >
-              <ChevronLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setCollapsed(false)}
-              className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-500 shadow-sm",
-                "transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800",
-                focusRing
-              )}
-              aria-expanded={false}
-              aria-label="Expand sidebar"
-            >
-              <ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden />
-            </button>
-          )}
+          <span
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-500 shadow-sm"
+            aria-hidden
+          >
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" strokeWidth={2} />
+            ) : (
+              <ChevronDown className="h-4 w-4" strokeWidth={2} />
+            )}
+          </span>
         </div>
       )}
 
@@ -315,20 +317,9 @@ export function PremiumSidebar({
                 aria-expanded={!collapsed && isOpen}
                 aria-controls={groupPanelId}
                 aria-label={
-                  collapsed
-                    ? `${section.label} — expand sidebar`
-                    : isOpen
-                      ? `Collapse ${section.label}`
-                      : `Expand ${section.label}`
+                  isOpen ? `Collapse ${section.label}` : `Expand ${section.label}`
                 }
                 onClick={() => {
-                  if (collapsed) {
-                    setCollapsed(false);
-                    // Reveal this group’s links immediately after expanding the rail.
-                    setOpenGroups((prev) => ({ ...prev, [section.label]: true }));
-                    return;
-                  }
-                  // Expanded sidebar: toggle from previous state (avoid stale `isOpen` closure).
                   setOpenGroups((prev) => ({
                     ...prev,
                     [section.label]: !(prev[section.label] ?? false),
@@ -348,14 +339,12 @@ export function PremiumSidebar({
                 {!collapsed ? (
                   <>
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">{section.label}</span>
-                    <span
-                      className={cn(
-                        "shrink-0 text-slate-400 transition-transform duration-200 ease-out",
-                        isOpen ? "rotate-0" : "-rotate-90"
+                    <span className="shrink-0 text-slate-400" aria-hidden>
+                      {isOpen ? (
+                        <ChevronDown className="h-4 w-4" strokeWidth={2} />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" strokeWidth={2} />
                       )}
-                      aria-hidden
-                    >
-                      <ChevronDown className="h-4 w-4" strokeWidth={2} />
                     </span>
                   </>
                 ) : null}
@@ -388,6 +377,25 @@ export function PremiumSidebar({
                               key={`${item.href}::${item.label}`}
                               href={item.href}
                               prefetch={item.prefetch === false ? false : undefined}
+                              onClick={() => {
+                                setOpenGroups((prev) => ({ ...prev, [section.label]: true }));
+                                try {
+                                  const raw = window.localStorage.getItem(storageKey);
+                                  const used = new Set<string>();
+                                  if (raw) {
+                                    const parsed = JSON.parse(raw);
+                                    if (Array.isArray(parsed)) {
+                                      for (const value of parsed) {
+                                        if (typeof value === "string") used.add(value);
+                                      }
+                                    }
+                                  }
+                                  used.add(section.label);
+                                  window.localStorage.setItem(storageKey, JSON.stringify(Array.from(used)));
+                                } catch {
+                                  // Ignore storage write errors.
+                                }
+                              }}
                               className={cn(
                                 "group/sublink flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
                                 motionSafe,
