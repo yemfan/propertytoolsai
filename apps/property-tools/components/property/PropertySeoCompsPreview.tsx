@@ -4,7 +4,7 @@ import React from "react";
 import type { PropertySeoRecord } from "@/lib/property-seo/types";
 
 function money(value?: number) {
-  if (typeof value !== "number") return "—";
+  if (typeof value !== "number" || !Number.isFinite(value) || value === 0) return "—";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",

@@ -126,10 +126,14 @@ export default function ConsumerPricingClientPage() {
       <div className="mx-auto max-w-5xl space-y-10">
         <div className="text-center">
           <h1 className="text-4xl font-semibold tracking-tight text-gray-900 md:text-5xl">
-            PropertyToolsAI Pricing
+            LeadSmart AI — Consumer plans
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-gray-600 md:text-lg">
-            Start free, then upgrade when you want deeper AI insights and more advanced tools.
+            Free and Premium access to PropertyTools AI calculators and insights. Agents: see{" "}
+            <a href="/agent/pricing" className="font-semibold text-[#0072ce] underline underline-offset-2 hover:text-[#005fa3]">
+              LeadSmart pricing for agents
+            </a>
+            .
           </p>
           {currentPlan && (
             <div className="mt-4 inline-flex rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white">

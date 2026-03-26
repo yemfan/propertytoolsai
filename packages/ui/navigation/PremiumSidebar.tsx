@@ -190,13 +190,13 @@ export function PremiumSidebar({
     <aside
       aria-label={appName}
       className={cn(
-        "hidden md:flex md:shrink-0 md:flex-col md:overflow-hidden",
-        useStretchHeight ? "md:h-full md:min-h-0" : "md:h-screen",
+        "flex max-sm:hidden sm:shrink-0 sm:flex-col sm:overflow-hidden",
+        useStretchHeight ? "sm:h-full sm:min-h-0" : "sm:h-screen",
         "border-r border-slate-200/90 bg-gradient-to-b from-white via-white to-slate-50/80 backdrop-blur-md",
         "shadow-[1px_0_0_rgba(15,23,42,0.04)]",
         "transition-[width] duration-300 ease-[cubic-bezier(0.33,1,0.68,1)]",
         motionSafe,
-        collapsed ? "md:w-[92px]" : "md:w-[272px]",
+        collapsed ? "sm:w-[92px]" : "sm:w-[272px]",
         className
       )}
     >

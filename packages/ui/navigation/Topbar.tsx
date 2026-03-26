@@ -22,8 +22,13 @@ export type TopbarProps = {
   rightActions?: TopbarAction[];
   /** Shown after {@link MobileSidebar}, before search (e.g. logo or brand). */
   leadingExtra?: ReactNode;
-  /** Replaces the default text search input when provided. */
-  searchSlot?: ReactNode;
+  /**
+   * Search area between logo and actions.
+   * - `undefined` — default search input
+   * - `null` — no search (keeps layout; use when the brand lives in `leadingExtra`)
+   * - other — custom node (e.g. alternate search UI)
+   */
+  searchSlot?: ReactNode | null;
   /** Extra controls on the right (icons, menus); shown after `rightActions`. */
   trailing?: ReactNode;
   /** Second row under the bar (e.g. mobile-only search). */
@@ -93,7 +98,7 @@ export function Topbar({
         {leadingExtra ? <div className="min-w-0 shrink-0">{leadingExtra}</div> : null}
 
         <div className="min-w-0 flex-1">
-          {searchSlot ?? (
+          {searchSlot === undefined ? (
             <div className="flex h-11 min-w-0 items-center gap-3 rounded-2xl border border-gray-200/90 bg-gray-50/90 px-3.5 shadow-sm transition-colors focus-within:border-gray-300 focus-within:bg-white focus-within:shadow-md md:px-4">
               <Search className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={2} aria-hidden />
               <input
@@ -102,6 +107,10 @@ export function Topbar({
                 className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-gray-900 outline-none ring-0 placeholder:text-gray-400"
               />
             </div>
+          ) : searchSlot === null ? (
+            <div className="min-h-[44px] min-w-0 flex-1" aria-hidden />
+          ) : (
+            searchSlot
           )}
         </div>
 

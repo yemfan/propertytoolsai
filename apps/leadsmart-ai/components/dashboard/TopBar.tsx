@@ -126,7 +126,7 @@ function ProfileMenu({
         Account &amp; settings
       </Link>
       <Link
-        href="/pricing"
+        href="/agent/pricing"
         className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
         role="menuitem"
         onClick={() => setOpen(false)}
@@ -289,11 +289,11 @@ export default function TopBar({
           {searchField("ls-dashboard-search-mobile")}
         </div>
       }
-      rightActions={[{ label: "Plans & pricing", href: "/pricing", variant: "outline" }]}
+      rightActions={[{ label: "Plans & pricing", href: "/agent/pricing", variant: "outline" }]}
       trailing={
         <>
           <Link
-            href="/pricing"
+            href="/agent/pricing"
             className="hidden sm:inline-flex h-10 items-center justify-center rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-xs font-semibold text-white shadow-md shadow-amber-500/20 transition hover:from-amber-600 hover:to-orange-600 md:text-sm"
           >
             Upgrade
@@ -308,7 +308,7 @@ export default function TopBar({
           </Link>
 
           <Link
-            href="/pricing"
+            href="/agent/pricing"
             title="Billing and credits"
             className="inline-flex h-10 max-w-[140px] items-center gap-2 truncate rounded-2xl border border-slate-200/90 bg-white px-3 text-xs font-semibold text-slate-800 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50 sm:hidden"
           >
@@ -317,7 +317,7 @@ export default function TopBar({
           </Link>
 
           <Link
-            href="/pricing"
+            href="/agent/pricing"
             className="hidden max-w-[220px] items-center gap-2 truncate rounded-2xl border border-slate-200/90 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50 sm:inline-flex"
           >
             <CreditCard className="h-[15px] w-[15px] shrink-0 text-slate-500" strokeWidth={2} aria-hidden />

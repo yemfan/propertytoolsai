@@ -14,6 +14,15 @@ export type ComparableHome = {
   lng?: number;
 };
 
+/**
+ * Stable React key + selection id when {@link ComparableHome.id} is missing or empty from the API.
+ */
+export function comparableHomeKey(comp: ComparableHome, index: number): string {
+  const id = String(comp.id ?? "").trim();
+  if (id) return id;
+  return `comp-${index}`;
+}
+
 export type SubjectHome = {
   address: string;
   lat: number;
@@ -30,8 +39,9 @@ export type SubjectHome = {
   adjustments?: Record<string, number>;
 };
 
+/** USD whole dollars; `0` / non-finite / missing → em dash (comps should not show $0 for unknown sale price). */
 export function money(value?: number) {
-  if (typeof value !== "number") return "—";
+  if (typeof value !== "number" || !Number.isFinite(value) || value === 0) return "—";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",

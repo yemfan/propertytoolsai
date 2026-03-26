@@ -297,7 +297,7 @@ export default function OpportunitiesPage() {
       {buyError ? (
         <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
           {buyError}{" "}
-          <Link className="text-brand-primary font-semibold underline" href="/pricing">
+          <Link className="text-brand-primary font-semibold underline" href="/agent/pricing">
             Go to pricing
           </Link>
         </div>

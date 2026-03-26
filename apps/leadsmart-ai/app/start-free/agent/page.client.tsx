@@ -51,7 +51,7 @@ export default function StartFreeAgentClientPage({ backHref }: Props) {
 
         <div className="mt-12 text-center text-sm text-slate-600">
           Questions? See{" "}
-          <Link href="/pricing" className="font-semibold text-blue-700 hover:text-blue-800">
+          <Link href="/agent/pricing" className="font-semibold text-blue-700 hover:text-blue-800">
             pricing & billing
           </Link>
           .

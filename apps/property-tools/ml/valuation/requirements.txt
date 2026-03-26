@@ -1,0 +1,11 @@
+pandas
+numpy
+scikit-learn
+joblib
+psycopg2-binary
+sqlalchemy
+
+# Optional (the trainer will fall back automatically if these are not installed):
+# lightgbm
+# xgboost
+

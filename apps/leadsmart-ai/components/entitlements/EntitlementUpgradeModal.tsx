@@ -86,7 +86,7 @@ export default function EntitlementUpgradeModal({ open, onClose, reason, plan }:
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Link
-            href="/pricing"
+            href="/agent/pricing"
             className="rounded-2xl bg-gray-900 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-gray-800"
             onClick={onClose}
           >

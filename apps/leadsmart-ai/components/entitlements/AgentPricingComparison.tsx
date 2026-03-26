@@ -67,7 +67,7 @@ export function AgentPricingComparison() {
       </div>
       <p className="mt-8 text-center text-sm text-slate-600">
         Need help choosing?{" "}
-        <Link href="/pricing" className="font-semibold text-blue-700 hover:text-blue-800">
+        <Link href="/agent/pricing" className="font-semibold text-blue-700 hover:text-blue-800">
           Open full pricing
         </Link>
       </p>

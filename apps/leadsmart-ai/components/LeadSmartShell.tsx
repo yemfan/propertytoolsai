@@ -32,10 +32,10 @@ export default function LeadSmartShell({ children }: { children: ReactNode }) {
           searchPlaceholder="Search leads, clients, addresses..."
           creditsLabel="124 Credits"
           notificationHref="/dashboard/notifications"
-          rightActions={[{ label: "Plans & pricing", href: "/pricing", variant: "outline" }]}
+          rightActions={[{ label: "Plans & pricing", href: "/agent/pricing", variant: "outline" }]}
           profileProfileHref="/dashboard"
           profileSettingsHref="/dashboard/settings"
-          profileBillingHref="/pricing"
+          profileBillingHref="/agent/pricing"
           profileBillingLabel="Billing & credits"
           profileName="Michael Ye"
           profileEmail="Broker Admin"

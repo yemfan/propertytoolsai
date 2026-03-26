@@ -12,6 +12,11 @@ import type { PlatformOverviewResponse } from "@/lib/dashboard/admin";
 import { getPresetDateRange, type DateRange } from "@/lib/dashboard/dateRange";
 import { useDashboardData } from "@/lib/dashboard/useDashboardData";
 import { PipelinePredictionPanel } from "@/components/admin/PipelinePredictionPanel";
+import { ValuationAccuracyOverview } from "@/components/admin/ValuationAccuracyOverview";
+import { ValuationOutliersPanel } from "@/components/admin/ValuationOutliersPanel";
+import { ValuationCalibrationPanel } from "@/components/admin/ValuationCalibrationPanel";
+import { ValuationModelRegistryPanel } from "@/components/admin/ValuationModelRegistryPanel";
+import { ValuationModelWorkflowPanel } from "@/components/admin/ValuationModelWorkflowPanel";
 import { SeoRevenuePanel } from "@/components/seo/SeoRevenuePanel";
 
 function FunnelBar({
@@ -94,6 +99,19 @@ export function PlatformOverviewClient() {
       </div>
 
       <PipelinePredictionPanel />
+
+      <div className="grid gap-6 lg:grid-cols-1">
+        <ValuationAccuracyOverview />
+        <ValuationOutliersPanel />
+        <ValuationCalibrationPanel />
+        <ValuationModelWorkflowPanel />
+        <ValuationModelRegistryPanel />
+        <p className="text-sm text-gray-600">
+          <Link className="font-medium text-gray-900 underline" href="/admin/valuation/training">
+            Export valuation training dataset (CSV / JSON)
+          </Link>
+        </p>
+      </div>
 
       <SectionCard title="Date Range">
         <p className="mb-3 text-xs text-gray-500">

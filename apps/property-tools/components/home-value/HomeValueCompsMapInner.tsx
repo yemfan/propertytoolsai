@@ -3,7 +3,7 @@
 import Map, { Marker, Popup } from "react-map-gl/mapbox";
 import { useMemo } from "react";
 import type { ComparableHome, SubjectHome } from "./homeValueCompsShared";
-import { fmtDate, money } from "./homeValueCompsShared";
+import { comparableHomeKey, fmtDate, money } from "./homeValueCompsShared";
 
 export default function HomeValueCompsMapInner({
   subject,
@@ -16,10 +16,11 @@ export default function HomeValueCompsMapInner({
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 }) {
-  const selectedComp = useMemo(
-    () => comps.find((comp) => comp.id === selectedId) ?? null,
-    [comps, selectedId]
-  );
+  const selectedComp = useMemo(() => {
+    if (selectedId == null) return null;
+    const idx = comps.findIndex((comp, i) => comparableHomeKey(comp, i) === selectedId);
+    return idx >= 0 ? comps[idx] : null;
+  }, [comps, selectedId]);
 
   const initialViewState = useMemo(
     () => ({
@@ -47,27 +48,27 @@ export default function HomeValueCompsMapInner({
           </button>
         </Marker>
 
-        {comps
-          .filter((comp) => typeof comp.lat === "number" && typeof comp.lng === "number")
-          .map((comp, index) => {
-            const selected = comp.id === selectedId;
-            return (
-              <Marker key={comp.id} latitude={comp.lat!} longitude={comp.lng!} anchor="bottom">
-                <button
-                  type="button"
-                  onClick={() => onSelect(comp.id)}
-                  className={[
-                    "rounded-full border px-3 py-2 text-xs font-semibold shadow-sm transition",
-                    selected
-                      ? "border-gray-900 bg-gray-900 text-white"
-                      : "border-white bg-white text-gray-900 hover:bg-gray-50",
-                  ].join(" ")}
-                >
-                  #{index + 1}
-                </button>
-              </Marker>
-            );
-          })}
+        {comps.map((comp, index) => {
+          if (typeof comp.lat !== "number" || typeof comp.lng !== "number") return null;
+          const rowKey = comparableHomeKey(comp, index);
+          const selected = rowKey === selectedId;
+          return (
+            <Marker key={rowKey} latitude={comp.lat} longitude={comp.lng} anchor="bottom">
+              <button
+                type="button"
+                onClick={() => onSelect(rowKey)}
+                className={[
+                  "rounded-full border px-3 py-2 text-xs font-semibold shadow-sm transition",
+                  selected
+                    ? "border-gray-900 bg-gray-900 text-white"
+                    : "border-white bg-white text-gray-900 hover:bg-gray-50",
+                ].join(" ")}
+              >
+                #{index + 1}
+              </button>
+            </Marker>
+          );
+        })}
 
         {selectedComp &&
         typeof selectedComp.lat === "number" &&

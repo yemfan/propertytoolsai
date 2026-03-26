@@ -3,7 +3,7 @@
 import type { HomeValueHistoryItem } from "@/lib/home-value/history";
 
 function formatCurrency(value?: number) {
-  if (typeof value !== "number") return "—";
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",

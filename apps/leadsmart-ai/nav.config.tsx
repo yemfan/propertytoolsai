@@ -19,7 +19,7 @@ import {
  * LeadSmart AI — authenticated dashboard sidebar / mobile drawer.
  * Repo folder: `apps/leadsmart-ai`.
  *
- * Hrefs use real `/dashboard/*` routes (and `/deal-assistant`, `/pricing`) so active states match.
+ * Hrefs use real `/dashboard/*` routes (and `/deal-assistant`, `/agent/pricing`) so active states match.
  * Short paths like `/leads` still redirect via `next.config.js` for bookmarks.
  * Badge strings are placeholders until wired to live counts.
  */
@@ -185,7 +185,7 @@ const navConfig = {
         },
         {
           label: "Billing",
-          href: "/pricing",
+          href: "/agent/pricing",
           icon: <Settings size={16} strokeWidth={2} aria-hidden />,
         },
         {

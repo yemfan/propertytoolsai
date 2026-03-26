@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Shared `@repo/ui` lives outside `./app` + `./components` — Tailwind v4 must scan it or sidebar/topbar utilities are missing. */
+@source "../../../packages/ui/**/*.{js,ts,jsx,tsx}";
+
 /*
  * PropertyTools AI — UI system (aligned with leadsmart-ai)
  * - Brand: #0072ce primary, #28a745 success, #ff8c42 accent (see @theme + :root)

@@ -207,11 +207,11 @@ export default function PricingModal({
       } = await supabaseBrowser().auth.getSession();
       if (!session) {
         setLoading(null);
-        router.push(loginUrl({ redirect: "/pricing", reason: "checkout" }));
+        router.push(loginUrl({ redirect: "/agent/pricing", reason: "checkout" }));
         onClose();
         return;
       }
-      if (!(await requireAuthOrRedirect("/pricing"))) {
+      if (!(await requireAuthOrRedirect("/agent/pricing"))) {
         setLoading(null);
         return;
       }

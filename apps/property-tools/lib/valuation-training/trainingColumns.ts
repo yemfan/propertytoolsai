@@ -1,0 +1,33 @@
+/** Columns exported for valuation ML training (matches `scripts/export-valuation-training-data.ts`). */
+export const VALUATION_TRAINING_FIELDS = [
+  "actual_sale_price",
+  "beds",
+  "baths",
+  "sqft",
+  "lot_size",
+  "year_built",
+  "city",
+  "state",
+  "zip",
+  "property_type",
+  "condition",
+  "api_estimate",
+  "comps_estimate",
+  "final_estimate",
+  "low_estimate",
+  "high_estimate",
+  "confidence_score",
+  "comparable_count",
+  "weighted_ppsf",
+  "listing_trend_adjustment_pct",
+  "condition_adjustment_pct",
+  "range_spread_pct",
+  "tax_anchor_estimate",
+  "tier_used",
+  "valuation_version",
+  "confidence_label",
+  "created_at",
+  "actual_sale_date",
+] as const;
+
+export type ValuationTrainingField = (typeof VALUATION_TRAINING_FIELDS)[number];

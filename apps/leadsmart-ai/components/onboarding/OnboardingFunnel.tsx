@@ -70,7 +70,7 @@ function Shell({
             <LeadSmartLogo compact className="max-w-[200px] sm:max-w-[240px]" priority={false} />
           </Link>
           <Link
-            href="/pricing"
+            href="/agent/pricing"
             className="text-xs font-semibold text-sky-300/90 underline-offset-2 hover:text-white hover:underline"
           >
             Pricing
@@ -680,7 +680,7 @@ export default function OnboardingFunnel() {
               Compare plans & unlock →
             </button>
             <Link
-              href={`/pricing?from=onboarding&email=${encodeURIComponent(fullProfile.email)}`}
+              href={`/agent/pricing?from=onboarding&email=${encodeURIComponent(fullProfile.email)}`}
               className="rounded-xl border border-white/25 px-6 py-3.5 text-center text-sm font-semibold text-white hover:bg-white/5"
             >
               Open full pricing page
@@ -698,9 +698,9 @@ export default function OnboardingFunnel() {
   /* ——— Step 7: Pricing (embedded summary) ——— */
   if (step === 7) {
     const plans = [
-      { name: "Free", price: "$0", note: "Test core workflows", cta: "Start free trial", href: "/pricing?from=onboarding", primary: false },
-      { name: "Pro", price: "$49/mo", note: "500 leads · full CRM", cta: "Upgrade Pro", href: "/pricing?from=onboarding#plans", primary: true },
-      { name: "Premium", price: "$99/mo", note: "Teams · unlimited scale", cta: "Go Premium", href: "/pricing?from=onboarding#plans", primary: false },
+      { name: "Free", price: "$0", note: "Test core workflows", cta: "Start free trial", href: "/agent/pricing?from=onboarding", primary: false },
+      { name: "Pro", price: "$49/mo", note: "500 leads · full CRM", cta: "Upgrade Pro", href: "/agent/pricing?from=onboarding#plans", primary: true },
+      { name: "Premium", price: "$99/mo", note: "Teams · unlimited scale", cta: "Go Premium", href: "/agent/pricing?from=onboarding#plans", primary: false },
     ];
     return (
       <Shell step={7}>
@@ -761,7 +761,7 @@ export default function OnboardingFunnel() {
               Create agent account
             </Link>
             <Link
-              href="/pricing?from=onboarding#plans"
+              href="/agent/pricing?from=onboarding#plans"
               className="rounded-xl border border-white/20 py-3.5 text-sm font-semibold text-white hover:bg-white/5"
             >
               Stripe checkout · View plans

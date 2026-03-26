@@ -106,19 +106,31 @@ export default function AccountMenu() {
     };
   }, [user]);
 
-  const { workspaceHref, settingsHref } = useMemo(() => {
+  const { workspaceHref, settingsHref, pricingHref } = useMemo(() => {
     if (!me) {
-      return { workspaceHref: "/", settingsHref: "/client/dashboard" } as const;
+      return {
+        workspaceHref: "/",
+        settingsHref: "/client/dashboard",
+        pricingHref: "/pricing",
+      } as const;
     }
     const role = me.role ?? "user";
     const hasAgent = Boolean(me.has_agent_record);
     const pro = isProfessionalUser(role, hasAgent);
     if (!pro) {
-      return { workspaceHref: "/client/dashboard", settingsHref: "/client/dashboard" } as const;
+      return {
+        workspaceHref: "/client/dashboard",
+        settingsHref: "/client/dashboard",
+        pricingHref: "/pricing",
+      } as const;
     }
     const home = resolveRoleHomePath(role, hasAgent);
     const settings = hasAgent ? "/dashboard/settings" : "/portal";
-    return { workspaceHref: home, settingsHref: settings } as const;
+    return {
+      workspaceHref: home,
+      settingsHref: settings,
+      pricingHref: "/agent/pricing",
+    } as const;
   }, [me]);
 
   async function onLogout() {
@@ -175,7 +187,7 @@ export default function AccountMenu() {
           Account &amp; settings
         </Link>
         <Link
-          href="/pricing"
+          href={pricingHref}
           role="menuitem"
           className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
           onClick={() => setOpen(false)}

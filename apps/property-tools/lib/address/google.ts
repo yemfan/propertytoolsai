@@ -1,4 +1,4 @@
-import type { AddressPrediction, AddressSearchProvider, AddressSelection } from "./types";
+import type { AddressPrediction, AddressSearchOptions, AddressSearchProvider, AddressSelection } from "./types";
 
 /**
  * Matches the payload from `components/AddressAutocomplete` (`AddressAutocompleteValue`)
@@ -72,7 +72,7 @@ export function googleGeocodeResultToAddressSelection(result: unknown): AddressS
 export const googleProvider: AddressSearchProvider = {
   providerName: "google",
 
-  async searchAddresses(query: string): Promise<AddressPrediction[]> {
+  async searchAddresses(query: string, _options?: AddressSearchOptions): Promise<AddressPrediction[]> {
     const q = query.trim();
     if (!q) return [];
 

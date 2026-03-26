@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { PremiumSidebar, PremiumTopbar } from "@repo/ui";
-import navConfig, { propertyToolsNav } from "@/nav.config";
+import { propertyToolsNav } from "@/nav.config";
 
 const APP_NAME = "PropertyTools AI";
 
@@ -31,13 +31,7 @@ export default function PropertyToolsShell({ children }: { children: ReactNode }
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <PremiumSidebar
-          appName={APP_NAME}
-          sections={propertyToolsNav}
-          workspaceLabel={navConfig.sidebarTitle ?? "Tools"}
-          branding="none"
-          height="stretch"
-        />
+        <PremiumSidebar appName={APP_NAME} sections={propertyToolsNav} branding="none" height="stretch" />
         <main className="min-h-0 min-w-0 flex-1 p-4 md:p-6">{children}</main>
       </div>
     </div>

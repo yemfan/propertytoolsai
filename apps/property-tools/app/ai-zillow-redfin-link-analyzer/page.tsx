@@ -16,7 +16,27 @@ type PropertySummary = {
   lotSize: number | null;
   yearBuilt: number | null;
   propertyType: string;
+  /** When present, listing hero/thumbnail from parsed listing data */
+  imageUrl?: string | null;
 };
+
+function pickListingImageUrl(data: unknown): string | null {
+  if (!data || typeof data !== "object") return null;
+  const d = data as Record<string, unknown>;
+  for (const k of [
+    "image_url",
+    "photo_url",
+    "hero_image_url",
+    "main_photo_url",
+    "thumbnail_url",
+    "imageUrl",
+    "photoUrl",
+  ]) {
+    const v = d[k];
+    if (typeof v === "string" && v.trim().startsWith("http")) return v.trim();
+  }
+  return null;
+}
 
 type Metrics = {
   estimatedValue: number;
@@ -216,6 +236,7 @@ export default function AIZillowRedfinLinkAnalyzerPage() {
         lotSize: data.lot_size ?? null,
         yearBuilt: data.year_built ?? null,
         propertyType: String(data.property_type ?? "Unknown"),
+        imageUrl: pickListingImageUrl(data),
       };
 
       if (!realProperty.address) {
@@ -266,6 +287,7 @@ export default function AIZillowRedfinLinkAnalyzerPage() {
         lotSize: data.lot_size ?? null,
         yearBuilt: data.year_built ?? null,
         propertyType: String(data.property_type ?? "Unknown"),
+        imageUrl: pickListingImageUrl(data),
       };
 
       setProperty(refreshed);
@@ -444,9 +466,16 @@ export default function AIZillowRedfinLinkAnalyzerPage() {
                 View Listing ({property.platform === "zillow" ? "Zillow" : "Redfin"})
               </a>
             </div>
-            <div className="w-full md:w-40 h-24 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center text-[11px] text-gray-400">
-              Photo Placeholder
-            </div>
+            {property.imageUrl ? (
+              <div className="h-24 w-full shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100 md:w-40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={property.imageUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

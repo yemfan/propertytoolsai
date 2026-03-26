@@ -21,6 +21,8 @@ type PropertySnapshot = {
   lotSize: number;
   yearBuilt: number;
   propertyType: string;
+  /** When set, show hero thumbnail; otherwise no photo box */
+  photoUrl?: string | null;
 };
 
 type InvestmentMetrics = {
@@ -348,9 +350,16 @@ export default function PropertyReportPage() {
             {property.sqft.toLocaleString()} sqft • {property.propertyType}
           </p>
         </div>
-        <div className="w-full md:w-48 h-32 bg-gray-100 border border-gray-200 rounded-xl flex items-center justify-center text-xs text-gray-400">
-          Photo Placeholder
-        </div>
+        {property.photoUrl ? (
+          <div className="h-32 w-full shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100 md:w-48">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={property.photoUrl}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap gap-3">

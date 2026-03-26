@@ -106,7 +106,7 @@ export default function ComparisonReportBuilderClient({
         {isFree ? (
           <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             This feature requires <strong>Pro</strong> or <strong>Premium</strong>.{" "}
-            <Link href="/pricing" className="font-semibold underline">
+            <Link href="/agent/pricing" className="font-semibold underline">
               View plans
             </Link>
           </div>

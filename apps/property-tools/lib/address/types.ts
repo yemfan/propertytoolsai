@@ -24,11 +24,24 @@ export type AddressPrediction = {
   raw?: unknown;
 };
 
+/** Options for {@link AddressSearchProvider.searchAddresses} (e.g. Mapbox Search Box session). */
+export type AddressSearchOptions = {
+  /** Required by Mapbox `/suggest` + `/retrieve`; reuse for all keystrokes in one pick flow. */
+  sessionToken?: string;
+};
+
 /** Pluggable address search (Mapbox, Google, etc.). */
 export type AddressSearchProvider = {
   providerName: "mapbox" | "google";
-  searchAddresses: (query: string) => Promise<AddressPrediction[]>;
+  searchAddresses: (query: string, options?: AddressSearchOptions) => Promise<AddressPrediction[]>;
   normalizeSelection: (prediction: AddressPrediction) => AddressSelection;
+  /**
+   * Mapbox Search Box: after `/suggest`, call `/retrieve` with the same `session_token` for coordinates + full props.
+   */
+  resolveSelection?: (
+    prediction: AddressPrediction,
+    options: { sessionToken: string }
+  ) => Promise<AddressSelection>;
 };
 
 /** Parse a comma-separated typed address when autocomplete is not used. */

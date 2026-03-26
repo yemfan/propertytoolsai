@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 import type { ComparableHome, SubjectHome } from "./homeValueCompsShared";
 import {
+  comparableHomeKey,
   confidenceClass,
   fmtDate,
   money,
@@ -28,7 +29,9 @@ export function CompsMapPanel({
   subject: SubjectHome;
   comps: ComparableHome[];
 }) {
-  const [selectedId, setSelectedId] = useState<string | null>(comps[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    comps.length ? comparableHomeKey(comps[0], 0) : null
+  );
 
   return (
     <section className="overflow-hidden rounded-3xl border bg-white shadow-sm">
@@ -85,12 +88,13 @@ export function ComparableHomesList({
           </div>
         ) : (
           comps.map((comp, index) => {
-            const selected = comp.id === selectedId;
+            const rowKey = comparableHomeKey(comp, index);
+            const selected = rowKey === selectedId;
             return (
               <button
-                key={comp.id}
+                key={rowKey}
                 type="button"
-                onClick={() => onSelect(comp.id)}
+                onClick={() => onSelect(rowKey)}
                 className={[
                   "block w-full rounded-2xl border p-4 text-left transition",
                   selected
@@ -131,9 +135,9 @@ export function ComparableHomesList({
 
                 {comp.matchReasons?.length ? (
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                    {comp.matchReasons.map((reason) => (
+                    {comp.matchReasons.map((reason, rIdx) => (
                       <span
-                        key={reason}
+                        key={`${rowKey}-reason-${rIdx}-${reason}`}
                         className={[
                           "rounded-full px-2 py-1",
                           selected ? "bg-white/10" : "bg-white border",
@@ -177,7 +181,16 @@ export function EstimateExplainabilityPanel({
               label="Range"
               value={`${money(subject.rangeLow)} - ${money(subject.rangeHigh)}`}
             />
-            <MetricCard label="Median Price / Sqft" value={`${money(subject.medianPpsf)}/sqft`} />
+            <MetricCard
+              label="Median Price / Sqft"
+              value={
+                typeof subject.medianPpsf === "number" &&
+                Number.isFinite(subject.medianPpsf) &&
+                subject.medianPpsf > 0
+                  ? `${money(subject.medianPpsf)}/sqft`
+                  : "—"
+              }
+            />
             <MetricCard
               label="Subject Home Size"
               value={subject.sqft ? `${subject.sqft.toLocaleString()} sqft` : "—"}

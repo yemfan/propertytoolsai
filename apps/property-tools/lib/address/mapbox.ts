@@ -1,6 +1,21 @@
-import type { AddressPrediction, AddressSearchProvider, AddressSelection } from "./types";
+import type { AddressPrediction, AddressSearchOptions, AddressSearchProvider, AddressSelection } from "./types";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN?.trim() ?? "";
+
+function mapboxSuggestRequestUrl(): URL {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return new URL("/api/mapbox/searchbox/suggest", window.location.origin);
+  }
+  return new URL("https://api.mapbox.com/search/searchbox/v1/suggest");
+}
+
+function mapboxRetrieveRequestUrl(mapboxId: string): URL {
+  const encoded = encodeURIComponent(mapboxId);
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return new URL(`/api/mapbox/searchbox/retrieve/${encoded}`, window.location.origin);
+  }
+  return new URL(`https://api.mapbox.com/search/searchbox/v1/retrieve/${encoded}`);
+}
 function ctxBlock(ctx: Record<string, unknown>, key: string): Record<string, unknown> | null {
   const v = ctx[key];
   return v && typeof v === "object" ? (v as Record<string, unknown>) : null;
@@ -106,16 +121,23 @@ export function mapboxRetrieveToAddressSelection(res: unknown): AddressSelection
 export const mapboxProvider: AddressSearchProvider = {
   providerName: "mapbox",
 
-  async searchAddresses(query: string): Promise<AddressPrediction[]> {
+  async searchAddresses(query: string, options?: AddressSearchOptions): Promise<AddressPrediction[]> {
     if (!query.trim()) return [];
-    if (!MAPBOX_TOKEN) return [];
 
-    const url = new URL("https://api.mapbox.com/search/searchbox/v1/suggest");
+    const sessionToken = options?.sessionToken?.trim();
+    if (!sessionToken) return [];
+
+    const url = mapboxSuggestRequestUrl();
+    if (url.hostname.includes("api.mapbox.com") && !MAPBOX_TOKEN) return [];
     url.searchParams.set("q", query.trim());
-    url.searchParams.set("access_token", MAPBOX_TOKEN);
-    url.searchParams.set("language", "en");
-    url.searchParams.set("country", "US");
-    url.searchParams.set("types", "address");
+    url.searchParams.set("session_token", sessionToken);
+    if (url.hostname.includes("api.mapbox.com")) {
+      url.searchParams.set("access_token", MAPBOX_TOKEN);
+      url.searchParams.set("language", "en");
+      url.searchParams.set("country", "US");
+      url.searchParams.set("types", "address");
+      url.searchParams.set("limit", "10");
+    }
 
     const res = await fetch(url.toString());
     if (!res.ok) throw new Error("Mapbox address search failed");
@@ -131,11 +153,37 @@ export const mapboxProvider: AddressSearchProvider = {
       return {
         id: String(it.mapbox_id ?? it.id ?? `mapbox-${i}`),
         label: String(it.full_address ?? it.name ?? ""),
-        street: it.address_line1 != null ? String(it.address_line1) : undefined,
+        street: it.address != null ? String(it.address) : undefined,
         city: cityFromPlace,
         raw: item,
       };
     });
+  },
+
+  async resolveSelection(
+    prediction: AddressPrediction,
+    options: { sessionToken: string }
+  ): Promise<AddressSelection> {
+    const sessionToken = options.sessionToken.trim();
+    const mapboxId = prediction.id.trim();
+    if (!sessionToken || !mapboxId) return mapboxProvider.normalizeSelection(prediction);
+
+    const url = mapboxRetrieveRequestUrl(mapboxId);
+    if (url.hostname.includes("api.mapbox.com") && !MAPBOX_TOKEN) {
+      return mapboxProvider.normalizeSelection(prediction);
+    }
+    url.searchParams.set("session_token", sessionToken);
+    if (url.hostname.includes("api.mapbox.com")) {
+      url.searchParams.set("access_token", MAPBOX_TOKEN);
+    }
+
+    const res = await fetch(url.toString());
+    if (!res.ok) return mapboxProvider.normalizeSelection(prediction);
+
+    const json = (await res.json()) as { features?: unknown[] };
+    const feature = json?.features?.[0];
+    const resolved = mapboxRetrieveFeatureToAddressSelection(feature);
+    return resolved ?? mapboxProvider.normalizeSelection(prediction);
   },
 
   normalizeSelection(prediction: AddressPrediction): AddressSelection {
@@ -161,7 +209,12 @@ export const mapboxProvider: AddressSearchProvider = {
 
     return {
       fullAddress: String(raw?.full_address ?? prediction.label),
-      street: raw?.address_line1 != null ? String(raw.address_line1) : prediction.street,
+      street:
+        raw?.address_line1 != null
+          ? String(raw.address_line1)
+          : raw?.address != null
+            ? String(raw.address)
+            : prediction.street,
       city: place?.name != null ? String(place.name) : prediction.city ?? "Unknown",
       state:
         (region?.region_code != null ? String(region.region_code) : "") ||

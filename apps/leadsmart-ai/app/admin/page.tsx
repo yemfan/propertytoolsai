@@ -12,7 +12,7 @@ export default function AdminPortalPage() {
         { href: "/admin/support", label: "Support inbox", description: "Customer conversations and replies" },
         { href: "/dashboard/overview", label: "Operations dashboard", description: "Overview, leads, and tools" },
         { href: "/dashboard/settings", label: "Account & settings", description: "Profile and preferences" },
-        { href: "/pricing", label: "Plans & billing", description: "Subscriptions and upgrades" },
+        { href: "/pricing/hub", label: "Plans & billing", description: "Subscriptions and upgrades" },
         { href: "/portal", label: "Stripe billing portal", description: "Invoices and payment method" },
       ]}
     />

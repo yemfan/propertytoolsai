@@ -56,7 +56,7 @@ export function StartFreeAgentActions({ backHref }: Props) {
           {!loading ? <ArrowRight className="h-4 w-4" aria-hidden /> : null}
         </button>
         <Link
-          href="/pricing"
+          href="/agent/pricing"
           className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50"
         >
           Compare Plans

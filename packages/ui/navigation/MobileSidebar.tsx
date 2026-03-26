@@ -74,7 +74,7 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
         type="button"
         onClick={() => setOpen(true)}
         className={[
-          "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-gray-200/90 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 md:hidden",
+          "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-gray-200/90 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 sm:hidden",
           className,
         ]
           .filter(Boolean)
@@ -87,7 +87,7 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
+        <div className="fixed inset-0 z-50 sm:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
           <button
             type="button"
             className="absolute inset-0 bg-slate-900/35 backdrop-blur-[2px]"

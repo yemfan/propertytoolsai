@@ -3,6 +3,9 @@
 import dynamic from "next/dynamic";
 import type { AddressSelection } from "@/lib/home-value/types";
 
+/** Set to `true` to restore the minimap / static Mapbox image on the confirm-address step. */
+const SHOW_MAP_PREVIEW = false;
+
 const AddressConfirmMinimap = dynamic(
   () =>
     import("./AddressConfirmMinimap").then((m) => ({
@@ -47,11 +50,12 @@ function StaticMapFallback({ address }: { address: AddressSelection }) {
 export function AddressConfirmCard({ address, onConfirm, onEdit, isBusy }: Props) {
   if (!address) return null;
 
-  const canShowMap = typeof address.lat === "number" && typeof address.lng === "number";
+  const canShowMap =
+    SHOW_MAP_PREVIEW && typeof address.lat === "number" && typeof address.lng === "number";
 
   return (
     <section className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
-      <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
+      <div className={SHOW_MAP_PREVIEW ? "grid gap-6 lg:grid-cols-[1fr_420px]" : "grid gap-6"}>
         <div>
           <div className="inline-flex rounded-full border bg-gray-50 px-3 py-1 text-xs font-medium text-gray-600">
             Confirm Address
@@ -60,7 +64,9 @@ export function AddressConfirmCard({ address, onConfirm, onEdit, isBusy }: Props
           <h2 className="mt-4 text-2xl font-semibold tracking-tight text-gray-900">Is this the right property?</h2>
 
           <p className="mt-3 text-sm leading-relaxed text-gray-600 md:text-base">
-            Review the address and map location before generating the estimate.
+            {SHOW_MAP_PREVIEW
+              ? "Review the address and map location before generating the estimate."
+              : "Review the address before generating the estimate."}
           </p>
 
           <div className="mt-6 rounded-2xl border bg-gray-50 p-5">
@@ -92,15 +98,17 @@ export function AddressConfirmCard({ address, onConfirm, onEdit, isBusy }: Props
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-3xl border bg-gray-50">
-          {canShowMap ? (
-            <div className="relative h-[320px]">
-              <AddressConfirmMinimap address={address} />
-            </div>
-          ) : (
-            <StaticMapFallback address={address} />
-          )}
-        </div>
+        {SHOW_MAP_PREVIEW ? (
+          <div className="overflow-hidden rounded-3xl border bg-gray-50">
+            {canShowMap ? (
+              <div className="relative h-[320px]">
+                <AddressConfirmMinimap address={address} />
+              </div>
+            ) : (
+              <StaticMapFallback address={address} />
+            )}
+          </div>
+        ) : null}
       </div>
     </section>
   );

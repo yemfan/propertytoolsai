@@ -24,7 +24,7 @@ export default async function CheckoutSuccessPage({
   const sp = searchParams != null ? await searchParams : {};
   const sessionId = String(sp.session_id ?? "").trim();
   if (!sessionId) {
-    redirect("/pricing?checkout_error=missing_session");
+    redirect("/agent/pricing?checkout_error=missing_session");
   }
 
   const supabase = supabaseServerClient();
@@ -40,7 +40,7 @@ export default async function CheckoutSuccessPage({
   try {
     session = await stripe.checkout.sessions.retrieve(sessionId);
   } catch {
-    redirect("/pricing?checkout_error=invalid_session");
+    redirect("/agent/pricing?checkout_error=invalid_session");
   }
 
   const rawSub = session.subscription;
@@ -52,7 +52,7 @@ export default async function CheckoutSuccessPage({
         : null;
 
   if (!subId) {
-    redirect("/pricing?checkout_error=no_subscription");
+    redirect("/agent/pricing?checkout_error=no_subscription");
   }
 
   const subscription = await stripe.subscriptions.retrieve(subId);
@@ -95,10 +95,10 @@ export default async function CheckoutSuccessPage({
     null;
 
   if (!metaUserId) {
-    redirect("/pricing?checkout_error=no_metadata");
+    redirect("/agent/pricing?checkout_error=no_metadata");
   }
   if (metaUserId !== user.id) {
-    redirect("/pricing?checkout_error=session_user_mismatch");
+    redirect("/agent/pricing?checkout_error=session_user_mismatch");
   }
 
   if (session.mode !== "subscription") {
@@ -111,7 +111,7 @@ export default async function CheckoutSuccessPage({
       subscriptionStatus: subscription.status,
     })
   ) {
-    redirect("/pricing?checkout_error=unpaid");
+    redirect("/agent/pricing?checkout_error=unpaid");
   }
 
   try {
@@ -138,7 +138,7 @@ export default async function CheckoutSuccessPage({
     });
   } catch (e) {
     console.error("[checkout-success] persist or billing sync failed", e);
-    redirect("/pricing?checkout_error=sync_failed");
+    redirect("/agent/pricing?checkout_error=sync_failed");
   }
 
   redirect("/dashboard?checkout=success");

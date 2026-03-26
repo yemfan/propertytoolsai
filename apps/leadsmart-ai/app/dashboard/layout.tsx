@@ -48,7 +48,7 @@ export default async function DashboardLayout({
         .eq("user_id", ctx.userId);
     }
     if (status && !["active", "trialing"].includes(status)) {
-      redirect("/pricing");
+      redirect("/agent/pricing");
     }
   } catch (e) {
     if (isRedirectError(e)) throw e;

@@ -72,7 +72,7 @@ export default function PaywallModal(props: {
             </button>
           ) : (
             <a
-              href={props.ctaHref ?? "/pricing?checkout_plan=pro"}
+              href={props.ctaHref ?? "/agent/pricing?checkout_plan=pro"}
               className="w-full inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
               onClick={() => props.onClose()}
             >

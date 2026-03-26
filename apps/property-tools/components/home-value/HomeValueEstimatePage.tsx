@@ -23,7 +23,6 @@ export default function HomeValuePage() {
     confirmSelectedAddress,
     clearPendingAddress,
     startEstimateFromTypedInput,
-    useMyLocation: handleUseMyLocation,
     runEstimate,
     unlockReport,
     nextActions,
@@ -39,7 +38,6 @@ export default function HomeValuePage() {
           onChange={setAddressInput}
           onSelect={prepareAddressSelection}
           onSubmit={() => void startEstimateFromTypedInput()}
-          onUseMyLocation={() => void handleUseMyLocation()}
           isBusy={uiState === "estimating"}
         />
 

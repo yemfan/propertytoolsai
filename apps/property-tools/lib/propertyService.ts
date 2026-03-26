@@ -1,3 +1,4 @@
+import { milesBetween } from "@/lib/comps-ingestion/normalize";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { notifyLeadsForPropertyEvent } from "@/lib/smartLeadNotifications";
 
@@ -54,7 +55,8 @@ let cachedWriteTables:
     }
   | null = null;
 
-async function detectWarehouseWriteTables(): Promise<NonNullable<typeof cachedWriteTables>> {
+/** Resolves physical snapshot/comps table names (properties vs properties_dw). */
+export async function detectWarehouseWriteTables(): Promise<NonNullable<typeof cachedWriteTables>> {
   if (cachedWriteTables) return cachedWriteTables;
 
   async function tableExists(table: string) {
@@ -254,6 +256,85 @@ export async function insertSnapshotIfNeeded(params: {
   return { inserted: true, snapshot: insertedSnapshot };
 }
 
+const COMP_SNAPSHOT_HISTORY_LIMIT = 40;
+/** Max warehouse rows to consider in the subject ZIP (similarity-ranked). */
+const COMP_CANDIDATE_POOL = 300;
+/** Max snapshot-history fetches per request (caps DB load). */
+const COMP_MAX_HISTORY_SCANS = 250;
+const COMP_HISTORY_FETCH_BATCH = 12;
+
+function coalescePositiveNumber(...vals: unknown[]): number | null {
+  for (const v of vals) {
+    const n =
+      typeof v === "number"
+        ? v
+        : v != null && String(v).trim() !== ""
+          ? Number(v)
+          : NaN;
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
+
+function isSoldListingStatus(status: string | null | undefined): boolean {
+  const s = String(status ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  return s === "sold" || s === "closed" || s === "off_market_sold";
+}
+
+/**
+ * Comps used to use only {@link getLatestSnapshot}: a newer active/listing snapshot
+ * without `listing_status: sold` hid MLS sold rows and produced $0 / null comp prices.
+ * Scan recent history and pick the most recent qualifying sale (status and/or sale date + price).
+ */
+export function extractCompSaleFromHistory(
+  snapshots: PropertySnapshotRow[]
+): { soldPrice: number | null; soldDate: string | null } {
+  if (!snapshots.length) return { soldPrice: null, soldDate: null };
+
+  let best: { price: number; date: string; timeMs: number } | null = null;
+
+  for (const snap of snapshots) {
+    const data = (snap.data && typeof snap.data === "object"
+      ? snap.data
+      : {}) as Record<string, unknown>;
+    const saleDateRaw =
+      (typeof data.sale_date === "string" && data.sale_date.trim()) ||
+      (typeof data.saleDate === "string" && data.saleDate.trim()) ||
+      null;
+
+    const dataPriceFields = [
+      data.sold_price,
+      data.sale_price,
+      data.close_price,
+      data.closed_price,
+      data.last_sold_price,
+    ];
+
+    const statusSold = isSoldListingStatus(snap.listing_status);
+
+    let price: number | null = null;
+    if (statusSold) {
+      price = coalescePositiveNumber(snap.estimated_value, ...dataPriceFields);
+    } else if (saleDateRaw) {
+      price = coalescePositiveNumber(...dataPriceFields, data.price, snap.estimated_value);
+    }
+
+    if (price == null || price <= 0) continue;
+
+    const dateStr = saleDateRaw || snap.created_at;
+    const timeMs = new Date(dateStr).getTime();
+    const t = Number.isFinite(timeMs) ? timeMs : 0;
+    if (!best || t > best.timeMs) {
+      best = { price, date: dateStr, timeMs: t };
+    }
+  }
+
+  return best ? { soldPrice: best.price, soldDate: best.date } : { soldPrice: null, soldDate: null };
+}
+
 function similarityScore(subject: PropertyRow, comp: PropertyRow): number {
   const bedsA = subject.beds ?? 0;
   const bedsB = comp.beds ?? 0;
@@ -271,62 +352,176 @@ function similarityScore(subject: PropertyRow, comp: PropertyRow): number {
   return Math.max(0, 1 - penalty);
 }
 
+/**
+ * When the ZIP-scoped RPC returns nothing, load other properties with coordinates in a rough bbox
+ * and keep those within `miles` (haversine). Used to find sold comps across ZIP boundaries.
+ */
+export async function loadWarehousePropertiesNearSubject(
+  subject: Pick<PropertyRow, "id" | "lat" | "lng">,
+  miles: number,
+  cap: number
+): Promise<PropertyRow[]> {
+  if (
+    subject.lat == null ||
+    subject.lng == null ||
+    !Number.isFinite(Number(subject.lat)) ||
+    !Number.isFinite(Number(subject.lng))
+  ) {
+    return [];
+  }
+  const lat = Number(subject.lat);
+  const lng = Number(subject.lng);
+  const cos = Math.cos((lat * Math.PI) / 180);
+  const deltaLat = miles / 69;
+  const deltaLng = miles / (69 * (Math.abs(cos) < 0.01 ? 0.01 : Math.abs(cos)));
+
+  const { data, error } = await supabaseServer
+    .from("properties_warehouse")
+    .select("*")
+    .neq("id", subject.id)
+    .gte("lat", lat - deltaLat)
+    .lte("lat", lat + deltaLat)
+    .gte("lng", lng - deltaLng)
+    .lte("lng", lng + deltaLng)
+    .limit(500);
+
+  if (error) throw error;
+
+  const rows = ((data ?? []) as PropertyRow[]).filter((r) => {
+    if (r.lat == null || r.lng == null) return false;
+    const d = milesBetween(lat, lng, r.lat, r.lng);
+    return typeof d === "number" && d <= miles;
+  });
+
+  return rows.slice(0, Math.max(1, cap));
+}
+
+/**
+ * Same-ZIP candidates with at least one snapshot where sale price > 0
+ * (`warehouse_property_ids_in_zip_with_sale_price` migration).
+ */
+async function loadZipCompCandidateProperties(subject: PropertyRow): Promise<PropertyRow[]> {
+  const { data: idArray, error: rpcError } = await supabaseServer.rpc(
+    "warehouse_property_ids_in_zip_with_sale_price",
+    {
+      p_zip: subject.zip_code,
+      p_exclude_property_id: subject.id,
+      p_max: COMP_CANDIDATE_POOL,
+    }
+  );
+
+  if (rpcError) throw rpcError;
+  if (!Array.isArray(idArray) || idArray.length === 0) return [];
+
+  const { data: rows, error } = await supabaseServer
+    .from("properties_warehouse")
+    .select("*")
+    .in("id", idArray);
+  if (error) throw error;
+  return (rows as PropertyRow[]) ?? [];
+}
+
 export async function getComparables(address: string, limit = 10) {
-  const subject = await getPropertyByAddress(address);
+  let subject = await getPropertyByAddress(address);
   if (!subject) {
     return { subject: null, comps: [] as PropertyCompRow[] };
   }
 
-  // Simple v1: same ZIP, exclude self, similar beds/baths/sqft.
-  const { data: candidateProps, error } = await supabaseServer
-    .from("properties_warehouse")
-    .select("*")
-    .eq("zip_code", subject.zip_code)
-    .neq("id", subject.id)
-    .limit(100);
+  if (
+    (subject.lat == null ||
+      subject.lng == null ||
+      !Number.isFinite(Number(subject.lat)) ||
+      !Number.isFinite(Number(subject.lng))) &&
+    subject.address
+  ) {
+    const query = [subject.address, subject.city, subject.state, subject.zip_code]
+      .filter((x) => x != null && String(x).trim())
+      .join(", ");
+    if (query.trim()) {
+      const { forwardGeocodeAddress } = await import("@/lib/homeValue/forwardGeocodeAddress");
+      const geo = await forwardGeocodeAddress(query);
+      if (geo) {
+        subject = await upsertPropertyWarehouse({
+          address: subject.address,
+          city: subject.city ?? undefined,
+          state: subject.state ?? undefined,
+          zip_code: subject.zip_code ?? undefined,
+          lat: geo.lat,
+          lng: geo.lng,
+          property_type: subject.property_type ?? undefined,
+          beds: subject.beds ?? undefined,
+          baths: subject.baths ?? undefined,
+          sqft: subject.sqft ?? undefined,
+          lot_size: subject.lot_size ?? undefined,
+          year_built: subject.year_built ?? undefined,
+        });
+      }
+    }
+  }
 
-  if (error) throw error;
+  let candidateProps = await loadZipCompCandidateProperties(subject);
 
-  const candidates = ((candidateProps as PropertyRow[]) ?? []).map((p) => ({
-    property: p,
-    score: similarityScore(subject, p),
-  }));
+  if (candidateProps.length === 0) {
+    try {
+      const { ingestRentcastSoldCompsForPropertyRow } = await import(
+        "@/lib/comps-ingestion/rentcastWarehouseIngest"
+      );
+      await ingestRentcastSoldCompsForPropertyRow(subject, 35);
+    } catch (e) {
+      console.error("getComparables: Rentcast comp ingest failed", e);
+    }
+    candidateProps = await loadZipCompCandidateProperties(subject);
+  }
 
-  const top = candidates
-    .filter((c) => c.score >= 0.25)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
+  if (candidateProps.length === 0) {
+    candidateProps = await loadWarehousePropertiesNearSubject(
+      subject,
+      5,
+      COMP_CANDIDATE_POOL
+    );
+  }
 
-  // Persist comps (idempotent) with similarity score and sold info (from latest snapshots).
-  // This makes imported MLS sold history immediately usable by estimators/CMAs.
-  const compsWithSold = await Promise.all(
-    top.map(async (c) => {
-      const snap = await getLatestSnapshot(c.property.id);
-      const listingStatus = snap?.listing_status ?? null;
-      const estimated = snap?.estimated_value ?? null;
-      const data = (snap?.data ?? {}) as any;
+  const ordered = ((candidateProps as PropertyRow[]) ?? [])
+    .map((p) => ({
+      property: p,
+      score: similarityScore(subject, p),
+    }))
+    .sort((a, b) => b.score - a.score);
 
-      const soldPrice =
-        listingStatus === "sold" && estimated != null ? Number(estimated) : null;
+  const priced: Array<{
+    property: PropertyRow;
+    score: number;
+    sold_price: number;
+    sold_date: string | null;
+  }> = [];
 
-      // Import stores `sale_date` inside snapshot.data.
-      const saleDateRaw =
-        typeof data?.sale_date === "string"
-          ? data.sale_date
-          : typeof data?.saleDate === "string"
-            ? data.saleDate
-            : null;
+  const scanCap = Math.min(ordered.length, COMP_MAX_HISTORY_SCANS);
+  for (let i = 0; i < scanCap && priced.length < limit; i += COMP_HISTORY_FETCH_BATCH) {
+    const batch = ordered.slice(i, Math.min(i + COMP_HISTORY_FETCH_BATCH, scanCap));
+    const resolved = await Promise.all(
+      batch.map(async (c) => {
+        const history = await getPropertyHistory(c.property.id, COMP_SNAPSHOT_HISTORY_LIMIT);
+        const { soldPrice, soldDate } = extractCompSaleFromHistory(history);
+        return { ...c, soldPrice, soldDate };
+      })
+    );
+    for (const row of resolved) {
+      const p =
+        row.soldPrice != null && Number.isFinite(Number(row.soldPrice))
+          ? Number(row.soldPrice)
+          : NaN;
+      if (!Number.isFinite(p) || p <= 0) continue;
+      priced.push({
+        property: row.property,
+        score: row.score,
+        sold_price: p,
+        sold_date: row.soldDate,
+      });
+      if (priced.length >= limit) break;
+    }
+  }
 
-      const soldDate = saleDateRaw ? String(saleDateRaw) : null;
-
-      return {
-        property: c.property,
-        score: c.score,
-        sold_price: soldPrice,
-        sold_date: soldDate,
-      };
-    })
-  );
+  const compsWithSold = priced;
 
   const upserts = compsWithSold.map((c) => ({
     subject_property_id: subject.id,

@@ -34,7 +34,7 @@ export type ListingStyleProperty = {
 };
 
 function money(value?: number) {
-  if (typeof value !== "number") return "—";
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -61,47 +61,37 @@ export function PropertyHeroGallery({
   photos: PropertyPhoto[];
 }) {
   const [selected, setSelected] = useState(0);
-  const primary = photos[selected] ?? photos[0] ?? null;
+  if (!photos.length) return null;
+
+  const primary = photos[selected] ?? photos[0]!;
   const rest = photos.slice(0, 5);
 
   return (
     <section className="overflow-hidden rounded-3xl border bg-white shadow-sm">
       <div className="grid gap-2 p-2 lg:grid-cols-[1.35fr_0.65fr]">
         <div className="overflow-hidden rounded-3xl bg-gray-100">
-          {primary ? (
-            <img
-              src={primary.url}
-              alt={primary.alt || address}
-              className="h-[420px] w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-[420px] items-center justify-center bg-gray-100 text-sm text-gray-500">
-              No property photos available
-            </div>
-          )}
+          <img
+            src={primary.url}
+            alt={primary.alt || address}
+            className="h-[420px] w-full object-cover"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-2">
-          {rest.length > 0 ? (
-            rest.map((photo, index) => (
-              <button
-                key={photo.id}
-                type="button"
-                onClick={() => setSelected(index)}
-                className="overflow-hidden rounded-2xl border bg-gray-100 text-left"
-              >
-                <img
-                  src={photo.url}
-                  alt={photo.alt || `${address} photo ${index + 1}`}
-                  className="h-[205px] w-full object-cover transition hover:scale-[1.02]"
-                />
-              </button>
-            ))
-          ) : (
-            <div className="col-span-2 flex h-full min-h-[420px] items-center justify-center rounded-2xl bg-gray-100 text-sm text-gray-500">
-              Photo gallery unavailable
-            </div>
-          )}
+          {rest.map((photo, index) => (
+            <button
+              key={photo.id}
+              type="button"
+              onClick={() => setSelected(index)}
+              className="overflow-hidden rounded-2xl border bg-gray-100 text-left"
+            >
+              <img
+                src={photo.url}
+                alt={photo.alt || `${address} photo ${index + 1}`}
+                className="h-[205px] w-full object-cover transition hover:scale-[1.02]"
+              />
+            </button>
+          ))}
         </div>
       </div>
     </section>
@@ -213,12 +203,11 @@ export function PropertyPhotosSection({
 }: {
   property: ListingStyleProperty;
 }) {
+  const photos = property.photos ?? [];
+
   return (
     <div className="space-y-6">
-      <PropertyHeroGallery
-        address={property.fullAddress}
-        photos={property.photos ?? []}
-      />
+      <PropertyHeroGallery address={property.fullAddress} photos={photos} />
       <PropertyOverviewCard property={property} />
       <PropertyHighlightsGrid property={property} />
     </div>

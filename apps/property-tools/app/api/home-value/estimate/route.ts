@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/authFromRequest";
+import { forwardGeocodeAddress } from "@/lib/homeValue/forwardGeocodeAddress";
 import { normalizeHomeValueEstimateRequestBody } from "@/lib/homeValue/normalizeEstimateRequestBody";
 import { runHomeValueEstimatePipeline } from "@/lib/homeValue/runEstimate";
 import { getComparables } from "@/lib/propertyService";
+
+function addressLineForGeocode(address: string, city: string | null, state: string | null, zip: string | null) {
+  return [address, city, state, zip]
+    .filter((x) => x != null && String(x).trim())
+    .map((x) => String(x).trim())
+    .join(", ");
+}
 
 export const runtime = "nodejs";
 
@@ -15,14 +23,28 @@ export async function POST(req: Request) {
 
     const result = await runHomeValueEstimatePipeline(body, { userId });
     const normalized = result.normalizedProperty;
-    const lat = normalized.lat != null ? Number(normalized.lat) : NaN;
-    const lng = normalized.lng != null ? Number(normalized.lng) : NaN;
+    let lat = normalized.lat != null ? Number(normalized.lat) : NaN;
+    let lng = normalized.lng != null ? Number(normalized.lng) : NaN;
 
     if (!normalized.address) {
       return NextResponse.json(
         { success: false, error: "Missing property address" },
         { status: 400 }
       );
+    }
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      const query = addressLineForGeocode(
+        normalized.address,
+        normalized.city,
+        normalized.state,
+        normalized.zip
+      );
+      const geo = query ? await forwardGeocodeAddress(query) : null;
+      if (geo) {
+        lat = geo.lat;
+        lng = geo.lng;
+      }
     }
 
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {

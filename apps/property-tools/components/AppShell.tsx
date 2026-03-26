@@ -12,7 +12,7 @@ import { hasPremiumToolAccess } from "@/lib/access";
 import { getNavSectionsForRole } from "@/lib/auth/navByRole";
 import { parseUserRole, type UserRole } from "@/lib/auth/roles";
 import { stripUnlockPremiumNavItem } from "@/lib/nav/stripUnlockPremiumNav";
-import navConfig, { propertyToolsNav } from "@/nav.config";
+import { propertyToolsNav } from "@/nav.config";
 
 const APP_NAME = "PropertyTools AI";
 
@@ -34,19 +34,19 @@ function PropertyToolsTopChrome({
       leadingExtra={
         <Link
           href="/"
-          className="flex min-w-0 shrink-0 items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-2 py-1 shadow-sm outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
+          className="flex min-w-0 shrink-0 items-center rounded-2xl p-1 outline-none transition hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
         >
           <Image
             src="/images/ptlogo.png"
             alt={APP_NAME}
-            width={220}
-            height={66}
-            className="h-10 w-auto sm:h-11"
+            width={200}
+            height={60}
+            className="h-8 w-auto max-w-[min(200px,55vw)] object-contain object-left sm:h-9"
             priority
           />
         </Link>
       }
-      searchSlot={<></>}
+      searchSlot={null}
       rightActions={
         authLoading
           ? []
@@ -90,17 +90,6 @@ function PropertyToolsTopChrome({
  */
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isMarketingHome = pathname === "/";
-
-  if (isMarketingHome) {
-    return (
-      <AuthProvider>
-        <AccessProvider>
-          <div className="min-h-screen bg-white text-slate-900">{children}</div>
-        </AccessProvider>
-      </AuthProvider>
-    );
-  }
 
   /** Full-bleed design preview (`app/layout-preview`) — avoids double sidebar/topbar. */
   if (pathname === "/layout-preview") {
@@ -163,7 +152,6 @@ function AppShellAuthedLayout({ children }: { children: ReactNode }) {
         <PremiumSidebar
           appName={APP_NAME}
           sections={navSections}
-          workspaceLabel={navConfig.sidebarTitle ?? "Tools"}
           branding="none"
           height="stretch"
         />
