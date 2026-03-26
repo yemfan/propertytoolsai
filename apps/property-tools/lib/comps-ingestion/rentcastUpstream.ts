@@ -49,7 +49,6 @@ function comparableSaleToNearby(c: ComparableSale): NearbyCompCandidate {
     listingStatus: "sold",
     city: null,
     state: null,
-    zipCode: null,
     lat: null,
     lng: null,
   };
