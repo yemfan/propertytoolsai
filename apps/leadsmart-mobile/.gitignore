@@ -1,0 +1,19 @@
+# Local env (secrets)
+.env
+.env.local
+.env.*.local
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Supabase CLI (linked project metadata — may contain refs)
+.supabase/

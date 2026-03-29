@@ -15,7 +15,7 @@ then **Root Directory is set to the repo root** (`/vercel/path0`). Vercel looks 
 **Fix (preferred):**
 
 1. **Vercel** → your project → **Settings** → **General** → **Root Directory**
-2. Set **`apps/leadsmart-ai`** (or **`apps/property-tools`** for the other project). **Do not** leave this empty or `.` if you want a working Next.js deploy.
+2. Set **`apps/leadsmartai`** (or **`apps/propertytoolsai`** for the other project). **Do not** leave this empty or `.` if you want a working Next.js deploy.
 3. **Build & Development** → **Output Directory** → leave **empty** (default).
 4. **Build Command** / **Install Command** → leave **empty** so **`apps/<app>/vercel.json`** is used (`cd ../.. && npm ci` and `cd ../.. && npm run build -w …`).
 
@@ -23,7 +23,7 @@ Redeploy (clear build cache once if needed).
 
 **Fix (fallback — if you cannot change Root Directory):**
 
-1. **Environment variable (per Vercel project):** **`VERCEL_MONOREPO_APP`** = **`leadsmart-ai`** or **`property-tools`** (must match that deployment). If unset, the build script infers from **`VERCEL_PROJECT_NAME`** and deployment URLs (**`VERCEL_URL`**, etc.) using a **normalized** match (e.g. **“Property Tools AI”** and **property.tools** both match **`propertytools`**).
+1. **Environment variable (per Vercel project):** **`VERCEL_MONOREPO_APP`** = **`leadsmartai`** or **`propertytoolsai`** (must match that deployment). If unset, the build script infers from **`VERCEL_PROJECT_NAME`** and deployment URLs (**`VERCEL_URL`**, etc.) using a **normalized** match (e.g. **“Property Tools AI”** and **property.tools** both match **`propertytools`**).
 
 2. **Build Command:** leave **`npm run build`** (default). Root **`build`** detects **`VERCEL=1`** and runs **`build:vercel-*-root`** with **`NEXT_DIST_IN_MONOREPO_ROOT=1`** so **`.next`** lands at **`<repo>/.next`** (no broken trace paths). A **copy fallback** exists only if that manifest is missing.
 
@@ -43,19 +43,19 @@ The script resolves the **monorepo root** from its path and walks up from **`pro
 
 ### LeadSmart works, Property Tools does not (same repo)
 
-1. **Mirror LeadSmart’s layout** — In the **Property Tools** Vercel project, set **Root Directory** to **`apps/property-tools`** (same pattern as **`apps/leadsmart-ai`**). Leave **Install / Build** empty so **`apps/property-tools/vercel.json`** runs.
+1. **Mirror LeadSmart’s layout** — In the **Property Tools** Vercel project, set **Root Directory** to **`apps/propertytoolsai`** (same pattern as **`apps/leadsmartai`**). Leave **Install / Build** empty so **`apps/propertytoolsai/vercel.json`** runs.
 
 2. **Remove legacy env `NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT`** and **`NEXT_DIST_IN_MONOREPO_ROOT`** from the Vercel dashboard for **Property Tools** (and any project whose **Root Directory** is **`apps/<app>`**). They can force **`distDir`** to the wrong place; Option A’s **`vercel.json`** clears them for the workspace build.
 
-3. **Repo-root Property Tools project only** — If **Root Directory** stays the **repository root**, set **`VERCEL_MONOREPO_APP=property-tools`** (or rely on URL / project-name inference after the latest script update).
+3. **Repo-root Property Tools project only** — If **Root Directory** stays the **repository root**, set **`VERCEL_MONOREPO_APP=propertytoolsai`** (or rely on URL / project-name inference after the latest script update).
 
 ### Favicon / logo / metadata URLs (Property Tools)
 
-Next.js uses **`metadataBase`** (from **`apps/property-tools/app/layout.tsx`**) to turn relative icon paths into absolute URLs. Set **`NEXT_PUBLIC_SITE_URL`** to your live origin (e.g. **`https://propertytoolsai.com`**) in the Vercel **Environment Variables** for Property Tools so production metadata matches your domain. If it is unset, **`VERCEL_URL`** is used on preview deployments so **favicons load from the same preview host**. Static files under **`apps/property-tools/public/images/`** must still be committed (e.g. **`ptlogo.png`**, **`ptlogoicon48.png`**).
+Next.js uses **`metadataBase`** (from **`apps/propertytoolsai/app/layout.tsx`**) to turn relative icon paths into absolute URLs. Set **`NEXT_PUBLIC_SITE_URL`** to your live origin (e.g. **`https://propertytoolsai.com`**) in the Vercel **Environment Variables** for Property Tools so production metadata matches your domain. If it is unset, **`VERCEL_URL`** is used on preview deployments so **favicons load from the same preview host**. Static files under **`apps/propertytoolsai/public/images/`** must still be committed (e.g. **`ptlogo.png`**, **`ptlogoicon48.png`**).
 
 ## Option A — Recommended: one Vercel project per app
 
-1. **Root Directory** = **`apps/leadsmart-ai`** (or **`apps/property-tools`**).
+1. **Root Directory** = **`apps/leadsmartai`** (or **`apps/propertytoolsai`**).
 2. Leave **Install Command** / **Build Command** **empty** in the dashboard so **`apps/<app>/vercel.json`** applies:
    - `installCommand`: `cd ../.. && npm ci`
    - `buildCommand`: clears **`NEXT_DIST_IN_MONOREPO_ROOT`** / **`NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT`** for this step, then **`npm run build -w <workspace-name>`** only — **no** **`vercel-sync-next-output`** (Vercel reads **`apps/<app>/.next`** when Root Directory is **`apps/<app>`**).
@@ -69,25 +69,25 @@ Vercel shows this when it **cannot read** `routes-manifest.json` inside the Next
 **Checklist:**
 
 1. **Scroll up** in the deploy log — if **`next build` failed** (TypeScript, OOM, etc.), fix that first; the Routes Manifest error is often a **follow-on**.
-2. **Root Directory** = **`apps/leadsmart-ai`** or **`apps/property-tools`** (not the monorepo root). **Output Directory** in the dashboard = **empty**.
+2. **Root Directory** = **`apps/leadsmartai`** or **`apps/propertytoolsai`** (not the monorepo root). **Output Directory** in the dashboard = **empty**.
 3. **Wrong `distDir` from env** — For **Root Directory** = **`apps/<app>`**, **remove** **`NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT`** and **`NEXT_DIST_IN_MONOREPO_ROOT`** from Vercel env. **`apps/<app>/vercel.json`** clears them for the workspace **`next build`**.
 4. If Root Directory **must** stay the repo root, set **`VERCEL_MONOREPO_APP`** (see **Critical** above) so **`npm run build`** runs the correct single-app build. If Root Directory is **`apps/<app>`**, **do not** set **`VERCEL_MONOREPO_APP`** for a “repo root” flow — use **`apps/<app>/vercel.json`** instead.
-5. **Turborepo** — Root **`turbo.json`** `build.outputs` includes `.next/**`, `!.next/cache/**`, and `dist/**`. If you run **`turbo build`** from the repo root, use **`npx turbo run build --filter=leadsmart-ai`** when you only need one app.
+5. **Turborepo** — Root **`turbo.json`** `build.outputs` includes `.next/**`, `!.next/cache/**`, and `dist/**`. If you run **`turbo build`** from the repo root, use **`npx turbo run build --filter=leadsmartai`** when you only need one app.
 6. After changing settings, **Redeploy** (optionally **Clear build cache**).
 
 ## Option B — Repo-root Vercel project (not recommended for Next.js)
 
 If **Root Directory** is the **repository root**, Vercel still expects **`.next` at `/vercel/path0/.next`**, but a normal workspace **`next build`** writes to **`apps/<app>/.next`**. That mismatch causes the error above.
 
-**Do not** use a repo-root Root Directory for these Next apps unless you must. Prefer **Option A** (Root Directory = **`apps/leadsmart-ai`** or **`apps/property-tools`**).
+**Do not** use a repo-root Root Directory for these Next apps unless you must. Prefer **Option A** (Root Directory = **`apps/leadsmartai`** or **`apps/propertytoolsai`**).
 
 If Root Directory **must** stay the repo root:
 
 - **Install Command:** `npm ci` (or your usual root install).
-- **Build Command:** **`npm run build`** (default). Set **`VERCEL_MONOREPO_APP`** = **`leadsmart-ai`** or **`property-tools`** for that project (see **`scripts/vercel-monorepo-root-build.mjs`**).
+- **Build Command:** **`npm run build`** (default). Set **`VERCEL_MONOREPO_APP`** = **`leadsmartai`** or **`propertytoolsai`** for that project (see **`scripts/vercel-monorepo-root-build.mjs`**).
 - **Do not** set Build Command to **`npm run build:vercel-*-root` alone** on repo-root deploys — that runs workspace **`next build`** **without** **`NEXT_DIST_IN_MONOREPO_ROOT=1`**, so output stays under **`apps/<app>/.next`** and Vercel won’t find **`<repo>/.next`**. Use **`npm run build`** (runs **`vercel-monorepo-root-build.mjs`**, which sets **`NEXT_DIST_IN_MONOREPO_ROOT=1`**, with **copy fallback** only if the repo-root manifest is missing).
 
-If you **can** set **Root Directory** to **`apps/leadsmart-ai`**, use **`apps/<app>/vercel.json`** and leave dashboard build empty — you do **not** need **`VERCEL_MONOREPO_APP`**.
+If you **can** set **Root Directory** to **`apps/leadsmartai`**, use **`apps/<app>/vercel.json`** and leave dashboard build empty — you do **not** need **`VERCEL_MONOREPO_APP`**.
 
 ## Node.js version
 
@@ -113,15 +113,15 @@ Optional (recommended on Vercel):
 
 | Variable | Purpose |
 |----------|---------|
-| `VERCEL_MONOREPO_APP` | **`leadsmart-ai`** or **`property-tools`** — required for **repo-root** Vercel projects (unless **`VERCEL_PROJECT_NAME`** matches the heuristic). Used by **`scripts/vercel-monorepo-root-build.mjs`**. |
+| `VERCEL_MONOREPO_APP` | **`leadsmartai`** or **`propertytoolsai`** — required for **repo-root** Vercel projects (unless **`VERCEL_PROJECT_NAME`** matches the heuristic). Used by **`scripts/vercel-monorepo-root-build.mjs`**. |
 | `TURBO_TELEMETRY_DISABLED=1` | Quiets Turborepo’s telemetry banner (local root `build` sets this via `cross-env`). |
 | `NEXT_TELEMETRY_DISABLED=1` | Quiets Next.js telemetry; apps also load this from committed `.env.production`. |
 
-## Fewer pages at **build** time (`leadsmart-ai` + `property-tools`)
+## Fewer pages at **build** time (`leadsmartai` + `propertytoolsai`)
 
-Both apps previously prerendered **hundreds to thousands** of static HTML routes (local SEO keyword matrix, and on `property-tools` programmatic `/tool/...` pages), which can **OOM** Vercel’s build VM even with a large `NODE_OPTIONS` heap.
+Both apps previously prerendered **hundreds to thousands** of static HTML routes (local SEO keyword matrix, and on `propertytoolsai` programmatic `/tool/...` pages), which can **OOM** Vercel’s build VM even with a large `NODE_OPTIONS` heap.
 
-Heavy routes use **`generateStaticParams()` → `[]`**, **`revalidate` (ISR)**, and (on `property-tools` `/tool/...`) **`dynamicParams: true`** so URLs are **rendered on first request** and cached at the edge — not all at build time. **Sitemaps** still list those URLs for SEO.
+Heavy routes use **`generateStaticParams()` → `[]`**, **`revalidate` (ISR)**, and (on `propertytoolsai` `/tool/...`) **`dynamicParams: true`** so URLs are **rendered on first request** and cached at the edge — not all at build time. **Sitemaps** still list those URLs for SEO.
 
 ## Troubleshooting `next build` exit code 1
 
@@ -131,11 +131,11 @@ The lines at the **bottom** of the log (`npm error Lifecycle script build failed
 2. **`Cannot find module '…lightningcss…'` or `…tailwindcss-oxide.linux-x64-gnu.node'`** — The repo root `package.json` includes **`optionalDependencies`** for Linux **`lightningcss-*`** and **`@tailwindcss/oxide-linux-x64-gnu`** / **`musl`** (same versions as Tailwind 4.2.x) so `npm ci` on Vercel installs the native binaries. Ensure that commit is deployed and **Redeploy** (clear build cache if needed).
 3. **Heap / OOM** — Each app’s **`next.config.js`** lowers **static generation concurrency** and enables **webpack memory optimizations**. The **`build` script** runs **`apps/<app>/scripts/next-build.mjs`**, which sets **`NODE_OPTIONS`** before spawning `next build`. `apps/*/vercel.json` can also set heap when Root Directory is that app. The **root** `package.json` scripts set `NODE_OPTIONS` for **`turbo build`**. You can mirror **`NODE_OPTIONS`** in **Project → Settings → Environment Variables** if needed.
 4. **Build log still shows `cross-env … next build`** — That is the **old** script. Fix: (a) confirm the **commit SHA** on the deployment matches GitHub `main`; (b) **Redeploy** with **Clear cache**; (c) in **Project → Settings → General**, ensure **Build Command** is **empty** (use `apps/<app>/vercel.json`) or `cd ../.. && npm run build -w <workspace>` — **remove** any manual `cross-env …` override. A current log should show **`[next-build] appRoot=...`** before Next runs.
-5. **Turbo building both apps** — If the log shows `leadsmart-ai:build:` and `property-tools:build:` **and** **`Tasks: 2 successful`**, the deploy is still using **root** `turbo build` (old **Build Command** override, or pre-router commit). **Fix:** use current **`npm run build`** from **`main`** and set **`VERCEL_MONOREPO_APP`** when **Root Directory** is the repo root, or set **Root Directory** to **`apps/leadsmart-ai`** (Option A).
+5. **Turbo building both apps** — If the log shows `leadsmartai:build:` and `propertytoolsai:build:` **and** **`Tasks: 2 successful`**, the deploy is still using **root** `turbo build` (old **Build Command** override, or pre-router commit). **Fix:** use current **`npm run build`** from **`main`** and set **`VERCEL_MONOREPO_APP`** when **Root Directory** is the repo root, or set **Root Directory** to **`apps/leadsmartai`** (Option A).
 
 ## Understanding build logs
 
 - **`https://turborepo.dev/docs/telemetry`** — Turborepo’s own telemetry notice (separate from Next.js). The root `npm run build` sets `TURBO_TELEMETRY_DISABLED=1` to reduce noise.
-- **`Packages in scope: … 9 packages`** — **Turbo** is building **all** workspaces (local **`npm run build`** or an explicit **`turbo build`**). **Repo-root Vercel** deploys that use **`vercel-monorepo-root-build.mjs`** should log **`[vercel-monorepo-root-build] VERCEL=1 → npm run build:vercel-…-root`** instead. To build **only one app**, use **Root Directory** `apps/leadsmart-ai` and `apps/leadsmart-ai/vercel.json`, or **`VERCEL_MONOREPO_APP`** + **`npm run build`** at the repo root.
+- **`Packages in scope: … 9 packages`** — **Turbo** is building **all** workspaces (local **`npm run build`** or an explicit **`turbo build`**). **Repo-root Vercel** deploys that use **`vercel-monorepo-root-build.mjs`** should log **`[vercel-monorepo-root-build] VERCEL=1 → npm run build:vercel-…-root`** instead. To build **only one app**, use **Root Directory** `apps/leadsmartai` and `apps/leadsmartai/vercel.json`, or **`VERCEL_MONOREPO_APP`** + **`npm run build`** at the repo root.
 - **`Remote caching unavailable (Authentication failed — check TURBO_TOKEN)`** — Normal if you haven’t connected [Vercel Remote Cache](https://vercel.com/docs/monorepos/remote-caching) or a Turbo token. Builds still succeed; only distributed cache is skipped.
-- **`leadsmart-ai:build: - Environments: .env.production`** — Next.js is loading the committed `apps/leadsmart-ai/.env.production` (e.g. `NEXT_TELEMETRY_DISABLED=1`). Secrets stay in Vercel env, not in git.
+- **`leadsmartai:build: - Environments: .env.production`** — Next.js is loading the committed `apps/leadsmartai/.env.production` (e.g. `NEXT_TELEMETRY_DISABLED=1`). Secrets stay in Vercel env, not in git.

@@ -48,7 +48,7 @@
 | Piece | Location |
 |-------|-----------|
 | Shared navigation UI + types | `packages/ui/navigation/*` |
-| PropertyTools nav data | `apps/property-tools/nav.config.tsx` |
-| LeadSmart nav data | `apps/leadsmart-ai/nav.config.tsx` |
+| PropertyTools nav data | `apps/propertytoolsai/nav.config.tsx` |
+| LeadSmart nav data | `apps/leadsmartai/nav.config.tsx` |
 | PropertyTools wiring | `components/AppShell.tsx`, `nav.config.tsx` |
 | LeadSmart wiring | `components/AppShell.tsx`, `DashboardShell.tsx`, `nav.config.tsx` |

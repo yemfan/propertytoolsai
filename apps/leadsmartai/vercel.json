@@ -1,0 +1,20 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "buildCommand": "cd ../.. && NEXT_DIST_IN_MONOREPO_ROOT= NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT= pnpm --filter leadsmartai run build",
+  "build": {
+    "env": {
+      "NODE_OPTIONS": "--max-old-space-size=12288"
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/jobs/greetings/run",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/jobs/reengagement/run",
+      "schedule": "30 15 * * *"
+    }
+  ]
+}

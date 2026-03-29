@@ -1,0 +1,124 @@
+import { useCallback } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { presentAiQuickReplyPlaceholder } from "../../lib/lead/aiQuickReplyPlaceholder";
+import { buildMailtoUrl, buildSmsUrl, buildTelUrl, normalizePhoneForLinking } from "../../lib/lead/contactLinking";
+import { openExternalUrl } from "../../lib/lead/openExternalUrl";
+import { theme } from "../../lib/theme";
+
+export type LeadQuickActionsRowProps = {
+  leadId: string;
+  displayPhone: string | null | undefined;
+  email: string;
+};
+
+type ActionKey = "call" | "sms" | "email" | "ai";
+
+const ACTIONS: { key: ActionKey; label: string; hint: string }[] = [
+  { key: "call", label: "Call", hint: "Opens the phone app" },
+  { key: "sms", label: "Text", hint: "Opens the SMS app" },
+  { key: "email", label: "Email", hint: "Opens the mail composer" },
+  { key: "ai", label: "AI reply", hint: "AI-assisted reply (coming soon)" },
+];
+
+export function LeadQuickActionsRow({ leadId, displayPhone, email }: LeadQuickActionsRowProps) {
+  const phone = normalizePhoneForLinking(displayPhone);
+  const emailTrimmed = email.trim();
+  const canCall = Boolean(phone);
+  const canSms = Boolean(phone);
+  const canEmail = Boolean(emailTrimmed);
+
+  const onPress = useCallback(
+    async (key: ActionKey) => {
+      if (key === "call" && phone) {
+        await openExternalUrl(buildTelUrl(phone), "No app can handle phone calls on this device.");
+        return;
+      }
+      if (key === "sms" && phone) {
+        await openExternalUrl(buildSmsUrl(phone), "No app can handle SMS on this device.");
+        return;
+      }
+      if (key === "email" && emailTrimmed) {
+        await openExternalUrl(
+          buildMailtoUrl(emailTrimmed),
+          "No app can handle email links on this device.",
+        );
+        return;
+      }
+      if (key === "ai") {
+        presentAiQuickReplyPlaceholder(leadId, "choose");
+      }
+    },
+    [leadId, phone, emailTrimmed],
+  );
+
+  const enabled = (key: ActionKey) => {
+    if (key === "call") return canCall;
+    if (key === "sms") return canSms;
+    if (key === "email") return canEmail;
+    return true;
+  };
+
+  return (
+    <View style={styles.wrap} accessibilityRole="toolbar" accessibilityLabel="Lead quick actions">
+      {ACTIONS.map(({ key, label, hint }) => {
+        const isEnabled = enabled(key);
+        return (
+          <Pressable
+            key={key}
+            style={({ pressed }) => [
+              styles.chip,
+              !isEnabled && styles.chipDisabled,
+              pressed && isEnabled && styles.chipPressed,
+            ]}
+            onPress={() => void onPress(key)}
+            disabled={key !== "ai" && !isEnabled}
+            accessibilityRole="button"
+            accessibilityLabel={label}
+            accessibilityHint={hint}
+            accessibilityState={{ disabled: key !== "ai" && !isEnabled }}
+          >
+            <Text style={[styles.chipLabel, !isEnabled && key !== "ai" && styles.chipLabelDisabled]}>
+              {label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.border,
+  },
+  chip: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: theme.bg,
+    borderWidth: 1,
+    borderColor: theme.border,
+    minWidth: 72,
+    alignItems: "center",
+  },
+  chipPressed: {
+    backgroundColor: "#e2e8f0",
+  },
+  chipDisabled: {
+    opacity: 0.45,
+  },
+  chipLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.accent,
+  },
+  chipLabelDisabled: {
+    color: theme.textMuted,
+  },
+});

@@ -19,9 +19,9 @@ Apply in **both** app Supabase projects (or shared DB):
 After applying the migration, from repo root (use the app whose `.env.local` points at that database):
 
 ```bash
-npm run smoke:growth-engine -w leadsmart-ai
+npm run smoke:growth-engine -w leadsmartai
 # or
-npm run smoke:growth-engine -w property-tools
+npm run smoke:growth-engine -w propertytoolsai
 ```
 
 Requires `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in that app’s `.env.local`.

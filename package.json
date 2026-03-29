@@ -1,25 +1,28 @@
 {
+  "name": "propertytoolsai-workspace",
   "private": true,
-  "packageManager": "npm@11.9.0",
+  "packageManager": "pnpm@9.15.9",
   "engines": {
-    "node": "20.x"
+    "node": "20.x",
+    "pnpm": ">=9.15.0"
   },
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
     "dev": "turbo dev",
-    "dev:property-tools": "npm run dev -w property-tools -- --port 3001",
-    "dev:leadsmart": "npm run dev -w leadsmart-ai -- --port 3000",
-    "clean:next": "node -e \"const fs=require('fs');const path=require('path');for(const app of ['leadsmart-ai','property-tools']){const p=path.join('apps',app,'.next');try{fs.rmSync(p,{recursive:true,force:true});console.log('cleaned',p);}catch(e){console.warn('skip',p,e?.message||e);}}\"",
+    "dev:propertytoolsai": "pnpm --filter propertytoolsai dev -- --port 3001",
+    "dev:leadsmartai": "pnpm --filter leadsmartai dev -- --port 3000",
+    "dev:leadsmart": "pnpm --filter leadsmartai dev -- --port 3000",
+    "dev:mobile": "pnpm --filter leadsmart-mobile start",
+    "clean:next": "node -e \"const fs=require('fs');const path=require('path');for(const app of ['leadsmartai','propertytoolsai']){const p=path.join('apps',app,'.next');try{fs.rmSync(p,{recursive:true,force:true});console.log('cleaned',p);}catch(e){console.warn('skip',p,e?.message||e);}}\"",
     "build": "node scripts/vercel-monorepo-root-build.mjs",
-    "build:leadsmart": "cross-env NODE_OPTIONS=--max-old-space-size=12288 npm run build -w leadsmart-ai",
-    "build:property-tools": "cross-env NODE_OPTIONS=--max-old-space-size=12288 npm run build -w property-tools",
-    "build:vercel-leadsmart-root": "cross-env NODE_OPTIONS=--max-old-space-size=12288 npm run build -w leadsmart-ai",
-    "build:vercel-property-tools-root": "cross-env NODE_OPTIONS=--max-old-space-size=12288 npm run build -w property-tools",
+    "build:leadsmartai": "cross-env NODE_OPTIONS=--max-old-space-size=12288 pnpm --filter leadsmartai run build",
+    "build:propertytoolsai": "cross-env NODE_OPTIONS=--max-old-space-size=12288 pnpm --filter propertytoolsai run build",
+    "build:leadsmart": "cross-env NODE_OPTIONS=--max-old-space-size=12288 pnpm --filter leadsmartai run build",
+    "build:property-tools": "cross-env NODE_OPTIONS=--max-old-space-size=12288 pnpm --filter propertytoolsai run build",
+    "build:vercel-leadsmart-root": "cross-env NODE_OPTIONS=--max-old-space-size=12288 pnpm --filter leadsmartai run build",
+    "build:vercel-propertytoolsai-root": "cross-env NODE_OPTIONS=--max-old-space-size=12288 pnpm --filter propertytoolsai run build",
     "lint": "turbo lint",
     "smoke:db:all": "node scripts/smoke-db-all.mjs",
+    "test:integration:leadsmart": "pnpm --filter leadsmartai run test:integration",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev"
   },

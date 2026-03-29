@@ -1,5 +1,5 @@
 /**
- * Root `npm run build` entry for monorepo.
+ * Root `pnpm run build` entry for monorepo.
  *
  * - Local / non-Vercel: `clean:next` + `turbo build` (unchanged behavior).
  * - Vercel with Root Directory = repo root: build with `NEXT_DIST_IN_MONOREPO_ROOT=1` so
@@ -8,10 +8,9 @@
  *   If the repo-root build is missing a manifest, fall back to copying from `apps/<app>/.next`.
  *
  * Set in Vercel → Environment Variables (per project):
- *   VERCEL_MONOREPO_APP=leadsmart-ai   OR   property-tools
+ *   VERCEL_MONOREPO_APP=leadsmartai | leadsmart-ai | propertytoolsai | property-tools
  *
- * If unset, we try to infer from VERCEL_PROJECT_NAME (dashboard project name)
- * and deployment URLs (so "Property Tools AI" / property.tools match property-tools).
+ * If unset, we try to infer from VERCEL_PROJECT_NAME and deployment URLs.
  */
 import { execSync } from "node:child_process";
 import { cpSync, existsSync, readdirSync, rmSync } from "node:fs";
@@ -35,14 +34,20 @@ function run(cmd, envOverrides = {}) {
   });
 }
 
+function canonicalApp(explicit) {
+  const e = (explicit || "").trim();
+  if (e === "leadsmartai" || e === "leadsmart-ai") return "leadsmartai";
+  if (e === "propertytoolsai" || e === "property-tools") return "propertytoolsai";
+  return null;
+}
+
 function resolveMonorepoApp() {
   const explicit = process.env.VERCEL_MONOREPO_APP?.trim();
-  if (explicit === "leadsmart-ai" || explicit === "property-tools") {
-    return explicit;
-  }
+  const canon = canonicalApp(explicit || "");
+  if (canon) return canon;
   if (explicit) {
     console.error(
-      `[vercel-monorepo-root-build] Invalid VERCEL_MONOREPO_APP="${explicit}". Use leadsmart-ai or property-tools.`,
+      `[vercel-monorepo-root-build] Invalid VERCEL_MONOREPO_APP="${explicit}". Use leadsmartai, leadsmart-ai, propertytoolsai, or property-tools.`,
     );
     process.exit(1);
   }
@@ -55,9 +60,8 @@ function resolveMonorepoApp() {
   ];
   const compact = normalizeForMatch(blobs.filter(Boolean).join(" "));
 
-  // Order: leadsmart first (rare overlap), then property-tools (repo / product names vary a lot).
-  if (compact.includes("leadsmart")) return "leadsmart-ai";
-  if (compact.includes("propertytools")) return "property-tools";
+  if (compact.includes("leadsmart")) return "leadsmartai";
+  if (compact.includes("propertytools")) return "propertytoolsai";
 
   return null;
 }
@@ -69,19 +73,18 @@ if (process.env.VERCEL === "1") {
       [
         "[vercel-monorepo-root-build] Cannot infer which app to build.",
         "Set Vercel → Environment Variables → VERCEL_MONOREPO_APP to one of:",
-        "  leadsmart-ai",
-        "  property-tools",
-        "Or set VERCEL_MONOREPO_APP=property-tools on the Property Tools project (repo-root deploys only).",
-        "Better fix: set Root Directory to apps/leadsmart-ai or apps/property-tools (see docs/VERCEL.md).",
+        "  leadsmartai (or legacy leadsmart-ai)",
+        "  propertytoolsai (or legacy property-tools)",
+        "Better fix: set Root Directory to apps/leadsmartai or apps/propertytoolsai (see docs/VERCEL.md).",
       ].join("\n"),
     );
     process.exit(1);
   }
 
   const script =
-    app === "leadsmart-ai"
+    app === "leadsmartai"
       ? "build:vercel-leadsmart-root"
-      : "build:vercel-property-tools-root";
+      : "build:vercel-propertytoolsai-root";
 
   const appNextDir = join(root, "apps", app, ".next");
   const repoNextDir = join(root, ".next");
@@ -105,10 +108,10 @@ if (process.env.VERCEL === "1") {
   }
 
   console.log(
-    `[vercel-monorepo-root-build] VERCEL=1 → npm run ${script} (app=${app}, NEXT_DIST_IN_MONOREPO_ROOT=1)`,
+    `[vercel-monorepo-root-build] VERCEL=1 → pnpm run ${script} (app=${app}, NEXT_DIST_IN_MONOREPO_ROOT=1)`,
   );
   // Build straight into <repo>/.next so NFT traces match Vercel’s project root (do not rely on cpSync).
-  run(`npm run ${script}`, {
+  run(`pnpm run ${script}`, {
     NEXT_DIST_IN_MONOREPO_ROOT: "1",
     NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT: "",
   });
@@ -171,7 +174,7 @@ if (process.env.VERCEL === "1") {
   process.exit(0);
 }
 
-run("cross-env TURBO_TELEMETRY_DISABLED=1 npm run clean:next");
+run("cross-env TURBO_TELEMETRY_DISABLED=1 pnpm run clean:next");
 run(
-  "cross-env NODE_OPTIONS=--max-old-space-size=12288 TURBO_TELEMETRY_DISABLED=1 npx turbo build --concurrency=1",
+  "cross-env NODE_OPTIONS=--max-old-space-size=12288 TURBO_TELEMETRY_DISABLED=1 pnpm exec turbo build --concurrency=1",
 );

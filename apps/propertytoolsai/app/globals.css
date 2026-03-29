@@ -1,0 +1,319 @@
+@import "tailwindcss";
+
+/* Shared `@repo/ui` lives outside `./app` + `./components` — Tailwind v4 must scan it or sidebar/topbar utilities are missing. */
+@source "../../../packages/ui/**/*.{js,ts,jsx,tsx}";
+
+/*
+ * PropertyTools AI — UI system (aligned with leadsmartai)
+ * - Brand: #0072ce primary, #28a745 success, #ff8c42 accent (see @theme + :root)
+ * - Surfaces: Card variants in components/ui/Card.tsx (ring + shadow-sm; interactive = hover lift)
+ * - Marketing: gradient page shells in components/layout/*PageShell*.tsx
+ */
+
+/* Tailwind v4 theme in CSS (avoids @config + TS on PostCSS/webpack — Linux/Vercel stability) */
+@theme {
+  --color-brand-primary: #0072ce;
+  --color-brand-success: #28a745;
+  --color-brand-accent: #ff8c42;
+  --color-brand-surface: #f5f5f5;
+  --color-brand-text: #333333;
+}
+
+/* Plain CSS (not @layer) — avoids Turbopack/PostCSS ordering issues on Vercel */
+.font-heading {
+  font-family: var(--font-heading), system-ui, sans-serif;
+}
+.font-body {
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+:root {
+  --color-primary: #0072ce;
+  --color-success: #28a745;
+  --color-accent: #ff8c42;
+  --color-surface: #f5f5f5;
+  --color-text: #333333;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body), system-ui, sans-serif;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading), system-ui, sans-serif;
+}
+
+.brand-logo-text {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* CTA and key action buttons use heading font for stronger hierarchy. */
+button,
+.btn-primary,
+.cta-button {
+  font-family: var(--font-heading), system-ui, sans-serif;
+}
+
+/* Dashboard/UI typography scale */
+.ui-page-title {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1.25;
+}
+
+.ui-page-subtitle {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.ui-card-title {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.ui-card-subtitle {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ui-table-header {
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.ui-table-cell {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+
+.ui-meta {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+a {
+  color: var(--color-primary);
+}
+
+a:hover {
+  color: #005ca8;
+}
+
+/*
+ * Plain CSS above is unlayered and wins over Tailwind utilities — `a { color: primary }` was
+ * overriding `text-white` on Next.js <Link> CTAs (blue text on blue buttons) on propertytoolsai.com.
+ */
+a.text-white,
+a.text-white:hover,
+a.text-white:focus-visible {
+  color: #fff !important;
+}
+
+a.text-slate-900,
+a.text-slate-900:hover,
+a.text-slate-900:focus-visible {
+  color: #0f172a !important;
+}
+
+a.text-slate-800,
+a.text-slate-800:hover,
+a.text-slate-800:focus-visible {
+  color: #1e293b !important;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background-color: #005ca8;
+}
+
+.text-success {
+  color: var(--color-success);
+}
+
+.text-accent {
+  color: var(--color-accent);
+}
+
+/* Revenue KPI dashboard — motion (respects reduced motion) */
+@keyframes revenue-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes revenue-pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes revenue-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.revenue-enter {
+  animation: revenue-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.revenue-delay-1 {
+  animation-delay: 0.06s;
+}
+.revenue-delay-2 {
+  animation-delay: 0.12s;
+}
+.revenue-delay-3 {
+  animation-delay: 0.18s;
+}
+.revenue-delay-4 {
+  animation-delay: 0.24s;
+}
+.revenue-delay-5 {
+  animation-delay: 0.3s;
+}
+.revenue-delay-6 {
+  animation-delay: 0.36s;
+}
+.revenue-delay-7 {
+  animation-delay: 0.42s;
+}
+.revenue-delay-8 {
+  animation-delay: 0.48s;
+}
+
+.revenue-live-dot {
+  animation: revenue-pulse-dot 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .revenue-enter,
+  .revenue-delay-1,
+  .revenue-delay-2,
+  .revenue-delay-3,
+  .revenue-delay-4,
+  .revenue-delay-5,
+  .revenue-delay-6,
+  .revenue-delay-7,
+  .revenue-delay-8 {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .revenue-live-dot {
+    animation: none !important;
+  }
+}
+
+/* Marketing landing — subtle motion + depth (aligned with leadsmartai; respects reduced motion) */
+@keyframes landing-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.landing-animate {
+  animation: landing-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.landing-delay-1 {
+  animation-delay: 0.06s;
+}
+.landing-delay-2 {
+  animation-delay: 0.12s;
+}
+.landing-delay-3 {
+  animation-delay: 0.18s;
+}
+.landing-delay-4 {
+  animation-delay: 0.24s;
+}
+.landing-delay-5 {
+  animation-delay: 0.3s;
+}
+
+.landing-hero-float {
+  animation: landing-float 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-animate,
+  .landing-delay-1,
+  .landing-delay-2,
+  .landing-delay-3,
+  .landing-delay-4,
+  .landing-delay-5 {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .landing-hero-float {
+    animation: none !important;
+  }
+}

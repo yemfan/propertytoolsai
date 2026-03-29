@@ -1,0 +1,14 @@
+# Propertytoolsai monorepo — single workspace root (pnpm workspaces).
+#
+# Apps
+#   apps/propertytoolsai   → public lead-gen (Next.js)
+#   apps/leadsmartai       → CRM / AI / automation (Next.js)
+#   apps/leadsmart-mobile  → LeadSmart mobile (Expo)
+#
+# Packages
+#   packages/shared       → types, constants, utils
+#   packages/api-client   → typed fetch + DTO helpers
+#
+packages:
+  - "apps/*"
+  - "packages/*"

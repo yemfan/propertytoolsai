@@ -1,0 +1,24 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "buildCommand": "cd ../.. && NEXT_DIST_IN_MONOREPO_ROOT= NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT= pnpm --filter propertytoolsai run build",
+  "build": {
+    "env": {
+      "NODE_OPTIONS": "--max-old-space-size=12288"
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/jobs/seo-refresh",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/jobs/seo-expand",
+      "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/jobs/seo-optimize",
+      "schedule": "0 4 * * *"
+    }
+  ]
+}

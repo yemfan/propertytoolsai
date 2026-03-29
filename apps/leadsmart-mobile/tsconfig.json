@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@leadsmart/shared": ["../../packages/shared/src/index.ts"],
+      "@leadsmart/shared/*": ["../../packages/shared/src/*"],
+      "@leadsmart/api-client": ["../../packages/api-client/src/index.ts"],
+      "@leadsmart/api-client/*": ["../../packages/api-client/src/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "app.config.ts"]
+}

@@ -1,6 +1,12 @@
 # dependencies
 node_modules/
 /node_modules
+.pnpm-debug.log*
+
+# Expo / React Native
+.expo/
+**/.expo/
+apps/leadsmart-mobile/dist/
 # Use only the root lockfile in this monorepo (nested lockfiles confuse Next.js + Vercel)
 apps/**/package-lock.json
 /.pnp
@@ -40,5 +46,5 @@ yarn-error.log*
 next-env.d.ts
 
 # valuation ML training (local / admin workflow)
-apps/property-tools/tmp/
-apps/property-tools/ml/valuation/artifacts/
+apps/propertytoolsai/tmp/
+apps/propertytoolsai/ml/valuation/artifacts/

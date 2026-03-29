@@ -6,13 +6,13 @@ Canonical roles live in **`public.profiles.role`**:
 
 ## Database
 
-- Migrations under `apps/property-tools/supabase/migrations/` (and mirrored in `apps/leadsmart-ai/`):
+- Migrations under `apps/propertytoolsai/supabase/migrations/` (and mirrored in `apps/leadsmartai/`):
   - `20260315000000_create_profiles_table.sql` — table
   - `20260316000000_profiles_updated_at_trigger.sql` — `updated_at` trigger
   - `20260317000000_profiles_rbac_rls_auth_trigger.sql` — role check, RLS, **`auth.users` → `public.profiles` trigger**
 - After signup, Supabase inserts `auth.users`; the trigger inserts a matching `profiles` row (`role = consumer`).
 
-## App code (`apps/property-tools`)
+## App code (`apps/propertytoolsai`)
 
 | Piece | Purpose |
 |--------|---------|

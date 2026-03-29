@@ -1,0 +1,277 @@
+import type { LeadId } from "./lead";
+import type { DealPredictionLabel } from "./deal-prediction";
+import type { MobilePipelineSlug } from "../constants/mobile-pipeline";
+
+/**
+ * DTOs for LeadSmart CRM mobile HTTP API (`/api/mobile/*`).
+ * Field names follow CRM JSON conventions (snake_case on nested message rows).
+ */
+
+export type MobileInboxThreadDto = {
+  leadId: LeadId;
+  channel: "sms" | "email";
+  leadName: string | null;
+  preview: string;
+  lastMessageAt: string;
+  lastDirection: "inbound" | "outbound";
+  messageId: string;
+  /** `leads.rating === "hot"` or a recent `nurture_alerts` row with `type === "hot"`. */
+  isHotLead: boolean;
+};
+
+export type MobileSmsMessageDto = {
+  id: string;
+  message: string;
+  direction: "inbound" | "outbound";
+  created_at: string;
+};
+
+export type MobileEmailMessageDto = {
+  id: string;
+  subject: string | null;
+  message: string;
+  direction: "inbound" | "outbound";
+  created_at: string;
+};
+
+export type MobileLeadConversationsDto = {
+  sms: MobileSmsMessageDto[];
+  email: MobileEmailMessageDto[];
+};
+
+/** After `POST /api/mobile/leads/:id/sms/send` */
+export type MobileSmsSendResponseDto = {
+  message: MobileSmsMessageDto;
+};
+
+/** After `POST /api/mobile/leads/:id/email/send` */
+export type MobileEmailSendResponseDto = {
+  message: MobileEmailMessageDto;
+};
+
+/** After `POST /api/mobile/leads/:id/sms/ai-reply` */
+export type MobileSmsAiReplyResponseDto = {
+  suggestion: string;
+};
+
+/** After `POST /api/mobile/leads/:id/email/ai-reply` */
+export type MobileEmailAiReplyResponseDto = {
+  subject: string;
+  body: string;
+};
+
+export type MobilePipelineStageOptionDto = {
+  id: string;
+  mobile_slug: MobilePipelineSlug;
+  name: string;
+  color: string | null;
+  position: number;
+};
+
+export type MobileLeadPipelineDto = {
+  stage_id: string | null;
+  mobile_slug: MobilePipelineSlug | null;
+  name: string | null;
+};
+
+export type MobileTaskStatus = "open" | "done" | "cancelled";
+export type MobileTaskPriority = "low" | "medium" | "high" | "urgent";
+
+export type MobileLeadTaskDto = {
+  id: string;
+  lead_id: LeadId;
+  lead_name: string | null;
+  title: string;
+  description: string | null;
+  due_at: string | null;
+  status: MobileTaskStatus;
+  priority: MobileTaskPriority;
+  task_type: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+};
+
+export type MobileTasksGroupedResponseDto = {
+  stages: MobilePipelineStageOptionDto[];
+  overdue: MobileLeadTaskDto[];
+  today: MobileLeadTaskDto[];
+  upcoming: MobileLeadTaskDto[];
+};
+
+/** Reserved for external sync; `local` = CRM-only appointment. */
+export type MobileCalendarProvider = "google" | "outlook" | "local";
+
+export type MobileCalendarEventStatus = "scheduled" | "cancelled" | "completed";
+
+export type MobileCalendarEventDto = {
+  id: string;
+  lead_id: LeadId;
+  lead_name: string | null;
+  title: string;
+  description: string | null;
+  starts_at: string;
+  ends_at: string | null;
+  timezone: string | null;
+  status: MobileCalendarEventStatus;
+  /** Provider when synced; omit or `local` for manually entered mobile events. */
+  calendar_provider: MobileCalendarProvider | null;
+  external_event_id: string | null;
+  external_calendar_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MobileCalendarEventsListResponseDto = {
+  events: MobileCalendarEventDto[];
+};
+
+export type MobileBookingLinkDto = {
+  id: string;
+  lead_id: LeadId;
+  lead_name: string | null;
+  booking_url: string;
+  label: string | null;
+  share_message: string | null;
+  expires_at: string | null;
+  created_at: string;
+};
+
+export type MobileFollowUpReminderDto = {
+  lead_id: LeadId;
+  lead_name: string | null;
+  next_contact_at: string;
+  /** True when `next_contact_at` is before now. */
+  overdue: boolean;
+};
+
+export type MobileRemindersResponseDto = {
+  upcoming_appointments: MobileCalendarEventDto[];
+  overdue_tasks: MobileLeadTaskDto[];
+  follow_ups: MobileFollowUpReminderDto[];
+};
+
+/**
+ * Lead record from mobile list/detail: Supabase `leads` row plus hydration fields.
+ * Intentionally loose beyond known mobile additions — CRM selects evolve over time.
+ */
+export type MobileLeadRecordDto = Record<string, unknown> & {
+  id: string;
+  display_phone: string | null;
+  ai_lead_score: number | null;
+  ai_intent: string | null;
+  ai_timeline: string | null;
+  ai_confidence: number | null;
+  ai_explanation: string[];
+  prediction_score?: number | null;
+  prediction_label?: DealPredictionLabel | string | null;
+  prediction_computed_at?: string | null;
+};
+
+export type MobileLeadDetailResponseDto = {
+  lead: MobileLeadRecordDto;
+  conversations: MobileLeadConversationsDto;
+  pipeline: MobileLeadPipelineDto;
+  next_open_task: MobileLeadTaskDto | null;
+  pipeline_stages: MobilePipelineStageOptionDto[];
+  /** Earliest future scheduled appointment for this lead, if any. */
+  next_appointment: MobileCalendarEventDto | null;
+  /** Recent booking links for this lead (newest first). */
+  booking_links: MobileBookingLinkDto[];
+};
+
+export type MobileLeadsListResponseDto = {
+  leads: MobileLeadRecordDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type MobilePushRegisterRequestDto = {
+  expoPushToken: string;
+  platform?: string;
+  deviceId?: string | null;
+  appVersion?: string | null;
+};
+
+export type MobileApiErrorCode = "NO_AGENT_ROW" | string;
+
+/**
+ * `data.kind` on Expo push notifications from LeadSmart CRM.
+ * All `data` values are strings for APNs/FCM compatibility.
+ */
+export type MobilePushNotificationKind =
+  | "hot_lead"
+  | "inbound_sms"
+  | "inbound_email"
+  | "needs_human"
+  | "reminder";
+
+/**
+ * Contract for `notification.request.content.data` on LeadSmart-originated pushes.
+ * Optional fields may be omitted by older servers.
+ */
+export type MobilePushNotificationData = {
+  kind: MobilePushNotificationKind;
+  leadId: string;
+  /** `sms` | `email` where relevant */
+  channel?: string;
+  /** Short human-readable context */
+  reason?: string;
+};
+
+export type MobileDashboardAlertType =
+  | "hot_lead"
+  | "overdue_task"
+  | "ai_escalation"
+  | "unread_message";
+
+export type MobileDashboardPriorityAlert = {
+  type: MobileDashboardAlertType;
+  leadId?: LeadId;
+  title: string;
+  subtitle?: string;
+  createdAt?: string;
+};
+
+export type MobileDashboardQuickAction = {
+  key: string;
+  label: string;
+};
+
+export type MobileDashboardStats = {
+  hotLeads: number;
+  unreadMessages: number;
+  tasksToday: number;
+  appointmentsToday: number;
+};
+
+/** `GET /api/mobile/dashboard` — home / overview payload for the agent app. */
+export type MobileDashboardResponse = {
+  stats: MobileDashboardStats;
+  priorityAlerts: MobileDashboardPriorityAlert[];
+  quickActions: MobileDashboardQuickAction[];
+};
+
+export type DailyAgendaItemType = "task" | "appointment" | "follow_up";
+
+/** Single row for a daily agenda (tasks + appointments + CRM follow-up touchpoints). */
+export type DailyAgendaItem = {
+  id: string;
+  type: DailyAgendaItemType;
+  title: string;
+  subtitle?: string;
+  /** ISO 8601 — task due, appointment start, or `next_contact_at` for follow-ups. */
+  dueAt: string;
+  leadId?: LeadId;
+  priority?: "low" | "medium" | "high";
+  status?: string;
+};
+
+/** `GET /api/mobile/daily-agenda` (alias: `GET /api/mobile/agenda`) — merged day view (UTC day unless `date`). */
+export type MobileDailyAgendaResponseDto = {
+  /** `YYYY-MM-DD` (UTC) this list was built for. */
+  agendaDate: string;
+  items: DailyAgendaItem[];
+};

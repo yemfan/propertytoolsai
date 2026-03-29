@@ -1,0 +1,42 @@
+type SendEmailParams = {
+  to: string | string[];
+  subject: string;
+  text: string;
+  html?: string;
+};
+
+export async function sendEmail({ to, subject, text, html }: SendEmailParams): Promise<{ id?: string } | undefined> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.log("sendEmail: RESEND_API_KEY not set, skipping email send");
+    return undefined;
+  }
+
+  const recipients = Array.isArray(to) ? to : [to];
+  const from =
+    process.env.RESEND_FROM_EMAIL?.trim() || "LeadSmart AI <noreply@leadsmart-ai.com>";
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: recipients,
+      subject,
+      text,
+      ...(html ? { html } : {}),
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new Error(`Resend error ${res.status}: ${errText || res.statusText}`);
+  }
+
+  const json = (await res.json().catch(() => ({}))) as { id?: string };
+  return { id: json.id };
+}
+

@@ -1,4 +1,4 @@
--- Support chat (Supabase / Postgres). See apps/leadsmart-ai/supabase/migrations for duplicate.
+-- Support chat (Supabase / Postgres). See apps/leadsmartai/supabase/migrations for duplicate.
 -- Native ENUM types match prisma/schema.prisma enums.
 
 DO $$ BEGIN

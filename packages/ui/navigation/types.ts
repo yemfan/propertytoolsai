@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 /**
  * Shared nav primitives for `PremiumSidebar`, `MobileSidebar`, `Topbar`, etc.
- * Apps build `NavSection[]` in `nav.config.tsx` (see `apps/property-tools`, `apps/leadsmart-ai`).
+ * Apps build `NavSection[]` in `nav.config.tsx` (see `apps/propertytoolsai`, `apps/leadsmartai`).
  */
 export type NavLeafItem = {
   label: string;

@@ -1,0 +1,331 @@
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import type {
+  MobileBookingLinkDto,
+  MobileCalendarEventDto,
+  MobileCalendarEventStatus,
+  MobileCalendarProvider,
+} from "@leadsmart/shared";
+
+async function assertLeadOwned(agentId: string, leadId: string): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("leads")
+    .select("id")
+    .eq("id", leadId as never)
+    .eq("agent_id", agentId as never)
+    .is("merged_into_lead_id", null)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("NOT_FOUND");
+}
+
+async function touchLeadActivity(leadId: string): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await supabaseAdmin
+    .from("leads")
+    .update({ last_activity_at: now } as never)
+    .eq("id", leadId as never);
+  if (error) throw new Error(error.message);
+}
+
+function normalizeStatus(s: string | undefined | null): MobileCalendarEventStatus {
+  const v = String(s || "scheduled").toLowerCase();
+  if (v === "cancelled" || v === "canceled") return "cancelled";
+  if (v === "completed") return "completed";
+  return "scheduled";
+}
+
+function normalizeProvider(p: string | undefined | null): MobileCalendarProvider | null {
+  if (p == null || p === "") return null;
+  const v = String(p).toLowerCase();
+  if (v === "google" || v === "outlook" || v === "local") return v;
+  return "local";
+}
+
+function mapEventRow(row: Record<string, unknown>, leadName: string | null): MobileCalendarEventDto {
+  return {
+    id: String(row.id ?? ""),
+    lead_id: String(row.lead_id ?? ""),
+    lead_name: leadName,
+    title: String(row.title ?? ""),
+    description: row.description != null ? String(row.description) : null,
+    starts_at: String(row.starts_at ?? ""),
+    ends_at: row.ends_at != null ? String(row.ends_at) : null,
+    timezone: row.timezone != null ? String(row.timezone) : null,
+    status: normalizeStatus(row.status as string),
+    calendar_provider: normalizeProvider(row.calendar_provider as string),
+    external_event_id: row.external_event_id != null ? String(row.external_event_id) : null,
+    external_calendar_id: row.external_calendar_id != null ? String(row.external_calendar_id) : null,
+    created_at: String(row.created_at ?? ""),
+    updated_at: String(row.updated_at ?? ""),
+  };
+}
+
+function mapBookingRow(row: Record<string, unknown>, leadName: string | null): MobileBookingLinkDto {
+  return {
+    id: String(row.id ?? ""),
+    lead_id: String(row.lead_id ?? ""),
+    lead_name: leadName,
+    booking_url: String(row.booking_url ?? ""),
+    label: row.label != null ? String(row.label) : null,
+    share_message: row.share_message != null ? String(row.share_message) : null,
+    expires_at: row.expires_at != null ? String(row.expires_at) : null,
+    created_at: String(row.created_at ?? ""),
+  };
+}
+
+export async function listMobileCalendarEvents(params: {
+  agentId: string;
+  fromIso?: string;
+  toIso?: string;
+  /** When set, only events for this lead (dashboard lead drawer, etc.). */
+  leadId?: string;
+}): Promise<MobileCalendarEventDto[]> {
+  const { agentId } = params;
+  const from = params.fromIso ?? new Date().toISOString();
+  const to =
+    params.toIso ?? new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+
+  let evQ = supabaseAdmin
+    .from("lead_calendar_events")
+    .select(
+      "id,lead_id,title,description,starts_at,ends_at,timezone,status,calendar_provider,external_event_id,external_calendar_id,created_at,updated_at"
+    )
+    .eq("agent_id", agentId as never)
+    .eq("status", "scheduled")
+    .gte("starts_at", from)
+    .lte("starts_at", to);
+
+  if (params.leadId) {
+    evQ = evQ.eq("lead_id", params.leadId as never);
+  }
+
+  const { data: evs, error } = await evQ.order("starts_at", { ascending: true }).limit(500);
+
+  if (error) throw new Error(error.message);
+
+  const rows = evs ?? [];
+  const leadIds = [...new Set(rows.map((r) => String((r as { lead_id: unknown }).lead_id)))];
+  const nameById = new Map<string, string | null>();
+  if (leadIds.length) {
+    const { data: leads, error: le } = await supabaseAdmin
+      .from("leads")
+      .select("id,name")
+      .eq("agent_id", agentId as never)
+      .in("id", leadIds as never);
+    if (le) throw new Error(le.message);
+    for (const l of leads ?? []) {
+      const r = l as { id: unknown; name: unknown };
+      nameById.set(String(r.id), r.name != null ? String(r.name) : null);
+    }
+  }
+
+  return rows.map((r) => mapEventRow(r as Record<string, unknown>, nameById.get(String((r as { lead_id: unknown }).lead_id)) ?? null));
+}
+
+export async function fetchNextAppointmentForLead(
+  agentId: string,
+  leadId: string
+): Promise<MobileCalendarEventDto | null> {
+  const now = new Date().toISOString();
+  const { data, error } = await supabaseAdmin
+    .from("lead_calendar_events")
+    .select(
+      "id,lead_id,title,description,starts_at,ends_at,timezone,status,calendar_provider,external_event_id,external_calendar_id,created_at,updated_at"
+    )
+    .eq("agent_id", agentId as never)
+    .eq("lead_id", leadId as never)
+    .eq("status", "scheduled")
+    .gte("starts_at", now)
+    .order("starts_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select("name")
+    .eq("id", leadId as never)
+    .eq("agent_id", agentId as never)
+    .maybeSingle();
+
+  const nm = (lead as { name?: unknown } | null)?.name;
+  return mapEventRow(data as Record<string, unknown>, nm != null ? String(nm) : null);
+}
+
+export async function listRecentBookingLinksForLead(params: {
+  agentId: string;
+  leadId: string;
+  limit?: number;
+}): Promise<MobileBookingLinkDto[]> {
+  const lim = Math.min(Math.max(params.limit ?? 5, 1), 20);
+  const { data: rows, error } = await supabaseAdmin
+    .from("lead_booking_links")
+    .select("id,lead_id,booking_url,label,share_message,expires_at,created_at")
+    .eq("agent_id", params.agentId as never)
+    .eq("lead_id", params.leadId as never)
+    .order("created_at", { ascending: false })
+    .limit(lim);
+
+  if (error) throw new Error(error.message);
+
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select("name")
+    .eq("id", params.leadId as never)
+    .eq("agent_id", params.agentId as never)
+    .maybeSingle();
+
+  const nm = (lead as { name?: unknown } | null)?.name;
+  const leadName = nm != null ? String(nm) : null;
+
+  return (rows ?? []).map((r) => mapBookingRow(r as Record<string, unknown>, leadName));
+}
+
+export async function createMobileCalendarEvent(params: {
+  agentId: string;
+  leadId: string;
+  title: string;
+  description?: string | null;
+  startsAt: string;
+  endsAt?: string | null;
+  timezone?: string | null;
+  calendarProvider?: MobileCalendarProvider | null;
+  externalEventId?: string | null;
+  externalCalendarId?: string | null;
+}): Promise<MobileCalendarEventDto> {
+  await assertLeadOwned(params.agentId, params.leadId);
+  const now = new Date().toISOString();
+  const insert = {
+    lead_id: params.leadId,
+    agent_id: params.agentId,
+    title: params.title.trim(),
+    description: params.description ?? null,
+    starts_at: params.startsAt,
+    ends_at: params.endsAt ?? null,
+    timezone: params.timezone ?? null,
+    status: "scheduled",
+    calendar_provider: params.calendarProvider ?? "local",
+    external_event_id: params.externalEventId ?? null,
+    external_calendar_id: params.externalCalendarId ?? null,
+    metadata_json: {},
+    updated_at: now,
+  };
+
+  const { data, error } = await supabaseAdmin
+    .from("lead_calendar_events")
+    .insert(insert as never)
+    .select(
+      "id,lead_id,title,description,starts_at,ends_at,timezone,status,calendar_provider,external_event_id,external_calendar_id,created_at,updated_at"
+    )
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select("name")
+    .eq("id", params.leadId as never)
+    .maybeSingle();
+
+  const nm = (lead as { name?: unknown } | null)?.name;
+  await touchLeadActivity(params.leadId);
+  return mapEventRow(data as Record<string, unknown>, nm != null ? String(nm) : null);
+}
+
+export async function patchMobileCalendarEvent(params: {
+  agentId: string;
+  eventId: string;
+  status?: MobileCalendarEventStatus;
+  title?: string;
+  description?: string | null;
+  startsAt?: string;
+  endsAt?: string | null;
+}): Promise<MobileCalendarEventDto> {
+  const { data: existing, error: e0 } = await supabaseAdmin
+    .from("lead_calendar_events")
+    .select("id,lead_id")
+    .eq("id", params.eventId as never)
+    .eq("agent_id", params.agentId as never)
+    .maybeSingle();
+
+  if (e0) throw new Error(e0.message);
+  if (!existing) throw new Error("NOT_FOUND");
+
+  const leadId = String((existing as { lead_id: unknown }).lead_id);
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (params.status != null) patch.status = params.status;
+  if (params.title != null) patch.title = params.title.trim();
+  if (params.description !== undefined) patch.description = params.description;
+  if (params.startsAt != null) patch.starts_at = params.startsAt;
+  if (params.endsAt !== undefined) patch.ends_at = params.endsAt;
+
+  const { data, error } = await supabaseAdmin
+    .from("lead_calendar_events")
+    .update(patch as never)
+    .eq("id", params.eventId as never)
+    .eq("agent_id", params.agentId as never)
+    .select(
+      "id,lead_id,title,description,starts_at,ends_at,timezone,status,calendar_provider,external_event_id,external_calendar_id,created_at,updated_at"
+    )
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select("name")
+    .eq("id", leadId as never)
+    .maybeSingle();
+
+  const nm = (lead as { name?: unknown } | null)?.name;
+  await touchLeadActivity(leadId);
+  return mapEventRow(data as Record<string, unknown>, nm != null ? String(nm) : null);
+}
+
+export async function createMobileBookingLink(params: {
+  agentId: string;
+  leadId: string;
+  bookingUrl: string;
+  label?: string | null;
+  shareMessage?: string | null;
+  expiresAt?: string | null;
+}): Promise<MobileBookingLinkDto> {
+  await assertLeadOwned(params.agentId, params.leadId);
+  const url = String(params.bookingUrl || "").trim();
+  if (!url) throw new Error("INVALID_URL");
+
+  const meta = {
+    source: "mobile",
+    created_via: "booking_link",
+    at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabaseAdmin
+    .from("lead_booking_links")
+    .insert({
+      lead_id: params.leadId,
+      agent_id: params.agentId,
+      booking_url: url,
+      label: params.label?.trim() || null,
+      share_message: params.shareMessage?.trim() || null,
+      expires_at: params.expiresAt ?? null,
+      metadata_json: meta,
+    } as never)
+    .select("id,lead_id,booking_url,label,share_message,expires_at,created_at")
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  const { data: lead } = await supabaseAdmin
+    .from("leads")
+    .select("name")
+    .eq("id", params.leadId as never)
+    .maybeSingle();
+
+  const nm = (lead as { name?: unknown } | null)?.name;
+  await touchLeadActivity(params.leadId);
+  return mapBookingRow(data as Record<string, unknown>, nm != null ? String(nm) : null);
+}

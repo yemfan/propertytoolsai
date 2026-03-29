@@ -1,6 +1,6 @@
 /**
  * Run all Supabase migration smoke tests (both apps).
- * From repo root: npm run smoke:db:all
+ * From repo root: pnpm run smoke:db:all
  *
  * Excludes smoke:lead-score (requires a lead UUID).
  */
@@ -41,9 +41,9 @@ const PROPERTY_TOOLS = [
 ];
 
 function run(workspace, script) {
-  const label = workspace === "leadsmart-ai" ? "leadsmart-ai" : "property-tools";
+  const label = workspace === "leadsmartai" ? "leadsmartai" : "propertytoolsai";
   console.log(`\n=== ${label} ${script} ===\n`);
-  execSync(`npm run ${script} -w ${workspace}`, {
+  execSync(`pnpm --filter ${workspace} run ${script}`, {
     stdio: "inherit",
     cwd: root,
     env: process.env,
@@ -52,8 +52,8 @@ function run(workspace, script) {
 
 try {
   console.log("Running migration smoke tests (excludes smoke:lead-score)…\n");
-  for (const s of LEADSMART) run("leadsmart-ai", s);
-  for (const s of PROPERTY_TOOLS) run("property-tools", s);
+  for (const s of LEADSMART) run("leadsmartai", s);
+  for (const s of PROPERTY_TOOLS) run("propertytoolsai", s);
   console.log("\n✓ All migration smoke tests passed.\n");
 } catch {
   process.exitCode = 1;

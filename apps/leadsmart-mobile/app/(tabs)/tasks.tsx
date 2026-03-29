@@ -1,0 +1,223 @@
+import type { MobileLeadTaskDto, MobileTasksGroupedResponseDto } from "@leadsmart/shared";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useState, type ReactNode } from "react";
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { EmptyState } from "../../components/EmptyState";
+import { ErrorBanner } from "../../components/ErrorBanner";
+import { ScreenLoading } from "../../components/ScreenLoading";
+import { TaskCard } from "../../components/tasks/TaskCard";
+import { fetchMobileTasks, patchMobileTask } from "../../lib/leadsmartMobileApi";
+import type { MobileApiFailure } from "../../lib/leadsmartMobileApi";
+import { theme } from "../../lib/theme";
+
+function Section({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
+      {children}
+    </View>
+  );
+}
+
+export default function TasksScreen() {
+  const router = useRouter();
+  const [grouped, setGrouped] = useState<MobileTasksGroupedResponseDto | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<MobileApiFailure | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [completingId, setCompletingId] = useState<string | null>(null);
+
+  const load = useCallback(async (mode: "full" | "refresh") => {
+    if (mode === "full") {
+      setLoading(true);
+      setError(null);
+    }
+    if (mode === "refresh") setRefreshing(true);
+
+    const res = await fetchMobileTasks();
+
+    if (mode === "full") setLoading(false);
+    if (mode === "refresh") setRefreshing(false);
+
+    if (res.ok === false) {
+      setError(res);
+      setGrouped(null);
+      return;
+    }
+    setGrouped(res);
+    setError(null);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load("full");
+    }, [load])
+  );
+
+  const onRefresh = useCallback(() => {
+    void load("refresh");
+  }, [load]);
+
+  const removeTask = useCallback((taskId: string) => {
+    setGrouped((prev) => {
+      if (!prev) return prev;
+      const without = (arr: MobileLeadTaskDto[]) => arr.filter((t) => t.id !== taskId);
+      return {
+        ...prev,
+        overdue: without(prev.overdue),
+        today: without(prev.today),
+        upcoming: without(prev.upcoming),
+      };
+    });
+  }, []);
+
+  const completeTask = useCallback(
+    async (task: MobileLeadTaskDto) => {
+      setActionError(null);
+      setCompletingId(task.id);
+      const res = await patchMobileTask(task.id, { status: "done" });
+      setCompletingId(null);
+      if (res.ok === false) {
+        setActionError(res.message);
+        return;
+      }
+      removeTask(task.id);
+    },
+    [removeTask]
+  );
+
+  if (loading && !grouped) {
+    return <ScreenLoading message="Loading tasks…" />;
+  }
+
+  if (error && !grouped) {
+    return (
+      <View style={styles.centered}>
+        <ErrorBanner
+          title="Unable to load tasks"
+          message={error.message}
+          onRetry={() => {
+            void load("full");
+          }}
+        />
+      </View>
+    );
+  }
+
+  const g = grouped!;
+  const totalOpen = g.overdue.length + g.today.length + g.upcoming.length;
+
+  return (
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.scrollContent}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
+      {actionError ? (
+        <View style={styles.bannerPad}>
+          <ErrorBanner
+            title="Action failed"
+            message={actionError}
+            onRetry={() => setActionError(null)}
+            retryLabel="Dismiss"
+          />
+        </View>
+      ) : null}
+
+      {totalOpen === 0 ? (
+        <View style={styles.emptyWrap}>
+          <EmptyState title="No open tasks" subtitle="Create a task from a lead to see it here." />
+        </View>
+      ) : null}
+
+      {g.overdue.length > 0 ? (
+        <Section title="Overdue" hint="Due before today (UTC)">
+          {g.overdue.map((t) => (
+            <TaskCard
+              key={t.id}
+              task={t}
+              showLeadName
+              onPress={() => router.push(`/lead/${t.lead_id}`)}
+              onComplete={() => void completeTask(t)}
+              completing={completingId === t.id}
+            />
+          ))}
+        </Section>
+      ) : null}
+
+      {g.today.length > 0 ? (
+        <Section title="Today" hint="Due today (UTC)">
+          {g.today.map((t) => (
+            <TaskCard
+              key={t.id}
+              task={t}
+              showLeadName
+              onPress={() => router.push(`/lead/${t.lead_id}`)}
+              onComplete={() => void completeTask(t)}
+              completing={completingId === t.id}
+            />
+          ))}
+        </Section>
+      ) : null}
+
+      {g.upcoming.length > 0 ? (
+        <Section title="Upcoming" hint="No date or future due dates">
+          {g.upcoming.map((t) => (
+            <TaskCard
+              key={t.id}
+              task={t}
+              showLeadName
+              onPress={() => router.push(`/lead/${t.lead_id}`)}
+              onComplete={() => void completeTask(t)}
+              completing={completingId === t.id}
+            />
+          ))}
+        </Section>
+      ) : null}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  scroll: { flex: 1, backgroundColor: theme.bg },
+  scrollContent: { paddingBottom: 32 },
+  centered: {
+    flex: 1,
+    backgroundColor: theme.bg,
+    padding: 16,
+    paddingTop: 24,
+  },
+  bannerPad: { paddingHorizontal: 12, paddingTop: 12 },
+  emptyWrap: { paddingHorizontal: 12, paddingTop: 24 },
+  section: { marginTop: 8, paddingHorizontal: 12 },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: theme.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
+  sectionHint: {
+    fontSize: 12,
+    color: theme.textSubtle,
+    marginBottom: 4,
+  },
+});

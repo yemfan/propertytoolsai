@@ -1,0 +1,57 @@
+export type SmsAssistantIntent =
+  | "buyer_listing_inquiry"
+  | "buyer_financing"
+  | "seller_home_value"
+  | "seller_list_home"
+  | "support"
+  | "appointment"
+  | "unknown";
+
+export type SmsLeadSnapshot = {
+  leadId?: string | null;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  status?: string | null;
+  leadScore?: number | null;
+  leadTemperature?: string | null;
+  propertyAddress?: string | null;
+  city?: string | null;
+  state?: string | null;
+  intent?: string | null;
+  assignedAgentId?: string | null;
+};
+
+export type SmsReplyContext = {
+  fromPhone: string;
+  toPhone: string;
+  inboundBody: string;
+  lead: SmsLeadSnapshot | null;
+  recentMessages: Array<{
+    direction: "inbound" | "outbound";
+    body: string;
+    createdAt: string;
+  }>;
+  inferredIntent: SmsAssistantIntent;
+};
+
+export type SmsAssistantReply = {
+  replyText: string;
+  inferredIntent: SmsAssistantIntent;
+  extractedData?: {
+    name?: string;
+    email?: string;
+    propertyAddress?: string;
+    timeline?: string;
+    budget?: number;
+  };
+  nextBestAction:
+    | "continue_ai"
+    | "notify_agent"
+    | "schedule_call"
+    | "send_valuation_link"
+    | "send_listing_link";
+  hotLead: boolean;
+  needsHuman: boolean;
+  tags: string[];
+};

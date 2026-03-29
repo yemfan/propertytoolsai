@@ -17,9 +17,9 @@ Shared UI for the monorepo.
 
 **App paths in this repo**
 
-| Your name | Actual folder |
-|-----------|----------------|
-| `apps/propertytoolsai` | `apps/property-tools` |
-| `apps/leadsmartai` | `apps/leadsmart-ai` |
+| Folder |
+|--------|
+| `apps/propertytoolsai` |
+| `apps/leadsmartai` |
 
 Nav config: `nav.config.tsx` at each app root; LeadSmart also uses `marketing.nav.config.tsx` for the public tools shell. Shell: `components/AppShell.tsx`. Details: **`navigation/README.md`**.

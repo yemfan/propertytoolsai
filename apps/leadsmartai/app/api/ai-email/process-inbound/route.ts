@@ -1,0 +1,182 @@
+import { NextResponse } from "next/server";
+import { notifyAgentOfHotLead } from "@/lib/ai-sms/notifications";
+import {
+  applyEmailExtractedLeadFields,
+  createEmailLeadIfMissing,
+  findLeadByEmail,
+  getRecentEmailMessages,
+  logEmailMessage,
+} from "@/lib/ai-email/lead-resolution";
+import { inferEmailIntentHeuristic } from "@/lib/ai-email/intent";
+import { generateEmailAssistantReply } from "@/lib/ai-email/service";
+import { sendOutboundEmail } from "@/lib/ai-email/send";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import {
+  dispatchMobileInboundEmailPush,
+  dispatchMobileNeedsHumanPush,
+} from "@/lib/mobile/pushNotificationsService";
+
+export const runtime = "nodejs";
+
+function authorizeInbound(req: Request) {
+  const secret = process.env.AI_EMAIL_INBOUND_SECRET?.trim();
+  const h = req.headers.get("authorization") || "";
+  if (process.env.NODE_ENV === "production" && !secret) return false;
+  if (secret) return h === `Bearer ${secret}`;
+  return true;
+}
+
+export async function POST(req: Request) {
+  if (!authorizeInbound(req)) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = (await req.json().catch(() => ({}))) as {
+      fromEmail?: string;
+      toEmail?: string;
+      subject?: string;
+      body?: string;
+      fromName?: string | null;
+      skipDeliver?: boolean;
+    };
+    const fromEmail = String(body.fromEmail ?? "").trim();
+    const toEmail = String(body.toEmail ?? "").trim();
+    const subject = String(body.subject ?? "").trim();
+    const text = String(body.body ?? "").trim();
+    if (!fromEmail || !toEmail || !subject || !text) {
+      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
+    }
+
+    let lead = await findLeadByEmail(fromEmail);
+    if (!lead?.leadId) {
+      if (process.env.EMAIL_AI_CREATE_LEAD_FOR_UNKNOWN === "false") {
+        return NextResponse.json({ success: false, error: "Lead not found" }, { status: 404 });
+      }
+      lead = await createEmailLeadIfMissing({
+        email: fromEmail,
+        name: body.fromName ?? null,
+        source: "email_inbound",
+        intent: inferEmailIntentHeuristic(subject, text),
+      });
+    }
+
+    const leadId = String(lead.leadId);
+
+    await logEmailMessage({
+      leadId,
+      direction: "inbound",
+      subject,
+      body: text,
+    });
+
+    if (lead.assignedAgentId) {
+      void dispatchMobileInboundEmailPush({
+        agentId: lead.assignedAgentId,
+        leadId,
+        leadName: lead.name,
+        subject,
+        preview: text,
+      }).catch(() => {});
+    }
+
+    const recentMessages = await getRecentEmailMessages(leadId, 8);
+    const inferredIntent = inferEmailIntentHeuristic(subject, text);
+
+    const reply = await generateEmailAssistantReply({
+      fromEmail,
+      toEmail,
+      subject,
+      inboundBody: text,
+      lead,
+      recentMessages,
+      inferredIntent,
+    });
+
+    try {
+      if (reply.extractedData) {
+        await applyEmailExtractedLeadFields(leadId, reply.extractedData, reply.inferredIntent);
+      }
+    } catch {
+      // ignore
+    }
+
+    const agentId = lead.assignedAgentId;
+    const aiRequestsHuman = Boolean(reply.needsHuman) || reply.tags.includes("human_escalation");
+    if (aiRequestsHuman && agentId) {
+      void dispatchMobileNeedsHumanPush({
+        agentId,
+        leadId,
+        leadName: lead.name,
+        channel: "email",
+        reason: `Email · ${reply.inferredIntent}`,
+      }).catch(() => {});
+    }
+
+    const wantsAgent =
+      reply.hotLead ||
+      reply.needsHuman ||
+      reply.nextBestAction === "notify_agent" ||
+      reply.tags.includes("human_escalation");
+
+    if (wantsAgent && agentId) {
+      try {
+        await supabaseAdmin.from("nurture_alerts").insert({
+          agent_id: agentId,
+          lead_id: leadId,
+          type: "hot",
+          message: `AI email escalation (${reply.inferredIntent}): ${subject.slice(0, 80)}`,
+        } as Record<string, unknown>);
+      } catch {
+        // ignore
+      }
+    }
+
+    if (process.env.EMAIL_HOT_LEAD_AGENT_TEXT !== "false" && wantsAgent && agentId) {
+      try {
+        await notifyAgentOfHotLead({
+          leadId,
+          reason: reply.needsHuman
+            ? "Human escalation (email)"
+            : `Hot email intent: ${reply.inferredIntent}`,
+          latestMessage: text.slice(0, 500),
+        });
+      } catch {
+        // ignore
+      }
+    }
+
+    const deliver = body.skipDeliver !== true && process.env.EMAIL_AI_DRAFT_ONLY !== "true";
+    await sendOutboundEmail({
+      leadId,
+      to: fromEmail,
+      subject: reply.subject,
+      body: reply.replyBody,
+      actorType: "ai",
+      actorName: "LeadSmart AI",
+      deliver,
+    });
+
+    try {
+      await supabaseAdmin.rpc("log_lead_event", {
+        p_lead_id: leadId,
+        p_event_type: "ai_email_reply",
+        p_metadata: {
+          inferredIntent: reply.inferredIntent,
+          nextBestAction: reply.nextBestAction,
+          hotLead: reply.hotLead,
+          needsHuman: reply.needsHuman,
+          tags: reply.tags,
+          delivered: deliver,
+        },
+      });
+    } catch {
+      // ignore
+    }
+
+    return NextResponse.json({ success: true, leadId, reply });
+  } catch (error) {
+    console.error("process inbound email error:", error);
+    return NextResponse.json({ success: false, error: "Failed to process inbound email" }, { status: 500 });
+  }
+}

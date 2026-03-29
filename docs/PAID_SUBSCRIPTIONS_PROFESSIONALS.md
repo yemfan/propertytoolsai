@@ -19,7 +19,7 @@ Checkout is allowed when **any** of these is true:
 
 ## Dashboard access
 
-After login, users with a **professional role** (same list as above) or an **`agents`** row are sent into the app. **LeadSmart AI** routes by `user_profiles.role` to **`/admin`**, **`/broker`**, or **`/agent`** (see `apps/leadsmart-ai/lib/rolePortalPaths.ts`). **PropertyTools** sends pros to **`/dashboard`** (no separate role portals).
+After login, users with a **professional role** (same list as above) or an **`agents`** row are sent into the app. **LeadSmart AI** routes by `user_profiles.role` to **`/admin`**, **`/broker`**, or **`/agent`** (see `apps/leadsmartai/lib/rolePortalPaths.ts`). **PropertyTools** sends pros to **`/dashboard`** (no separate role portals).
 
 ## Billing (Stripe Customer Portal)
 
@@ -29,9 +29,9 @@ After login, users with a **professional role** (same list as above) or an **`ag
 
 ## Implementation
 
-- `apps/property-tools/lib/paidSubscriptionEligibility.ts`
-- `apps/leadsmart-ai/lib/paidSubscriptionEligibility.ts` (mirrored)
-- `apps/leadsmart-ai/lib/rolePortalPaths.ts` — `getProfessionalPortalPath` (admin / broker / agent)
-- `apps/leadsmart-ai/lib/rolePortalServer.ts` — session + profile context for gates and `/` redirect
+- `apps/propertytoolsai/lib/paidSubscriptionEligibility.ts`
+- `apps/leadsmartai/lib/paidSubscriptionEligibility.ts` (mirrored)
+- `apps/leadsmartai/lib/rolePortalPaths.ts` — `getProfessionalPortalPath` (admin / broker / agent)
+- `apps/leadsmartai/lib/rolePortalServer.ts` — session + profile context for gates and `/` redirect
 - `apps/*/lib/stripeCustomerForUser.ts` — shared Stripe customer lookup
-- Stripe: `POST /api/create-checkout-session` and `POST /api/stripe/checkout` (property-tools)
+- Stripe: `POST /api/create-checkout-session` and `POST /api/stripe/checkout` (propertytoolsai)

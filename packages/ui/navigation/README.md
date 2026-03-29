@@ -1,10 +1,8 @@
 # `@repo/ui` — navigation
 
-Shared **Next.js App Router** chrome for PropertyTools AI (`apps/property-tools`) and LeadSmart AI (`apps/leadsmart-ai`).
+Shared **Next.js App Router** chrome for PropertyTools AI (`apps/propertytoolsai`) and LeadSmart AI (`apps/leadsmartai`).
 
 **Visual language:** cool **slate** neutrals, subtle **hairline** borders (`slate-200/90`), soft **elevation** (shadows + `ring-1` tints), **uppercase tracking** on micro-labels, and **backdrop blur / saturate** on sticky bars for a calm, premium SaaS feel (Nord-adjacent, not theme-dependent).
-
-> **Folder names:** the monorepo uses `apps/property-tools` and `apps/leadsmart-ai` (not `propertytoolsai` / `leadsmartai`).
 
 ## Modules
 

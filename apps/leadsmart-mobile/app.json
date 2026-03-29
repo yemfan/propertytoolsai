@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "LeadSmart",
+    "slug": "leadsmart-mobile",
+    "scheme": "leadsmart",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "platforms": ["ios", "android"],
+    "ios": {
+      "bundleIdentifier": "ai.leadsmart.mobile",
+      "supportsTablet": true,
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": ["tel", "sms", "mailto"]
+      }
+    },
+    "android": {
+      "package": "ai.leadsmart.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#0f172a"
+      }
+    },
+    "plugins": ["expo-router", "expo-notifications"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
