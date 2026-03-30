@@ -3,6 +3,9 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
 /**
  * Merges with `app.json`. Use `EXPO_PUBLIC_LEADSMART_API_URL` for the LeadSmart web API
  * (e.g. `https://your-leadsmart.vercel.app` — no trailing slash).
+ *
+ * EAS cannot auto-inject `extra.eas.projectId` into TypeScript config — set
+ * `EXPO_PUBLIC_EAS_PROJECT_ID` in `.env.local` or keep the default below after `eas init` / dashboard link.
  */
 function envFirst(...keys: (string | undefined)[]): string {
   for (const k of keys) {
@@ -11,6 +14,9 @@ function envFirst(...keys: (string | undefined)[]): string {
   }
   return "";
 }
+
+/** Linked EAS project (dashboard). Override with EXPO_PUBLIC_EAS_PROJECT_ID for a different project. */
+const DEFAULT_EAS_PROJECT_ID = "146f9ab1-a17d-4b90-a005-e6fa6749c6ed";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -35,7 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ),
     /** EAS project ID for `getExpoPushTokenAsync` (production / dev builds). */
     eas: {
-      projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID?.trim() ?? "",
+      projectId: envFirst(process.env.EXPO_PUBLIC_EAS_PROJECT_ID, DEFAULT_EAS_PROJECT_ID),
     },
   },
 });

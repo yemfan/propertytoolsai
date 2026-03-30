@@ -23,6 +23,7 @@
     "@leadsmart/shared": "workspace:*",
     "@supabase/supabase-js": "^2.99.2",
     "expo": "~52.0.35",
+    "expo-dev-client": "~5.0.20",
     "expo-constants": "~17.0.5",
     "expo-device": "~7.0.3",
     "expo-notifications": "~0.29.14",
@@ -37,6 +38,7 @@
     "react-native-screens": "~4.4.0"
   },
   "devDependencies": {
+    "@expo/metro-config": "0.19.12",
     "@babel/core": "^7.26.0",
     "@types/react": "~18.3.12",
     "babel-plugin-module-resolver": "^5.0.2",

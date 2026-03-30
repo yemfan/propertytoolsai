@@ -12,6 +12,7 @@
       "bundleIdentifier": "ai.leadsmart.mobile",
       "supportsTablet": true,
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationQueriesSchemes": ["tel", "sms", "mailto"]
       }
     },
@@ -21,7 +22,7 @@
         "backgroundColor": "#0f172a"
       }
     },
-    "plugins": ["expo-router", "expo-notifications"],
+    "plugins": ["expo-dev-client", "expo-router", "expo-notifications"],
     "experiments": {
       "typedRoutes": true
     }
