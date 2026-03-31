@@ -21,12 +21,12 @@ export const metadata = {
   title: "PropertyTools AI",
   description: "Professional real estate calculators for buyers, investors, and agents",
   /**
-   * Tab: `app/icon.png` + `/images/ptlog64.png`. Apple: `app/apple-icon.png` + `/images/pt-logo180.png`.
+   * Tab: `app/icon.png` + `/images/ptlogo64.png`. Apple: `app/apple-icon.png` + `/images/pt-logo180.png`.
    * Explicit entries ensure correct absolute URLs with `metadataBase` on Vercel previews.
    */
   icons: {
-    icon: [{ url: "/images/ptlog64.png", sizes: "64x64", type: "image/png" }],
-    shortcut: "/images/ptlog64.png",
+    icon: [{ url: "/images/ptlogo64.png", sizes: "64x64", type: "image/png" }],
+    shortcut: "/images/ptlogo64.png",
     apple: [{ url: "/images/pt-logo180.png", sizes: "180x180", type: "image/png" }],
   },
 };

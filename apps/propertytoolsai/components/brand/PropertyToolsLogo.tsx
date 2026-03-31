@@ -7,14 +7,14 @@ type Props = {
 };
 
 /**
- * PropertyTools AI horizontal lockup — `public/images/ptlogo.png`.
+ * PropertyTools AI horizontal lockup — `public/images/ptlog.png`.
  * Uses a plain `img` so the logo always loads from `/public` (no `next/image` optimizer edge cases).
  */
 export default function PropertyToolsLogo({ className, compact }: Props) {
   return (
     // eslint-disable-next-line @next/next/no-img-element -- static public asset; avoids Image optimizer edge cases on deploy
     <img
-      src="/images/ptlogo.png"
+      src="/images/ptlog.png"
       alt="PropertyTools AI"
       width={540}
       height={162}
