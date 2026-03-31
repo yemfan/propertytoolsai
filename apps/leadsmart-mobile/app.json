@@ -3,6 +3,7 @@
     "name": "LeadSmart",
     "slug": "leadsmart-mobile",
     "scheme": "leadsmart",
+    "icon": "./assets/icon.png",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -20,6 +21,7 @@
     "android": {
       "package": "ai.leadsmart.mobile",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f172a"
       }
     },
