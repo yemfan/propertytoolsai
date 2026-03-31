@@ -74,11 +74,26 @@ export default async function SellHouseCityPage({
             ))}
           </div>
           <h3 className="mt-5 text-base font-semibold text-slate-900">FAQ</h3>
-          <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-slate-700">
-            <li>How fast can I sell in {city.city}? Median timelines are currently about {market.medianDaysOnMarket} days, depending on condition and price.</li>
-            <li>Should I renovate before listing? Prioritize updates with strong buyer signal in your neighborhood price band.</li>
-            <li>How do I maximize net proceeds? Use a pricing strategy tied to demand trend and buyer activity by week.</li>
-          </ul>
+          <dl className="mt-2 space-y-4 text-sm text-slate-700">
+            <div>
+              <dt className="font-semibold text-slate-900">How fast can I sell in {city.city}?</dt>
+              <dd className="mt-1 ml-0 text-slate-700">
+                Median timelines are currently about {market.medianDaysOnMarket} days, depending on condition and price.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-slate-900">Should I renovate before listing?</dt>
+              <dd className="mt-1 ml-0 text-slate-700">
+                Prioritize updates with strong buyer signal in your neighborhood price band.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-slate-900">How do I maximize net proceeds?</dt>
+              <dd className="mt-1 ml-0 text-slate-700">
+                Use a pricing strategy tied to demand trend and buyer activity by week.
+              </dd>
+            </div>
+          </dl>
           <h3 className="mt-5 text-base font-semibold text-slate-900">Internal links</h3>
           <div className="mt-2 flex flex-wrap gap-3 text-sm">
             {nearbyCities.map((near) => (

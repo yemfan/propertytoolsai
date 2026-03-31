@@ -87,11 +87,26 @@ export default async function HomeValueCityPage({
             ))}
           </div>
           <h3 className="mt-5 text-base font-semibold text-slate-900">FAQ</h3>
-          <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-slate-700">
-            <li>How accurate is a {keywords[0]} in {city.city}? It is strongest when combined with recent neighborhood comps.</li>
-            <li>Is now a good time to sell in {city.city}? Demand is {market.sellerDemandScore >= 70 ? "strong" : "moderate"} based on current velocity and pricing pressure.</li>
-            <li>What impacts value the most? Condition, lot position, school zone, and pricing strategy versus local alternatives.</li>
-          </ul>
+          <dl className="mt-2 space-y-4 text-sm text-slate-700">
+            <div>
+              <dt className="font-semibold text-slate-900">How accurate is a {keywords[0]} in {city.city}?</dt>
+              <dd className="mt-1 ml-0 text-slate-700">
+                It is strongest when combined with recent neighborhood comps.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-slate-900">Is now a good time to sell in {city.city}?</dt>
+              <dd className="mt-1 ml-0 text-slate-700">
+                Demand is {market.sellerDemandScore >= 70 ? "strong" : "moderate"} based on current velocity and pricing pressure.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-slate-900">What impacts value the most?</dt>
+              <dd className="mt-1 ml-0 text-slate-700">
+                Condition, lot position, school zone, and pricing strategy versus local alternatives.
+              </dd>
+            </div>
+          </dl>
           <h3 className="mt-5 text-base font-semibold text-slate-900">Internal links</h3>
           <div className="mt-2 flex flex-wrap gap-3 text-sm">
             {nearbyCities.map((near) => (

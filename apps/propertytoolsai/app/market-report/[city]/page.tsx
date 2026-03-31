@@ -79,11 +79,22 @@ export default async function MarketReportCityPage({
             ))}
           </div>
           <h3 className="mt-5 text-base font-semibold text-slate-900">FAQ</h3>
-          <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-slate-700">
-            <li>How often should I check the {city.city} market report? Weekly during active listing planning.</li>
-            <li>What metric matters most for sellers? Recent comp velocity plus days on market in your segment.</li>
-            <li>What does a stable trend mean? Price growth is flatter, so strategy and presentation drive results.</li>
-          </ul>
+          <dl className="mt-2 space-y-4 text-sm text-slate-700">
+            <div>
+              <dt className="font-semibold text-slate-900">How often should I check the {city.city} market report?</dt>
+              <dd className="mt-1 ml-0 text-slate-700">Weekly during active listing planning.</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-slate-900">What metric matters most for sellers?</dt>
+              <dd className="mt-1 ml-0 text-slate-700">Recent comp velocity plus days on market in your segment.</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-slate-900">What does a stable trend mean?</dt>
+              <dd className="mt-1 ml-0 text-slate-700">
+                Price growth is flatter, so strategy and presentation drive results.
+              </dd>
+            </div>
+          </dl>
           <h3 className="mt-5 text-base font-semibold text-slate-900">Internal links</h3>
           <div className="mt-2 flex flex-wrap gap-3 text-sm">
             {nearbyCities.map((near) => (
