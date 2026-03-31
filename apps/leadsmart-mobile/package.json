@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "description": "LeadSmart agent mobile app (Expo). Workspace path: apps/leadsmart-mobile.",
-  "packageManager": "pnpm@9.15.5",
   "type": "module",
   "main": "expo-router/entry",
   "scripts": {

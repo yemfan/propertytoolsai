@@ -6,11 +6,13 @@
   "build": {
     "base": {
       "corepack": false,
+      "node": "20.18.3",
       "ios": {
         "image": "sdk-52"
       },
       "env": {
-        "NODE_OPTIONS": "--max-old-space-size=8192"
+        "NODE_OPTIONS": "--max-old-space-size=8192",
+        "EAS_NO_FROZEN_LOCKFILE": "1"
       }
     },
     "development": {
