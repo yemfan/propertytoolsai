@@ -20,11 +20,11 @@ export default function StartFreeAgentClientPage({ backHref }: Props) {
         </div>
 
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-          Activate the LeadSmart Agent workspace
+          Activate the LeadSmart AI Agent workspace
         </h1>
 
         <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
-          Your account is ready — add an active <strong>LeadSmart Agent</strong> entitlement to open the CRM, AI
+          Your account is ready — add an active <strong>LeadSmart AI Agent</strong> entitlement to open the CRM, AI
           tools, and pipeline. Start with the <strong>Starter</strong> plan (free trial) to get core limits while you
           evaluate, then upgrade when you need more volume.
         </p>

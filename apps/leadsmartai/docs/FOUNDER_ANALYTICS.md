@@ -1,4 +1,4 @@
-# Founder analytics (LeadSmart)
+# Founder analytics (LeadSmart AI)
 
 Production-oriented SaaS metrics for admins: **billing truth in Postgres**, **append-only events** for history, and **funnel tables** for activation and conversion.
 

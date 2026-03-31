@@ -22,4 +22,4 @@ Shared UI for the monorepo.
 | `apps/propertytoolsai` |
 | `apps/leadsmartai` |
 
-Nav config: `nav.config.tsx` at each app root; LeadSmart also uses `marketing.nav.config.tsx` for the public tools shell. Shell: `components/AppShell.tsx`. Details: **`navigation/README.md`**.
+Nav config: `nav.config.tsx` at each app root; LeadSmart AI also uses `marketing.nav.config.tsx` for the public tools shell. Shell: `components/AppShell.tsx`. Details: **`navigation/README.md`**.

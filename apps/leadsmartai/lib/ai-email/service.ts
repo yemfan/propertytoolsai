@@ -1,4 +1,6 @@
 import OpenAI from "openai";
+import { buildEmailSystemInstructions } from "@/lib/agent-ai/promptBuilder";
+import { getAgentAiSettings } from "@/lib/agent-ai/settings";
 import { buildEmailUserPrompt, EMAIL_ASSISTANT_SYSTEM_PROMPT } from "./prompts";
 import { inferEmailIntentHeuristic } from "./intent";
 import { emailNeedsHumanEscalation, isEmailOptOut } from "./safety";
@@ -150,6 +152,9 @@ export async function generateEmailAssistantReply(ctx: EmailReplyContext): Promi
     return fallbackReply(ctx);
   }
 
+  const agentAi = await getAgentAiSettings(ctx.lead?.assignedAgentId ?? undefined);
+  const instructions = buildEmailSystemInstructions(EMAIL_ASSISTANT_SYSTEM_PROMPT, agentAi);
+
   const prompt = buildEmailUserPrompt({
     leadSummary: buildLeadSummary(ctx),
     recentMessages: buildRecentMessagesText(ctx),
@@ -160,7 +165,7 @@ export async function generateEmailAssistantReply(ctx: EmailReplyContext): Promi
   try {
     const response = await openai.responses.create({
       model: emailModel(),
-      instructions: EMAIL_ASSISTANT_SYSTEM_PROMPT,
+      instructions,
       input: [{ role: "user", content: prompt }],
       text: {
         format: {

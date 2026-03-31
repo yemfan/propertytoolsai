@@ -2,7 +2,7 @@
 --
 -- Notes:
 -- - `public.leads` already exists in this project with `id bigint` (CRM). We extend it
---   with LeadSmart / home-value columns instead of replacing the table (which would
+--   with LeadSmart AI / home-value columns instead of replacing the table (which would
 --   break FKs like leadsmart_runs, communications, etc.).
 -- - Some requested indexes (`idx_leads_email`, `idx_leads_city`) may already exist;
 --   we use IF NOT EXISTS.
@@ -157,10 +157,10 @@ for each row
 execute function public.set_updated_at();
 
 comment on column public.leads.full_address is
-  'Normalized full street address (LeadSmart / home value); may mirror property_address.';
+  'Normalized full street address (LeadSmart AI / home value); may mirror property_address.';
 comment on column public.leads.estimated_value is
-  'LeadSmart home value point estimate (may mirror property_value / estimated_home_value).';
+  'LeadSmart AI home value point estimate (may mirror property_value / estimated_home_value).';
 comment on column public.leads.status is
-  'LeadSmart pipeline status; existing CRM may also use lead_status.';
+  'LeadSmart AI pipeline status; existing CRM may also use lead_status.';
 comment on column public.leads.assigned_agent_id is
-  'Optional agent assignment for LeadSmart; may mirror agent_id.';
+  'Optional agent assignment for LeadSmart AI; may mirror agent_id.';

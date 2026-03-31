@@ -1,4 +1,6 @@
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import AgentAiSettingsPanel from "@/components/dashboard/AgentAiSettingsPanel";
+import AgentVoiceSettingsPanel from "@/components/dashboard/AgentVoiceSettingsPanel";
 import MlsCsvImportClient from "./MlsCsvImportClient";
 import HomeValueSmartLinkCopyShare from "@/components/dashboard/HomeValueSmartLinkCopyShare";
 
@@ -39,6 +41,16 @@ export default async function SettingsPage() {
           Free plan is limited to 20 lead rows. Upgrade logic can be enforced
           in the data layer and RLS policies later.
         </p>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
+        <div className="ui-card-title text-brand-text">AI assistant style</div>
+        <AgentAiSettingsPanel />
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
+        <div className="ui-card-title text-brand-text">Phone assistant voice</div>
+        <AgentVoiceSettingsPanel />
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">

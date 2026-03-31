@@ -21,9 +21,9 @@ export const metadata = {
   title: "LeadSmart AI",
   description: "Professional real estate calculators for buyers, investors, and agents",
   icons: {
-    icon: "/images/ls32.png",
-    apple: "/images/ls180.png",
-    shortcut: "/images/ls32.png",
+    icon: "/images/app-icon.png",
+    apple: "/images/app-icon.png",
+    shortcut: "/images/app-icon.png",
   },
 };
 

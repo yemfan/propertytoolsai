@@ -41,9 +41,9 @@ Prefer fixing **Root Directory** to **`apps/<app>`** instead of repo root.
 
 The script resolves the **monorepo root** from its path and walks up from **`process.cwd()`** as a fallback. If both **`routes-manifest.json`** locations are missing, the log lists **which** `.next` folders exist so you can tell if **`next build` failed** vs. a path mismatch.
 
-### LeadSmart works, Property Tools does not (same repo)
+### LeadSmart AI works, Property Tools does not (same repo)
 
-1. **Mirror LeadSmart’s layout** — In the **Property Tools** Vercel project, set **Root Directory** to **`apps/propertytoolsai`** (same pattern as **`apps/leadsmartai`**). Leave **Install / Build** empty so **`apps/propertytoolsai/vercel.json`** runs.
+1. **Mirror LeadSmart AI’s layout** — In the **Property Tools** Vercel project, set **Root Directory** to **`apps/propertytoolsai`** (same pattern as **`apps/leadsmartai`**). Leave **Install / Build** empty so **`apps/propertytoolsai/vercel.json`** runs.
 
 2. **Remove legacy env `NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT`** and **`NEXT_DIST_IN_MONOREPO_ROOT`** from the Vercel dashboard for **Property Tools** (and any project whose **Root Directory** is **`apps/<app>`**). They can force **`distDir`** to the wrong place; Option A’s **`vercel.json`** clears them for the workspace build.
 
@@ -55,7 +55,7 @@ Next.js uses **`metadataBase`** (from **`apps/propertytoolsai/app/layout.tsx`**)
 
 ## Option A — Recommended: one Vercel project per app
 
-1. **Root Directory** = **`apps/leadsmartai`** (or **`apps/propertytoolsai`**).
+1. **Root Directory** = **`apps/leadsmartai`** (or **`apps/propertytoolsai`**). The path is **`leadsmartai`** (one word, no hyphen). **`apps/leadsmart-ai` does not exist** — that mistake triggers: *The specified Root Directory "apps/leadsmart-ai" does not exist*.
 2. Leave **Install Command** / **Build Command** **empty** in the dashboard so **`apps/<app>/vercel.json`** applies:
    - `installCommand`: `cd ../.. && npm ci`
    - `buildCommand`: clears **`NEXT_DIST_IN_MONOREPO_ROOT`** / **`NEXT_BUILD_OUTPUT_AT_MONOREPO_ROOT`** for this step, then **`npm run build -w <workspace-name>`** only — **no** **`vercel-sync-next-output`** (Vercel reads **`apps/<app>/.next`** when Root Directory is **`apps/<app>`**).

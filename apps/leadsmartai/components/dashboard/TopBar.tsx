@@ -278,7 +278,7 @@ export default function TopBar({
         >
           <Home className="h-7 w-7 shrink-0 text-[#0072ce] sm:h-8 sm:w-8" strokeWidth={2} aria-hidden />
           <span className="hidden min-[400px]:flex min-w-0 flex-col leading-tight">
-            <span className="truncate text-sm font-bold tracking-tight text-[#0072ce]">LeadSmart</span>
+            <span className="truncate text-sm font-bold tracking-tight text-[#0072ce]">LeadSmart AI</span>
             <span className="truncate text-xs font-semibold text-slate-800">AI</span>
           </span>
         </Link>

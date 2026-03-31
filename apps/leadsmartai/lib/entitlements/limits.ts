@@ -30,7 +30,7 @@ export async function canCreateCma(
   if (!ent) {
     return {
       allowed: false,
-      reason: "No active LeadSmart Agent entitlement.",
+      reason: "No active LeadSmart AI Agent entitlement.",
       reasonCode: "no_agent_entitlement",
       plan: null,
       product: PRODUCT_LEADSMART_AGENT,
@@ -74,7 +74,7 @@ export async function canAddLead(
   if (!ent) {
     return {
       allowed: false,
-      reason: "No active LeadSmart Agent entitlement.",
+      reason: "No active LeadSmart AI Agent entitlement.",
       reasonCode: "no_agent_entitlement",
       plan: null,
       product: PRODUCT_LEADSMART_AGENT,
@@ -118,7 +118,7 @@ export async function canAddContact(
   if (!ent) {
     return {
       allowed: false,
-      reason: "No active LeadSmart Agent entitlement.",
+      reason: "No active LeadSmart AI Agent entitlement.",
       reasonCode: "no_agent_entitlement",
       plan: null,
       product: PRODUCT_LEADSMART_AGENT,
@@ -162,7 +162,7 @@ export async function canDownloadFullReport(
   if (!ent) {
     return {
       allowed: false,
-      reason: "No active LeadSmart Agent entitlement.",
+      reason: "No active LeadSmart AI Agent entitlement.",
       reasonCode: "no_agent_entitlement",
       plan: null,
       product: PRODUCT_LEADSMART_AGENT,
@@ -221,7 +221,7 @@ export async function canInviteTeam(
   if (!ent) {
     return {
       allowed: false,
-      reason: "No active LeadSmart Agent entitlement.",
+      reason: "No active LeadSmart AI Agent entitlement.",
       reasonCode: "no_agent_entitlement",
       plan: null,
       product: PRODUCT_LEADSMART_AGENT,

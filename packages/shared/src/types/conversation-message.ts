@@ -14,7 +14,7 @@ export type ConversationTurn = {
 };
 
 /**
- * Lightweight message shape used in several LeadSmart JSON blobs (`messages` arrays).
+ * Lightweight message shape used in several LeadSmart AI JSON blobs (`messages` arrays).
  */
 export type ThreadMessageSnake = {
   id?: string;

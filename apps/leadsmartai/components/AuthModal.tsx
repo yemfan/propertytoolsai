@@ -143,7 +143,7 @@ export default function AuthModal({
               You&apos;re in — welcome, agent
             </div>
             <p className="mt-2 text-sm text-blue-100">
-              Start free with LeadSmart: explore the CRM, AI tools, and your pipeline — no credit card required to
+              Start free with LeadSmart AI: explore the CRM, AI tools, and your pipeline — no credit card required to
               get started.
             </p>
           </div>

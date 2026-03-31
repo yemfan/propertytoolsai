@@ -22,7 +22,7 @@ function supabaseProjectRef(): string {
 /**
  * Cookie options for `@supabase/ssr`.
  *
- * **Default (isolated sessions):** sets a unique `name` so LeadSmart and Property Tools
+ * **Default (isolated sessions):** sets a unique `name` so LeadSmart AI and Property Tools
  * each keep their own login, even with the same Supabase project and
  * `NEXT_PUBLIC_AUTH_COOKIE_DOMAIN` (subdomains).
  *

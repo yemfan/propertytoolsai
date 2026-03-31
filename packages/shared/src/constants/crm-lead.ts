@@ -1,4 +1,4 @@
-/** CRM `leads.lead_status` values (LeadSmart dashboard). */
+/** CRM `leads.lead_status` values (LeadSmart AI dashboard). */
 export const LEAD_STATUS = {
   New: "new",
   Contacted: "contacted",

@@ -9,7 +9,7 @@ export default function OnboardingWelcomeScreen() {
     <View style={s.flex}>
       <View style={s.safePad}>
         <View style={s.centerBlock}>
-          <Text style={s.kicker}>LeadSmart</Text>
+          <Text style={s.kicker}>LeadSmart AI</Text>
           <Text style={s.title}>Your pipeline, in your pocket</Text>
           <Text style={s.body}>
             See hot leads, reply faster, and stay on top of SMS and email — built for agents on the go.

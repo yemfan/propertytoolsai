@@ -31,7 +31,7 @@ export default function OnboardingNotificationsScreen() {
       }
       if (next === "granted" && Platform.OS === "android") {
         await Notifications.setNotificationChannelAsync("default", {
-          name: "LeadSmart",
+          name: "LeadSmart AI",
           importance: Notifications.AndroidImportance.HIGH,
         });
       }

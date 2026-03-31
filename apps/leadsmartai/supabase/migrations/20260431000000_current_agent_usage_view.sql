@@ -1,4 +1,4 @@
--- All daily usage rows for LeadSmart Agent (any date).
+-- All daily usage rows for LeadSmart AI Agent (any date).
 
 create or replace view public.current_agent_usage as
 select

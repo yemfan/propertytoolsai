@@ -1,4 +1,4 @@
-# LeadSmart Agent entitlements
+# LeadSmart AI Agent entitlements
 
 ## TypeScript layout (`lib/entitlements/`)
 

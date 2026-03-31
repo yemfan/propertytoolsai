@@ -4,7 +4,7 @@
 |------|------|
 | `apps/propertytoolsai` | Public lead-gen / Property Tools web app |
 | `apps/leadsmartai` | LeadSmart CRM / AI / automation web app |
-| `apps/leadsmart-mobile` | LeadSmart Expo (iOS / Android) |
+| `apps/leadsmart-mobile` | LeadSmart AI Expo (iOS / Android) |
 | `packages/shared` | `@leadsmart/shared` — types, constants, utils |
 | `packages/api-client` | `@leadsmart/api-client` — `apiFetch`, DTO re-exports |
 | `packages/*` | Existing `@repo/*` internal packages |

@@ -1,7 +1,7 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
 /**
- * Merges with `app.json`. Use `EXPO_PUBLIC_LEADSMART_API_URL` for the LeadSmart web API
+ * Merges with `app.json`. Use `EXPO_PUBLIC_LEADSMART_API_URL` for the LeadSmart AI web API
  * (e.g. `https://your-leadsmart.vercel.app` — no trailing slash).
  *
  * EAS cannot auto-inject `extra.eas.projectId` into TypeScript config — set
@@ -20,8 +20,16 @@ const DEFAULT_EAS_PROJECT_ID = "146f9ab1-a17d-4b90-a005-e6fa6749c6ed";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: config.name ?? "LeadSmart",
+  /** Shown under the icon on iOS/Android — keep literal so EAS merges never drop it. */
+  name: "LeadSmart",
   slug: config.slug ?? "leadsmart-mobile",
+  ios: {
+    ...config.ios,
+    infoPlist: {
+      ...config.ios?.infoPlist,
+      CFBundleDisplayName: "LeadSmart",
+    },
+  },
   extra: {
     ...config.extra,
     /** Supports `EXPO_PUBLIC_*` (Expo) or `NEXT_PUBLIC_*` (shared .env.local with web). */
@@ -29,7 +37,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       process.env.EXPO_PUBLIC_LEADSMART_API_URL,
       process.env.NEXT_PUBLIC_LEADSMART_API_URL
     ),
-    /** Dev: Supabase JWT for `Authorization: Bearer` (same session as LeadSmart web). */
+    /** Dev: Supabase JWT for `Authorization: Bearer` (same session as LeadSmart AI web). */
     leadsmartAccessToken: envFirst(
       process.env.EXPO_PUBLIC_LEADSMART_ACCESS_TOKEN,
       process.env.NEXT_PUBLIC_LEADSMART_ACCESS_TOKEN

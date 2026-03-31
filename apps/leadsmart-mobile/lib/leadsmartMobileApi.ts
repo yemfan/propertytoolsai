@@ -87,14 +87,14 @@ function requireConfig(): MobileApiFailure | MobileConfig {
   const base = getLeadsmartApiBaseUrl();
   const token = getLeadsmartAccessToken();
   if (!base) {
-    return { ok: false, status: 0, message: "Set EXPO_PUBLIC_LEADSMART_API_URL (LeadSmart API base URL)." };
+    return { ok: false, status: 0, message: "Set EXPO_PUBLIC_LEADSMART_API_URL (LeadSmart AI API base URL)." };
   }
   if (!token) {
     return {
       ok: false,
       status: 0,
       message:
-        "Set EXPO_PUBLIC_LEADSMART_ACCESS_TOKEN (Supabase JWT from a signed-in LeadSmart session).",
+        "Set EXPO_PUBLIC_LEADSMART_ACCESS_TOKEN (Supabase JWT from a signed-in LeadSmart AI session).",
     };
   }
   return { base, token };
@@ -371,7 +371,7 @@ export async function fetchMobileLeadDetail(
 type PushRegisterJson = MobileJsonError & { ok?: boolean; success?: boolean };
 
 /**
- * Register this device’s Expo push token with LeadSmart (`POST /api/mobile/push/register`).
+ * Register this device’s Expo push token with LeadSmart AI (`POST /api/mobile/push/register`).
  */
 export async function registerMobileExpoPushToken(
   expoPushToken: string

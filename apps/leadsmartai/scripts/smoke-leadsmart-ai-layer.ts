@@ -54,7 +54,7 @@ async function main() {
   }
   console.log("✓ ai_usage");
 
-  console.log("\nLeadSmart AI layer migration is present and queryable.");
+  console.log("\nLeadSmart layer migration is present and queryable.");
 }
 
 main().catch((e) => {

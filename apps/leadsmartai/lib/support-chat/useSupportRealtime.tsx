@@ -118,7 +118,7 @@ export function useSupportRealtime(options: UseSupportRealtimeOptions): UseSuppo
     setChannelStatus("idle");
     channelRef.current = null;
 
-    if (!enabled || !conversationPublicId?.trim() || !envConfigured()) {
+    if (!enabled || !conversationPublicId?.trim() || !envConfigured() || !supabase) {
       return;
     }
 

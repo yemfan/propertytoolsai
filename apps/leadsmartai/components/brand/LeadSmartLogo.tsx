@@ -10,7 +10,7 @@ type Props = {
 };
 
 /**
- * LeadSmart horizontal lockup — source asset: repo `Images/LSLogoH.png` (copied to `public/images/lslogoh.png`).
+ * LeadSmart AI horizontal lockup — source asset: repo `Images/LSLogoH.png` (copied to `public/images/lslogoh.png`).
  */
 export function LeadSmartLogo({ className, compact, priority }: Props) {
   const isPriority = priority ?? !compact;

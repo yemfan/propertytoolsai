@@ -4,7 +4,7 @@
  * Premium collapsed SaaS sidebar (desktop `md+`):
  * default-collapsed icon rail, hover tooltips, animated groups, `isLinkActive` + `match[]`,
  * gray palette; header toggles rail with ChevronRight (collapsed) / ChevronDown (expanded).
- * Consumes the same `NavSection` trees as PropertyTools + LeadSmart `nav.config`.
+ * Consumes the same `NavSection` trees as PropertyTools + LeadSmart AI `nav.config`.
  */
 import { ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
@@ -97,7 +97,7 @@ function NavIconWrap({ children }: { children: ReactNode }) {
 
 /**
  * Premium collapsible desktop sidebar: default-collapsed icon rail, hover tooltips,
- * animated groups, and shared active logic for PropertyToolsAI / LeadSmart-style nav configs.
+ * animated groups, and shared active logic for PropertyToolsAI / LeadSmart AI-style nav configs.
  */
 export function PremiumSidebar({
   appName,

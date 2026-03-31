@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * LeadSmart-style surfaces: soft ring + shadow, optional hover lift (interactive).
+ * LeadSmart AI-style surfaces: soft ring + shadow, optional hover lift (interactive).
  * Matches `leadsmartai` marketing cards: `rounded-xl border-slate-200/90`, subtle depth.
  */
 export const cardVariants = {

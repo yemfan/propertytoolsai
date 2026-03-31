@@ -463,7 +463,7 @@ export default function OnboardingFunnel() {
               Open my inbox →
             </button>
           ) : (
-            <p className="mt-6 text-xs text-slate-500">Secure handshake with LeadSmart routing…</p>
+            <p className="mt-6 text-xs text-slate-500">Secure handshake with LeadSmart AI routing…</p>
           )}
         </div>
       </Shell>

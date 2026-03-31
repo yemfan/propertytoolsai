@@ -4,7 +4,7 @@ import { hasAgentWorkspaceAccess } from "@/lib/entitlements/agentAccess";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 
 /**
- * Server Components: require signed-in user + LeadSmart Agent entitlement (or platform admin).
+ * Server Components: require signed-in user + LeadSmart AI Agent entitlement (or platform admin).
  * Uses cookie session via `getCurrentUserWithRole()` (no `Request`).
  */
 export async function requireAgentAccess(): Promise<CurrentUserWithRole> {

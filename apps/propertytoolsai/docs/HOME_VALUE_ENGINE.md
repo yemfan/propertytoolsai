@@ -32,7 +32,7 @@
 - Baseline PPSF: **comps** (if sold prices present) else **city** median PPSF else **245** fallback.
 - Guests allowed (lead-gen).
 
-## CRM / LeadSmart
+## CRM / LeadSmart AI
 
 **`LeadRecord`** (`lib/leads/leadRecord.ts`) — canonical shape returned on unlock (`leadRecord` in JSON): `source: "home_value_estimator"`, value band, confidence, `likelyIntent`, engagement, optional timeline / buying vs selling.
 

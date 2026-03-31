@@ -80,7 +80,7 @@ export default function ClientChatPage() {
     <div className="flex flex-col h-[calc(100dvh-8.5rem)]">
       <div className="mb-3">
         <h1 className="text-xl font-bold text-slate-900">Chat</h1>
-        <p className="text-sm text-slate-600">Message your agent — they see this on LeadSmart.</p>
+        <p className="text-sm text-slate-600">Message your agent — they see this on LeadSmart AI.</p>
       </div>
 
       {leads.length > 1 && (

@@ -5,7 +5,7 @@ import StartFreeAgentClientPage from "./page.client";
 
 export const metadata = {
   title: "Start as Agent | LeadSmart AI",
-  description: "Activate LeadSmart Agent Starter — CMA, leads, CRM, and alerts in one workspace.",
+  description: "Activate LeadSmart AI Agent Starter — CMA, leads, CRM, and alerts in one workspace.",
 };
 
 function signedInDashboardHref(user: NonNullable<Awaited<ReturnType<typeof getCurrentUserWithRole>>>): string {

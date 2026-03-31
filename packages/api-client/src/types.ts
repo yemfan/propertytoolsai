@@ -1,4 +1,4 @@
-/** Standard envelope for LeadSmart HTTP JSON APIs. */
+/** Standard envelope for LeadSmart AI HTTP JSON APIs. */
 export type ApiSuccess<T> = {
   ok: true;
   status: number;

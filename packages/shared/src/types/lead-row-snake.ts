@@ -1,5 +1,5 @@
 /**
- * Raw lead row shape returned by LeadSmart dashboard/list JSON APIs (snake_case).
+ * Raw lead row shape returned by LeadSmart AI dashboard/list JSON APIs (snake_case).
  * Map to {@link Lead} / {@link LeadCrm} on the client when a normalized model is preferred.
  */
 export type LeadRowSnake = {

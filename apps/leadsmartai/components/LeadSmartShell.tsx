@@ -7,7 +7,7 @@ import navConfig, { leadSmartNav } from "@/nav.config";
 const APP_NAME = "LeadSmart AI";
 
 /**
- * LeadSmart layout using `PremiumSidebar` + `PremiumTopbar` from `@repo/ui`.
+ * LeadSmart AI layout using `PremiumSidebar` + `PremiumTopbar` from `@repo/ui`.
  * For production dashboard chrome (tokens, notifications, real auth menu), use `DashboardShell` instead.
  */
 export default function LeadSmartShell({ children }: { children: ReactNode }) {

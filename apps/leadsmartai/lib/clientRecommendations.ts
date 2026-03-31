@@ -17,7 +17,7 @@ export function buildClientRecommendations(lead: ClientPortalLead | null): Clien
         id: "link-lead",
         title: "Link your deal",
         detail:
-          "Sign in with the same email your agent has on file, or ask them to update your contact email in LeadSmart.",
+          "Sign in with the same email your agent has on file, or ask them to update your contact email in LeadSmart AI.",
         priority: "high",
       },
     ];
@@ -65,7 +65,7 @@ export function buildClientRecommendations(lead: ClientPortalLead | null): Clien
   recs.push({
     id: "message-agent",
     title: "Message your agent",
-    detail: "Ask questions anytime in Chat — your agent sees updates on their LeadSmart dashboard.",
+    detail: "Ask questions anytime in Chat — your agent sees updates on their LeadSmart AI dashboard.",
     priority: "low",
   });
 

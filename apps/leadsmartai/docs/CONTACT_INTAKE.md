@@ -1,4 +1,4 @@
-# Contact intake (LeadSmart)
+# Contact intake (LeadSmart AI)
 
 Unified pipeline for **manual entry**, **CSV import**, and **business card scan** (review required before CRM save).
 

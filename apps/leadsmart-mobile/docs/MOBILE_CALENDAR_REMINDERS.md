@@ -32,7 +32,7 @@ Apply migration `20260464000000_lead_calendar_booking.sql` (creates `lead_calend
 - Creating an appointment or booking link updates **`leads.last_activity_at`**.
 - Booking rows include **`metadata_json`** (`source: mobile`, timestamps) for dashboards or future timeline UI.
 
-## LeadSmart web dashboard (`apps/leadsmartai`)
+## LeadSmart AI web dashboard (`apps/leadsmartai`)
 
 The CRM dashboard uses the **same tables and server helpers** with cookie/session auth:
 

@@ -10,6 +10,7 @@ import {
   House,
   LayoutDashboard,
   MessageSquare,
+  Phone,
   Settings,
   Sparkles,
   Target,
@@ -79,6 +80,11 @@ const navConfig = {
           label: "Assigned Leads",
           href: "/dashboard/contacts",
           icon: <Users size={16} strokeWidth={2} aria-hidden />,
+        },
+        {
+          label: "Voice calls",
+          href: "/dashboard/calls",
+          icon: <Phone size={16} strokeWidth={2} aria-hidden />,
         },
         {
           label: "Lead Activity",

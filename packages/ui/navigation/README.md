@@ -16,7 +16,7 @@ Shared **Next.js App Router** chrome for PropertyTools AI (`apps/propertytoolsai
 | `PremiumTopbar` | Glass bar + optional credits, bell, `ProfileMenu` |
 | `ProfileMenu` | Avatar dropdown (profile/settings/billing/log out) |
 
-Apps own **`nav.config.tsx`** (and LeadSmart **`marketing.nav.config.tsx`**) that build `NavSection[]` with **lucide-react** icons.
+Apps own **`nav.config.tsx`** (and LeadSmart AI **`marketing.nav.config.tsx`**) that build `NavSection[]` with **lucide-react** icons.
 
 ## Usage
 

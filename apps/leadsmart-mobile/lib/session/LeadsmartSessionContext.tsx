@@ -49,7 +49,7 @@ export function LeadsmartSessionProvider({ children }: { children: ReactNode }) 
 
   const signInWithToken = useCallback(async (token: string) => {
     const t = token.trim();
-    if (!t) throw new Error("Paste your access token from LeadSmart.");
+    if (!t) throw new Error("Paste your access token from LeadSmart AI.");
 
     setCachedAccessToken(t);
     const res = await fetchMobileLeads({ page: 1, pageSize: 1 });

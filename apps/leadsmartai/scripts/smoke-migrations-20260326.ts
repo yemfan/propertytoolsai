@@ -1,5 +1,5 @@
 /**
- * Verifies 20260326_* migrations (LeadSmart backend, city market, pricing, scoring, SMS auto-follow).
+ * Verifies 20260326_* migrations (LeadSmart AI backend, city market, pricing, scoring, SMS auto-follow).
  * Safe if you ran individual files and/or 20260326_full_ai_system_bundle.sql (idempotent creates).
  *
  * Usage (from repo root):
@@ -41,7 +41,7 @@ async function main() {
 
   const supabase = createClient(url, key);
 
-  console.log("Checking 20260326_* migrations (LeadSmart backend + AI bundle tables)...\n");
+  console.log("Checking 20260326_* migrations (LeadSmart AI backend + AI bundle tables)...\n");
 
   for (const { table, select } of TABLES) {
     const { error } = await supabase.from(table).select(select).limit(1);

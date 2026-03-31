@@ -66,7 +66,7 @@ export function useLeadDetailRealtime(
       )
       .subscribe((status) => {
         if (status === "CHANNEL_ERROR") {
-          console.warn("[LeadSmart] lead detail realtime channel error");
+          console.warn("[LeadSmart AI] lead detail realtime channel error");
         }
       });
 

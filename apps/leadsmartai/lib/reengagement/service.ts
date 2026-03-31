@@ -305,7 +305,7 @@ export async function runReengagementJob(opts?: { agentId?: string }): Promise<R
             body: generated.body,
             agentId: lead.agentId,
             actorType: "system",
-            actorName: "LeadSmart Re-engagement",
+            actorName: "LeadSmart AI Re-engagement",
           });
         } else {
           const to = (lead.email || "").trim();
@@ -317,7 +317,7 @@ export async function runReengagementJob(opts?: { agentId?: string }): Promise<R
             body: generated.body,
             agentId: lead.agentId,
             actorType: "system",
-            actorName: "LeadSmart Re-engagement",
+            actorName: "LeadSmart AI Re-engagement",
           });
         }
 

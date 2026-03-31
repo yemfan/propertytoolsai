@@ -1,6 +1,6 @@
 # Navigation architecture (PropertyToolsAI & LeadSmart AI)
 
-Shared implementation: **`@repo/ui`** (`PremiumSidebar`, `Sidebar`, `MobileSidebar`, `Topbar`, `CollapsibleNavGroup`) from **`packages/ui/navigation/`**, plus each app’s root **`nav.config.tsx`**. PropertyToolsAI and LeadSmart dashboard shells use **`PremiumSidebar`** (default-collapsed rail + tooltips). See **`docs/visual-navigation-structure.md`** for ASCII layouts.
+Shared implementation: **`@repo/ui`** (`PremiumSidebar`, `Sidebar`, `MobileSidebar`, `Topbar`, `CollapsibleNavGroup`) from **`packages/ui/navigation/`**, plus each app’s root **`nav.config.tsx`**. PropertyToolsAI and LeadSmart AI dashboard shells use **`PremiumSidebar`** (default-collapsed rail + tooltips). See **`docs/visual-navigation-structure.md`** for ASCII layouts.
 
 ## Principles
 

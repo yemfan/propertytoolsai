@@ -135,7 +135,7 @@ export async function mobileSendSmsReply(params: {
     body: text,
     agentId: params.agentId,
     actorType: "agent",
-    actorName: "LeadSmart Mobile",
+    actorName: "LeadSmart AI Mobile",
   });
 
   return fetchLatestOutboundSms(params.leadId);
@@ -165,7 +165,7 @@ export async function mobileSendEmailReply(params: {
     body,
     agentId: params.agentId,
     actorType: "agent",
-    actorName: "LeadSmart Mobile",
+    actorName: "LeadSmart AI Mobile",
   });
 
   return fetchLatestOutboundEmail(params.leadId);

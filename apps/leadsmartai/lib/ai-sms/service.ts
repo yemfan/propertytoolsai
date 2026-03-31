@@ -1,4 +1,6 @@
 import OpenAI from "openai";
+import { buildSmsSystemInstructions } from "@/lib/agent-ai/promptBuilder";
+import { getAgentAiSettings } from "@/lib/agent-ai/settings";
 import { buildSmsUserPrompt, SMS_ASSISTANT_SYSTEM_PROMPT } from "./prompts";
 import { inferIntentHeuristic } from "./intent";
 import { needsHumanEscalation, shouldStopMessaging } from "./safety";
@@ -139,6 +141,9 @@ export async function generateSmsAssistantReply(ctx: SmsReplyContext): Promise<S
     return fallbackReply(ctx);
   }
 
+  const agentAi = await getAgentAiSettings(ctx.lead?.assignedAgentId ?? undefined);
+  const instructions = buildSmsSystemInstructions(SMS_ASSISTANT_SYSTEM_PROMPT, agentAi);
+
   const prompt = buildSmsUserPrompt({
     inboundBody: ctx.inboundBody,
     leadSummary: buildLeadSummary(ctx),
@@ -148,7 +153,7 @@ export async function generateSmsAssistantReply(ctx: SmsReplyContext): Promise<S
   try {
     const response = await openai.responses.create({
       model: smsModel(),
-      instructions: SMS_ASSISTANT_SYSTEM_PROMPT,
+      instructions,
       input: [{ role: "user", content: prompt }],
       text: {
         format: {

@@ -1,6 +1,6 @@
 # LeadSmart mobile push notifications
 
-## Registration (Expo → LeadSmart)
+## Registration (Expo → LeadSmart AI)
 
 - **HTTP**: `POST /api/mobile/push/register`
 - **Auth**: Same session as other mobile routes — `Authorization: Bearer <Supabase JWT>` (or cookie session).
@@ -33,11 +33,11 @@ Expo messages use **`data` as string key/value pairs only** (APNs/FCM friendly).
 
 | `data.kind` | When | `title` (typical) | `data` fields |
 |-------------|------|-------------------|---------------|
-| `hot_lead` | Hot lead / high-intent SMS or email agent alert (`notifyAgentOfHotLead` + mobile path) | `Hot lead — LeadSmart` | `leadId`, `kind` |
-| `inbound_sms` | Inbound SMS stored for a lead (not unsubscribe) | `New SMS — LeadSmart` | `leadId`, `kind` |
-| `inbound_email` | Inbound email logged for assigned lead | `New email — LeadSmart` | `leadId`, `kind` |
-| `needs_human` | AI SMS/email reply flagged `needsHuman` or tag `human_escalation` | `AI needs you — LeadSmart` | `leadId`, `kind`, `channel` (`sms` \| `email`), `reason` |
-| `reminder` | Follow-up due (`next_contact_at`) — `GET /api/cron/lead-followups` | `Follow-up due — LeadSmart` | `leadId`, `kind` |
+| `hot_lead` | Hot lead / high-intent SMS or email agent alert (`notifyAgentOfHotLead` + mobile path) | `Hot lead — LeadSmart AI` | `leadId`, `kind` |
+| `inbound_sms` | Inbound SMS stored for a lead (not unsubscribe) | `New SMS — LeadSmart AI` | `leadId`, `kind` |
+| `inbound_email` | Inbound email logged for assigned lead | `New email — LeadSmart AI` | `leadId`, `kind` |
+| `needs_human` | AI SMS/email reply flagged `needsHuman` or tag `human_escalation` | `AI needs you — LeadSmart AI` | `leadId`, `kind`, `channel` (`sms` \| `email`), `reason` |
+| `reminder` | Follow-up due (`next_contact_at`) — `GET /api/cron/lead-followups` | `Follow-up due — LeadSmart AI` | `leadId`, `kind` |
 
 Optional future fields: keep values **strings** (e.g. `threadId`).
 

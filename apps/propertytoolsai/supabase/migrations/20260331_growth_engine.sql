@@ -1,4 +1,4 @@
--- Growth engine: shareable results, referrals, attribution (mirror LeadSmart)
+-- Growth engine: shareable results, referrals, attribution (mirror LeadSmart AI)
 
 create table if not exists public.shareable_results (
   id uuid primary key default gen_random_uuid(),

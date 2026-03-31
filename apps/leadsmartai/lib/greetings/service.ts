@@ -1,4 +1,11 @@
 import OpenAI from "openai";
+import { buildGreetingGeneratorSystemInstructions } from "@/lib/agent-ai/promptBuilder";
+import {
+  DEFAULT_AGENT_AI_SETTINGS,
+  getAgentAiSettingsWithMeta,
+  resolveGreetingTone,
+} from "@/lib/agent-ai/settings";
+import type { AgentAiSettings } from "@/lib/agent-ai/types";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendOutboundSms } from "@/lib/ai-sms/outbound";
 import { sendOutboundEmail } from "@/lib/ai-email/send";
@@ -202,7 +209,7 @@ export async function generateGreeting(params: {
     return {
       eventType: event.type,
       channel,
-      subject: channel === "email" ? "A quick hello from LeadSmart" : "",
+      subject: channel === "email" ? "A quick hello from LeadSmart AI" : "",
       body,
       tags: [event.type, "template"],
     };
@@ -213,17 +220,30 @@ export async function generateGreeting(params: {
     return generateGreeting({ ...params, settings: { ...settings, useAiPersonalization: false } });
   }
 
+  const { settings: agentAi, hasRow } = await getAgentAiSettingsWithMeta(lead.assignedAgentId ?? undefined);
+  const effectiveTone = resolveGreetingTone({
+    agentAi,
+    greetingAutomationTone: settings.tone,
+    hasAgentAiRow: hasRow,
+  });
+
+  const mergedAgentAi: AgentAiSettings = hasRow
+    ? agentAi
+    : { ...DEFAULT_AGENT_AI_SETTINGS, personality: effectiveTone };
+
   const userPrompt = buildGreetingPrompt({
     eventType: event.type,
     holidayKey: event.holidayKey,
     leadName: lead.name,
     propertyAddress: lead.address,
     city: lead.city,
-    tone: settings.tone,
+    tone: effectiveTone,
     channel,
     relationshipStage: lead.relationshipStage,
     lastContactedAt: lead.lastContactedAt,
   });
+
+  const instructions = buildGreetingGeneratorSystemInstructions(mergedAgentAi);
 
   const schema = {
     type: "object",
@@ -239,8 +259,7 @@ export async function generateGreeting(params: {
   try {
     const response = await openai.responses.create({
       model: greetingModel(),
-      instructions:
-        "You write short JSON-only outputs for a real estate CRM greeting generator. Follow the user rules exactly.",
+      instructions,
       input: [{ role: "user", content: userPrompt }],
       text: {
         format: {
@@ -309,7 +328,7 @@ export async function sendGreeting(params: { lead: GreetingLead; generated: Gene
       body: generated.body,
       agentId: lead.assignedAgentId ?? null,
       actorType: "system",
-      actorName: "LeadSmart Greetings",
+      actorName: "LeadSmart AI Greetings",
     });
   } else {
     const to = (lead.email || "").trim();
@@ -321,7 +340,7 @@ export async function sendGreeting(params: { lead: GreetingLead; generated: Gene
       body: generated.body,
       agentId: lead.assignedAgentId ?? null,
       actorType: "system",
-      actorName: "LeadSmart Greetings",
+      actorName: "LeadSmart AI Greetings",
       deliver: true,
     });
   }

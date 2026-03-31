@@ -4,7 +4,7 @@ import { getLeadsmartApiBaseUrl } from "./env";
 type SummaryJson = { ok?: boolean; error?: string };
 
 /**
- * Optional connectivity check against LeadSmart (cookie auth won’t apply until you add tokens).
+ * Optional connectivity check against LeadSmart AI (cookie auth won’t apply until you add tokens).
  * Returns a short status string for the home screen.
  */
 export async function pingLeadsmartApi(): Promise<string> {

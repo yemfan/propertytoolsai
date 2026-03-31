@@ -131,7 +131,7 @@ export default function ConsumerPricingClientPage() {
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-gray-600 md:text-lg">
             Free and Premium access to PropertyTools AI calculators and insights. Agents: see{" "}
             <a href="/agent/pricing" className="font-semibold text-[#0072ce] underline underline-offset-2 hover:text-[#005fa3]">
-              LeadSmart pricing for agents
+              LeadSmart AI pricing for agents
             </a>
             .
           </p>

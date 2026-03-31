@@ -1,6 +1,6 @@
 # Onboarding → activation → upgrade funnel
 
-LeadSmart tracks **activation**, **AI usage caps** for free/starter, **upgrade prompts** tied to billing, **push** (hot leads already wired; reminders added), and **funnel analytics** rows.
+LeadSmart AI tracks **activation**, **AI usage caps** for free/starter, **upgrade prompts** tied to billing, **push** (hot leads already wired; reminders added), and **funnel analytics** rows.
 
 ## Schema
 

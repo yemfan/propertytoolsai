@@ -209,7 +209,7 @@ export type MobilePushNotificationKind =
   | "reminder";
 
 /**
- * Contract for `notification.request.content.data` on LeadSmart-originated pushes.
+ * Contract for `notification.request.content.data` on LeadSmart AI-originated pushes.
  * Optional fields may be omitted by older servers.
  */
 export type MobilePushNotificationData = {

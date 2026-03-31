@@ -2640,7 +2640,7 @@ create index if not exists idx_referral_events_type_created on public.referral_e
 --
 -- Notes:
 -- - `public.leads` already exists in this project with `id bigint` (CRM). We extend it
---   with LeadSmart / home-value columns instead of replacing the table (which would
+--   with LeadSmart AI / home-value columns instead of replacing the table (which would
 --   break FKs like leadsmart_runs, communications, etc.).
 -- - Some requested indexes (`idx_leads_email`, `idx_leads_city`) may already exist;
 --   we use IF NOT EXISTS.
@@ -2795,13 +2795,13 @@ for each row
 execute function public.set_updated_at();
 
 comment on column public.leads.full_address is
-  'Normalized full street address (LeadSmart / home value); may mirror property_address.';
+  'Normalized full street address (LeadSmart AI / home value); may mirror property_address.';
 comment on column public.leads.estimated_value is
-  'LeadSmart home value point estimate (may mirror property_value / estimated_home_value).';
+  'LeadSmart AI home value point estimate (may mirror property_value / estimated_home_value).';
 comment on column public.leads.status is
-  'LeadSmart pipeline status; existing CRM may also use lead_status.';
+  'LeadSmart AI pipeline status; existing CRM may also use lead_status.';
 comment on column public.leads.assigned_agent_id is
-  'Optional agent assignment for LeadSmart; may mirror agent_id.';
+  'Optional agent assignment for LeadSmart AI; may mirror agent_id.';
 
 -- ========================================================================
 -- FILE: 20260418_home_value_sessions_session_id_unique.sql
@@ -3262,7 +3262,7 @@ grant select on public.active_product_entitlements to service_role;
 -- FILE: 20260426000000_get_active_agent_entitlement.sql
 -- ========================================================================
 
--- RPC: single active LeadSmart Agent entitlement row (uses active_product_entitlements view).
+-- RPC: single active LeadSmart AI Agent entitlement row (uses active_product_entitlements view).
 
 create or replace function public.get_active_agent_entitlement(p_user_id uuid)
 returns table (
@@ -3444,7 +3444,7 @@ grant execute on function public.increment_contacts_usage(uuid, text) to service
 -- FILE: 20260431000000_current_agent_usage_view.sql
 -- ========================================================================
 
--- All daily usage rows for LeadSmart Agent (any date).
+-- All daily usage rows for LeadSmart AI Agent (any date).
 
 create or replace view public.current_agent_usage as
 select
@@ -4628,7 +4628,7 @@ comment on column public.subscription_events.stripe_subscription_id is
 -- FILE: 20260470000000_contact_import_jobs.sql
 -- ========================================================================
 
--- CSV / business-card import jobs and per-row staging for LeadSmart contact intake.
+-- CSV / business-card import jobs and per-row staging for LeadSmart AI contact intake.
 -- agent_id follows public.agents.id (uuid or bigint).
 
 do $$

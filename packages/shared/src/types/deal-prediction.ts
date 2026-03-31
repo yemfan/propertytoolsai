@@ -1,5 +1,5 @@
 /**
- * LeadSmart deal prediction (3–6 month buy/sell likelihood).
+ * LeadSmart AI deal prediction (3–6 month buy/sell likelihood).
  * Scores are persisted on `public.leads`; factors explain the breakdown.
  */
 export type DealPredictionLabel = "low" | "medium" | "high";

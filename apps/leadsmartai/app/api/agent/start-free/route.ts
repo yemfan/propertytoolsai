@@ -4,7 +4,7 @@ import { PRODUCT_LEADSMART_AGENT } from "@/lib/entitlements/product";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
- * Activates LeadSmart Agent Starter via `product_entitlements` (source: free_start).
+ * Activates LeadSmart AI Agent Starter via `product_entitlements` (source: free_start).
  *
  * DB has a **partial** unique index on `(user_id, product) WHERE is_active`, so we cannot rely on
  * a plain `upsert(..., onConflict: user_id,product)`. Deactivate prior active rows, then insert.

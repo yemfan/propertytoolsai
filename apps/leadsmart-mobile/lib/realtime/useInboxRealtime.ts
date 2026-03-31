@@ -43,7 +43,7 @@ export function useInboxRealtime(onRefresh: () => void, enabled: boolean) {
       )
       .subscribe((status) => {
         if (status === "CHANNEL_ERROR") {
-          console.warn("[LeadSmart] inbox realtime channel error");
+          console.warn("[LeadSmart AI] inbox realtime channel error");
         }
       });
 

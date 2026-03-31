@@ -1,4 +1,4 @@
--- RPC: single active LeadSmart Agent entitlement row (uses active_product_entitlements view).
+-- RPC: single active LeadSmart AI Agent entitlement row (uses active_product_entitlements view).
 
 create or replace function public.get_active_agent_entitlement(p_user_id uuid)
 returns table (

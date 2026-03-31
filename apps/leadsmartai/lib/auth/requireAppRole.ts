@@ -18,7 +18,7 @@ function roleInAllowed(role: string | null, allowed: AppRole[]): boolean {
 }
 
 /**
- * App Router guard: `getCurrentUserWithRole` + LeadSmart Agent entitlement when `"agent"` is in
+ * App Router guard: `getCurrentUserWithRole` + LeadSmart AI Agent entitlement when `"agent"` is in
  * `allowed`. Import from this module (not `@/lib/auth/requireRole`, which uses `fetchUserPortalContext`).
  *
  * @example

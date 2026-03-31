@@ -1,4 +1,4 @@
--- Daily entitlement counters (shared shape with LeadSmart billing). Requires public.profiles + set_updated_at.
+-- Daily entitlement counters (shared shape with LeadSmart AI billing). Requires public.profiles + set_updated_at.
 
 create table if not exists public.entitlement_usage_daily (
   id uuid primary key default gen_random_uuid(),

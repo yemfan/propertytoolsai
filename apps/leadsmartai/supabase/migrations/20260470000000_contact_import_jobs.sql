@@ -1,4 +1,4 @@
--- CSV / business-card import jobs and per-row staging for LeadSmart contact intake.
+-- CSV / business-card import jobs and per-row staging for LeadSmart AI contact intake.
 -- agent_id follows public.agents.id (uuid or bigint).
 
 do $$

@@ -1,5 +1,5 @@
 /**
- * Concatenates LeadSmart migration SQL files (ordered by filename) into one script.
+ * Concatenates LeadSmart AI migration SQL files (ordered by filename) into one script.
  * Excludes destructive resets and bundle files that duplicate individual migrations.
  *
  * Output: apps/leadsmart-mobile/supabase/consolidated_all_migrations.sql

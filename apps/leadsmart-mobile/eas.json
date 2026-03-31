@@ -28,7 +28,9 @@
       "distribution": "internal"
     },
     "production": {
-      "extends": "base"
+      "extends": "base",
+      "distribution": "store",
+      "developmentClient": false
     }
   },
   "submit": {

@@ -4,7 +4,7 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerTitle: "LeadSmart",
+        headerTitle: "LeadSmart AI",
         headerShadowVisible: false,
         tabBarActiveTintColor: "#2563eb",
         tabBarInactiveTintColor: "#64748b",

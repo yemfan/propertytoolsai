@@ -1,4 +1,4 @@
-# LeadSmart onboarding funnel
+# LeadSmart AI onboarding funnel
 
 **Route:** `/onboarding`
 

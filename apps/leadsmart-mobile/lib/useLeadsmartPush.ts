@@ -42,7 +42,7 @@ function navigateToLead(
 }
 
 /**
- * Registers the Expo push token with the LeadSmart API when JWT + API URL are set,
+ * Registers the Expo push token with the LeadSmart AI API when JWT + API URL are set,
  * and opens the lead screen when the user taps a notification.
  */
 export function useLeadsmartPush() {
@@ -82,7 +82,7 @@ export function useLeadsmartPush() {
 
       if (Platform.OS === "android") {
         await Notifications.setNotificationChannelAsync("default", {
-          name: "LeadSmart",
+          name: "LeadSmart AI",
           importance: Notifications.AndroidImportance.HIGH,
         });
       }
@@ -102,7 +102,7 @@ export function useLeadsmartPush() {
       const reg = await registerMobileExpoPushToken(tokenResult.data);
       if (reg.ok === false) {
         lastRegisteredToken.current = null;
-        console.warn("[LeadSmart] push token registration failed:", reg.message);
+        console.warn("[LeadSmart AI] push token registration failed:", reg.message);
       }
     })();
 

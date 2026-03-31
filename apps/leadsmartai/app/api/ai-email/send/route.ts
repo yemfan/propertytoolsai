@@ -77,7 +77,7 @@ export async function POST(req: Request) {
       body: text,
       agentId: agentIdForLog,
       actorType: isAdmin ? "system" : "agent",
-      actorName: actorName ?? (isAdmin ? "LeadSmart" : "Agent"),
+      actorName: actorName ?? (isAdmin ? "LeadSmart AI" : "Agent"),
       deliver: true,
     });
 

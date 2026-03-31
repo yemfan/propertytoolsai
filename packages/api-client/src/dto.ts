@@ -1,5 +1,5 @@
 /**
- * Shared JSON envelope patterns for LeadSmart HTTP APIs (dashboard, mobile, public).
+ * Shared JSON envelope patterns for LeadSmart AI HTTP APIs (dashboard, mobile, public).
  */
 
 /** Typical success body: `{ ok: true, ...payload }` */

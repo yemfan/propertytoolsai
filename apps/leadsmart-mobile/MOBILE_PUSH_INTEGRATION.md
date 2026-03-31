@@ -9,7 +9,7 @@
 
 | Variable | Purpose |
 |----------|---------|
-| `EXPO_PUBLIC_LEADSMART_API_URL` | LeadSmart Next origin, no trailing slash |
+| `EXPO_PUBLIC_LEADSMART_API_URL` | LeadSmart AI Next origin, no trailing slash |
 | `EXPO_PUBLIC_LEADSMART_ACCESS_TOKEN` | Supabase JWT (same user as CRM agent login) |
 | `EXPO_PUBLIC_EAS_PROJECT_ID` | Required for `getExpoPushTokenAsync` on many device builds |
 
@@ -49,7 +49,7 @@ The app uses **Supabase Realtime** `postgres_changes` with the same access JWT a
 
 | Variable | Purpose |
 |----------|---------|
-| `EXPO_PUBLIC_SUPABASE_URL` | Same as LeadSmart web `NEXT_PUBLIC_SUPABASE_URL` |
+| `EXPO_PUBLIC_SUPABASE_URL` | Same as LeadSmart AI web `NEXT_PUBLIC_SUPABASE_URL` |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Same as `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
 
 Apply migration `20260460000000_mobile_message_realtime_rls.sql` so `sms_messages`, `email_messages`, and `sms_conversations` are **RLS-protected** and added to **`supabase_realtime`**.

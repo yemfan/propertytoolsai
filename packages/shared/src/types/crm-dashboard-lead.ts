@@ -39,7 +39,7 @@ export type CrmLeadRow = {
   ai_timeline?: string | null;
   ai_confidence?: number | null;
   ai_explanation?: string[] | null;
-  /** Rules-based 3–6 month deal likelihood (see `lib/dealPrediction` in LeadSmart API). */
+  /** Rules-based 3–6 month deal likelihood (see `lib/dealPrediction` in LeadSmart AI API). */
   prediction_score?: number | null;
   prediction_label?: string | null;
   prediction_factors?: DealPredictionFactor[] | null;

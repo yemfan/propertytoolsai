@@ -397,7 +397,7 @@ export default function PricingPage() {
         <p className="mt-4 text-xs text-slate-600">Trusted by 500+ agents, 10,000+ leads managed</p>
       </section>
 
-      {/* Value props — LeadSmart-style top-accent feature cards */}
+      {/* Value props — LeadSmart AI-style top-accent feature cards */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {PRICING_VALUE_HIGHLIGHTS.map((item) => (
           <FeatureHighlightCard

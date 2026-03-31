@@ -49,7 +49,7 @@ export default function OnboardingLoginScreen() {
           <Text style={s.kicker}>Sign in</Text>
           <Text style={s.title}>Connect your account</Text>
           <Text style={s.body}>
-            Paste the same Supabase JWT you use with LeadSmart web (Bearer token for mobile API). Your API
+            Paste the same Supabase JWT you use with LeadSmart AI web (Bearer token for mobile API). Your API
             base URL must be set in{" "}
             <Text style={{ fontWeight: "700" }}>EXPO_PUBLIC_LEADSMART_API_URL</Text>.
           </Text>

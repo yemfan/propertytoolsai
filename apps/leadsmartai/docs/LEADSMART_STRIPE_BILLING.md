@@ -1,4 +1,4 @@
-# LeadSmart Stripe billing (CRM subscriptions)
+# LeadSmart AI Stripe billing (CRM subscriptions)
 
 End-to-end **monthly subscriptions** for CRM tiers **starter**, **pro**, and **team**, with **Stripe Checkout**, **Customer Portal**, **webhooks**, `public.subscriptions` storage, and **feature gating**.
 

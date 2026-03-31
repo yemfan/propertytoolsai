@@ -18,7 +18,7 @@ export async function getUserEntitlements(userId: string): Promise<AgentEntitlem
 }
 
 /**
- * Active LeadSmart Agent row from `active_product_entitlements` (is_active + date window).
+ * Active LeadSmart AI Agent row from `active_product_entitlements` (is_active + date window).
  * View omits `source`; cast is still valid for `AgentEntitlement` with optional `source`.
  */
 export async function getAgentEntitlement(userId: string): Promise<AgentEntitlement | null> {

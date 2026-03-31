@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
- * All Expo push tokens registered for a Supabase auth user (LeadSmart agent login).
+ * All Expo push tokens registered for a Supabase auth user (LeadSmart AI agent login).
  */
 export async function listExpoPushTokensForUser(userId: string): Promise<string[]> {
   const { data, error } = await supabaseAdmin

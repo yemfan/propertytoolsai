@@ -8,7 +8,7 @@ Colored circular ✓ chips using **primary**, **primaryDark**, **success**, and 
 
 ## Feature highlight cards (`components/ui/FeatureHighlightCard.tsx`)
 
-Top **4px brand accent** + **gradient** into `slate-50` — same pattern as LeadSmart **“Close More Deals with Less Work”** (`#features`). Props: `accent` (`primary` | `primaryDark` | `success` | `accent`), `title`, `description`. Used on the **homepage** (“Make Smarter Decisions with AI”) and **pricing** value-prop row.
+Top **4px brand accent** + **gradient** into `slate-50` — same pattern as LeadSmart AI **“Close More Deals with Less Work”** (`#features`). Props: `accent` (`primary` | `primaryDark` | `success` | `accent`), `title`, `description`. Used on the **homepage** (“Make Smarter Decisions with AI”) and **pricing** value-prop row.
 
 ## Surfaces (`components/ui/Card.tsx`)
 
@@ -26,7 +26,7 @@ Top **4px brand accent** + **gradient** into `slate-50` — same pattern as Lead
 - **`ToolPageScaffold`** — calculator-style tool pages: “Back to Home”, blue `h1`, gray intro, `lg:grid-cols-3` (2/3 inputs + sticky 1/3 results), white `shadow-md` panels (same pattern as mortgage/refinance pages).
 - **`AppShell`** — signed-in/tool chrome uses `bg-gray-50` + white sidebar; marketing home stays full-width white.
 - **`PropertyToolsShell`** — optional demo/layout: `PremiumSidebar` + `PremiumTopbar` from `@repo/ui` (no `GlobalSearchBar` / `AccountMenu`). Use `AppShell` for production.
-- **`/layout-preview`** — renders **`PremiumSidebar`** + **`PremiumTopbar`** from `@repo/ui` with production `nav.config` trees (PropertyTools + cross-import LeadSmart); `AppShell` skips chrome on this path; `robots: noindex`.
+- **`/layout-preview`** — renders **`PremiumSidebar`** + **`PremiumTopbar`** from `@repo/ui` with production `nav.config` trees (PropertyTools + cross-import LeadSmart AI); `AppShell` skips chrome on this path; `robots: noindex`.
 
 ## Typography
 

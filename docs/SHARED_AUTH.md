@@ -4,7 +4,7 @@ Both apps use **Supabase Auth** with cookie-backed sessions (`@supabase/ssr`).
 
 ## Default: separate sessions per site
 
-By default, each app uses its **own auth cookie name** (storage key), so **logging in on Property Tools does not log you in on LeadSmart** (and vice versa), even if they use the **same** Supabase project and the same parent domain.
+By default, each app uses its **own auth cookie name** (storage key), so **logging in on Property Tools does not log you in on LeadSmart AI** (and vice versa), even if they use the **same** Supabase project and the same parent domain.
 
 Deploying this behavior **once** will **sign users out** until they log in again (old cookies used the shared default key).
 
