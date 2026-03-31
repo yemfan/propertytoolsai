@@ -16,26 +16,15 @@ const fontBody = Roboto({
   weight: ["400", "500", "700"],
 });
 
-const siteOrigin = getSiteUrl();
-
-/** Absolute asset URLs — avoids relying on `metadataBase` resolution for icons (more reliable with www + Vercel). */
-function absPath(path: string): string {
-  return new URL(path, `${siteOrigin}/`).href;
-}
-
 /**
- * Same pattern as LeadSmart (`metadata` + `icons`). Icon URLs are absolute so they match the public
- * domain even when `metadataBase` handling differs between Next versions or deploy modes.
+ * Favicons: use Next file convention only (`app/icon.png`, `app/apple-icon.png`).
+ * Do not point `metadata.icons` at `/images/*` — production has returned 404 for `public/images`
+ * while `app/icon.png` routes still work (deploy/static output issue).
  */
 export const metadata = {
-  metadataBase: new URL(siteOrigin),
+  metadataBase: new URL(getSiteUrl()),
   title: "PropertyTools AI",
   description: "Professional real estate calculators for buyers, investors, and agents",
-  icons: {
-    icon: [{ url: absPath("/images/ptlogo64.png"), sizes: "64x64", type: "image/png" }],
-    shortcut: absPath("/images/ptlogo64.png"),
-    apple: [{ url: absPath("/images/pt-logo180.png"), sizes: "180x180", type: "image/png" }],
-  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
