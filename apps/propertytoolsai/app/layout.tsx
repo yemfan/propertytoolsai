@@ -1,4 +1,5 @@
 import "./globals.css";
+import type { Metadata } from "next";
 import { ReactNode } from "react";
 import { Montserrat, Roboto } from "next/font/google";
 import AppShell from "@/components/AppShell";
@@ -17,14 +18,20 @@ const fontBody = Roboto({
 });
 
 /**
- * Favicons: do not set `metadata.icons` here when `app/icon.png` + `app/apple-icon.png` exist — duplicate
- * icon entries can confuse browsers. Next injects file-based icons automatically.
- * Also ship `public/favicon.ico` (PNG bytes) for clients that only request `/favicon.ico`.
+ * Favicon order matters for some browsers: `public/favicon.ico` first, then `app/icon.png` (served at `/icon.png`).
+ * `app/apple-icon.png` is still picked up by Next automatically for apple-touch-icon.
  */
-export const metadata = {
+export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: "PropertyTools AI",
   description: "Professional real estate calculators for buyers, investors, and agents",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "64x64" },
+    ],
+    shortcut: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
