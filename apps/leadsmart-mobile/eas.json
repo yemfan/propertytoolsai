@@ -11,8 +11,12 @@
         "image": "sdk-52"
       },
       "env": {
-        "NODE_OPTIONS": "--max-old-space-size=12288",
-        "EAS_NO_FROZEN_LOCKFILE": "1"
+        "EAS_VERBOSE": "1",
+        "NODE_OPTIONS": "--max-old-space-size=14336",
+        "EAS_NO_FROZEN_LOCKFILE": "1",
+        "NPM_CONFIG_REGISTRY": "https://registry.npmjs.org/",
+        "PNPM_CONFIG_CHILD_CONCURRENCY": "2",
+        "PNPM_CONFIG_NETWORK_CONCURRENCY": "8"
       }
     },
     "development": {
