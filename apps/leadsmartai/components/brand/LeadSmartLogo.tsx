@@ -10,14 +10,14 @@ type Props = {
 };
 
 /**
- * LeadSmart AI horizontal lockup — `public/images/ptlog.png` (Property Tools / LeadSmart mark).
+ * LeadSmart AI horizontal lockup — `public/images/lslogoh.png`.
  */
 export function LeadSmartLogo({ className, compact, priority }: Props) {
   const isPriority = priority ?? !compact;
 
   return (
     <Image
-      src="/images/ptlog.png"
+      src="/images/lslogoh.png"
       alt="LeadSmart AI"
       width={540}
       height={162}
