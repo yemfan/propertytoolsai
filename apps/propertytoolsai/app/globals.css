@@ -2,6 +2,10 @@
 
 /* Shared `@repo/ui` lives outside `./app` + `./components` — Tailwind v4 must scan it or sidebar/topbar utilities are missing. */
 @source "../../../packages/ui/**/*.{js,ts,jsx,tsx}";
+/* App shell, `nav.config.tsx`, and routes — ensure Lucide + layout utilities are not purged on Vercel. */
+@source "../*.{js,ts,jsx,tsx}";
+@source "../components/**/*.{js,ts,jsx,tsx}";
+@source "./**/*.{js,ts,jsx,tsx}";
 
 /*
  * PropertyTools AI — UI system (aligned with leadsmartai)

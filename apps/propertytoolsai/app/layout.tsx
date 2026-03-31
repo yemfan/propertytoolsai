@@ -20,9 +20,18 @@ export const metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: "PropertyTools AI",
   description: "Professional real estate calculators for buyers, investors, and agents",
-  /** Tab favicon: `app/icon.png` (copy of `public/images/ptlog64.png`). Apple touch: `pt-logo180`. */
+  /**
+   * Favicons: `app/icon.png` + `app/apple-icon.png` (Next file convention), plus explicit links so
+   * browsers and previews resolve the same URLs as `metadataBase` (Vercel / Linux).
+   */
   icons: {
-    apple: "/images/pt-logo180.png",
+    icon: [
+      { url: "/images/ptlog64.png", sizes: "64x64", type: "image/png" },
+    ],
+    shortcut: "/images/ptlog64.png",
+    apple: [
+      { url: "/images/pt-logo180.png", sizes: "180x180", type: "image/png" },
+    ],
   },
 };
 

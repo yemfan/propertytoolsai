@@ -21,6 +21,7 @@ export default function PropertyToolsLogo({ className, compact, priority }: Prop
       alt="PropertyTools AI"
       width={540}
       height={162}
+      unoptimized
       priority={isPriority}
       className={cn(
         "w-auto object-contain object-left",
