@@ -1,25 +1,32 @@
+import Image from "next/image";
+import { cn } from "@/lib/cn";
+
+type Props = {
+  className?: string;
+  /** Smaller variant for footers / compact nav */
+  compact?: boolean;
+  /** LCP — default true when not compact */
+  priority?: boolean;
+};
+
 /**
- * Text + mark logo — no external PNG (public/images/ptlogo.png was never committed, so /images/* 404’d on Vercel).
+ * PropertyTools AI horizontal lockup — `public/images/ptlogo.png` (same pattern as LeadSmart AI `LeadSmartLogo`).
  */
-export default function PropertyToolsLogo({ className }: { className?: string }) {
+export default function PropertyToolsLogo({ className, compact, priority }: Props) {
+  const isPriority = priority ?? !compact;
+
   return (
-    <span className={`inline-flex items-center gap-2 ${className ?? ""}`}>
-      <svg
-        className="h-[1.1em] w-[1.1em] shrink-0 text-[#0072ce]"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-        <polyline points="9 22 9 12 15 12 15 22" />
-      </svg>
-      <span className="brand-logo-text whitespace-nowrap leading-none tracking-tight text-[#0072ce]">
-        PropertyTools<span className="text-[#ff8c42]"> AI</span>
-      </span>
-    </span>
+    <Image
+      src="/images/ptlogo.png"
+      alt="PropertyTools AI"
+      width={540}
+      height={162}
+      priority={isPriority}
+      className={cn(
+        "w-auto object-contain object-left",
+        compact ? "h-11 max-h-12 sm:h-12" : "h-16 max-h-20 sm:h-20 md:h-24",
+        className
+      )}
+    />
   );
 }

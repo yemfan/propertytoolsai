@@ -20,6 +20,10 @@ export const metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: "PropertyTools AI",
   description: "Professional real estate calculators for buyers, investors, and agents",
+  /** Tab favicon: `app/icon.png` (copy of `public/images/ptlog64.png`). Apple touch: `pt-logo180`. */
+  icons: {
+    apple: "/images/pt-logo180.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
