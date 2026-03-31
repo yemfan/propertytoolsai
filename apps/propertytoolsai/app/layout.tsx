@@ -17,8 +17,8 @@ const fontBody = Roboto({
 });
 
 /**
- * Same pattern as `apps/leadsmartai/app/layout.tsx`: relative `/images/*` icons + `metadataBase`.
- * Tab: `app/icon.png` + `/images/ptlogo64.png`. Apple: `app/apple-icon.png` + `/images/pt-logo180.png`.
+ * Same pattern as `apps/leadsmartai/app/layout.tsx`: `metadata.icons` + `app/icon.png` + `app/apple-icon.png`.
+ * Keep `app/apple-icon.png` in sync with `public/images/pt-logo180.png` (LeadSmart has both app icons).
  */
 export const metadata = {
   metadataBase: new URL(getSiteUrl()),
