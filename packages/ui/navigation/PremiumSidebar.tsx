@@ -119,8 +119,7 @@ export function PremiumSidebar({
     }
     return initial;
   });
-  const storageKey = "premium-sidebar-used-groups";
-  /** Only auto-expand the group for the active route when the URL changes — not when `sections` identity changes (avoids fighting manual collapse). */
+  /** Only auto-expand the group that contains the active route when the URL changes — never open other groups the user collapsed. */
   const lastAutoExpandPath = useRef<string | null>(null);
   const sectionsRef = useRef(sections);
   sectionsRef.current = sections;
@@ -141,46 +140,6 @@ export function PremiumSidebar({
       return next;
     });
   }, [pathname]);
-
-  useLayoutEffect(() => {
-    const used = new Set<string>();
-    try {
-      const raw = window.localStorage.getItem(storageKey);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          for (const value of parsed) {
-            if (typeof value === "string") used.add(value);
-          }
-        }
-      }
-    } catch {
-      // Ignore storage read errors; keep default open behavior only.
-    }
-
-    let changed = false;
-    for (const section of sectionsRef.current) {
-      if (!isNavGroup(section)) continue;
-      if (section.items.some((item) => isLinkActive(pathname, item))) {
-        if (!used.has(section.label)) changed = true;
-        used.add(section.label);
-      }
-    }
-
-    if (changed) {
-      try {
-        window.localStorage.setItem(storageKey, JSON.stringify(Array.from(used)));
-      } catch {
-        // Ignore storage write errors.
-      }
-    }
-
-    setOpenGroups((prev) => {
-      const next = { ...prev };
-      for (const label of used) next[label] = true;
-      return next;
-    });
-  }, [pathname, storageKey]);
 
   const showBranding = branding !== "none";
   const useStretchHeight = height === "stretch";
@@ -379,22 +338,6 @@ export function PremiumSidebar({
                               prefetch={item.prefetch === false ? false : undefined}
                               onClick={() => {
                                 setOpenGroups((prev) => ({ ...prev, [section.label]: true }));
-                                try {
-                                  const raw = window.localStorage.getItem(storageKey);
-                                  const used = new Set<string>();
-                                  if (raw) {
-                                    const parsed = JSON.parse(raw);
-                                    if (Array.isArray(parsed)) {
-                                      for (const value of parsed) {
-                                        if (typeof value === "string") used.add(value);
-                                      }
-                                    }
-                                  }
-                                  used.add(section.label);
-                                  window.localStorage.setItem(storageKey, JSON.stringify(Array.from(used)));
-                                } catch {
-                                  // Ignore storage write errors.
-                                }
                               }}
                               className={cn(
                                 "group/sublink flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
