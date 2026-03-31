@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 /**
  * Current user’s active CRM subscription + feature list (for dashboard / mobile shell).
  */
-export async function GET(_req: Request) {
+export async function GET(req: Request) {
   try {
     const user = await getCurrentUserWithRole(req);
     if (!user) {
