@@ -82,11 +82,17 @@ export async function getAssignedAgentContact(leadId: string): Promise<AssignedA
   };
 }
 
-export async function notifyAgentOfHotLead(params: {
+/** Hot-lead SMS + mobile push to the assigned agent (6h dedupe). */
+export type NotifyAgentOfHotLeadParams = {
   leadId: string;
   reason: string;
   latestMessage: string;
-}) {
+  /** Defaults to SMS pipeline metadata; use `ai_voice` for Twilio Voice hot leads. */
+  source?: "ai_sms" | "ai_voice";
+};
+
+export async function notifyAgentOfHotLead(params: NotifyAgentOfHotLeadParams) {
+  const source = params.source ?? "ai_sms";
   if (await wasHotLeadAgentAlertRecent(params.leadId)) {
     return { notified: false, reason: "recently_notified" as const };
   }
@@ -98,7 +104,7 @@ export async function notifyAgentOfHotLead(params: {
         lead_id: params.leadId,
         agent_id: null,
         event_type: "hot_lead_agent_notify_skipped",
-        metadata: { reason: "no_assigned_agent", source: "ai_sms" },
+        metadata: { reason: "no_assigned_agent", source },
       } as Record<string, unknown>);
     } catch {
       // ignore
@@ -107,7 +113,7 @@ export async function notifyAgentOfHotLead(params: {
   }
 
   const leadPhone = contact.lead.phone_number || contact.lead.phone;
-  const pushTitle = "Hot lead — LeadSmart";
+  const pushTitle = "Hot lead — LeadSmart AI";
   const pushBody = [
     contact.lead.name ? contact.lead.name : `Lead ${params.leadId}`,
     params.reason,
@@ -145,7 +151,7 @@ export async function notifyAgentOfHotLead(params: {
         lead_id: params.leadId,
         agent_id: contact.agent.id,
         event_type: "hot_lead_agent_notify_skipped",
-        metadata: { reason: "no_agent_phone", source: "ai_sms" },
+        metadata: { reason: "no_agent_phone", source },
       } as Record<string, unknown>);
     } catch {
       // ignore
@@ -156,7 +162,7 @@ export async function notifyAgentOfHotLead(params: {
   }
 
   const body = [
-    "Hot lead (LeadSmart)",
+    "Hot lead (LeadSmart AI)",
     contact.lead.name ? `Lead: ${contact.lead.name}` : `Lead ID: ${params.leadId}`,
     leadPhone ? `Phone: ${leadPhone}` : null,
     contact.lead.property_address ? `Property: ${contact.lead.property_address}` : null,
@@ -172,7 +178,7 @@ export async function notifyAgentOfHotLead(params: {
     body,
     agentId: contact.agent.id,
     actorType: "system",
-    actorName: "LeadSmart Alert",
+    actorName: "LeadSmart AI Alert",
   });
 
   try {
@@ -183,7 +189,7 @@ export async function notifyAgentOfHotLead(params: {
       metadata: {
         reason: params.reason,
         agentPhone: agentE164,
-        source: "ai_sms",
+        source,
       },
     } as Record<string, unknown>);
   } catch {

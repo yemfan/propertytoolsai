@@ -1,4 +1,7 @@
-import { notifyAgentOfHotLead } from "@/lib/ai-sms/notifications";
+import {
+  notifyAgentOfHotLead,
+  type NotifyAgentOfHotLeadParams,
+} from "@/lib/ai-sms/notifications";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { escalateHotInboundVoiceCall } from "./hot-call-escalation";
 import { resolveEffectiveAgentId } from "./hot-call-task";
@@ -368,15 +371,11 @@ export async function processGatheredSpeech(params: {
   };
 }
 
-export async function notifyAgentOfHotCall(params: {
-  leadId: string;
-  reason: string;
-  latestMessage: string;
-}) {
+export async function notifyAgentOfHotCall(
+  params: Omit<NotifyAgentOfHotLeadParams, "source">
+) {
   return notifyAgentOfHotLead({
-    leadId: params.leadId,
-    reason: params.reason,
-    latestMessage: params.latestMessage,
+    ...params,
     source: "ai_voice",
   });
 }

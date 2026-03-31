@@ -1,4 +1,7 @@
-import { notifyAgentOfHotLead } from "@/lib/ai-sms/notifications";
+import {
+  notifyAgentOfHotLead,
+  type NotifyAgentOfHotLeadParams,
+} from "@/lib/ai-sms/notifications";
 import { dispatchMobileNeedsHumanPush } from "@/lib/mobile/pushNotificationsService";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createVoiceHotFollowUpTask, resolveEffectiveAgentId } from "./hot-call-task";
@@ -137,13 +140,14 @@ export async function escalateHotInboundVoiceCall(params: HotVoiceEscalationInpu
     }
   }
 
+  const hotNotifyPayload: NotifyAgentOfHotLeadParams = {
+    leadId: params.leadId,
+    reason: params.needsHuman ? "needs_human" : "voice_hot_lead",
+    latestMessage: params.speechResult,
+    source: "ai_voice",
+  };
   const notifyResult = agentId
-    ? await notifyAgentOfHotLead({
-        leadId: params.leadId,
-        reason: params.needsHuman ? "needs_human" : "voice_hot_lead",
-        latestMessage: params.speechResult,
-        source: "ai_voice",
-      })
+    ? await notifyAgentOfHotLead(hotNotifyPayload)
     : { notified: false as const, reason: "no_assigned_agent" as const };
 
   const notifyMeta: Record<string, unknown> = {
