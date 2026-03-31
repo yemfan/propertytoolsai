@@ -93,13 +93,16 @@ export async function POST(req: Request) {
       skipEnrichment: false,
     });
 
+    const leadId = result.action === "skipped" ? result.duplicateLeadId : result.leadId;
+
     await supabaseAdmin
       .from("contact_import_jobs")
       .update({
         status: "completed",
         summary: {
-          lead_id: result.leadId,
+          lead_id: leadId,
           action: result.action,
+          ...(result.action === "skipped" ? { duplicate_score: result.score } : {}),
           finished_at: new Date().toISOString(),
         },
         updated_at: new Date().toISOString(),
@@ -109,7 +112,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       success: true,
-      leadId: result.leadId,
+      leadId,
       action: result.action,
     });
   } catch (e) {
