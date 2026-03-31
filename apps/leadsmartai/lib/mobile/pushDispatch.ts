@@ -120,7 +120,7 @@ export async function dispatchMobileInboundSmsPush(params: {
 
   const name = params.leadName?.trim() || "Lead";
   const preview = params.preview.trim().slice(0, 140);
-  const title = "New SMS — LeadSmart";
+  const title = "New SMS — LeadSmart AI";
   const body = preview ? `${name}: ${preview}` : `${name} sent a text.`;
 
   await sendExpoPushMessages(
@@ -160,7 +160,7 @@ export async function dispatchMobileInboundEmailPush(params: {
 
   const name = params.leadName?.trim() || "Lead";
   const sub = params.subject.trim().slice(0, 80);
-  const title = "New email — LeadSmart";
+  const title = "New email — LeadSmart AI";
   const body = sub ? `${name}: ${sub}` : `${name} sent an email.`;
 
   await sendExpoPushMessages(
@@ -186,7 +186,7 @@ export async function dispatchMobileNeedsHumanPush(params: {
   agentId: string;
   leadId: string;
   leadName: string | null;
-  channel: "sms" | "email";
+  channel: "sms" | "email" | "voice";
   reason: string;
 }): Promise<void> {
   if (mobilePushGloballyDisabled() || process.env.MOBILE_PUSH_NEEDS_HUMAN === "false") return;
@@ -203,7 +203,7 @@ export async function dispatchMobileNeedsHumanPush(params: {
 
   const name = params.leadName?.trim() || "Lead";
   const reason = params.reason.trim().slice(0, 160);
-  const title = "AI needs you — LeadSmart";
+  const title = "AI needs you — LeadSmart AI";
   const body = reason ? `${name} · ${reason}` : `${name}: please review this conversation.`;
 
   await sendExpoPushMessages(
@@ -243,7 +243,7 @@ export async function dispatchMobileReminderPush(params: {
   if (!tokens.length) return;
 
   const name = params.leadName?.trim() || "Lead";
-  const title = "Follow-up due — LeadSmart";
+  const title = "Follow-up due — LeadSmart AI";
   const body = params.hint?.trim()
     ? `${name}: ${params.hint.trim().slice(0, 140)}`
     : `${name}: time to reach out.`;
