@@ -1,7 +1,7 @@
 # Static images
 
-- **`lslogoh.png`** — main header/footer logo (`LeadSmartLogo`). Sync from repo root `Images/LSLogoH.png` when updating art.
-- **`ptlogo.png`** — legacy / unused if LeadSmart AI uses `lslogoh.png` only.
-- **`ls64.png`** — 64×64 favicon (`app/layout.tsx` `metadata.icons.icon` / `shortcut`).
-- **`ls180.png`** — Apple touch icon (`metadata.icons.apple`).
-- **`lslogo.png`** / **`ls32.png`** — optional legacy marks.
+- **`ptlog.png`** — main header/footer logo (`LeadSmartLogo`). Same artwork as **`ptlogo.png`** (duplicate filename for clarity).
+- **`ptlogo.png`** — source horizontal mark; used to generate **`pt-logo64.png`** and **`pt-logo180.png`**.
+- **`pt-logo64.png`** — 64×64 square favicon (letterboxed from `ptlogo.png`); copied to **`app/icon.png`**.
+- **`pt-logo180.png`** — 180×180 Apple touch icon (letterboxed from `ptlogo.png`); `metadata.icons.apple`.
+- **`lslogoh.png`** / **`ls64.png`** / **`ls180.png`** — optional legacy LeadSmart-only assets.
