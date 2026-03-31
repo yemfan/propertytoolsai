@@ -9,6 +9,7 @@ import {
   type SignupPrefillAgent,
 } from "@/lib/hooks/useSignupProfilePrefill";
 import { safeInternalRedirect } from "@/lib/loginUrl";
+import { messageFromUnknownError } from "@/lib/supabaseThrow";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type AgentSignupFormProps = {
@@ -180,7 +181,7 @@ export function AgentSignupForm({
       router.push(after ?? "/dashboard");
       onClose?.();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e ?? "");
+      const msg = messageFromUnknownError(e, "Agent signup failed.");
       if (/rate limit|too many requests/i.test(msg)) {
         setError(
           "Too many emails sent. Wait before retrying, or in Supabase Dashboard → Authentication → Providers → Email: disable “Confirm email” while testing, or connect custom SMTP."

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { messageFromUnknownError } from "@/lib/supabaseThrow";
 
 type AgentPlan = "starter" | "growth" | "elite";
 
@@ -117,10 +118,10 @@ export default function AgentPricingClientPage() {
         body: JSON.stringify({ plan: "starter" }),
       });
 
-      const json = (await res.json()) as { success?: boolean; ok?: boolean; error?: string; redirectTo?: string };
+      const json = (await res.json()) as { success?: boolean; ok?: boolean; error?: unknown; redirectTo?: string };
 
       if (!res.ok || json?.success === false || json?.ok === false) {
-        throw new Error(json?.error || "Failed to activate Starter");
+        throw new Error(messageFromUnknownError(json?.error, "Failed to activate Starter"));
       }
 
       window.location.href = json.redirectTo || "/agent/dashboard";
@@ -143,10 +144,10 @@ export default function AgentPricingClientPage() {
         body: JSON.stringify({ plan, cancel_surface: "agent" }),
       });
 
-      const json = (await res.json()) as { success?: boolean; error?: string; url?: string };
+      const json = (await res.json()) as { success?: boolean; error?: unknown; url?: string };
 
       if (!res.ok) {
-        throw new Error(json?.error || "Failed to create checkout session");
+        throw new Error(messageFromUnknownError(json?.error, "Failed to create checkout session"));
       }
 
       if (!json.url) {

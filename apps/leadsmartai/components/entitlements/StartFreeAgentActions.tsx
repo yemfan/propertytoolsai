@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { messageFromUnknownError } from "@/lib/supabaseThrow";
 
 type Props = {
   backHref: string;
@@ -24,10 +25,10 @@ export function StartFreeAgentActions({ backHref }: Props) {
         credentials: "include",
         body: JSON.stringify({ plan: "starter" }),
       });
-      const json = (await res.json()) as { ok?: boolean; success?: boolean; error?: string };
+      const json = (await res.json()) as { ok?: boolean; success?: boolean; error?: unknown };
       const ok = json.ok ?? json.success;
       if (!res.ok || !ok) {
-        setError(json.error ?? "Could not activate Starter. Try again.");
+        setError(messageFromUnknownError(json.error, "Could not activate Starter. Try again."));
         return;
       }
       router.push("/agent/dashboard");
