@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { markFirstReply } from "@/lib/funnel/funnelAnalytics";
 import { requireMobileAgent } from "@/lib/mobile/auth";
 import { mobileSendEmailReply } from "@/lib/mobile/replyComposerService";
 
