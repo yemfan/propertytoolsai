@@ -17,18 +17,14 @@ const fontBody = Roboto({
 });
 
 /**
- * Same pattern as `apps/leadsmartai/app/layout.tsx`: `metadata.icons` + `app/icon.png` + `app/apple-icon.png`.
- * Keep `app/apple-icon.png` in sync with `public/images/pt-logo180.png` (LeadSmart has both app icons).
+ * Favicons: do not set `metadata.icons` here when `app/icon.png` + `app/apple-icon.png` exist — duplicate
+ * icon entries can confuse browsers. Next injects file-based icons automatically.
+ * Also ship `public/favicon.ico` (PNG bytes) for clients that only request `/favicon.ico`.
  */
 export const metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: "PropertyTools AI",
   description: "Professional real estate calculators for buyers, investors, and agents",
-  icons: {
-    icon: [{ url: "/images/ptlogo64.png", sizes: "64x64", type: "image/png" }],
-    shortcut: "/images/ptlogo64.png",
-    apple: [{ url: "/images/pt-logo180.png", sizes: "180x180", type: "image/png" }],
-  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
