@@ -21,18 +21,10 @@ export const metadata = {
   title: "PropertyTools AI",
   description: "Professional real estate calculators for buyers, investors, and agents",
   /**
-   * Favicons: `app/icon.png` + `app/apple-icon.png` (Next file convention), plus explicit links so
-   * browsers and previews resolve the same URLs as `metadataBase` (Vercel / Linux).
+   * Favicons: use Next file convention only (`app/icon.png`, `app/apple-icon.png` — copies of
+   * `public/images/ptlog64.png` and `pt-logo180.png`). Avoid duplicate `metadata.icons` links that
+   * some browsers resolve incorrectly against `metadataBase`.
    */
-  icons: {
-    icon: [
-      { url: "/images/ptlog64.png", sizes: "64x64", type: "image/png" },
-    ],
-    shortcut: "/images/ptlog64.png",
-    apple: [
-      { url: "/images/pt-logo180.png", sizes: "180x180", type: "image/png" },
-    ],
-  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
