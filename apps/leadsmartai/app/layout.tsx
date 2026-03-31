@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { Montserrat, Roboto } from "next/font/google";
 import AuthProvider from "@/components/AuthProvider";
 import AppShell from "@/components/AppShell";
+import { getSiteUrl } from "@/lib/siteUrl";
 
 const fontHeading = Montserrat({
   subsets: ["latin"],
@@ -17,12 +18,17 @@ const fontBody = Roboto({
 });
 
 export const metadata = {
-  metadataBase: new URL("https://leadsmart-ai.com"),
+  metadataBase: new URL(getSiteUrl()),
   title: "LeadSmart AI",
   description: "Professional real estate calculators for buyers, investors, and agents",
-  /** Tab favicon: `app/icon.png` (copy of `public/images/lslog64.png`). Apple touch: `ls180`. */
+  /**
+   * Tab: `app/icon.png` + `/images/lslog64.png`. Apple: `app/apple-icon.png` + `/images/ls180.png`.
+   * Explicit entries ensure correct absolute URLs with `metadataBase` on Vercel previews.
+   */
   icons: {
-    apple: "/images/ls180.png",
+    icon: [{ url: "/images/lslog64.png", sizes: "64x64", type: "image/png" }],
+    shortcut: "/images/lslog64.png",
+    apple: [{ url: "/images/ls180.png", sizes: "180x180", type: "image/png" }],
   },
 };
 
