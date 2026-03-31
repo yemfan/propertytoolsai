@@ -11,7 +11,7 @@
         "image": "sdk-52"
       },
       "env": {
-        "NODE_OPTIONS": "--max-old-space-size=8192",
+        "NODE_OPTIONS": "--max-old-space-size=12288",
         "EAS_NO_FROZEN_LOCKFILE": "1"
       }
     },

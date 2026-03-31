@@ -9,6 +9,10 @@
 #   packages/shared       → types, constants, utils
 #   packages/api-client   → typed fetch + DTO helpers
 #
+# Expo EAS + React Native: isolated (default) pnpm installs often fail on cloud builders;
+# hoisted linker matches Expo monorepo guidance (see expo.dev/guides/monorepos).
+nodeLinker: hoisted
+
 packages:
   - "apps/*"
   - "packages/*"
