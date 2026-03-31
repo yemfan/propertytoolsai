@@ -30,7 +30,11 @@
     "production": {
       "extends": "base",
       "distribution": "store",
-      "developmentClient": false
+      "developmentClient": false,
+      "ios": {
+        "image": "sdk-52",
+        "autoIncrement": true
+      }
     }
   },
   "submit": {
