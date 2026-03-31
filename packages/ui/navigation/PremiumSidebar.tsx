@@ -159,11 +159,11 @@ export function PremiumSidebar({
         className
       )}
     >
-      {/* Header: full branding (default) or slim collapse-only row when branding is hidden */}
+      {/* Header: app name + workspace when branding is shown; no header row when branding is hidden (nav is flush). */}
       {showBranding ? (
         <div
           className={cn(
-            "flex h-16 w-full shrink-0 items-center justify-between gap-2 border-b border-slate-200/80 bg-white/80 px-4 text-left backdrop-blur-sm",
+            "flex h-16 w-full shrink-0 items-center border-b border-slate-200/80 bg-white/80 px-4 text-left backdrop-blur-sm",
             "transition-colors"
           )}
         >
@@ -185,37 +185,8 @@ export function PremiumSidebar({
               </div>
             )}
           </div>
-          <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-500 shadow-sm"
-            aria-hidden
-          >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" strokeWidth={2} />
-            ) : (
-              <ChevronDown className="h-4 w-4" strokeWidth={2} />
-            )}
-          </span>
         </div>
-      ) : (
-        <div
-          className={cn(
-            "flex h-11 w-full shrink-0 items-center border-b border-slate-200/80 bg-white/80 px-2 backdrop-blur-sm",
-            collapsed ? "justify-center" : "justify-end",
-            "transition-colors"
-          )}
-        >
-          <span
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-500 shadow-sm"
-            aria-hidden
-          >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" strokeWidth={2} />
-            ) : (
-              <ChevronDown className="h-4 w-4" strokeWidth={2} />
-            )}
-          </span>
-        </div>
-      )}
+      ) : null}
 
       {/* Nav */}
       <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 [scrollbar-gutter:stable] [scrollbar-color:rgba(148,163,184,0.5)_transparent]">
