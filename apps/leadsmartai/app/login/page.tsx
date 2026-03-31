@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { sendPasswordResetEmail } from "@/lib/auth/sendPasswordResetEmail";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { safeInternalRedirect } from "@/lib/loginUrl";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
@@ -35,6 +36,8 @@ function LoginPageInner() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetSending, setResetSending] = useState(false);
+  const [resetNotice, setResetNotice] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -129,6 +132,22 @@ function LoginPageInner() {
     }
   }
 
+  async function handleForgotPassword() {
+    setError(null);
+    setResetNotice(null);
+    setResetSending(true);
+    try {
+      const result = await sendPasswordResetEmail(email);
+      if (result.ok === false) {
+        setError(result.message);
+        return;
+      }
+      setResetNotice("Check your email for a link to reset your password.");
+    } finally {
+      setResetSending(false);
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-5">
@@ -162,7 +181,17 @@ function LoginPageInner() {
             />
           </div>
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-700">Password</label>
+            <div className="flex items-center justify-between gap-2">
+              <label className="block text-xs font-medium text-gray-700">Password</label>
+              <button
+                type="button"
+                onClick={() => void handleForgotPassword()}
+                disabled={loading || resetSending}
+                className="text-[11px] font-semibold text-blue-700 hover:text-blue-800 disabled:opacity-50"
+              >
+                {resetSending ? "Sending…" : "Forgot password?"}
+              </button>
+            </div>
             <input
               type="password"
               value={password}
@@ -172,6 +201,11 @@ function LoginPageInner() {
               required
             />
           </div>
+          {resetNotice ? (
+            <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-medium text-emerald-900">
+              {resetNotice}
+            </p>
+          ) : null}
           {error && (
             <p className="text-[11px] text-red-600 font-medium whitespace-pre-line">
               {error}

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { sendPasswordResetEmail } from "@/lib/auth/sendPasswordResetEmail";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
@@ -45,6 +46,8 @@ export default function AuthModal({
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetSending, setResetSending] = useState(false);
+  const [resetNotice, setResetNotice] = useState<string | null>(null);
   const [signupStep, setSignupStep] = useState<SignupStep>("form");
 
   const header = useMemo(
@@ -68,6 +71,7 @@ export default function AuthModal({
     }
     setMode(initialMode ?? "login");
     setError(null);
+    setResetNotice(null);
     setSignupRole("");
     setPhone("");
     setSignupStep("form");
@@ -113,6 +117,22 @@ export default function AuthModal({
   }, [open, loading, onClose]);
 
   if (!open) return null;
+
+  async function handleForgotPassword() {
+    setError(null);
+    setResetNotice(null);
+    setResetSending(true);
+    try {
+      const result = await sendPasswordResetEmail(email);
+      if (result.ok === false) {
+        setError(result.message);
+        return;
+      }
+      setResetNotice("Check your email for a link to reset your password.");
+    } finally {
+      setResetSending(false);
+    }
+  }
 
   function finishAndCloseAgentStartFree() {
     setSignupStep("form");
@@ -405,9 +425,19 @@ export default function AuthModal({
             ) : null}
 
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-slate-700">
-                Password
-              </label>
+              <div className="flex items-center justify-between gap-2">
+                <label className="block text-xs font-medium text-slate-700">Password</label>
+                {mode === "login" ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleForgotPassword()}
+                    disabled={loading || resetSending}
+                    className="text-[11px] font-semibold text-blue-700 hover:text-blue-800 disabled:opacity-50"
+                  >
+                    {resetSending ? "Sending…" : "Forgot password?"}
+                  </button>
+                ) : null}
+              </div>
               <input
                 type="password"
                 value={password}
@@ -419,6 +449,12 @@ export default function AuthModal({
                 required
               />
             </div>
+
+            {resetNotice ? (
+              <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-medium text-emerald-900">
+                {resetNotice}
+              </p>
+            ) : null}
 
             {error ? (
               <p className="text-[11px] text-red-600 font-medium whitespace-pre-line">

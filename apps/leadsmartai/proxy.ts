@@ -167,5 +167,6 @@ export const config = {
     "/propertytools/dashboard/:path*",
     "/login",
     "/signup",
+    "/auth/:path*",
   ],
 };
