@@ -12,6 +12,7 @@
       "bundleIdentifier": "ai.leadsmart.mobile",
       "supportsTablet": true,
       "infoPlist": {
+        "CFBundleDisplayName": "LeadSmart",
         "ITSAppUsesNonExemptEncryption": false,
         "LSApplicationQueriesSchemes": ["tel", "sms", "mailto"]
       }
