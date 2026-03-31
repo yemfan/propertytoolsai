@@ -5,9 +5,10 @@
   },
   "build": {
     "base": {
-      "node": "20.19.4",
-      "corepack": true,
-      "pnpm": "9.15.5",
+      "corepack": false,
+      "ios": {
+        "image": "sdk-52"
+      },
       "env": {
         "NODE_OPTIONS": "--max-old-space-size=8192"
       }

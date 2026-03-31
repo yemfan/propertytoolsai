@@ -1,11 +1,14 @@
 /**
- * EAS Build runs this before `pnpm install`. Ensures Corepack is on and that the
- * monorepo root (pnpm-workspace.yaml + lockfile) is present in the upload — if
- * those are missing, EAS can mis-detect the package manager or fail workspace installs.
+ * EAS Build runs this before package install. Verifies the monorepo root
+ * (pnpm-workspace.yaml + lockfile) is in the archive — if those are missing,
+ * EAS can mis-detect the package manager or fail workspace installs.
+ *
+ * We intentionally do NOT run `corepack enable` here: forcing Corepack + a
+ * pinned pnpm in eas.json often fails on EAS with "Failed to install pnpm".
+ * The sdk-52 iOS image already ships a compatible pnpm (see Expo infra docs).
  *
  * @see https://github.com/expo/eas-cli/issues/2978
  */
-const { execSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -17,16 +20,10 @@ function mustExist(relFromRoot, label) {
   if (!fs.existsSync(abs)) {
     console.error(`[eas-pre-install] Missing ${label}: ${abs}`);
     console.error(
-      "[eas-pre-install] Ensure the Expo project uses the git repo root (or full monorepo) in the archive — pnpm-workspace.yaml and pnpm-lock.yaml must not be excluded."
+      "[eas-pre-install] Ensure pnpm-workspace.yaml and pnpm-lock.yaml are committed and not excluded by .easignore."
     );
     process.exit(1);
   }
-}
-
-try {
-  execSync("corepack enable", { stdio: "inherit", env: process.env });
-} catch (e) {
-  console.warn("[eas-pre-install] corepack enable warning (non-fatal):", e?.message || e);
 }
 
 mustExist("pnpm-workspace.yaml", "pnpm workspace manifest");
