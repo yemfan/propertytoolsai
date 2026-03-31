@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
+import PropertyToolsLogo from "@/components/brand/PropertyToolsLogo";
 
 const navItems = [
   { href: "/", label: "Home" },
@@ -23,14 +23,7 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center py-2">
           <Link href="/" className="flex items-center text-brand-primary hover:text-[#005ca8]">
-            <Image
-              src="/images/ptlogo.png"
-              alt="PropertyTools AI logo"
-              width={540}
-              height={162}
-              className="h-12 md:h-14 w-auto rounded object-contain"
-              priority
-            />
+            <PropertyToolsLogo className="text-2xl md:text-3xl" />
           </Link>
 
           <button

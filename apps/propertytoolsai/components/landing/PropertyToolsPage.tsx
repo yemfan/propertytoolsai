@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useAccess } from "@/components/AccessProvider";
 import { useAuth } from "@/components/AuthProvider";
@@ -9,6 +8,7 @@ import AccountMenu from "@/components/layout/AccountMenu";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import PropertyToolsLogo from "@/components/brand/PropertyToolsLogo";
 import { BrandCheck } from "@/components/brand/BrandCheck";
 import { FeatureHighlightCard } from "@/components/ui/FeatureHighlightCard";
 import { trackEvent } from "@/lib/marketing/trackEvent";
@@ -100,14 +100,7 @@ export default function PropertyToolsPage() {
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link href="/" className="flex shrink-0 items-center">
-            <Image
-              src="/images/ptlogo.png"
-              alt="PropertyTools AI"
-              width={540}
-              height={162}
-              className="h-9 w-auto md:h-10"
-              priority
-            />
+            <PropertyToolsLogo className="text-xl md:text-2xl" />
           </Link>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {headerLoading ? (
@@ -267,7 +260,7 @@ export default function PropertyToolsPage() {
         </p>
       </section>
 
-      {/* AI VALUE — same top-accent card style as LeadSmart “Close More Deals with Less Work” */}
+      {/* AI VALUE — same top-accent card style as LeadSmart AI “Close More Deals with Less Work” */}
       <section id="ai-value" className="px-4 py-12 text-center sm:px-6 md:py-16">
         <h2 className="font-heading text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
           Make Smarter Decisions with AI

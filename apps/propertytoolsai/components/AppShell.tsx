@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -12,6 +11,7 @@ import { hasPremiumToolAccess } from "@/lib/access";
 import { getNavSectionsForRole } from "@/lib/auth/navByRole";
 import { parseUserRole, type UserRole } from "@/lib/auth/roles";
 import { stripUnlockPremiumNavItem } from "@/lib/nav/stripUnlockPremiumNav";
+import PropertyToolsLogo from "@/components/brand/PropertyToolsLogo";
 import { propertyToolsNav } from "@/nav.config";
 
 const APP_NAME = "PropertyTools AI";
@@ -36,14 +36,7 @@ function PropertyToolsTopChrome({
           href="/"
           className="flex min-w-0 shrink-0 items-center rounded-2xl p-1 outline-none transition hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
         >
-          <Image
-            src="/images/ptlogo.png"
-            alt={APP_NAME}
-            width={200}
-            height={60}
-            className="h-8 w-auto max-w-[min(200px,55vw)] object-contain object-left sm:h-9"
-            priority
-          />
+          <PropertyToolsLogo className="max-w-[min(220px,55vw)] text-lg sm:text-xl" />
         </Link>
       }
       searchSlot={null}
