@@ -20,10 +20,9 @@ export const metadata = {
   metadataBase: new URL("https://leadsmart-ai.com"),
   title: "LeadSmart AI",
   description: "Professional real estate calculators for buyers, investors, and agents",
+  /** Tab favicon: `app/icon.png` (copy of `public/images/ls64.png`). Apple touch: `ls180`. */
   icons: {
-    icon: "/images/app-icon.png",
-    apple: "/images/app-icon.png",
-    shortcut: "/images/app-icon.png",
+    apple: "/images/ls180.png",
   },
 };
 
