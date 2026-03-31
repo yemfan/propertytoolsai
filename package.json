@@ -9,7 +9,7 @@
   "scripts": {
     "eas-build-pre-install": "node scripts/eas-chmod-workspaces.mjs",
     "dev": "turbo dev",
-    "dev:propertytoolsai": "pnpm --filter propertytoolsai dev -- --port 3001",
+    "dev:propertytoolsai": "cross-env PORT=3001 pnpm --filter propertytoolsai dev -- --port 3001",
     "dev:leadsmartai": "pnpm --filter leadsmartai dev -- --port 3000",
     "dev:leadsmart": "pnpm --filter leadsmartai dev -- --port 3000",
     "dev:mobile": "pnpm --filter leadsmart-mobile start",
