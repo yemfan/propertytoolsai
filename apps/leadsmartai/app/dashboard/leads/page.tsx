@@ -129,37 +129,30 @@ export default function LeadsPage() {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const params = new URLSearchParams();
-        if (quickFilter) params.set("filter", quickFilter);
-        const res = await fetch(`/api/dashboard/leads?${params.toString()}`);
-        const json = (await res.json().catch(() => ({}))) as any;
-        if (!res.ok || json?.ok === false) {
-          throw new Error(json?.error ?? "Failed to load leads.");
-        }
-        if (!cancelled) {
-          setLeads((json.leads ?? []) as Lead[]);
-        }
-      } catch (e: any) {
-        if (!cancelled) {
-          setError(e?.message ?? "Something went wrong while loading leads.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+  const reloadLeads = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      if (quickFilter) params.set("filter", quickFilter);
+      const res = await fetch(`/api/dashboard/leads?${params.toString()}`);
+      const json = (await res.json().catch(() => ({}))) as any;
+      if (!res.ok || json?.ok === false) {
+        throw new Error(json?.error ?? "Failed to load leads.");
       }
+      setLeads((json.leads ?? []) as Lead[]);
+    } catch (e: any) {
+      setError(e?.message ?? "Something went wrong while loading leads.");
+    } finally {
+      setLoading(false);
     }
-    load();
-    return () => {
-      cancelled = true;
-    };
   }, [quickFilter]);
+
+  useEffect(() => {
+    void reloadLeads();
+  }, [reloadLeads]);
+
+  const showIntakeActions = true;
 
   const sourceOptions = useMemo(() => {
     const set = new Set<string>();

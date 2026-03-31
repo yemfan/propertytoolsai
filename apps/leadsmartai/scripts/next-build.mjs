@@ -14,6 +14,22 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(scriptDir, "..");
 const pkg = JSON.parse(readFileSync(path.join(appRoot, "package.json"), "utf8"));
 
+/** Monorepo root `prisma/schema.prisma` — without `prisma generate`, `@prisma/client` has no enums/models (TS fails on Vercel). */
+const monorepoRoot = path.resolve(appRoot, "..", "..");
+const prismaSchemaPath = path.join(monorepoRoot, "prisma", "schema.prisma");
+if (existsSync(prismaSchemaPath)) {
+  console.log("[next-build] prisma generate", prismaSchemaPath);
+  const gen = spawnSync(
+    "pnpm",
+    ["exec", "prisma", "generate", `--schema=${prismaSchemaPath}`],
+    { cwd: monorepoRoot, stdio: "inherit", shell: true, env: process.env },
+  );
+  if (gen.status !== 0) {
+    console.error("[next-build] prisma generate failed");
+    process.exit(gen.status ?? 1);
+  }
+}
+
 const require = createRequire(path.join(appRoot, "package.json"));
 let nextBin;
 try {

@@ -211,7 +211,7 @@ async function main() {
   const supabase = createClient(url, key);
 
   const { createImportJobFromCsv, previewImportJob, finalizeImportJob } = await import(
-    "../lib/contact-intake/importJobService.ts"
+    "../lib/contact-intake/importJobService"
   );
 
   console.log("— Schema: contact import + leads intake columns\n");
