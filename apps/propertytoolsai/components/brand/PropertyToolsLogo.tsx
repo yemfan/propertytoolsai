@@ -1,27 +1,29 @@
 import Image from "next/image";
 import { cn } from "@/lib/cn";
-import logoSrc from "./ptlogo.png";
 
 type Props = {
   className?: string;
   /** Smaller variant for footers / compact nav */
   compact?: boolean;
+  /** LCP — default true when not compact */
+  priority?: boolean;
 };
 
 /**
- * Horizontal lockup — bundled with the app (`components/brand/ptlogo.png`) so it is emitted under
- * `/_next/static/media/` and does not depend on `public/images` (which can 404 on some deploys).
+ * PropertyTools AI horizontal lockup — `public/images/ptlogo.png` (same pattern as LeadSmart `LeadSmartLogo`).
  */
-export default function PropertyToolsLogo({ className, compact }: Props) {
+export default function PropertyToolsLogo({ className, compact, priority }: Props) {
+  const isPriority = priority ?? !compact;
+
   return (
     <Image
-      src={logoSrc}
+      src="/images/ptlogo.png"
       alt="PropertyTools AI"
       width={540}
       height={162}
-      priority
+      priority={isPriority}
       className={cn(
-        "h-auto w-auto max-w-full object-contain object-left",
+        "w-auto max-w-full object-contain object-left",
         compact ? "h-11 max-h-12 sm:h-12" : "h-16 max-h-20 sm:h-20 md:h-24",
         className
       )}

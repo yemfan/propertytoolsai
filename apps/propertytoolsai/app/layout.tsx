@@ -17,14 +17,18 @@ const fontBody = Roboto({
 });
 
 /**
- * Favicons: use Next file convention only (`app/icon.png`, `app/apple-icon.png`).
- * Do not point `metadata.icons` at `/images/*` — production has returned 404 for `public/images`
- * while `app/icon.png` routes still work (deploy/static output issue).
+ * Same pattern as `apps/leadsmartai/app/layout.tsx`: relative `/images/*` icons + `metadataBase`.
+ * Tab: `app/icon.png` + `/images/ptlogo64.png`. Apple: `app/apple-icon.png` + `/images/pt-logo180.png`.
  */
 export const metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: "PropertyTools AI",
   description: "Professional real estate calculators for buyers, investors, and agents",
+  icons: {
+    icon: [{ url: "/images/ptlogo64.png", sizes: "64x64", type: "image/png" }],
+    shortcut: "/images/ptlogo64.png",
+    apple: [{ url: "/images/pt-logo180.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
