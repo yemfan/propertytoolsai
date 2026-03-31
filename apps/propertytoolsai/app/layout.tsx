@@ -16,21 +16,25 @@ const fontBody = Roboto({
   weight: ["400", "500", "700"],
 });
 
+const siteOrigin = getSiteUrl();
+
+/** Absolute asset URLs — avoids relying on `metadataBase` resolution for icons (more reliable with www + Vercel). */
+function absPath(path: string): string {
+  return new URL(path, `${siteOrigin}/`).href;
+}
+
 /**
- * Same pattern as `apps/leadsmartai/app/layout.tsx`: Metadata API only (no manual `<head>`).
- * Manual `<head>` in the App Router is easy for Next to drop or merge incorrectly.
- *
- * `metadataBase` uses `NEXT_PUBLIC_SITE_URL` at **build** time — change the env in Vercel, then **redeploy**
- * so the client bundle and metadata pick it up.
+ * Same pattern as LeadSmart (`metadata` + `icons`). Icon URLs are absolute so they match the public
+ * domain even when `metadataBase` handling differs between Next versions or deploy modes.
  */
 export const metadata = {
-  metadataBase: new URL(getSiteUrl()),
+  metadataBase: new URL(siteOrigin),
   title: "PropertyTools AI",
   description: "Professional real estate calculators for buyers, investors, and agents",
   icons: {
-    icon: [{ url: "/images/ptlogo64.png", sizes: "64x64", type: "image/png" }],
-    shortcut: "/images/ptlogo64.png",
-    apple: [{ url: "/images/pt-logo180.png", sizes: "180x180", type: "image/png" }],
+    icon: [{ url: absPath("/images/ptlogo64.png"), sizes: "64x64", type: "image/png" }],
+    shortcut: absPath("/images/ptlogo64.png"),
+    apple: [{ url: absPath("/images/pt-logo180.png"), sizes: "180x180", type: "image/png" }],
   },
 };
 

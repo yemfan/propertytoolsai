@@ -8,15 +8,6 @@ const monorepoRoot = path.join(__dirname, "../..");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@repo/ui", "@leadsmart/shared", "@leadsmart/api-client"],
-  /** Nested URL aliases — prefer real route files under `app/api/...` when present. */
-  async rewrites() {
-    return {
-      beforeFiles: [
-        // Browsers request /favicon.ico even when <link rel="icon"> points at a PNG.
-        { source: "/favicon.ico", destination: "/images/ptlogo64.png" },
-      ],
-    };
-  },
   /** Nav-friendly URLs → existing tool routes */
   async redirects() {
     return [

@@ -27,6 +27,14 @@ export function getSiteUrl(): string {
   if (fromEnv) {
     return normalizeOrigin(fromEnv, DEFAULT_ORIGIN);
   }
+  /**
+   * Production on Vercel without `NEXT_PUBLIC_SITE_URL` would otherwise use `VERCEL_URL` (*.vercel.app).
+   * Metadata/icons then point at the deployment host while users hit the custom domain — favicons and OG
+   * URLs look wrong or fail. Preview deployments still use `VERCEL_URL` below.
+   */
+  if (process.env.VERCEL_ENV === "production") {
+    return DEFAULT_ORIGIN;
+  }
   const vercel = process.env.VERCEL_URL?.trim();
   if (vercel) {
     return normalizeOrigin(`https://${vercel}`, DEFAULT_ORIGIN);
