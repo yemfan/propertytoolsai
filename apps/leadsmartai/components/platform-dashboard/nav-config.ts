@@ -1,12 +1,11 @@
 import {
   BarChart3,
-  CreditCard,
   GitCompare,
+  Headphones,
   LayoutDashboard,
   LineChart,
   MessageSquare,
   Settings,
-  Shield,
   Users,
   Wrench,
 } from "lucide-react";
@@ -42,9 +41,8 @@ const support: PlatformNavSection[] = [
   {
     items: [
       { href: "/support/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/admin/support", label: "Tickets", icon: Shield },
+      { href: "/admin/support", label: "Support inbox", icon: Headphones },
       { href: "/dashboard/support", label: "Conversations", icon: MessageSquare },
-      { href: "/admin/support", label: "Issues", icon: Wrench },
       { href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
     ],
   },
@@ -53,10 +51,8 @@ const support: PlatformNavSection[] = [
 const admin: PlatformNavSection[] = [
   {
     items: [
-      { href: "/admin/platform-overview", label: "Platform Overview", icon: LayoutDashboard },
-      { href: "/admin/billing", label: "Billing", icon: CreditCard },
+      { href: "/admin/support", label: "Support inbox", icon: Headphones },
       { href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
-      { href: "/admin/support", label: "System Logs", icon: Shield },
       { href: "/dashboard/settings", label: "Settings", icon: Settings },
     ],
   },

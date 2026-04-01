@@ -1,5 +1,5 @@
-import { FounderDashboardClient } from "./FounderDashboardClient";
+import { redirect } from "next/navigation";
 
-export default function FounderAnalyticsPage() {
-  return <FounderDashboardClient />;
+export default function FounderAnalyticsRedirectPage() {
+  redirect("/admin/support");
 }
