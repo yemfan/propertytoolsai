@@ -15,14 +15,34 @@ import { useLeadsmartSession } from "../../lib/session/LeadsmartSessionContext";
 
 export default function OnboardingLoginScreen() {
   const router = useRouter();
-  const { signInWithToken, onboardingComplete } = useLeadsmartSession();
+  const { signInWithEmailPassword, signInWithToken, onboardingComplete } = useLeadsmartSession();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [token, setToken] = useState("");
+  const [showTokenFallback, setShowTokenFallback] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const apiUrl = getLeadsmartApiBaseUrl();
 
-  const onSubmit = async () => {
+  async function onSubmitEmailPassword() {
+    setError(null);
+    setBusy(true);
+    try {
+      await signInWithEmailPassword(email, password);
+      if (onboardingComplete) {
+        router.replace("/(tabs)/inbox");
+      } else {
+        router.replace("/(onboarding)/notifications");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sign-in failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onSubmitToken() {
     setError(null);
     setBusy(true);
     try {
@@ -37,7 +57,7 @@ export default function OnboardingLoginScreen() {
     } finally {
       setBusy(false);
     }
-  };
+  }
 
   return (
     <KeyboardAvoidingView
@@ -49,45 +69,111 @@ export default function OnboardingLoginScreen() {
           <Text style={s.kicker}>Sign in</Text>
           <Text style={s.title}>Connect your account</Text>
           <Text style={s.body}>
-            Paste the same Supabase JWT you use with LeadSmart AI web (Bearer token for mobile API). Your API
-            base URL must be set in{" "}
-            <Text style={{ fontWeight: "700" }}>EXPO_PUBLIC_LEADSMART_API_URL</Text>.
+            Use the same email and password as LeadSmart AI web. Your session is stored on this device; the app sends
+            your Supabase access token to the LeadSmart API automatically.
           </Text>
           {!apiUrl ? (
             <Text style={s.error}>Missing API URL — set EXPO_PUBLIC_LEADSMART_API_URL in .env or app config.</Text>
           ) : (
             <Text style={s.muted} numberOfLines={2}>
-              Endpoint: {apiUrl}
+              API: {apiUrl}
             </Text>
           )}
-          <TextInput
-            style={s.input}
-            placeholder="Paste JWT access token"
-            placeholderTextColor="#94a3b8"
-            value={token}
-            onChangeText={setToken}
-            autoCapitalize="none"
-            autoCorrect={false}
-            multiline
-            editable={!busy}
-            accessibilityLabel="Access token"
-          />
+
+          {!showTokenFallback ? (
+            <>
+              <TextInput
+                style={s.input}
+                placeholder="Email"
+                placeholderTextColor="#94a3b8"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                editable={!busy}
+                accessibilityLabel="Email"
+              />
+              <TextInput
+                style={s.input}
+                placeholder="Password"
+                placeholderTextColor="#94a3b8"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!busy}
+                accessibilityLabel="Password"
+              />
+            </>
+          ) : (
+            <>
+              <Text style={s.body}>
+                Paste a JWT only for troubleshooting or if email sign-in is unavailable. Get it from the browser after
+                signing in at LeadSmart AI (session access token).
+              </Text>
+              <TextInput
+                style={s.input}
+                placeholder="Paste JWT access token"
+                placeholderTextColor="#94a3b8"
+                value={token}
+                onChangeText={setToken}
+                autoCapitalize="none"
+                autoCorrect={false}
+                multiline
+                editable={!busy}
+                accessibilityLabel="Access token"
+              />
+            </>
+          )}
+
           {error ? <Text style={s.error}>{error}</Text> : null}
+
+          <Pressable
+            onPress={() => {
+              setShowTokenFallback((v) => !v);
+              setError(null);
+            }}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel={showTokenFallback ? "Use email sign-in" : "Use token instead"}
+          >
+            <Text style={[s.muted, { textDecorationLine: "underline", marginTop: 8 }]}>
+              {showTokenFallback ? "← Sign in with email" : "Advanced: sign in with token"}
+            </Text>
+          </Pressable>
         </View>
         <View>
-          <Pressable
-            style={[s.primaryBtn, (busy || !token.trim()) && { opacity: 0.5 }]}
-            onPress={() => void onSubmit()}
-            disabled={busy || !token.trim()}
-            accessibilityRole="button"
-            accessibilityLabel="Sign in"
-          >
-            {busy ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={s.primaryBtnText}>Sign in</Text>
-            )}
-          </Pressable>
+          {!showTokenFallback ? (
+            <Pressable
+              style={[s.primaryBtn, (busy || !email.trim() || !password) && { opacity: 0.5 }]}
+              onPress={() => void onSubmitEmailPassword()}
+              disabled={busy || !email.trim() || !password}
+              accessibilityRole="button"
+              accessibilityLabel="Sign in"
+            >
+              {busy ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={s.primaryBtnText}>Sign in</Text>
+              )}
+            </Pressable>
+          ) : (
+            <Pressable
+              style={[s.primaryBtn, (busy || !token.trim()) && { opacity: 0.5 }]}
+              onPress={() => void onSubmitToken()}
+              disabled={busy || !token.trim()}
+              accessibilityRole="button"
+              accessibilityLabel="Sign in with token"
+            >
+              {busy ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={s.primaryBtnText}>Continue with token</Text>
+              )}
+            </Pressable>
+          )}
         </View>
       </View>
     </KeyboardAvoidingView>

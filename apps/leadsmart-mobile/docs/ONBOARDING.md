@@ -7,7 +7,7 @@
 | `/` | `app/index.tsx` | Session gate (loading → redirect) |
 | `/(onboarding)/welcome` | `app/(onboarding)/welcome.tsx` | Welcome + CTA |
 | `/(onboarding)/value` | `app/(onboarding)/value.tsx` | Two horizontal swipe value slides + dots |
-| `/(onboarding)/login` | `app/(onboarding)/login.tsx` | Paste Supabase JWT; validates via `GET /api/mobile/leads` |
+| `/(onboarding)/login` | `app/(onboarding)/login.tsx` | Email/password (Supabase `signInWithPassword`); optional **Advanced** paste-JWT; validates via `GET /api/mobile/leads` |
 | `/(onboarding)/notifications` | `app/(onboarding)/notifications.tsx` | Request notification permission or skip |
 | `/(tabs)/inbox` | `app/(tabs)/inbox.tsx` | Post-onboarding home |
 
@@ -16,7 +16,8 @@ Stack layout: `app/(onboarding)/_layout.tsx` (header hidden). Root stack registe
 ## 2. Routing logic
 
 - **`LeadsmartSessionProvider`** (`lib/session/LeadsmartSessionContext.tsx`) hydrates:
-  - JWT from **SecureStore** (native) / **localStorage** (web)
+  - Supabase session from **AsyncStorage** via `getSupabaseAuthClient()` (`lib/supabaseAuthClient.ts`) — access token refresh on `TOKEN_REFRESHED`
+  - Legacy JWT from **SecureStore** if no Supabase session (older paste-only installs)
   - Onboarding flag from **AsyncStorage** (`leadsmart_onboarding_v1_complete`)
 - **`getLeadsmartAccessToken()`** (`lib/env.ts`) checks **in-memory cache** first (set on hydrate / login), then env/extra fallbacks for dev.
 - **`app/index.tsx`**:
@@ -24,7 +25,7 @@ Stack layout: `app/(onboarding)/_layout.tsx` (header hidden). Root stack registe
   2. If `!onboardingComplete` → `Redirect` to `/(onboarding)/welcome`
   3. If no `accessToken` → `/(onboarding)/login`
   4. Else → `/(tabs)/inbox`
-- **Login**: after successful `signInWithToken`, if `onboardingComplete` → **Inbox**; else → **Notifications** (first run).
+- **Login**: after successful `signInWithEmailPassword` or `signInWithToken`, if `onboardingComplete` → **Inbox**; else → **Notifications** (first run).
 - **Notifications**: `markOnboardingComplete()` then `router.replace("/(tabs)/inbox")` (for both Enable and Not now).
 
 ## 3. Basic styles

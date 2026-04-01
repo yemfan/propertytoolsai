@@ -94,7 +94,7 @@ function requireConfig(): MobileApiFailure | MobileConfig {
       ok: false,
       status: 0,
       message:
-        "Set EXPO_PUBLIC_LEADSMART_ACCESS_TOKEN (Supabase JWT from a signed-in LeadSmart AI session).",
+        "Sign in on the app (email/password) or set EXPO_PUBLIC_LEADSMART_ACCESS_TOKEN for dev. The app uses your Supabase session JWT for API calls.",
     };
   }
   return { base, token };
