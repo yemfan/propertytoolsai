@@ -53,7 +53,7 @@ export function StartFreeAgentActions({ backHref }: Props) {
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-60"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-          Start Free as Agent (Starter)
+          Activate Starter (free)
           {!loading ? <ArrowRight className="h-4 w-4" aria-hidden /> : null}
         </button>
         <Link

@@ -11,6 +11,7 @@ import {
 import { safeInternalRedirect } from "@/lib/loginUrl";
 import { messageFromUnknownError } from "@/lib/supabaseThrow";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { START_FREE_AS_AGENT_LABEL } from "@/lib/auth/startFreeAgentMarketing";
 
 type AgentSignupFormProps = {
   /** Full page vs compact card (dialog). */
@@ -207,7 +208,9 @@ export function AgentSignupForm({
       }
     >
       <div className="space-y-1 text-center">
-        <h1 className="text-xl font-bold text-gray-900">Start Free as Agent</h1>
+        <h1 className="text-xl font-bold text-gray-900">
+          {hasSession ? "Complete agent setup" : START_FREE_AS_AGENT_LABEL}
+        </h1>
         <p className="text-xs text-gray-600">Get access to the agent portal and CMA tools.</p>
         {hasSession ? (
           <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-[11px] font-medium text-sky-950">

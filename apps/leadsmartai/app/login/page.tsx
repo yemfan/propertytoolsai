@@ -7,6 +7,7 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { safeInternalRedirect } from "@/lib/loginUrl";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function LoginPage() {
   return (
@@ -18,6 +19,7 @@ export default function LoginPage() {
 
 function LoginPageInner() {
   const router = useRouter();
+  const { user: sessionUser } = useAuth();
   const searchParams = useSearchParams();
   const redirectParam = searchParams?.get("redirect") ?? searchParams?.get("next");
   const reason = searchParams?.get("reason");
@@ -226,12 +228,14 @@ function LoginPageInner() {
               Sign up
             </a>
           </p>
-          <p>
-            Real estate agent?{" "}
-            <a className="text-blue-700 font-semibold" href="/agent-signup">
-              Start free as agent
-            </a>
-          </p>
+          {!sessionUser ? (
+            <p>
+              Real estate agent?{" "}
+              <a className="text-blue-700 font-semibold" href="/agent-signup">
+                Start free as agent
+              </a>
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

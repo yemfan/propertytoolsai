@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { FormEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Topbar, filterNavSectionsByRole } from "@repo/ui";
+import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { leadSmartNav } from "@/nav.config";
 import { SupportChatLauncher } from "@/components/support/CustomerSupportChat";
-import { isAgentOrBrokerProfileRole } from "@/lib/rolePortalPaths";
+import { isAdminOrSupportRole, isAgentOrBrokerProfileRole } from "@/lib/rolePortalPaths";
 
 function displayLabelFromEmail(email: string | null | undefined): string {
   if (!email?.trim()) return "Account";
@@ -36,9 +37,11 @@ function initialsFromEmail(email: string | null | undefined): string {
 function ProfileMenu({
   email,
   onLogout,
+  showCommercialPricing,
 }: {
   email: string | null | undefined;
   onLogout: () => void;
+  showCommercialPricing: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -126,15 +129,17 @@ function ProfileMenu({
         <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
         Account &amp; settings
       </Link>
-      <Link
-        href="/agent/pricing"
-        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-        role="menuitem"
-        onClick={() => setOpen(false)}
-      >
-        <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-        Plans &amp; pricing
-      </Link>
+      {showCommercialPricing ? (
+        <Link
+          href="/agent/pricing"
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          role="menuitem"
+          onClick={() => setOpen(false)}
+        >
+          <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+          Plans &amp; pricing
+        </Link>
+      ) : null}
       <div className="mt-1 border-t border-slate-100 pt-1">
         <button
           type="button"
@@ -191,19 +196,13 @@ export default function TopBar({
     [appRole]
   );
   const showAgentBrokerPromotion = isAgentOrBrokerProfileRole(appRole);
+  const hideCommercialPricing = isAdminOrSupportRole(appRole);
   const router = useRouter();
   const [tokens, setTokens] = useState<number | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
 
   async function onLogout() {
-    try {
-      await supabaseBrowser().auth.signOut();
-    } catch (e) {
-      console.error("Logout failed", e);
-    } finally {
-      router.push("/login?redirect=/dashboard");
-      router.refresh?.();
-    }
+    await signOutWithFullReload("/login");
   }
 
   useEffect(() => {
@@ -291,7 +290,11 @@ export default function TopBar({
           {searchField("ls-dashboard-search-mobile")}
         </div>
       }
-      rightActions={[{ label: "Plans & pricing", href: "/agent/pricing", variant: "outline" }]}
+      rightActions={
+        hideCommercialPricing
+          ? []
+          : [{ label: "Plans & pricing", href: "/agent/pricing", variant: "outline" }]
+      }
       trailing={
         <>
           {showAgentBrokerPromotion ? (
@@ -311,24 +314,32 @@ export default function TopBar({
             <Bell className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
           </Link>
 
-          <Link
-            href="/agent/pricing"
-            title="Billing and credits"
-            className="inline-flex h-10 max-w-[140px] items-center gap-2 truncate rounded-2xl border border-slate-200/90 bg-white px-3 text-xs font-semibold text-slate-800 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50 sm:hidden"
-          >
-            <CreditCard className="h-3.5 w-3.5 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-            <span className="tabular-nums">{typeof tokens === "number" ? tokens : "—"}</span>
-          </Link>
+          {!hideCommercialPricing ? (
+            <Link
+              href="/agent/pricing"
+              title="Billing and credits"
+              className="inline-flex h-10 max-w-[140px] items-center gap-2 truncate rounded-2xl border border-slate-200/90 bg-white px-3 text-xs font-semibold text-slate-800 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50 sm:hidden"
+            >
+              <CreditCard className="h-3.5 w-3.5 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+              <span className="tabular-nums">{typeof tokens === "number" ? tokens : "—"}</span>
+            </Link>
+          ) : null}
 
-          <Link
-            href="/agent/pricing"
-            className="hidden max-w-[220px] items-center gap-2 truncate rounded-2xl border border-slate-200/90 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50 sm:inline-flex"
-          >
-            <CreditCard className="h-[15px] w-[15px] shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-            <span className="truncate font-medium tabular-nums tracking-tight text-slate-900">{creditsLabel}</span>
-          </Link>
+          {!hideCommercialPricing ? (
+            <Link
+              href="/agent/pricing"
+              className="hidden max-w-[220px] items-center gap-2 truncate rounded-2xl border border-slate-200/90 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50 sm:inline-flex"
+            >
+              <CreditCard className="h-[15px] w-[15px] shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+              <span className="truncate font-medium tabular-nums tracking-tight text-slate-900">{creditsLabel}</span>
+            </Link>
+          ) : null}
 
-          <ProfileMenu email={email} onLogout={onLogout} />
+          <ProfileMenu
+            email={email}
+            onLogout={onLogout}
+            showCommercialPricing={!hideCommercialPricing}
+          />
         </>
       }
     />

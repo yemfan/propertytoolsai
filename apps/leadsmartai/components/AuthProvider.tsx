@@ -85,6 +85,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       },
       closeAuth: () => setAuthOpen(false),
       openAgentSignup: (prefill) => {
+        if (user) return;
         setAgentSignupPrefill(prefill ?? null);
         setAgentSignupOpen(true);
       },

@@ -7,7 +7,12 @@ import { estimateHomeValue } from "@/lib/property";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import PricingModal from "@/components/PricingModal";
 import { useAuth } from "@/components/AuthProvider";
+import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import {
+  LOGGED_IN_GET_AGENT_ACCESS_LABEL,
+  START_FREE_AS_AGENT_LABEL,
+} from "@/lib/auth/startFreeAgentMarketing";
 
 export default function HomePage() {
   return (
@@ -50,16 +55,9 @@ function HomePageInner() {
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
 
   async function handleLogout() {
-    try {
-      await supabaseBrowser().auth.signOut();
-    } catch (e) {
-      console.error("Logout failed", e);
-    } finally {
-      setIsAuthed(false);
-      setUserRole(null);
-      router.push("/");
-      router.refresh?.();
-    }
+    setIsAuthed(false);
+    setUserRole(null);
+    await signOutWithFullReload("/");
   }
 
   async function handleStartFreeAsAgent() {
@@ -398,7 +396,7 @@ function HomePageInner() {
                     disabled={upgradeLoading}
                     className="text-sm font-semibold px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {upgradeLoading ? "Upgrading..." : "Start Free as Agent"}
+                    {upgradeLoading ? "Upgrading..." : LOGGED_IN_GET_AGENT_ACCESS_LABEL}
                   </button>
                 )}
 
@@ -455,7 +453,11 @@ function HomePageInner() {
               disabled={upgradeLoading}
               className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {upgradeLoading ? "Upgrading..." : "Start Free as Agent"}
+              {upgradeLoading
+                ? "Upgrading..."
+                : isAuthed
+                  ? LOGGED_IN_GET_AGENT_ACCESS_LABEL
+                  : START_FREE_AS_AGENT_LABEL}
             </button>
             <Link
               href="/pricing"

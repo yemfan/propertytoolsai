@@ -23,6 +23,14 @@ export function isAgentOrBrokerProfileRole(role: string | null | undefined): boo
   return BROKER_PORTAL_ROLES.has(r);
 }
 
+/** Platform operators — no customer pricing, upgrades, or promos. */
+export function isAdminOrSupportRole(role: string | null | undefined): boolean {
+  const r = String(role ?? "")
+    .toLowerCase()
+    .trim();
+  return r === "admin" || r === "support";
+}
+
 export type PortalKind = "admin" | "broker" | "agent";
 
 /** Primary CRM dashboard (shared shell) for agents. */

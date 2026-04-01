@@ -15,6 +15,11 @@ export type NavLeafItem = {
    */
   roles?: string[];
   /**
+   * When set, users whose role matches one of these strings do not see this item (e.g. hide CRM
+   * “Billing” from platform admin/support).
+   */
+  hideForRoles?: string[];
+  /**
    * When set, active only on these pathnames (exact, optional trailing slash).
    * Use for roots like `/dashboard` so `/dashboard/leads` does not match.
    */

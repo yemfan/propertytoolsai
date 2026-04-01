@@ -1,4 +1,5 @@
 import ConsumerPricingClientPage from "./page.client";
+import { redirectAdminSupportAwayFromCommercialPricing } from "@/lib/auth/redirectStaffFromCommercialPricing";
 
 export const metadata = {
   title: "Pricing | LeadSmart AI",
@@ -6,6 +7,7 @@ export const metadata = {
     "Plans for AI CMAs, lead management, CRM, and alerts — from free trial to team scale.",
 };
 
-export default function ConsumerPricingPage() {
+export default async function ConsumerPricingPage() {
+  await redirectAdminSupportAwayFromCommercialPricing();
   return <ConsumerPricingClientPage />;
 }

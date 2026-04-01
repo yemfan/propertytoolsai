@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { PricingHubContext } from "@/lib/pricing/pricingHubContext";
+import {
+  LOGGED_IN_ACTIVATE_AGENT_ACCESS_LABEL,
+  LOGGED_IN_GET_AGENT_ACCESS_LABEL,
+  LOGGED_IN_VIEW_AGENT_PLANS_LABEL,
+  LOGGED_IN_VIEW_AGENT_PRICING_LABEL,
+} from "@/lib/auth/startFreeAgentMarketing";
 
 type ProductCard = {
   key: "consumer" | "agent" | "loan_broker";
@@ -107,11 +113,46 @@ function getCardState(key: ProductCard["key"], context: PricingHubContext | null
       };
     }
 
+    const role = context.role;
+    // Signed-in: never use the anonymous “Start Free as Agent” marketing line.
+    if (role === "consumer") {
+      return {
+        featured: true,
+        badge: "Recommended",
+        cta: LOGGED_IN_GET_AGENT_ACCESS_LABEL,
+        href: "/agent/pricing",
+      };
+    }
+    if (role === "agent") {
+      return {
+        featured: true,
+        badge: "Setup",
+        cta: LOGGED_IN_ACTIVATE_AGENT_ACCESS_LABEL,
+        href: "/start-free/agent",
+      };
+    }
+    if (role === "loan_broker") {
+      return {
+        featured: true,
+        badge: null,
+        cta: LOGGED_IN_VIEW_AGENT_PRICING_LABEL,
+        href: "/agent/pricing",
+      };
+    }
+    if (role === "admin" || role === "support") {
+      return {
+        featured: false,
+        badge: null,
+        cta: LOGGED_IN_VIEW_AGENT_PRICING_LABEL,
+        href: "/agent/pricing",
+      };
+    }
+
     return {
-      featured: context.role === "consumer" || context.role === "agent",
-      badge: "Start Free",
-      cta: "Start Free as Agent",
-      href: "/start-free/agent",
+      featured: false,
+      badge: null,
+      cta: LOGGED_IN_VIEW_AGENT_PLANS_LABEL,
+      href: "/agent/pricing",
     };
   }
 

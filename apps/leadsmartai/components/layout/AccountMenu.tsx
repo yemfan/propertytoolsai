@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
-import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
+import { isAdminOrSupportRole, resolveRoleHomePath } from "@/lib/rolePortalPaths";
 
 type MePayload = { role?: string; has_agent_record?: boolean };
 
@@ -19,8 +19,7 @@ function isProfessionalUser(role: string | null | undefined, hasAgentRecord: boo
 }
 
 export default function AccountMenu() {
-  const { user, loading, refresh } = useAuth();
-  const router = useRouter();
+  const { user, loading } = useAuth();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -106,12 +105,13 @@ export default function AccountMenu() {
     };
   }, [user]);
 
-  const { workspaceHref, settingsHref, pricingHref } = useMemo(() => {
+  const { workspaceHref, settingsHref, pricingHref, hideCommercialPricing } = useMemo(() => {
     if (!me) {
       return {
         workspaceHref: "/",
         settingsHref: "/client/dashboard",
         pricingHref: "/pricing",
+        hideCommercialPricing: false,
       } as const;
     }
     const role = me.role ?? "user";
@@ -122,6 +122,7 @@ export default function AccountMenu() {
         workspaceHref: "/client/dashboard",
         settingsHref: "/client/dashboard",
         pricingHref: "/pricing",
+        hideCommercialPricing: false,
       } as const;
     }
     const home = resolveRoleHomePath(role, hasAgent);
@@ -130,20 +131,13 @@ export default function AccountMenu() {
       workspaceHref: home,
       settingsHref: settings,
       pricingHref: "/agent/pricing",
+      hideCommercialPricing: isAdminOrSupportRole(role),
     } as const;
   }, [me]);
 
   async function onLogout() {
     setOpen(false);
-    try {
-      await supabaseBrowser().auth.signOut();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      await refresh();
-      router.refresh();
-      router.push("/");
-    }
+    await signOutWithFullReload("/");
   }
 
   if (loading || !user) return null;
@@ -186,14 +180,16 @@ export default function AccountMenu() {
         >
           Account &amp; settings
         </Link>
-        <Link
-          href={pricingHref}
-          role="menuitem"
-          className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
-          onClick={() => setOpen(false)}
-        >
-          Plans &amp; billing
-        </Link>
+        {!hideCommercialPricing ? (
+          <Link
+            href={pricingHref}
+            role="menuitem"
+            className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
+            onClick={() => setOpen(false)}
+          >
+            Plans &amp; billing
+          </Link>
+        ) : null}
       </div>
       <div className="border-t border-gray-100 py-1">
         <button

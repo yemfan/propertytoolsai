@@ -61,7 +61,8 @@ function getMessage(reason: LimitReason | null) {
     default:
       return {
         title: "Activate Agent Access",
-        body: "Start free as an agent to unlock your workspace, lead tools, CRM, and AI actions.",
+        body:
+          "Choose a plan or activate the free Starter tier to unlock your workspace, lead tools, CRM, and AI actions.",
       };
   }
 }
@@ -128,7 +129,7 @@ export default function EntitlementUpgradeModal({ open, onClose, reason, plan }:
             className="rounded-2xl border px-5 py-3 text-center text-sm font-medium text-gray-900 transition hover:bg-gray-50"
             onClick={onClose}
           >
-            {crm ? "Compare agent pricing" : "View Agent Plans"}
+            {crm ? "Compare agent pricing" : "Activate Starter (free)"}
           </Link>
         </div>
       </div>

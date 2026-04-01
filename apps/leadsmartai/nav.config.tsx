@@ -214,6 +214,7 @@ const navConfig = {
           href: "/dashboard/billing",
           match: ["/dashboard/billing"],
           icon: <Settings size={16} strokeWidth={2} aria-hidden />,
+          hideForRoles: ["admin", "support"],
         },
         {
           label: "Notifications",

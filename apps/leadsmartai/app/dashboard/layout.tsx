@@ -4,6 +4,7 @@ import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { isRedirectError } from "@/lib/isRedirectError";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import { AgentWorkspaceProviders } from "@/components/entitlements/AgentWorkspaceProviders";
+import { isAdminOrSupportRole } from "@/lib/rolePortalPaths";
 import { supabaseServer } from "@/lib/supabaseServer";
 
 export default async function DashboardLayout({
@@ -38,6 +39,7 @@ export default async function DashboardLayout({
       .maybeSingle();
     const roleRaw = (data as { role?: string } | null)?.role;
     appRole = typeof roleRaw === "string" && roleRaw.trim() ? roleRaw.trim() : null;
+    const staff = isAdminOrSupportRole(appRole);
     let status = String((data as any)?.subscription_status ?? "").toLowerCase();
     const trialEndsAt = (data as any)?.trial_ends_at
       ? new Date(String((data as any).trial_ends_at))
@@ -49,7 +51,7 @@ export default async function DashboardLayout({
         .update({ plan: "free", subscription_status: "inactive" } as any)
         .eq("user_id", ctx.userId);
     }
-    if (status && !["active", "trialing"].includes(status)) {
+    if (!staff && status && !["active", "trialing"].includes(status)) {
       redirect("/agent/pricing");
     }
   } catch (e) {

@@ -53,7 +53,7 @@ export default function AgentSignupModal({
             }
           >
             <span id="agent-signup-modal-title" className="sr-only">
-              Start free as agent
+              Create your agent account
             </span>
             <AgentSignupForm
               layout="dialog"
