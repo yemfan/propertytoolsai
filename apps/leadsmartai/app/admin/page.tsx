@@ -1,6 +1,21 @@
-import { redirect } from "next/navigation";
+import RolePortalHub from "@/components/portals/RolePortalHub";
 
-/** Admin hub is the support dashboard only. */
 export default function AdminPortalPage() {
-  redirect("/admin/support");
+  return (
+    <RolePortalHub
+      eyebrow="LeadSmart AI"
+      title="Admin portal"
+      description="Platform administration and operational tools. Open the full dashboard for day-to-day work."
+      links={[
+        { href: "/admin/platform-overview", label: "Platform overview", description: "Cross-product KPIs, funnel, and ops" },
+        { href: "/admin/founder", label: "Founder analytics", description: "MRR, funnel, churn, and usage events" },
+        { href: "/admin/billing", label: "Subscription & billing", description: "Plans, MRR, and subscription status" },
+        { href: "/admin/support", label: "Support inbox", description: "Customer conversations and replies" },
+        { href: "/dashboard/overview", label: "Operations dashboard", description: "Overview, leads, and tools" },
+        { href: "/dashboard/settings", label: "Account & settings", description: "Profile and preferences" },
+        { href: "/pricing/hub", label: "Plans & billing", description: "Subscriptions and upgrades" },
+        { href: "/portal", label: "Stripe billing portal", description: "Invoices and payment method" },
+      ]}
+    />
+  );
 }

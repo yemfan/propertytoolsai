@@ -1,5 +1,12 @@
-import { redirect } from "next/navigation";
+import { requireRole } from "@/lib/auth/requireRole";
+import AdminBillingClientPage from "./page.client";
 
-export default function AdminBillingRedirectPage() {
-  redirect("/admin/support");
+export const metadata = {
+  title: "Subscription & Billing | Admin | LeadSmart AI",
+  description: "Manage plans, billing status, and MRR.",
+};
+
+export default async function AdminBillingPage() {
+  await requireRole(["admin"], { strictUnauthorized: true });
+  return <AdminBillingClientPage />;
 }
