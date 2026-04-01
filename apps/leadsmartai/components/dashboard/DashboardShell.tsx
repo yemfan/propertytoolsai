@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { PremiumSidebar, filterNavSectionsByRole } from "@repo/ui";
 import navConfig, { leadSmartNav } from "@/nav.config";
 import TopBar from "@/components/dashboard/TopBar";
+import { isAgentOrBrokerProfileRole } from "@/lib/rolePortalPaths";
 
 const APP_NAME = "LeadSmart AI";
 
@@ -34,13 +35,15 @@ export default function AppDashboardShell({
     [appRole]
   );
 
+  const showAgentBrokerPromotion = isAgentOrBrokerProfileRole(appRole);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900 md:flex md:min-h-screen md:flex-row">
       <PremiumSidebar
         appName={APP_NAME}
         sections={navSections}
         workspaceLabel={navConfig.sidebarTitle ?? "Workspace"}
-        footer={sidebarFooter}
+        footer={showAgentBrokerPromotion ? sidebarFooter : undefined}
       />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <TopBar email={email} appRole={appRole} />

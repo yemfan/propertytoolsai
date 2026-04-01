@@ -9,6 +9,7 @@ import { Topbar, filterNavSectionsByRole } from "@repo/ui";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { leadSmartNav } from "@/nav.config";
 import { SupportChatLauncher } from "@/components/support/CustomerSupportChat";
+import { isAgentOrBrokerProfileRole } from "@/lib/rolePortalPaths";
 
 function displayLabelFromEmail(email: string | null | undefined): string {
   if (!email?.trim()) return "Account";
@@ -189,6 +190,7 @@ export default function TopBar({
     () => filterNavSectionsByRole(leadSmartNav, appRole),
     [appRole]
   );
+  const showAgentBrokerPromotion = isAgentOrBrokerProfileRole(appRole);
   const router = useRouter();
   const [tokens, setTokens] = useState<number | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
@@ -292,12 +294,14 @@ export default function TopBar({
       rightActions={[{ label: "Plans & pricing", href: "/agent/pricing", variant: "outline" }]}
       trailing={
         <>
-          <Link
-            href="/agent/pricing"
-            className="hidden sm:inline-flex h-10 items-center justify-center rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-xs font-semibold text-white shadow-md shadow-amber-500/20 transition hover:from-amber-600 hover:to-orange-600 md:text-sm"
-          >
-            Upgrade
-          </Link>
+          {showAgentBrokerPromotion ? (
+            <Link
+              href="/agent/pricing"
+              className="hidden sm:inline-flex h-10 items-center justify-center rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-xs font-semibold text-white shadow-md shadow-amber-500/20 transition hover:from-amber-600 hover:to-orange-600 md:text-sm"
+            >
+              Upgrade
+            </Link>
+          ) : null}
           <SupportChatLauncher />
           <Link
             href="/dashboard/notifications"

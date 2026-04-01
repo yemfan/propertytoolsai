@@ -11,6 +11,18 @@ export const BROKER_PORTAL_ROLES = new Set([
   "partner",
 ]);
 
+/**
+ * Agent workspace upsells (sidebar promo, Upgrade CTA) — not for consumers, admins, or support.
+ * Includes mortgage `loan_broker` as a “broker” professional.
+ */
+export function isAgentOrBrokerProfileRole(role: string | null | undefined): boolean {
+  const r = String(role ?? "")
+    .toLowerCase()
+    .trim();
+  if (r === "agent" || r === "loan_broker") return true;
+  return BROKER_PORTAL_ROLES.has(r);
+}
+
 export type PortalKind = "admin" | "broker" | "agent";
 
 /** Primary CRM dashboard (shared shell) for agents. */
