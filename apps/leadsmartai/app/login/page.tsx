@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { sendPasswordResetEmail } from "@/lib/auth/sendPasswordResetEmail";
@@ -153,12 +154,6 @@ function LoginPageInner() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-5">
-        <div className="space-y-1 text-center">
-          <h1 className="text-xl font-bold text-gray-900">Log in to LeadSmart AI</h1>
-          <p className="text-xs text-gray-600">
-            Access your agent dashboard and manage your home value leads.
-          </p>
-        </div>
         {reason === "trial" ? (
           <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5 text-center text-[11px] font-medium text-sky-950">
             Sign in to continue. Next, we’ll open secure Stripe checkout for your Pro free trial (card on file; you are
@@ -183,17 +178,7 @@ function LoginPageInner() {
             />
           </div>
           <div className="space-y-1">
-            <div className="flex items-center justify-between gap-2">
-              <label className="block text-xs font-medium text-gray-700">Password</label>
-              <button
-                type="button"
-                onClick={() => void handleForgotPassword()}
-                disabled={loading || resetSending}
-                className="text-[11px] font-semibold text-blue-700 hover:text-blue-800 disabled:opacity-50"
-              >
-                {resetSending ? "Sending…" : "Forgot password?"}
-              </button>
-            </div>
+            <label className="block text-xs font-medium text-gray-700">Password</label>
             <input
               type="password"
               value={password}
@@ -202,6 +187,22 @@ function LoginPageInner() {
               autoComplete="current-password"
               required
             />
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+              <button
+                type="button"
+                onClick={() => void handleForgotPassword()}
+                disabled={loading || resetSending}
+                className="text-xs font-semibold text-blue-700 hover:text-blue-800 disabled:opacity-50"
+              >
+                {resetSending ? "Sending…" : "Email me a reset link"}
+              </button>
+              <Link
+                href="/forgot-password"
+                className="text-xs font-semibold text-blue-700 hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
           </div>
           {resetNotice ? (
             <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-medium text-emerald-900">

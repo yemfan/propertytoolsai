@@ -11,7 +11,8 @@ import { mergeAuthHeaders } from "@/lib/mergeAuthHeaders";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import Link from "next/link";
 
-type Plan = "free" | "pro" | "premium";
+/** Stripe checkout keys (see `create-checkout-session` + `stripePriceIds`). */
+type CheckoutPlanKey = "pro" | "premium";
 
 const PRICING_VALUE_HIGHLIGHTS: {
   accent: FeatureHighlightAccent;
@@ -20,90 +21,82 @@ const PRICING_VALUE_HIGHLIGHTS: {
 }[] = [
   {
     accent: "primary",
-    title: "⚡ Instant AI CMA Reports",
-    description: "Professional comps and narrative in minutes, not hours.",
+    title: "🏠 Home value & CMA intelligence",
+    description: "Estimates, comps, and narrative reports tailored to your market.",
   },
   {
     accent: "primaryDark",
-    title: "🤖 Lead Management & Automation",
-    description: "Pipeline, follow-ups, and engagement in one workflow.",
+    title: "📊 Calculators & affordability",
+    description: "Mortgage, refinance, rent vs buy, investment, and more in one place.",
   },
   {
     accent: "success",
-    title: "🔔 Alerts & Market Updates",
-    description: "Stay ahead when leads engage or limits approach.",
+    title: "📈 Market trends & insights",
+    description: "Trends, snapshots, and data to support smarter buy/sell decisions.",
   },
   {
     accent: "accent",
-    title: "📁 CRM & Reports in one place",
-    description: "Exports and context your team can actually use.",
-  },
-  {
-    accent: "primary",
-    title: "📈 Flexible plans for every agent",
-    description: "From solo to team — scale without replatforming.",
+    title: "🔔 Saved homes & alerts",
+    description: "Watch listings and get notified when something important changes.",
   },
 ];
 
-const plans: {
-  key: Plan;
-  title: string;
-  price: string;
-  subtitle: string;
-  features: string[];
-  cta: string;
-  highlighted?: boolean;
-}[] = [
+const plans: (
+  | {
+      id: string;
+      paid: false;
+      title: string;
+      price: string;
+      subtitle: string;
+      features: string[];
+    }
+  | {
+      id: string;
+      paid: true;
+      checkoutKey: CheckoutPlanKey;
+      title: string;
+      price: string;
+      subtitle: string;
+      features: string[];
+      cta: string;
+    }
+)[] = [
   {
-    key: "free",
-    title: "Free",
-    price: "$0/mo",
-    subtitle: "Best for testing the workflow",
+    id: "consumer-basic",
+    paid: false,
+    title: "Consumer Basic",
+    price: "Free",
+    subtitle: "Sign up at no cost — core tools with fair daily limits",
     features: [
-      "CMA Reports: 2/day",
-      "Lead Management: No CRM access",
-      "Alerts: Basic",
-      "CRM Access: No",
-      "Reports Download: Limited",
-      "Team Access: No",
+      "Home value estimator & AI CMA tools (daily usage limits apply)",
+      "All standard calculators: mortgage, affordability, refinance, rent vs buy, closing costs, cap rate, and more",
+      "Market reports & value trends (limited exports vs Premium)",
+      "Saved searches, shortlists, and standard alerts",
+      "Property comparison & listing intelligence (usage caps apply)",
+      "Email support",
     ],
-    cta: "Get Started Free",
   },
   {
-    key: "pro",
-    title: "Pro Agent",
-    price: "$49/mo",
-    subtitle: "For active solo agents",
+    id: "consumer-premium",
+    paid: true,
+    checkoutKey: "premium",
+    title: "Consumer Premium",
+    price: "$19/mo",
+    subtitle: "Unlimited access to everything PropertyToolsAI offers",
     features: [
-      "CMA Reports: 5/day",
-      "Lead Management: Up to 500 leads",
-      "Alerts: Full + engagement tracking",
-      "CRM Access: Yes",
-      "Reports Download: Full",
-      "Team Access: No",
+      "Unlimited use of every consumer tool and AI feature — no daily caps",
+      "Unlimited CMA & home value sessions, reports, and downloads",
+      "Unlimited exports, PDFs, and saved analyses",
+      "Advanced alerts, automation, and priority notifications where available",
+      "Full market analytics and comparison depth — same tools as Basic, without limits",
+      "Priority support",
     ],
-    cta: "Start Pro",
-    highlighted: true,
-  },
-  {
-    key: "premium",
-    title: "Premium / Team",
-    price: "$99/mo",
-    subtitle: "For top producers and teams",
-    features: [
-      "CMA Reports: 10/day (expandable)",
-      "Lead Management: Unlimited",
-      "Alerts: Advanced + automation",
-      "CRM Access: Full",
-      "Reports Download: Unlimited",
-      "Team Access: Yes",
-    ],
-    cta: "Upgrade to Premium",
+    cta: "Get Consumer Premium",
   },
 ];
 
 export default function PricingPage() {
-  const [loadingPlan, setLoadingPlan] = useState<Plan | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState<CheckoutPlanKey | null>(null);
   const [trialLoading, setTrialLoading] = useState(false);
   const [planInfo, setPlanInfo] = useState<{
     plan: string;
@@ -150,7 +143,7 @@ export default function PricingPage() {
     if (!limitsForcePaywall) setPaywallDismissed(false);
   }, [limitsForcePaywall]);
 
-  /** After login at `/pricing?trial_checkout=1`, open Stripe (Pro + trial period). */
+  /** After login at `/pricing?trial_checkout=1`, open Stripe (Consumer Premium + trial period). */
   useEffect(() => {
     if (!authReady) return;
     if (typeof window === "undefined") return;
@@ -176,7 +169,7 @@ export default function PricingPage() {
           method: "POST",
           headers,
           credentials: "include",
-          body: JSON.stringify({ plan: "pro", with_trial: true }),
+          body: JSON.stringify({ plan: "premium", with_trial: true }),
         });
         const body = (await res.json().catch(() => ({}))) as any;
         if (!res.ok) throw new Error(body?.error || "Failed to open checkout");
@@ -249,7 +242,7 @@ export default function PricingPage() {
     return Math.min(100, Math.round((leadUsage.count / leadUsage.limit) * 100));
   }, [leadUsage]);
 
-  async function startCheckout(plan: "pro" | "premium") {
+  async function startCheckout(plan: CheckoutPlanKey) {
     setError(null);
     setLoadingPlan(plan);
     try {
@@ -322,7 +315,7 @@ export default function PricingPage() {
         method: "POST",
         headers,
         credentials: "include",
-        body: JSON.stringify({ plan: "pro", with_trial: true }),
+        body: JSON.stringify({ plan: "premium", with_trial: true }),
       });
       const body = (await res.json().catch(() => ({}))) as any;
       if (!res.ok) throw new Error(body?.error || "Failed to open checkout");
@@ -358,11 +351,12 @@ export default function PricingPage() {
       <section className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 via-white to-sky-50/40 p-6 shadow-sm shadow-slate-900/[0.04] ring-1 ring-slate-900/[0.04] sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0072ce]">Pricing</p>
         <h1 className="font-heading mt-2 max-w-4xl text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-          Grow your real estate business faster with AI tools built for agents
+          Two simple plans for buyers and sellers
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-700 sm:text-base">
-          Generate smarter CMAs, automate lead follow-ups, and close deals with less manual work. From solo agents to
-          growing teams, choose the plan that scales your pipeline.
+          <span className="font-semibold text-slate-800">Consumer Basic</span> is free — create an account and use our
+          tools with fair usage limits. <span className="font-semibold text-slate-800">Consumer Premium</span> unlocks
+          unlimited access to every feature.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Button
@@ -374,31 +368,34 @@ export default function PricingPage() {
             {trialLoading
               ? "Starting…"
               : authReady && !loggedIn
-                ? "Sign in to start free trial"
-                : "🚀 Start Free Trial"}
+                ? "Sign in to try Premium free"
+                : "🚀 Try Premium free (trial)"}
+          </Button>
+          <Button href={loggedIn ? "/dashboard" : "/signup"} variant="outline" size="lg">
+            {loggedIn ? "Open dashboard" : "Start with Basic (free)"}
           </Button>
           <Button href="#plans" variant="outline" size="lg">
-            📊 See Plans
+            📊 See plans
           </Button>
         </div>
         {authReady && !loggedIn ? (
           <p className="mt-3 max-w-2xl text-xs leading-relaxed text-slate-600">
-            The free trial is tied to your account.{" "}
+            The Premium trial opens secure Stripe checkout after you{" "}
             <Link href="/signup" className="font-semibold text-[#0072ce] hover:underline">
-              Sign up
+              sign up
             </Link>{" "}
             or{" "}
             <Link href={loginUrl({ redirect: PRICING_TRIAL_CHECKOUT_PATH, reason: "trial" })} className="font-semibold text-[#0072ce] hover:underline">
               sign in
             </Link>
-            — we’ll bring you back here to activate your trial.
+            .
           </p>
         ) : null}
-        <p className="mt-4 text-xs text-slate-600">Trusted by 500+ agents, 10,000+ leads managed</p>
+        <p className="mt-4 text-xs text-slate-600">Trusted by thousands of home buyers and sellers</p>
       </section>
 
       {/* Value props — LeadSmart AI-style top-accent feature cards */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {PRICING_VALUE_HIGHLIGHTS.map((item) => (
           <FeatureHighlightCard
             key={item.title}
@@ -436,7 +433,7 @@ export default function PricingPage() {
               ) : null}
               {leadsPct >= 100 ? (
                 <div className="mt-2 text-xs text-red-700 font-semibold">
-                  You’ve reached your CMA or Lead limit. Upgrade to Premium for unlimited access.
+                  You’ve reached your CMA or Lead limit. Upgrade to Consumer Premium for unlimited access.
                 </div>
               ) : null}
             </>
@@ -455,30 +452,34 @@ export default function PricingPage() {
           ) : null}
           {cmaUsage?.reached ? (
             <div className="mt-2 text-xs text-red-700 font-semibold">
-              You’ve reached your CMA or Lead limit. Upgrade to Premium for unlimited access.
+              You’ve reached your CMA or Lead limit. Upgrade to Consumer Premium for unlimited access.
             </div>
           ) : null}
         </Card>
       </section>
 
       {/* Pricing table */}
-      <section id="plans" className="grid grid-cols-1 gap-6 md:grid-cols-3">
+      <section id="plans" className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {plans.map((p) => (
           <Card
-            key={p.key}
+            key={p.id}
             className={`p-6 ${
-              p.highlighted ? "border-[#0072ce]/35 ring-2 ring-[#0072ce]/15" : ""
+              p.id === "consumer-premium" ? "border-[#0072ce]/35 ring-2 ring-[#0072ce]/15" : ""
             }`}
           >
             <div className="flex items-center justify-between gap-2">
               <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 {p.title}
               </div>
-              {p.highlighted ? (
+              {p.id === "consumer-premium" ? (
                 <span className="inline-flex items-center rounded-full bg-[#0072ce]/10 px-2 py-1 text-[10px] font-bold text-[#005ca8]">
-                  Most Popular
+                  Unlimited everything
                 </span>
-              ) : null}
+              ) : (
+                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-700">
+                  Free forever
+                </span>
+              )}
             </div>
             <div className="mt-2 text-3xl font-bold text-gray-900">
               {p.price}
@@ -486,41 +487,49 @@ export default function PricingPage() {
             <div className="mt-1 text-xs text-gray-500">{p.subtitle}</div>
             <ul className="mt-5 space-y-2 text-sm text-gray-700">
               {p.features.map((f, i) => (
-                <li key={f} className="flex items-start gap-2">
+                <li key={`${p.id}-${i}`} className="flex items-start gap-2">
                   <BrandCheck tone={toneAt(i)} />
                   <span>{f}</span>
                 </li>
               ))}
             </ul>
 
-            <div className="mt-6">
-              {p.key === "free" ? (
+            <div className="mt-6 space-y-2">
+              {p.paid && p.id === "consumer-premium" ? (
+                <button
+                  type="button"
+                  onClick={() => startCheckout(p.checkoutKey)}
+                  disabled={loadingPlan === p.checkoutKey}
+                  className="w-full rounded-xl bg-[#0072ce] py-2.5 font-semibold text-white shadow-sm hover:bg-[#005ca8] disabled:opacity-60"
+                >
+                  {loadingPlan === p.checkoutKey ? "Redirecting…" : p.cta}
+                </button>
+              ) : !p.paid ? (
+                <Link
+                  href={loggedIn ? "/dashboard" : "/signup"}
+                  className="flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
+                >
+                  {loggedIn ? "Open dashboard" : "Sign up free"}
+                </Link>
+              ) : null}
+              {p.paid && p.id === "consumer-premium" ? (
                 <button
                   type="button"
                   onClick={startTrial}
                   disabled={trialLoading || Boolean(planInfo?.trial_used)}
-                  className="w-full rounded-xl bg-slate-100 py-2.5 font-semibold text-slate-800 hover:bg-slate-200 disabled:opacity-60"
+                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60"
                 >
-                  {trialLoading ? "Starting…" : "Start Free Trial"}
+                  {trialLoading ? "Starting…" : "Start 7-day Premium trial"}
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => startCheckout(p.key as "pro" | "premium")}
-                  disabled={loadingPlan === p.key}
-                  className="w-full rounded-xl bg-[#0072ce] py-2.5 font-semibold text-white shadow-sm hover:bg-[#005ca8] disabled:opacity-60"
-                >
-                  {loadingPlan === p.key ? "Redirecting…" : p.cta}
-                </button>
-              )}
+              ) : null}
             </div>
-            {p.key === "pro" &&
+            {p.id === "consumer-basic" &&
             leadUsage?.limit != null &&
             leadsPct >= 90 ? (
               <div className="mt-3 text-[11px] text-amber-700 font-medium">
                 {leadsPct >= 100
-                  ? "You’ve reached your Pro lead limit. Upgrade to Premium for unlimited leads."
-                  : "You’re close to your Pro lead limit — Premium includes unlimited leads."}
+                  ? "You’ve reached your Basic usage limits. Consumer Premium includes unlimited access."
+                  : "You’re close to your Basic limits — Consumer Premium includes unlimited access."}
               </div>
             ) : null}
           </Card>
@@ -530,13 +539,16 @@ export default function PricingPage() {
       {/* CTA section */}
       <Card className="p-6 sm:p-8">
         <h2 className="font-heading text-2xl font-bold text-slate-900">
-          Ready to save hours and close more listings?
+          Ready to unlock smarter buy &amp; sell decisions?
         </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-700">
-          Start your 7-day free trial to unlock full access. Agents using PropertyTools AI spend less time on manual
-          analysis and more time on revenue-driving conversations.
+          Use <span className="font-semibold">Consumer Basic</span> free with an account, or try{" "}
+          <span className="font-semibold">Consumer Premium</span> with a 7-day trial / subscription for unlimited access.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
+          <Button href={loggedIn ? "/dashboard" : "/signup"} variant="outline" size="lg">
+            {loggedIn ? "Open dashboard" : "Start free (Basic)"}
+          </Button>
           <Button
             type="button"
             size="lg"
@@ -546,17 +558,17 @@ export default function PricingPage() {
             {trialLoading
               ? "Starting…"
               : authReady && !loggedIn
-                ? "Sign in to start free trial"
-                : "🚀 Start Free Trial"}
+                ? "Sign in to try Premium free"
+                : "🚀 Try Premium free (trial)"}
           </Button>
           <Button
             type="button"
             variant="outline"
             size="lg"
-            onClick={() => startCheckout("pro")}
-            disabled={loadingPlan === "pro"}
+            onClick={() => startCheckout("premium")}
+            disabled={loadingPlan === "premium"}
           >
-            💼 Upgrade Now
+            ✨ Subscribe to Premium
           </Button>
         </div>
         {authReady && !loggedIn ? (
@@ -569,9 +581,9 @@ export default function PricingPage() {
       {/* Testimonials / social proof */}
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {[
-          "“I generated 3 CMAs before breakfast and won two listing appointments this week.” — Sarah K., Listing Agent",
-          "“Lead automation saves me 6–8 hours every week.” — Michael T., Solo Realtor",
-          "“Premium removed lead cap anxiety as our team scaled.” — Ariana P., Team Lead",
+          "“Finally understood what our home was worth before we talked to an agent.” — Sarah K., Seller",
+          "“The affordability and mortgage tools made our first buy way less stressful.” — Michael T., Buyer",
+          "“Upgraded to Premium and stopped hitting limits on reports — worth it.” — Ariana P., Investor",
         ].map((q) => (
           <Card key={q} variant="muted" className="p-4 text-sm text-slate-700">
             {q}
@@ -580,9 +592,9 @@ export default function PricingPage() {
       </section>
 
       <Card variant="muted" className="p-4 text-sm text-slate-700">
-        <span className="font-semibold">500+ active agents</span> ·{" "}
-        <span className="font-semibold">10,000+ leads managed</span> ·{" "}
-        <span className="font-semibold">1,200+ CMA reports generated monthly</span>
+        <span className="font-semibold">Thousands of consumers</span> ·{" "}
+        <span className="font-semibold">Millions of calculator runs</span> ·{" "}
+        <span className="font-semibold">Reports &amp; estimates every day</span>
       </Card>
 
       <PaywallModal
@@ -593,7 +605,7 @@ export default function PricingPage() {
         }}
         message={paywallMsg}
         ctaLabel="Upgrade Now"
-        onPrimaryClick={() => startCheckout("pro")}
+        onPrimaryClick={() => startCheckout("premium")}
       />
     </div>
   );

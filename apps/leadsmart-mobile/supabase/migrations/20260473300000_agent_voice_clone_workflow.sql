@@ -25,6 +25,7 @@ comment on column public.agent_voice_settings.consent_confirmed is 'Agent consen
 comment on column public.agent_voice_settings.use_cloned_voice is 'When true and clone is ready, use provider clone id for TTS; Twilio still falls back to preset until Play URL wired.';
 comment on column public.agent_voice_settings.voice_clone_preview_acknowledged_at is 'Agent confirmed they reviewed the clone preview before activation is allowed.';
 
+-- Widen clone status for upload/processing steps.
 alter table public.agent_voice_settings
   drop constraint if exists agent_voice_settings_voice_clone_status_check;
 
@@ -35,6 +36,7 @@ alter table public.agent_voice_settings
     or voice_clone_status in ('uploaded', 'processing', 'pending', 'ready', 'failed')
   );
 
+-- Private bucket for voice samples (server uploads via service role only).
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'agent-voice-clones',

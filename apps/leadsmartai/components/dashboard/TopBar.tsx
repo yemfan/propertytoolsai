@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CreditCard, ChevronDown, Home, House, LogOut, Search, Settings } from "lucide-react";
+import { Bell, CreditCard, ChevronDown, Home, House, LogOut, Search, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
@@ -36,10 +36,12 @@ function initialsFromEmail(email: string | null | undefined): string {
 
 function ProfileMenu({
   email,
+  avatarUrl,
   onLogout,
   showCommercialPricing,
 }: {
   email: string | null | undefined;
+  avatarUrl?: string | null;
   onLogout: () => void;
   showCommercialPricing: boolean;
 }) {
@@ -121,6 +123,15 @@ function ProfileMenu({
         Home
       </Link>
       <Link
+        href="/account/profile"
+        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        role="menuitem"
+        onClick={() => setOpen(false)}
+      >
+        <User className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+        My profile
+      </Link>
+      <Link
         href="/dashboard/settings"
         className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
         role="menuitem"
@@ -167,8 +178,13 @@ function ProfileMenu({
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-800 to-slate-900 text-xs font-bold text-white shadow-inner shadow-white/10 ring-2 ring-slate-100">
-          {initials}
+        <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-slate-800 to-slate-900 text-xs font-bold text-white shadow-inner shadow-white/10 ring-2 ring-slate-100">
+          {avatarUrl?.trim() ? (
+            // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL
+            <img src={avatarUrl.trim()} alt="" className="h-full w-full object-cover" />
+          ) : (
+            initials
+          )}
         </span>
         <span className="hidden min-w-0 flex-1 sm:block">
           <span className="block truncate text-sm font-semibold text-slate-900">{name}</span>
@@ -200,6 +216,7 @@ export default function TopBar({
   const router = useRouter();
   const [tokens, setTokens] = useState<number | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   async function onLogout() {
     await signOutWithFullReload("/login");
@@ -220,6 +237,8 @@ export default function TopBar({
         if (cancelled) return;
         setTokens(typeof json?.tokens_remaining === "number" ? json.tokens_remaining : null);
         setPlan(typeof json?.plan === "string" ? json.plan : null);
+        const av = json?.avatar_url;
+        setAvatarUrl(typeof av === "string" && av.trim() ? av.trim() : null);
       } catch {
         // ignore
       }
@@ -337,6 +356,7 @@ export default function TopBar({
 
           <ProfileMenu
             email={email}
+            avatarUrl={avatarUrl}
             onLogout={onLogout}
             showCommercialPricing={!hideCommercialPricing}
           />

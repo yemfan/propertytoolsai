@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseAuthCookieOptions } from "@/lib/authCookieOptions";
+import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
+import { fetchUserPortalContext } from "@/lib/rolePortalServer";
 import { requireSupabasePublicEnv } from "@/lib/supabasePublicEnv";
 
 /**
@@ -41,6 +43,14 @@ export async function GET(request: Request) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      const ctx = await fetchUserPortalContext(supabase);
+      if (ctx && !ctx.isPro) {
+        const out = NextResponse.redirect(getPropertyToolsConsumerPostLoginUrl());
+        for (const v of response.headers.getSetCookie()) {
+          out.headers.append("Set-Cookie", v);
+        }
+        return out;
+      }
       return response;
     }
   }

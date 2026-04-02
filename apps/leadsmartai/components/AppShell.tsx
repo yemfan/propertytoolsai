@@ -63,7 +63,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
     pathname === "/agent-signup" ||
     pathname === "/login" ||
     pathname === "/signup" ||
-    pathname === "/onboarding";
+    pathname === "/onboarding" ||
+    pathname === "/forgot-password" ||
+    pathname.startsWith("/auth/");
 
   if (isPublicReport) {
     return (

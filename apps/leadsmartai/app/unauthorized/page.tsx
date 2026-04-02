@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
+import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 import { fetchUserPortalContext } from "@/lib/rolePortalServer";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
@@ -13,7 +14,7 @@ function homeHref(ctx: Awaited<ReturnType<typeof fetchUserPortalContext>>): stri
   if (!ctx) return "/login";
   const r = String(ctx.role ?? "").toLowerCase().trim();
   if (r === "consumer" || r === "user" || r === "") {
-    return "/client/dashboard";
+    return getPropertyToolsConsumerPostLoginUrl();
   }
   return resolveRoleHomePath(ctx.role, ctx.hasAgentRow);
 }

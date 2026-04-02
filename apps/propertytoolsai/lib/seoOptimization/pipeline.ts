@@ -180,8 +180,19 @@ export async function runOptimizationForPageKey(pageKey: string, options?: { for
 
 export async function runWeeklyBatch(options?: { limit?: number; force?: boolean }): Promise<{
   processed: PipelineResult[];
+  skipped?: true;
+  reason?: string;
 }> {
-  const limit = options?.limit ?? Number(process.env.SEO_OPT_WEEKLY_LIMIT ?? 50);
+  const limitRaw = options?.limit ?? Number(process.env.SEO_OPT_WEEKLY_LIMIT ?? "0");
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.floor(limitRaw) : 0;
+  if (limit <= 0) {
+    return {
+      processed: [],
+      skipped: true,
+      reason: "SEO_OPT_WEEKLY_LIMIT is 0 or unset — set a positive integer to run the batch",
+    };
+  }
+
   const keysEnv = process.env.SEO_OPT_PAGE_KEYS;
   let keys: string[];
 

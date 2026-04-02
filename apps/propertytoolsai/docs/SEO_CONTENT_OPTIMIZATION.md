@@ -34,7 +34,7 @@ Tables:
 | `SEO_OPT_LOW_CTR` | Low CTR threshold (default `0.025`). |
 | `SEO_OPT_LOW_RANK_POS` | Position above this → `rewrite_full` (default `30`). |
 | `SEO_OPT_MID_RANK_MIN` / `SEO_OPT_MID_RANK_MAX` | Mid-rank band for `improve_content` (default `8`–`30`). |
-| `SEO_OPT_WEEKLY_LIMIT` | Batch size for cron (default `50`). |
+| `SEO_OPT_WEEKLY_LIMIT` | Batch size for `runWeeklyBatch` and `GET /api/cron/seo-content-optimization`. **`0` or unset = disabled** (no OpenAI calls; cron still returns 200 with `skipped: true`). Set to a positive integer (e.g. `50`) to enable. |
 | `SEO_OPT_PAGE_KEYS` | Comma-separated `pageKey` list for batch (overrides DB discovery). |
 | `SEO_OPT_INCLUDE_ALL_PAGES` | If `true`, weekly batch uses all programmatic pages when no metrics exist (uses `force` so classifier runs). |
 | `CRON_SECRET` | If set, cron route requires `Authorization: Bearer …` or `?secret=`. |
@@ -79,9 +79,11 @@ Batch (weekly-style):
 
 `GET /api/cron/seo-content-optimization`
 
-Protect with `CRON_SECRET` in production. Optional query: `?limit=50&force=true`.
+Protect with `CRON_SECRET` in production. Optional query: `?limit=50&force=true` (`limit` overrides `SEO_OPT_WEEKLY_LIMIT` for that request).
 
-Schedule (e.g. Vercel cron): weekly, same route.
+**Enable the batch:** set `SEO_OPT_WEEKLY_LIMIT` to a **positive** number in the environment. If it is `0` or unset, the handler returns `{ ok: true, skipped: true }` and does not run the optimizer.
+
+**Vercel:** `apps/propertytoolsai/vercel.json` includes a weekly schedule (`0 5 * * 0` — Sunday 05:00 UTC) for this route. Ensure `CRON_SECRET` and `SEO_OPT_WEEKLY_LIMIT` are set in the Vercel project when you want it to run.
 
 ## Page keys
 

@@ -43,7 +43,9 @@ export function computeAgentPlanFromSubscriptionSync(params: {
 function planFromPriceId(priceId: string | null | undefined): "pro" | "premium" | null {
   if (!priceId) return null;
   if (priceId === process.env.STRIPE_PRICE_ID_PRO) return "pro";
-  if (priceId === process.env.STRIPE_PRICE_ID_PREMIUM) return "premium";
+  const consumerPrem = (process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM ?? "").trim();
+  if (consumerPrem && priceId === consumerPrem) return "premium";
+  if (priceId === (process.env.STRIPE_PRICE_ID_PREMIUM ?? "").trim()) return "premium";
   return null;
 }
 

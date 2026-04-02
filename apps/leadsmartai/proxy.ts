@@ -2,7 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseAuthCookieOptions } from "@/lib/authCookieOptions";
 import { PRODUCT_LEADSMART_AGENT } from "@/lib/entitlements/product";
+import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
 import { getSupabasePublicEnv } from "@/lib/supabasePublicEnv";
+import { fetchUserPortalContext } from "@/lib/rolePortalServer";
 import { matchesPortalKind } from "@/lib/rolePortalPaths";
 
 function isAgentPath(pathname: string) {
@@ -45,6 +47,7 @@ export async function proxy(req: NextRequest) {
     isSupportPath(pathname) ||
     isAdminPath(pathname) ||
     pathname.startsWith("/account/") ||
+    pathname.startsWith("/client/") ||
     pathname.startsWith("/propertytools/dashboard");
 
   if (!env) {
@@ -93,7 +96,19 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Consumers (buyer/seller) use PropertyToolsAI — not authenticated LeadSmart surfaces.
+  if (user && protectedPath) {
+    const ctx = await fetchUserPortalContext(supabase);
+    if (ctx && !ctx.isPro) {
+      return NextResponse.redirect(getPropertyToolsConsumerPostLoginUrl());
+    }
+  }
+
   if (isAuthPage(pathname) && user) {
+    const ctx = await fetchUserPortalContext(supabase);
+    if (ctx && !ctx.isPro) {
+      return NextResponse.redirect(getPropertyToolsConsumerPostLoginUrl());
+    }
     const url = req.nextUrl.clone();
     url.pathname = "/dashboard-router";
     url.search = "";
@@ -164,9 +179,11 @@ export const config = {
     "/admin",
     "/admin/:path*",
     "/account/:path*",
+    "/client/:path*",
     "/propertytools/dashboard/:path*",
     "/login",
     "/signup",
+    "/forgot-password",
     "/auth/:path*",
   ],
 };

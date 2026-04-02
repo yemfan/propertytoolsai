@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
+import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
 import {
   UNAUTHORIZED_PATH,
@@ -102,13 +103,13 @@ export function ensurePortalAccess(kind: PortalKind, ctx: UserPortalContext | nu
       redirect(UNAUTHORIZED_PATH);
     }
     if (!ctx.isPro) {
-      redirect("/client/dashboard");
+      redirect(getPropertyToolsConsumerPostLoginUrl());
     }
     return;
   }
 
   if (!ctx.isPro) {
-    redirect("/client/dashboard");
+    redirect(getPropertyToolsConsumerPostLoginUrl());
   }
   if (!matchesPortalKind(ctx.role, kind)) {
     redirect(resolveRoleHomePath(ctx.role, ctx.hasAgentRow));

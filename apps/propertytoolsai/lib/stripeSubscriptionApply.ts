@@ -43,11 +43,10 @@ export function computeAgentPlanFromSubscriptionSync(params: {
 function planFromPriceId(priceId: string | null | undefined): "pro" | "premium" | null {
   if (!priceId) return null;
   if (priceId === process.env.STRIPE_PRICE_ID_PRO) return "pro";
-  if (priceId === process.env.STRIPE_PRICE_ID_PREMIUM) return "premium";
+  const consumerPrem = (process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM ?? "").trim();
+  if (consumerPrem && priceId === consumerPrem) return "premium";
+  if (priceId === (process.env.STRIPE_PRICE_ID_PREMIUM ?? "").trim()) return "premium";
   // Account billing checkout may use dedicated price envs (see lib/billingAccountPriceKeys.ts)
-  if (process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM && priceId === process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM) {
-    return "premium";
-  }
   if (
     (process.env.STRIPE_PRICE_ID_AGENT_STARTER && priceId === process.env.STRIPE_PRICE_ID_AGENT_STARTER) ||
     (process.env.STRIPE_PRICE_ID_AGENT_PRO && priceId === process.env.STRIPE_PRICE_ID_AGENT_PRO) ||

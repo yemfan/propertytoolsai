@@ -44,7 +44,7 @@ The Home Value (and other) address fields use **Google Places** in the browser. 
 
 ## Stripe checkout (“No such price: prod_…”)
 
-`STRIPE_PRICE_ID_PRO` and `STRIPE_PRICE_ID_PREMIUM` must be **Price** IDs (`price_…`), not **Product** IDs (`prod_…`).
+`STRIPE_PRICE_ID_PRO` (Consumer Basic) and **`STRIPE_PRICE_ID_CONSUMER_PREMIUM`** (Consumer Premium, e.g. $19/mo) must be **Price** IDs (`price_…`), not **Product** IDs (`prod_…`). If `STRIPE_PRICE_ID_CONSUMER_PREMIUM` is unset, checkout falls back to `STRIPE_PRICE_ID_PREMIUM`.
 
 1. [Stripe Dashboard](https://dashboard.stripe.com) → **Product catalog** → open your product.
 2. Under **Pricing**, copy the id next to the recurring price — it looks like `price_xxxxxxxx`.

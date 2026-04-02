@@ -7,9 +7,13 @@ import { useAuth } from "@/components/AuthProvider";
 import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
+import {
+  getPropertyToolsConsumerAccountProfileUrl,
+  getPropertyToolsConsumerPostLoginUrl,
+} from "@/lib/propertyToolsConsumerUrl";
 import { isAdminOrSupportRole, resolveRoleHomePath } from "@/lib/rolePortalPaths";
 
-type MePayload = { role?: string; has_agent_record?: boolean };
+type MePayload = { role?: string; has_agent_record?: boolean; avatar_url?: string | null };
 
 /** Match login / home redirect: consumers are `role === user` with no `agents` row. */
 function isProfessionalUser(role: string | null | undefined, hasAgentRecord: boolean): boolean {
@@ -86,7 +90,7 @@ export default function AccountMenu() {
           credentials: "include",
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
-        const json = (await res.json().catch(() => ({}))) as MePayload;
+        const json = (await res.json().catch(() => ({}))) as MePayload & Record<string, unknown>;
         if (cancelled) return;
         if (res.ok) {
           setMe(json);
@@ -105,11 +109,12 @@ export default function AccountMenu() {
     };
   }, [user]);
 
-  const { workspaceHref, settingsHref, pricingHref, hideCommercialPricing } = useMemo(() => {
+  const { workspaceHref, profileHref, settingsHref, pricingHref, hideCommercialPricing } = useMemo(() => {
     if (!me) {
       return {
         workspaceHref: "/",
-        settingsHref: "/client/dashboard",
+        profileHref: getPropertyToolsConsumerAccountProfileUrl(),
+        settingsHref: "/dashboard/settings",
         pricingHref: "/pricing",
         hideCommercialPricing: false,
       } as const;
@@ -119,8 +124,9 @@ export default function AccountMenu() {
     const pro = isProfessionalUser(role, hasAgent);
     if (!pro) {
       return {
-        workspaceHref: "/client/dashboard",
-        settingsHref: "/client/dashboard",
+        workspaceHref: getPropertyToolsConsumerPostLoginUrl(),
+        profileHref: getPropertyToolsConsumerAccountProfileUrl(),
+        settingsHref: getPropertyToolsConsumerAccountProfileUrl(),
         pricingHref: "/pricing",
         hideCommercialPricing: false,
       } as const;
@@ -129,6 +135,7 @@ export default function AccountMenu() {
     const settings = hasAgent ? "/dashboard/settings" : "/portal";
     return {
       workspaceHref: home,
+      profileHref: "/account/profile",
       settingsHref: settings,
       pricingHref: "/agent/pricing",
       hideCommercialPricing: isAdminOrSupportRole(role),
@@ -144,6 +151,7 @@ export default function AccountMenu() {
 
   const email = user.email?.trim() || "";
   const initial = email ? email[0]!.toUpperCase() : "?";
+  const avatarUrl = me?.avatar_url?.trim() || null;
 
   const menuPanel = (
     <div
@@ -173,13 +181,23 @@ export default function AccountMenu() {
           Dashboard
         </Link>
         <Link
-          href={settingsHref}
+          href={profileHref}
           role="menuitem"
           className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
           onClick={() => setOpen(false)}
         >
-          Account &amp; settings
+          My profile
         </Link>
+        {settingsHref !== profileHref ? (
+          <Link
+            href={settingsHref}
+            role="menuitem"
+            className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
+            onClick={() => setOpen(false)}
+          >
+            Account &amp; settings
+          </Link>
+        ) : null}
         {!hideCommercialPricing ? (
           <Link
             href={pricingHref}
@@ -214,8 +232,13 @@ export default function AccountMenu() {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-800">
-          {initial}
+        <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-xs font-bold text-blue-800">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL
+            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            initial
+          )}
         </span>
         <span className="hidden min-w-0 truncate sm:block">Account</span>
         <svg className="h-4 w-4 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

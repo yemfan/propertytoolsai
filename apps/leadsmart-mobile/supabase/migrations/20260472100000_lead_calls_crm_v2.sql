@@ -34,6 +34,7 @@ alter table if exists public.lead_calls
   add column if not exists started_at timestamptz null,
   add column if not exists ended_at timestamptz null;
 
+-- Migrate escalation_reason → needs_human when present
 do $$
 begin
   if exists (

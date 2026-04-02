@@ -5,7 +5,7 @@ export function safeInternalRedirect(path: string | null | undefined): string | 
 }
 
 /**
- * After login, pricing auto-opens Stripe Checkout (Pro subscription with trial period).
+ * After login, pricing auto-opens Stripe Checkout (Consumer Premium subscription with trial period).
  * Query is read by `app/pricing/page.tsx`.
  */
 export const PRICING_TRIAL_CHECKOUT_PATH = "/pricing?trial_checkout=1";

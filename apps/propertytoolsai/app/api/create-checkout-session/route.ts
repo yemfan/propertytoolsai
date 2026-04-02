@@ -27,7 +27,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
-    const withTrial = Boolean(body.with_trial) && body.plan === "pro";
+    const withTrial =
+      Boolean(body.with_trial) && (body.plan === "pro" || body.plan === "premium");
     const trialDays = Number(process.env.STRIPE_TRIAL_DAYS ?? 7);
 
     const price = getStripePriceIdForPlan(body.plan);

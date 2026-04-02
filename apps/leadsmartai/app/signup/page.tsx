@@ -154,16 +154,12 @@ function SignupForm() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-5">
-        <div className="space-y-1 text-center">
-          <h1 className="text-xl font-bold text-gray-900">Create your account</h1>
-          <p className="text-xs text-gray-600">Get started on the main site. Agents unlock portal features.</p>
-          {hasSession ? (
-            <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-left text-[11px] font-medium text-sky-950">
-              You&apos;re signed in — we filled this form from your account. Update anything below and save (no new
-              password needed).
-            </p>
-          ) : null}
-        </div>
+        {hasSession ? (
+          <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-left text-[11px] font-medium text-sky-950">
+            You&apos;re signed in — we filled this form from your account. Update anything below and save (no new
+            password needed).
+          </p>
+        ) : null}
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1">

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { sendPasswordResetEmail } from "@/lib/auth/sendPasswordResetEmail";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
+import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 
 type Mode = "login" | "signup";
@@ -246,6 +247,8 @@ export default function AuthModal({
             const hasAgent = Boolean(me?.has_agent_record);
             if (isRealEstateProfessionalRole(role) || hasAgent) {
               router.replace(resolveRoleHomePath(role, hasAgent));
+            } else {
+              window.location.assign(getPropertyToolsConsumerPostLoginUrl());
             }
           }
         } catch {
@@ -307,6 +310,13 @@ export default function AuthModal({
       if (userId && dbRole === "agent") {
         setSignupStep("agentStartFree");
         router.refresh?.();
+        return;
+      }
+
+      // Consumers belong on PropertyToolsAI, not LeadSmart.
+      if (userId && dbRole === "user") {
+        onClose();
+        window.location.assign(getPropertyToolsConsumerPostLoginUrl());
         return;
       }
 
