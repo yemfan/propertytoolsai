@@ -4,37 +4,72 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { getLeadsmartApiBaseUrl } from "../../lib/env";
+import { getLeadsmartApiBaseUrl, getSupabaseAnonKey, getSupabaseUrl } from "../../lib/env";
 import { onboardingStyles as s } from "../../lib/onboarding/styles";
 import { useLeadsmartSession } from "../../lib/session/LeadsmartSessionContext";
 
+const oauthBtn = StyleSheet.create({
+  row: {
+    marginTop: 12,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    backgroundColor: "#fff",
+  },
+  rowApple: {
+    marginTop: 10,
+    backgroundColor: "#000",
+    borderColor: "#000",
+  },
+  label: { fontSize: 15, fontWeight: "600", color: "#0f172a" },
+  labelApple: { color: "#fff" },
+});
+
+const inputCompact = [s.input, { minHeight: 52, textAlignVertical: "center" as const }];
+
 export default function OnboardingLoginScreen() {
   const router = useRouter();
-  const { signInWithEmailPassword, signInWithToken, onboardingComplete } = useLeadsmartSession();
+  const {
+    signInWithEmailPassword,
+    signInWithToken,
+    signInWithGoogleOAuth,
+    signInWithAppleOAuth,
+    onboardingComplete,
+  } = useLeadsmartSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [token, setToken] = useState("");
   const [showTokenFallback, setShowTokenFallback] = useState(false);
+  const [rememberDevice, setRememberDevice] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const apiUrl = getLeadsmartApiBaseUrl();
+  const oauthAvailable = Boolean(getSupabaseUrl().trim() && getSupabaseAnonKey().trim());
+
+  function goAfterSignIn() {
+    if (onboardingComplete) {
+      router.replace("/(tabs)/inbox");
+    } else {
+      router.replace("/(onboarding)/notifications");
+    }
+  }
 
   async function onSubmitEmailPassword() {
     setError(null);
     setBusy(true);
     try {
-      await signInWithEmailPassword(email, password);
-      if (onboardingComplete) {
-        router.replace("/(tabs)/inbox");
-      } else {
-        router.replace("/(onboarding)/notifications");
-      }
+      await signInWithEmailPassword(email, password, rememberDevice);
+      goAfterSignIn();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sign-in failed.");
     } finally {
@@ -46,12 +81,34 @@ export default function OnboardingLoginScreen() {
     setError(null);
     setBusy(true);
     try {
-      await signInWithToken(token);
-      if (onboardingComplete) {
-        router.replace("/(tabs)/inbox");
-      } else {
-        router.replace("/(onboarding)/notifications");
-      }
+      await signInWithToken(token, rememberDevice);
+      goAfterSignIn();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sign-in failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onGoogle() {
+    setError(null);
+    setBusy(true);
+    try {
+      await signInWithGoogleOAuth(rememberDevice);
+      goAfterSignIn();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sign-in failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onApple() {
+    setError(null);
+    setBusy(true);
+    try {
+      await signInWithAppleOAuth(rememberDevice);
+      goAfterSignIn();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sign-in failed.");
     } finally {
@@ -80,10 +137,35 @@ export default function OnboardingLoginScreen() {
             </Text>
           )}
 
+          {!showTokenFallback && oauthAvailable ? (
+            <>
+              <Text style={[s.muted, { marginTop: 20 }]}>Continue with</Text>
+              <Pressable
+                style={[oauthBtn.row, busy && { opacity: 0.6 }]}
+                onPress={() => void onGoogle()}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel="Continue with Google"
+              >
+                <Text style={oauthBtn.label}>Continue with Google</Text>
+              </Pressable>
+              <Pressable
+                style={[oauthBtn.row, oauthBtn.rowApple, busy && { opacity: 0.6 }]}
+                onPress={() => void onApple()}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel="Continue with Apple"
+              >
+                <Text style={[oauthBtn.label, oauthBtn.labelApple]}>Continue with Apple</Text>
+              </Pressable>
+              <Text style={[s.muted, { marginTop: 16, textAlign: "center" }]}>or with email</Text>
+            </>
+          ) : null}
+
           {!showTokenFallback ? (
             <>
               <TextInput
-                style={s.input}
+                style={inputCompact}
                 placeholder="Email"
                 placeholderTextColor="#94a3b8"
                 value={email}
@@ -95,7 +177,7 @@ export default function OnboardingLoginScreen() {
                 accessibilityLabel="Email"
               />
               <TextInput
-                style={s.input}
+                style={inputCompact}
                 placeholder="Password"
                 placeholderTextColor="#94a3b8"
                 value={password}
@@ -129,6 +211,27 @@ export default function OnboardingLoginScreen() {
           )}
 
           {error ? <Text style={s.error}>{error}</Text> : null}
+
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginTop: 16,
+              gap: 12,
+            }}
+          >
+            <Text style={[s.muted, { flex: 1, marginTop: 0 }]}>Remember this device</Text>
+            <Switch
+              value={rememberDevice}
+              onValueChange={setRememberDevice}
+              disabled={busy}
+              accessibilityLabel="Remember this device"
+            />
+          </View>
+          <Text style={[s.muted, { fontSize: 12, marginTop: 6 }]}>
+            When off, you&apos;ll be signed out after you fully close the app.
+          </Text>
 
           <Pressable
             onPress={() => {

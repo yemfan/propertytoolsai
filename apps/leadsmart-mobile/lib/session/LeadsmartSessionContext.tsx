@@ -1,8 +1,11 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchMobileLeads } from "../leadsmartMobileApi";
+import { signInWithApple, signInWithGoogle } from "../oauthMobile";
 import { getSupabaseAuthClient } from "../supabaseAuthClient";
 import { readOnboardingComplete, writeOnboardingComplete } from "./onboardingFlag";
+import { consumeShouldClearSessionOnLaunch, setClearSessionOnNextLaunch } from "./rememberDevice";
 import { clearStoredAccessToken, readStoredAccessToken, writeStoredAccessToken } from "./secureToken";
 import { clearCachedAccessToken, setCachedAccessToken } from "./tokenCache";
 
@@ -11,9 +14,11 @@ type LeadsmartSessionValue = {
   accessToken: string | null;
   onboardingComplete: boolean;
   /** Email + password against the same Supabase project as LeadSmart AI web (preferred). */
-  signInWithEmailPassword: (email: string, password: string) => Promise<void>;
+  signInWithEmailPassword: (email: string, password: string, rememberDevice?: boolean) => Promise<void>;
   /** Persist JWT after validating against the mobile API (fallback / dev). */
-  signInWithToken: (token: string) => Promise<void>;
+  signInWithToken: (token: string, rememberDevice?: boolean) => Promise<void>;
+  signInWithGoogleOAuth: (rememberDevice?: boolean) => Promise<void>;
+  signInWithAppleOAuth: (rememberDevice?: boolean) => Promise<void>;
   signOut: () => Promise<void>;
   markOnboardingComplete: () => Promise<void>;
 };
@@ -56,6 +61,10 @@ export function LeadsmartSessionProvider({ children }: { children: ReactNode }) 
         setOnboardingComplete(onboarded);
 
         if (supabase) {
+          if (await consumeShouldClearSessionOnLaunch()) {
+            await supabase.auth.signOut();
+          }
+
           const {
             data: { session },
           } = await supabase.auth.getSession();
@@ -96,17 +105,11 @@ export function LeadsmartSessionProvider({ children }: { children: ReactNode }) 
     };
   }, []);
 
-  const signInWithEmailPassword = useCallback(async (email: string, password: string) => {
-    const supabase = getSupabaseAuthClient();
-    if (!supabase) {
-      throw new Error("Supabase is not configured. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.");
-    }
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
-    if (error) throw error;
-    const t = data.session?.access_token?.trim() ?? "";
+  const finalizeSupabaseSession = useCallback(async (supabase: SupabaseClient, rememberDevice: boolean) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const t = session?.access_token?.trim() ?? "";
     if (!t) throw new Error("No session after sign-in.");
 
     setCachedAccessToken(t);
@@ -117,32 +120,78 @@ export function LeadsmartSessionProvider({ children }: { children: ReactNode }) 
       throw new Error(res.message);
     }
 
+    await setClearSessionOnNextLaunch(!rememberDevice);
     await writeStoredAccessToken(t);
     setAccessToken(t);
   }, []);
 
-  const signInWithToken = useCallback(async (token: string) => {
-    const t = token.trim();
-    if (!t) {
-      throw new Error("Paste your access token from LeadSmart AI web, or sign in with email and password.");
-    }
+  const signInWithEmailPassword = useCallback(
+    async (email: string, password: string, rememberDevice = true) => {
+      const supabase = getSupabaseAuthClient();
+      if (!supabase) {
+        throw new Error("Supabase is not configured. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.");
+      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) throw error;
+      await finalizeSupabaseSession(supabase, rememberDevice);
+    },
+    [finalizeSupabaseSession]
+  );
 
-    setCachedAccessToken(t);
-    const res = await fetchMobileLeads({ page: 1, pageSize: 1 });
-    if (res.ok === false) {
-      clearCachedAccessToken();
-      throw new Error(res.message);
-    }
+  const signInWithToken = useCallback(
+    async (token: string, rememberDevice = true) => {
+      const t = token.trim();
+      if (!t) {
+        throw new Error("Paste your access token from LeadSmart AI web, or sign in with email and password.");
+      }
 
-    await writeStoredAccessToken(t);
-    setAccessToken(t);
-  }, []);
+      setCachedAccessToken(t);
+      const res = await fetchMobileLeads({ page: 1, pageSize: 1 });
+      if (res.ok === false) {
+        clearCachedAccessToken();
+        throw new Error(res.message);
+      }
+
+      await setClearSessionOnNextLaunch(!rememberDevice);
+      await writeStoredAccessToken(t);
+      setAccessToken(t);
+    },
+    []
+  );
+
+  const signInWithGoogleOAuth = useCallback(
+    async (rememberDevice = true) => {
+      const supabase = getSupabaseAuthClient();
+      if (!supabase) {
+        throw new Error("Supabase is not configured. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.");
+      }
+      await signInWithGoogle(supabase);
+      await finalizeSupabaseSession(supabase, rememberDevice);
+    },
+    [finalizeSupabaseSession]
+  );
+
+  const signInWithAppleOAuth = useCallback(
+    async (rememberDevice = true) => {
+      const supabase = getSupabaseAuthClient();
+      if (!supabase) {
+        throw new Error("Supabase is not configured. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.");
+      }
+      await signInWithApple(supabase);
+      await finalizeSupabaseSession(supabase, rememberDevice);
+    },
+    [finalizeSupabaseSession]
+  );
 
   const signOut = useCallback(async () => {
     const supabase = getSupabaseAuthClient();
     if (supabase) {
       await supabase.auth.signOut();
     }
+    await setClearSessionOnNextLaunch(false);
     clearCachedAccessToken();
     await clearStoredAccessToken();
     setAccessToken(null);
@@ -160,6 +209,8 @@ export function LeadsmartSessionProvider({ children }: { children: ReactNode }) 
       onboardingComplete,
       signInWithEmailPassword,
       signInWithToken,
+      signInWithGoogleOAuth,
+      signInWithAppleOAuth,
       signOut,
       markOnboardingComplete,
     }),
@@ -169,6 +220,8 @@ export function LeadsmartSessionProvider({ children }: { children: ReactNode }) 
       onboardingComplete,
       signInWithEmailPassword,
       signInWithToken,
+      signInWithGoogleOAuth,
+      signInWithAppleOAuth,
       signOut,
       markOnboardingComplete,
     ]

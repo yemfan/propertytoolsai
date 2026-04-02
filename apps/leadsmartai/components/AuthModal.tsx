@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendPasswordResetEmail } from "@/lib/auth/sendPasswordResetEmail";
@@ -117,6 +118,24 @@ export default function AuthModal({
   }, [open, loading, onClose]);
 
   if (!open) return null;
+
+  async function signInWithOAuth(provider: "google" | "apple") {
+    setError(null);
+    setLoading(true);
+    try {
+      const supabase = supabaseBrowser();
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (oauthError) throw oauthError;
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Sign in failed.");
+      setLoading(false);
+    }
+  }
 
   async function handleForgotPassword() {
     setError(null);
@@ -351,6 +370,43 @@ export default function AuthModal({
             </button>
           </div>
 
+          <div className="relative py-1">
+            <div className="absolute inset-0 flex items-center" aria-hidden>
+              <div className="w-full border-t border-slate-200" />
+            </div>
+            <div className="relative flex justify-center text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <span className="bg-white px-2">Or continue with</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => void signInWithOAuth("google")}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Continue with Google
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => void signInWithOAuth("apple")}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Continue with Apple
+            </button>
+          </div>
+
+          <div className="relative py-1">
+            <div className="absolute inset-0 flex items-center" aria-hidden>
+              <div className="w-full border-t border-slate-200" />
+            </div>
+            <div className="relative flex justify-center text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <span className="bg-white px-2">Email</span>
+            </div>
+          </div>
+
           <form onSubmit={submit} className="space-y-3">
             {mode === "signup" ? (
               <div className="space-y-1">
@@ -425,19 +481,7 @@ export default function AuthModal({
             ) : null}
 
             <div className="space-y-1">
-              <div className="flex items-center justify-between gap-2">
-                <label className="block text-xs font-medium text-slate-700">Password</label>
-                {mode === "login" ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleForgotPassword()}
-                    disabled={loading || resetSending}
-                    className="text-[11px] font-semibold text-blue-700 hover:text-blue-800 disabled:opacity-50"
-                  >
-                    {resetSending ? "Sending…" : "Forgot password?"}
-                  </button>
-                ) : null}
-              </div>
+              <label className="block text-xs font-medium text-slate-700">Password</label>
               <input
                 type="password"
                 value={password}
@@ -448,6 +492,25 @@ export default function AuthModal({
                 }
                 required
               />
+              {mode === "login" ? (
+                <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center sm:justify-between">
+                  <button
+                    type="button"
+                    onClick={() => void handleForgotPassword()}
+                    disabled={loading || resetSending}
+                    className="text-left text-xs font-semibold text-blue-700 hover:text-blue-800 disabled:opacity-50"
+                  >
+                    {resetSending ? "Sending…" : "Email me a reset link"}
+                  </button>
+                  <Link
+                    href="/forgot-password"
+                    onClick={() => onClose()}
+                    className="text-xs font-semibold text-blue-700 underline underline-offset-2 hover:text-blue-800"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+              ) : null}
             </div>
 
             {resetNotice ? (

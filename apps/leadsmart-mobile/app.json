@@ -27,7 +27,7 @@
         "backgroundColor": "#0f172a"
       }
     },
-    "plugins": ["expo-dev-client", "expo-router", "expo-notifications"],
+    "plugins": ["expo-dev-client", "expo-router", "expo-notifications", "expo-apple-authentication"],
     "experiments": {
       "typedRoutes": true
     }

@@ -24,6 +24,14 @@ export default function OnboardingWelcomeScreen() {
           >
             <Text style={s.primaryBtnText}>Get started</Text>
           </Pressable>
+          <Pressable
+            style={s.secondaryBtn}
+            onPress={() => router.push("/(onboarding)/login")}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in"
+          >
+            <Text style={s.secondaryBtnText}>Already have an account? Sign in</Text>
+          </Pressable>
         </View>
       </View>
     </View>
