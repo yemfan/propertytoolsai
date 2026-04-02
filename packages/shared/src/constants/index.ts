@@ -17,3 +17,11 @@ export {
   MOBILE_PIPELINE_SLUGS,
   type MobilePipelineSlug,
 } from "./mobile-pipeline";
+export {
+  USER_PROFILE_ROLES,
+  PROFESSIONAL_PROFILE_ROLES,
+  type UserProfileRole,
+  formatUserRoleLabel,
+  describeUserRole,
+  isProfessionalProfileRole,
+} from "./user-roles";

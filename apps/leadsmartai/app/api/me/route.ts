@@ -11,7 +11,9 @@ export async function GET(req: Request) {
 
     const { data, error } = await supabaseServer
       .from("user_profiles")
-      .select("plan,tokens_remaining,tokens_reset_date,role,subscription_status,trial_ends_at,trial_used")
+      .select(
+        "plan,tokens_remaining,tokens_reset_date,role,subscription_status,trial_ends_at,trial_used,full_name,phone,avatar_url"
+      )
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -24,6 +26,7 @@ export async function GET(req: Request) {
       .maybeSingle();
 
     return NextResponse.json({
+      email: user.email ?? null,
       plan: (data as any)?.plan ?? "free",
       role: (data as any)?.role ?? "user",
       has_agent_record: !!agentRow,
@@ -32,6 +35,9 @@ export async function GET(req: Request) {
       trial_used: (data as any)?.trial_used ?? false,
       tokens_remaining: (data as any)?.tokens_remaining ?? 10,
       tokens_reset_date: (data as any)?.tokens_reset_date ?? null,
+      full_name: (data as any)?.full_name ?? null,
+      phone: (data as any)?.phone ?? null,
+      avatar_url: (data as any)?.avatar_url ?? null,
     });
   } catch (e: any) {
     return NextResponse.json(

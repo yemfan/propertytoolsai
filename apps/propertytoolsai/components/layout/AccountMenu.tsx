@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, CreditCard, Home, LogOut, Package } from "lucide-react";
+import { ChevronDown, CreditCard, Home, LogOut, Package, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -106,6 +106,15 @@ export default function AccountMenu() {
             >
               <Home className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
               Home
+            </Link>
+            <Link
+              href="/account/profile"
+              role="menuitem"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              onClick={() => setOpen(false)}
+            >
+              <User className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+              My profile
             </Link>
             <Link
               href="/account/billing"

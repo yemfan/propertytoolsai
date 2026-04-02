@@ -1,8 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import TransactionPipeline from "@/components/client/TransactionPipeline";
 import { useClientLeadId } from "@/components/client/useClientLeadId";
+import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
+import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
+
+/** Same idea as AccountMenu: pros are not “consumer-only” even if role is still `user`. */
+function isWorkspaceProfessional(role: string | undefined, hasAgentRecord: boolean): boolean {
+  const r = String(role ?? "user").toLowerCase().trim();
+  if (r === "user" && !hasAgentRecord) return false;
+  return isRealEstateProfessionalRole(r) || hasAgentRecord;
+}
+
+type MeApi = { role?: string; has_agent_record?: boolean };
 
 type MeRes = {
   ok: boolean;
@@ -27,6 +39,7 @@ type DashRes = {
 
 export default function ClientDashboardPage() {
   const [me, setMe] = useState<MeRes | null>(null);
+  const [meApi, setMeApi] = useState<MeApi | null>(null);
   const [dash, setDash] = useState<DashRes | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const leads = me?.leads ?? [];
@@ -62,12 +75,50 @@ export default function ClientDashboardPage() {
     void loadDash();
   }, [loadDash]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const r = await fetch("/api/me", { credentials: "include" });
+        const j = (await r.json().catch(() => ({}))) as MeApi & { error?: string };
+        if (cancelled || !r.ok) return;
+        setMeApi({ role: j.role, has_agent_record: j.has_agent_record });
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const showAgentWorkspaceHint =
+    meApi &&
+    isWorkspaceProfessional(meApi.role, Boolean(meApi.has_agent_record));
+
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-bold text-slate-900">Your dashboard</h1>
         <p className="text-sm text-slate-600 mt-1">Deal status, next steps, and smart suggestions.</p>
       </div>
+
+      {showAgentWorkspaceHint ? (
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+          <p className="font-semibold">Client portal (buyer / seller)</p>
+          <p className="mt-1 leading-relaxed">
+            This page only shows a deal when your login email matches a lead in CRM. Your{" "}
+            <span className="font-medium">agent workspace</span> (leads, pipeline, tools) is separate —{" "}
+            <Link
+              href={resolveRoleHomePath(meApi?.role ?? null, Boolean(meApi?.has_agent_record))}
+              className="font-semibold text-sky-900 underline underline-offset-2 hover:text-sky-950"
+            >
+              open agent workspace
+            </Link>
+            .
+          </p>
+        </div>
+      ) : null}
 
       {leads.length > 1 && (
         <label className="block text-xs font-semibold text-slate-500 uppercase">
@@ -95,9 +146,13 @@ export default function ClientDashboardPage() {
       {!leadId && me?.ok && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
           <p className="font-semibold mb-1">No deal linked yet</p>
-          <p>
-            We match your login email to your agent&apos;s lead record. Ask your agent to add this email to
-            your file, then refresh.
+          <p className="leading-relaxed">
+            We match your login email to a contact on a lead. Ask your agent to add this exact email to your
+            lead in LeadSmart, then refresh. If you expected the agent CRM instead, use{" "}
+            <Link href="/dashboard/overview" className="font-semibold underline underline-offset-2">
+              Dashboard overview
+            </Link>
+            .
           </p>
         </div>
       )}
