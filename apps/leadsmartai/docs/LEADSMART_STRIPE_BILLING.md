@@ -18,8 +18,13 @@ End-to-end **monthly subscriptions** for CRM tiers **starter**, **pro**, and **t
 | `STRIPE_PRICE_ID_CRM_STARTER` | Recurring **monthly** price ID (`price_…`) for Starter |
 | `STRIPE_PRICE_ID_CRM_PRO` | Pro |
 | `STRIPE_PRICE_ID_CRM_TEAM` | Team |
+| `STRIPE_PRICE_ID_AGENT_PRO` | LeadSmart **Agent Pro** (Growth) — maps to `agent_starter` entitlements |
+| `STRIPE_PRICE_ID_AGENT_PREMIUM` | LeadSmart **Agent Premium** (Elite) — maps to `agent_pro` entitlements |
+| `STRIPE_AGENT_TRIAL_DAYS` | Optional. Default **14** for `POST /api/create-checkout-session` with `cancel_surface: "agent"` |
 
-Legacy agent prices (`STRIPE_PRICE_ID_AGENT_*`, etc.) still map to `InternalPlan` and sync entitlements. Those rows also populate `public.subscriptions` via **`agent_starter` → pro tier** and **`agent_pro` → team tier** for feature checks (see `mapInternalPlanToCrmSlug`).
+`POST /api/create-checkout-session` with **`cancel_surface: "agent"`** uses `STRIPE_PRICE_ID_AGENT_PRO` / `STRIPE_PRICE_ID_AGENT_PREMIUM` and applies a **14-day trial** by default (`subscription_data.trial_period_days`). Consumer checkouts (no `cancel_surface`) use `STRIPE_PRICE_ID_PRO` and `STRIPE_PRICE_ID_CONSUMER_PREMIUM` instead.
+
+Legacy agent prices still map to `InternalPlan` and sync entitlements. Those rows also populate `public.subscriptions` via **`agent_starter` → pro tier** and **`agent_pro` → team tier** for feature checks (see `mapInternalPlanToCrmSlug`).
 
 ## Plan catalog & features
 

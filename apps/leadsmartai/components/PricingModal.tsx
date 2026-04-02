@@ -185,7 +185,7 @@ export default function PricingModal({
         method: "POST",
         headers,
         credentials: "include",
-        body: JSON.stringify({ plan: "pro", with_trial: true }),
+        body: JSON.stringify({ plan: "pro", with_trial: true, cancel_surface: "agent" }),
       });
       const body = (await res.json().catch(() => ({}))) as any;
       if (!res.ok) throw new Error(body?.error || "Failed to open checkout");
@@ -219,7 +219,7 @@ export default function PricingModal({
       const res = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers,
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, cancel_surface: "agent" }),
         credentials: "include",
       });
       const raw = await res.text();

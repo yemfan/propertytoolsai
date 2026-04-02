@@ -3,7 +3,10 @@ import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { getUserFromRequest } from "@/lib/authFromRequest";
 import { getPaidSubscriptionEligibility } from "@/lib/paidSubscriptionEligibility";
-import { getStripePriceIdForPlan } from "@/lib/stripePriceIds";
+import {
+  getStripePriceIdForAgentPlan,
+  getStripePriceIdForPlan,
+} from "@/lib/stripePriceIds";
 
 type Body = {
   plan: "pro" | "premium";
@@ -32,10 +35,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
-    const withTrial = Boolean(body.with_trial) && body.plan === "pro";
-    const trialDays = Number(process.env.STRIPE_TRIAL_DAYS ?? 7);
+    const isAgentSurface = body.cancel_surface === "agent";
+    const trialDays = isAgentSurface
+      ? Number(process.env.STRIPE_AGENT_TRIAL_DAYS ?? process.env.STRIPE_TRIAL_DAYS ?? 14)
+      : Number(process.env.STRIPE_TRIAL_DAYS ?? 7);
+    /** Agent Growth + Agent Premium: 14-day trial by default (set `STRIPE_AGENT_TRIAL_DAYS=0` to disable). */
+    const withTrial = isAgentSurface
+      ? trialDays > 0
+      : Boolean(body.with_trial) && (body.plan === "pro" || body.plan === "premium");
 
-    const price = getStripePriceIdForPlan(body.plan);
+    const price = isAgentSurface
+      ? getStripePriceIdForAgentPlan(body.plan)
+      : getStripePriceIdForPlan(body.plan);
 
     try {
       const priceRow = await stripe.prices.retrieve(price);
@@ -70,6 +81,11 @@ export async function POST(req: Request) {
       metadata: {
         user_id: user.id,
         plan: body.plan,
+        ...(isAgentSurface
+          ? {
+              internal_plan: body.plan === "premium" ? "agent_pro" : "agent_starter",
+            }
+          : {}),
       },
     };
     if (withTrial && Number.isFinite(trialDays) && trialDays > 0) {

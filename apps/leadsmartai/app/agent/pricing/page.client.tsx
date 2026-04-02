@@ -19,7 +19,7 @@ const PLANS: Array<{
   key: AgentPlan;
   name: string;
   price: string;
-  /** Maps to `POST /api/create-checkout-session` body `{ plan }` */
+  /** Maps to `POST /api/create-checkout-session` body `{ plan, cancel_surface: "agent" }` */
   checkoutPlan?: "pro" | "premium";
   description: string;
   features: string[];
@@ -43,7 +43,7 @@ const PLANS: Array<{
   },
   {
     key: "growth",
-    name: "Growth",
+    name: "Agent Pro",
     price: "$49/mo",
     checkoutPlan: "pro",
     description: "For active agents closing deals consistently.",
@@ -55,12 +55,12 @@ const PLANS: Array<{
       "Full report downloads",
       "No team access",
     ],
-    cta: "Upgrade to Growth",
+    cta: "Start 14-day trial",
     featured: true,
   },
   {
     key: "elite",
-    name: "Elite",
+    name: "Agent Premium",
     price: "$99/mo",
     checkoutPlan: "premium",
     description: "For top producers and growing teams.",
@@ -72,7 +72,7 @@ const PLANS: Array<{
       "Unlimited downloads",
       "Team access included",
     ],
-    cta: "Go Elite",
+    cta: "Start 14-day trial",
   },
 ];
 
@@ -170,8 +170,9 @@ export default function AgentPricingClientPage() {
             LeadSmart AI for Agents
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-gray-600 md:text-lg">
-            Start free, then upgrade as your pipeline grows. Unlock more CMA reports,
-            higher lead capacity, stronger CRM tools, and advanced automation.
+            Start free, then upgrade as your pipeline grows. Paid plans include a <strong>14-day free trial</strong>{" "}
+            (card required; cancel anytime during the trial). Unlock more CMA reports, higher lead capacity, stronger
+            CRM tools, and advanced automation.
           </p>
           {hasAccess && currentPlan && (
             <div className="mt-4 inline-flex rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white">
@@ -275,14 +276,14 @@ export default function AgentPricingClientPage() {
             </div>
 
             <div className="rounded-2xl bg-gray-50 p-5">
-              <div className="text-sm font-semibold text-gray-900">Growth</div>
+              <div className="text-sm font-semibold text-gray-900">Agent Pro</div>
               <p className="mt-2 text-sm text-gray-600">
                 Best for solo agents actively converting leads and managing a serious pipeline.
               </p>
             </div>
 
             <div className="rounded-2xl bg-gray-50 p-5">
-              <div className="text-sm font-semibold text-gray-900">Elite</div>
+              <div className="text-sm font-semibold text-gray-900">Agent Premium</div>
               <p className="mt-2 text-sm text-gray-600">
                 Best for top producers and teams needing scale, automation, and collaboration.
               </p>

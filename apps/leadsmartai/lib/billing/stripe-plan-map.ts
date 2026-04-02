@@ -18,6 +18,8 @@ const PRICE_ID_TO_PLAN: Record<string, InternalPlan> = {
   price_consumer_premium: "consumer_premium",
   price_agent_starter: "agent_starter",
   price_agent_pro: "agent_pro",
+  /** Alias: Agent Premium SKU maps to Elite (`agent_pro`) entitlements */
+  price_agent_premium: "agent_pro",
   price_loan_broker_pro: "loan_broker_pro",
   price_crm_starter: "crm_starter",
   price_crm_pro: "crm_pro",
@@ -29,11 +31,16 @@ function planFromEnv(priceId: string): InternalPlan | undefined {
   if (process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM && priceId === process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM) {
     return "consumer_premium";
   }
-  if (process.env.STRIPE_PRICE_ID_AGENT_STARTER && priceId === process.env.STRIPE_PRICE_ID_AGENT_STARTER) {
+  /** Agent Premium (Elite) — check before Agent Pro so distinct price IDs resolve correctly */
+  if (process.env.STRIPE_PRICE_ID_AGENT_PREMIUM && priceId === process.env.STRIPE_PRICE_ID_AGENT_PREMIUM) {
+    return "agent_pro";
+  }
+  /** Agent Pro product name → Growth tier */
+  if (process.env.STRIPE_PRICE_ID_AGENT_PRO && priceId === process.env.STRIPE_PRICE_ID_AGENT_PRO) {
     return "agent_starter";
   }
-  if (process.env.STRIPE_PRICE_ID_AGENT_PRO && priceId === process.env.STRIPE_PRICE_ID_AGENT_PRO) {
-    return "agent_pro";
+  if (process.env.STRIPE_PRICE_ID_AGENT_STARTER && priceId === process.env.STRIPE_PRICE_ID_AGENT_STARTER) {
+    return "agent_starter";
   }
   if (process.env.STRIPE_PRICE_ID_LOAN_BROKER_PRO && priceId === process.env.STRIPE_PRICE_ID_LOAN_BROKER_PRO) {
     return "loan_broker_pro";

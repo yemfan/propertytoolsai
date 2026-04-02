@@ -45,6 +45,10 @@ function planFromPriceId(priceId: string | null | undefined): "pro" | "premium" 
   if (priceId === process.env.STRIPE_PRICE_ID_PRO) return "pro";
   const consumerPrem = (process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM ?? "").trim();
   if (consumerPrem && priceId === consumerPrem) return "premium";
+  const agentPro = (process.env.STRIPE_PRICE_ID_AGENT_PRO ?? "").trim();
+  if (agentPro && priceId === agentPro) return "pro";
+  const agentPremium = (process.env.STRIPE_PRICE_ID_AGENT_PREMIUM ?? "").trim();
+  if (agentPremium && priceId === agentPremium) return "premium";
   return null;
 }
 

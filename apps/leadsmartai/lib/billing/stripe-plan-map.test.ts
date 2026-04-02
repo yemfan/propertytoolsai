@@ -4,6 +4,7 @@ import { mapStripePriceToPlan, resolveInternalPlanFromStripeSubscription } from 
 describe("resolveInternalPlanFromStripeSubscription", () => {
   it("uses price map when metadata has no internal_plan", () => {
     expect(resolveInternalPlanFromStripeSubscription("price_agent_pro", {})).toBe("agent_pro");
+    expect(resolveInternalPlanFromStripeSubscription("price_agent_premium", {})).toBe("agent_pro");
     expect(mapStripePriceToPlan("price_unknown")).toBe("consumer_free");
     expect(resolveInternalPlanFromStripeSubscription("price_unknown", {})).toBe("consumer_free");
   });
