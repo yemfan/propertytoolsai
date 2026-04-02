@@ -3,6 +3,11 @@ import { getCachedAccessToken } from "./session/tokenCache";
 
 /** Base URL for `apps/leadsmartai` (Next) API routes, without trailing slash. */
 export function getLeadsmartApiBaseUrl(): string {
+  const fromEnv =
+    process.env.EXPO_PUBLIC_LEADSMART_API_URL ?? process.env.NEXT_PUBLIC_LEADSMART_API_URL;
+  if (typeof fromEnv === "string" && fromEnv.trim()) {
+    return fromEnv.trim().replace(/\/$/, "");
+  }
   const fromExtra = Constants.expoConfig?.extra?.leadsmartApiUrl;
   if (typeof fromExtra === "string" && fromExtra.trim()) {
     return fromExtra.replace(/\/$/, "");

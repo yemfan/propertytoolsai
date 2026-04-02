@@ -94,7 +94,7 @@ function requireConfig(): MobileApiFailure | MobileConfig {
       ok: false,
       status: 0,
       message:
-        "Sign in on the app (email/password) or set EXPO_PUBLIC_LEADSMART_ACCESS_TOKEN for dev. The app uses your Supabase session JWT for API calls.",
+        "API URL is set, but you are not signed in. Use onboarding / Login with your LeadSmart email and password (Supabase issues the JWT). Optional dev-only: EXPO_PUBLIC_LEADSMART_ACCESS_TOKEN. Setting EXPO_PUBLIC_LEADSMART_API_URL alone does not authenticate.",
     };
   }
   return { base, token };
