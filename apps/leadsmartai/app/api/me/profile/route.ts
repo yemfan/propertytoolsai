@@ -4,9 +4,14 @@ import { supabaseAdmin, isSupabaseServiceConfigured } from "@/lib/supabase/admin
 
 export const runtime = "nodejs";
 
+const ONBOARDING_ROLES = new Set(["user", "agent", "broker", "support"]);
+
 type Body = {
   full_name?: string;
   phone?: string;
+  role?: string;
+  /** Set true when finishing Google/Apple onboarding or email signup form */
+  oauth_onboarding_completed?: boolean;
 };
 
 /**
@@ -29,12 +34,22 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
 
-  const updates: Record<string, string> = {};
+  const updates: Record<string, string | boolean> = {};
   if (typeof body.full_name === "string") {
     updates.full_name = body.full_name.trim();
   }
   if (typeof body.phone === "string") {
     updates.phone = body.phone.trim();
+  }
+  if (typeof body.role === "string") {
+    const r = body.role.trim().toLowerCase();
+    if (!ONBOARDING_ROLES.has(r)) {
+      return NextResponse.json({ ok: false, error: "Invalid role" }, { status: 400 });
+    }
+    updates.role = r;
+  }
+  if (typeof body.oauth_onboarding_completed === "boolean") {
+    updates.oauth_onboarding_completed = body.oauth_onboarding_completed;
   }
 
   if (Object.keys(updates).length === 0) {
@@ -52,11 +67,13 @@ export async function PATCH(req: Request) {
   }
 
   if (!updated?.length) {
-    const { error: insErr } = await supabaseAdmin.from("user_profiles").insert({
+    const insertRow: Record<string, unknown> = {
       user_id: user.id,
-      role: "user",
+      role: typeof updates.role === "string" ? updates.role : "user",
       ...updates,
-    } as never);
+    };
+    if (typeof insertRow.role !== "string" || !insertRow.role) insertRow.role = "user";
+    const { error: insErr } = await supabaseAdmin.from("user_profiles").insert(insertRow as never);
     if (insErr) {
       return NextResponse.json({ ok: false, error: insErr.message }, { status: 500 });
     }

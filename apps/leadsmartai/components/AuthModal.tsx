@@ -7,26 +7,16 @@ import { sendPasswordResetEmail } from "@/lib/auth/sendPasswordResetEmail";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
 import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
+import {
+  isSignupRoleAssigned,
+  SIGNUP_ROLE_OPTIONS,
+  signupRoleToDbRole,
+} from "@/lib/auth/signupRoleOptions";
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 
 type Mode = "login" | "signup";
 /** After signup as Real Estate Agent — show Start free CTA before closing. */
 type SignupStep = "form" | "agentStartFree";
-
-const SIGNUP_ROLE_OPTIONS = [
-  { value: "", label: "Not Assigned" },
-  { value: "agent", label: "Real Estate Agent" },
-  { value: "broker", label: "Loan Broker" },
-  { value: "support", label: "System Support" },
-] as const;
-
-function signupRoleToDbRole(value: string): string {
-  return value === "" ? "user" : value;
-}
-
-function isSignupRoleAssigned(value: string): boolean {
-  return value !== "";
-}
 
 export default function AuthModal({
   open,
@@ -125,10 +115,11 @@ export default function AuthModal({
     setLoading(true);
     try {
       const supabase = supabaseBrowser();
+      const next = `${window.location.pathname}${window.location.search}`;
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next || "/")}`,
         },
       });
       if (oauthError) throw oauthError;
@@ -299,7 +290,8 @@ export default function AuthModal({
             role: dbRole,
             full_name: fullName.trim(),
             phone: phoneForProfile,
-          },
+            oauth_onboarding_completed: true,
+          } as Record<string, unknown>,
           { onConflict: "user_id" }
         );
       }

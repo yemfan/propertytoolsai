@@ -45,6 +45,22 @@ export async function GET(request: Request) {
     if (!error) {
       const ctx = await fetchUserPortalContext(supabase);
       if (ctx && !ctx.isPro) {
+        const { data: prof } = await supabase
+          .from("user_profiles")
+          .select("oauth_onboarding_completed")
+          .eq("user_id", ctx.userId)
+          .maybeSingle();
+        const row = prof as { oauth_onboarding_completed?: boolean | null } | null;
+        const onboardingDone = row?.oauth_onboarding_completed === true;
+        if (!onboardingDone) {
+          const completeUrl = new URL("/auth/complete-profile", url.origin);
+          completeUrl.searchParams.set("next", next);
+          const out = NextResponse.redirect(completeUrl);
+          for (const v of response.headers.getSetCookie()) {
+            out.headers.append("Set-Cookie", v);
+          }
+          return out;
+        }
         const out = NextResponse.redirect(getPropertyToolsConsumerPostLoginUrl());
         for (const v of response.headers.getSetCookie()) {
           out.headers.append("Set-Cookie", v);

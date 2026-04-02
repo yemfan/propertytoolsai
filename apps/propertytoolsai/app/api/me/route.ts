@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     const { data, error } = await supabaseServer
       .from("user_profiles")
       .select(
-        "plan,tokens_remaining,tokens_reset_date,role,subscription_status,trial_ends_at,trial_used,full_name,phone,avatar_url"
+        "plan,tokens_remaining,tokens_reset_date,role,subscription_status,trial_ends_at,trial_used,full_name,phone,avatar_url,oauth_onboarding_completed"
       )
       .eq("user_id", user.id)
       .maybeSingle();
@@ -38,6 +38,7 @@ export async function GET(req: Request) {
       full_name: (data as any)?.full_name ?? null,
       phone: (data as any)?.phone ?? null,
       avatar_url: (data as any)?.avatar_url ?? null,
+      oauth_onboarding_completed: (data as any)?.oauth_onboarding_completed ?? null,
     });
   } catch (e: any) {
     return NextResponse.json(
