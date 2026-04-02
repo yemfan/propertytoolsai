@@ -3,17 +3,17 @@ import { supabaseServerClient } from "@/lib/supabaseServerClient";
 export async function getUserFromRequest(req: Request) {
   const supabase = supabaseServerClient();
 
-  // Try cookie-based session first
+  // Prefer Bearer when present (multipart / mobile clients can pair it reliably with FormData).
+  const authHeader = req.headers.get("authorization") || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (token) {
+    const { data: tokenUserData, error: tokenUserErr } = await supabase.auth.getUser(token);
+    if (!tokenUserErr && tokenUserData?.user) return tokenUserData.user;
+  }
+
   const { data: userData, error: userErr } = await supabase.auth.getUser();
   if (!userErr && userData?.user) return userData.user;
 
-  // Fallback: accept explicit bearer token (client-side auth storage)
-  const authHeader = req.headers.get("authorization") || "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token) return null;
-
-  const { data: tokenUserData, error: tokenUserErr } = await supabase.auth.getUser(token);
-  if (tokenUserErr) return null;
-  return tokenUserData?.user ?? null;
+  return null;
 }
 

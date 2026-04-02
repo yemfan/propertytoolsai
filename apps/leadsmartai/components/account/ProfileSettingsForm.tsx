@@ -94,7 +94,11 @@ export default function ProfileSettingsForm() {
     setSuccess(null);
     try {
       const { data: sessionData } = await supabaseBrowser().auth.getSession();
-      const token = sessionData.session?.access_token;
+      let token = sessionData.session?.access_token;
+      if (!token) {
+        const { data: refreshed } = await supabaseBrowser().auth.refreshSession();
+        token = refreshed.session?.access_token ?? undefined;
+      }
       const fd = new FormData();
       fd.set("file", file);
       const res = await fetch("/api/me/avatar", {
@@ -171,7 +175,13 @@ export default function ProfileSettingsForm() {
           <div>
             <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
               {uploading ? "Uploading…" : "Upload new photo"}
-              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={(ev) => void onPickPhoto(ev)} disabled={uploading} />
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
+                className="hidden"
+                onChange={(ev) => void onPickPhoto(ev)}
+                disabled={uploading}
+              />
             </label>
           </div>
         </div>

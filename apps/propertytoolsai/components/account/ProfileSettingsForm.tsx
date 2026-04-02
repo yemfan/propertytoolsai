@@ -98,7 +98,11 @@ export default function ProfileSettingsForm() {
     setSuccess(null);
     try {
       const { data: sessionData } = await supabaseBrowser().auth.getSession();
-      const token = sessionData.session?.access_token;
+      let token = sessionData.session?.access_token;
+      if (!token) {
+        const { data: refreshed } = await supabaseBrowser().auth.refreshSession();
+        token = refreshed.session?.access_token ?? undefined;
+      }
       const fd = new FormData();
       fd.set("file", file);
       const res = await fetch("/api/me/avatar", {
@@ -176,7 +180,7 @@ export default function ProfileSettingsForm() {
               {uploading ? "Uploading…" : "Upload new photo"}
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
                 className="hidden"
                 onChange={(ev) => void onPickPhoto(ev)}
                 disabled={uploading}

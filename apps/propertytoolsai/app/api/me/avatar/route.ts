@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { resolveAvatarImageFile } from "@/lib/avatarUploadMime";
+import { resolveAvatarImageForUpload } from "@/lib/avatarUploadMime";
 import { getUserFromRequest } from "@/lib/authFromRequest";
 import { supabaseAdmin, isSupabaseServiceConfigured } from "@/lib/supabase/admin";
 
@@ -41,17 +41,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "File too large (max 5MB)" }, { status: 400 });
   }
 
+  const ab = await raw.arrayBuffer();
+  const buf = Buffer.from(ab);
   const fileLike: Pick<File, "type" | "name"> = {
     type: raw.type,
     name: raw instanceof File ? raw.name : "upload.bin",
   };
-  const resolved = resolveAvatarImageFile(fileLike);
+  const resolved = resolveAvatarImageForUpload(fileLike, ab);
   if (resolved.ok === false) {
     return NextResponse.json({ ok: false, error: resolved.error }, { status: 400 });
   }
 
   const path = `${user.id}/profile-${Date.now()}.${resolved.ext}`;
-  const buf = Buffer.from(await raw.arrayBuffer());
 
   const { error: upErr } = await supabaseAdmin.storage.from(AVATAR_BUCKET).upload(path, buf, {
     contentType: resolved.contentType,
