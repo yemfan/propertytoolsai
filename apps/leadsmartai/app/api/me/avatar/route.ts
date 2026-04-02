@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
+import { resolveAvatarImageFile } from "@/lib/avatarUploadMime";
 import { getUserFromRequest } from "@/lib/authFromRequest";
 import { supabaseAdmin, isSupabaseServiceConfigured } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
 const MAX_BYTES = 5 * 1024 * 1024;
-const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 const AVATAR_BUCKET = "avatars";
 
@@ -29,38 +29,33 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Expected multipart form data" }, { status: 400 });
   }
 
-  const file = formData.get("file");
-  if (!file || !(file instanceof File)) {
+  const raw = formData.get("file");
+  if (!raw || typeof raw === "string") {
     return NextResponse.json({ ok: false, error: "Missing file" }, { status: 400 });
   }
+  if (!(raw instanceof Blob)) {
+    return NextResponse.json({ ok: false, error: "Invalid file" }, { status: 400 });
+  }
 
-  if (file.size > MAX_BYTES) {
+  if (raw.size > MAX_BYTES) {
     return NextResponse.json({ ok: false, error: "File too large (max 5MB)" }, { status: 400 });
   }
 
-  const type = file.type || "application/octet-stream";
-  if (!ALLOWED.has(type)) {
-    return NextResponse.json(
-      { ok: false, error: "Use JPEG, PNG, WebP, or GIF" },
-      { status: 400 }
-    );
+  const fileLike: Pick<File, "type" | "name"> = {
+    type: raw.type,
+    name: raw instanceof File ? raw.name : "upload.bin",
+  };
+  const resolved = resolveAvatarImageFile(fileLike);
+  if (resolved.ok === false) {
+    return NextResponse.json({ ok: false, error: resolved.error }, { status: 400 });
   }
 
-  const ext =
-    type === "image/jpeg"
-      ? "jpg"
-      : type === "image/png"
-        ? "png"
-        : type === "image/webp"
-          ? "webp"
-          : "gif";
-
-  const path = `${user.id}/profile-${Date.now()}.${ext}`;
-  const buf = Buffer.from(await file.arrayBuffer());
+  const path = `${user.id}/profile-${Date.now()}.${resolved.ext}`;
+  const buf = Buffer.from(await raw.arrayBuffer());
 
   const { error: upErr } = await supabaseAdmin.storage.from(AVATAR_BUCKET).upload(path, buf, {
-    contentType: type,
-    upsert: false,
+    contentType: resolved.contentType,
+    upsert: true,
   });
 
   if (upErr) {

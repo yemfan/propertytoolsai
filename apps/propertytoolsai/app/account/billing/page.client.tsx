@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type BillingStatus =
@@ -28,29 +29,36 @@ type BillingRecord = {
   billing_provider: string;
 };
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
+const PREMIUM_CHECKOUT_KEY = "price_consumer_premium";
+
+/** Active PropertyTools Premium (Stripe) subscription. */
+function isPremiumPlanActive(billing: BillingRecord | null): boolean {
+  if (!billing || billing.plan !== "consumer_premium") return false;
+  return ["active", "trialing", "past_due"].includes(billing.status);
 }
 
-function formatDate(value: string | null) {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString([], {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+/** Free card is "current" when user is not on an active Premium sub for this product. */
+function isFreePlanCurrent(billing: BillingRecord | null): boolean {
+  if (isPremiumPlanActive(billing)) return false;
+  if (!billing) return true;
+  if (billing.plan === "consumer_free") return true;
+  if (["canceled", "incomplete"].includes(billing.status)) return true;
+  return false;
+}
+
+/** Another paid plan (e.g. agent) is active — neither Free nor Premium card is the canonical "current". */
+function hasOtherActivePaidPlan(billing: BillingRecord | null): boolean {
+  if (!billing) return false;
+  if (billing.plan === "consumer_premium" || billing.plan === "consumer_free") return false;
+  return ["active", "trialing", "past_due"].includes(billing.status);
 }
 
 function planLabel(plan: BillingPlan) {
   switch (plan) {
     case "consumer_free":
-      return "Consumer Free";
+      return "Free";
     case "consumer_premium":
-      return "Consumer Premium";
+      return "Premium";
     case "agent_starter":
       return "Agent Starter";
     case "agent_pro":
@@ -62,61 +70,16 @@ function planLabel(plan: BillingPlan) {
   }
 }
 
-function statusClass(status: BillingStatus) {
-  switch (status) {
-    case "active":
-      return "bg-emerald-50 text-emerald-700";
-    case "trialing":
-      return "bg-blue-50 text-blue-700";
-    case "past_due":
-      return "bg-red-50 text-red-700";
-    case "canceled":
-      return "bg-gray-100 text-gray-700";
-    case "incomplete":
-      return "bg-amber-50 text-amber-700";
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
-}
-
-const PLAN_OPTIONS: Array<{
-  label: string;
-  plan: BillingPlan;
-  priceText: string;
-  priceId?: string;
-}> = [
-  {
-    label: "Consumer Premium",
-    plan: "consumer_premium",
-    priceText: "$19/mo",
-    priceId: "price_consumer_premium",
-  },
-  {
-    label: "Agent Starter",
-    plan: "agent_starter",
-    priceText: "$49/mo",
-    priceId: "price_agent_starter",
-  },
-  {
-    label: "Agent Pro",
-    plan: "agent_pro",
-    priceText: "$99/mo",
-    priceId: "price_agent_pro",
-  },
-  {
-    label: "Loan Broker Pro",
-    plan: "loan_broker_pro",
-    priceText: "$99/mo",
-    priceId: "price_loan_broker_pro",
-  },
-];
-
 export default function AccountBillingClientPage() {
   const [billing, setBilling] = useState<BillingRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState<string>("");
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const premiumActive = isPremiumPlanActive(billing);
+  const freeCurrent = isFreePlanCurrent(billing);
+  const otherPlan = hasOtherActivePaidPlan(billing);
 
   async function loadBilling() {
     try {
@@ -175,16 +138,16 @@ export default function AccountBillingClientPage() {
     }
   }
 
-  async function startCheckout(priceId: string) {
+  async function startPremiumCheckout() {
     try {
-      setCheckoutLoading(priceId);
+      setCheckoutLoading(true);
       setError("");
 
       const res = await fetch("/api/billing/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ priceId: PREMIUM_CHECKOUT_KEY }),
       });
 
       const json = (await res.json()) as { success?: boolean; error?: string; url?: string };
@@ -198,188 +161,175 @@ export default function AccountBillingClientPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start checkout");
     } finally {
-      setCheckoutLoading("");
+      setCheckoutLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-2xl px-4 py-10">
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
-            Billing
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage your plan, payments, and subscription settings.
+          <Link
+            href="/"
+            className="text-sm font-medium text-[#0066b3] hover:underline"
+          >
+            ← Back
+          </Link>
+          <h1 className="mt-4 text-2xl font-bold text-slate-900">Billing & subscription</h1>
+          <p className="mt-1 max-w-xl text-sm leading-relaxed text-slate-600">
+            Choose your PropertyTools AI plan. Payments are processed securely with Stripe.
           </p>
         </div>
-
-        {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {loading ? (
-          <div className="rounded-2xl border bg-white p-6 text-sm text-gray-500 shadow-sm">
-            Loading billing details...
-          </div>
-        ) : (
-          <>
-            <section className="rounded-2xl border bg-white shadow-sm">
-              <div className="border-b p-5">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Current Subscription
-                </h2>
-              </div>
-
-              <div className="grid gap-6 p-5 md:grid-cols-2">
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-sm text-gray-500">Current Plan</div>
-                    <div className="mt-1 text-2xl font-semibold text-gray-900">
-                      {billing ? planLabel(billing.plan) : "Free Plan"}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-500">Status</div>
-                    <div className="mt-2">
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-                          billing ? statusClass(billing.status) : "bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        {billing ? billing.status.replace("_", " ") : "free"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-500">Monthly Price</div>
-                    <div className="mt-1 text-lg font-medium text-gray-900">
-                      {billing ? formatCurrency(billing.amount_monthly) : "$0"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <div className="text-sm text-gray-500">Current Period Start</div>
-                    <div className="mt-1 text-base text-gray-900">
-                      {billing ? formatDate(billing.current_period_start) : "—"}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-500">Current Period End</div>
-                    <div className="mt-1 text-base text-gray-900">
-                      {billing ? formatDate(billing.current_period_end) : "—"}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-gray-500">Renewal</div>
-                    <div className="mt-1 text-base text-gray-900">
-                      {billing?.cancel_at_period_end
-                        ? "Cancels at period end"
-                        : "Auto-renewing"}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {billing?.status === "past_due" && (
-                <div className="border-t bg-red-50 px-5 py-4 text-sm text-red-700">
-                  Your billing status is past due. Please update your payment method.
-                </div>
-              )}
-
-              {billing?.cancel_at_period_end && (
-                <div className="border-t bg-amber-50 px-5 py-4 text-sm text-amber-700">
-                  Your subscription is set to cancel at the end of the current billing period.
-                </div>
-              )}
-            </section>
-
-            <section className="rounded-2xl border bg-white shadow-sm">
-              <div className="border-b p-5">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Available Plans
-                </h2>
-              </div>
-
-              <div className="grid gap-4 p-5 md:grid-cols-2">
-                {PLAN_OPTIONS.map((plan) => {
-                  const isCurrent = billing?.plan === plan.plan;
-
-                  return (
-                    <div
-                      key={plan.plan}
-                      className="rounded-2xl border p-5"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="text-lg font-semibold text-gray-900">
-                            {plan.label}
-                          </div>
-                          <div className="mt-1 text-sm text-gray-500">
-                            {plan.priceText}
-                          </div>
-                        </div>
-
-                        {isCurrent && (
-                          <span className="rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white">
-                            Current
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="mt-5">
-                        <button
-                          type="button"
-                          disabled={isCurrent || !plan.priceId || checkoutLoading === plan.priceId}
-                          onClick={() => plan.priceId && void startCheckout(plan.priceId)}
-                          className="w-full rounded-2xl bg-gray-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
-                        >
-                          {isCurrent
-                            ? "Current Plan"
-                            : checkoutLoading === plan.priceId
-                            ? "Redirecting..."
-                            : "Choose Plan"}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section className="rounded-2xl border bg-white shadow-sm">
-              <div className="border-b p-5">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Billing Management
-                </h2>
-              </div>
-
-              <div className="p-5">
-                <button
-                  type="button"
-                  onClick={() => void openPortal()}
-                  disabled={portalLoading}
-                  className="rounded-2xl border px-5 py-3 text-sm font-medium text-gray-900 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-100"
-                >
-                  {portalLoading ? "Opening..." : "Manage Subscription"}
-                </button>
-
-                <p className="mt-3 text-sm text-gray-500">
-                  Update payment methods, download invoices, or cancel your plan in the billing portal.
-                </p>
-              </div>
-            </section>
-          </>
-        )}
+        <Link
+          href="/account/profile"
+          className="shrink-0 text-sm font-medium text-[#0066b3] hover:underline sm:pt-9"
+        >
+          My profile →
+        </Link>
       </div>
+
+      {error ? (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {error}
+        </div>
+      ) : null}
+
+      {loading ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-8 text-sm text-slate-600 shadow-sm">
+          Loading…
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {otherPlan && billing ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              Your account has an active <span className="font-semibold">{planLabel(billing.plan)}</span>{" "}
+              subscription. To change or cancel, use{" "}
+              <button
+                type="button"
+                onClick={() => void openPortal()}
+                className="font-semibold text-[#0066b3] underline hover:no-underline"
+                disabled={portalLoading}
+              >
+                Manage billing
+              </button>
+              .
+            </p>
+          ) : null}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Free */}
+            <div
+              className={`relative flex flex-col rounded-xl border bg-white p-6 shadow-sm transition ${
+                freeCurrent && !otherPlan
+                  ? "border-[#0066b3] ring-2 ring-[#0066b3]/25"
+                  : "border-slate-200"
+              }`}
+            >
+              {freeCurrent && !otherPlan ? (
+                <span className="absolute right-4 top-4 rounded-full bg-[#0066b3] px-2.5 py-0.5 text-xs font-semibold text-white">
+                  Current plan
+                </span>
+              ) : null}
+              <h2 className="text-lg font-semibold text-slate-900">Free</h2>
+              <p className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
+                $0
+                <span className="text-base font-normal text-slate-600">/mo</span>
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                Core PropertyTools AI features for personal use.
+              </p>
+              <div className="mt-6 flex flex-1 flex-col justify-end">
+                {freeCurrent && !otherPlan ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 text-sm font-semibold text-slate-500"
+                  >
+                    Your plan
+                  </button>
+                ) : premiumActive ? (
+                  <button
+                    type="button"
+                    onClick={() => void openPortal()}
+                    disabled={portalLoading}
+                    className="w-full rounded-lg border border-slate-300 bg-white py-2.5 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    {portalLoading ? "Opening…" : "Change plan in portal"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void openPortal()}
+                    disabled={portalLoading}
+                    className="w-full rounded-lg border border-slate-300 bg-white py-2.5 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    {portalLoading ? "Opening…" : "Manage in billing portal"}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Premium */}
+            <div
+              className={`relative flex flex-col rounded-xl border bg-white p-6 shadow-sm transition ${
+                premiumActive
+                  ? "border-[#0066b3] ring-2 ring-[#0066b3]/25"
+                  : "border-slate-200"
+              }`}
+            >
+              {premiumActive ? (
+                <span className="absolute right-4 top-4 rounded-full bg-[#0066b3] px-2.5 py-0.5 text-xs font-semibold text-white">
+                  Current plan
+                </span>
+              ) : null}
+              <h2 className="text-lg font-semibold text-slate-900">Premium</h2>
+              <p className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
+                $19
+                <span className="text-base font-normal text-slate-600">/mo</span>
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                Full access to PropertyTools AI — priority usage and advanced features.
+              </p>
+              <div className="mt-6 flex flex-1 flex-col justify-end">
+                {premiumActive ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 text-sm font-semibold text-slate-500"
+                  >
+                    Your plan
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void startPremiumCheckout()}
+                    disabled={checkoutLoading || otherPlan}
+                    title={
+                      otherPlan
+                        ? "Use Manage billing to change an existing subscription"
+                        : undefined
+                    }
+                    className="w-full rounded-lg bg-[#0066b3] py-2.5 text-sm font-semibold text-white hover:opacity-95 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:opacity-100"
+                  >
+                    {checkoutLoading ? "Redirecting…" : "Upgrade to Premium"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <p className="text-center text-sm text-slate-600">
+            <button
+              type="button"
+              onClick={() => void openPortal()}
+              disabled={portalLoading}
+              className="font-medium text-[#0066b3] underline hover:no-underline disabled:opacity-60"
+            >
+              {portalLoading ? "Opening…" : "Manage billing — invoices, payment method, cancel"}
+            </button>
+          </p>
+        </div>
+      )}
     </div>
   );
 }
