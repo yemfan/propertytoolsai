@@ -127,6 +127,27 @@ export default function AuthModal(props: {
     }
   }
 
+  async function handleOAuth(provider: "google" | "apple") {
+    setError(null);
+    setInfo(null);
+    setLoading(true);
+    try {
+      const supabase = supabaseBrowser();
+      const { error: err } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (err) {
+        setError(err.message);
+      }
+    } catch (e: any) {
+      setError(e?.message ?? "OAuth sign in failed.");
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/45 p-3 sm:items-center">
       <button
@@ -196,6 +217,32 @@ export default function AuthModal(props: {
         </div>
 
         <div className="px-5 py-4">
+          <div className="space-y-2 pb-4">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => void handleOAuth("google")}
+              className="inline-flex w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Continue with Google
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => void handleOAuth("apple")}
+              className="inline-flex w-full items-center justify-center rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Continue with Apple
+            </button>
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center" aria-hidden>
+                <div className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <span className="bg-white px-2">Email</span>
+              </div>
+            </div>
+          </div>
           {mode === "login" ? (
             <form onSubmit={handleLogin} className="space-y-3">
               <div>

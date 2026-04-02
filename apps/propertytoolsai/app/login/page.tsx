@@ -26,6 +26,25 @@ function LoginPageInner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  async function handleOAuth(provider: "google" | "apple") {
+    try {
+      setLoading(true);
+      setError("");
+      const target = nextParam ?? redirectParam;
+      const safe = target ? safeInternalRedirect(target) : "/dashboard";
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safe)}`,
+        },
+      });
+      if (oauthError) throw oauthError;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start social sign in");
+      setLoading(false);
+    }
+  }
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
@@ -78,6 +97,32 @@ function LoginPageInner() {
         ) : null}
 
         <form onSubmit={handleLogin} className="mt-8 space-y-4">
+          <div className="space-y-2">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => void handleOAuth("google")}
+              className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-900 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Continue with Google
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => void handleOAuth("apple")}
+              className="w-full rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white transition hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Continue with Apple
+            </button>
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center" aria-hidden>
+                <div className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                <span className="bg-white px-2">Email</span>
+              </div>
+            </div>
+          </div>
           <input
             type="email"
             required
