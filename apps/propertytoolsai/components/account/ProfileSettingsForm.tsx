@@ -148,10 +148,6 @@ export default function ProfileSettingsForm() {
     <div className="space-y-6">
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">Account type</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Your role is stored in <span className="font-medium">user_profiles.role</span> (shared with LeadSmart AI).
-          It is not editable here.
-        </p>
         <div className="mt-4 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
           <p className="text-sm font-semibold text-slate-900">{roleLabel}</p>
           <p className="mt-1 text-sm text-slate-600 leading-relaxed">{roleDescription}</p>

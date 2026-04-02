@@ -1,6 +1,6 @@
 /**
  * Maps UI / checkout `priceId` keys (not Stripe ids) to env-backed Stripe Price IDs.
- * Falls back to existing STRIPE_PRICE_ID_PRO / PREMIUM when specific keys are unset.
+ * Falls back to STRIPE_PRICE_ID_PRO where noted for agent/loan keys when specific keys are unset.
  */
 
 export const BILLING_CHECKOUT_PRICE_KEYS = [
@@ -41,10 +41,7 @@ function requirePriceId(raw: string | undefined, envName: string): string {
 export function getStripePriceIdForBillingCheckoutKey(key: string): string {
   switch (key) {
     case "price_consumer_premium":
-      return requirePriceId(
-        process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM ?? process.env.STRIPE_PRICE_ID_PREMIUM,
-        "STRIPE_PRICE_ID_CONSUMER_PREMIUM (or STRIPE_PRICE_ID_PREMIUM)"
-      );
+      return requirePriceId(process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM, "STRIPE_PRICE_ID_CONSUMER_PREMIUM");
     case "price_agent_starter":
       return requirePriceId(
         process.env.STRIPE_PRICE_ID_AGENT_STARTER ?? process.env.STRIPE_PRICE_ID_PRO,

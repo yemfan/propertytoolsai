@@ -26,7 +26,6 @@ const PRICE_ID_TO_PLAN: Record<string, InternalPlan> = {
 
 function planFromEnv(priceId: string): InternalPlan | undefined {
   if (priceId === process.env.STRIPE_PRICE_ID_PRO) return "agent_starter";
-  if (priceId === process.env.STRIPE_PRICE_ID_PREMIUM) return "agent_pro";
   if (process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM && priceId === process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM) {
     return "consumer_premium";
   }

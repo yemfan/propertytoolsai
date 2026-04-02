@@ -37,6 +37,32 @@ export async function POST(req: Request) {
     const billingPlan = getBillingPlanFromCheckoutKey(priceKey as BillingCheckoutPriceKey);
     const origin = new URL(req.url).origin;
 
+    try {
+      const priceRow = await stripe.prices.retrieve(stripePrice);
+      if (!priceRow.active) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "This Stripe price is inactive. In Stripe Dashboard → Products, activate the price, or set STRIPE_PRICE_ID_CONSUMER_PREMIUM in your deployment env to an active price ID.",
+          },
+          { status: 400 }
+        );
+      }
+      if (priceRow.type !== "recurring") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Checkout requires a recurring subscription price.",
+          },
+          { status: 400 }
+        );
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Invalid Stripe price";
+      return NextResponse.json({ success: false, error: msg }, { status: 400 });
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer_email: user.email,

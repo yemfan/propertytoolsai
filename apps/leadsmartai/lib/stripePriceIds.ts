@@ -3,8 +3,8 @@
  * not a **Product** id (`prod_...`). Using a product id causes: "No such price: 'prod_...'".
  */
 export function getStripePriceIdForPlan(plan: "pro" | "premium"): string {
-  const envKey = plan === "pro" ? "STRIPE_PRICE_ID_PRO" : "STRIPE_PRICE_ID_PREMIUM";
-  const raw = plan === "pro" ? process.env.STRIPE_PRICE_ID_PRO : process.env.STRIPE_PRICE_ID_PREMIUM;
+  const envKey = plan === "pro" ? "STRIPE_PRICE_ID_PRO" : "STRIPE_PRICE_ID_CONSUMER_PREMIUM";
+  const raw = plan === "pro" ? process.env.STRIPE_PRICE_ID_PRO : process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM;
   const v = (raw ?? "").trim();
 
   if (!v) {

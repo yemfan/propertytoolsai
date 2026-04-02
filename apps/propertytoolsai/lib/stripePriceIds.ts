@@ -9,14 +9,12 @@ export function getStripePriceIdForPlan(plan: "pro" | "premium"): string {
     return validatePriceId(v, envKey);
   }
 
-  const consumerPremium = (process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM ?? "").trim();
-  const legacyPremium = (process.env.STRIPE_PRICE_ID_PREMIUM ?? "").trim();
-  const v = consumerPremium || legacyPremium;
-  const envKey = consumerPremium ? "STRIPE_PRICE_ID_CONSUMER_PREMIUM" : "STRIPE_PRICE_ID_PREMIUM";
+  const envKey = "STRIPE_PRICE_ID_CONSUMER_PREMIUM";
+  const v = (process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM ?? "").trim();
 
   if (!v) {
     throw new Error(
-      `Missing STRIPE_PRICE_ID_CONSUMER_PREMIUM (Consumer Premium, $19/mo) or STRIPE_PRICE_ID_PREMIUM as fallback. Add a Stripe Price ID to .env.local (starts with price_). See ENV.md → Stripe.`
+      `Missing STRIPE_PRICE_ID_CONSUMER_PREMIUM (Consumer Premium). Add a Stripe Price ID to .env.local (starts with price_). See ENV.md → Stripe.`
     );
   }
 

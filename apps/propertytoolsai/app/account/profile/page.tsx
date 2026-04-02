@@ -14,10 +14,6 @@ export default function AccountProfilePage() {
           ← Back
         </Link>
         <h1 className="mt-4 text-2xl font-bold text-slate-900">My profile</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Your role comes from <span className="font-medium">user_profiles</span> (same database as LeadSmart AI).
-          Contact support to change professional access levels.
-        </p>
       </div>
       <ProfileSettingsForm />
     </div>

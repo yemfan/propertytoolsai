@@ -134,23 +134,18 @@ describe("computeAgentPlanFromSubscriptionSync", () => {
 
 describe("resolvePaidPlanFromStripe", () => {
   let prevPro: string | undefined;
-  let prevPremium: string | undefined;
   let prevConsumerPremium: string | undefined;
 
   beforeEach(() => {
     prevPro = process.env.STRIPE_PRICE_ID_PRO;
-    prevPremium = process.env.STRIPE_PRICE_ID_PREMIUM;
     prevConsumerPremium = process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM;
-    delete process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM;
     process.env.STRIPE_PRICE_ID_PRO = "price_pro_test";
-    process.env.STRIPE_PRICE_ID_PREMIUM = "price_premium_test";
+    process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM = "price_premium_test";
   });
 
   afterEach(() => {
     if (prevPro === undefined) delete process.env.STRIPE_PRICE_ID_PRO;
     else process.env.STRIPE_PRICE_ID_PRO = prevPro;
-    if (prevPremium === undefined) delete process.env.STRIPE_PRICE_ID_PREMIUM;
-    else process.env.STRIPE_PRICE_ID_PREMIUM = prevPremium;
     if (prevConsumerPremium === undefined) delete process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM;
     else process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM = prevConsumerPremium;
   });
@@ -158,16 +153,10 @@ describe("resolvePaidPlanFromStripe", () => {
   it("uses env price id for pro", () => {
     expect(resolvePaidPlanFromStripe(mockSubscription("active", { priceId: "price_pro_test" }))).toBe("pro");
   });
-  it("uses env price id for premium", () => {
+  it("uses env price id for premium (STRIPE_PRICE_ID_CONSUMER_PREMIUM)", () => {
     expect(resolvePaidPlanFromStripe(mockSubscription("active", { priceId: "price_premium_test" }))).toBe(
       "premium"
     );
-  });
-  it("uses STRIPE_PRICE_ID_CONSUMER_PREMIUM when set", () => {
-    process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM = "price_consumer_premium_test";
-    expect(
-      resolvePaidPlanFromStripe(mockSubscription("active", { priceId: "price_consumer_premium_test" }))
-    ).toBe("premium");
   });
   it("uses subscription metadata when price id unknown", () => {
     expect(resolvePaidPlanFromStripe(mockSubscription("active", { planMeta: "premium" }))).toBe("premium");
