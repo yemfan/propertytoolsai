@@ -1,5 +1,5 @@
 import type { NavGroupItem, NavLeafItem, NavSection } from "./types";
-import { isNavGroup } from "./types";
+import { isNavDivider, isNavGroup } from "./types";
 
 function roleMatches(allowed: string[] | undefined, userRole: string): boolean {
   if (!allowed?.length) return true;
@@ -13,6 +13,25 @@ function roleHiddenBy(hideFor: string[] | undefined, userRole: string): boolean 
   return hideFor.some((r) => r.toLowerCase() === u);
 }
 
+/** Removes leading/trailing dividers and merges consecutive dividers (e.g. after role filtering). */
+function collapseNavDividers(sections: NavSection[]): NavSection[] {
+  const out: NavSection[] = [];
+  for (const s of sections) {
+    if (isNavDivider(s)) {
+      if (out.length === 0) continue;
+      const last = out[out.length - 1];
+      if (isNavDivider(last)) continue;
+      out.push(s);
+    } else {
+      out.push(s);
+    }
+  }
+  while (out.length > 0 && isNavDivider(out[out.length - 1]!)) {
+    out.pop();
+  }
+  return out;
+}
+
 /**
  * Drops nav sections the user’s role is not allowed to see.
  * `userRole` is typically `user_profiles.role` (e.g. `admin`, `agent`).
@@ -22,7 +41,8 @@ export function filterNavSectionsByRole(
   userRole: string | null | undefined
 ): NavSection[] {
   const r = (userRole ?? "").trim();
-  return sections.flatMap((section): NavSection[] => {
+  const mapped = sections.flatMap((section): NavSection[] => {
+    if (isNavDivider(section)) return [section];
     if (isNavGroup(section)) {
       const g = section as NavGroupItem;
       if (!roleMatches(g.roles, r)) return [];
@@ -38,4 +58,5 @@ export function filterNavSectionsByRole(
     if (roleHiddenBy(leaf.hideForRoles, r)) return [];
     return [leaf];
   });
+  return collapseNavDividers(mapped);
 }

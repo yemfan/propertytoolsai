@@ -1,13 +1,14 @@
 export type {
   AppNavConfig,
   NavConfig,
+  NavDividerSection,
   NavGroupDef,
   NavGroupItem,
   NavLeafItem,
   NavLinkDef,
   NavSection,
 } from "./types";
-export { isNavGroup } from "./types";
+export { isNavDivider, isNavGroup } from "./types";
 export { filterNavSectionsByRole } from "./filterNavByRole";
 export { isGroupActive, isLinkActive, isSectionActive } from "./matchPath";
 export { CollapsibleNavGroup } from "./CollapsibleNavGroup";

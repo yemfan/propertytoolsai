@@ -3,6 +3,7 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 import type {
   DailyAgendaItem,
+  MobileAgentInboxNotificationDto,
   MobileBookingLinkDto,
   MobileCalendarEventDto,
   MobileCalendarEventStatus,
@@ -20,6 +21,8 @@ import type {
   MobileLeadPipelineDto,
   MobileLeadTaskDto,
   MobileLeadsListResponseDto,
+  MobileNotificationPreferencesDto,
+  MobileNotificationsListResponseDto,
   MobilePipelineStageOptionDto,
   MobileRemindersResponseDto,
   MobileSmsAiReplyResponseDto,
@@ -680,4 +683,67 @@ export async function fetchMobileReminders(): Promise<
     overdue_tasks: d.overdue_tasks,
     follow_ups: d.follow_ups as MobileFollowUpReminderDto[],
   };
+}
+
+type NotificationsListJson = MobileJsonError & Partial<MobileNotificationsListResponseDto>;
+
+export async function fetchMobileNotifications(params?: {
+  limit?: number;
+}): Promise<({ ok: true } & MobileNotificationsListResponseDto) | MobileApiFailure> {
+  const q =
+    typeof params?.limit === "number"
+      ? `?limit=${encodeURIComponent(String(params.limit))}`
+      : "";
+  const res = await mobileGet<NotificationsListJson>(`${MOBILE_API_PATHS.notifications}${q}`);
+  if (res.ok === false) return res;
+  const list = res.data.notifications;
+  if (!Array.isArray(list)) {
+    return { ok: false, status: 200, message: "Invalid notifications response." };
+  }
+  return { ok: true, notifications: list as MobileAgentInboxNotificationDto[] };
+}
+
+export async function postMobileNotificationRead(params: {
+  notificationId?: string;
+  markAllRead?: boolean;
+}): Promise<{ ok: true } | MobileApiFailure> {
+  const body: Record<string, unknown> = {};
+  if (params.markAllRead) body.markAllRead = true;
+  else if (params.notificationId) body.notificationId = params.notificationId;
+  else return { ok: false, status: 0, message: "notificationId or markAllRead required." };
+
+  const res = await mobilePost<MobileJsonError>(MOBILE_API_PATHS.notifications, body);
+  if (res.ok === false) return res;
+  return { ok: true };
+}
+
+type PrefsJson = MobileJsonError & { preferences?: MobileNotificationPreferencesDto };
+
+export async function fetchMobileNotificationPreferences(): Promise<
+  ({ ok: true } & { preferences: MobileNotificationPreferencesDto }) | MobileApiFailure
+> {
+  const res = await mobileGet<PrefsJson>(MOBILE_API_PATHS.notificationPreferences);
+  if (res.ok === false) return res;
+  const p = res.data.preferences;
+  if (!p || typeof p.push_hot_lead !== "boolean") {
+    return { ok: false, status: 200, message: "Invalid notification preferences response." };
+  }
+  return { ok: true, preferences: p };
+}
+
+export async function patchMobileNotificationPreferences(
+  patch: Partial<
+    Pick<
+      MobileNotificationPreferencesDto,
+      "push_hot_lead" | "push_missed_call" | "push_reminder" | "reminder_digest_minutes"
+    >
+  >
+): Promise<({ ok: true } & { preferences: MobileNotificationPreferencesDto }) | MobileApiFailure> {
+  const res = await mobilePatch<PrefsJson>(MOBILE_API_PATHS.notificationPreferences, patch);
+  if (res.ok === false) return res;
+  const p = res.data.preferences;
+  if (!p) {
+    return { ok: false, status: 200, message: "Invalid notification preferences response." };
+  }
+  return { ok: true, preferences: p };
 }

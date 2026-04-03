@@ -1,7 +1,13 @@
+import {
+  leadRowToBaseSignals,
+  overlayDashboardAlertSignals,
+  type LeadAttentionRow,
+} from "@/lib/lead-priority/leadAttentionSignals";
 import { listMobileCalendarEvents } from "@/lib/mobile/calendarMobile";
 import { getMobileInbox } from "@/lib/mobile/inbox";
 import { listMobileTasksGrouped } from "@/lib/mobile/leadTasksMobile";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { scoreLeadAttention } from "@leadsmart/shared";
 import type {
   MobileDashboardPriorityAlert,
   MobileDashboardQuickAction,
@@ -49,6 +55,51 @@ async function leadNamesForIds(agentId: string, ids: string[]): Promise<Map<stri
     map.set(String(r.id), r.name != null ? String(r.name) : null);
   }
   return map;
+}
+
+async function leadAttentionRowsForIds(
+  agentId: string,
+  ids: string[]
+): Promise<Map<string, LeadAttentionRow>> {
+  const map = new Map<string, LeadAttentionRow>();
+  const uniq = [...new Set(ids)].filter(Boolean);
+  if (!uniq.length) return map;
+  const { data, error } = await supabaseAdmin
+    .from("leads")
+    .select("id,rating,prediction_score,prediction_label")
+    .eq("agent_id", agentId as never)
+    .in("id", uniq as never);
+  if (error) throw new Error(error.message);
+  for (const row of data ?? []) {
+    const r = row as LeadAttentionRow & { id: unknown };
+    map.set(String(r.id), r);
+  }
+  return map;
+}
+
+function enrichAndSortPriorityAlerts(
+  alerts: MobileDashboardPriorityAlert[],
+  leadById: Map<string, LeadAttentionRow>,
+  unreadCountByLead: Map<string, number>
+): MobileDashboardPriorityAlert[] {
+  const enriched = alerts.map((a) => {
+    const row = a.leadId ? leadById.get(a.leadId) : undefined;
+    const base = leadRowToBaseSignals(row);
+    const uc = a.leadId ? unreadCountByLead.get(a.leadId) ?? 0 : 0;
+    const withThreads =
+      uc > 1 ? { ...base, unreadInboundThreadCount: uc } : { ...base };
+    const signals = overlayDashboardAlertSignals(withThreads, a.type);
+    const r = scoreLeadAttention(signals);
+    return {
+      ...a,
+      attentionScore: r.score,
+      attentionPriority: r.priority,
+      attentionReasons: r.reasons.slice(0, 3),
+      deliveryTiming: r.deliveryTiming,
+    };
+  });
+  enriched.sort((x, y) => (y.attentionScore ?? 0) - (x.attentionScore ?? 0));
+  return enriched;
 }
 
 export async function getMobileDashboard(agentId: string): Promise<MobileDashboardResponse> {
@@ -151,9 +202,18 @@ export async function getMobileDashboard(agentId: string): Promise<MobileDashboa
     });
   }
 
+  const unreadCountByLead = new Map<string, number>();
+  for (const t of unreadThreads) {
+    unreadCountByLead.set(t.leadId, (unreadCountByLead.get(t.leadId) ?? 0) + 1);
+  }
+
+  const alertLeadIds = priorityAlerts.map((a) => a.leadId).filter(Boolean) as string[];
+  const attentionRows = await leadAttentionRowsForIds(agentId, alertLeadIds);
+  const ranked = enrichAndSortPriorityAlerts(priorityAlerts, attentionRows, unreadCountByLead);
+
   return {
     stats,
-    priorityAlerts: priorityAlerts.slice(0, MAX_ALERTS),
+    priorityAlerts: ranked.slice(0, MAX_ALERTS),
     quickActions: DEFAULT_QUICK_ACTIONS,
   };
 }

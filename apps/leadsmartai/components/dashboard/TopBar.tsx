@@ -1,6 +1,21 @@
 "use client";
 
-import { Bell, CreditCard, ChevronDown, House, LogOut, Search, Settings, User } from "lucide-react";
+import {
+  BarChart3,
+  Bell,
+  Calendar,
+  CreditCard,
+  ChevronDown,
+  House,
+  ListTodo,
+  LogOut,
+  MessageSquare,
+  Plus,
+  Search,
+  Settings,
+  User,
+  UserPlus,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
@@ -34,6 +49,119 @@ function initialsFromEmail(email: string | null | undefined): string {
     .join("")
     .slice(0, 2)
     .toUpperCase() || "?";
+}
+
+const QUICK_ACTION_LINKS = [
+  { href: "/dashboard/leads/add", label: "Add Lead", Icon: UserPlus },
+  { href: "/dashboard/send", label: "Send Message", Icon: MessageSquare },
+  { href: "/dashboard/tasks?new=1", label: "Create Task", Icon: ListTodo },
+  { href: "/dashboard/calendar?new=1", label: "Create Appointment", Icon: Calendar },
+  { href: "/dashboard/comparison-report", label: "Generate CMA", Icon: BarChart3 },
+] as const;
+
+function QuickActionsDropdown() {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [placement, setPlacement] = useState<{ top: number; right: number } | null>(null);
+
+  const updatePlacement = useCallback(() => {
+    const el = buttonRef.current;
+    if (!el || typeof window === "undefined") return;
+    const r = el.getBoundingClientRect();
+    setPlacement({
+      top: r.bottom + 8,
+      right: window.innerWidth - r.right,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPlacement(null);
+      return;
+    }
+    updatePlacement();
+    window.addEventListener("resize", updatePlacement);
+    window.addEventListener("scroll", updatePlacement, true);
+    return () => {
+      window.removeEventListener("resize", updatePlacement);
+      window.removeEventListener("scroll", updatePlacement, true);
+    };
+  }, [open, updatePlacement]);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      const t = e.target as Node;
+      if (rootRef.current?.contains(t)) return;
+      if (menuRef.current?.contains(t)) return;
+      setOpen(false);
+    }
+    if (open) document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  const menuPanel = (
+    <div
+      ref={menuRef}
+      className="fixed z-[199] w-[min(100vw-1.5rem,17rem)] rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-xl shadow-slate-900/10 ring-1 ring-slate-900/[0.04]"
+      role="menu"
+      aria-label="Quick actions"
+      style={
+        placement
+          ? { top: placement.top, right: placement.right }
+          : { visibility: "hidden", pointerEvents: "none" }
+      }
+    >
+      <p className="px-3 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+        Quick actions
+      </p>
+      {QUICK_ACTION_LINKS.map(({ href, label, Icon }) => (
+        <Link
+          key={href}
+          href={href}
+          role="menuitem"
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          onClick={() => setOpen(false)}
+        >
+          <Icon className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+          {label}
+        </Link>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="relative" ref={rootRef}>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex h-10 shrink-0 items-center gap-2 rounded-2xl border border-slate-200/90 bg-white px-3 text-slate-700 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={open ? "Close quick actions menu" : "Open quick actions menu"}
+      >
+        <Plus className="h-[18px] w-[18px] shrink-0" strokeWidth={2} aria-hidden />
+        <span className="hidden text-sm font-semibold sm:inline">Quick actions</span>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+          strokeWidth={2}
+          aria-hidden
+        />
+      </button>
+      {open && placement && typeof document !== "undefined" ? createPortal(menuPanel, document.body) : null}
+    </div>
+  );
 }
 
 function ProfileMenu({
@@ -362,6 +490,7 @@ export default function TopBar({
             </Link>
           ) : null}
           <SupportChatLauncher />
+          <QuickActionsDropdown />
           <Link
             href="/dashboard/notifications"
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200/90 bg-white text-slate-600 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50"

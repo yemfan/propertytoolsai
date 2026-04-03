@@ -11,7 +11,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { NavSection } from "./types";
-import { isNavGroup } from "./types";
+import { isNavDivider, isNavGroup } from "./types";
 import { isLinkActive } from "./matchPath";
 
 export type PremiumSidebarProps = {
@@ -203,7 +203,17 @@ export function PremiumSidebar({
       {/* Nav */}
       <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 [scrollbar-gutter:stable] [scrollbar-color:rgba(148,163,184,0.5)_transparent]">
         <nav className="space-y-2.5">
-          {sections.map((section) => {
+          {sections.map((section, sectionIdx) => {
+            if (isNavDivider(section)) {
+              return (
+                <div
+                  key={`nav-divider-${sectionIdx}`}
+                  className="my-1 border-t border-slate-200/90 pt-1"
+                  role="separator"
+                  aria-hidden
+                />
+              );
+            }
             if (!isNavGroup(section)) {
               const active = isLinkActive(pathname, section);
               const link = (
@@ -241,7 +251,7 @@ export function PremiumSidebar({
               );
 
               return (
-                <RailTooltip key={section.href} label={section.label} collapsed={collapsed}>
+                <RailTooltip key={`${section.href}-${section.label}`} label={section.label} collapsed={collapsed}>
                   {link}
                 </RailTooltip>
               );

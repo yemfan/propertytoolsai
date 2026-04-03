@@ -5,6 +5,7 @@ import {
   leadEngagementScore,
 } from "@/lib/dashboard/schemaConfig";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { scoreLeadAttention, type NotificationDeliveryTiming, type NotificationPriority } from "@leadsmart/shared";
 
 /** Row shape from `public.leads` — tolerate legacy/extra columns. */
 export type LeadRowLike = {
@@ -35,6 +36,10 @@ export type AgentDashboardResponse = {
     city: string;
     score: number;
     status: string;
+    attentionScore?: number;
+    attentionPriority?: NotificationPriority;
+    attentionReasons?: string[];
+    deliveryTiming?: NotificationDeliveryTiming;
   }>;
   pipeline: Array<{
     stage: string;
@@ -179,13 +184,24 @@ export async function getAgentDashboardOverview({
     .filter((l) => scoreOf(l) >= 60)
     .sort((a, b) => scoreOf(b) - scoreOf(a))
     .slice(0, 5)
-    .map((l) => ({
-      id: String(l.id),
-      name: l.name || "Unknown Lead",
-      city: cityFromLead(l),
-      score: scoreOf(l),
-      status: statusOf(l) || "new",
-    }));
+    .map((l) => {
+      const engagement = scoreOf(l);
+      const att = scoreLeadAttention({
+        hotLead: engagement >= 60,
+        dealPredictionScore: engagement,
+      });
+      return {
+        id: String(l.id),
+        name: l.name || "Unknown Lead",
+        city: cityFromLead(l),
+        score: engagement,
+        status: statusOf(l) || "new",
+        attentionScore: att.score,
+        attentionPriority: att.priority,
+        attentionReasons: att.reasons.slice(0, 3),
+        deliveryTiming: att.deliveryTiming,
+      };
+    });
 
   const pipeline = [
     { stage: "New", count: rows.filter((l) => statusOf(l) === "new").length },

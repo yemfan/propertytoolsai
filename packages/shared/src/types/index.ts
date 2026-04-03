@@ -39,6 +39,18 @@ export type {
   HomeValueEstimateResponse,
 } from "./home-value-estimate";
 export type { NotificationPayload } from "./notification-payload";
+export type {
+  NotificationContextScoreInput,
+  NotificationPriority,
+  NotificationScoreResult,
+} from "./notification-context-score";
+export type {
+  LeadAttentionSignals,
+  LeadAttentionScoreContribution,
+  LeadAttentionScoreResult,
+  LeadAttentionThresholds,
+  NotificationDeliveryTiming,
+} from "./lead-attention-score";
 export type { PushPlatform, PushDeviceRegistration, PushNotificationData } from "./notification-push";
 export type {
   DealPredictionFactor,
@@ -73,6 +85,10 @@ export type {
   MobileLeadsListResponseDto,
   MobilePushNotificationData,
   MobilePushNotificationKind,
+  MobileNotificationDeepScreen,
+  MobileAgentInboxNotificationDto,
+  MobileNotificationsListResponseDto,
+  MobileNotificationPreferencesDto,
   MobilePipelineStageOptionDto,
   MobilePushRegisterRequestDto,
   MobileRemindersResponseDto,

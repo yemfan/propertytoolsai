@@ -1,4 +1,3 @@
-import type { MobilePushNotificationKind } from "@leadsmart/shared";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
@@ -16,34 +15,53 @@ Notifications.setNotificationHandler({
   }),
 });
 
-function parsePushData(data: Record<string, unknown>): { leadId: string; kind: MobilePushNotificationKind } | null {
-  const leadId = typeof data.leadId === "string" ? data.leadId : null;
-  const kind = typeof data.kind === "string" ? data.kind : null;
-  if (!leadId || !kind) return null;
-  if (
-    kind !== "hot_lead" &&
-    kind !== "inbound_sms" &&
-    kind !== "inbound_email" &&
-    kind !== "needs_human"
-  ) {
-    return null;
-  }
-  return { leadId, kind };
-}
+const KINDS = new Set<string>([
+  "hot_lead",
+  "inbound_sms",
+  "inbound_email",
+  "needs_human",
+  "reminder",
+  "missed_call",
+  "reminder_digest",
+]);
 
-function navigateToLead(
+function navigateFromPushData(
   router: ReturnType<typeof useRouter>,
-  data: Record<string, unknown> | undefined
+  raw: Record<string, unknown>
 ) {
-  if (!data || typeof data !== "object") return;
-  const parsed = parsePushData(data as Record<string, unknown>);
-  if (!parsed) return;
-  router.push({ pathname: "/lead/[id]", params: { id: parsed.leadId } });
+  const kind = typeof raw.kind === "string" ? raw.kind : "";
+  const screen = typeof raw.screen === "string" ? raw.screen : "";
+  const leadId = typeof raw.leadId === "string" ? raw.leadId : undefined;
+  const taskId = typeof raw.taskId === "string" ? raw.taskId : undefined;
+
+  if (screen === "notifications" || kind === "reminder_digest") {
+    router.push("/notifications");
+    return;
+  }
+
+  if (screen === "task" && taskId) {
+    router.push({ pathname: "/tasks", params: { focusTaskId: taskId } });
+    return;
+  }
+
+  if (screen === "call_log" && leadId) {
+    router.push({ pathname: "/lead/[id]", params: { id: leadId } });
+    return;
+  }
+
+  if (leadId && (screen === "lead" || screen === "" || !screen)) {
+    router.push({ pathname: "/lead/[id]", params: { id: leadId } });
+    return;
+  }
+
+  if (kind && KINDS.has(kind) && leadId) {
+    router.push({ pathname: "/lead/[id]", params: { id: leadId } });
+  }
 }
 
 /**
  * Registers the Expo push token with the LeadSmart AI API when JWT + API URL are set,
- * and opens the lead screen when the user taps a notification.
+ * and routes when the user taps a notification.
  */
 export function useLeadsmartPush() {
   const router = useRouter();
@@ -52,7 +70,10 @@ export function useLeadsmartPush() {
 
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      navigateToLead(router, response.notification?.request.content.data);
+      const data = response.notification?.request.content.data;
+      if (data && typeof data === "object") {
+        navigateFromPushData(router, data as Record<string, unknown>);
+      }
     });
     return () => sub.remove();
   }, [router]);
@@ -63,7 +84,10 @@ export function useLeadsmartPush() {
       if (openedFromNotification.current) return;
       if (!response?.notification) return;
       openedFromNotification.current = true;
-      navigateToLead(router, response.notification.request.content.data);
+      const data = response.notification.request.content.data;
+      if (data && typeof data === "object") {
+        navigateFromPushData(router, data as Record<string, unknown>);
+      }
     });
   }, [router]);
 

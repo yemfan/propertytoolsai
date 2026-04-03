@@ -1,6 +1,11 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendExpoPushMessages, type ExpoPushMessage } from "@/lib/mobile/expoPushSend";
 import { listExpoPushTokensForUser } from "@/lib/mobile/pushTokens";
+import {
+  getAgentNotificationPreferences,
+  insertAgentInboxNotification,
+  updateInboxNotificationPushSentAt,
+} from "@/lib/notifications/agentNotifications";
 
 const INBOUND_PUSH_DEDUPE_MS = 120_000;
 const NEEDS_HUMAN_PUSH_DEDUPE_MS = 180_000;
@@ -57,7 +62,8 @@ function buildMessages(
   tokens: string[],
   title: string,
   body: string,
-  data: Record<string, string>
+  data: Record<string, string>,
+  priority: "high" | "default" = "high"
 ): ExpoPushMessage[] {
   return tokens.map((to) => ({
     to,
@@ -65,11 +71,11 @@ function buildMessages(
     body,
     data,
     sound: "default",
-    priority: "high",
+    priority,
   }));
 }
 
-/** Hot lead alert (alongside optional SMS agent notify). Returns whether any push was sent. */
+/** Hot lead: inbox row + immediate high-priority push (when prefs allow). */
 export async function dispatchMobileHotLeadPush(params: {
   userId: string;
   agentId: string | null;
@@ -79,15 +85,48 @@ export async function dispatchMobileHotLeadPush(params: {
 }): Promise<boolean> {
   if (mobilePushGloballyDisabled() || process.env.MOBILE_PUSH_HOT_LEAD === "false") return false;
 
+  const now = new Date().toISOString();
+  let inboxId: string | null = null;
+
+  if (params.agentId) {
+    const prefs = await getAgentNotificationPreferences(params.agentId);
+    const skipPush = !prefs.push_hot_lead;
+    inboxId = await insertAgentInboxNotification({
+      agentId: params.agentId,
+      type: "hot_lead",
+      priority: "high",
+      title: params.title,
+      body: params.body,
+      deepLink: { screen: "lead", leadId: params.leadId },
+      pushSentAt: skipPush ? now : null,
+    });
+
+    if (skipPush) {
+      await logLeadEventBestEffort({
+        leadId: params.leadId,
+        agentId: params.agentId,
+        eventType: "mobile_push_hot_lead",
+        metadata: { suppressed: "prefs", title: params.title.slice(0, 80) },
+      });
+      return false;
+    }
+  }
+
   const tokens = await listExpoPushTokensForUser(params.userId);
-  if (!tokens.length) return false;
+  if (!tokens.length) {
+    if (inboxId) await updateInboxNotificationPushSentAt(inboxId, now);
+    return false;
+  }
 
   await sendExpoPushMessages(
     buildMessages(tokens, params.title, params.body, {
       kind: "hot_lead",
       leadId: params.leadId,
+      screen: "lead",
     })
   );
+
+  if (inboxId) await updateInboxNotificationPushSentAt(inboxId, now);
 
   await logLeadEventBestEffort({
     leadId: params.leadId,
@@ -127,6 +166,7 @@ export async function dispatchMobileInboundSmsPush(params: {
     buildMessages(tokens, title, body, {
       kind: "inbound_sms",
       leadId: params.leadId,
+      screen: "lead",
     })
   );
 
@@ -167,6 +207,7 @@ export async function dispatchMobileInboundEmailPush(params: {
     buildMessages(tokens, title, body, {
       kind: "inbound_email",
       leadId: params.leadId,
+      screen: "lead",
     })
   );
 
@@ -212,6 +253,7 @@ export async function dispatchMobileNeedsHumanPush(params: {
       leadId: params.leadId,
       channel: params.channel,
       reason: reason || "review",
+      screen: "lead",
     })
   );
 
@@ -223,7 +265,9 @@ export async function dispatchMobileNeedsHumanPush(params: {
   });
 }
 
-/** Scheduled follow-up due (cron). Deduped ~1× per lead per day. */
+/**
+ * Follow-up reminder due (cron). Records inbox + relies on digest cron for batched low-priority push.
+ */
 export async function dispatchMobileReminderPush(params: {
   agentId: string;
   leadId: string;
@@ -236,29 +280,89 @@ export async function dispatchMobileReminderPush(params: {
     return;
   }
 
-  const userId = await getAuthUserIdForAgent(params.agentId);
-  if (!userId) return;
-
-  const tokens = await listExpoPushTokensForUser(userId);
-  if (!tokens.length) return;
-
+  const prefs = await getAgentNotificationPreferences(params.agentId);
+  const now = new Date().toISOString();
   const name = params.leadName?.trim() || "Lead";
-  const title = "Follow-up due — LeadSmart AI";
+  const title = "Follow-up due";
   const body = params.hint?.trim()
     ? `${name}: ${params.hint.trim().slice(0, 140)}`
     : `${name}: time to reach out.`;
 
-  await sendExpoPushMessages(
-    buildMessages(tokens, title, body, {
-      kind: "reminder",
-      leadId: params.leadId,
-    })
-  );
+  await insertAgentInboxNotification({
+    agentId: params.agentId,
+    type: "reminder",
+    priority: "low",
+    title,
+    body,
+    deepLink: { screen: "lead", leadId: params.leadId },
+    pushSentAt: !prefs.push_reminder ? now : null,
+  });
 
   await logLeadEventBestEffort({
     leadId: params.leadId,
     agentId: params.agentId,
     eventType: "mobile_push_reminder",
-    metadata: {},
+    metadata: { queued: true },
   });
+}
+
+/** Missed inbound call — medium priority inbox + push. Call from voice webhook when wired. */
+export async function dispatchMobileMissedCallPush(params: {
+  agentId: string;
+  leadId: string;
+  leadName: string | null;
+  fromNumber?: string | null;
+}): Promise<boolean> {
+  if (mobilePushGloballyDisabled() || process.env.MOBILE_PUSH_MISSED_CALL === "false") {
+    return false;
+  }
+
+  const prefs = await getAgentNotificationPreferences(params.agentId);
+  const now = new Date().toISOString();
+  const name = params.leadName?.trim() || "Lead";
+  const sub = params.fromNumber?.trim() ? ` from ${params.fromNumber.trim()}` : "";
+  const title = "Missed call — LeadSmart AI";
+  const body = `${name}${sub}. Tap to follow up.`;
+
+  const skipPush = !prefs.push_missed_call;
+  const inboxId = await insertAgentInboxNotification({
+    agentId: params.agentId,
+    type: "missed_call",
+    priority: "medium",
+    title,
+    body,
+    deepLink: { screen: "call_log", leadId: params.leadId },
+    pushSentAt: skipPush ? now : null,
+  });
+
+  if (skipPush) return false;
+
+  const userId = await getAuthUserIdForAgent(params.agentId);
+  if (!userId) {
+    await updateInboxNotificationPushSentAt(inboxId, now);
+    return false;
+  }
+
+  const tokens = await listExpoPushTokensForUser(userId);
+  if (!tokens.length) {
+    await updateInboxNotificationPushSentAt(inboxId, now);
+    return false;
+  }
+
+  await sendExpoPushMessages(
+    buildMessages(
+      tokens,
+      title,
+      body,
+      {
+        kind: "missed_call",
+        leadId: params.leadId,
+        screen: "call_log",
+      },
+      "default"
+    )
+  );
+
+  await updateInboxNotificationPushSentAt(inboxId, now);
+  return true;
 }

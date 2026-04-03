@@ -1,12 +1,12 @@
-import type { MobileDashboardPriorityAlert } from "@leadsmart/shared";
+import type { MobileDashboardAlertType, MobileDashboardPriorityAlert } from "@leadsmart/shared";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { theme } from "../../lib/theme";
 
-const CTA: Record<MobileDashboardPriorityAlert["type"], string> = {
-  hot_lead: "Review",
-  overdue_task: "Resolve",
-  ai_escalation: "Handle",
-  unread_message: "Reply",
+const ALERT_EMOJI: Record<MobileDashboardAlertType, string> = {
+  hot_lead: "🔥",
+  overdue_task: "⏰",
+  ai_escalation: "🤖",
+  unread_message: "💬",
 };
 
 type Props = {
@@ -15,6 +15,7 @@ type Props = {
 };
 
 export function PriorityAlertCard({ alert, onPress }: Props) {
+  const emoji = ALERT_EMOJI[alert.type] ?? "•";
   return (
     <Pressable
       accessibilityRole="button"
@@ -22,16 +23,26 @@ export function PriorityAlertCard({ alert, onPress }: Props) {
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       <View style={styles.left}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{CTA[alert.type]}</Text>
-        </View>
+        <Text style={styles.emoji} accessible={false}>
+          {emoji}
+        </Text>
         <View style={styles.textCol}>
-          <Text style={styles.title} numberOfLines={2}>
+          <Text style={styles.title} numberOfLines={3}>
             {alert.title}
           </Text>
           {alert.subtitle ? (
             <Text style={styles.sub} numberOfLines={2}>
               {alert.subtitle}
+            </Text>
+          ) : null}
+          {alert.attentionPriority === "high" ? (
+            <Text style={styles.priorityPill} numberOfLines={1}>
+              High priority
+              {alert.attentionScore != null ? ` · ${alert.attentionScore}` : ""}
+            </Text>
+          ) : alert.attentionReasons && alert.attentionReasons.length > 0 ? (
+            <Text style={styles.reasonHint} numberOfLines={1}>
+              {alert.attentionReasons[0]}
             </Text>
           ) : null}
         </View>
@@ -57,20 +68,17 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.92 },
   left: { flex: 1, flexDirection: "row", alignItems: "flex-start", gap: 10 },
-  badge: {
-    backgroundColor: "#eff6ff",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  badgeText: {
+  emoji: { fontSize: 20, lineHeight: 24, marginTop: 1 },
+  textCol: { flex: 1, minWidth: 0 },
+  title: { fontSize: 15, fontWeight: "600", color: theme.text, lineHeight: 21 },
+  sub: { marginTop: 4, fontSize: 13, color: theme.textMuted, lineHeight: 18 },
+  priorityPill: {
+    marginTop: 6,
     fontSize: 11,
     fontWeight: "800",
-    color: theme.accent,
-    textTransform: "uppercase",
+    color: "#b45309",
+    letterSpacing: 0.3,
   },
-  textCol: { flex: 1, minWidth: 0 },
-  title: { fontSize: 15, fontWeight: "700", color: theme.text },
-  sub: { marginTop: 2, fontSize: 13, color: theme.textMuted, lineHeight: 18 },
+  reasonHint: { marginTop: 4, fontSize: 12, color: theme.textSubtle, lineHeight: 16 },
   chev: { fontSize: 22, color: theme.textSubtle, paddingLeft: 4 },
 });

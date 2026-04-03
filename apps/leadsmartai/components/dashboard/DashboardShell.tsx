@@ -40,8 +40,8 @@ export default function AppDashboardShell({
   return (
     <div
       className={
-        "flex min-h-screen min-h-0 w-full min-w-0 flex-col overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900 " +
-        "lg:min-h-screen lg:flex-row lg:items-stretch"
+        "flex min-h-0 w-full min-w-0 flex-col overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900 " +
+        "min-h-screen lg:h-screen lg:max-h-screen lg:flex-row lg:overflow-hidden"
       }
     >
       <PremiumSidebar
@@ -50,9 +50,22 @@ export default function AppDashboardShell({
         workspaceLabel={navConfig.sidebarTitle ?? "Workspace"}
         footer={showAgentBrokerPromotion ? sidebarFooter : undefined}
       />
-      <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
-        <TopBar email={email} appRole={appRole} />
-        <main className="min-h-0 min-w-0 w-full max-w-none flex-1 overflow-x-hidden px-4 py-6 md:px-8 md:py-8">
+      {/*
+        Main column (sidebar | this):
+        ┌─────────────────────────────────────┐
+        │ Header: search + quick actions      │  ← shrink-0, white, bottom border (TopBar)
+        ├─────────────────────────────────────┤
+        │ Dashboard content (scroll)          │  ← flex-1 overflow-y-auto
+        └─────────────────────────────────────┘
+      */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col border-l border-slate-200/80 bg-white lg:min-h-0">
+        <div className="shrink-0">
+          <TopBar email={email} appRole={appRole} />
+        </div>
+        <main
+          id="agent-portal-main"
+          className="min-h-0 w-full max-w-none flex-1 overflow-x-hidden overflow-y-auto bg-slate-50/60 px-4 py-6 md:px-8 md:py-8 lg:px-10"
+        >
           {children}
         </main>
       </div>

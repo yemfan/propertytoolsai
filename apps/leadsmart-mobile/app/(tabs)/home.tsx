@@ -1,13 +1,13 @@
 import type {
   DailyAgendaItem,
   MobileDashboardPriorityAlert,
-  MobileDashboardQuickAction,
   MobileDashboardStats,
 } from "@leadsmart/shared";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,19 +15,25 @@ import {
   View,
 } from "react-native";
 import { ErrorBanner } from "../../components/ErrorBanner";
-import { DashboardStatCard } from "../../components/home/DashboardStatCard";
 import { DailyAgendaList } from "../../components/home/DailyAgendaList";
 import { PriorityAlertCard } from "../../components/home/PriorityAlertCard";
-import { QuickActionRow } from "../../components/home/QuickActionRow";
 import { ScreenLoading } from "../../components/ScreenLoading";
 import {
   fetchMobileDailyAgenda,
   fetchMobileDashboard,
 } from "../../lib/leadsmartMobileApi";
 import type { MobileApiFailure } from "../../lib/leadsmartMobileApi";
+import { getSupabaseAuthClient } from "../../lib/supabaseAuthClient";
 import { theme } from "../../lib/theme";
 
-function formatAgendaHeading(agendaDate: string): string {
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function formatAgendaDayLabel(agendaDate: string): string {
   try {
     const parts = agendaDate.split("-").map(Number);
     if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return agendaDate;
@@ -44,21 +50,33 @@ function formatAgendaHeading(agendaDate: string): string {
   }
 }
 
-function SectionTitle({ children }: { children: string }) {
-  return <Text style={styles.sectionTitle}>{children}</Text>;
+function SectionRule() {
+  return <View style={styles.rule} />;
 }
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [firstName, setFirstName] = useState<string | null>(null);
   const [initialDone, setInitialDone] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [dashboardError, setDashboardError] = useState<MobileApiFailure | null>(null);
   const [agendaError, setAgendaError] = useState<MobileApiFailure | null>(null);
   const [stats, setStats] = useState<MobileDashboardStats | null>(null);
   const [alerts, setAlerts] = useState<MobileDashboardPriorityAlert[]>([]);
-  const [quickActions, setQuickActions] = useState<MobileDashboardQuickAction[]>([]);
   const [agendaDate, setAgendaDate] = useState("");
   const [agendaItems, setAgendaItems] = useState<DailyAgendaItem[]>([]);
+
+  useEffect(() => {
+    const sb = getSupabaseAuthClient();
+    if (!sb) return;
+    void sb.auth.getSession().then(({ data }) => {
+      const u = data.session?.user as { email?: string; user_metadata?: { full_name?: string } } | undefined;
+      const meta = u?.user_metadata;
+      const raw = meta?.full_name?.trim() || u?.email?.split("@")[0]?.trim() || "";
+      const first = raw.split(/\s+/)[0];
+      setFirstName(first || null);
+    });
+  }, []);
 
   const load = useCallback(async (mode: "full" | "refresh") => {
     if (mode === "refresh") setRefreshing(true);
@@ -77,13 +95,11 @@ export default function HomeScreen() {
       if (mode === "full") {
         setStats(null);
         setAlerts([]);
-        setQuickActions([]);
       }
     } else {
       setDashboardError(null);
       setStats(dash.stats);
       setAlerts(dash.priorityAlerts);
-      setQuickActions(dash.quickActions);
     }
 
     if (agenda.ok === false) {
@@ -105,32 +121,20 @@ export default function HomeScreen() {
     void load("refresh");
   }, [load]);
 
-  const handleQuickAction = useCallback(
-    (key: string) => {
+  const handleFixedQuickAction = useCallback(
+    (key: "lead" | "task" | "booking" | "message") => {
       switch (key) {
-        case "add_task":
-          router.push("/(tabs)/tasks");
-          break;
-        case "create_appointment":
-          router.push({ pathname: "/(tabs)/calendar", params: { newAppt: "1" } });
-          break;
-        case "send_booking_link":
-          router.push({ pathname: "/(tabs)/leads", params: { booking: "1" } });
-          break;
-        case "open_hot_leads":
-          router.push({ pathname: "/(tabs)/leads", params: { filter: "hot" } });
-          break;
-        case "inbox":
-          router.push("/(tabs)/inbox");
-          break;
-        case "leads":
+        case "lead":
           router.push("/(tabs)/leads");
           break;
-        case "tasks":
-          router.push("/(tabs)/tasks");
+        case "task":
+          router.push("/tasks");
           break;
-        case "calendar":
-          router.push("/(tabs)/calendar");
+        case "booking":
+          router.push({ pathname: "/(tabs)/calendar", params: { newAppt: "1" } });
+          break;
+        case "message":
+          router.push("/(tabs)/inbox");
           break;
         default:
           break;
@@ -150,7 +154,7 @@ export default function HomeScreen() {
         return;
       }
       if (a.type === "overdue_task") {
-        router.push("/(tabs)/tasks");
+        router.push("/tasks");
         return;
       }
       router.push("/(tabs)/leads");
@@ -165,7 +169,7 @@ export default function HomeScreen() {
         return;
       }
       if (item.type === "task") {
-        router.push("/(tabs)/tasks");
+        router.push("/tasks");
         return;
       }
       if (item.type === "appointment") {
@@ -201,6 +205,9 @@ export default function HomeScreen() {
     );
   }
 
+  const displayName = firstName?.trim() || "there";
+  const summaryLine = `${stats.hotLeads} hot leads • ${stats.tasksToday} tasks • ${stats.appointmentsToday} appointments`;
+
   return (
     <View style={styles.root}>
       <ScrollView
@@ -208,11 +215,69 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <Text style={styles.heroTitle}>Today</Text>
-        <Text style={styles.heroSub}>
-          {agendaDate ? `${formatAgendaHeading(agendaDate)} · agenda in UTC` : "Your command center"}
-        </Text>
+        <View style={styles.heroBlock}>
+          <Text style={styles.greeting}>
+            {getGreeting()}, {displayName}
+          </Text>
+          <Text style={styles.summaryLine}>{summaryLine}</Text>
+        </View>
 
+        <SectionRule />
+
+        <View style={styles.chipRow}>
+          <Pressable
+            onPress={() => router.push({ pathname: "/(tabs)/leads", params: { filter: "hot" } })}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>Hot Leads</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/(tabs)/inbox")}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>Unread</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/tasks")}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>Tasks</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/(tabs)/calendar")}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>Appointments</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/notifications")}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>Alerts</Text>
+          </Pressable>
+        </View>
+
+        <SectionRule />
+
+        <Text style={styles.sectionHeading}>Today</Text>
+        {agendaDate ? (
+          <Text style={styles.agendaHint}>
+            {formatAgendaDayLabel(agendaDate)} · times in your local timezone
+          </Text>
+        ) : null}
+
+        {agendaError ? (
+          <ErrorBanner
+            title="Agenda unavailable"
+            message={agendaError.message}
+            onRetry={() => void load("refresh")}
+          />
+        ) : null}
+        <DailyAgendaList items={agendaItems} onItemPress={handleAgendaItem} />
+
+        <SectionRule />
+
+        <Text style={styles.sectionHeading}>Priority Alerts</Text>
         {dashboardError ? (
           <ErrorBanner
             title="Dashboard update failed"
@@ -220,44 +285,8 @@ export default function HomeScreen() {
             onRetry={() => void load("refresh")}
           />
         ) : null}
-
-        <SectionTitle>Stats</SectionTitle>
-        <View style={styles.statRow}>
-          <DashboardStatCard
-            label="Hot leads"
-            value={stats.hotLeads}
-            variant="hot"
-            onPress={() => router.push({ pathname: "/(tabs)/leads", params: { filter: "hot" } })}
-          />
-          <DashboardStatCard
-            label="Unread messages"
-            value={stats.unreadMessages}
-            onPress={() => router.push("/(tabs)/inbox")}
-          />
-        </View>
-        <View style={styles.statRow}>
-          <DashboardStatCard
-            label="Tasks today"
-            value={stats.tasksToday}
-            onPress={() => router.push("/(tabs)/tasks")}
-          />
-          <DashboardStatCard
-            label="Appointments today"
-            value={stats.appointmentsToday}
-            onPress={() => router.push("/(tabs)/calendar")}
-          />
-        </View>
-
-        <SectionTitle>Quick actions</SectionTitle>
-        {quickActions.length > 0 ? (
-          <QuickActionRow actions={quickActions} onAction={handleQuickAction} />
-        ) : (
-          <Text style={styles.muted}>No quick actions from server.</Text>
-        )}
-
-        <SectionTitle>Priority alerts</SectionTitle>
         {alerts.length === 0 ? (
-          <Text style={styles.muted}>No priority alerts — you’re caught up.</Text>
+          <Text style={styles.muted}>No priority alerts — you&apos;re caught up.</Text>
         ) : (
           alerts.map((a, i) => (
             <PriorityAlertCard
@@ -268,15 +297,35 @@ export default function HomeScreen() {
           ))
         )}
 
-        <SectionTitle>Daily agenda</SectionTitle>
-        {agendaError ? (
-          <ErrorBanner
-            title="Agenda unavailable"
-            message={agendaError.message}
-            onRetry={() => void load("refresh")}
-          />
-        ) : null}
-        <DailyAgendaList items={agendaItems} onItemPress={handleAgendaItem} />
+        <SectionRule />
+
+        <Text style={styles.sectionHeading}>Quick Actions</Text>
+        <View style={styles.quickGrid}>
+          <Pressable
+            onPress={() => handleFixedQuickAction("lead")}
+            style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
+          >
+            <Text style={styles.quickBtnText}>+ Lead</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleFixedQuickAction("task")}
+            style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
+          >
+            <Text style={styles.quickBtnText}>+ Task</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleFixedQuickAction("booking")}
+            style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
+          >
+            <Text style={styles.quickBtnText}>+ Booking</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleFixedQuickAction("message")}
+            style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
+          >
+            <Text style={styles.quickBtnText}>+ Message</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </View>
   );
@@ -285,7 +334,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.bg },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingBottom: 32, paddingTop: 8 },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 36, paddingTop: 12 },
   centered: {
     flex: 1,
     backgroundColor: theme.bg,
@@ -293,17 +342,62 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     justifyContent: "flex-start",
   },
-  heroTitle: { fontSize: 28, fontWeight: "800", color: theme.text },
-  heroSub: { fontSize: 14, color: theme.textMuted, marginTop: 4, marginBottom: 16 },
-  sectionTitle: {
-    fontSize: 13,
+  heroBlock: { paddingBottom: 4 },
+  greeting: { fontSize: 26, fontWeight: "800", color: theme.text, letterSpacing: -0.3 },
+  summaryLine: {
+    marginTop: 10,
+    fontSize: 15,
+    fontWeight: "500",
+    color: theme.textMuted,
+    lineHeight: 22,
+  },
+  rule: {
+    height: 1,
+    backgroundColor: theme.border,
+    marginVertical: 16,
+  },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  chipPressed: { backgroundColor: "#eff6ff", borderColor: "#bfdbfe" },
+  chipText: { fontSize: 13, fontWeight: "700", color: theme.text },
+  sectionHeading: {
+    fontSize: 12,
     fontWeight: "800",
     color: theme.textMuted,
     textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginTop: 20,
-    marginBottom: 10,
+    letterSpacing: 1,
+    marginBottom: 8,
   },
-  statRow: { flexDirection: "row", gap: 10, marginBottom: 10 },
-  muted: { fontSize: 14, color: theme.textMuted, paddingVertical: 6, lineHeight: 20 },
+  agendaHint: { fontSize: 12, color: theme.textSubtle, marginBottom: 10, marginTop: -4 },
+  muted: { fontSize: 14, color: theme.textMuted, paddingVertical: 8, lineHeight: 20 },
+  quickGrid: {
+    flexDirection: "row",
+    flexWrap: "nowrap",
+    gap: 8,
+    marginTop: 4,
+  },
+  quickBtn: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderRadius: 14,
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    alignItems: "center",
+  },
+  quickBtnPressed: { backgroundColor: "#eff6ff", borderColor: "#bfdbfe" },
+  quickBtnText: { fontSize: 15, fontWeight: "700", color: theme.text },
 });

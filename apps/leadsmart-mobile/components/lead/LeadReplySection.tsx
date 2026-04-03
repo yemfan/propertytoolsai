@@ -27,9 +27,18 @@ export type LeadReplySectionProps = {
   email: MobileEmailMessageDto[];
   setSms: Dispatch<SetStateAction<MobileSmsMessageDto[]>>;
   setEmail: Dispatch<SetStateAction<MobileEmailMessageDto[]>>;
+  /** Preview lead — composer visible but send/AI do not call the API. */
+  demo?: boolean;
 };
 
-export function LeadReplySection({ leadId, sms, email, setSms, setEmail }: LeadReplySectionProps) {
+export function LeadReplySection({
+  leadId,
+  sms,
+  email,
+  setSms,
+  setEmail,
+  demo = false,
+}: LeadReplySectionProps) {
   const [smsText, setSmsText] = useState("");
   const [smsSending, setSmsSending] = useState(false);
   const [smsAiLoading, setSmsAiLoading] = useState(false);
@@ -53,6 +62,10 @@ export function LeadReplySection({ leadId, sms, email, setSms, setEmail }: LeadR
 
   const onSmsAi = useCallback(async () => {
     setSmsError(null);
+    if (demo) {
+      setSmsError("Sample lead — connect your CRM to use AI replies.");
+      return;
+    }
     setSmsAiLoading(true);
     try {
       const res = await postMobileSmsAiReply(leadId);
@@ -64,12 +77,16 @@ export function LeadReplySection({ leadId, sms, email, setSms, setEmail }: LeadR
     } finally {
       setSmsAiLoading(false);
     }
-  }, [leadId]);
+  }, [leadId, demo]);
 
   const onSmsSend = useCallback(async () => {
     const text = smsText.trim();
     if (!text) return;
     setSmsError(null);
+    if (demo) {
+      setSmsError("Sample lead — connect your CRM to send messages.");
+      return;
+    }
     setSmsSending(true);
     try {
       const res = await postMobileSmsSend(leadId, text);
@@ -83,7 +100,7 @@ export function LeadReplySection({ leadId, sms, email, setSms, setEmail }: LeadR
     } finally {
       setSmsSending(false);
     }
-  }, [leadId, smsText, setSms, flashSent]);
+  }, [leadId, smsText, setSms, flashSent, demo]);
 
   const onEmailAi = useCallback(async () => {
     const res = await postMobileEmailAiReply(leadId);
@@ -115,15 +132,19 @@ export function LeadReplySection({ leadId, sms, email, setSms, setEmail }: LeadR
         aiLoading={smsAiLoading}
         error={smsError}
         showSent={smsSentFlash}
+        hideLabel
+        placeholder="Type a reply…"
       />
-      <Pressable
-        style={styles.emailBtn}
-        onPress={() => setEmailOpen(true)}
-        accessibilityRole="button"
-        accessibilityLabel="Reply by email"
-      >
-        <Text style={styles.emailBtnText}>Reply by email</Text>
-      </Pressable>
+      {!demo ? (
+        <Pressable
+          style={styles.emailBtn}
+          onPress={() => setEmailOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Reply by email"
+        >
+          <Text style={styles.emailBtnText}>Reply by email</Text>
+        </Pressable>
+      ) : null}
       <EmailReplyModal
         visible={emailOpen}
         onClose={() => setEmailOpen(false)}

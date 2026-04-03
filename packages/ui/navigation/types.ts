@@ -28,6 +28,11 @@ export type NavLeafItem = {
   prefetch?: boolean;
 };
 
+/** Horizontal rule between nav groups (sidebar / mobile drawer). */
+export type NavDividerSection = {
+  kind: "divider";
+};
+
 export type NavGroupItem = {
   label: string;
   icon?: ReactNode;
@@ -44,9 +49,14 @@ export type NavGroupItem = {
   defaultOpen?: boolean;
 };
 
-export type NavSection = NavLeafItem | NavGroupItem;
+export type NavSection = NavLeafItem | NavGroupItem | NavDividerSection;
+
+export function isNavDivider(item: NavSection): item is NavDividerSection {
+  return (item as NavDividerSection).kind === "divider";
+}
 
 export function isNavGroup(item: NavSection): item is NavGroupItem {
+  if (isNavDivider(item)) return false;
   return "items" in item && Array.isArray((item as NavGroupItem).items);
 }
 

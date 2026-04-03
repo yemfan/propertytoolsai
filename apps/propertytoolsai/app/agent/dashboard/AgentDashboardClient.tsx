@@ -67,7 +67,15 @@ export default function AgentDashboardClient() {
                     <div className="font-medium text-gray-900">{lead.name}</div>
                     <div className="text-sm text-gray-500">
                       {lead.city} • Score {lead.score}
+                      {lead.attentionPriority != null ? (
+                        <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                          Attention: {lead.attentionPriority}
+                        </span>
+                      ) : null}
                     </div>
+                    {lead.attentionReasons && lead.attentionReasons.length > 0 ? (
+                      <div className="mt-1 text-xs text-gray-500">{lead.attentionReasons[0]}</div>
+                    ) : null}
                   </div>
                   <div className="text-sm font-medium text-gray-700">{lead.status}</div>
                 </div>

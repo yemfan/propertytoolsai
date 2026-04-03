@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { getCurrentAgentContext, getLeadUsageThisMonth } from "@/lib/dashboardService";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { AgentHomeDashboard } from "@/components/dashboard/agent-portal/AgentHomeDashboard";
 import SendDailyBriefingButton from "@/components/dashboard/SendDailyBriefingButton";
 import TasksFromBriefing from "@/components/dashboard/TasksFromBriefing";
 
@@ -10,20 +10,57 @@ function startOfTodayIso() {
   return d.toISOString();
 }
 
+function clipText(s: string, max: number) {
+  const t = s.trim().replace(/\s+/g, " ");
+  if (t.length <= max) return t;
+  return `${t.slice(0, max - 1)}…`;
+}
+
+function hotLeadSubtitle(
+  row: Record<string, unknown>,
+  latestMessage?: string
+): string | undefined {
+  const msg = latestMessage?.trim();
+  if (msg) return clipText(msg, 160);
+  const intent = String(row.likely_intent ?? "").trim();
+  if (intent) return clipText(intent, 160);
+  return undefined;
+}
+
 export default async function OverviewPage() {
   const [usage, ctx] = await Promise.all([getLeadUsageThisMonth(), getCurrentAgentContext()]);
   const todayIso = startOfTodayIso();
 
+  const { data: profileRow } = await supabaseServer
+    .from("user_profiles")
+    .select("full_name")
+    .eq("user_id", ctx.userId)
+    .maybeSingle();
+  const greetingName =
+    String((profileRow as { full_name?: string | null } | null)?.full_name ?? "")
+      .trim()
+      .split(/\s+/)[0] ?? "";
+
   const { data: leads } = await supabaseServer
     .from("leads")
-    .select("id,rating,engagement_score,last_activity_at")
+    .select("id,name,rating,engagement_score,last_activity_at,likely_intent")
     .eq("agent_id", ctx.agentId)
     .limit(500);
-  const leadRows = (leads as any[]) ?? [];
-  /** Match `leads.id` / `lead_events.lead_id` type (bigint vs uuid) — never pass NaN to `.in()`. */
+  const leadRows = (leads as Record<string, unknown>[]) ?? [];
+
+  const hotRows = leadRows.filter((l) => String(l.rating ?? "").toLowerCase() === "hot");
+  const totalLeads = leadRows.length;
+  const hotLeadsCount = hotRows.length;
+
+  const inactive7Days = leadRows.filter((l) => {
+    if (!l.last_activity_at) return false;
+    const ms = new Date(String(l.last_activity_at)).getTime();
+    return ms <= Date.now() - 7 * 24 * 60 * 60 * 1000;
+  }).length;
+
   const leadIds = leadRows
     .map((l) => {
-      const raw = (l as any).id;
+      const raw = l.id;
       if (raw == null) return null;
       if (typeof raw === "number" && Number.isFinite(raw)) return raw;
       const s = String(raw).trim();
@@ -32,39 +69,16 @@ export default async function OverviewPage() {
     })
     .filter((x): x is string | number => x != null);
 
-  const totalLeads = leadRows.length;
-  const hotLeads = leadRows.filter((l) => String(l.rating ?? "").toLowerCase() === "hot").length;
-  const scores = leadRows
-    .map((l) => Number(l.engagement_score ?? 0))
-    .filter((n) => Number.isFinite(n));
-  const avgEngagementScore = scores.length
-    ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-    : 0;
-  const inactive7Days = leadRows.filter((l) => {
-    if (!l.last_activity_at) return false;
-    const ms = new Date(String(l.last_activity_at)).getTime();
-    return ms <= Date.now() - 7 * 24 * 60 * 60 * 1000;
-  }).length;
-
   let leadsViewedReportsToday = 0;
-  let events: any[] = [];
   if (leadIds.length) {
     const { data: reportEvents } = await supabaseServer
       .from("lead_events")
-      .select("lead_id,event_type,created_at")
+      .select("lead_id")
       .eq("event_type", "report_view")
       .gte("created_at", todayIso)
       .in("lead_id", leadIds);
-    leadsViewedReportsToday = new Set(((reportEvents as any[]) ?? []).map((e) => Number(e.lead_id)))
+    leadsViewedReportsToday = new Set(((reportEvents as { lead_id?: unknown }[]) ?? []).map((e) => Number(e.lead_id)))
       .size;
-
-    const { data: recentEvents } = await supabaseServer
-      .from("lead_events")
-      .select("id,lead_id,event_type,created_at")
-      .in("lead_id", leadIds)
-      .order("created_at", { ascending: false })
-      .limit(30);
-    events = (recentEvents as any[]) ?? [];
   }
 
   const { count: commCount } = await supabaseServer
@@ -82,224 +96,169 @@ export default async function OverviewPage() {
     .limit(1)
     .maybeSingle();
 
-  let tasksDoneToday = 0;
-  let tasksPending = 0;
-  try {
-    const { count: doneCount } = await supabaseServer
-      .from("tasks")
-      .select("id", { count: "exact", head: true })
-      .eq("agent_id", ctx.agentId)
-      .eq("status", "done")
-      .gte("updated_at", todayIso);
-    const { count: pendingCount } = await supabaseServer
-      .from("tasks")
-      .select("id", { count: "exact", head: true })
-      .eq("agent_id", ctx.agentId)
-      .eq("status", "pending");
-    tasksDoneToday = doneCount ?? 0;
-    tasksPending = pendingCount ?? 0;
-  } catch {
-    // tasks table may not exist yet
-  }
-  const tasksTotal = tasksDoneToday + tasksPending;
-  const tasksCompletionRate =
-    tasksTotal > 0 ? Math.round((tasksDoneToday / tasksTotal) * 100) : 0;
+  const insights = (briefing as { insights?: { suggestedActions?: string[]; topHotLeads?: { name?: string }[] } } | null)
+    ?.insights;
+  const aiAlerts = ((insights?.suggestedActions ?? []) as string[]).slice(0, 4);
 
-  const metrics = {
-    totalLeads,
-    hotLeads,
-    avgEngagementScore,
-    messagesSent,
-    leadsViewedReportsToday,
-    inactive7Days,
-  };
+  const taskRowsForUi: { id: string; title: string; done: boolean }[] = [];
+  try {
+    const { data: todayTasks } = await supabaseServer
+      .from("tasks")
+      .select("id,title,status,due_date")
+      .eq("agent_id", ctx.agentId)
+      .eq("status", "pending")
+      .order("due_date", { ascending: true })
+      .limit(6);
+    for (const t of (todayTasks as { id?: unknown; title?: string; status?: string }[]) ?? []) {
+      const id = String(t.id ?? "");
+      if (!id) continue;
+      taskRowsForUi.push({
+        id,
+        title: String(t.title ?? "Task"),
+        done: String(t.status ?? "").toLowerCase() === "done",
+      });
+    }
+  } catch {
+    // tasks table optional
+  }
+
+  let conversationRows: { id: string; title: string; subtitle: string; at: string; href: string }[] = [];
+  try {
+    const { data: comms } = await supabaseServer
+      .from("communications")
+      .select("id,created_at,type,content,lead_id")
+      .eq("agent_id", ctx.agentId)
+      .order("created_at", { ascending: false })
+      .limit(6);
+    conversationRows = ((comms as { id?: unknown; created_at?: string; type?: string; content?: string; lead_id?: unknown }[]) ?? []).map(
+      (c) => {
+        const id = String(c.id ?? "");
+        const body = String(c.content ?? "").trim();
+        const preview = body.length > 72 ? `${body.slice(0, 70)}…` : body || "Message";
+        const leadId = c.lead_id != null ? String(c.lead_id) : "";
+        return {
+          id,
+          title: String(c.type ?? "message").toUpperCase(),
+          subtitle: preview,
+          at: c.created_at ? new Date(c.created_at).toLocaleString() : "—",
+          href: leadId ? `/dashboard/leads?highlight=${encodeURIComponent(leadId)}` : "/dashboard/inbox",
+        };
+      }
+    );
+  } catch {
+    conversationRows = [];
+  }
+
+  const hotSlice = hotRows.slice(0, 6);
+  const hotLeadIds = hotSlice
+    .map((l) => l.id)
+    .filter((id): id is string | number => id != null && String(id) !== "");
+
+  let latestMsgByLeadId = new Map<string, string>();
+  if (hotLeadIds.length) {
+    const { data: hotComms } = await supabaseServer
+      .from("communications")
+      .select("lead_id,content,created_at")
+      .eq("agent_id", ctx.agentId)
+      .in("lead_id", hotLeadIds)
+      .order("created_at", { ascending: false });
+    for (const row of (hotComms as { lead_id?: unknown; content?: string }[]) ?? []) {
+      const lid = row.lead_id != null ? String(row.lead_id) : "";
+      if (!lid || latestMsgByLeadId.has(lid)) continue;
+      const raw = String(row.content ?? "").trim();
+      if (raw) latestMsgByLeadId.set(lid, raw);
+    }
+  }
+
+  const hotLeads = hotSlice.map((l) => {
+    const idStr = String(l.id ?? "");
+    const sub = hotLeadSubtitle(l as Record<string, unknown>, latestMsgByLeadId.get(idStr));
+    return {
+      id: idStr,
+      name: String(l.name ?? "Lead"),
+      href: `/dashboard/leads?id=${encodeURIComponent(idStr)}`,
+      ...(sub ? { subtitle: sub } : {}),
+    };
+  });
+
+  const stats = [
+    {
+      label: "Total leads",
+      value: totalLeads,
+      href: "/dashboard/leads",
+      hint: "Active in CRM",
+    },
+    {
+      label: "Hot leads",
+      value: hotLeadsCount,
+      href: "/dashboard/leads?filter=hot",
+      hint: "Needs attention",
+    },
+    {
+      label: "Messages sent",
+      value: messagesSent,
+      href: "/dashboard/send",
+      hint: "All channels",
+    },
+    {
+      label: "Quiet leads",
+      value: inactive7Days,
+      href: "/dashboard/leads?filter=inactive",
+      hint: "7+ days inactive",
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="ui-page-title text-brand-text">Dashboard Overview</h1>
-        <p className="ui-page-subtitle text-brand-text/80">
-          Track your pipeline, marketing activity, and open house attendees in one place.
-        </p>
-      </div>
+    <div className="space-y-8">
+      <AgentHomeDashboard
+        greetingName={greetingName}
+        stats={stats}
+        agenda={[]}
+        tasksToday={taskRowsForUi.map((t) => ({
+          ...t,
+          href: "/dashboard/tasks",
+        }))}
+        hotLeads={hotLeads}
+        aiAlerts={aiAlerts.length ? aiAlerts : []}
+        conversations={conversationRows}
+      />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <Link
-          href="/dashboard/leads"
-          className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:border-brand-primary/40 hover:shadow-md transition"
-        >
-          <div className="ui-card-subtitle text-slate-500">
-            Total Leads
+      <section className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-900/[0.03]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">Today&apos;s AI briefing</h2>
+            <p className="mt-1 text-xs text-slate-600">
+              Deeper summary, lead picks, and generated tasks — same engine as before.
+            </p>
           </div>
-          <div className="mt-2 text-3xl font-extrabold text-brand-text">
-            {metrics.totalLeads ?? 0}
-          </div>
-        </Link>
-
-        <Link
-          href="/dashboard/leads?filter=hot"
-          className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:border-brand-accent/40 hover:shadow-md transition"
-        >
-          <div className="ui-card-subtitle text-slate-500">
-            🔥 Hot leads
-          </div>
-          <div className="mt-2 text-3xl font-extrabold text-brand-text">
-            {metrics.hotLeads ?? 0}
-          </div>
-        </Link>
-
-        <Link
-          href="/dashboard/leads?filter=high_engagement"
-          className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:border-brand-success/40 hover:shadow-md transition"
-        >
-          <div className="ui-card-subtitle text-slate-500">
-            👀 Leads viewed reports today
-          </div>
-          <div className="mt-2 text-3xl font-extrabold text-brand-text">
-            {metrics.leadsViewedReportsToday ?? 0}
-          </div>
-        </Link>
-
-        <Link
-          href="/dashboard/leads?filter=inactive"
-          className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 hover:border-brand-accent/40 hover:shadow-md transition"
-        >
-          <div className="ui-card-subtitle text-slate-500">
-            ⏳ Inactive 7+ days
-          </div>
-          <div className="mt-2 text-3xl font-extrabold text-brand-text">
-            {metrics.inactive7Days ?? 0}
-          </div>
-        </Link>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 flex flex-wrap items-center gap-4">
-        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Tasks today
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-bold text-brand-success">{tasksDoneToday}</span>
-          <span className="text-slate-400">done</span>
-          <span className="text-slate-300">/</span>
-          <span className="text-2xl font-bold text-brand-text">{tasksPending}</span>
-          <span className="text-slate-400">pending</span>
-        </div>
-        {tasksTotal > 0 && (
-          <div className="text-sm text-slate-600">
-            Completion rate: <span className="font-semibold">{tasksCompletionRate}%</span>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="text-sm font-semibold text-brand-text">Today&apos;s AI Briefing</div>
           <SendDailyBriefingButton />
         </div>
         {briefing ? (
-          <div className="space-y-4">
-            <p className="text-sm text-slate-700 whitespace-pre-line">{String((briefing as any).summary ?? "")}</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="border border-slate-100 rounded-lg p-3">
-                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Top leads</div>
-                <div className="mt-2 text-xs text-slate-700 space-y-1">
-                  {(((briefing as any).insights?.topHotLeads ?? []) as any[]).slice(0, 3).map((l, i) => (
-                    <div key={`${l.name}-${i}`}>{l.name} ({l.score ?? 0})</div>
-                  ))}
-                  {!((briefing as any).insights?.topHotLeads ?? []).length ? <div>None yet</div> : null}
-                </div>
-              </div>
-              <div className="border border-slate-100 rounded-lg p-3">
-                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions</div>
-                <ul className="mt-2 text-xs text-slate-700 list-disc pl-4 space-y-1">
-                  {(((briefing as any).insights?.suggestedActions ?? []) as any[]).slice(0, 4).map((a, i) => (
-                    <li key={`${a}-${i}`}>{a}</li>
-                  ))}
-                  {!((briefing as any).insights?.suggestedActions ?? []).length ? <li>No actions generated yet.</li> : null}
-                </ul>
-              </div>
-            </div>
+          <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
+            <p className="text-sm text-slate-700 whitespace-pre-line">{String((briefing as { summary?: string }).summary ?? "")}</p>
             <div>
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                Tasks from briefing
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tasks from briefing</div>
+              <div className="mt-2">
+                <TasksFromBriefing />
               </div>
-              <TasksFromBriefing />
             </div>
           </div>
         ) : (
-          <p className="text-sm text-slate-600">
-            No briefing generated yet for today. Click <span className="font-semibold">Generate now</span>.
-          </p>
+          <p className="mt-4 text-sm text-slate-600">No briefing for today yet — generate one to populate insights.</p>
         )}
-      </div>
+      </section>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div>
-            <div className="text-sm font-semibold text-brand-text">Quick Actions</div>
-            <div className="text-xs text-brand-text/80 mt-1">
-              Launch the most common workflows without leaving the portal.
-            </div>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <Link
-              href="/smart-cma-builder?save=1"
-              className="inline-flex items-center justify-center rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-[#005ca8]"
-            >
-              Create Report
-            </Link>
-            <Link
-              href="/dashboard/leads"
-              className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-800 border border-slate-200 hover:bg-slate-50"
-            >
-              Add Lead
-            </Link>
-            <Link
-              href="/dashboard/open-houses"
-              className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-800 border border-slate-200 hover:bg-slate-50"
-            >
-              Create Open House
-            </Link>
-          </div>
-        </div>
-
-        <div className="border-t border-slate-100 pt-4">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div className="text-sm font-semibold text-slate-900">Recent Activity</div>
-            <div className="text-xs text-slate-600">
-              Plan: <span className="font-semibold">{usage.planType.toUpperCase()}</span>
-              {" · "}Leads used: <span className="font-semibold">{usage.used}</span>
-              {Number.isFinite(usage.limit) ? ` / ${usage.limit}` : ""}
-            </div>
-          </div>
-
-          <div className="mt-3 space-y-2">
-            {events.length ? (
-              events.map((ev) => (
-                <div
-                  key={ev.id}
-                  className="flex items-center justify-between gap-3 border border-slate-100 rounded-lg px-3 py-2 text-xs"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-slate-800">
-                      {String(ev.event_type).replace("_", " ")}
-                    </span>
-                    <span className="text-slate-500">
-                      Lead #{String(ev.lead_id ?? "—")}
-                    </span>
-                  </div>
-                  <div className="text-slate-500 whitespace-nowrap">
-                    {ev.created_at ? new Date(ev.created_at).toLocaleString() : "—"}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-slate-600">No recent engagement yet.</p>
-            )}
-          </div>
-        </div>
-      </div>
+      <p className="text-center text-xs text-slate-400">
+        Plan <span className="font-semibold text-slate-600">{usage.planType.toUpperCase()}</span>
+        {" · "}
+        Leads this month:{" "}
+        <span className="font-semibold text-slate-600">
+          {usage.used}
+          {Number.isFinite(usage.limit) ? ` / ${usage.limit}` : ""}
+        </span>
+        {" · "}
+        Reports viewed today: <span className="font-semibold text-slate-600">{leadsViewedReportsToday}</span>
+      </p>
     </div>
   );
 }
-

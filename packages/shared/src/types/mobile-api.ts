@@ -1,4 +1,6 @@
 import type { LeadId } from "./lead";
+import type { NotificationDeliveryTiming } from "./lead-attention-score";
+import type { NotificationPriority } from "./notification-priority";
 import type { DealPredictionLabel } from "./deal-prediction";
 import type { MobilePipelineSlug } from "../constants/mobile-pipeline";
 
@@ -206,19 +208,61 @@ export type MobilePushNotificationKind =
   | "inbound_sms"
   | "inbound_email"
   | "needs_human"
-  | "reminder";
+  | "reminder"
+  | "missed_call"
+  | "reminder_digest";
+
+/** In-app / push routing target (strings for Expo `data`). */
+export type MobileNotificationDeepScreen = "lead" | "call_log" | "task" | "notifications";
 
 /**
  * Contract for `notification.request.content.data` on LeadSmart AI-originated pushes.
- * Optional fields may be omitted by older servers.
+ * Optional fields may be omitted by older servers. Values are strings for FCM/APNs.
  */
 export type MobilePushNotificationData = {
   kind: MobilePushNotificationKind;
-  leadId: string;
+  /** Present for lead-centric kinds; omit for digest-only. */
+  leadId?: string;
   /** `sms` | `email` where relevant */
   channel?: string;
   /** Short human-readable context */
   reason?: string;
+  /** Deep-link screen id */
+  screen?: MobileNotificationDeepScreen;
+  taskId?: string;
+  /** Comma-separated lead ids (reminder digest) */
+  leadIds?: string;
+  reminderCount?: string;
+};
+
+/** Row shape for `GET /api/mobile/notifications` (agent inbox). */
+export type MobileAgentInboxNotificationDto = {
+  id: string;
+  type: "hot_lead" | "missed_call" | "reminder";
+  priority: "high" | "medium" | "low";
+  title: string;
+  body: string;
+  read: boolean;
+  created_at: string;
+  push_sent_at: string | null;
+  data: {
+    deep_link?: {
+      screen: MobileNotificationDeepScreen;
+      lead_id?: LeadId;
+      task_id?: string;
+    };
+  } | null;
+};
+
+export type MobileNotificationsListResponseDto = {
+  notifications: MobileAgentInboxNotificationDto[];
+};
+
+export type MobileNotificationPreferencesDto = {
+  push_hot_lead: boolean;
+  push_missed_call: boolean;
+  push_reminder: boolean;
+  reminder_digest_minutes: number;
 };
 
 export type MobileDashboardAlertType =
@@ -233,6 +277,12 @@ export type MobileDashboardPriorityAlert = {
   title: string;
   subtitle?: string;
   createdAt?: string;
+  /** Explainable lead attention score (0–100) when the server enriched this alert. */
+  attentionScore?: number;
+  attentionPriority?: NotificationPriority;
+  /** Top 1–3 reasons for the score (for UI). */
+  attentionReasons?: string[];
+  deliveryTiming?: NotificationDeliveryTiming;
 };
 
 export type MobileDashboardQuickAction = {

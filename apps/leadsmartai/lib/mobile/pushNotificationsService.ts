@@ -15,6 +15,7 @@ export {
   dispatchMobileHotLeadPush,
   dispatchMobileInboundEmailPush,
   dispatchMobileInboundSmsPush,
+  dispatchMobileMissedCallPush,
   dispatchMobileNeedsHumanPush,
   dispatchMobileReminderPush,
 } from "@/lib/mobile/pushDispatch";

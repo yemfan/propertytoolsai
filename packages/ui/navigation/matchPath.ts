@@ -1,5 +1,5 @@
 import type { NavGroupItem, NavLeafItem, NavSection } from "./types";
-import { isNavGroup } from "./types";
+import { isNavDivider, isNavGroup } from "./types";
 
 export function isLinkActive(pathname: string | null, link: NavLeafItem): boolean {
   if (!pathname) return false;
@@ -17,6 +17,7 @@ export function isGroupActive(pathname: string | null, group: NavGroupItem): boo
 }
 
 export function isSectionActive(pathname: string | null, section: NavSection): boolean {
+  if (isNavDivider(section)) return false;
   if (isNavGroup(section)) return isGroupActive(pathname, section);
   return isLinkActive(pathname, section);
 }

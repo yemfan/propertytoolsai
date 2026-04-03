@@ -16,6 +16,8 @@ function RootNavigation() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="tasks" options={{ title: "Tasks" }} />
+      <Stack.Screen name="notifications" options={{ title: "Notifications" }} />
       <Stack.Screen name="lead/[id]" options={{ title: "Lead" }} />
     </Stack>
   );

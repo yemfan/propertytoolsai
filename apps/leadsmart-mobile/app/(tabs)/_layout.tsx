@@ -32,17 +32,17 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="tasks"
-        options={{
-          title: "Tasks",
-          tabBarLabel: "Tasks",
-        }}
-      />
-      <Tabs.Screen
         name="calendar"
         options={{
           title: "Calendar",
           tabBarLabel: "Calendar",
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Settings",
+          tabBarLabel: "Settings",
         }}
       />
     </Tabs>

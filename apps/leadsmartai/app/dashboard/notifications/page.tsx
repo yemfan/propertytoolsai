@@ -1,5 +1,9 @@
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { Bell, Flame, PhoneMissed } from "lucide-react";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { getCurrentAgentContext, getLeads } from "@/lib/dashboardService";
+import { getMobileReminders } from "@/lib/mobile/remindersMobile";
 
 type LeadLite = {
   id: string;
@@ -16,23 +20,108 @@ type NotificationRow = {
   sent_at: string;
 };
 
-export default async function NotificationsPage() {
-  await getCurrentAgentContext();
+type HotLeadRow = { id: string; name: string | null; last_activity_at: string | null };
+type MissedCallRow = {
+  id: string;
+  lead_id: string | null;
+  status: string | null;
+  created_at: string;
+  summary: string | null;
+  from_phone: string | null;
+  /** PostgREST may return one object or a single-element array for FK embeds */
+  leads: { name: string | null } | { name: string | null }[] | null;
+};
 
-  // Best-effort: get recent lead IDs for this agent.
-  // Note: `getLeads()` may be plan-limited for free agents.
+function leadEmbedName(embed: MissedCallRow["leads"]): string | null {
+  if (embed == null) return null;
+  if (Array.isArray(embed)) return embed[0]?.name ?? null;
+  return embed.name ?? null;
+}
+
+function isSameLocalCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+type FollowUpReminderRow = {
+  lead_id: string;
+  lead_name: string | null;
+  next_contact_at: string;
+  overdue: boolean;
+};
+
+/** Second line under “Follow-up Reminder” — e.g. “Call Mike Chen today”. */
+function followUpActionSubtitle(f: FollowUpReminderRow): string {
+  const name = f.lead_name?.trim() || "this contact";
+  const when = new Date(f.next_contact_at);
+  const now = new Date();
+  if (f.overdue) {
+    return `Follow up with ${name} — overdue`;
+  }
+  if (isSameLocalCalendarDay(when, now)) {
+    return `Call ${name} today`;
+  }
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (isSameLocalCalendarDay(when, tomorrow)) {
+    return `Call ${name} tomorrow`;
+  }
+  return `Contact ${name} · ${when.toLocaleString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })}`;
+}
+
+function EmptyRow({ children }: { children: ReactNode }) {
+  return <p className="px-4 py-8 text-center text-sm text-slate-500">{children}</p>;
+}
+
+export default async function NotificationsPage() {
+  const ctx = await getCurrentAgentContext();
+  const agentId = ctx.agentId;
+
   const leads = await getLeads({ limit: 500 });
   const leadIds = leads.map((l) => l.id);
   const leadMap = new Map<string, LeadLite>();
   leads.forEach((l) => leadMap.set(l.id, { id: l.id, name: l.name, email: l.email }));
 
-  const notificationsRes = await supabaseServer
-    .from("notifications")
-    .select("id,lead_id,property_id,type,message,sent_at")
-    .in("lead_id", leadIds.length ? leadIds : ["__none__"])
-    .order("sent_at", { ascending: false })
-    .limit(50);
+  const [
+    hotRes,
+    missedRes,
+    reminders,
+    notificationsRes,
+  ] = await Promise.all([
+    supabaseServer
+      .from("leads")
+      .select("id,name,last_activity_at")
+      .eq("agent_id", agentId)
+      .eq("rating", "hot")
+      .order("last_activity_at", { ascending: false })
+      .limit(20),
+    supabaseServer
+      .from("lead_calls")
+      .select("id,lead_id,status,created_at,summary,from_phone, leads(name)")
+      .eq("agent_id", agentId)
+      .in("status", ["no_answer", "failed"])
+      .order("created_at", { ascending: false })
+      .limit(25),
+    getMobileReminders(agentId),
+    supabaseServer
+      .from("notifications")
+      .select("id,lead_id,property_id,type,message,sent_at")
+      .in("lead_id", leadIds.length ? leadIds : ["__none__"])
+      .order("sent_at", { ascending: false })
+      .limit(50),
+  ]);
 
+  const hotLeads = (hotRes.data ?? []) as HotLeadRow[];
+  const missedCalls = (missedRes.data ?? []) as unknown as MissedCallRow[];
   const notifications = (notificationsRes.data ?? []) as NotificationRow[];
 
   const propertyIds = Array.from(
@@ -45,69 +134,311 @@ export default async function NotificationsPage() {
     .in("id", propertyIds.length ? propertyIds : ["__none__"]);
 
   const propertyMap = new Map<string, string>();
-  (propertiesData ?? []).forEach((p: any) => propertyMap.set(String(p.id), String(p.address)));
+  (propertiesData ?? []).forEach((p: { id?: unknown; address?: unknown }) =>
+    propertyMap.set(String(p.id), String(p.address ?? ""))
+  );
+
+  const { upcoming_appointments: appointments, overdue_tasks: overdueTasks, follow_ups: followUps } =
+    reminders;
+
+  const reminderCount =
+    appointments.length + overdueTasks.length + followUps.length;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-        <div>
-          <h1 className="ui-page-title text-brand-text">Notifications</h1>
-          <p className="ui-page-subtitle text-brand-text/80">
-            Nearby property activity alerts that have been sent to your leads.
-          </p>
-        </div>
+    <div className="space-y-8">
+      <div>
+        <h1 className="ui-page-title text-brand-text">Notifications</h1>
+        <p className="ui-page-subtitle mt-1 text-brand-text/80">
+          Hot leads to prioritize, calls you may have missed, and reminders across your pipeline.
+        </p>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="ui-table-header text-left px-4 py-3">Lead</th>
-                <th className="ui-table-header text-left px-4 py-3">Type</th>
-                <th className="ui-table-header text-left px-4 py-3">Property</th>
-                <th className="ui-table-header text-left px-4 py-3">Sent</th>
-              </tr>
-            </thead>
-            <tbody>
-              {notifications.length ? (
-                notifications.map((n) => (
-                  <tr key={n.id} className="border-t border-slate-100 hover:bg-slate-50">
-                    <td className="ui-table-cell px-4 py-3">
-                      <div className="ui-card-title text-brand-text">{leadMap.get(n.lead_id ?? "")?.name ?? "—"}</div>
-                      <div className="ui-meta text-slate-500">{leadMap.get(n.lead_id ?? "")?.email ?? ""}</div>
-                    </td>
-                    <td className="ui-table-cell px-4 py-3">
-                      <span
-                        className={
-                          n.type === "sold"
-                            ? "inline-flex items-center px-2 py-0.5 rounded-full bg-brand-surface border border-green-200 text-brand-success text-xs font-semibold"
-                            : "inline-flex items-center px-2 py-0.5 rounded-full bg-brand-surface border border-blue-200 text-brand-primary text-xs font-semibold"
-                        }
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Hot leads */}
+        <section className="flex flex-col overflow-hidden rounded-2xl border border-orange-200/80 bg-gradient-to-b from-orange-50/50 to-white shadow-sm ring-1 ring-orange-900/[0.04]">
+          <div className="flex items-center gap-2 border-b border-orange-100/90 bg-white/80 px-4 py-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+              <Flame className="h-4 w-4" strokeWidth={2} aria-hidden />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Hot leads</h2>
+              <p className="text-xs text-slate-500">High-intent contacts</p>
+            </div>
+            <Link
+              href="/dashboard/leads?filter=hot"
+              className="ml-auto text-xs font-semibold text-[#0072ce] hover:underline"
+            >
+              View all
+            </Link>
+          </div>
+          <div className="min-h-[120px] flex-1">
+            {hotLeads.length ? (
+              <ul className="divide-y divide-orange-100/80">
+                {hotLeads.map((l) => (
+                  <li key={l.id}>
+                    <Link
+                      href={`/dashboard/leads?id=${encodeURIComponent(String(l.id))}`}
+                      className="block px-4 py-3 transition hover:bg-orange-50/60"
+                    >
+                      <p className="text-sm font-medium text-slate-900">{l.name ?? "Lead"}</p>
+                      {l.last_activity_at ? (
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          Last activity {new Date(l.last_activity_at).toLocaleString()}
+                        </p>
+                      ) : null}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyRow>No hot leads right now. Ratings update as leads engage.</EmptyRow>
+            )}
+          </div>
+        </section>
+
+        {/* Missed calls */}
+        <section className="flex flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/[0.03]">
+          <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-100 text-rose-700">
+              <PhoneMissed className="h-4 w-4" strokeWidth={2} aria-hidden />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Missed calls</h2>
+              <p className="text-xs text-slate-500">No answer or failed dial</p>
+            </div>
+            <Link
+              href="/dashboard/calls"
+              className="ml-auto text-xs font-semibold text-[#0072ce] hover:underline"
+            >
+              Call log
+            </Link>
+          </div>
+          <div className="min-h-[120px] flex-1">
+            {missedCalls.length ? (
+              <ul className="space-y-2 p-3">
+                {missedCalls.map((c, idx) => {
+                  const leadName = leadEmbedName(c.leads);
+                  const displayName = leadName ?? c.from_phone ?? "Unknown caller";
+                  const href =
+                    c.lead_id != null
+                      ? `/dashboard/leads?id=${encodeURIComponent(String(c.lead_id))}`
+                      : "/dashboard/calls";
+                  const summary = String(c.summary ?? "").trim();
+                  const detailLine = summary
+                    ? `${summary.length > 120 ? `${summary.slice(0, 119)}…` : summary} — tap to review`
+                    : "AI captured details — tap to review";
+                  return (
+                    <li key={c.id}>
+                      <Link
+                        href={href}
+                        className={[
+                          "block rounded-xl border px-3 py-3 text-sm transition",
+                          idx === 0
+                            ? "border-rose-200/90 bg-gradient-to-br from-rose-50/90 to-white shadow-sm hover:border-rose-300/80"
+                            : "border-slate-100 bg-white hover:bg-slate-50/90",
+                        ].join(" ")}
                       >
-                        {n.type}
-                      </span>
-                    </td>
-                    <td className="ui-table-cell px-4 py-3">
-                      {n.property_id ? propertyMap.get(n.property_id) ?? n.property_id : "—"}
-                    </td>
-                    <td className="ui-table-cell px-4 py-3 text-slate-600 whitespace-nowrap">
-                      {new Date(n.sent_at).toLocaleString()}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="px-4 py-6 text-sm text-slate-600">
-                    No notifications sent yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                        <p className="font-semibold leading-snug text-slate-900">
+                          <span className="mr-1.5" aria-hidden>
+                            📞
+                          </span>
+                          Missed Call: <span className="font-semibold">{displayName}</span>
+                        </p>
+                        <p className="mt-1.5 text-sm leading-snug text-slate-600">{detailLine}</p>
+                        <p className="mt-2 text-[11px] text-slate-400">
+                          {new Date(c.created_at).toLocaleString()}
+                        </p>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <EmptyRow>No missed calls on record.</EmptyRow>
+            )}
+          </div>
+        </section>
+
+        {/* Reminders */}
+        <section className="flex flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/[0.03]">
+          <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-100 text-sky-800">
+              <Bell className="h-4 w-4" strokeWidth={2} aria-hidden />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Reminders</h2>
+              <p className="text-xs text-slate-500">
+                Appointments, tasks, follow-ups
+                {reminderCount > 0 ? ` · ${reminderCount}` : ""}
+              </p>
+            </div>
+            <Link
+              href="/dashboard/calendar"
+              className="ml-auto text-xs font-semibold text-[#0072ce] hover:underline"
+            >
+              Calendar
+            </Link>
+          </div>
+          <div className="min-h-[120px] flex-1 space-y-4 p-4">
+            {appointments.length > 0 ? (
+              <div>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                  Appointments
+                </p>
+                <ul className="space-y-2">
+                  {appointments.slice(0, 6).map((ev) => (
+                    <li
+                      key={ev.id}
+                      className="rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 text-sm"
+                    >
+                      <p className="font-medium text-slate-900">{ev.title}</p>
+                      <p className="text-xs text-slate-600">
+                        {ev.lead_name ? `${ev.lead_name} · ` : ""}
+                        {ev.starts_at ? new Date(ev.starts_at).toLocaleString() : ""}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {overdueTasks.length > 0 ? (
+              <div>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                  Overdue tasks
+                </p>
+                <ul className="space-y-2">
+                  {overdueTasks.slice(0, 6).map((t) => (
+                    <li key={t.id}>
+                      <Link
+                        href="/dashboard/tasks"
+                        className="block rounded-lg border border-amber-100 bg-amber-50/50 px-3 py-2 text-sm transition hover:bg-amber-50"
+                      >
+                        <p className="font-medium text-slate-900">{t.title}</p>
+                        <p className="text-xs text-amber-800/90">
+                          {t.lead_name ? `${t.lead_name} · ` : ""}
+                          Due {t.due_at ? new Date(t.due_at).toLocaleString() : "—"}
+                        </p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {followUps.length > 0 ? (
+              <div>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                  Follow-ups
+                </p>
+                <ul className="space-y-2">
+                  {followUps.slice(0, 8).map((f, idx) => (
+                    <li key={f.lead_id}>
+                      <Link
+                        href={`/dashboard/leads?id=${encodeURIComponent(f.lead_id)}`}
+                        className={[
+                          "block rounded-xl border px-3 py-3 text-sm transition",
+                          idx === 0
+                            ? "border-sky-200/90 bg-gradient-to-br from-sky-50/90 to-white shadow-sm hover:border-sky-300/80"
+                            : "border-slate-100 bg-white hover:bg-slate-50/90",
+                        ].join(" ")}
+                      >
+                        <p className="font-semibold leading-snug text-slate-900">
+                          <span className="mr-1.5" aria-hidden>
+                            ⏰
+                          </span>
+                          Follow-up Reminder
+                        </p>
+                        <p
+                          className={
+                            f.overdue
+                              ? "mt-1.5 text-sm font-normal leading-snug text-rose-600"
+                              : "mt-1.5 text-sm font-normal leading-snug text-slate-600"
+                          }
+                        >
+                          {followUpActionSubtitle(f)}
+                        </p>
+                        <p className="mt-2 text-[11px] text-slate-400">
+                          Scheduled {new Date(f.next_contact_at).toLocaleString()}
+                        </p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {reminderCount === 0 ? (
+              <p className="py-6 text-center text-sm text-slate-500">
+                No upcoming reminders.{" "}
+                <Link href="/dashboard/tasks" className="font-semibold text-[#0072ce] hover:underline">
+                  Tasks
+                </Link>{" "}
+                and{" "}
+                <Link href="/dashboard/calendar" className="font-semibold text-[#0072ce] hover:underline">
+                  calendar
+                </Link>{" "}
+                will show here.
+              </p>
+            ) : null}
+          </div>
+        </section>
       </div>
+
+      {/* Legacy: automated listing/property alerts */}
+      {notifications.length > 0 ? (
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">Property listing alerts</h2>
+            <p className="text-sm text-slate-600">
+              Automated nearby listing activity sent to your leads (email/SMS).
+            </p>
+          </div>
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50 text-slate-600">
+                  <tr>
+                    <th className="ui-table-header px-4 py-3 text-left">Lead</th>
+                    <th className="ui-table-header px-4 py-3 text-left">Type</th>
+                    <th className="ui-table-header px-4 py-3 text-left">Property</th>
+                    <th className="ui-table-header px-4 py-3 text-left">Sent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {notifications.map((n) => (
+                    <tr key={n.id} className="border-t border-slate-100 hover:bg-slate-50">
+                      <td className="ui-table-cell px-4 py-3">
+                        <div className="ui-card-title text-brand-text">
+                          {leadMap.get(n.lead_id ?? "")?.name ?? "—"}
+                        </div>
+                        <div className="ui-meta text-slate-500">{leadMap.get(n.lead_id ?? "")?.email ?? ""}</div>
+                      </td>
+                      <td className="ui-table-cell px-4 py-3">
+                        <span
+                          className={
+                            n.type === "sold"
+                              ? "inline-flex items-center rounded-full border border-green-200 bg-brand-surface px-2 py-0.5 text-xs font-semibold text-brand-success"
+                              : "inline-flex items-center rounded-full border border-blue-200 bg-brand-surface px-2 py-0.5 text-xs font-semibold text-brand-primary"
+                          }
+                        >
+                          {n.type}
+                        </span>
+                      </td>
+                      <td className="ui-table-cell px-4 py-3">
+                        {n.property_id ? propertyMap.get(n.property_id) ?? n.property_id : "—"}
+                      </td>
+                      <td className="ui-table-cell whitespace-nowrap px-4 py-3 text-slate-600">
+                        {new Date(n.sent_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }
-

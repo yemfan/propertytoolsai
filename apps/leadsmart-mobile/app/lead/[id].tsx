@@ -25,6 +25,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { LeadQuickActionsRow } from "../../components/lead/LeadQuickActionsRow";
 import { LeadReplySection } from "../../components/lead/LeadReplySection";
+import { PipelineBreadcrumb } from "../../components/lead/PipelineBreadcrumb";
 import { ScreenLoading } from "../../components/ScreenLoading";
 import { AppointmentCard } from "../../components/calendar/AppointmentCard";
 import { AppointmentComposerModal } from "../../components/calendar/AppointmentComposerModal";
@@ -52,6 +53,38 @@ const emptyPipeline: MobileLeadPipelineDto = {
   name: null,
 };
 
+function buildLeadSubtitle(lead: MobileLeadRecordDto, pipeline: MobileLeadPipelineDto): string {
+  const rating = leadField(lead, "rating");
+  const hot = rating.toLowerCase() === "hot";
+  const tier = hot ? "Hot lead" : "Lead";
+  const rawIntent = typeof lead.ai_intent === "string" ? lead.ai_intent.trim() : "";
+  const role =
+    (rawIntent ? rawIntent.split(/[—–-]/)[0]?.trim() : "") ||
+    leadField(lead, "buyer_seller")?.trim() ||
+    "Buyer";
+  const stage = pipeline.name?.trim() || leadField(lead, "lead_status")?.trim() || "New";
+  return `${tier} • ${role} • ${stage}`;
+}
+
+function mergeConversation(
+  sms: MobileSmsMessageDto[],
+  email: MobileEmailMessageDto[]
+): Array<{ key: string; kind: "sms" | "email"; m: MobileSmsMessageDto | MobileEmailMessageDto }> {
+  const rows: Array<{
+    key: string;
+    kind: "sms" | "email";
+    m: MobileSmsMessageDto | MobileEmailMessageDto;
+  }> = [];
+  for (const m of sms) rows.push({ key: `s-${m.id}`, kind: "sms", m });
+  for (const m of email) rows.push({ key: `e-${m.id}`, kind: "email", m });
+  rows.sort((a, b) => new Date(a.m.created_at).getTime() - new Date(b.m.created_at).getTime());
+  return rows;
+}
+
+function SectionRule() {
+  return <View style={styles.sectionRule} />;
+}
+
 function MessageBubble({
   m,
   kind,
@@ -61,8 +94,10 @@ function MessageBubble({
 }) {
   const inbound = m.direction === "inbound";
   const subject = kind === "email" && "subject" in m && m.subject ? m.subject : null;
+  const channel = kind === "sms" ? "SMS" : "Email";
   return (
     <View style={[styles.bubbleWrap, inbound ? styles.bubbleInbound : styles.bubbleOutbound]}>
+      <Text style={styles.bubbleChannel}>{channel}</Text>
       {subject ? <Text style={styles.bubbleSubject}>{subject}</Text> : null}
       <Text style={styles.bubbleBody}>{m.message || "—"}</Text>
       <Text style={styles.bubbleMeta}>
@@ -256,9 +291,9 @@ export default function LeadDetailScreen() {
   }
 
   const name = leadField(lead, "name") || `Lead ${lead.id}`;
-  const rating = leadField(lead, "rating");
-  const hot = rating.toLowerCase() === "hot";
+  const subtitle = buildLeadSubtitle(lead, pipeline);
   const lastActivity = leadField(lead, "last_activity_at");
+  const mergedThread = mergeConversation(sms, email);
 
   return (
     <KeyboardAvoidingView
@@ -272,7 +307,6 @@ export default function LeadDetailScreen() {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-      <View style={styles.card}>
         {isDemoLeadId(lead.id) ? (
           <View style={styles.demoBanner}>
             <Text style={styles.demoBannerText}>
@@ -280,52 +314,38 @@ export default function LeadDetailScreen() {
             </Text>
           </View>
         ) : null}
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>{name}</Text>
-          {hot ? (
-            <View style={styles.hotPill}>
-              <Text style={styles.hotText}>Hot</Text>
-            </View>
+
+        <View style={styles.hero}>
+          <Text style={styles.heroName}>{name}</Text>
+          <Text style={styles.heroSubtitle}>{subtitle}</Text>
+          {!isDemoLeadId(lead.id) && lastActivity ? (
+            <Text style={styles.heroMeta}>Last activity {formatShortDateTime(lastActivity)}</Text>
+          ) : null}
+          {!isDemoLeadId(lead.id) && lead.display_phone ? (
+            <Text style={styles.heroLine}>{lead.display_phone}</Text>
+          ) : null}
+          {!isDemoLeadId(lead.id) && leadField(lead, "email") ? (
+            <Text style={styles.heroLine}>{leadField(lead, "email")}</Text>
           ) : null}
         </View>
-        {lastActivity ? (
-          <Text style={styles.lastActive}>Last activity {formatShortDateTime(lastActivity)}</Text>
-        ) : null}
-        {lead.display_phone ? <Text style={styles.line}>{lead.display_phone}</Text> : null}
-        {leadField(lead, "email") ? <Text style={styles.line}>{leadField(lead, "email")}</Text> : null}
-        {leadField(lead, "property_address") ? (
-          <Text style={styles.line}>{leadField(lead, "property_address")}</Text>
-        ) : null}
-        <View style={styles.metaRow}>
-          {leadField(lead, "lead_status") ? (
-            <Text style={styles.badge}>{leadField(lead, "lead_status")}</Text>
-          ) : null}
-          {leadField(lead, "source") ? (
-            <Text style={styles.muted}>Source: {leadField(lead, "source")}</Text>
-          ) : null}
-        </View>
-        {lead.ai_lead_score != null ? (
-          <Text style={styles.aiLine}>
-            AI score {Math.round(lead.ai_lead_score)}
-            {lead.ai_intent ? ` · ${lead.ai_intent}` : ""}
-            {lead.ai_timeline ? ` · ${lead.ai_timeline}` : ""}
-          </Text>
-        ) : null}
+
+        <SectionRule />
+
+        <LeadQuickActionsRow
+          toolbar
+          leadId={lead.id}
+          displayPhone={lead.display_phone}
+          email={leadField(lead, "email")}
+        />
+
+        <SectionRule />
+
+        <Text style={styles.blockHeading}>Next Task</Text>
         {!isDemoLeadId(lead.id) ? (
           <>
-            <Text style={styles.cardSectionTitle}>Pipeline</Text>
-            {pipelineActionError ? (
-              <Text style={styles.inlineError}>{pipelineActionError}</Text>
-            ) : null}
-            <PipelineStagePicker
-              stages={pipelineStages}
-              selectedSlug={pipeline.mobile_slug}
-              busySlug={pipelineBusySlug ?? undefined}
-              onSelect={onSelectPipelineStage}
-            />
-            <Text style={styles.cardSectionTitle}>Next task</Text>
+            {pipelineActionError ? <Text style={styles.inlineError}>{pipelineActionError}</Text> : null}
             {nextOpenTask ? (
-              <View style={styles.taskBlock}>
+              <View style={styles.nextTaskCard}>
                 <TaskCard
                   variant="compact"
                   task={nextOpenTask}
@@ -335,20 +355,31 @@ export default function LeadDetailScreen() {
                 />
               </View>
             ) : (
-              <View style={styles.sectionEmpty}>
-                <EmptyState title="No open task" />
-              </View>
+              <Text style={styles.mutedBlock}>No open task for this lead.</Text>
             )}
-            <Pressable
-              onPress={() => setTaskModalOpen(true)}
-              style={({ pressed }) => [styles.addTaskBtn, pressed && styles.addTaskBtnPressed]}
-            >
-              <Text style={styles.addTaskBtnText}>Add task</Text>
-            </Pressable>
-            <Text style={styles.cardSectionTitle}>Schedule</Text>
+            <View style={styles.inlineActions}>
+              <Pressable
+                onPress={() => setTaskModalOpen(true)}
+                style={({ pressed }) => [styles.linkBtn, pressed && styles.linkBtnPressed]}
+              >
+                <Text style={styles.linkBtnText}>Add task</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setAppointmentModalOpen(true)}
+                style={({ pressed }) => [styles.linkBtn, pressed && styles.linkBtnPressed]}
+              >
+                <Text style={styles.linkBtnText}>Schedule</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setBookingLinkModalOpen(true)}
+                style={({ pressed }) => [styles.linkBtn, pressed && styles.linkBtnPressed]}
+              >
+                <Text style={styles.linkBtnText}>Booking link</Text>
+              </Pressable>
+            </View>
             {scheduleError ? <Text style={styles.inlineError}>{scheduleError}</Text> : null}
             {nextAppointment ? (
-              <View style={styles.taskBlock}>
+              <View style={styles.compactSchedule}>
                 <AppointmentCard
                   variant="compact"
                   event={nextAppointment}
@@ -356,11 +387,7 @@ export default function LeadDetailScreen() {
                   cancelling={appointmentCancelling}
                 />
               </View>
-            ) : (
-              <View style={styles.sectionEmpty}>
-                <EmptyState title="No upcoming appointment" />
-              </View>
-            )}
+            ) : null}
             {bookingLinks.length > 0 ? (
               <View style={styles.bookingBlock}>
                 <Text style={styles.bookingLinksLabel}>Booking links</Text>
@@ -369,52 +396,54 @@ export default function LeadDetailScreen() {
                 ))}
               </View>
             ) : null}
-            <View style={styles.scheduleRow}>
-              <Pressable
-                onPress={() => setAppointmentModalOpen(true)}
-                style={({ pressed }) => [styles.scheduleBtn, pressed && styles.addTaskBtnPressed]}
-              >
-                <Text style={styles.scheduleBtnText}>Schedule</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setBookingLinkModalOpen(true)}
-                style={({ pressed }) => [styles.scheduleBtnGreen, pressed && styles.addTaskBtnPressed]}
-              >
-                <Text style={styles.scheduleBtnGreenText}>Booking link</Text>
-              </Pressable>
+          </>
+        ) : (
+          <View style={styles.nextTaskCard}>
+            <Text style={styles.nextTaskPrimary}>Call back within 1 hour</Text>
+          </View>
+        )}
+
+        <SectionRule />
+
+        <Text style={styles.blockHeading}>Pipeline Stage</Text>
+        {!isDemoLeadId(lead.id) ? (
+          <>
+            {pipelineActionError ? <Text style={styles.inlineError}>{pipelineActionError}</Text> : null}
+            <PipelineBreadcrumb stages={pipelineStages} selectedSlug={pipeline.mobile_slug} />
+            <View style={styles.pickerPad}>
+              <PipelineStagePicker
+                stages={pipelineStages}
+                selectedSlug={pipeline.mobile_slug}
+                busySlug={pipelineBusySlug ?? undefined}
+                onSelect={onSelectPipelineStage}
+              />
             </View>
           </>
-        ) : null}
-        <LeadQuickActionsRow
-          leadId={lead.id}
-          displayPhone={lead.display_phone}
-          email={leadField(lead, "email")}
-        />
-      </View>
+        ) : (
+          <Text style={styles.breadcrumbDemo}>New {'>'} Contacted {'>'} Qualified {'>'} Showing</Text>
+        )}
 
-      <Text style={styles.sectionTitle}>SMS</Text>
-      <Text style={styles.sectionHint}>Recent thread (oldest at top)</Text>
-      {sms.length === 0 ? (
-        <View style={styles.sectionEmpty}>
-          <EmptyState title="No SMS messages" />
-        </View>
-      ) : (
-        sms.map((m) => <MessageBubble key={m.id} m={m} kind="sms" />)
-      )}
+        <SectionRule />
 
-      <Text style={styles.sectionTitle}>Email</Text>
-      <Text style={styles.sectionHint}>Recent thread (oldest at top)</Text>
-      {email.length === 0 ? (
-        <View style={styles.sectionEmpty}>
-          <EmptyState title="No email messages" />
-        </View>
-      ) : (
-        email.map((m) => <MessageBubble key={m.id} m={m} kind="email" />)
-      )}
+        <Text style={styles.blockHeading}>Conversation</Text>
+        {mergedThread.length === 0 ? (
+          <View style={styles.sectionEmpty}>
+            <EmptyState title="No messages yet" subtitle="Start with Text, Email, or a reply below." />
+          </View>
+        ) : (
+          mergedThread.map((row) => (
+            <MessageBubble key={row.key} m={row.m} kind={row.kind} />
+          ))
+        )}
       </ScrollView>
-      {!isDemoLeadId(lead.id) ? (
-        <LeadReplySection leadId={lead.id} sms={sms} email={email} setSms={setSms} setEmail={setEmail} />
-      ) : null}
+      <LeadReplySection
+        leadId={lead.id}
+        sms={sms}
+        email={email}
+        setSms={setSms}
+        setEmail={setEmail}
+        demo={isDemoLeadId(lead.id)}
+      />
       {!isDemoLeadId(lead.id) ? (
         <TaskComposerModal
           visible={taskModalOpen}
@@ -452,21 +481,13 @@ export default function LeadDetailScreen() {
 const styles = StyleSheet.create({
   kav: { flex: 1, backgroundColor: theme.bg },
   scroll: { flex: 1, backgroundColor: theme.bg },
-  scrollContent: { paddingBottom: 24 },
+  scrollContent: { paddingBottom: 28, paddingHorizontal: 16 },
   centered: {
     flex: 1,
     backgroundColor: theme.bg,
     padding: 16,
     justifyContent: "flex-start",
     paddingTop: 24,
-  },
-  card: {
-    margin: 12,
-    padding: 16,
-    backgroundColor: theme.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.border,
   },
   demoBanner: {
     backgroundColor: "#e0f2fe",
@@ -477,52 +498,46 @@ const styles = StyleSheet.create({
     borderColor: "#7dd3fc",
   },
   demoBannerText: { fontSize: 13, color: "#0369a1", lineHeight: 18 },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  title: { flex: 1, fontSize: 20, fontWeight: "700", color: theme.text },
-  hotPill: {
-    backgroundColor: theme.hotPillBg,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.hotBorder,
+  hero: { paddingTop: 4, paddingBottom: 4 },
+  heroName: { fontSize: 26, fontWeight: "800", color: theme.text, letterSpacing: -0.3 },
+  heroSubtitle: { marginTop: 8, fontSize: 15, fontWeight: "500", color: theme.textMuted, lineHeight: 22 },
+  heroMeta: { marginTop: 8, fontSize: 12, color: theme.textSubtle },
+  heroLine: { marginTop: 4, fontSize: 15, color: "#334155" },
+  sectionRule: {
+    height: 1,
+    backgroundColor: theme.border,
+    marginVertical: 16,
   },
-  hotText: { fontSize: 11, fontWeight: "800", color: theme.hotPillText },
-  lastActive: { marginTop: 6, fontSize: 12, color: theme.textMuted },
-  line: { marginTop: 8, fontSize: 15, color: "#334155" },
-  metaRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 12 },
-  badge: {
+  blockHeading: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "#334155",
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    overflow: "hidden",
+    fontWeight: "800",
+    color: theme.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 10,
   },
-  muted: { fontSize: 12, color: theme.textSubtle },
-  aiLine: { marginTop: 12, fontSize: 13, color: theme.accent, fontWeight: "500" },
   inlineError: {
     fontSize: 13,
     color: theme.errorTitle,
     marginBottom: 8,
     marginTop: 4,
   },
-  taskBlock: { marginTop: 4 },
-  addTaskBtn: {
-    alignSelf: "flex-start",
-    marginTop: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: "#eff6ff",
+  nextTaskCard: {
+    marginBottom: 4,
+    padding: 14,
+    backgroundColor: theme.surface,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#bfdbfe",
+    borderColor: theme.border,
   },
-  addTaskBtnPressed: { opacity: 0.88 },
-  addTaskBtnText: { fontSize: 14, fontWeight: "700", color: theme.accent },
-  bookingBlock: { marginTop: 8 },
+  nextTaskPrimary: { fontSize: 17, fontWeight: "700", color: theme.text },
+  mutedBlock: { fontSize: 14, color: theme.textMuted, marginBottom: 8 },
+  inlineActions: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 12, marginBottom: 8 },
+  linkBtn: { paddingVertical: 6 },
+  linkBtnPressed: { opacity: 0.7 },
+  linkBtnText: { fontSize: 14, fontWeight: "700", color: theme.accent },
+  compactSchedule: { marginTop: 8 },
+  bookingBlock: { marginTop: 12 },
   bookingLinksLabel: {
     fontSize: 12,
     fontWeight: "700",
@@ -531,57 +546,27 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  scheduleRow: { flexDirection: "row", gap: 10, marginTop: 12, flexWrap: "wrap" },
-  scheduleBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: "#eff6ff",
-    borderWidth: 1,
-    borderColor: "#bfdbfe",
+  pickerPad: { marginTop: 10 },
+  breadcrumbDemo: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: theme.text,
+    lineHeight: 22,
   },
-  scheduleBtnText: { fontSize: 14, fontWeight: "700", color: theme.accent },
-  scheduleBtnGreen: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: "#ecfdf5",
-    borderWidth: 1,
-    borderColor: "#86efac",
-  },
-  scheduleBtnGreenText: { fontSize: 14, fontWeight: "700", color: "#15803d" },
-  cardSectionTitle: {
-    marginTop: 18,
-    marginBottom: 4,
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
-  sectionTitle: {
-    marginHorizontal: 16,
-    marginTop: 20,
-    marginBottom: 4,
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
-  sectionHint: {
-    marginHorizontal: 16,
-    marginBottom: 8,
-    fontSize: 12,
-    color: theme.textSubtle,
-  },
-  sectionEmpty: { marginHorizontal: 8 },
+  sectionEmpty: { marginVertical: 8 },
   bubbleWrap: {
-    marginHorizontal: 12,
     marginVertical: 6,
     padding: 12,
     borderRadius: 12,
     maxWidth: "92%",
+  },
+  bubbleChannel: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: theme.textSubtle,
+    letterSpacing: 0.6,
+    marginBottom: 6,
+    textTransform: "uppercase",
   },
   bubbleInbound: {
     alignSelf: "flex-start",

@@ -17,9 +17,10 @@ export type ReplyComposerProps = {
   sending: boolean;
   aiLoading: boolean;
   error: string | null;
-  /** Brief “sent” acknowledgement */
   showSent?: boolean;
   placeholder?: string;
+  /** Hide the “SMS reply” label (lead detail wireframe). */
+  hideLabel?: boolean;
 };
 
 export function ReplyComposer({
@@ -31,13 +32,14 @@ export function ReplyComposer({
   aiLoading,
   error,
   showSent,
-  placeholder = "SMS reply…",
+  placeholder = "Type a reply…",
+  hideLabel,
 }: ReplyComposerProps) {
   const canSend = value.trim().length > 0 && !sending;
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>SMS reply</Text>
+      {!hideLabel ? <Text style={styles.label}>SMS reply</Text> : null}
       {error ? (
         <Text style={styles.error} accessibilityLiveRegion="polite">
           {error}
@@ -48,7 +50,7 @@ export function ReplyComposer({
           Message sent
         </Text>
       ) : null}
-      <View style={styles.row}>
+      <View style={styles.composerRow}>
         <TextInput
           style={styles.input}
           value={value}
@@ -58,23 +60,25 @@ export function ReplyComposer({
           multiline
           maxLength={1600}
           editable={!sending}
-          accessibilityLabel="SMS reply text"
+          accessibilityLabel="Reply message"
         />
-        <AiReplyButton onPress={onAiDraft} loading={aiLoading} disabled={sending} />
+        <View style={styles.actions}>
+          <AiReplyButton onPress={onAiDraft} loading={aiLoading} disabled={sending} label="AI" />
+          <Pressable
+            style={[styles.sendBtn, !canSend && styles.sendDisabled]}
+            onPress={onSend}
+            disabled={!canSend}
+            accessibilityRole="button"
+            accessibilityLabel="Send message"
+          >
+            {sending ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.sendText}>Send</Text>
+            )}
+          </Pressable>
+        </View>
       </View>
-      <Pressable
-        style={[styles.send, !canSend && styles.sendDisabled]}
-        onPress={onSend}
-        disabled={!canSend}
-        accessibilityRole="button"
-        accessibilityLabel="Send SMS"
-      >
-        {sending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.sendText}>Send SMS</Text>
-        )}
-      </Pressable>
     </View>
   );
 }
@@ -84,8 +88,8 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: theme.border,
     paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 10,
     backgroundColor: theme.surface,
   },
   label: {
@@ -98,7 +102,11 @@ const styles = StyleSheet.create({
   },
   error: { fontSize: 13, color: theme.errorTitle, marginBottom: 8 },
   success: { fontSize: 13, color: "#15803d", marginBottom: 8, fontWeight: "600" },
-  row: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
+  composerRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
+  },
   input: {
     flex: 1,
     minHeight: 44,
@@ -112,13 +120,21 @@ const styles = StyleSheet.create({
     color: theme.text,
     backgroundColor: theme.bg,
   },
-  send: {
-    marginTop: 10,
-    backgroundColor: theme.accent,
-    paddingVertical: 14,
-    borderRadius: 12,
+  actions: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 8,
+    paddingBottom: 2,
+  },
+  sendBtn: {
+    backgroundColor: theme.accent,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    minWidth: 72,
+    alignItems: "center",
+    justifyContent: "center",
   },
   sendDisabled: { opacity: 0.45 },
-  sendText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  sendText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 });

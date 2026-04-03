@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useState, type ReactNode } from "react";
 import type { NavSection } from "./types";
-import { isNavGroup } from "./types";
+import { isNavDivider, isNavGroup } from "./types";
 import { isLinkActive } from "./matchPath";
 
 export type SidebarProps = {
@@ -58,12 +58,22 @@ export function Sidebar({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
         <nav className="space-y-2">
-          {sections.map((section) => {
+          {sections.map((section, sectionIdx) => {
+            if (isNavDivider(section)) {
+              return (
+                <div
+                  key={`nav-divider-${sectionIdx}`}
+                  className="my-1 border-t border-gray-200 pt-1"
+                  role="separator"
+                  aria-hidden
+                />
+              );
+            }
             if (!isNavGroup(section)) {
               const active = isLinkActive(pathname, section);
               return (
                 <Link
-                  key={section.href}
+                  key={`${section.href}-${section.label}`}
                   href={section.href}
                   className={[
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",

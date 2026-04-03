@@ -24,4 +24,6 @@ export const MOBILE_API_PATHS = {
     `/api/mobile/calendar/events/${encodeURIComponent(eventId)}`,
   calendarBookingLink: "/api/mobile/calendar/booking-link",
   reminders: "/api/mobile/reminders",
+  notifications: "/api/mobile/notifications",
+  notificationPreferences: "/api/mobile/notification-preferences",
 } as const;

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { NavSection } from "./types";
-import { isNavGroup } from "./types";
+import { isNavDivider, isNavGroup } from "./types";
 import { isLinkActive } from "./matchPath";
 
 function cn(...parts: (string | false | undefined | null)[]) {
@@ -114,12 +114,22 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
             </div>
 
             <nav className="space-y-2">
-              {sections.map((section) => {
+              {sections.map((section, sectionIdx) => {
+                if (isNavDivider(section)) {
+                  return (
+                    <div
+                      key={`nav-divider-${sectionIdx}`}
+                      className="my-1 border-t border-slate-200/90 pt-1"
+                      role="separator"
+                      aria-hidden
+                    />
+                  );
+                }
                 if (!isNavGroup(section)) {
                   const active = isLinkActive(pathname, section);
                   return (
                     <Link
-                      key={section.href}
+                      key={`${section.href}-${section.label}`}
                       href={section.href}
                       prefetch={section.prefetch === false ? false : undefined}
                       onClick={() => setOpen(false)}

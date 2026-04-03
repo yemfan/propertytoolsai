@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.accent,
     backgroundColor: "#eff6ff",
-    minWidth: 88,
+    minWidth: 52,
     alignItems: "center",
     justifyContent: "center",
   },

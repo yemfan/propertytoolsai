@@ -9,6 +9,8 @@ export type LeadQuickActionsRowProps = {
   leadId: string;
   displayPhone: string | null | undefined;
   email: string;
+  /** When true, four equal-width actions in one row (lead detail wireframe). */
+  toolbar?: boolean;
 };
 
 type ActionKey = "call" | "sms" | "email" | "ai";
@@ -17,10 +19,10 @@ const ACTIONS: { key: ActionKey; label: string; hint: string }[] = [
   { key: "call", label: "Call", hint: "Opens the phone app" },
   { key: "sms", label: "Text", hint: "Opens the SMS app" },
   { key: "email", label: "Email", hint: "Opens the mail composer" },
-  { key: "ai", label: "AI reply", hint: "AI-assisted reply (coming soon)" },
+  { key: "ai", label: "AI Reply", hint: "AI-assisted reply (coming soon)" },
 ];
 
-export function LeadQuickActionsRow({ leadId, displayPhone, email }: LeadQuickActionsRowProps) {
+export function LeadQuickActionsRow({ leadId, displayPhone, email, toolbar }: LeadQuickActionsRowProps) {
   const phone = normalizePhoneForLinking(displayPhone);
   const emailTrimmed = email.trim();
   const canCall = Boolean(phone);
@@ -59,7 +61,11 @@ export function LeadQuickActionsRow({ leadId, displayPhone, email }: LeadQuickAc
   };
 
   return (
-    <View style={styles.wrap} accessibilityRole="toolbar" accessibilityLabel="Lead quick actions">
+    <View
+      style={[styles.wrap, toolbar && styles.wrapToolbar]}
+      accessibilityRole="toolbar"
+      accessibilityLabel="Lead quick actions"
+    >
       {ACTIONS.map(({ key, label, hint }) => {
         const isEnabled = enabled(key);
         return (
@@ -67,6 +73,7 @@ export function LeadQuickActionsRow({ leadId, displayPhone, email }: LeadQuickAc
             key={key}
             style={({ pressed }) => [
               styles.chip,
+              toolbar && styles.chipToolbar,
               !isEnabled && styles.chipDisabled,
               pressed && isEnabled && styles.chipPressed,
             ]}
@@ -97,6 +104,12 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: theme.border,
   },
+  wrapToolbar: {
+    marginTop: 0,
+    paddingTop: 0,
+    borderTopWidth: 0,
+    flexWrap: "nowrap",
+  },
   chip: {
     paddingVertical: 10,
     paddingHorizontal: 14,
@@ -106,6 +119,11 @@ const styles = StyleSheet.create({
     borderColor: theme.border,
     minWidth: 72,
     alignItems: "center",
+  },
+  chipToolbar: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 8,
   },
   chipPressed: {
     backgroundColor: "#e2e8f0",

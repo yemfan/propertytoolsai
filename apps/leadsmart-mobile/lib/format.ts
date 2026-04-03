@@ -16,6 +16,18 @@ export function formatTaskDueLabel(iso: string | null): string {
   }
 }
 
+/** Clock only (e.g. "9:00 AM") for agenda rows. */
+export function formatAgendaClock(iso: string): string {
+  try {
+    return new Date(iso).toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
 /** Short date/time for thread rows and message bubbles. */
 export function formatShortDateTime(iso: string): string {
   try {
