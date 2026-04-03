@@ -29,8 +29,10 @@ export async function GET(req: Request) {
       .eq("auth_user_id", user.id)
       .maybeSingle();
 
+    const profileEmail = (data as { email?: string | null } | null)?.email?.trim() || null;
+
     return NextResponse.json({
-      email: user.email ?? null,
+      email: profileEmail || user.email || null,
       plan: (ls?.plan as string | undefined) ?? "free",
       role: (ls?.role as string | undefined) ?? "user",
       has_agent_record: !!agentRow,

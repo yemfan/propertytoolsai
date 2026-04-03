@@ -34,7 +34,9 @@
     "smoke:competitor-intel": "tsx scripts/smoke-competitor-intel.ts",
     "smoke:serp-dominator": "tsx scripts/smoke-serp-dominator.ts",
     "smoke:revenue-kpi": "tsx scripts/smoke-revenue-kpi.ts",
-    "smoke:valuation-training-exports": "tsx scripts/smoke-valuation-training-exports.ts"
+    "smoke:valuation-training-exports": "tsx scripts/smoke-valuation-training-exports.ts",
+    "seed:socal-cities": "tsx scripts/seed-socal-county-cities.ts",
+    "populate:socal-seo": "tsx scripts/populate-socal-seo-pipeline.ts"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.0.2",

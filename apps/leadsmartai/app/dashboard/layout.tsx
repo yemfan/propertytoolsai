@@ -4,8 +4,9 @@ import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { isRedirectError } from "@/lib/isRedirectError";
 import DashboardShell from "@/components/dashboard/DashboardShell";
 import { AgentWorkspaceProviders } from "@/components/entitlements/AgentWorkspaceProviders";
-import { isAdminOrSupportRole } from "@/lib/rolePortalPaths";
+import { ADMIN_SUPPORT_HOME_PATH, isAdminOrSupportRole } from "@/lib/rolePortalPaths";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { supabaseServerClient } from "@/lib/supabaseServerClient";
 
 export default async function DashboardLayout({
   children,
@@ -22,6 +23,21 @@ export default async function DashboardLayout({
         redirect("/login?redirect=/dashboard");
       }
       if (msg === ERROR_DASHBOARD_NO_AGENT_ROW) {
+        const supabase = supabaseServerClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user?.id) {
+          const { data: ls } = await supabaseServer
+            .from("leadsmart_users")
+            .select("role")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          const roleRaw = (ls as { role?: string } | null)?.role;
+          if (isAdminOrSupportRole(roleRaw)) {
+            redirect(ADMIN_SUPPORT_HOME_PATH);
+          }
+        }
         redirect("/agent-signup?redirect=/dashboard");
       }
       throw e;

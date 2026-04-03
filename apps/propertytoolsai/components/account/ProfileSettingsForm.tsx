@@ -24,6 +24,7 @@ export default function ProfileSettingsForm() {
   const [me, setMe] = useState<Me | null>(null);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
 
   const load = useCallback(async () => {
     setError(null);
@@ -46,6 +47,7 @@ export default function ProfileSettingsForm() {
       setMe(json);
       setFullName((json.full_name ?? "").trim());
       setPhone((json.phone ?? "").trim());
+      setEmail((json.email ?? "").trim());
     } catch {
       setError("Could not load profile");
     } finally {
@@ -62,6 +64,12 @@ export default function ProfileSettingsForm() {
     setSaving(true);
     setError(null);
     setSuccess(null);
+    const emailTrim = email.trim();
+    if (!emailTrim) {
+      setError("Email is required.");
+      setSaving(false);
+      return;
+    }
     try {
       const { data: sessionData } = await supabaseBrowser().auth.getSession();
       const token = sessionData.session?.access_token;
@@ -72,13 +80,14 @@ export default function ProfileSettingsForm() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ full_name: fullName, phone }),
+        body: JSON.stringify({ full_name: fullName, phone, email: emailTrim }),
       });
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) {
         setError(json.error ?? "Save failed");
         return;
       }
+      await supabaseBrowser().auth.refreshSession();
       setSuccess("Profile saved.");
       await load();
       router.refresh();
@@ -192,11 +201,15 @@ export default function ProfileSettingsForm() {
           <label className="block text-xs font-medium text-slate-700">Email</label>
           <input
             type="email"
-            value={me?.email ?? ""}
-            readOnly
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0066b3]/30"
           />
-          <p className="text-[11px] text-slate-500">Email is managed by your login provider.</p>
+          <p className="text-[11px] text-slate-500">
+            Used for login and notifications. If your project requires email confirmation, you may need to verify a new
+            address.
+          </p>
         </div>
         <div className="space-y-1">
           <label className="block text-xs font-medium text-slate-700">Full name</label>

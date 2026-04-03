@@ -13,6 +13,10 @@ import { messageFromUnknownError } from "@/lib/supabaseThrow";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { START_FREE_AS_AGENT_LABEL } from "@/lib/auth/startFreeAgentMarketing";
 import { formatUsPhoneInput, formatUsPhoneStored, isValidUsPhone } from "@/lib/usPhone";
+import { ADMIN_SUPPORT_HOME_PATH, isAdminOrSupportRole } from "@/lib/rolePortalPaths";
+
+/** Matches `leadsmart_users.role` for this onboarding form. */
+type AgentSignupAccountType = "agent" | "loan_broker";
 
 type AgentSignupFormProps = {
   /** Full page vs compact card (dialog). */
@@ -51,6 +55,7 @@ export function AgentSignupForm({
   const [brokerage, setBrokerage] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [accountType, setAccountType] = useState<AgentSignupAccountType>("agent");
 
   useEffect(() => {
     if (prefillLoading) return;
@@ -64,6 +69,46 @@ export function AgentSignupForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  /** `undefined` = still loading /api/me for signed-in users (avoid flashing "Complete agent setup"). */
+  const [meRole, setMeRole] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!hasSession || prefillLoading) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const supabase = supabaseBrowser();
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        const res = await fetch("/api/me", {
+          credentials: "include",
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        const json = (await res.json().catch(() => ({}))) as { role?: string | null };
+        if (cancelled) return;
+        setMeRole(typeof json.role === "string" ? json.role : null);
+      } catch {
+        if (!cancelled) setMeRole(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasSession, prefillLoading]);
+
+  useEffect(() => {
+    if (!hasSession || prefillLoading || meRole === undefined) return;
+    if (isAdminOrSupportRole(meRole)) {
+      router.replace(ADMIN_SUPPORT_HOME_PATH);
+    }
+  }, [hasSession, prefillLoading, meRole, router]);
+
+  useEffect(() => {
+    if (meRole === "agent" || meRole === "loan_broker") {
+      setAccountType(meRole);
+    }
+  }, [meRole]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -109,7 +154,7 @@ export function AgentSignupForm({
         const { error: upsertUserErr1 } = await supabase.from("leadsmart_users").upsert(
           {
             user_id: user.id,
-            role: "agent",
+            role: accountType,
             license_number: licenseNumber.trim() || null,
             brokerage: brokerage.trim() || null,
           },
@@ -174,7 +219,7 @@ export function AgentSignupForm({
       const { error: upsertUserErr1 } = await supabase.from("leadsmart_users").upsert(
         {
           user_id: userId,
-          role: "agent",
+          role: accountType,
           license_number: licenseNumber.trim() || null,
           brokerage: brokerage.trim() || null,
         },
@@ -222,6 +267,26 @@ export function AgentSignupForm({
     }
   }
 
+  const staffUser = hasSession && meRole !== undefined && isAdminOrSupportRole(meRole);
+  const awaitingRole = hasSession && !prefillLoading && meRole === undefined;
+  if (prefillLoading || awaitingRole || staffUser) {
+    const label = staffUser ? "Redirecting…" : "Loading…";
+    if (layout === "page") {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+          <p className="text-sm text-gray-600">{label}</p>
+        </div>
+      );
+    }
+    return (
+      <div className="w-full max-w-sm space-y-5 p-6 text-center">
+        <p className="text-sm text-gray-600">{label}</p>
+      </div>
+    );
+  }
+
+  const signedInAgentFlow = hasSession && !isAdminOrSupportRole(meRole);
+
   const inner = (
     <div
       className={
@@ -232,15 +297,15 @@ export function AgentSignupForm({
     >
       <div className="space-y-1 text-center">
         <h1 className="text-xl font-bold text-gray-900">
-          {hasSession ? "Complete agent setup" : START_FREE_AS_AGENT_LABEL}
+          {signedInAgentFlow ? "Complete agent setup" : START_FREE_AS_AGENT_LABEL}
         </h1>
         <p className="text-xs text-gray-600">Get access to the agent portal and CMA tools.</p>
-        {showSignedInPrefillBanner ? (
+        {showSignedInPrefillBanner && signedInAgentFlow ? (
           <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-[11px] font-medium text-sky-950">
             You&apos;re signed in — we filled this form from your account. Finish the fields below to activate your
             agent profile (no new password needed).
           </p>
-        ) : hasSession ? (
+        ) : signedInAgentFlow ? (
           <p className="text-[11px] text-gray-500">
             You&apos;re signed in — no password needed to save your agent profile.
           </p>
@@ -258,6 +323,32 @@ export function AgentSignupForm({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
+        <fieldset className="space-y-2">
+          <legend className="block text-xs font-medium text-gray-700">Account type</legend>
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:gap-x-5 sm:gap-y-2">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-800">
+              <input
+                type="radio"
+                name="accountType"
+                checked={accountType === "agent"}
+                onChange={() => setAccountType("agent")}
+                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              Real estate agent
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-800">
+              <input
+                type="radio"
+                name="accountType"
+                checked={accountType === "loan_broker"}
+                onChange={() => setAccountType("loan_broker")}
+                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              Loan broker
+            </label>
+          </div>
+        </fieldset>
+
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-700">Name</label>
           <input
@@ -314,13 +405,13 @@ export function AgentSignupForm({
             onChange={(e) => setEmail(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
-            readOnly={hasSession}
-            title={hasSession ? "Email is tied to your signed-in account" : undefined}
+            readOnly={signedInAgentFlow}
+            title={signedInAgentFlow ? "Email is tied to your signed-in account" : undefined}
             disabled={prefillLoading}
           />
         </div>
 
-        {!hasSession ? (
+        {!signedInAgentFlow ? (
           <div className="space-y-1">
             <label className="block text-xs font-medium text-gray-700">Password</label>
             <input
@@ -328,7 +419,7 @@ export function AgentSignupForm({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required={!hasSession}
+              required={!signedInAgentFlow}
               autoComplete="new-password"
               disabled={prefillLoading}
             />
@@ -347,7 +438,7 @@ export function AgentSignupForm({
           disabled={loading || prefillLoading}
           className="w-full inline-flex items-center justify-center bg-blue-600 text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {loading ? "Saving…" : hasSession ? "Save agent profile" : "Create Agent Account"}
+          {loading ? "Saving…" : signedInAgentFlow ? "Save agent profile" : "Create Agent Account"}
         </button>
       </form>
 

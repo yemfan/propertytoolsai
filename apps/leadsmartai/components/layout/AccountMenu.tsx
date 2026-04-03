@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { formatUserRoleLabel } from "@leadsmart/shared";
 import { useAuth } from "@/components/AuthProvider";
 import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
@@ -120,6 +121,7 @@ export default function AccountMenu() {
     pricingHref,
     hideCommercialPricing,
     slimAgentBrokerHeaderMenu,
+    hideAccountSettings,
   } = useMemo(() => {
     if (!me) {
       return {
@@ -129,6 +131,7 @@ export default function AccountMenu() {
         pricingHref: "/pricing",
         hideCommercialPricing: false,
         slimAgentBrokerHeaderMenu: false,
+        hideAccountSettings: false,
       } as const;
     }
     const role = me.role ?? "user";
@@ -142,19 +145,22 @@ export default function AccountMenu() {
         pricingHref: "/pricing",
         hideCommercialPricing: false,
         slimAgentBrokerHeaderMenu: false,
+        hideAccountSettings: false,
       } as const;
     }
     const home = resolveRoleHomePath(role, hasAgent);
     const settings = hasAgent ? "/dashboard/settings" : "/portal";
     const slim =
       isAgentOrBrokerProfileRole(role) && !isAdminOrSupportRole(role);
+    const staff = isAdminOrSupportRole(role);
     return {
       workspaceHref: home,
       profileHref: "/account/profile",
       settingsHref: settings,
       pricingHref: "/agent/pricing",
-      hideCommercialPricing: isAdminOrSupportRole(role),
+      hideCommercialPricing: staff,
       slimAgentBrokerHeaderMenu: slim,
+      hideAccountSettings: staff,
     } as const;
   }, [me]);
 
@@ -186,6 +192,9 @@ export default function AccountMenu() {
       <div className="border-b border-gray-100 px-4 py-3">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Signed in as</p>
         <p className="mt-1 break-all text-sm font-semibold text-gray-900">{email || "Your account"}</p>
+        {me ? (
+          <p className="mt-1 text-xs text-gray-600">{formatUserRoleLabel(me.role)}</p>
+        ) : null}
       </div>
       <div className="py-1">
         {slimAgentBrokerHeaderMenu ? (
@@ -225,7 +234,7 @@ export default function AccountMenu() {
             >
               My profile
             </Link>
-            {settingsHref !== profileHref ? (
+            {settingsHref !== profileHref && !hideAccountSettings ? (
               <Link
                 href={settingsHref}
                 role="menuitem"

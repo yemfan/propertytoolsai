@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     const { data, error } = await supabaseServer
       .from("user_profiles")
       .select(
-        "full_name,phone,avatar_url,leadsmart_users(plan,tokens_remaining,tokens_reset_date,role,subscription_status,trial_ends_at,trial_used,oauth_onboarding_completed),propertytools_users(tier)"
+        "full_name,phone,avatar_url,email,leadsmart_users(plan,tokens_remaining,tokens_reset_date,role,subscription_status,trial_ends_at,trial_used,oauth_onboarding_completed),propertytools_users(tier)"
       )
       .eq("user_id", user.id)
       .maybeSingle();
@@ -22,6 +22,7 @@ export async function GET(req: Request) {
     const row = data as {
       full_name?: string | null;
       phone?: string | null;
+      email?: string | null;
       avatar_url?: string | null;
       leadsmart_users?: Record<string, unknown> | Record<string, unknown>[] | null;
       propertytools_users?: { tier?: string } | { tier?: string }[] | null;
@@ -42,8 +43,10 @@ export async function GET(req: Request) {
       .eq("auth_user_id", user.id)
       .maybeSingle();
 
+    const profileEmail = row?.email?.trim() || null;
+
     return NextResponse.json({
-      email: user.email ?? null,
+      email: profileEmail || user.email || null,
       plan: String(ls?.plan ?? "free"),
       role: roleForApi,
       propertytools_tier: pt?.tier ?? null,

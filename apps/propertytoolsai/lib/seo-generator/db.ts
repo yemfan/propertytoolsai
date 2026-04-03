@@ -45,6 +45,11 @@ function isMissingSeoTable(message: string): boolean {
 
 export function mapGeneratedPageToRow(input: SeoGeneratorInput, page: SeoGeneratedPage) {
   const now = new Date().toISOString();
+  /**
+   * Do not send `money_keyword` / `money_keyword_slug` unless the DB has those columns
+   * (see migration `20260443000000_seo_money_keyword_leads_attribution.sql`). Money-keyword
+   * copy still lives on `page_json`. Add the columns in Supabase to denormalize for analytics.
+   */
   return {
     slug: page.slug,
     template: page.template,
@@ -54,8 +59,6 @@ export function mapGeneratedPageToRow(input: SeoGeneratorInput, page: SeoGenerat
     max_price: input.maxPrice ?? null,
     beds: input.beds ?? null,
     property_type: input.propertyType ?? null,
-    money_keyword: input.moneyKeyword ?? null,
-    money_keyword_slug: input.moneyKeywordSlug ?? null,
     title: page.title,
     meta_title: page.metaTitle,
     meta_description: page.metaDescription,
@@ -239,7 +242,7 @@ export async function findStaleSeoPages(hours = 168, limit = 200): Promise<Stale
   const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabaseAdmin
     .from(TABLE)
-    .select("slug, template, city, state, zip, max_price, beds, property_type, money_keyword, money_keyword_slug")
+    .select("slug, template, city, state, zip, max_price, beds, property_type")
     .lt("last_generated_at", cutoff)
     .eq("status", "published")
     .order("last_generated_at", { ascending: true })

@@ -11,10 +11,22 @@ export async function generateSeoPagesBatch(inputs: SeoGeneratorInput[]) {
       await upsertSeoPage(input, page);
       results.push({ slug: page.slug, success: true });
     } catch (error) {
+      let msg = "Generation failed";
+      if (error instanceof Error) msg = error.message;
+      else if (typeof error === "string") msg = error;
+      else if (error && typeof error === "object" && "message" in error && typeof (error as { message: unknown }).message === "string") {
+        msg = (error as { message: string }).message;
+      } else {
+        try {
+          msg = JSON.stringify(error);
+        } catch {
+          msg = String(error);
+        }
+      }
       results.push({
         slug: `${input.city}-${input.template}`,
         success: false,
-        error: error instanceof Error ? error.message : "Generation failed",
+        error: msg,
       });
     }
   }

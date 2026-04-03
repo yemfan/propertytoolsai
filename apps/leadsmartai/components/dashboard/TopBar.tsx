@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { FormEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { formatUserRoleLabel } from "@leadsmart/shared";
 import { Topbar, filterNavSectionsByRole } from "@repo/ui";
 import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
@@ -41,6 +42,8 @@ function ProfileMenu({
   onLogout,
   showCommercialPricing,
   slimAccountBillingOnly,
+  hideAccountSettings,
+  appRole,
 }: {
   email: string | null | undefined;
   avatarUrl?: string | null;
@@ -48,6 +51,10 @@ function ProfileMenu({
   showCommercialPricing: boolean;
   /** Agent / broker: only Account + Billing (portal), same as marketing {@link AccountMenu}. */
   slimAccountBillingOnly: boolean;
+  /** Admin / support: hide CRM dashboard settings entry (internal roles). */
+  hideAccountSettings: boolean;
+  /** `leadsmart_users.role` — shown under email. */
+  appRole?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -116,6 +123,7 @@ function ProfileMenu({
       <div className="border-b border-slate-100 px-3 py-2.5">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Signed in</p>
         <p className="truncate text-sm font-medium text-slate-900">{email || "Account"}</p>
+        <p className="mt-1 truncate text-xs text-slate-500">{formatUserRoleLabel(appRole)}</p>
       </div>
       {slimAccountBillingOnly ? (
         <>
@@ -158,15 +166,17 @@ function ProfileMenu({
             <User className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
             My profile
           </Link>
-          <Link
-            href="/dashboard/settings"
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-          >
-            <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-            Account &amp; settings
-          </Link>
+          {!hideAccountSettings ? (
+            <Link
+              href="/dashboard/settings"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+            >
+              <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+              Account &amp; settings
+            </Link>
+          ) : null}
           {showCommercialPricing ? (
             <Link
               href="/agent/pricing"
@@ -387,6 +397,8 @@ export default function TopBar({
             onLogout={onLogout}
             showCommercialPricing={!hideCommercialPricing}
             slimAccountBillingOnly={slimAccountBillingOnly}
+            hideAccountSettings={hideCommercialPricing}
+            appRole={appRole}
           />
         </>
       }

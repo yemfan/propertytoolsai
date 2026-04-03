@@ -87,7 +87,6 @@ export async function POST(req: Request) {
   if (!rows?.length) {
     const { error: insErr } = await supabaseAdmin.from("user_profiles").insert({
       user_id: user.id,
-      role: "user",
       avatar_url: publicUrl,
     } as never);
     if (insErr) {
