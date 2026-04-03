@@ -48,6 +48,7 @@ function MarketingTopChrome() {
  */
 function isPlatformDashboardPath(pathname: string): boolean {
   return (
+    pathname.startsWith("/dashboard") ||
     pathname.startsWith("/agent/dashboard") ||
     pathname.startsWith("/loan-broker/") ||
     pathname.startsWith("/support/dashboard") ||
