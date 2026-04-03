@@ -74,6 +74,81 @@ comment on table public.propertytools_users is
   'PropertyTools consumer subscription: basic (free) vs premium; no RBAC role here.';
 
 -- ---------------------------------------------------------------------------
+-- 2b) UNIQUE/PK on user_id required for ON CONFLICT — otherwise 42P10
+--     (partial unique indexes do not satisfy ON CONFLICT inference.)
+-- ---------------------------------------------------------------------------
+do $onconflict$
+declare
+  has_uq_user_profiles boolean;
+begin
+  if to_regclass('public.leadsmart_users') is not null then
+    if not exists (
+      select 1
+      from pg_constraint c
+      join pg_class t on t.oid = c.conrelid
+      join pg_namespace n on n.oid = t.relnamespace and n.nspname = 'public'
+      where t.relname = 'leadsmart_users' and c.contype = 'p'
+    ) then
+      if exists (select 1 from public.leadsmart_users group by user_id having count(*) > 1) then
+        raise exception 'leadsmart_users: duplicate user_id; resolve before migration';
+      end if;
+      alter table public.leadsmart_users add primary key (user_id);
+    end if;
+  end if;
+
+  if to_regclass('public.propertytools_users') is not null then
+    if not exists (
+      select 1
+      from pg_constraint c
+      join pg_class t on t.oid = c.conrelid
+      join pg_namespace n on n.oid = t.relnamespace and n.nspname = 'public'
+      where t.relname = 'propertytools_users' and c.contype = 'p'
+    ) then
+      if exists (select 1 from public.propertytools_users group by user_id having count(*) > 1) then
+        raise exception 'propertytools_users: duplicate user_id; resolve before migration';
+      end if;
+      alter table public.propertytools_users add primary key (user_id);
+    end if;
+  end if;
+
+  if to_regclass('public.user_profiles') is null then
+    return;
+  end if;
+
+  select exists (
+    select 1
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace and n.nspname = 'public'
+    where t.relname = 'user_profiles'
+      and c.contype in ('p', 'u')
+      and cardinality(c.conkey) = 1
+      and (
+        select a.attname::text
+        from pg_attribute a
+        where a.attrelid = c.conrelid and a.attnum = c.conkey[1] and not a.attisdropped
+      ) = 'user_id'
+  )
+  into has_uq_user_profiles;
+
+  if has_uq_user_profiles then
+    return;
+  end if;
+
+  if exists (select 1 from public.user_profiles group by user_id having count(*) > 1) then
+    raise exception 'user_profiles: duplicate user_id; resolve before migration';
+  end if;
+
+  alter table public.user_profiles
+    add constraint user_profiles_user_id_upsert_key unique (user_id);
+exception
+  when duplicate_object then null;
+  when unique_violation then
+    raise notice 'user_profiles: could not add UNIQUE(user_id)';
+end;
+$onconflict$;
+
+-- ---------------------------------------------------------------------------
 -- 3) Merge public.profiles → user_profiles (run before moving columns off user_profiles)
 -- ---------------------------------------------------------------------------
 do $merge$
@@ -154,13 +229,16 @@ insert into public.leadsmart_users (
 )
 select
   up.user_id,
-  up.role,
+  coalesce(nullif(trim(up.role), ''), 'user'),
   up.license_number,
   up.brokerage,
-  up.plan,
-  up.tokens_remaining,
-  up.tokens_reset_date,
-  up.trial_used,
+  coalesce(nullif(trim(up.plan), ''), 'free'),
+  coalesce(up.tokens_remaining, 10),
+  coalesce(
+    up.tokens_reset_date,
+    date_trunc('month', now()) + interval '1 month'
+  ),
+  coalesce(up.trial_used, false),
   up.trial_started_at,
   up.trial_ends_at,
   up.stripe_customer_id,
@@ -169,9 +247,9 @@ select
   coalesce(up.oauth_onboarding_completed, false),
   up.subscription_current_period_start,
   up.subscription_current_period_end,
-  up.subscription_cancel_at_period_end,
-  up.estimator_usage_count,
-  up.cma_usage_count,
+  coalesce(up.subscription_cancel_at_period_end, false),
+  coalesce(up.estimator_usage_count, 0),
+  coalesce(up.cma_usage_count, 0),
   up.usage_reset_date,
   up.last_reset_date
 from public.user_profiles up
