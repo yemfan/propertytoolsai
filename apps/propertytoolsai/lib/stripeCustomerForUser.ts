@@ -1,7 +1,7 @@
 import { supabaseServer } from "@/lib/supabaseServer";
 
 /**
- * Stripe Customer ID for billing portal — prefer `agents`, then `user_profiles`.
+ * Stripe Customer ID for billing portal — prefer `agents`, then `leadsmart_users`, then `propertytools_users`.
  */
 export async function getStripeCustomerIdForUser(userId: string): Promise<string | null> {
   const { data: agent } = await supabaseServer
@@ -13,14 +13,23 @@ export async function getStripeCustomerIdForUser(userId: string): Promise<string
   const fromAgent = (agent as { stripe_customer_id?: string } | null)?.stripe_customer_id;
   if (fromAgent && String(fromAgent).trim()) return String(fromAgent).trim();
 
-  const { data: profile } = await supabaseServer
-    .from("user_profiles")
+  const { data: ls } = await supabaseServer
+    .from("leadsmart_users")
     .select("stripe_customer_id")
     .eq("user_id", userId)
     .maybeSingle();
 
-  const fromProfile = (profile as { stripe_customer_id?: string } | null)?.stripe_customer_id;
-  if (fromProfile && String(fromProfile).trim()) return String(fromProfile).trim();
+  const fromLs = (ls as { stripe_customer_id?: string } | null)?.stripe_customer_id;
+  if (fromLs && String(fromLs).trim()) return String(fromLs).trim();
+
+  const { data: pt } = await supabaseServer
+    .from("propertytools_users")
+    .select("stripe_customer_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const fromPt = (pt as { stripe_customer_id?: string } | null)?.stripe_customer_id;
+  if (fromPt && String(fromPt).trim()) return String(fromPt).trim();
 
   return null;
 }

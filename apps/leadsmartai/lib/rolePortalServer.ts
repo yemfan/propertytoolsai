@@ -43,7 +43,7 @@ export async function fetchUserPortalContext(
     let userRow: { role?: string } | null = null;
     let rowErr: unknown = null;
     ({ data: userRow, error: rowErr } = await supabase
-      .from("user_profiles")
+      .from("leadsmart_users")
       .select("role")
       .eq("user_id", userId)
       .maybeSingle());

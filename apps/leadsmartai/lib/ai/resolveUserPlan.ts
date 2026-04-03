@@ -18,11 +18,11 @@ export async function resolveUserPlanType(userId: string): Promise<string> {
 
   try {
     const { data: profile } = await supabaseServer
-      .from("user_profiles")
-      .select("plan_type")
+      .from("leadsmart_users")
+      .select("plan")
       .eq("user_id", userId)
       .maybeSingle();
-    const fromProfile = String((profile as any)?.plan_type ?? "").trim();
+    const fromProfile = String((profile as { plan?: string } | null)?.plan ?? "").trim();
     if (fromProfile) return fromProfile;
   } catch {
     /* ignore */

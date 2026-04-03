@@ -84,19 +84,22 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
+  const { data: upRow } = await supabase
+    .from("user_profiles")
+    .select("leadsmart_users(role)")
+    .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!profile?.role) {
+  if (!upRow) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  const role = parseUserRole(profile.role as string);
+  const lsRaw = (upRow as { leadsmart_users?: { role?: string } | { role?: string }[] }).leadsmart_users;
+  const ls = lsRaw == null ? null : Array.isArray(lsRaw) ? lsRaw[0] : lsRaw;
+  const dbRole = ls?.role ?? "user";
+  const role = parseUserRole(dbRole);
 
   if (pathname === "/dashboard") {
     const redirectTarget =

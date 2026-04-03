@@ -18,21 +18,39 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: profile } = await supabaseServer
+    const { data: row } = await supabaseServer
       .from("user_profiles")
-      .select("plan,subscription_status,role")
+      .select(
+        "leadsmart_users(plan,subscription_status,role),propertytools_users(tier,subscription_status)"
+      )
       .eq("user_id", user.id)
       .maybeSingle();
 
-    const plan = (profile as any)?.plan ?? "free";
-    const subscriptionStatus = (profile as any)?.subscription_status ?? null;
-    const accountRole = (profile as any)?.role ?? null;
+    const up = row as {
+      leadsmart_users?: Record<string, unknown> | Record<string, unknown>[] | null;
+      propertytools_users?: { tier?: string; subscription_status?: string | null } | { tier?: string; subscription_status?: string | null }[] | null;
+    } | null;
+    const lsRaw = up?.leadsmart_users;
+    const ls = lsRaw == null ? null : Array.isArray(lsRaw) ? lsRaw[0] : lsRaw;
+    const ptRaw = up?.propertytools_users;
+    const pt = ptRaw == null ? null : Array.isArray(ptRaw) ? ptRaw[0] : ptRaw;
+
+    const plan = String(ls?.plan ?? "free");
+    const lsStatus = ls?.subscription_status != null ? String(ls.subscription_status) : null;
+    const ptStatus = pt?.subscription_status != null ? String(pt.subscription_status) : null;
+    const subscriptionStatus =
+      ptStatus != null && ptStatus.trim() !== "" ? ptStatus : lsStatus;
+    const rawRole = String(ls?.role ?? "").toLowerCase().trim();
+    const accountRole =
+      rawRole === "user" || rawRole === "" ? "consumer" : String(ls?.role ?? "");
+    const ptTier = pt?.tier === "premium" || pt?.tier === "basic" ? pt.tier : null;
     const premium =
       resolveAccessTier({
         userId: user.id,
         plan,
         subscriptionStatus,
         accountRole,
+        propertytoolsTier: ptTier,
       }) === "premium";
 
     const body = (await req.json().catch(() => ({}))) as {

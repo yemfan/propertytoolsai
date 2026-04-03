@@ -136,18 +136,24 @@ export async function POST(req: Request) {
 
     const { data: profile } = await supabaseServer
       .from("user_profiles")
-      .select("full_name, brokerage, phone")
+      .select("full_name, phone, leadsmart_users(brokerage)")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    const prof = profile as Record<string, unknown> | null;
+    const prof = profile as {
+      full_name?: string | null;
+      phone?: string | null;
+      leadsmart_users?: { brokerage?: string | null } | { brokerage?: string | null }[] | null;
+    } | null;
+    const ls = prof?.leadsmart_users;
+    const lsOne = ls == null ? null : Array.isArray(ls) ? ls[0] : ls;
 
     const result: ComparisonReportResult = {
       agent_snapshot: {
-        display_name: (prof?.full_name as string) ?? null,
+        display_name: prof?.full_name ?? null,
         email: user.email ?? null,
-        phone: (prof?.phone as string) ?? null,
-        brokerage: (prof?.brokerage as string) ?? null,
+        phone: prof?.phone ?? null,
+        brokerage: lsOne?.brokerage ?? null,
       },
       executive_summary: ai.executive_summary,
       best_property_id: ai.best_property_id,

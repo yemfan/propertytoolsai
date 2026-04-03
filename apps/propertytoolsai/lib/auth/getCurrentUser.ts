@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { mapLegacyUserProfileRoleToRbac } from "./mapLegacyRole";
 import type { ProfileRow } from "./profileTypes";
-import { parseUserRole, type UserRole } from "./roles";
+import type { UserRole } from "./roles";
 
 export type SessionUserWithProfile = {
   user: User;
@@ -29,25 +29,40 @@ export async function getCurrentUser() {
   return user;
 }
 
-function normalizeProfileRow(row: Record<string, unknown>): ProfileRow {
-  const id = String(row.id ?? "");
-  const role = parseUserRole(row.role as string);
+function rbacFromLeadsmartRole(role: string | null | undefined): UserRole {
+  const r = String(role ?? "")
+    .toLowerCase()
+    .trim();
+  if (r === "user" || r === "") return "consumer";
+  return mapLegacyUserProfileRoleToRbac(role);
+}
+
+function normalizeProfileRow(
+  row: Record<string, unknown>,
+  user: User,
+  tier: string | null | undefined
+): ProfileRow {
+  const id = String(row.user_id ?? row.id ?? user.id);
+  const lsRaw = row.leadsmart_users;
+  const ls = lsRaw == null ? null : Array.isArray(lsRaw) ? lsRaw[0] : (lsRaw as Record<string, unknown>);
+  const role = rbacFromLeadsmartRole(ls?.role as string | undefined);
+
   return {
     id,
-    email: row.email != null ? String(row.email) : null,
+    email: row.email != null ? String(row.email) : user.email ?? null,
     full_name: row.full_name != null ? String(row.full_name) : null,
     role,
+    tier: tier === "premium" || tier === "basic" ? tier : undefined,
     created_at: String(row.created_at ?? new Date().toISOString()),
     updated_at: String(row.updated_at ?? new Date().toISOString()),
-    agent_id: row.agent_id != null ? String(row.agent_id) : null,
-    broker_id: row.broker_id != null ? String(row.broker_id) : null,
-    support_id: row.support_id != null ? String(row.support_id) : null,
+    agent_id: ls?.agent_id != null ? String(ls.agent_id) : null,
+    broker_id: ls?.broker_id != null ? String(ls.broker_id) : null,
+    support_id: ls?.support_id != null ? String(ls.support_id) : null,
   };
 }
 
 /**
- * Returns the authenticated Supabase user + `public.profiles` row.
- * Falls back to legacy `user_profiles` for role/name when `profiles` is missing (migration window).
+ * Returns the authenticated Supabase user + merged `user_profiles` / `leadsmart_users` / `propertytools_users`.
  */
 export async function getCurrentUserWithProfile(): Promise<SessionUserWithProfile | null> {
   const supabase = supabaseServerClient();
@@ -58,42 +73,37 @@ export async function getCurrentUserWithProfile(): Promise<SessionUserWithProfil
   if (userErr || !user) return null;
 
   const { data: profileRow, error: profileErr } = await supabase
-    .from("profiles")
-    .select("id,email,full_name,role,agent_id,broker_id,support_id,created_at,updated_at")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (profileErr) {
-    console.error("[getCurrentUserWithProfile] profiles:", profileErr.message);
-  }
-
-  if (profileRow) {
-    return {
-      user,
-      profile: normalizeProfileRow(profileRow as Record<string, unknown>),
-    };
-  }
-
-  const { data: legacy } = await supabase
     .from("user_profiles")
-    .select("full_name,role")
+    .select(
+      "user_id,email,full_name,created_at,updated_at,is_active,leadsmart_users(role,agent_id,broker_id,support_id),propertytools_users(tier)"
+    )
     .eq("user_id", user.id)
     .maybeSingle();
 
+  if (profileErr) {
+    console.error("[getCurrentUserWithProfile] user_profiles:", profileErr.message);
+  }
+
+  if (profileRow) {
+    const ptRaw = (profileRow as { propertytools_users?: { tier?: string } | { tier?: string }[] | null })
+      .propertytools_users;
+    const pt = ptRaw == null ? null : Array.isArray(ptRaw) ? ptRaw[0] : ptRaw;
+    const tier = pt?.tier ?? null;
+    return {
+      user,
+      profile: normalizeProfileRow(profileRow as Record<string, unknown>, user, tier),
+    };
+  }
+
   const meta = user.user_metadata as Record<string, unknown> | undefined;
   const fullName =
-    (legacy as { full_name?: string } | null)?.full_name ??
-    (typeof meta?.full_name === "string" ? meta.full_name : null);
-
-  const rbacRole: UserRole = mapLegacyUserProfileRoleToRbac(
-    (legacy as { role?: string } | null)?.role
-  );
+    typeof meta?.full_name === "string" ? meta.full_name : null;
 
   const synthetic: ProfileRow = {
     id: user.id,
     email: user.email ?? null,
     full_name: fullName,
-    role: rbacRole,
+    role: "consumer",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     agent_id: null,

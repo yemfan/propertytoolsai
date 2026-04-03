@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     }
 
     const { data: profile, error } = await supabaseServer
-      .from("user_profiles")
+      .from("leadsmart_users")
       .select("plan,subscription_status,trial_used,trial_started_at,trial_ends_at")
       .eq("user_id", user.id)
       .maybeSingle();
@@ -35,15 +35,20 @@ export async function POST(req: Request) {
     const now = new Date();
     const trialEnds = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    const { error: upsertErr } = await supabaseServer.from("user_profiles").upsert(
+    const { error: upProfErr } = await supabaseServer
+      .from("user_profiles")
+      .upsert({ user_id: user.id } as never, { onConflict: "user_id" });
+    if (upProfErr) throw upProfErr;
+
+    const { error: upsertErr } = await supabaseServer.from("leadsmart_users").upsert(
       {
         user_id: user.id,
-        plan: "pro", // full access during trial
+        plan: "pro",
         subscription_status: "trialing",
         trial_used: true,
         trial_started_at: now.toISOString(),
         trial_ends_at: trialEnds.toISOString(),
-      } as any,
+      } as Record<string, unknown>,
       { onConflict: "user_id" }
     );
     if (upsertErr) throw upsertErr;

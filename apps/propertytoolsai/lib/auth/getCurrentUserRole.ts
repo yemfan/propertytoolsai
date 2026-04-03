@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserWithProfile } from "./getCurrentUser";
 import { parseUserRole, type UserRole } from "./roles";
 
-/** Canonical RBAC roles (same as `UserRole` / `public.profiles.role`). */
+/** Canonical RBAC roles (same as `UserRole`; stored in `leadsmart_users.role`, `user` → consumer). */
 export type AppRole = UserRole;
 
 export type CurrentUserWithRole = {
@@ -10,17 +10,16 @@ export type CurrentUserWithRole = {
   email: string | null;
   fullName: string | null;
   role: AppRole;
-  /** From `profiles.agent_id` when present. */
+  /** From `leadsmart_users.agent_id` when present. */
   agentId: string | null;
-  /** From `profiles.broker_id` when present. */
+  /** From `leadsmart_users.broker_id` when present. */
   brokerId: string | null;
-  /** From `profiles.support_id` when present. */
+  /** From `leadsmart_users.support_id` when present. */
   supportId: string | null;
 };
 
 /**
- * Server-only: current session + `profiles` row fields for routing and guards.
- * If `profiles` is missing (migration window), falls back to `getCurrentUserWithProfile()` logic.
+ * Server-only: current session + merged `user_profiles` / `leadsmart_users` for routing and guards.
  */
 export async function getCurrentUserWithRole(): Promise<CurrentUserWithRole | null> {
   const supabase = await createClient();
@@ -33,21 +32,26 @@ export async function getCurrentUserWithRole(): Promise<CurrentUserWithRole | nu
   if (userError || !user) return null;
 
   const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("id, email, full_name, role, agent_id, broker_id, support_id")
-    .eq("id", user.id)
+    .from("user_profiles")
+    .select("user_id, email, full_name, leadsmart_users(role,agent_id,broker_id,support_id)")
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (!profileError && profile) {
     const row = profile as Record<string, unknown>;
+    const lsRaw = row.leadsmart_users;
+    const ls = lsRaw == null ? null : Array.isArray(lsRaw) ? lsRaw[0] : (lsRaw as Record<string, unknown>);
+    const rawRole = String(ls?.role ?? "").toLowerCase().trim();
+    const rbacRole =
+      rawRole === "user" || rawRole === "" ? "consumer" : parseUserRole(ls?.role as string);
     return {
-      id: String(profile.id),
-      email: profile.email != null ? String(profile.email) : null,
-      fullName: profile.full_name != null ? String(profile.full_name) : null,
-      role: parseUserRole(profile.role as string),
-      agentId: row.agent_id != null ? String(row.agent_id) : null,
-      brokerId: row.broker_id != null ? String(row.broker_id) : null,
-      supportId: row.support_id != null ? String(row.support_id) : null,
+      id: String(row.user_id ?? user.id),
+      email: row.email != null ? String(row.email) : null,
+      fullName: row.full_name != null ? String(row.full_name) : null,
+      role: rbacRole,
+      agentId: ls?.agent_id != null ? String(ls.agent_id) : null,
+      brokerId: ls?.broker_id != null ? String(ls.broker_id) : null,
+      supportId: ls?.support_id != null ? String(ls.support_id) : null,
     };
   }
 

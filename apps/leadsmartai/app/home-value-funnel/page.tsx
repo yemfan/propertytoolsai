@@ -156,13 +156,12 @@ function HomePageInner() {
           let userRow: any = null;
           let userRowErr: any = null;
           ({ data: userRow, error: userRowErr } = await supabase
-            .from("user_profiles")
+            .from("leadsmart_users")
             .select("role")
             .eq("user_id", user.id)
             .maybeSingle());
 
           if (userRowErr && missingUserId(userRowErr)) {
-            // no-op for backwards compatibility: `user_profiles` always uses `user_id`
             userRowErr = null;
           }
 

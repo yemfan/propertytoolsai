@@ -1,13 +1,13 @@
 import { getUserFromRequest } from "@/lib/authFromRequest";
 import { supabaseServer } from "@/lib/supabaseServer";
 
-/** Only `user_profiles.role === 'admin'` may access admin billing APIs. */
+/** Only `leadsmart_users.role === 'admin'` may access admin billing APIs. */
 export async function requireAdminFromRequest(req: Request) {
   const user = await getUserFromRequest(req);
   if (!user) return null;
 
   const { data, error } = await supabaseServer
-    .from("user_profiles")
+    .from("leadsmart_users")
     .select("role")
     .eq("user_id", user.id)
     .maybeSingle();

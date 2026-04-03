@@ -24,7 +24,7 @@ export default function PortalPage() {
         return;
       }
       const { data } = await supabase
-        .from("user_profiles")
+        .from("leadsmart_users")
         .select("plan,subscription_status")
         .eq("user_id", user.id)
         .maybeSingle();

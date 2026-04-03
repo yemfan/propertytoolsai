@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       const ctx = await fetchUserPortalContext(supabase);
       if (ctx && !ctx.isPro) {
         const { data: prof } = await supabase
-          .from("user_profiles")
+          .from("leadsmart_users")
           .select("oauth_onboarding_completed")
           .eq("user_id", ctx.userId)
           .maybeSingle();

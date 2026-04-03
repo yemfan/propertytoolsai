@@ -19,26 +19,46 @@ export async function GET(req: Request) {
     const { data, error } = await supabaseServer
       .from("user_profiles")
       .select(
-        "plan,subscription_status,estimator_usage_count,cma_usage_count,usage_reset_date,role"
+        "leadsmart_users(plan,subscription_status,estimator_usage_count,cma_usage_count,usage_reset_date,role),propertytools_users(tier,subscription_status)"
       )
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (error && (error as any).code !== "PGRST116") throw error;
+    if (error && (error as { code?: string }).code !== "PGRST116") throw error;
 
-    const plan = (data as any)?.plan ?? "free";
-    const subscriptionStatus = (data as any)?.subscription_status ?? null;
-    const accountRole = (data as any)?.role ?? null;
+    const row = data as {
+      leadsmart_users?: Record<string, unknown> | Record<string, unknown>[] | null;
+      propertytools_users?: { tier?: string; subscription_status?: string | null } | { tier?: string; subscription_status?: string | null }[] | null;
+    } | null;
+
+    const lsRaw = row?.leadsmart_users;
+    const ls = lsRaw == null ? null : Array.isArray(lsRaw) ? lsRaw[0] : lsRaw;
+    const ptRaw = row?.propertytools_users;
+    const pt = ptRaw == null ? null : Array.isArray(ptRaw) ? ptRaw[0] : ptRaw;
+
+    const plan = (ls?.plan as string) ?? "free";
+    const lsStatus = ls?.subscription_status != null ? String(ls.subscription_status) : null;
+    const ptStatus = pt?.subscription_status != null ? String(pt.subscription_status) : null;
+    const subscriptionStatus =
+      ptStatus != null && ptStatus.trim() !== "" ? ptStatus : lsStatus;
+
+    const rawRole = String(ls?.role ?? "").toLowerCase().trim();
+    const accountRole =
+      rawRole === "user" || rawRole === "" ? "consumer" : String(ls?.role ?? "");
+
+    const ptTier = pt?.tier === "premium" || pt?.tier === "basic" ? pt.tier : null;
+
     const paidElig = await getPaidSubscriptionEligibility(user.id);
     const tier: AccessTier = resolveAccessTier({
       userId: user.id,
       plan,
       subscriptionStatus,
       accountRole,
+      propertytoolsTier: ptTier,
     });
 
-    const estimatorUsed = Number((data as any)?.estimator_usage_count ?? 0);
-    const cmaUsed = Number((data as any)?.cma_usage_count ?? 0);
+    const estimatorUsed = Number(ls?.estimator_usage_count ?? 0);
+    const cmaUsed = Number(ls?.cma_usage_count ?? 0);
 
     const freeEstimatorLimit = DEFAULT_LIMITS.free.estimator.limit ?? 3;
     const freeCmaLimit = DEFAULT_LIMITS.free.cma.limit ?? 1;
@@ -57,7 +77,7 @@ export async function GET(req: Request) {
       email: user.email ?? null,
       accountRole,
       paidSubscriptionEligible: paidElig.allowed,
-      usageResetDate: (data as any)?.usage_reset_date ?? null,
+      usageResetDate: (ls?.usage_reset_date as string | null) ?? null,
       tools: {
         estimator: {
           used: estimatorUsed,
@@ -81,11 +101,9 @@ export async function GET(req: Request) {
         },
       },
     });
-  } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: e?.message ?? "Server error" },
-      { status: 500 }
-    );
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Server error";
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }
 

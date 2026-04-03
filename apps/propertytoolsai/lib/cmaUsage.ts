@@ -49,12 +49,15 @@ async function resolveIdentity(req: Request): Promise<{
 
   let role: UsageRole = "user";
   try {
-    const { data: profile } = await supabaseServer
+    const { data: row } = await supabaseServer
       .from("user_profiles")
-      .select("role")
+      .select("leadsmart_users(role)")
       .eq("user_id", user.id)
       .maybeSingle();
-    const r = String((profile as any)?.role ?? "user").toLowerCase();
+    const lsRaw = (row as { leadsmart_users?: { role?: string } | { role?: string }[] } | null)
+      ?.leadsmart_users;
+    const ls = lsRaw == null ? null : Array.isArray(lsRaw) ? lsRaw[0] : lsRaw;
+    const r = String(ls?.role ?? "user").toLowerCase();
     if (r === "agent") role = "agent";
   } catch {
     role = "user";
@@ -159,14 +162,14 @@ export async function incrementCmaUsage(req: Request): Promise<CmaUsageResult> {
     }
   }
 
-  // Sync to user_profiles for logged-in users.
+  // Sync to leadsmart_users for logged-in users (legacy CMA daily table + CRM counters).
   if (identity.userId) {
     await supabaseServer
-      .from("user_profiles")
+      .from("leadsmart_users")
       .update({
         cma_usage_count: used,
         last_reset_date: today,
-      } as any)
+      })
       .eq("user_id", identity.userId);
   }
 

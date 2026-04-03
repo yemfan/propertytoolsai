@@ -4,20 +4,10 @@ import { supabaseServer } from "@/lib/supabaseServer";
 
 export async function POST(req: Request) {
   try {
-    const isMissingUserIdColumn = (err: any) => {
-      const msg = String(err?.message ?? "");
-      return (
-        /user_id.*does not exist/i.test(msg) ||
-        /column\s+.*user_id.*does not exist/i.test(msg)
-      );
-    };
-
-    // 1) Auth required: verify the current logged-in user.
     const supabaseAuth = supabaseServerClient();
     const { data: userData, error: userErr } = await supabaseAuth.auth.getUser();
     let user = userData?.user ?? null;
 
-    // Fallback: some auth sessions are client-side; accept a bearer token.
     if (!user || userErr) {
       const authHeader = req.headers.get("authorization") || "";
       const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
@@ -40,103 +30,62 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2) Idempotent upgrade: if already an agent, return success.
-    // Use `public.user_profiles` (dedicated profile table) instead of `public.users`.
-    const supabaseAdmin = supabaseServer;
-    let userIdColumn: "user_id" | "id" = "user_id";
+    const admin = supabaseServer;
 
-    let userRow: any = null;
-    let roleErr: any = null;
-    try {
-      ({ data: userRow, error: roleErr } = await supabaseAdmin
-        .from("user_profiles")
-        .select("role")
-        .eq(userIdColumn, user.id)
-        .maybeSingle());
-    } catch (e: any) {
-      if (userIdColumn === "user_id" && isMissingUserIdColumn(e)) {
-        userIdColumn = "id";
-        // `user_profiles` always uses `user_id`
-        ({ data: userRow, error: roleErr } = await supabaseAdmin
-          .from("user_profiles")
-          .select("role")
-          .eq("user_id", user.id)
-          .maybeSingle());
-      } else {
-        throw e;
-      }
-    }
+    const { data: existing } = await admin
+      .from("leadsmart_users")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-    if (roleErr && (roleErr as any).code !== "PGRST116") throw roleErr;
-
-    const currentRole = (userRow as any)?.role as string | null;
-    if (currentRole === "agent") {
+    if ((existing as { role?: string } | null)?.role === "agent") {
       return NextResponse.json({ ok: true, upgraded: false });
     }
 
-    // 3) Update role to "agent" (update first; insert if missing).
-    let updatedUser: any = null;
-    let updateUserErr: any = null;
-    try {
-      ({ data: updatedUser, error: updateUserErr } = await supabaseAdmin
-        .from("user_profiles")
-        .update({ role: "agent" })
-        .eq("user_id", user.id)
-        .select("user_id")
-        .maybeSingle());
-    } catch (e: any) {
-      if (userIdColumn === "user_id" && isMissingUserIdColumn(e)) {
-        ({ data: updatedUser, error: updateUserErr } = await supabaseAdmin
-          .from("user_profiles")
-          .update({ role: "agent" })
-          .eq("user_id", user.id)
-          .select("user_id")
-          .maybeSingle());
-      } else {
-        throw e;
-      }
+    await admin.from("user_profiles").upsert({ user_id: user.id } as never, { onConflict: "user_id" });
+
+    const { data: updated } = await admin
+      .from("leadsmart_users")
+      .update({ role: "agent" })
+      .eq("user_id", user.id)
+      .select("user_id")
+      .maybeSingle();
+
+    if (!(updated as { user_id?: string } | null)?.user_id) {
+      const { error: insErr } = await admin.from("leadsmart_users").insert({
+        user_id: user.id,
+        role: "agent",
+      } as never);
+      if (insErr) throw insErr;
     }
 
-    if (updateUserErr) throw updateUserErr;
-
-    if (!(updatedUser as any)?.user_id) {
-      const insertPayload: any = { role: "agent", user_id: user.id };
-
-      const { error: insertUserErr } = await supabaseAdmin
-        .from("user_profiles")
-        .insert(insertPayload);
-      if (insertUserErr) throw insertUserErr;
-    }
-
-    // 4) Ensure an `agents` row exists so `/dashboard` can resolve agent context.
-    const { data: agentRow, error: agentSelectErr } = await supabaseAdmin
+    const { data: agentRow, error: agentSelectErr } = await admin
       .from("agents")
       .select("id")
       .eq("auth_user_id", user.id)
       .maybeSingle();
-    if (agentSelectErr && (agentSelectErr as any).code !== "PGRST116") throw agentSelectErr;
+    if (agentSelectErr && (agentSelectErr as { code?: string }).code !== "PGRST116") throw agentSelectErr;
 
     if (agentRow?.id) {
-      const { error: agentUpdateErr } = await supabaseAdmin
+      const { error: agentUpdateErr } = await admin
         .from("agents")
         .update({ plan_type: "free" })
         .eq("auth_user_id", user.id);
       if (agentUpdateErr) throw agentUpdateErr;
     } else {
-      const { error: agentInsertErr } = await supabaseAdmin.from("agents").insert({
+      const { error: agentInsertErr } = await admin.from("agents").insert({
         auth_user_id: user.id,
         plan_type: "free",
-      } as any);
+      } as Record<string, unknown>);
       if (agentInsertErr) throw agentInsertErr;
     }
 
     return NextResponse.json({ ok: true, upgraded: true });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("POST /api/upgrade-to-agent error", e);
     return NextResponse.json(
-      { error: e?.message ?? "Upgrade failed." },
+      { error: e instanceof Error ? e.message : "Upgrade failed." },
       { status: 500 }
     );
   }
 }
-

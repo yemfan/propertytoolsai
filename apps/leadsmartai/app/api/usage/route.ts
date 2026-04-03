@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     }
 
     const { data, error } = await supabaseServer
-      .from("user_profiles")
+      .from("leadsmart_users")
       .select("plan,subscription_status,estimator_usage_count,cma_usage_count,usage_reset_date")
       .eq("user_id", user.id)
       .maybeSingle();

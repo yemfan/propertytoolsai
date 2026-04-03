@@ -4,7 +4,7 @@ import { getCurrentUserWithProfile } from "@/lib/auth/getCurrentUser";
 export const dynamic = "force-dynamic";
 
 /**
- * Current session + `public.profiles` row (for client nav / role UI).
+ * Current session + merged profile (user_profiles + leadsmart_users) for client nav / role UI.
  */
 export async function GET() {
   const ctx = await getCurrentUserWithProfile();

@@ -50,21 +50,25 @@ export async function setUserPlanFromStripe(params: {
     update.trial_ends_at = params.trialEndsAt;
   }
 
-  const { data: existing, error: selErr } = await supabaseServer
-    .from("user_profiles")
+  const { data: existingLs, error: selErr } = await supabaseServer
+    .from("leadsmart_users")
     .select("user_id")
     .eq("user_id", params.userId)
     .maybeSingle();
 
-  if (selErr) throw toErrorFromSupabase(selErr, "Could not read user_profiles");
+  if (selErr) throw toErrorFromSupabase(selErr, "Could not read leadsmart_users");
 
-  if (existing) {
-    const { error } = await supabaseServer.from("user_profiles").update(update).eq("user_id", params.userId);
-    if (error) throw toErrorFromSupabase(error, "Could not update user_profiles");
+  if (existingLs) {
+    const { error } = await supabaseServer.from("leadsmart_users").update(update).eq("user_id", params.userId);
+    if (error) throw toErrorFromSupabase(error, "Could not update leadsmart_users");
     return;
   }
 
-  // `.update()` is a no-op when no row exists — insert so dashboard gating sees subscription_status.
+  const { error: upErr } = await supabaseServer
+    .from("user_profiles")
+    .upsert({ user_id: params.userId } as never, { onConflict: "user_id" });
+  if (upErr) throw toErrorFromSupabase(upErr, "Could not ensure user_profiles");
+
   const insertRow: Record<string, unknown> = {
     user_id: params.userId,
     role: "user",
@@ -73,7 +77,7 @@ export async function setUserPlanFromStripe(params: {
     tokens_reset_date: nextReset.toISOString(),
   };
 
-  const { error: insErr } = await supabaseServer.from("user_profiles").insert(insertRow);
-  if (insErr) throw toErrorFromSupabase(insErr, "Could not create user_profiles");
+  const { error: insErr } = await supabaseServer.from("leadsmart_users").insert(insertRow);
+  if (insErr) throw toErrorFromSupabase(insErr, "Could not create leadsmart_users");
 }
 

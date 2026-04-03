@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { describeUserRole, formatUserRoleLabel } from "@leadsmart/shared";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { formatUsPhoneInput, formatUsPhoneStored, isValidUsPhone } from "@/lib/usPhone";
 
 type Me = {
   email?: string | null;
@@ -41,7 +42,7 @@ export default function ProfileSettingsForm() {
       }
       setMe(json);
       setFullName((json.full_name ?? "").trim());
-      setPhone((json.phone ?? "").trim());
+      setPhone(formatUsPhoneInput((json.phone ?? "").trim()));
     } catch {
       setError("Could not load profile");
     } finally {
@@ -58,6 +59,13 @@ export default function ProfileSettingsForm() {
     setSaving(true);
     setError(null);
     setSuccess(null);
+    const phoneTrim = phone.trim();
+    if (phoneTrim && !isValidUsPhone(phone)) {
+      setError("Phone must be a valid US number (10 digits).");
+      setSaving(false);
+      return;
+    }
+    const phonePayload = phoneTrim ? formatUsPhoneStored(phone) ?? "" : "";
     try {
       const { data: sessionData } = await supabaseBrowser().auth.getSession();
       const token = sessionData.session?.access_token;
@@ -68,7 +76,7 @@ export default function ProfileSettingsForm() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ full_name: fullName, phone }),
+        body: JSON.stringify({ full_name: fullName, phone: phonePayload }),
       });
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) {
@@ -213,8 +221,9 @@ export default function ProfileSettingsForm() {
           <label className="block text-xs font-medium text-gray-700">Phone</label>
           <input
             type="tel"
+            inputMode="tel"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(formatUsPhoneInput(e.target.value))}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             autoComplete="tel"
             placeholder="(555) 555-5555"

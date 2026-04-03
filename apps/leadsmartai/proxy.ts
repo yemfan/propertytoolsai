@@ -118,7 +118,7 @@ export async function proxy(req: NextRequest) {
   // Strict admin / support trees — only `admin` + `support` roles (layout uses `ensurePortalAccess("admin")`)
   if ((isAdminPath(pathname) || isSupportPath(pathname)) && user) {
     const { data: adminProfile } = await supabase
-      .from("user_profiles")
+      .from("leadsmart_users")
       .select("role")
       .eq("user_id", user.id)
       .maybeSingle();
@@ -135,7 +135,7 @@ export async function proxy(req: NextRequest) {
   // Soft entitlement redirect for agent workspace (aligns with `hasAgentWorkspaceAccess` admin bypass)
   if (isAgentPath(pathname) && user) {
     const { data: profile } = await supabase
-      .from("user_profiles")
+      .from("leadsmart_users")
       .select("role")
       .eq("user_id", user.id)
       .maybeSingle();

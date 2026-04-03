@@ -40,20 +40,29 @@ export async function POST(req: Request) {
     if (error) throw error;
 
     if (data.user?.id) {
-      const { error: profileError } = await supabaseAdmin.from("profiles").upsert(
+      const uid = data.user.id;
+      const now = new Date().toISOString();
+
+      const { error: upErr } = await supabaseAdmin.from("user_profiles").upsert(
         {
-          id: data.user.id,
+          user_id: uid,
           email,
           full_name: fullName ?? null,
-          role,
-          is_active: true,
           invited_by: admin.id,
-          invited_at: new Date().toISOString(),
+          invited_at: now,
         },
-        { onConflict: "id" }
+        { onConflict: "user_id" }
       );
+      if (upErr) throw upErr;
 
-      if (profileError) throw profileError;
+      const { error: lsErr } = await supabaseAdmin.from("leadsmart_users").upsert(
+        {
+          user_id: uid,
+          role,
+        },
+        { onConflict: "user_id" }
+      );
+      if (lsErr) throw lsErr;
     }
 
     return NextResponse.json({ success: true });

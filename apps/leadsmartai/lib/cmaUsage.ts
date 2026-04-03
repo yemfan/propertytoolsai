@@ -50,7 +50,7 @@ async function resolveIdentity(req: Request): Promise<{
   let role: UsageRole = "user";
   try {
     const { data: profile } = await supabaseServer
-      .from("user_profiles")
+      .from("leadsmart_users")
       .select("role")
       .eq("user_id", user.id)
       .maybeSingle();
@@ -159,14 +159,14 @@ export async function incrementCmaUsage(req: Request): Promise<CmaUsageResult> {
     }
   }
 
-  // Sync to user_profiles for logged-in users.
+  // Sync to leadsmart_users for logged-in users.
   if (identity.userId) {
     await supabaseServer
-      .from("user_profiles")
+      .from("leadsmart_users")
       .update({
         cma_usage_count: used,
         last_reset_date: today,
-      } as any)
+      } as Record<string, unknown>)
       .eq("user_id", identity.userId);
   }
 

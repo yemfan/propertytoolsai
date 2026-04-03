@@ -1,8 +1,7 @@
 import type { UserRole } from "./roles";
 
 /**
- * Map legacy `user_profiles.role` strings to canonical `profiles.role`.
- * New signups should rely on `public.profiles` only.
+ * Map `leadsmart_users.role` strings (and legacy aliases) to canonical `UserRole`.
  */
 export function mapLegacyUserProfileRoleToRbac(legacy: string | null | undefined): UserRole {
   const r = String(legacy ?? "")

@@ -20,7 +20,7 @@ export async function getSupportStaffContext(): Promise<SupportStaffContext | nu
   if (userErr || !user) return null;
 
   const { data: profile } = await supabase
-    .from("user_profiles")
+    .from("leadsmart_users")
     .select("role")
     .eq("user_id", user.id)
     .maybeSingle();

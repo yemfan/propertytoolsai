@@ -31,7 +31,7 @@ export function checkoutSuccessShouldSyncSubscription(params: {
   );
 }
 
-/** Maps Stripe subscription status + resolved SKU to the plan stored on `agents` / `user_profiles`. */
+/** Maps Stripe subscription status + resolved SKU to the plan stored on `agents` / `leadsmart_users`. */
 export function computeAgentPlanFromSubscriptionSync(params: {
   subscriptionStatus: Stripe.Subscription["status"];
   resolvedPaidPlan: "pro" | "premium" | "free";
@@ -94,7 +94,7 @@ export function resolvePaidPlanFromStripe(
 }
 
 /**
- * Updates `agents` + `user_profiles` from a Stripe subscription (webhook or return from Checkout).
+ * Updates `agents` + `leadsmart_users` from a Stripe subscription (webhook or return from Checkout).
  */
 export async function persistAgentAndProfileFromSubscription(params: {
   userId: string | null;

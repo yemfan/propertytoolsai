@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     }
 
     const { data: profile, error } = await supabaseServer
-      .from("user_profiles")
+      .from("leadsmart_users")
       .select("plan,subscription_status,trial_ends_at,trial_used")
       .eq("user_id", user.id)
       .maybeSingle();
@@ -32,11 +32,11 @@ export async function POST(req: Request) {
       status = "inactive";
       plan = "free";
       await supabaseServer
-        .from("user_profiles")
+        .from("leadsmart_users")
         .update({
           plan: "free",
           subscription_status: "inactive",
-        } as any)
+        } as Record<string, unknown>)
         .eq("user_id", user.id);
     }
 

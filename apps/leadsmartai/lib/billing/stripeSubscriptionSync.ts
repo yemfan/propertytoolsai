@@ -21,6 +21,13 @@ function toIsoOrNull(unixSeconds?: number | null) {
   return new Date(unixSeconds * 1000).toISOString();
 }
 
+/** `leadsmart_users.role` uses `user` for consumers; `billing_subscriptions.role` uses `consumer`. */
+function mapLeadsmartRoleToBillingRole(role: string | null | undefined): string {
+  const r = String(role ?? "").toLowerCase().trim();
+  if (!r || r === "user") return "consumer";
+  return r;
+}
+
 function mapStripeStatus(status: Stripe.Subscription.Status): string {
   switch (status) {
     case "active":
@@ -46,8 +53,8 @@ async function getProfileByCustomerEmail(email?: string | null) {
   if (!email) return null;
 
   const { data, error } = await supabaseAdmin
-    .from("profiles")
-    .select("id, email, full_name, role")
+    .from("user_profiles")
+    .select("user_id, email, full_name, leadsmart_users(role)")
     .eq("email", email)
     .maybeSingle();
 
@@ -156,8 +163,10 @@ export async function syncStripeSubscription(subscription: Stripe.Subscription) 
   const profile = await getProfileByCustomerEmail(customerEmail);
   const metadataUserId =
     typeof subscription.metadata?.user_id === "string" ? subscription.metadata.user_id : null;
-  /** Prefer Stripe metadata from Checkout (authoritative) over email → profiles lookup. */
-  const userId = metadataUserId ?? profile?.id ?? null;
+  /** Prefer Stripe metadata from Checkout (authoritative) over email → user_profiles lookup. */
+  const lsRow = profile?.leadsmart_users;
+  const lsOne = Array.isArray(lsRow) ? lsRow[0] : lsRow;
+  const userId = metadataUserId ?? profile?.user_id ?? null;
 
   const fromPriceOnly = mapStripePriceToPlan(priceId);
   const internalPlan = resolveInternalPlanFromStripeSubscription(priceId, subscription.metadata);
@@ -197,7 +206,7 @@ export async function syncStripeSubscription(subscription: Stripe.Subscription) 
     user_id: userId,
     email: customerEmail ?? "unknown@example.com",
     full_name: profile?.full_name ?? customerName ?? null,
-    role: profile?.role ?? "consumer",
+    role: mapLeadsmartRoleToBillingRole((lsOne as { role?: string } | null)?.role),
     plan: internalPlan,
     status: mapStripeStatus(subscription.status),
     amount_monthly: amountMonthly,

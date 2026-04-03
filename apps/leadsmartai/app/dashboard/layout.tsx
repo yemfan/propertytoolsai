@@ -33,7 +33,7 @@ export default async function DashboardLayout({
   // Feature gating: dashboard requires active/trialing subscription.
   try {
     const { data } = await supabaseServer
-      .from("user_profiles")
+      .from("leadsmart_users")
       .select("subscription_status,trial_ends_at,role")
       .eq("user_id", ctx.userId)
       .maybeSingle();
@@ -47,8 +47,8 @@ export default async function DashboardLayout({
     if (status === "trialing" && trialEndsAt && trialEndsAt.getTime() <= Date.now()) {
       status = "inactive";
       await supabaseServer
-        .from("user_profiles")
-        .update({ plan: "free", subscription_status: "inactive" } as any)
+        .from("leadsmart_users")
+        .update({ plan: "free", subscription_status: "inactive" } as Record<string, unknown>)
         .eq("user_id", ctx.userId);
     }
     if (!staff && status && !["active", "trialing"].includes(status)) {

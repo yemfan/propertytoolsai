@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 
 /**
- * True when `user_profiles.role` is `admin` (case-insensitive).
+ * True when `leadsmart_users.role` is `admin` (case-insensitive).
  */
 export async function isUserAdmin(userId: string): Promise<boolean> {
   const { data, error } = await supabaseServer
-    .from("user_profiles")
+    .from("leadsmart_users")
     .select("role")
     .eq("user_id", userId)
     .maybeSingle();

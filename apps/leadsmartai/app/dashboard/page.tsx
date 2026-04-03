@@ -13,7 +13,7 @@ export default async function DashboardRootPage() {
   } = await supabase.auth.getUser();
   if (user) {
     const { data: profile } = await supabase
-      .from("user_profiles")
+      .from("leadsmart_users")
       .select("role")
       .eq("user_id", user.id)
       .maybeSingle();

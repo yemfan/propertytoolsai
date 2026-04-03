@@ -24,7 +24,7 @@ export type AccessUsageState = {
   userId: string | null;
   /** Present when logged in (from Supabase user). */
   email: string | null;
-  /** `user_profiles.role` when logged in (e.g. agent, broker, user). */
+  /** `leadsmart_users.role` when logged in (mapped: DB `user` → consumer). */
   accountRole?: string | null;
   /** False when only professionals may subscribe (ALLOW_CONSUMER_PAID_SUBSCRIPTIONS=false). */
   paidSubscriptionEligible?: boolean;

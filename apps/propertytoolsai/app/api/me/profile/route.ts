@@ -11,7 +11,7 @@ type Body = {
 
 /**
  * PATCH /api/me/profile — update `user_profiles` fields for the signed-in user.
- * Does not update `role`; role is system-assigned via `user_profiles.role` only.
+ * Does not update RBAC `role`; that lives on `leadsmart_users` (admin-assigned).
  */
 export async function PATCH(req: Request) {
   const user = await getUserFromRequest(req);

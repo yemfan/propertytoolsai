@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendPasswordResetEmail } from "@/lib/auth/sendPasswordResetEmail";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
@@ -13,6 +13,8 @@ import {
   signupRoleToDbRole,
 } from "@/lib/auth/signupRoleOptions";
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
+import { getOAuthRedirectOrigin } from "@/lib/siteUrl";
+import { formatUsPhoneInput, formatUsPhoneStored, isValidUsPhone } from "@/lib/usPhone";
 
 type Mode = "login" | "signup";
 /** After signup as Real Estate Agent — show Start free CTA before closing. */
@@ -42,15 +44,6 @@ export default function AuthModal({
   const [resetNotice, setResetNotice] = useState<string | null>(null);
   const [signupStep, setSignupStep] = useState<SignupStep>("form");
 
-  const header = useMemo(
-    () => ({
-      title: "🔒 Account Required",
-      description:
-        "Create a free account to access advanced tools like:\n\n• AI Deal Analyzer\n• CMA Reports\n• Rental Property Analysis\n• Seller Presentation\n\nTakes less than 10 seconds 🚀",
-    }),
-    []
-  );
-
   /**
    * Reset post-signup agent step whenever the modal closes — otherwise `signupStep` stays
    * `agentStartFree` and the next open paints the agent dialog before `open===true` effects run
@@ -79,16 +72,20 @@ export default function AuthModal({
         const u = session.user;
         const { data: prof } = await supabase
           .from("user_profiles")
-          .select("full_name, phone")
+          .select("full_name, phone, leadsmart_users(role)")
           .eq("user_id", u.id)
           .maybeSingle();
-        const row = prof as { full_name?: string | null; phone?: string | null } | null;
+        const row = prof as {
+          full_name?: string | null;
+          phone?: string | null;
+          leadsmart_users?: { role?: string | null } | null;
+        } | null;
         const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
         const metaName = typeof meta.full_name === "string" ? meta.full_name.trim() : "";
         const metaPhone = typeof meta.phone === "string" ? meta.phone.trim() : "";
         setEmail(u.email?.trim() ?? "");
         setFullName(row?.full_name?.trim() || metaName || "");
-        setPhone(row?.phone?.trim() || metaPhone || "");
+        setPhone(formatUsPhoneInput(row?.phone?.trim() || metaPhone || ""));
       } catch (e) {
         console.error("[AuthModal] session prefill", e);
       }
@@ -116,10 +113,11 @@ export default function AuthModal({
     try {
       const supabase = supabaseBrowser();
       const next = `${window.location.pathname}${window.location.search}`;
+      const origin = getOAuthRedirectOrigin();
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next || "/")}`,
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next || "/")}`,
         },
       });
       if (oauthError) throw oauthError;
@@ -259,15 +257,17 @@ export default function AuthModal({
           setError("Phone number is required when a role is selected.");
           return;
         }
-        const digits = p.replace(/\D/g, "");
-        if (digits.length < 10) {
-          setError("Enter a valid phone number (at least 10 digits).");
+        if (!isValidUsPhone(p)) {
+          setError("Enter a valid US phone number (10 digits).");
           return;
         }
+      } else if (phone.trim() && !isValidUsPhone(phone)) {
+        setError("Phone must be a valid US number (10 digits) if provided.");
+        return;
       }
 
       const dbRole = signupRoleToDbRole(signupRole);
-      const phoneForProfile = phone.trim() || null;
+      const phoneForProfile = phone.trim() ? formatUsPhoneStored(phone) : null;
 
       const { data, error: signUpErr } = await supabase.auth.signUp({
         email: email.trim(),
@@ -287,13 +287,25 @@ export default function AuthModal({
         await supabase.from("user_profiles").upsert(
           {
             user_id: userId,
-            role: dbRole,
             full_name: fullName.trim(),
             phone: phoneForProfile,
+          } as Record<string, unknown>,
+          { onConflict: "user_id" }
+        );
+        await supabase.from("leadsmart_users").upsert(
+          {
+            user_id: userId,
+            role: dbRole,
             oauth_onboarding_completed: true,
           } as Record<string, unknown>,
           { onConflict: "user_id" }
         );
+        if (dbRole === "user") {
+          await supabase.from("propertytools_users").upsert(
+            { user_id: userId, tier: "basic" } as Record<string, unknown>,
+            { onConflict: "user_id" }
+          );
+        }
       }
 
       onAuthenticated?.();
@@ -335,17 +347,8 @@ export default function AuthModal({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
+        aria-label="Sign in or create account"
       >
-        <div className="p-4 sm:p-5 bg-slate-50 border-b border-slate-200">
-          <div className="text-sm font-bold text-slate-900">{header.title}</div>
-          <p className="mt-1 text-xs text-slate-700 whitespace-pre-line">
-            {header.description}
-          </p>
-          <div className="mt-3 text-[11px] font-semibold text-slate-600">
-            No credit card required
-          </div>
-        </div>
-
         <div className="p-4 sm:p-5 space-y-4">
           <div className="flex gap-2">
             <button
@@ -469,13 +472,12 @@ export default function AuthModal({
                   </label>
                   <input
                     type="tel"
+                    inputMode="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => setPhone(formatUsPhoneInput(e.target.value))}
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     autoComplete="tel"
-                    placeholder={
-                      isSignupRoleAssigned(signupRole) ? "Required for your role" : ""
-                    }
+                    placeholder="(555) 555-5555"
                     required={isSignupRoleAssigned(signupRole)}
                   />
                 </div>

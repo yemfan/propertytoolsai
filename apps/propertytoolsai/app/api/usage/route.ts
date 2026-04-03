@@ -10,30 +10,27 @@ export async function GET(req: Request) {
     }
 
     const { data, error } = await supabaseServer
-      .from("user_profiles")
+      .from("leadsmart_users")
       .select("plan,subscription_status,estimator_usage_count,cma_usage_count,usage_reset_date")
       .eq("user_id", user.id)
       .maybeSingle();
-    if (error && (error as any).code !== "PGRST116") throw error;
+    if (error && (error as { code?: string }).code !== "PGRST116") throw error;
 
     return NextResponse.json({
       ok: true,
-      plan: (data as any)?.plan ?? "free",
-      subscription_status: (data as any)?.subscription_status ?? null,
+      plan: (data as { plan?: string })?.plan ?? "free",
+      subscription_status: (data as { subscription_status?: string | null })?.subscription_status ?? null,
       usage: data
         ? {
-            estimator_usage_count: (data as any).estimator_usage_count ?? 0,
-            cma_usage_count: (data as any).cma_usage_count ?? 0,
-            usage_reset_date: (data as any).usage_reset_date ?? null,
+            estimator_usage_count: (data as { estimator_usage_count?: number }).estimator_usage_count ?? 0,
+            cma_usage_count: (data as { cma_usage_count?: number }).cma_usage_count ?? 0,
+            usage_reset_date: (data as { usage_reset_date?: string | null }).usage_reset_date ?? null,
             limits: { estimator: 3, cma: 1 },
           }
         : null,
     });
-  } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: e?.message ?? "Server error" },
-      { status: 500 }
-    );
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Server error";
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }
-

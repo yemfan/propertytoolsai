@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSignupProfilePrefill, type SignupPrefillConsumer } from "@/lib/hooks/useSignupProfilePrefill";
 import { safeInternalRedirect } from "@/lib/loginUrl";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { formatUsPhoneInput, formatUsPhoneStored, isValidUsPhone } from "@/lib/usPhone";
 
 function SignupForm() {
   const router = useRouter();
@@ -25,21 +26,8 @@ function SignupForm() {
     if (prefillLoading) return;
     setFullName(pv.fullName);
     setEmail(pv.email);
-    setPhone(pv.phone ? formatUsPhone(pv.phone) : "");
+    setPhone(pv.phone ? formatUsPhoneInput(pv.phone) : "");
   }, [prefillLoading, pv]);
-
-  function formatUsPhone(input: string) {
-    const digits = input.replace(/\D/g, "").slice(0, 10);
-    if (!digits) return "";
-    if (digits.length <= 3) return `(${digits}`;
-    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-  }
-
-  function isValidUsPhone(input: string) {
-    const digits = input.replace(/\D/g, "");
-    return digits.length === 10;
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -63,19 +51,37 @@ function SignupForm() {
         if (userErr) throw userErr;
         if (!user) throw new Error("Session expired. Please log in again.");
 
-        const { error: upsertErr } = await supabase.from("user_profiles").upsert(
+        const phoneVal = phone.trim() ? formatUsPhoneStored(phone) : null;
+        const { error: upProfErr } = await supabase.from("user_profiles").upsert(
           {
             user_id: user.id,
-            role: "user",
             full_name: fullName.trim(),
-            phone: phone.trim() ? phone.trim() : null,
+            phone: phoneVal,
           },
+          { onConflict: "user_id" }
+        );
+        if (upProfErr) {
+          const msg = String(upProfErr?.message ?? "");
+          const missingUserId = /user_id.*does not exist|column\s+.*user_id.*does not exist/i.test(msg);
+          if (!missingUserId) throw upProfErr;
+        }
+        const { error: upsertErr } = await supabase.from("leadsmart_users").upsert(
+          { user_id: user.id, role: "user" },
           { onConflict: "user_id" }
         );
         if (upsertErr) {
           const msg = String(upsertErr?.message ?? "");
           const missingUserId = /user_id.*does not exist|column\s+.*user_id.*does not exist/i.test(msg);
           if (!missingUserId) throw upsertErr;
+        }
+        const { error: ptErr } = await supabase.from("propertytools_users").upsert(
+          { user_id: user.id, tier: "basic" },
+          { onConflict: "user_id" }
+        );
+        if (ptErr) {
+          const msg = String(ptErr?.message ?? "");
+          const missingUserId = /user_id.*does not exist|column\s+.*user_id.*does not exist/i.test(msg);
+          if (!missingUserId) throw ptErr;
         }
 
         const after = safeInternalRedirect(searchParams.get("redirect"));
@@ -111,13 +117,29 @@ function SignupForm() {
         return;
       }
 
-      const { error: upsertErr1 } = await supabase.from("user_profiles").upsert(
+      const phoneVal = phone.trim() ? formatUsPhoneStored(phone) : null;
+      const { error: upProfErr1 } = await supabase.from("user_profiles").upsert(
         {
           user_id: userId,
-          role: "user",
           full_name: fullName.trim(),
-          phone: phone.trim() ? phone.trim() : null,
+          phone: phoneVal,
         },
+        { onConflict: "user_id" }
+      );
+
+      if (upProfErr1) {
+        const msg = String(upProfErr1?.message ?? "");
+        const missingUserId = /user_id.*does not exist|column\s+.*user_id.*does not exist/i.test(
+          msg
+        );
+
+        if (!missingUserId) {
+          throw upProfErr1;
+        }
+      }
+
+      const { error: upsertErr1 } = await supabase.from("leadsmart_users").upsert(
+        { user_id: userId, role: "user" },
         { onConflict: "user_id" }
       );
 
@@ -129,6 +151,22 @@ function SignupForm() {
 
         if (!missingUserId) {
           throw upsertErr1;
+        }
+      }
+
+      const { error: ptErr1 } = await supabase.from("propertytools_users").upsert(
+        { user_id: userId, tier: "basic" },
+        { onConflict: "user_id" }
+      );
+
+      if (ptErr1) {
+        const msg = String(ptErr1?.message ?? "");
+        const missingUserId = /user_id.*does not exist|column\s+.*user_id.*does not exist/i.test(
+          msg
+        );
+
+        if (!missingUserId) {
+          throw ptErr1;
         }
       }
 
@@ -192,7 +230,7 @@ function SignupForm() {
               type="tel"
               inputMode="tel"
               value={phone}
-              onChange={(e) => setPhone(formatUsPhone(e.target.value))}
+              onChange={(e) => setPhone(formatUsPhoneInput(e.target.value))}
               placeholder="(Optional) Get instant alerts via SMS"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={prefillLoading}

@@ -79,7 +79,7 @@ function LoginPageInner() {
           let userRow: any = null;
           let rowErr: any = null;
           ({ data: userRow, error: rowErr } = await supabase
-            .from("user_profiles")
+            .from("leadsmart_users")
             .select("role")
             .eq("user_id", user.id)
             .maybeSingle());

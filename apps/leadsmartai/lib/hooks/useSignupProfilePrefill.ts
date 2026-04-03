@@ -101,16 +101,23 @@ export function useSignupProfilePrefill(
 
         const { data: prof } = await supabase
           .from("user_profiles")
-          .select("full_name, phone, license_number, brokerage")
+          .select("full_name, phone, leadsmart_users(license_number, brokerage)")
           .eq("user_id", user.id)
           .maybeSingle();
 
-        const row = prof as {
+        const raw = prof as {
           full_name?: string | null;
           phone?: string | null;
-          license_number?: string | null;
-          brokerage?: string | null;
+          leadsmart_users?: { license_number?: string | null; brokerage?: string | null } | null;
         } | null;
+        const lsRaw = raw?.leadsmart_users;
+        const ls = lsRaw == null ? null : Array.isArray(lsRaw) ? lsRaw[0] : lsRaw;
+        const row = {
+          full_name: raw?.full_name,
+          phone: raw?.phone,
+          license_number: ls?.license_number,
+          brokerage: ls?.brokerage,
+        };
 
         const authEmail = user.email?.trim() ?? "";
         const fromProfileName = row?.full_name?.trim() ?? "";

@@ -12,6 +12,7 @@ import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsume
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { formatUsPhoneInput, formatUsPhoneStored, isValidUsPhone } from "@/lib/usPhone";
 
 export default function CompleteProfilePage() {
   return (
@@ -57,16 +58,17 @@ function CompleteProfileInner() {
         const u = session.user;
         const { data: prof } = await supabase
           .from("user_profiles")
-          .select("full_name, phone, role, oauth_onboarding_completed")
+          .select("full_name, phone, leadsmart_users(role, oauth_onboarding_completed)")
           .eq("user_id", u.id)
           .maybeSingle();
         const row = prof as {
           full_name?: string | null;
           phone?: string | null;
-          role?: string | null;
-          oauth_onboarding_completed?: boolean | null;
+          leadsmart_users?: { role?: string | null; oauth_onboarding_completed?: boolean | null } | null;
         } | null;
-        if (row?.oauth_onboarding_completed === true) {
+        const ls = row?.leadsmart_users;
+        const lsOne = Array.isArray(ls) ? ls[0] : ls;
+        if (lsOne?.oauth_onboarding_completed === true) {
           router.replace(next);
           return;
         }
@@ -80,8 +82,8 @@ function CompleteProfileInner() {
         if (!cancelled) {
           setEmail(u.email?.trim() ?? "");
           setFullName(row?.full_name?.trim() || metaName || "");
-          setPhone(row?.phone?.trim() || "");
-          const r = row?.role ?? "user";
+          setPhone(formatUsPhoneInput(row?.phone?.trim() || ""));
+          const r = lsOne?.role ?? "user";
           if (r === "user") setSignupRole("");
           else if (SIGNUP_ROLE_OPTIONS.some((o) => o.value === r)) setSignupRole(r);
           else setSignupRole("");
@@ -111,15 +113,17 @@ function CompleteProfileInner() {
         setError("Phone number is required when a role is selected.");
         return;
       }
-      const digits = p.replace(/\D/g, "");
-      if (digits.length < 10) {
-        setError("Enter a valid phone number (at least 10 digits).");
+      if (!isValidUsPhone(p)) {
+        setError("Enter a valid US phone number (10 digits).");
         return;
       }
+    } else if (phone.trim() && !isValidUsPhone(phone)) {
+      setError("Phone must be a valid US number (10 digits) if provided.");
+      return;
     }
 
     const dbRole = signupRoleToDbRole(signupRole);
-    const phoneForProfile = phone.trim() || null;
+    const phoneForProfile = phone.trim() ? formatUsPhoneStored(phone) : null;
 
     setSaving(true);
     try {
@@ -231,10 +235,12 @@ function CompleteProfileInner() {
             </label>
             <input
               type="tel"
+              inputMode="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(formatUsPhoneInput(e.target.value))}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               autoComplete="tel"
+              placeholder="(555) 555-5555"
               required={isSignupRoleAssigned(signupRole)}
             />
           </div>

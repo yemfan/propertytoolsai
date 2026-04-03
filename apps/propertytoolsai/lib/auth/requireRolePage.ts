@@ -4,7 +4,7 @@ import type { AppRole, CurrentUserWithRole } from "@/lib/auth/getCurrentUserRole
 import { redirectToRoleHome } from "@/lib/auth/redirectToRoleHome";
 
 /**
- * Server Components / layouts: require Supabase session + `profiles.role`.
+ * Server Components / layouts: require Supabase session + `leadsmart_users.role` (via getCurrentUserWithRole).
  * - Unauthenticated → `/login`
  * - Wrong role → role home (`admin` may access any staff dashboard when listed in `allowed`)
  */

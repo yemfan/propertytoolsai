@@ -1,5 +1,5 @@
 /**
- * Canonical RBAC roles stored in `public.profiles.role` (see Supabase migrations).
+ * Canonical RBAC roles for routing; stored in `leadsmart_users.role` (`user` in DB → consumer here).
  */
 export const USER_ROLES = [
   "admin",
@@ -30,7 +30,7 @@ export function isDashboardStaffRole(role: UserRole): role is DashboardStaffRole
 
 /**
  * Default landing path after login / role hub (`/dashboard`) for each role.
- * `profiles.id` = auth user id; routing uses `profiles.role` (and optional CRM ids on profile).
+ * Auth user id matches `user_profiles.user_id`; RBAC is `leadsmart_users.role`.
  */
 export function getRoleHomePath(role: UserRole): string {
   switch (role) {

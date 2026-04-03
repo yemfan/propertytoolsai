@@ -5,7 +5,7 @@ import { resolveCrmAgentIdForUser } from "@/lib/dashboard/agent";
 /**
  * Authenticated user + profile, with CRM `agents.id` when linked.
  * `agent_id` is the numeric string used on `public.leads.agent_id` — not the auth UUID.
- * Prefers `profiles.agent_id` when set; otherwise resolves via `agents.auth_user_id`.
+ * Prefers `leadsmart_users.agent_id` when set; otherwise resolves via `agents.auth_user_id`.
  */
 export type CurrentProfile = ProfileRow & {
   userId: string;

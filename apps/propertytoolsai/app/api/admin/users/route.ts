@@ -23,17 +23,24 @@ function escapeIlikePattern(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
+function normalizeLsRole(db: string | null | undefined): string {
+  const r = String(db ?? "user").toLowerCase().trim();
+  return r === "user" ? "consumer" : r;
+}
+
 export async function GET(req: Request) {
   await requireRole(["admin"]);
 
   try {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim();
-    const role = searchParams.get("role")?.trim();
+    const roleFilter = searchParams.get("role")?.trim();
 
     let query = supabaseAdmin
-      .from("profiles")
-      .select("id, email, full_name, role, is_active, created_at")
+      .from("user_profiles")
+      .select(
+        "user_id, email, full_name, is_active, created_at, leadsmart_users(role), propertytools_users(tier)"
+      )
       .order("created_at", { ascending: false });
 
     if (q) {
@@ -41,17 +48,42 @@ export async function GET(req: Request) {
       query = query.or(`email.ilike.${pattern},full_name.ilike.${pattern}`);
     }
 
-    if (role && role !== "all") {
-      query = query.eq("role", role);
-    }
-
     const { data, error } = await query;
 
     if (error) throw error;
 
+    const rows = data ?? [];
+    const users = rows
+      .map((raw) => {
+        const r = raw as {
+          user_id: string;
+          email: string | null;
+          full_name: string | null;
+          is_active: boolean | null;
+          created_at: string;
+          leadsmart_users?: { role?: string } | { role?: string }[] | null;
+          propertytools_users?: { tier?: string } | { tier?: string }[] | null;
+        };
+        const lsRaw = r.leadsmart_users;
+        const ls = lsRaw == null ? null : Array.isArray(lsRaw) ? lsRaw[0] : lsRaw;
+        const dbRole = ls?.role ?? "user";
+        return {
+          id: r.user_id,
+          email: r.email,
+          full_name: r.full_name,
+          role: normalizeLsRole(dbRole),
+          is_active: r.is_active ?? true,
+          created_at: r.created_at,
+        };
+      })
+      .filter((u) => {
+        if (!roleFilter || roleFilter === "all") return true;
+        return u.role === roleFilter;
+      });
+
     return NextResponse.json({
       success: true,
-      users: data ?? [],
+      users,
     });
   } catch (error) {
     console.error(error);
@@ -77,24 +109,43 @@ export async function PATCH(req: Request) {
     }
 
     const { userId, role, isActive, fullName } = parsed.data;
+    const now = new Date().toISOString();
 
-    const updatePayload: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-    };
+    if (role !== undefined) {
+      const dbRole = role === "consumer" ? "user" : role;
+      const { error: lsErr } = await supabaseAdmin
+        .from("leadsmart_users")
+        .update({ role: dbRole, updated_at: now })
+        .eq("user_id", userId);
+      if (lsErr) throw lsErr;
+    }
 
-    if (role !== undefined) updatePayload.role = role;
-    if (isActive !== undefined) updatePayload.is_active = isActive;
-    if (fullName !== undefined) updatePayload.full_name = fullName;
+    if (isActive !== undefined || fullName !== undefined) {
+      const updatePayload: Record<string, unknown> = {
+        updated_at: now,
+      };
+      if (fullName !== undefined) updatePayload.full_name = fullName;
+      if (isActive !== undefined) updatePayload.is_active = isActive;
 
-    const { data, error } = await supabaseAdmin
-      .from("profiles")
-      .update(updatePayload)
-      .eq("id", userId)
-      .select("id");
+      const { data, error } = await supabaseAdmin
+        .from("user_profiles")
+        .update(updatePayload)
+        .eq("user_id", userId)
+        .select("user_id");
 
-    if (error) throw error;
-    if (!data?.length) {
-      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+      if (error) throw error;
+      if (!data?.length) {
+        return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+      }
+    } else if (role !== undefined) {
+      const { data: exists } = await supabaseAdmin
+        .from("user_profiles")
+        .select("user_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (!exists) {
+        return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+      }
     }
 
     return NextResponse.json({ success: true });

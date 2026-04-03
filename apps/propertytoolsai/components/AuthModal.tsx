@@ -106,15 +106,26 @@ export default function AuthModal(props: {
       }
       const userId = data?.user?.id;
       if (userId) {
-        await supabase.from("user_profiles").upsert(
+        const { error: upErr } = await supabase.from("user_profiles").upsert(
           {
             user_id: userId,
-            role: "user",
+            email: email.trim(),
             full_name: fullName.trim() || null,
             phone: phoneForProfile,
           },
           { onConflict: "user_id" }
         );
+        if (upErr) console.error(upErr.message);
+        const { error: lsErr } = await supabase.from("leadsmart_users").upsert(
+          { user_id: userId, role: "user" },
+          { onConflict: "user_id" }
+        );
+        if (lsErr) console.error(lsErr.message);
+        const { error: ptErr } = await supabase.from("propertytools_users").upsert(
+          { user_id: userId, tier: "basic" },
+          { onConflict: "user_id" }
+        );
+        if (ptErr) console.error(ptErr.message);
         props.onAuthenticated?.();
         props.onClose();
       } else {

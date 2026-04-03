@@ -70,30 +70,35 @@ export default function AgentSignupPage() {
         return;
       }
 
-      // 1) Set role for landing-page detection.
+      const emailTrim = email.trim();
+
       const { error: upsertUserErr1 } = await supabase.from("user_profiles").upsert(
         {
           user_id: userId,
-          role: "agent",
           full_name: fullName.trim(),
           phone: phone.trim(),
+          email: emailTrim,
+        },
+        { onConflict: "user_id" }
+      );
+      if (upsertUserErr1) throw upsertUserErr1;
+
+      const { error: lsErr } = await supabase.from("leadsmart_users").upsert(
+        {
+          user_id: userId,
+          role: "agent",
           license_number: licenseNumber.trim() || null,
           brokerage: brokerage.trim() || null,
         },
         { onConflict: "user_id" }
       );
-      if (upsertUserErr1) {
-        const msg = String(upsertUserErr1?.message ?? "");
-        const missingUserId = /user_id.*does not exist|column\s+.*user_id.*does not exist/i.test(
-          msg
-        );
+      if (lsErr) throw lsErr;
 
-        if (missingUserId) {
-          // no-op for backwards compatibility: `user_profiles` always uses `user_id`
-        } else {
-          throw upsertUserErr1;
-        }
-      }
+      const { error: ptErr } = await supabase.from("propertytools_users").upsert(
+        { user_id: userId, tier: "basic" },
+        { onConflict: "user_id" }
+      );
+      if (ptErr) throw ptErr;
 
       // 2) Create agent row for CRM / API features that scope by agent id.
       // Keep inserts limited to known columns (auth_user_id + plan_type).

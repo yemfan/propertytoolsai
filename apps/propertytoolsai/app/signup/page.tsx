@@ -36,16 +36,28 @@ export default function SignupPage() {
       if (signUpErr) throw signUpErr;
 
       if (data.user) {
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({
+        const uid = data.user.id;
+        const { error: upErr } = await supabase.from("user_profiles").upsert(
+          {
+            user_id: uid,
             full_name: fullName.trim(),
-          })
-          .eq("id", data.user.id);
+            email: email.trim(),
+          },
+          { onConflict: "user_id" }
+        );
+        if (upErr) console.error(upErr.message);
 
-        if (profileError) {
-          console.error(profileError.message);
-        }
+        const { error: lsErr } = await supabase.from("leadsmart_users").upsert(
+          { user_id: uid, role: "user" },
+          { onConflict: "user_id" }
+        );
+        if (lsErr) console.error(lsErr.message);
+
+        const { error: ptErr } = await supabase.from("propertytools_users").upsert(
+          { user_id: uid, tier: "basic" },
+          { onConflict: "user_id" }
+        );
+        if (ptErr) console.error(ptErr.message);
       }
 
       setSuccess("Account created. Please check your email to verify your account.");

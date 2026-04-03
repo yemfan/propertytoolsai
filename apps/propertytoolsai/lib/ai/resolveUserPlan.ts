@@ -1,7 +1,7 @@
 import { supabaseServer } from "@/lib/supabaseServer";
 
 /**
- * Resolve billing/plan tier for rate limiting (agents.plan_type or user_profiles.plan_type).
+ * Resolve billing/plan tier for rate limiting (`agents.plan_type` or `leadsmart_users.plan`).
  */
 export async function resolveUserPlanType(userId: string): Promise<string> {
   try {
@@ -10,20 +10,20 @@ export async function resolveUserPlanType(userId: string): Promise<string> {
       .select("plan_type")
       .eq("auth_user_id", userId)
       .maybeSingle();
-    const fromAgent = String((agent as any)?.plan_type ?? "").trim();
+    const fromAgent = String((agent as { plan_type?: string })?.plan_type ?? "").trim();
     if (fromAgent) return fromAgent;
   } catch {
     /* ignore */
   }
 
   try {
-    const { data: profile } = await supabaseServer
-      .from("user_profiles")
-      .select("plan_type")
+    const { data: ls } = await supabaseServer
+      .from("leadsmart_users")
+      .select("plan")
       .eq("user_id", userId)
       .maybeSingle();
-    const fromProfile = String((profile as any)?.plan_type ?? "").trim();
-    if (fromProfile) return fromProfile;
+    const fromLs = String((ls as { plan?: string })?.plan ?? "").trim();
+    if (fromLs) return fromLs;
   } catch {
     /* ignore */
   }

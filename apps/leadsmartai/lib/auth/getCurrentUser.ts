@@ -5,7 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 
 /**
- * Canonical `user_profiles.role` values used for route guards (lowercase).
+ * Canonical `leadsmart_users.role` values used for route guards (lowercase).
  * Extend as new roles are added.
  */
 export type AppRole =
@@ -41,7 +41,7 @@ async function enrichUser(user: User): Promise<CurrentUserWithRole> {
 
   const userId = user.id;
   const { data: profile } = await supabaseAdmin
-    .from("user_profiles")
+    .from("leadsmart_users")
     .select("role")
     .eq("user_id", userId)
     .maybeSingle();

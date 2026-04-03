@@ -12,6 +12,7 @@ import { safeInternalRedirect } from "@/lib/loginUrl";
 import { messageFromUnknownError } from "@/lib/supabaseThrow";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { START_FREE_AS_AGENT_LABEL } from "@/lib/auth/startFreeAgentMarketing";
+import { formatUsPhoneInput, formatUsPhoneStored, isValidUsPhone } from "@/lib/usPhone";
 
 type AgentSignupFormProps = {
   /** Full page vs compact card (dialog). */
@@ -47,7 +48,7 @@ export function AgentSignupForm({
   useEffect(() => {
     if (prefillLoading) return;
     setFullName(pv.fullName);
-    setPhone(pv.phone ? formatUsPhone(pv.phone) : "");
+    setPhone(pv.phone ? formatUsPhoneInput(pv.phone) : "");
     setLicenseNumber(pv.licenseNumber);
     setBrokerage(pv.brokerage);
     setEmail(pv.email);
@@ -56,19 +57,6 @@ export function AgentSignupForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  function formatUsPhone(input: string) {
-    const digits = input.replace(/\D/g, "").slice(0, 10);
-    if (!digits) return "";
-    if (digits.length <= 3) return `(${digits}`;
-    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-  }
-
-  function isValidUsPhone(input: string) {
-    const digits = input.replace(/\D/g, "");
-    return digits.length === 10;
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -88,6 +76,7 @@ export function AgentSignupForm({
     setLoading(true);
     try {
       const supabase = supabaseBrowser();
+      const phoneStored = formatUsPhoneStored(phone)!;
 
       if (hasSession) {
         const {
@@ -97,12 +86,23 @@ export function AgentSignupForm({
         if (userErr) throw userErr;
         if (!user) throw new Error("Session expired. Please log in again.");
 
-        const { error: upsertUserErr1 } = await supabase.from("user_profiles").upsert(
+        const { error: upProfErr } = await supabase.from("user_profiles").upsert(
+          {
+            user_id: user.id,
+            full_name: fullName.trim(),
+            phone: phoneStored,
+          },
+          { onConflict: "user_id" }
+        );
+        if (upProfErr) {
+          const msg = String(upProfErr?.message ?? "");
+          const missingUserId = /user_id.*does not exist|column\s+.*user_id.*does not exist/i.test(msg);
+          if (!missingUserId) throw upProfErr;
+        }
+        const { error: upsertUserErr1 } = await supabase.from("leadsmart_users").upsert(
           {
             user_id: user.id,
             role: "agent",
-            full_name: fullName.trim(),
-            phone: phone.trim(),
             license_number: licenseNumber.trim() || null,
             brokerage: brokerage.trim() || null,
           },
@@ -146,12 +146,28 @@ export function AgentSignupForm({
         return;
       }
 
-      const { error: upsertUserErr1 } = await supabase.from("user_profiles").upsert(
+      const { error: upProfErr } = await supabase.from("user_profiles").upsert(
+        {
+          user_id: userId,
+          full_name: fullName.trim(),
+          phone: phoneStored,
+        },
+        { onConflict: "user_id" }
+      );
+      if (upProfErr) {
+        const msg = String(upProfErr?.message ?? "");
+        const missingUserId = /user_id.*does not exist|column\s+.*user_id.*does not exist/i.test(
+          msg
+        );
+
+        if (!missingUserId) {
+          throw upProfErr;
+        }
+      }
+      const { error: upsertUserErr1 } = await supabase.from("leadsmart_users").upsert(
         {
           user_id: userId,
           role: "agent",
-          full_name: fullName.trim(),
-          phone: phone.trim(),
           license_number: licenseNumber.trim() || null,
           brokerage: brokerage.trim() || null,
         },
@@ -249,7 +265,7 @@ export function AgentSignupForm({
             type="tel"
             inputMode="tel"
             value={phone}
-            onChange={(e) => setPhone(formatUsPhone(e.target.value))}
+            onChange={(e) => setPhone(formatUsPhoneInput(e.target.value))}
             placeholder="(Required) Agent alerts + follow-ups"
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
