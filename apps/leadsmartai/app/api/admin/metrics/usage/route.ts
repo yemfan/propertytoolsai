@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { clampIntDays, daysAgoIso, getUsageBreakdown } from "@/lib/analytics/saasMetrics";
+import { adminMetricsErrorResponse, requireAdminMetricsSupabase } from "@/lib/admin/adminMetricsRoutes";
 import { requireRoleRoute } from "@/lib/auth/requireRole";
 
 /** GET — feature / usage event breakdown from usage_events. */
@@ -21,7 +22,6 @@ export async function GET(req: Request) {
       breakdown,
     });
   } catch (e) {
-    console.error("[admin/metrics/usage]", e);
-    return NextResponse.json({ success: false, error: "Failed to load usage metrics" }, { status: 500 });
+    return adminMetricsErrorResponse("[admin/metrics/usage]", e, "Failed to load usage metrics");
   }
 }

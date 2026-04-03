@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { isAdminOrSupportRole, isAgentOrBrokerProfileRole } from "@/lib/rolePortalPaths";
 
 export default function PortalPage() {
   const [loading, setLoading] = useState(true);
@@ -10,6 +11,7 @@ export default function PortalPage() {
   const [error, setError] = useState<string | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [slimBillingOnly, setSlimBillingOnly] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -25,11 +27,14 @@ export default function PortalPage() {
       }
       const { data } = await supabase
         .from("leadsmart_users")
-        .select("plan,subscription_status")
+        .select("plan,subscription_status,role")
         .eq("user_id", user.id)
         .maybeSingle();
-      setPlan((data as { plan?: string } | null)?.plan ?? null);
-      setStatus((data as { subscription_status?: string } | null)?.subscription_status ?? null);
+      const row = data as { plan?: string; subscription_status?: string; role?: string } | null;
+      setPlan(row?.plan ?? null);
+      setStatus(row?.subscription_status ?? null);
+      const role = row?.role ?? "user";
+      setSlimBillingOnly(isAgentOrBrokerProfileRole(role) && !isAdminOrSupportRole(role));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load account");
     } finally {
@@ -111,18 +116,22 @@ export default function PortalPage() {
           >
             {opening ? "Opening…" : "Open billing portal"}
           </button>
-          <Link
-            href="/dashboard"
-            className="w-full rounded-xl border border-gray-200 bg-gray-100 py-3 text-center text-sm font-semibold text-gray-900 hover:bg-gray-200"
-          >
-            Go to dashboard
-          </Link>
-          <Link
-            href="/pricing"
-            className="w-full rounded-xl py-3 text-center text-sm font-semibold text-gray-700 hover:bg-gray-50"
-          >
-            Pricing & upgrades
-          </Link>
+          {!slimBillingOnly ? (
+            <>
+              <Link
+                href="/dashboard"
+                className="w-full rounded-xl border border-gray-200 bg-gray-100 py-3 text-center text-sm font-semibold text-gray-900 hover:bg-gray-200"
+              >
+                Go to dashboard
+              </Link>
+              <Link
+                href="/pricing"
+                className="w-full rounded-xl py-3 text-center text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Pricing & upgrades
+              </Link>
+            </>
+          ) : null}
         </div>
       </div>
     </div>

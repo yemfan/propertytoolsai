@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -37,6 +36,7 @@ function CompleteProfileInner() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
@@ -172,6 +172,18 @@ function CompleteProfileInner() {
     }
   }
 
+  async function handleCancel() {
+    setCancelling(true);
+    try {
+      await supabaseBrowser().auth.signOut();
+      router.replace("/");
+    } catch {
+      router.replace("/");
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-600">
@@ -183,6 +195,16 @@ function CompleteProfileInner() {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-12">
       <div className="mx-auto w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex items-start justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => void handleCancel()}
+            disabled={saving || cancelling}
+            className="text-sm font-medium text-slate-600 hover:text-slate-900 disabled:opacity-50"
+          >
+            {cancelling ? "Signing out…" : "Cancel"}
+          </button>
+        </div>
         <h1 className="text-xl font-bold text-slate-900">Complete your profile</h1>
         <p className="mt-2 text-sm text-slate-600">
           You signed in with Google or Apple. Tell us your name, role, and how to reach you so we can route you to the
@@ -257,9 +279,7 @@ function CompleteProfileInner() {
         </form>
 
         <p className="mt-4 text-center text-xs text-slate-500">
-          <Link href="/" className="font-medium text-blue-700 hover:underline">
-            Back to home
-          </Link>
+          Use Cancel to sign out and return to the homepage if you need to stop or use a different account.
         </p>
       </div>
     </div>

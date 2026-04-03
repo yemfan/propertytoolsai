@@ -38,16 +38,23 @@ export default function AppDashboardShell({
   const showAgentBrokerPromotion = isAgentOrBrokerProfileRole(appRole);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900 md:flex md:min-h-screen md:flex-row">
+    <div
+      className={
+        "flex min-h-screen min-h-0 w-full min-w-0 flex-col overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900 " +
+        "lg:min-h-screen lg:flex-row lg:items-stretch"
+      }
+    >
       <PremiumSidebar
         appName={APP_NAME}
         sections={navSections}
         workspaceLabel={navConfig.sidebarTitle ?? "Workspace"}
         footer={showAgentBrokerPromotion ? sidebarFooter : undefined}
       />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
         <TopBar email={email} appRole={appRole} />
-        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden px-4 py-6 md:px-8 md:py-8">{children}</main>
+        <main className="min-h-0 min-w-0 w-full max-w-none flex-1 overflow-x-hidden px-4 py-6 md:px-8 md:py-8">
+          {children}
+        </main>
       </div>
     </div>
   );

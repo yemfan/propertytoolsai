@@ -62,6 +62,20 @@ type UsagePayload = {
   breakdown: { event_type: string; count: number }[];
 };
 
+type MetricsApiError = {
+  success?: boolean;
+  error?: string;
+  details?: string;
+};
+
+function formatMetricsApiError(j: MetricsApiError, fallback: string): string {
+  const base = j.error ?? fallback;
+  if (j.details && String(j.details).trim()) {
+    return `${base} — ${j.details}`;
+  }
+  return base;
+}
+
 export function FounderDashboardClient() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -81,14 +95,18 @@ export function FounderDashboardClient() {
         fetch("/api/admin/metrics/usage?days=30"),
       ]);
       const [oj, rj, fj, uj] = await Promise.all([o.json(), r.json(), f.json(), u.json()]);
-      if (!oj.success) throw new Error(oj.error ?? "Overview failed");
-      if (!rj.success) throw new Error(rj.error ?? "Revenue failed");
-      if (!fj.success) throw new Error(fj.error ?? "Funnel failed");
-      if (!uj.success) throw new Error(uj.error ?? "Usage failed");
-      setOverview(oj);
-      setRevenue(rj);
-      setFunnel(fj);
-      setUsage(uj);
+      const oe = oj as MetricsApiError & OverviewPayload;
+      const re = rj as MetricsApiError & RevenuePayload;
+      const fe = fj as MetricsApiError & FunnelPayload;
+      const ue = uj as MetricsApiError & UsagePayload;
+      if (!oe.success) throw new Error(formatMetricsApiError(oe, "Overview failed"));
+      if (!re.success) throw new Error(formatMetricsApiError(re, "Revenue failed"));
+      if (!fe.success) throw new Error(formatMetricsApiError(fe, "Funnel failed"));
+      if (!ue.success) throw new Error(formatMetricsApiError(ue, "Usage failed"));
+      setOverview(oe);
+      setRevenue(re);
+      setFunnel(fe);
+      setUsage(ue);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
     } finally {

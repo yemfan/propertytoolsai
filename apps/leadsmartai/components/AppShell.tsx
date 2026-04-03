@@ -101,14 +101,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/20 text-slate-900 md:flex md:min-h-screen md:flex-row">
+    <div className="flex min-h-screen min-h-0 w-full min-w-0 flex-col overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-emerald-50/20 text-slate-900 lg:min-h-screen lg:flex-row lg:items-stretch">
       <PremiumSidebar
         appName={APP_NAME}
         sections={leadSmartMarketingNav}
         workspaceLabel={marketingNavConfig.sidebarTitle ?? "Tools"}
         footer={marketingSidebarFooter}
       />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
         <MarketingTopChrome />
         <main className="min-w-0 flex-1 overflow-x-hidden p-4 sm:p-8">{children}</main>
         <Footer />

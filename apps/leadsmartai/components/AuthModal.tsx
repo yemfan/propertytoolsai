@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendPasswordResetEmail } from "@/lib/auth/sendPasswordResetEmail";
@@ -349,7 +350,16 @@ export default function AuthModal({
         aria-modal="true"
         aria-label="Sign in or create account"
       >
-        <div className="p-4 sm:p-5 space-y-4">
+        <button
+          type="button"
+          onClick={() => !loading && onClose()}
+          disabled={loading}
+          className="absolute right-3 top-3 z-10 rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" strokeWidth={2} aria-hidden />
+        </button>
+        <div className="p-4 pt-12 sm:p-5 sm:pt-12 space-y-4">
           <div className="flex gap-2">
             <button
               type="button"

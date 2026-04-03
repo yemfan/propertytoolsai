@@ -11,6 +11,7 @@ import { hasPremiumToolAccess } from "@/lib/access";
 import { getNavSectionsForRole } from "@/lib/auth/navByRole";
 import { parseUserRole, type UserRole } from "@/lib/auth/roles";
 import { stripUnlockPremiumNavItem } from "@/lib/nav/stripUnlockPremiumNav";
+import AssignedAgentCard from "@/components/assigned-agent/AssignedAgentCard";
 import PropertyToolsLogo from "@/components/brand/PropertyToolsLogo";
 import { propertyToolsNav } from "@/nav.config";
 
@@ -32,12 +33,9 @@ function PropertyToolsTopChrome({
       appName={APP_NAME}
       sections={navSections}
       leadingExtra={
-        <Link
-          href="/"
-          className="flex min-w-0 shrink-0 items-center rounded-2xl p-1 outline-none transition hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
-        >
-          <PropertyToolsLogo className="max-w-[min(220px,55vw)] text-lg sm:text-xl" />
-        </Link>
+        <span className="min-w-0 truncate text-sm font-semibold tracking-tight text-slate-800 sm:text-base">
+          {APP_NAME}
+        </span>
       }
       searchSlot={null}
       rightActions={
@@ -78,7 +76,7 @@ function PropertyToolsTopChrome({
 }
 
 /**
- * PropertyToolsAI chrome: full-width {@link Topbar} first, then {@link PremiumSidebar} (md+) + main; {@link MobileSidebar} is inside the top bar.
+ * PropertyToolsAI chrome: full-width {@link Topbar} first, then {@link PremiumSidebar} (lg+) + main; {@link MobileSidebar} is inside the top bar below lg.
  * Repo path: `apps/propertytoolsai`. Nav: {@link propertyToolsNav} from `nav.config.tsx`.
  */
 export default function AppShell({ children }: { children: ReactNode }) {
@@ -138,17 +136,28 @@ function AppShellAuthedLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900">
+      <div className="shrink-0 border-b border-slate-200/80 bg-white/95 backdrop-blur-sm">
+        <div className="mx-auto flex h-14 max-w-[1920px] items-center justify-center px-4 lg:justify-start lg:px-8">
+          <Link
+            href="/"
+            className="flex min-w-0 items-center rounded-2xl py-1 outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
+          >
+            <PropertyToolsLogo className="max-w-[min(260px,72vw)] text-lg sm:text-xl" />
+          </Link>
+        </div>
+      </div>
       <div className="shrink-0">
         <PropertyToolsTopChrome navSections={navSections} hideUnlockPremium={hideUnlockPremium} />
       </div>
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <PremiumSidebar
           appName={APP_NAME}
           sections={navSections}
           branding="none"
           height="stretch"
+          topSlot={<AssignedAgentCard />}
         />
-        <main className="min-h-0 min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
+        <main className="min-h-0 min-w-0 flex-1 px-4 py-6 lg:px-8 lg:py-8">{children}</main>
       </div>
     </div>
   );

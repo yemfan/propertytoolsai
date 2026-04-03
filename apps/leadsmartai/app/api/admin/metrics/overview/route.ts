@@ -10,6 +10,7 @@ import {
   countNewPayingEvents,
   daysAgoIso,
 } from "@/lib/analytics/saasMetrics";
+import { adminMetricsErrorResponse, requireAdminMetricsSupabase } from "@/lib/admin/adminMetricsRoutes";
 import { requireRoleRoute } from "@/lib/auth/requireRole";
 
 /**
@@ -20,6 +21,9 @@ export async function GET(req: Request) {
   try {
     const auth = await requireRoleRoute(["admin"], { strictUnauthorized: true });
     if (auth.ok === false) return auth.response;
+
+    const misconfigured = requireAdminMetricsSupabase();
+    if (misconfigured) return misconfigured;
 
     const { searchParams } = new URL(req.url);
     const usageDays = clampIntDays(searchParams.get("days"), 30);
@@ -71,7 +75,6 @@ export async function GET(req: Request) {
       newPayingUsersInWindow: newPaying,
     });
   } catch (e) {
-    console.error("[admin/metrics/overview]", e);
-    return NextResponse.json({ success: false, error: "Failed to load overview metrics" }, { status: 500 });
+    return adminMetricsErrorResponse("[admin/metrics/overview]", e, "Failed to load overview metrics");
   }
 }

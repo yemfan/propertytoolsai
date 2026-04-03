@@ -8,6 +8,7 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { safeInternalRedirect } from "@/lib/loginUrl";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
+import { getOAuthRedirectOrigin } from "@/lib/siteUrl";
 import { useAuth } from "@/components/AuthProvider";
 
 export default function LoginPage() {
@@ -135,6 +136,42 @@ function LoginPageInner() {
     }
   }
 
+  async function handleOAuth(provider: "google" | "apple") {
+    setError(null);
+    setLoading(true);
+    try {
+      const supabase = supabaseBrowser();
+      const raw = redirectParam;
+      const nextPath = safeInternalRedirect(raw) ?? "/dashboard";
+      const origin = getOAuthRedirectOrigin();
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+        },
+      });
+      if (oauthError) throw oauthError;
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Sign in failed.");
+      setLoading(false);
+    }
+  }
+
+  function handleCancel() {
+    try {
+      if (typeof window !== "undefined" && document.referrer) {
+        const ref = new URL(document.referrer);
+        if (ref.origin === window.location.origin) {
+          router.back();
+          return;
+        }
+      }
+    } catch {
+      /* ignore invalid referrer */
+    }
+    router.push("/");
+  }
+
   async function handleForgotPassword() {
     setError(null);
     setResetNotice(null);
@@ -154,6 +191,15 @@ function LoginPageInner() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-5">
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="text-sm font-medium text-gray-600 hover:text-gray-900"
+          >
+            Cancel
+          </button>
+        </div>
         {reason === "trial" ? (
           <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5 text-center text-[11px] font-medium text-sky-950">
             Sign in to continue. Next, we’ll open secure Stripe checkout for your Pro free trial (card on file; you are
@@ -165,6 +211,32 @@ function LoginPageInner() {
             Sign in to continue to checkout. We’ll return you to pricing right after.
           </p>
         ) : null}
+        <div className="space-y-2">
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => void handleOAuth("google")}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Continue with Google
+          </button>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => void handleOAuth("apple")}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Continue with Apple
+          </button>
+          <div className="relative py-1">
+            <div className="absolute inset-0 flex items-center" aria-hidden>
+              <div className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              <span className="bg-white px-2">Or use email</span>
+            </div>
+          </div>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1">
             <label className="block text-xs font-medium text-gray-700">Email</label>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CreditCard, ChevronDown, Home, House, LogOut, Search, Settings, User } from "lucide-react";
+import { Bell, CreditCard, ChevronDown, House, LogOut, Search, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
@@ -9,6 +9,7 @@ import { Topbar, filterNavSectionsByRole } from "@repo/ui";
 import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { leadSmartNav } from "@/nav.config";
+import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
 import { SupportChatLauncher } from "@/components/support/CustomerSupportChat";
 import { isAdminOrSupportRole, isAgentOrBrokerProfileRole } from "@/lib/rolePortalPaths";
 
@@ -39,11 +40,14 @@ function ProfileMenu({
   avatarUrl,
   onLogout,
   showCommercialPricing,
+  slimAccountBillingOnly,
 }: {
   email: string | null | undefined;
   avatarUrl?: string | null;
   onLogout: () => void;
   showCommercialPricing: boolean;
+  /** Agent / broker: only Account + Billing (portal), same as marketing {@link AccountMenu}. */
+  slimAccountBillingOnly: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -113,44 +117,69 @@ function ProfileMenu({
         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Signed in</p>
         <p className="truncate text-sm font-medium text-slate-900">{email || "Account"}</p>
       </div>
-      <Link
-        href="/dashboard"
-        className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-        role="menuitem"
-        onClick={() => setOpen(false)}
-      >
-        <House className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-        Home
-      </Link>
-      <Link
-        href="/account/profile"
-        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-        role="menuitem"
-        onClick={() => setOpen(false)}
-      >
-        <User className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-        My profile
-      </Link>
-      <Link
-        href="/dashboard/settings"
-        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-        role="menuitem"
-        onClick={() => setOpen(false)}
-      >
-        <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-        Account &amp; settings
-      </Link>
-      {showCommercialPricing ? (
-        <Link
-          href="/agent/pricing"
-          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-          role="menuitem"
-          onClick={() => setOpen(false)}
-        >
-          <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-          Plans &amp; pricing
-        </Link>
-      ) : null}
+      {slimAccountBillingOnly ? (
+        <>
+          <Link
+            href="/account/profile"
+            className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            <User className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+            Account
+          </Link>
+          <Link
+            href="/portal"
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+            Billing
+          </Link>
+        </>
+      ) : (
+        <>
+          <Link
+            href="/dashboard"
+            className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            <House className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+            Home
+          </Link>
+          <Link
+            href="/account/profile"
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            <User className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+            My profile
+          </Link>
+          <Link
+            href="/dashboard/settings"
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+            Account &amp; settings
+          </Link>
+          {showCommercialPricing ? (
+            <Link
+              href="/agent/pricing"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+            >
+              <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+              Plans &amp; pricing
+            </Link>
+          ) : null}
+        </>
+      )}
       <div className="mt-1 border-t border-slate-100 pt-1">
         <button
           type="button"
@@ -213,6 +242,8 @@ export default function TopBar({
   );
   const showAgentBrokerPromotion = isAgentOrBrokerProfileRole(appRole);
   const hideCommercialPricing = isAdminOrSupportRole(appRole);
+  const slimAccountBillingOnly =
+    isAgentOrBrokerProfileRole(appRole) && !isAdminOrSupportRole(appRole);
   const router = useRouter();
   const [tokens, setTokens] = useState<number | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
@@ -294,13 +325,9 @@ export default function TopBar({
       leadingExtra={
         <Link
           href="/dashboard"
-          className="flex min-w-0 shrink-0 items-center gap-1.5 rounded-2xl p-1 outline-none transition hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
+          className="flex min-w-0 shrink-0 items-center rounded-2xl p-1 outline-none transition hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
         >
-          <Home className="h-7 w-7 shrink-0 text-[#0072ce] sm:h-8 sm:w-8" strokeWidth={2} aria-hidden />
-          <span className="hidden min-[400px]:flex min-w-0 flex-col leading-tight">
-            <span className="truncate text-sm font-bold tracking-tight text-[#0072ce]">LeadSmart AI</span>
-            <span className="truncate text-xs font-semibold text-slate-800">AI</span>
-          </span>
+          <LeadSmartLogo compact className="h-8 max-w-[min(100%,200px)] w-auto sm:h-9" priority={false} />
         </Link>
       }
       searchSlot={<div className="hidden min-[480px]:block w-full">{searchField("ls-dashboard-search")}</div>}
@@ -359,6 +386,7 @@ export default function TopBar({
             avatarUrl={avatarUrl}
             onLogout={onLogout}
             showCommercialPricing={!hideCommercialPricing}
+            slimAccountBillingOnly={slimAccountBillingOnly}
           />
         </>
       }

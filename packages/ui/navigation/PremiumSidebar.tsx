@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Premium collapsed SaaS sidebar (desktop `md+`):
+ * Premium collapsed SaaS sidebar (desktop `lg+`; below `lg` use {@link MobileSidebar} in the top bar):
  * default-collapsed icon rail, hover tooltips, animated groups, `isLinkActive` + `match[]`,
  * gray palette; header toggles rail with ChevronRight (collapsed) / ChevronDown (expanded).
  * Consumes the same `NavSection` trees as PropertyTools + LeadSmart AI `nav.config`.
@@ -18,6 +18,11 @@ export type PremiumSidebarProps = {
   appName: string;
   sections: NavSection[];
   footer?: ReactNode;
+  /**
+   * Rendered above the main nav (below the optional branding header), e.g. assigned agent card.
+   * Use with `branding="none"` to pin utility UI to the top of the rail.
+   */
+  topSlot?: ReactNode;
   /** Shown under the app name when expanded (e.g. nav config `sidebarTitle`). */
   workspaceLabel?: string;
   /**
@@ -103,6 +108,7 @@ export function PremiumSidebar({
   appName,
   sections,
   footer,
+  topSlot,
   workspaceLabel = "Workspace",
   branding = "full",
   height = "viewport",
@@ -149,13 +155,13 @@ export function PremiumSidebar({
     <aside
       aria-label={appName}
       className={cn(
-        "flex max-sm:hidden sm:shrink-0 sm:flex-col sm:overflow-hidden",
-        useStretchHeight ? "sm:h-full sm:min-h-0" : "sm:h-screen",
+        "hidden lg:flex lg:shrink-0 lg:flex-col lg:overflow-hidden",
+        useStretchHeight ? "lg:h-full lg:min-h-0" : "lg:h-screen",
         "border-r border-slate-200/90 bg-gradient-to-b from-white via-white to-slate-50/80 backdrop-blur-md",
         "shadow-[1px_0_0_rgba(15,23,42,0.04)]",
         "transition-[width] duration-300 ease-[cubic-bezier(0.33,1,0.68,1)]",
         motionSafe,
-        collapsed ? "sm:w-[92px]" : "sm:w-[272px]",
+        collapsed ? "lg:w-[92px]" : "lg:w-[272px]",
         className
       )}
     >
@@ -185,6 +191,12 @@ export function PremiumSidebar({
               </div>
             )}
           </div>
+        </div>
+      ) : null}
+
+      {topSlot ? (
+        <div className="shrink-0 border-b border-slate-200/80 bg-white/70 px-3 py-3 backdrop-blur-sm">
+          {topSlot}
         </div>
       ) : null}
 

@@ -32,11 +32,18 @@ export function AgentSignupForm({
 }: AgentSignupFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const redirectParam = searchParams.get("redirect");
   const { values: prefill, hasSession, loading: prefillLoading } = useSignupProfilePrefill(
     "agent",
     overlayPrefill
   );
   const pv = prefill as SignupPrefillAgent;
+
+  /** Big callout only when we’re clearly in a “finish setup” flow (dashboard gate or modal), not casual browsing while signed in. */
+  const showSignedInPrefillBanner =
+    hasSession &&
+    !prefillLoading &&
+    (Boolean(safeInternalRedirect(redirectParam)) || layout === "dialog");
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -124,7 +131,7 @@ export function AgentSignupForm({
         if (upsertAgentErr) throw upsertAgentErr;
 
         onSuccess?.();
-        const after = safeInternalRedirect(searchParams.get("redirect"));
+        const after = safeInternalRedirect(redirectParam);
         router.push(after ?? "/dashboard");
         onClose?.();
         return;
@@ -194,7 +201,7 @@ export function AgentSignupForm({
       if (upsertAgentErr) throw upsertAgentErr;
 
       onSuccess?.();
-      const after = safeInternalRedirect(searchParams.get("redirect"));
+      const after = safeInternalRedirect(redirectParam);
       router.push(after ?? "/dashboard");
       onClose?.();
     } catch (e: unknown) {
@@ -228,10 +235,14 @@ export function AgentSignupForm({
           {hasSession ? "Complete agent setup" : START_FREE_AS_AGENT_LABEL}
         </h1>
         <p className="text-xs text-gray-600">Get access to the agent portal and CMA tools.</p>
-        {hasSession ? (
+        {showSignedInPrefillBanner ? (
           <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-[11px] font-medium text-sky-950">
             You&apos;re signed in — we filled this form from your account. Finish the fields below to activate your
             agent profile (no new password needed).
+          </p>
+        ) : hasSession ? (
+          <p className="text-[11px] text-gray-500">
+            You&apos;re signed in — no password needed to save your agent profile.
           </p>
         ) : null}
         <p className="pt-2 text-[11px] text-gray-500">

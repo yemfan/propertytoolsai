@@ -11,7 +11,11 @@ import {
   getPropertyToolsConsumerAccountProfileUrl,
   getPropertyToolsConsumerPostLoginUrl,
 } from "@/lib/propertyToolsConsumerUrl";
-import { isAdminOrSupportRole, resolveRoleHomePath } from "@/lib/rolePortalPaths";
+import {
+  isAdminOrSupportRole,
+  isAgentOrBrokerProfileRole,
+  resolveRoleHomePath,
+} from "@/lib/rolePortalPaths";
 
 type MePayload = { role?: string; has_agent_record?: boolean; avatar_url?: string | null };
 
@@ -109,7 +113,14 @@ export default function AccountMenu() {
     };
   }, [user]);
 
-  const { workspaceHref, profileHref, settingsHref, pricingHref, hideCommercialPricing } = useMemo(() => {
+  const {
+    workspaceHref,
+    profileHref,
+    settingsHref,
+    pricingHref,
+    hideCommercialPricing,
+    slimAgentBrokerHeaderMenu,
+  } = useMemo(() => {
     if (!me) {
       return {
         workspaceHref: "/",
@@ -117,6 +128,7 @@ export default function AccountMenu() {
         settingsHref: "/dashboard/settings",
         pricingHref: "/pricing",
         hideCommercialPricing: false,
+        slimAgentBrokerHeaderMenu: false,
       } as const;
     }
     const role = me.role ?? "user";
@@ -129,16 +141,20 @@ export default function AccountMenu() {
         settingsHref: getPropertyToolsConsumerAccountProfileUrl(),
         pricingHref: "/pricing",
         hideCommercialPricing: false,
+        slimAgentBrokerHeaderMenu: false,
       } as const;
     }
     const home = resolveRoleHomePath(role, hasAgent);
     const settings = hasAgent ? "/dashboard/settings" : "/portal";
+    const slim =
+      isAgentOrBrokerProfileRole(role) && !isAdminOrSupportRole(role);
     return {
       workspaceHref: home,
       profileHref: "/account/profile",
       settingsHref: settings,
       pricingHref: "/agent/pricing",
       hideCommercialPricing: isAdminOrSupportRole(role),
+      slimAgentBrokerHeaderMenu: slim,
     } as const;
   }, [me]);
 
@@ -172,42 +188,65 @@ export default function AccountMenu() {
         <p className="mt-1 break-all text-sm font-semibold text-gray-900">{email || "Your account"}</p>
       </div>
       <div className="py-1">
-        <Link
-          href={workspaceHref}
-          role="menuitem"
-          className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
-          onClick={() => setOpen(false)}
-        >
-          Dashboard
-        </Link>
-        <Link
-          href={profileHref}
-          role="menuitem"
-          className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
-          onClick={() => setOpen(false)}
-        >
-          My profile
-        </Link>
-        {settingsHref !== profileHref ? (
-          <Link
-            href={settingsHref}
-            role="menuitem"
-            className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
-            onClick={() => setOpen(false)}
-          >
-            Account &amp; settings
-          </Link>
-        ) : null}
-        {!hideCommercialPricing ? (
-          <Link
-            href={pricingHref}
-            role="menuitem"
-            className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
-            onClick={() => setOpen(false)}
-          >
-            Plans &amp; billing
-          </Link>
-        ) : null}
+        {slimAgentBrokerHeaderMenu ? (
+          <>
+            <Link
+              href="/account/profile"
+              role="menuitem"
+              className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
+              onClick={() => setOpen(false)}
+            >
+              Account
+            </Link>
+            <Link
+              href="/portal"
+              role="menuitem"
+              className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
+              onClick={() => setOpen(false)}
+            >
+              Billing
+            </Link>
+          </>
+        ) : (
+          <>
+            <Link
+              href={workspaceHref}
+              role="menuitem"
+              className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
+              onClick={() => setOpen(false)}
+            >
+              Dashboard
+            </Link>
+            <Link
+              href={profileHref}
+              role="menuitem"
+              className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
+              onClick={() => setOpen(false)}
+            >
+              My profile
+            </Link>
+            {settingsHref !== profileHref ? (
+              <Link
+                href={settingsHref}
+                role="menuitem"
+                className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
+                onClick={() => setOpen(false)}
+              >
+                Account &amp; settings
+              </Link>
+            ) : null}
+            {!hideCommercialPricing ? (
+              <Link
+                href={pricingHref}
+                role="menuitem"
+                className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
+                onClick={() => setOpen(false)}
+              >
+                Plans &amp; billing
+              </Link>
+            ) : null}
+          </>
+        )}
       </div>
       <div className="border-t border-gray-100 py-1">
         <button
