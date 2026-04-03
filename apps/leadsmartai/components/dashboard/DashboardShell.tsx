@@ -26,7 +26,7 @@ export default function AppDashboardShell({
   children,
 }: {
   email: string | null | undefined;
-  /** `user_profiles.role` — used to show admin-only nav (e.g. Platform Overview). */
+  /** `leadsmart_users.role` — used to show admin-only nav (e.g. Platform Overview). */
   appRole?: string | null;
   children: ReactNode;
 }) {

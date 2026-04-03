@@ -10,7 +10,7 @@ export default function AccountProfilePage() {
   return (
     <div className="mx-auto max-w-lg px-4 py-10">
       <div className="mb-6">
-        <Link href="/" className="text-sm font-medium text-blue-700 hover:underline">
+        <Link href="/dashboard" className="text-sm font-medium text-blue-700 hover:underline">
           ← Back
         </Link>
         <h1 className="mt-4 text-2xl font-bold text-gray-900">My profile</h1>
