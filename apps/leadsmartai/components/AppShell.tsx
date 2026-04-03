@@ -44,7 +44,7 @@ function MarketingTopChrome() {
 /**
  * LeadSmart AI — App Router shell:
  * - Marketing / tools: `PremiumSidebar` + `Topbar` (`MobileSidebar` inside top bar) from `@repo/ui`
- * - Dashboard uses `DashboardShell` in `app/dashboard/layout.tsx`
+ * - Dashboard + account settings use `DashboardShell` in `app/dashboard/layout.tsx` and `app/account/layout.tsx`
  */
 function isPlatformDashboardPath(pathname: string): boolean {
   return (
