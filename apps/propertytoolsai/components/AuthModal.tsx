@@ -147,8 +147,12 @@ export default function AuthModal(props: {
     try {
       const supabase = supabaseBrowser();
       const origin = getOAuthRedirectOrigin();
+      // Exclude auth pages as redirect targets — they would loop the user back to the
+      // login dialog after Google/Apple completes. Default to /dashboard instead.
+      const AUTH_PAGES = ["/login", "/signup", "/forgot-password", "/reset-password", "/auth"];
       const rawNext = `${window.location.pathname}${window.location.search || ""}`;
-      const next = safeInternalRedirect(rawNext) ?? "/dashboard";
+      const isAuthPage = AUTH_PAGES.some((p) => window.location.pathname.startsWith(p));
+      const next = (!isAuthPage && safeInternalRedirect(rawNext)) || "/dashboard";
       const { error: err } = await supabase.auth.signInWithOAuth({
         provider,
         options: {

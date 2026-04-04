@@ -105,6 +105,12 @@ function LoginPageInner() {
             persists.
           </div>
         ) : null}
+        {searchParams?.get("error") === "oauth" ? (
+          <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            Google sign-in could not be completed. This can happen if the sign-in window was open
+            too long or was opened in a different browser tab. Please try again.
+          </div>
+        ) : null}
 
         <form onSubmit={handleLogin} className="mt-8 space-y-4">
           <div className="space-y-2">

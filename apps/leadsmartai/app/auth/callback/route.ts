@@ -45,6 +45,9 @@ export async function GET(request: Request) {
     });
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      console.error("[auth/callback] exchangeCodeForSession failed:", error.message, error.status);
+    }
     if (!error) {
       let user = (await supabase.auth.getUser()).data.user;
       if (user?.user_metadata) {
@@ -94,5 +97,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL("/?error=oauth", url.origin));
+  return NextResponse.redirect(new URL("/login?error=oauth", url.origin));
 }

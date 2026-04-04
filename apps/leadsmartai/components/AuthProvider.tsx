@@ -64,9 +64,12 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     const supabase = supabaseBrowser();
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       void refresh();
-      if (event === "SIGNED_IN") {
+      // Close the modal on SIGNED_IN (email/password, magic link) AND on INITIAL_SESSION
+      // (fresh page load after OAuth redirect — Supabase fires INITIAL_SESSION, not SIGNED_IN,
+      // when restoring a session from cookies). Without this, the modal stays open after Google OAuth.
+      if (session?.user) {
         setAuthOpen(false);
       }
     });
