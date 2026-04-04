@@ -22,6 +22,7 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code");
   const nextRaw = url.searchParams.get("next") ?? "/";
   const next = nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : "/";
+  const provider = url.searchParams.get("provider") ?? "";
 
   if (code) {
     const cookieStore = await cookies();
@@ -97,5 +98,6 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL("/login?error=oauth", url.origin));
+  const providerQs = provider ? `&provider=${encodeURIComponent(provider)}` : "";
+  return NextResponse.redirect(new URL(`/login?error=oauth${providerQs}`, url.origin));
 }

@@ -26,6 +26,7 @@ function LoginPageInner() {
   const redirectParam = searchParams?.get("redirect") ?? searchParams?.get("next");
   const reason = searchParams?.get("reason");
   const oauthError = searchParams?.get("error") === "oauth";
+  const oauthProvider = searchParams?.get("provider") ?? "";
 
   const [email, setEmail] = useState("");
 
@@ -148,7 +149,7 @@ function LoginPageInner() {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(nextPath)}&provider=${provider}`,
         },
       });
       if (oauthError) throw oauthError;
@@ -215,7 +216,7 @@ function LoginPageInner() {
         ) : null}
         {oauthError ? (
           <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-center text-[11px] font-medium text-red-800">
-            Google sign-in could not be completed. This can happen if the sign-in window was open
+            {oauthProvider === "apple" ? "Apple" : "Google"} sign-in could not be completed. This can happen if the sign-in window was open
             too long or was opened in a different browser tab. Please try again.
           </p>
         ) : null}

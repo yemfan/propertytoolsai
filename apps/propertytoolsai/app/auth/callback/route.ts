@@ -16,6 +16,7 @@ export async function GET(req: Request) {
   const nextRaw = requestUrl.searchParams.get("next") ?? "/dashboard";
   const next =
     nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : "/dashboard";
+  const provider = requestUrl.searchParams.get("provider") ?? "";
 
   if (code) {
     const cookieStore = await cookies();
@@ -63,5 +64,6 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL("/login?error=oauth", requestUrl.origin));
+  const providerQs = provider ? `&provider=${encodeURIComponent(provider)}` : "";
+  return NextResponse.redirect(new URL(`/login?error=oauth${providerQs}`, requestUrl.origin));
 }
