@@ -22,7 +22,7 @@ export default function InboxPage() {
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           <Link
             href="/dashboard/send"
-            className="inline-flex rounded-xl bg-[#0072ce] px-4 py-2 text-sm font-semibold text-white hover:bg-[#005fa3]"
+            className="inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
           >
             Open send center
           </Link>

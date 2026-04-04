@@ -1,4 +1,4 @@
--- Let signed-in users upload to avatars/{auth.uid()}/... using the browser client (no service role on Vercel).
+push t signed-in users upload to avatars/{auth.uid()}/... using the browser client (no service role on Vercel).
 -- RLS on storage.objects defaults to deny; service_role still bypasses for POST /api/me/avatar.
 
 drop policy if exists "avatars_public_read" on storage.objects;

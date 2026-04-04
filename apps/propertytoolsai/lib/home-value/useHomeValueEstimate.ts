@@ -245,8 +245,8 @@ export function useHomeValueEstimate() {
       return;
     }
 
-    setPendingAddress(parsed);
-    setUiState("address_selected");
+    setError("");
+    await confirmSelectedAddress(parsed);
   }
 
   async function useMyLocation() {

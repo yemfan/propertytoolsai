@@ -9,7 +9,7 @@ export default function ReportNotFound() {
       </p>
       <Link
         href="/"
-        className="mt-8 rounded-xl bg-[#0066b3] px-6 py-3 text-sm font-semibold text-white hover:bg-[#005ca8]"
+        className="mt-8 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
       >
         LeadSmart AI home
       </Link>

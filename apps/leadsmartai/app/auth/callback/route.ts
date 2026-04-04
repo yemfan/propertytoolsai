@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { ensureSharedUserTablesAfterOAuth } from "@/lib/auth/bootstrapSharedUserTables";
 import { oauthBackfillFullName } from "@/lib/auth/canonicalUserContact";
 import { supabaseAuthCookieOptions } from "@/lib/authCookieOptions";
 import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
@@ -45,9 +46,7 @@ export async function GET(request: Request) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      let user = (await supabase.auth.getUser()).data.user;
       if (user?.user_metadata) {
         const meta = user.user_metadata as Record<string, unknown>;
         const backfill = oauthBackfillFullName(meta);
@@ -55,8 +54,13 @@ export async function GET(request: Request) {
           const { error: nameErr } = await supabase.auth.updateUser({ data: { full_name: backfill } });
           if (nameErr) {
             console.error("[auth/callback] oauth full_name backfill:", nameErr.message);
+          } else {
+            user = (await supabase.auth.getUser()).data.user ?? user;
           }
         }
+      }
+      if (user) {
+        await ensureSharedUserTablesAfterOAuth(user, "leadsmart");
       }
 
       const ctx = await fetchUserPortalContext(supabase);

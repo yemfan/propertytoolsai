@@ -24,6 +24,8 @@ type Props = {
   onSubmit: () => void;
   onUseMyLocation?: () => void;
   isBusy: boolean;
+  /** When an autocomplete pick is waiting on the confirm card — avoid a second CTA that would re-parse and drop lat/lng. */
+  awaitingAddressConfirm?: boolean;
 };
 
 export function AddressAutocompleteInput({
@@ -33,6 +35,7 @@ export function AddressAutocompleteInput({
   onSubmit,
   onUseMyLocation,
   isBusy,
+  awaitingAddressConfirm = false,
 }: Props) {
   const provider = useAddressProvider();
   const isGoogle = provider.providerName === "google";
@@ -169,7 +172,12 @@ export function AddressAutocompleteInput({
             <button
               type="button"
               onClick={onSubmit}
-              disabled={!value.trim() || isBusy}
+              disabled={!value.trim() || isBusy || awaitingAddressConfirm}
+              title={
+                awaitingAddressConfirm
+                  ? "Confirm the address on the card below to run the estimate."
+                  : undefined
+              }
               className="shrink-0 rounded-2xl bg-gray-900 px-6 py-4 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {isBusy ? "Estimating..." : "Get Estimate"}

@@ -236,7 +236,7 @@ export default function ComparisonReportBuilderClient({
         <button
           type="submit"
           disabled={loading || isFree}
-          className="rounded-xl bg-[#0066b3] px-6 py-3 text-sm font-semibold text-white hover:bg-[#005ca8] disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "Generating report…" : "Generate report & AI content"}
         </button>

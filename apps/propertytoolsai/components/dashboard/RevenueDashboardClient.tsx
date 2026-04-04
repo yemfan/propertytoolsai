@@ -385,7 +385,7 @@ export default function RevenueDashboardClient() {
                       <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="revenueStrokeGradient" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#2563eb" />
+                      <stop offset="0%" stopColor="#0072ce" />
                       <stop offset="100%" stopColor="#6366f1" />
                     </linearGradient>
                   </defs>

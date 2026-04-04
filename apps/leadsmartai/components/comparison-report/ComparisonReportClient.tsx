@@ -87,7 +87,7 @@ export default function ComparisonReportClient({ report }: { report: ComparisonR
           type="button"
           onClick={onDownloadPdf}
           disabled={pdfLoading}
-          className="rounded-xl bg-[#0066b3] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#005ca8] disabled:opacity-60"
+          className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-60"
         >
           {pdfLoading ? "Preparing PDF…" : "Download PDF"}
         </button>
@@ -272,7 +272,7 @@ export default function ComparisonReportClient({ report }: { report: ComparisonR
             <button
               type="button"
               onClick={() => setFormOpen((v) => !v)}
-              className="inline-flex items-center justify-center rounded-xl bg-[#0066b3] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#005ca8]"
+              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
             >
               {formOpen ? "Close form" : "Message form"}
             </button>

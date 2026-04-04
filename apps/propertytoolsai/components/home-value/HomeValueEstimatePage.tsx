@@ -28,6 +28,7 @@ export default function HomeValuePage() {
     nextActions,
     history,
     restoreFromHistory,
+    busyRefine,
   } = useHomeValueEstimate();
 
   return (
@@ -38,7 +39,8 @@ export default function HomeValuePage() {
           onChange={setAddressInput}
           onSelect={prepareAddressSelection}
           onSubmit={() => void startEstimateFromTypedInput()}
-          isBusy={uiState === "estimating"}
+          isBusy={busyRefine}
+          awaitingAddressConfirm={!!pendingAddress}
         />
 
         <RecentHistory
@@ -60,7 +62,7 @@ export default function HomeValuePage() {
               clearPendingAddress();
               setAddressInput(pendingAddress.fullAddress);
             }}
-            isBusy={uiState === "estimating"}
+            isBusy={busyRefine}
           />
         ) : null}
 

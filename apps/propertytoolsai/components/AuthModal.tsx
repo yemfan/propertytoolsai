@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { safeInternalRedirect } from "@/lib/loginUrl";
+import { getOAuthRedirectOrigin } from "@/lib/siteUrl";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type Mode = "login" | "signup";
@@ -144,10 +146,13 @@ export default function AuthModal(props: {
     setLoading(true);
     try {
       const supabase = supabaseBrowser();
+      const origin = getOAuthRedirectOrigin();
+      const rawNext = `${window.location.pathname}${window.location.search || ""}`;
+      const next = safeInternalRedirect(rawNext) ?? "/dashboard";
       const { error: err } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
         },
       });
       if (err) {
@@ -284,7 +289,7 @@ export default function AuthModal(props: {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-[#2563eb] py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1d4ed8] disabled:opacity-60"
+                className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
               >
                 {loading ? "Signing in…" : "Sign in"}
               </button>
@@ -345,7 +350,7 @@ export default function AuthModal(props: {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-[#2563eb] py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1d4ed8] disabled:opacity-60"
+                className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
               >
                 {loading ? "Creating account…" : "Create free account"}
               </button>

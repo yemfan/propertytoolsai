@@ -31,7 +31,7 @@ export default function HeaderAuthActions() {
       <button
         type="button"
         onClick={() => openAuth("signup")}
-        className="rounded-lg bg-[#0072ce] px-3 py-2 text-xs font-semibold text-white hover:bg-[#005fa3] sm:text-sm"
+        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 sm:text-sm"
       >
         Sign up
       </button>

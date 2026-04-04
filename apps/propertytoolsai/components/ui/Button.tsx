@@ -26,7 +26,7 @@ function buttonClasses(
     "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
   const variants: Record<NonNullable<ButtonProps["variant"]>, string> = {
     default:
-      "bg-[#0072ce] !text-white shadow-sm hover:bg-[#005ca8] focus-visible:ring-[#0072ce]",
+      "bg-blue-600 !text-white shadow-sm hover:bg-blue-700 focus-visible:ring-[#0072ce]",
     outline:
       "border-2 border-slate-200 bg-white !text-slate-900 hover:bg-slate-50 focus-visible:ring-[#0072ce]",
     secondary: "bg-slate-100 !text-slate-900 hover:bg-slate-200 focus-visible:ring-[#0072ce]",
@@ -72,9 +72,9 @@ export { Button, buttonClasses };
 type LegacyVariant = "primary" | "secondary" | "cta" | "ghost";
 
 const legacyVariantClasses: Record<LegacyVariant, string> = {
-  primary: "bg-[#2563eb] !text-white shadow-sm hover:bg-[#1d4ed8]",
-  secondary: "bg-[#0d9488] !text-white shadow-sm hover:bg-[#0f766e]",
-  cta: "bg-[#f97316] !text-white shadow-sm hover:bg-[#ea580c]",
+  primary: "bg-blue-600 !text-white shadow-sm hover:bg-blue-700 focus-visible:ring-[#0072ce]",
+  secondary: "bg-slate-100 !text-slate-900 shadow-sm hover:bg-slate-200 focus-visible:ring-[#0072ce]",
+  cta: "bg-[#ff8c42] !text-white shadow-sm hover:bg-[#e9732a] focus-visible:ring-[#ff8c42]",
   ghost: "border border-slate-200 bg-white !text-slate-800 hover:bg-slate-50",
 };
 

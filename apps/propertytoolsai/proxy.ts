@@ -93,6 +93,9 @@ export async function proxy(request: NextRequest) {
   if (!upRow) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
+    url.searchParams.set("next", `${pathname}${request.nextUrl.search || ""}`);
+    url.searchParams.set("reason", "missing_profile");
     return NextResponse.redirect(url);
   }
 

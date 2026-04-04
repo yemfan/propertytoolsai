@@ -5,6 +5,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { safeInternalRedirect } from "@/lib/loginUrl";
+import { getOAuthRedirectOrigin } from "@/lib/siteUrl";
 
 export default function LoginPage() {
   return (
@@ -32,10 +33,11 @@ function LoginPageInner() {
       setError("");
       const target = nextParam ?? redirectParam;
       const safe = target ? safeInternalRedirect(target) : "/dashboard";
+      const origin = getOAuthRedirectOrigin();
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safe)}`,
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safe)}`,
         },
       });
       if (oauthError) throw oauthError;
@@ -93,6 +95,13 @@ function LoginPageInner() {
         {reason === "password_reset" ? (
           <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
             Your password was updated. Sign in with your new password.
+          </div>
+        ) : null}
+        {reason === "missing_profile" ? (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            We could not load your saved profile. Use <strong>Continue with Google</strong> or{" "}
+            <strong>Continue with Apple</strong> once more to finish setup, or contact support if this message
+            persists.
           </div>
         ) : null}
 

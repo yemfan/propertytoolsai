@@ -7,6 +7,9 @@
   --color-brand-accent: #ff8c42;
   --color-brand-surface: #f5f5f5;
   --color-brand-text: #333333;
+  /* Shared with PropertyTools: bg-blue-600 / hover:bg-blue-700 = brand primary + hover. */
+  --color-blue-600: #0072ce;
+  --color-blue-700: #005ca8;
 }
 
 /* Plain CSS (not @layer) — avoids Turbopack/PostCSS ordering issues on Vercel */

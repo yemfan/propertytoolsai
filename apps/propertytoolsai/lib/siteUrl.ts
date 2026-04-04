@@ -1,12 +1,12 @@
 /**
- * Canonical site origin for metadata (`metadataBase`), Open Graph, and absolute URLs.
+ * Canonical site origin for metadata and OAuth redirects.
  *
- * **Production:** Set `NEXT_PUBLIC_SITE_URL` in Vercel to your canonical origin (e.g. `https://www.propertytoolsai.com`).
- * **Preview:** Uses `VERCEL_URL` when unset so icons load from the preview URL.
+ * **Production:** Set `NEXT_PUBLIC_SITE_URL` in Vercel (e.g. `https://www.propertytoolsai.com`) so
+ * Supabase `redirectTo` matches Authentication → URL Configuration → Redirect URLs exactly
+ * (including apex vs `www`).
  *
- * Values without a scheme are normalized to `https://…` so `new URL()` never throws.
+ * **Local dev:** When unset, OAuth uses `window.location.origin` from the browser.
  */
-/** Canonical public origin (www matches SEO helpers that use `www.propertytoolsai.com`). */
 const DEFAULT_ORIGIN = "https://www.propertytoolsai.com";
 
 function normalizeOrigin(raw: string, fallback: string): string {
@@ -27,22 +27,27 @@ export function getSiteUrl(): string {
   if (fromEnv) {
     return normalizeOrigin(fromEnv, DEFAULT_ORIGIN);
   }
-  /**
-   * Production on Vercel without `NEXT_PUBLIC_SITE_URL` would otherwise use `VERCEL_URL` (*.vercel.app).
-   * Metadata/icons then point at the deployment host while users hit the custom domain — favicons and OG
-   * URLs look wrong or fail. Preview deployments still use `VERCEL_URL` below.
-   */
-  if (process.env.VERCEL_ENV === "production") {
-    return DEFAULT_ORIGIN;
-  }
   const vercel = process.env.VERCEL_URL?.trim();
   if (vercel) {
     return normalizeOrigin(`https://${vercel}`, DEFAULT_ORIGIN);
   }
   if (process.env.NODE_ENV === "development") {
-    // Match `next dev` default (3000). Monorepo `dev:propertytoolsai` sets `PORT=3001` + `--port 3001`.
-    const port = process.env.PORT || "3000";
-    return `http://localhost:${port}`;
+    return "http://localhost:3001";
+  }
+  return DEFAULT_ORIGIN;
+}
+
+/**
+ * Base URL for Supabase OAuth `redirectTo` (Google / Apple).
+ * Must match an entry under Supabase → Authentication → URL Configuration → Redirect URLs.
+ */
+export function getOAuthRedirectOrigin(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (fromEnv) {
+    return normalizeOrigin(fromEnv, DEFAULT_ORIGIN);
+  }
+  if (typeof window !== "undefined") {
+    return window.location.origin;
   }
   return DEFAULT_ORIGIN;
 }
