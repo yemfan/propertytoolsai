@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
+import {
+  mirrorUserProfileContact,
+  toE164Us,
+  isValidUsPhone,
+  userMetadataWithFullNameOnly,
+} from "@/lib/auth/canonicalUserContact";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { supabaseServer } from "@/lib/supabaseServer";
+
+type UpgradeBody = {
+  full_name?: string;
+  phone?: string;
+};
 
 export async function POST(req: Request) {
   try {
@@ -30,7 +41,72 @@ export async function POST(req: Request) {
       );
     }
 
+    let body: UpgradeBody = {};
+    try {
+      const ct = req.headers.get("content-type") ?? "";
+      if (ct.includes("application/json")) {
+        body = (await req.json()) as UpgradeBody;
+      }
+    } catch {
+      body = {};
+    }
+
+    const fullName = typeof body.full_name === "string" ? body.full_name.trim() : "";
+    const phoneRaw = typeof body.phone === "string" ? body.phone.trim() : "";
+    if (!fullName) {
+      return NextResponse.json(
+        { error: "Full name is required to complete agent setup." },
+        { status: 400 }
+      );
+    }
+    if (!phoneRaw || !isValidUsPhone(phoneRaw)) {
+      return NextResponse.json(
+        { error: "A valid US phone number (10 digits) is required to complete agent setup." },
+        { status: 400 }
+      );
+    }
+    const e164 = toE164Us(phoneRaw.replace(/\D/g, ""));
+    if (!e164) {
+      return NextResponse.json({ error: "Invalid phone number." }, { status: 400 });
+    }
+
     const supabaseAdmin = supabaseServer;
+
+    const { data: existingAuth, error: authGetErr } = await supabaseAdmin.auth.admin.getUserById(
+      user.id
+    );
+    if (authGetErr || !existingAuth?.user) {
+      return NextResponse.json({ error: "Could not load account." }, { status: 500 });
+    }
+
+    const meta = userMetadataWithFullNameOnly(
+      (existingAuth.user.user_metadata as Record<string, unknown>) ?? {},
+      fullName
+    );
+
+    const { error: authUpErr } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+      email: user.email.trim(),
+      phone: e164,
+      user_metadata: meta,
+    });
+    if (authUpErr) {
+      return NextResponse.json(
+        { error: authUpErr.message || "Could not update your profile." },
+        { status: 400 }
+      );
+    }
+
+    try {
+      await mirrorUserProfileContact(supabaseAdmin, {
+        userId: user.id,
+        email: user.email.trim(),
+        phone: e164,
+        fullName,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Could not sync profile.";
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
 
     const { data: lsRow, error: lsErr } = await supabaseAdmin
       .from("leadsmart_users")
@@ -44,11 +120,6 @@ export async function POST(req: Request) {
     if (currentRole === "agent") {
       return NextResponse.json({ ok: true, upgraded: false });
     }
-
-    const { error: upErr } = await supabaseAdmin
-      .from("user_profiles")
-      .upsert({ user_id: user.id, email: user.email }, { onConflict: "user_id" });
-    if (upErr) throw upErr;
 
     const now = new Date().toISOString();
     if (lsRow) {

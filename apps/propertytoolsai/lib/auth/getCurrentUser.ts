@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
+import { fullNameFromUserMetadata } from "@/lib/auth/canonicalUserContact";
 import { mapLegacyUserProfileRoleToRbac } from "./mapLegacyRole";
 import type { ProfileRow } from "./profileTypes";
 import type { UserRole } from "./roles";
@@ -96,8 +97,7 @@ export async function getCurrentUserWithProfile(): Promise<SessionUserWithProfil
   }
 
   const meta = user.user_metadata as Record<string, unknown> | undefined;
-  const fullName =
-    typeof meta?.full_name === "string" ? meta.full_name : null;
+  const fullName = fullNameFromUserMetadata(meta);
 
   const synthetic: ProfileRow = {
     id: user.id,

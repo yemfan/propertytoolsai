@@ -1,4 +1,11 @@
 import { NextResponse } from "next/server";
+import {
+  fullNameFromUserMetadata,
+  mirrorUserProfileContact,
+  toE164Us,
+  isValidUsPhone,
+  userMetadataWithFullNameOnly,
+} from "@/lib/auth/canonicalUserContact";
 import { getUserFromRequest } from "@/lib/authFromRequest";
 import { supabaseAdmin, isSupabaseServiceConfigured } from "@/lib/supabase/admin";
 
@@ -16,7 +23,7 @@ type Body = {
 };
 
 /**
- * PATCH /api/me/profile — update `user_profiles` fields for the signed-in user.
+ * PATCH /api/me/profile — update profile fields on **Supabase Auth** (`auth.users`), then mirror `user_profiles`.
  * Does not update RBAC `role`; that lives on `leadsmart_users` (admin-assigned).
  */
 export async function PATCH(req: Request) {
@@ -36,10 +43,29 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
 
-  const updates: Record<string, string> = {};
-  if (typeof body.full_name === "string") {
-    updates.full_name = body.full_name.trim();
+  if (
+    body.full_name === undefined &&
+    body.email === undefined &&
+    body.phone === undefined
+  ) {
+    return NextResponse.json({ ok: false, error: "No valid fields to update" }, { status: 400 });
   }
+
+  const { data: authData, error: authGetErr } = await supabaseAdmin.auth.admin.getUserById(user.id);
+  if (authGetErr || !authData?.user) {
+    return NextResponse.json({ ok: false, error: "Could not load account." }, { status: 500 });
+  }
+
+  const u = authData.user;
+  const meta = { ...(u.user_metadata as Record<string, unknown>) };
+
+  let nextFullName =
+    typeof body.full_name === "string"
+      ? body.full_name.trim()
+      : fullNameFromUserMetadata(meta) ?? "";
+  let nextEmail = (u.email ?? "").trim();
+  let nextPhone: string | null = u.phone ?? null;
+
   if (typeof body.email === "string") {
     const trimmed = body.email.trim();
     if (!trimmed) {
@@ -48,47 +74,55 @@ export async function PATCH(req: Request) {
     if (!isValidProfileEmail(trimmed)) {
       return NextResponse.json({ ok: false, error: "Invalid email address." }, { status: 400 });
     }
-    const nextLower = trimmed.toLowerCase();
-    const currentLower = (user.email ?? "").trim().toLowerCase();
-    if (nextLower !== currentLower) {
-      const { error: authEmailErr } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
-        email: trimmed,
-      });
-      if (authEmailErr) {
-        return NextResponse.json(
-          { ok: false, error: authEmailErr.message || "Could not update email." },
-          { status: 400 }
-        );
-      }
-    }
-    updates.email = trimmed;
+    nextEmail = trimmed;
   }
   if (typeof body.phone === "string") {
-    updates.phone = body.phone.trim();
-  }
-
-  if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ ok: false, error: "No valid fields to update" }, { status: 400 });
-  }
-
-  const { data: updated, error } = await supabaseAdmin
-    .from("user_profiles")
-    .update(updates as never)
-    .eq("user_id", user.id)
-    .select("user_id");
-
-  if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-  }
-
-  if (!updated?.length) {
-    const { error: insErr } = await supabaseAdmin.from("user_profiles").insert({
-      user_id: user.id,
-      ...updates,
-    } as never);
-    if (insErr) {
-      return NextResponse.json({ ok: false, error: insErr.message }, { status: 500 });
+    const t = body.phone.trim();
+    if (!t) {
+      nextPhone = null;
+    } else if (!isValidUsPhone(t)) {
+      return NextResponse.json(
+        { ok: false, error: "Phone must be a valid US number (10 digits)." },
+        { status: 400 }
+      );
+    } else {
+      const e164 = toE164Us(t.replace(/\D/g, ""));
+      if (!e164) {
+        return NextResponse.json({ ok: false, error: "Invalid phone." }, { status: 400 });
+      }
+      nextPhone = e164;
     }
+  }
+
+  if (!nextEmail) {
+    return NextResponse.json({ ok: false, error: "Email is required on your account." }, { status: 400 });
+  }
+
+  const nextMeta = userMetadataWithFullNameOnly(meta, nextFullName);
+
+  const { error: authUpErr } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+    email: nextEmail,
+    phone: nextPhone ?? undefined,
+    user_metadata: nextMeta,
+  });
+
+  if (authUpErr) {
+    return NextResponse.json(
+      { ok: false, error: authUpErr.message || "Could not update profile." },
+      { status: 400 }
+    );
+  }
+
+  try {
+    await mirrorUserProfileContact(supabaseAdmin, {
+      userId: user.id,
+      email: nextEmail,
+      phone: nextPhone,
+      fullName: nextFullName || null,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Could not sync profile.";
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

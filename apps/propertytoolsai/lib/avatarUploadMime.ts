@@ -12,6 +12,7 @@ const MIME_TO_EXT: Record<string, string> = {
   "image/gif": "gif",
   "image/heic": "heic",
   "image/heif": "heif",
+  "image/avif": "avif",
 };
 
 const EXT_TO_CANONICAL: Record<string, { mime: string; ext: string }> = {
@@ -22,6 +23,7 @@ const EXT_TO_CANONICAL: Record<string, { mime: string; ext: string }> = {
   ".gif": { mime: "image/gif", ext: "gif" },
   ".heic": { mime: "image/heic", ext: "heic" },
   ".heif": { mime: "image/heif", ext: "heif" },
+  ".avif": { mime: "image/avif", ext: "avif" },
 };
 
 export type AvatarResolved =
@@ -41,7 +43,10 @@ export function resolveAvatarImageFile(file: Pick<File, "type" | "name">): Avata
     }
   }
 
-  if (mime === "image/jpg") mime = "image/jpeg";
+  // Storage bucket allows `image/jpeg` (not `image/pjpeg`); Supabase validates Content-Type strictly.
+  if (mime === "image/jpg" || mime === "image/pjpeg" || mime === "image/x-cis-jpg") {
+    mime = "image/jpeg";
+  }
 
   const ext = MIME_TO_EXT[mime];
   if (ext) {
@@ -89,9 +94,12 @@ export function sniffImageMimeFromBuffer(buf: Uint8Array): { contentType: string
   ) {
     return { contentType: "image/webp", ext: "webp" };
   }
-  // HEIC / HEIF (ISO BMFF: ....ftyp heic / mif1 / heix / msf1)
+  // AVIF / HEIC (ISO BMFF: ....ftyp …)
   if (buf.length >= 12 && buf[4] === 0x66 && buf[5] === 0x74 && buf[6] === 0x79 && buf[7] === 0x70) {
     const brand = String.fromCharCode(buf[8], buf[9], buf[10], buf[11]);
+    if (brand === "avif" || brand === "avis") {
+      return { contentType: "image/avif", ext: "avif" };
+    }
     if (brand === "heic" || brand === "heix" || brand === "mif1" || brand === "msf1") {
       return { contentType: "image/heic", ext: "heic" };
     }

@@ -4,11 +4,24 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
+function formatUsPhone(input: string) {
+  const digits = input.replace(/\D/g, "").slice(0, 10);
+  if (!digits) return "";
+  if (digits.length <= 3) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function isValidUsPhone(input: string) {
+  return input.replace(/\D/g, "").length === 10;
+}
+
 export default function SignupPage() {
   const supabase = useMemo(() => createClient(), []);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -22,13 +35,36 @@ export default function SignupPage() {
       setError("");
       setSuccess("");
 
+      const nameTrim = fullName.trim();
+      const emailTrim = email.trim();
+      if (!nameTrim) {
+        setError("Full name is required.");
+        return;
+      }
+      if (!emailTrim) {
+        setError("Email is required.");
+        return;
+      }
+      if (!phone.trim()) {
+        setError("Phone number is required.");
+        return;
+      }
+      if (!isValidUsPhone(phone)) {
+        setError("Phone must be a valid US number (10 digits).");
+        return;
+      }
+
+      const digits = phone.replace(/\D/g, "");
+      const e164 = `+1${digits}`;
+
       const { data, error: signUpErr } = await supabase.auth.signUp({
-        email: email.trim(),
+        email: emailTrim,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
-            full_name: fullName.trim(),
+            full_name: nameTrim,
+            phone_e164: e164,
           },
         },
       });
@@ -37,11 +73,21 @@ export default function SignupPage() {
 
       if (data.user) {
         const uid = data.user.id;
+
+        if (data.session) {
+          const { error: updErr } = await supabase.auth.updateUser({
+            phone: e164,
+            data: { full_name: nameTrim },
+          });
+          if (updErr) console.error(updErr.message);
+        }
+
         const { error: upErr } = await supabase.from("user_profiles").upsert(
           {
             user_id: uid,
-            full_name: fullName.trim(),
-            email: email.trim(),
+            full_name: nameTrim,
+            email: emailTrim,
+            phone: e164,
           },
           { onConflict: "user_id" }
         );
@@ -63,6 +109,7 @@ export default function SignupPage() {
       setSuccess("Account created. Please check your email to verify your account.");
       setFullName("");
       setEmail("");
+      setPhone("");
       setPassword("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to sign up");
@@ -95,6 +142,16 @@ export default function SignupPage() {
             className="w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:border-gray-400"
             placeholder="Email"
             autoComplete="email"
+          />
+          <input
+            type="tel"
+            inputMode="tel"
+            required
+            value={phone}
+            onChange={(e) => setPhone(formatUsPhone(e.target.value))}
+            className="w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:border-gray-400"
+            placeholder="Phone (US, 10 digits)"
+            autoComplete="tel"
           />
           <input
             type="password"

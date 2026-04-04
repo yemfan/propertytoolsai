@@ -4,6 +4,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { fullNameFromUserMetadata } from "@/lib/auth/canonicalUserContact";
 import { sendPasswordResetEmail } from "@/lib/auth/sendPasswordResetEmail";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
@@ -82,7 +83,7 @@ export default function AuthModal({
           leadsmart_users?: { role?: string | null } | null;
         } | null;
         const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
-        const metaName = typeof meta.full_name === "string" ? meta.full_name.trim() : "";
+        const metaName = fullNameFromUserMetadata(meta) ?? "";
         const metaPhone = typeof meta.phone === "string" ? meta.phone.trim() : "";
         setEmail(u.email?.trim() ?? "");
         setFullName(row?.full_name?.trim() || metaName || "");

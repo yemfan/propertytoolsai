@@ -1,11 +1,13 @@
 "use client";
 
 import type { DatePreset, DateRange } from "@/lib/dashboard/dateRange";
-import { getPresetDateRange } from "@/lib/dashboard/dateRange";
+import { DEFAULT_DASHBOARD_DATE_PRESET, getPresetDateRange } from "@/lib/dashboard/dateRange";
 
 type Props = {
   value: DateRange;
   onChange: (range: DateRange) => void;
+  /** Preset applied when the user clicks Reset (default: 30D). */
+  defaultPreset?: Exclude<DatePreset, "custom">;
 };
 
 const presets: { label: string; value: DatePreset }[] = [
@@ -15,10 +17,14 @@ const presets: { label: string; value: DatePreset }[] = [
   { label: "MTD", value: "mtd" },
 ];
 
-export function DateRangeFilter({ value, onChange }: Props) {
+export function DateRangeFilter({
+  value,
+  onChange,
+  defaultPreset = DEFAULT_DASHBOARD_DATE_PRESET,
+}: Props) {
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {presets.map((preset) => {
           const active = value.preset === preset.value;
           return (
@@ -37,6 +43,13 @@ export function DateRangeFilter({ value, onChange }: Props) {
             </button>
           );
         })}
+        <button
+          type="button"
+          onClick={() => onChange(getPresetDateRange(defaultPreset))}
+          className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
+        >
+          Reset
+        </button>
       </div>
 
       <div className="flex gap-2">

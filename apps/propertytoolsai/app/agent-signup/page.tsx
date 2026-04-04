@@ -54,11 +54,14 @@ export default function AgentSignupPage() {
     setLoading(true);
     try {
       const supabase = supabaseBrowser();
+      const digits = phone.replace(/\D/g, "");
+      const e164 = `+1${digits}`;
+
       const { data, error: signUpErr } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
-          data: { full_name: fullName.trim() },
+          data: { full_name: fullName.trim(), phone_e164: e164 },
         },
       });
 
@@ -72,11 +75,19 @@ export default function AgentSignupPage() {
 
       const emailTrim = email.trim();
 
+      if (data.session) {
+        const { error: phoneErr } = await supabase.auth.updateUser({
+          phone: e164,
+          data: { full_name: fullName.trim() },
+        });
+        if (phoneErr) throw phoneErr;
+      }
+
       const { error: upsertUserErr1 } = await supabase.from("user_profiles").upsert(
         {
           user_id: userId,
           full_name: fullName.trim(),
-          phone: phone.trim(),
+          phone: e164,
           email: emailTrim,
         },
         { onConflict: "user_id" }

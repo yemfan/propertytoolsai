@@ -82,6 +82,17 @@ function HomePageInner() {
     // Only non-agents should reach the upgrade flow.
     if (userRole !== "user") return;
 
+    const nameTrim = name.trim();
+    const phoneTrim = phone.trim();
+    if (!nameTrim) {
+      setUpgradeError("Please enter your full name to continue as an agent.");
+      return;
+    }
+    if (!phoneTrim || phoneTrim.replace(/\D/g, "").length !== 10) {
+      setUpgradeError("Please enter a valid 10-digit US phone number.");
+      return;
+    }
+
     setUpgradeLoading(true);
     try {
       // Supabase SSR cookie session might not be available for this route.
@@ -99,6 +110,7 @@ function HomePageInner() {
           Authorization: `Bearer ${accessToken}`,
         },
         credentials: "include",
+        body: JSON.stringify({ full_name: nameTrim, phone: phoneTrim }),
       });
       const json = (await res.json().catch(() => ({}))) as any;
       if (!res.ok || json?.ok === false) {

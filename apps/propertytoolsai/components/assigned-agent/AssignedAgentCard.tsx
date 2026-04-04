@@ -90,6 +90,11 @@ export default function AssignedAgentCard() {
           <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
             {agent.assignmentSource === "profile" ? "Your agent" : "Default agent"}
           </p>
+          {email ? (
+            <p className="mt-1.5 truncate px-1 text-xs text-slate-600" title={email}>
+              {email}
+            </p>
+          ) : null}
         </div>
 
         <div className="grid grid-cols-3 gap-1.5">

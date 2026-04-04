@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { AssignedAgentPayload } from "@/lib/consumer/assignedAgentTypes";
+import { fetchCanonicalUserContact } from "@/lib/auth/canonicalUserContact";
 import { getUserFromRequest } from "@/lib/authFromRequest";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -12,22 +13,41 @@ function defaultAuthIdFromEnv(): string | null {
   return a || null;
 }
 
+function displayNameFromEmailFallback(email: string): string {
+  const local = email.split("@")[0]?.trim() ?? "";
+  if (!local) return "Your agent";
+  const words = local.replace(/[._-]+/g, " ").trim();
+  return words
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
 async function loadAgentProfile(authUserId: string): Promise<{
   displayName: string;
   phone: string | null;
   email: string | null;
   avatarUrl: string | null;
 }> {
+  const contact = await fetchCanonicalUserContact(supabaseAdmin, authUserId);
+
   const { data: row } = await supabaseAdmin
     .from("user_profiles")
-    .select("full_name,phone,avatar_url,email")
+    .select("avatar_url")
     .eq("user_id", authUserId)
     .maybeSingle();
 
+  const email = contact?.email?.trim() || null;
+  const fullName = contact?.fullName?.trim() || null;
+  const phone = contact?.phone ?? null;
+
+  const displayName =
+    fullName ?? (email ? displayNameFromEmailFallback(email) : "Your agent");
+
   return {
-    displayName: row?.full_name != null && String(row.full_name).trim() ? String(row.full_name) : "Your agent",
-    phone: row?.phone != null ? String(row.phone) : null,
-    email: row?.email != null ? String(row.email) : null,
+    displayName,
+    phone,
+    email,
     avatarUrl: row?.avatar_url != null ? String(row.avatar_url) : null,
   };
 }

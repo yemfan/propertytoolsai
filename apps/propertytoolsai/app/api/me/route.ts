@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchCanonicalUserContact } from "@/lib/auth/canonicalUserContact";
 import { getUserFromRequest } from "@/lib/authFromRequest";
 import { supabaseServer } from "@/lib/supabaseServer";
 
@@ -8,6 +9,8 @@ export async function GET(req: Request) {
     if (!user) {
       return NextResponse.json({ plan: "guest", tokens_remaining: null });
     }
+
+    const contact = await fetchCanonicalUserContact(supabaseServer, user.id);
 
     const { data, error } = await supabaseServer
       .from("user_profiles")
@@ -43,10 +46,13 @@ export async function GET(req: Request) {
       .eq("auth_user_id", user.id)
       .maybeSingle();
 
-    const profileEmail = row?.email?.trim() || null;
+    const email =
+      contact?.email?.trim() || user.email || row?.email?.trim() || null;
+    const full_name = contact?.fullName ?? row?.full_name ?? null;
+    const phone = contact?.phone ?? row?.phone ?? null;
 
     return NextResponse.json({
-      email: profileEmail || user.email || null,
+      email,
       plan: String(ls?.plan ?? "free"),
       role: roleForApi,
       propertytools_tier: pt?.tier ?? null,
@@ -56,8 +62,8 @@ export async function GET(req: Request) {
       trial_used: Boolean(ls?.trial_used ?? false),
       tokens_remaining: Number(ls?.tokens_remaining ?? 10),
       tokens_reset_date: ls?.tokens_reset_date ?? null,
-      full_name: row?.full_name ?? null,
-      phone: row?.phone ?? null,
+      full_name,
+      phone,
       avatar_url: row?.avatar_url ?? null,
       oauth_onboarding_completed: ls?.oauth_onboarding_completed ?? null,
     });

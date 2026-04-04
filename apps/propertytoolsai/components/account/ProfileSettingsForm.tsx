@@ -168,7 +168,7 @@ export default function ProfileSettingsForm() {
 
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">Profile photo</h2>
-        <p className="mt-1 text-sm text-slate-600">JPG, PNG, WebP, or GIF — up to 5 MB.</p>
+        <p className="mt-1 text-sm text-slate-600">JPG, PNG, WebP, AVIF, or GIF — up to 5 MB.</p>
         <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
           <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
             {avatarSrc ? (
@@ -185,7 +185,7 @@ export default function ProfileSettingsForm() {
               {uploading ? "Uploading…" : "Upload new photo"}
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/heif,.heic,.heif,.avif"
                 className="hidden"
                 onChange={(ev) => void onPickPhoto(ev)}
                 disabled={uploading}

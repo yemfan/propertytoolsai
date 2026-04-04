@@ -29,6 +29,9 @@ export function anyTimestampInRange(
 
 export type DatePreset = "7d" | "30d" | "90d" | "mtd" | "custom";
 
+/** Default range when the dashboard loads or the user hits Reset. */
+export const DEFAULT_DASHBOARD_DATE_PRESET: Exclude<DatePreset, "custom"> = "30d";
+
 export type DateRange = {
   start: string;
   end: string;

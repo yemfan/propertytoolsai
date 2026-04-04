@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { oauthBackfillFullName } from "@/lib/auth/canonicalUserContact";
 import { supabaseAuthCookieOptions } from "@/lib/authCookieOptions";
 import { requireSupabasePublicEnv } from "@/lib/supabasePublicEnv";
 
@@ -38,6 +39,19 @@ export async function GET(req: Request) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user?.user_metadata) {
+        const meta = user.user_metadata as Record<string, unknown>;
+        const backfill = oauthBackfillFullName(meta);
+        if (backfill) {
+          const { error: nameErr } = await supabase.auth.updateUser({ data: { full_name: backfill } });
+          if (nameErr) {
+            console.error("[auth/callback] oauth full_name backfill:", nameErr.message);
+          }
+        }
+      }
       return response;
     }
   }
