@@ -22,7 +22,7 @@ export async function ensureSharedUserTablesAfterOAuth(
   const uid = user.id;
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
   const fullName =
-    fullNameFromUserMetadata(meta) ?? user.email?.split("@")[0]?.trim() || "User";
+    (fullNameFromUserMetadata(meta) ?? user.email?.split("@")[0]?.trim()) || "User";
   const email = user.email?.trim() ?? null;
   const phone =
     typeof user.phone === "string" && user.phone.trim()
