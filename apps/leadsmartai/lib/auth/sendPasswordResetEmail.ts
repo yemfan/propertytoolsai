@@ -6,7 +6,7 @@ function formatResetPasswordError(raw: string): string {
   if (/redirect|url|not allowed|invalid.*redirect/i.test(msg)) {
     return (
       `${msg} In Supabase → Authentication → URL Configuration, add Redirect URL ` +
-      "`https://your-domain/auth/reset-password` (and `http://localhost:3000/auth/reset-password` for dev). " +
+      "`https://your-domain/reset-password` (and `http://localhost:3000/reset-password` for dev). " +
       "Set `NEXT_PUBLIC_SITE_URL` to your public `https://…` origin so the link matches production."
     );
   }
@@ -20,8 +20,8 @@ function formatResetPasswordError(raw: string): string {
 }
 
 /**
- * Sends Supabase recovery email. Add `…/auth/reset-password` under Supabase → Authentication →
- * URL Configuration → Redirect URLs (same origin as {@link getOAuthRedirectOrigin}).
+ * Sends Supabase recovery email. Add `…/reset-password` under Supabase → Authentication →
+ * URL Configuration → Redirect URLs (same path as Property Tools; same origin as {@link getOAuthRedirectOrigin}).
  */
 export async function sendPasswordResetEmail(email: string): Promise<{ ok: true } | { ok: false; message: string }> {
   const trimmed = email.trim();
@@ -32,7 +32,7 @@ export async function sendPasswordResetEmail(email: string): Promise<{ ok: true 
   const origin = getOAuthRedirectOrigin();
   const supabase = supabaseBrowser();
   const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
-    redirectTo: `${origin}/auth/reset-password`,
+    redirectTo: `${origin}/reset-password`,
   });
 
   if (error) {

@@ -28,10 +28,10 @@ describe("getSiteUrl / getOAuthRedirectOrigin", () => {
     expect(getOAuthRedirectOrigin()).toBe("http://localhost:3001");
   });
 
-  it("getOAuthRedirectOrigin prefers NEXT_PUBLIC_SITE_URL over window", async () => {
-    process.env.NEXT_PUBLIC_SITE_URL = "https://www.propertytoolsai.com";
+  it("getOAuthRedirectOrigin uses browser tab origin even when NEXT_PUBLIC_SITE_URL points elsewhere", async () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
     vi.stubGlobal("window", { location: { origin: "http://localhost:3001" } });
     const { getOAuthRedirectOrigin } = await import("./siteUrl");
-    expect(getOAuthRedirectOrigin()).toBe("https://www.propertytoolsai.com");
+    expect(getOAuthRedirectOrigin()).toBe("http://localhost:3001");
   });
 });

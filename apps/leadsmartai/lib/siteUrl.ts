@@ -37,21 +37,28 @@ export function getSiteUrl(): string {
 }
 
 /**
- * Base URL for Supabase OAuth `redirectTo` (Google / Apple). Must match an entry under
- * Supabase → Authentication → URL Configuration → **Redirect URLs** (e.g. `https://your-domain.com/auth/callback`).
+ * Base URL for Supabase OAuth `redirectTo` (Google / Apple).
  *
- * **Production:** Set `NEXT_PUBLIC_SITE_URL` on the host (e.g. Vercel) to your public `https://…` origin so
- * the callback never falls back to localhost when env or Supabase Site URL is misconfigured.
+ * **Always uses the current browser tab origin** on the client so Google/Apple OAuth returns to
+ * this app, not Property Tools (or vice versa) when `NEXT_PUBLIC_SITE_URL` is mis-set. List each
+ * origin under Supabase → Authentication → URL Configuration → Redirect URLs.
  *
- * **Local dev:** When `NEXT_PUBLIC_SITE_URL` is unset, uses `window.location.origin` (typically `http://localhost:3000`).
+ * `NEXT_PUBLIC_SITE_URL` remains for {@link getSiteUrl} (metadata, password-reset links, etc.).
  */
 export function getOAuthRedirectOrigin(): string {
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
   const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (fromEnv) {
     return normalizeOrigin(fromEnv, DEFAULT_ORIGIN);
   }
-  if (typeof window !== "undefined") {
-    return window.location.origin;
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) {
+    return normalizeOrigin(`https://${vercel}`, DEFAULT_ORIGIN);
+  }
+  if (process.env.NODE_ENV === "development") {
+    return "http://localhost:3000";
   }
   return DEFAULT_ORIGIN;
 }

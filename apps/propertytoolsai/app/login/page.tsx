@@ -123,14 +123,6 @@ function LoginPageInner() {
             >
               Continue with Apple
             </button>
-            <div className="relative py-1">
-              <div className="absolute inset-0 flex items-center" aria-hidden>
-                <div className="w-full border-t border-gray-200" />
-              </div>
-              <div className="relative flex justify-center text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                <span className="bg-white px-2">Email</span>
-              </div>
-            </div>
           </div>
           <input
             type="email"

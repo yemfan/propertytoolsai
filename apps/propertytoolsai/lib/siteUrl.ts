@@ -39,15 +39,28 @@ export function getSiteUrl(): string {
 
 /**
  * Base URL for Supabase OAuth `redirectTo` (Google / Apple).
- * Must match an entry under Supabase → Authentication → URL Configuration → Redirect URLs.
+ *
+ * **Always uses the current browser tab origin** when this runs on the client, so OAuth never
+ * bounces to another app if `NEXT_PUBLIC_SITE_URL` was copied from the wrong `.env` (e.g. LeadSmart
+ * URL on Property Tools). Add every dev/prod origin you use under Supabase → Authentication →
+ * URL Configuration → Redirect URLs.
+ *
+ * `NEXT_PUBLIC_SITE_URL` is still used by {@link getSiteUrl} for metadata and email links.
  */
 export function getOAuthRedirectOrigin(): string {
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
   const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (fromEnv) {
     return normalizeOrigin(fromEnv, DEFAULT_ORIGIN);
   }
-  if (typeof window !== "undefined") {
-    return window.location.origin;
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) {
+    return normalizeOrigin(`https://${vercel}`, DEFAULT_ORIGIN);
+  }
+  if (process.env.NODE_ENV === "development") {
+    return "http://localhost:3001";
   }
   return DEFAULT_ORIGIN;
 }

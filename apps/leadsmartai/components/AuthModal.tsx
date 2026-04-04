@@ -419,15 +419,6 @@ export default function AuthModal({
             </button>
           </div>
 
-          <div className="relative py-1">
-            <div className="absolute inset-0 flex items-center" aria-hidden>
-              <div className="w-full border-t border-slate-200" />
-            </div>
-            <div className="relative flex justify-center text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-              <span className="bg-white px-2">Or continue with</span>
-            </div>
-          </div>
-
           <div className="flex flex-col gap-2">
             <button
               type="button"
@@ -445,15 +436,6 @@ export default function AuthModal({
             >
               Continue with Apple
             </button>
-          </div>
-
-          <div className="relative py-1">
-            <div className="absolute inset-0 flex items-center" aria-hidden>
-              <div className="w-full border-t border-slate-200" />
-            </div>
-            <div className="relative flex justify-center text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-              <span className="bg-white px-2">Email</span>
-            </div>
           </div>
 
           <form onSubmit={submit} className="space-y-3">
