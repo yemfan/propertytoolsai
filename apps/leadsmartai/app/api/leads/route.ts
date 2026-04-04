@@ -1,9 +1,30 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { sendEmail } from "@/lib/email";
 import { scheduleEmailSequenceForLead } from "@/lib/emailSequences";
 import { recordLeadEvent, scoreLead } from "@/lib/leadScoring";
 import { runLeadMarketplacePipeline } from "@/lib/leadScorePipeline";
+
+/** Returns { userId, agentId } for an authenticated agent, or a 401/403 NextResponse. */
+async function getAuthenticatedAgentId(): Promise<
+  { userId: string; agentId: string } | NextResponse
+> {
+  const supabase = supabaseServerClient();
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (userErr || !userData.user) {
+    return NextResponse.json({ ok: false, error: "Not authenticated" }, { status: 401 });
+  }
+  const { data: agentRow } = await supabase
+    .from("agents")
+    .select("id")
+    .eq("auth_user_id", userData.user.id)
+    .maybeSingle();
+  if (!agentRow?.id) {
+    return NextResponse.json({ ok: false, error: "Agent profile not found" }, { status: 403 });
+  }
+  return { userId: userData.user.id, agentId: String(agentRow.id) };
+}
 
 type LeadPayload = {
   name?: string;
@@ -105,11 +126,16 @@ Timestamp: ${new Date().toISOString()}`,
 
 export async function GET() {
   try {
+    const auth = await getAuthenticatedAgentId();
+    if (auth instanceof NextResponse) return auth;
+    const { agentId } = auth;
+
     const { data, error } = await supabaseServer
       .from("leads")
       .select(
         "id,name,email,phone,phone_number,sms_opt_in,property_address,source,lead_status,notes,rating,contact_frequency,contact_method,last_contacted_at,next_contact_at,created_at,search_location,search_radius,price_min,price_max,beds,baths"
       )
+      .eq("agent_id", agentId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -132,6 +158,10 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
+    const auth = await getAuthenticatedAgentId();
+    if (auth instanceof NextResponse) return auth;
+    const { agentId } = auth;
+
     const body = (await req.json().catch(() => ({}))) as {
       id?: string;
       status?: string;
@@ -195,6 +225,7 @@ export async function PATCH(req: Request) {
       .from("leads")
       .update(updatePayload)
       .eq("id", id)
+      .eq("agent_id", agentId)
       .select(
         "id,name,email,phone,property_address,source,lead_status,notes,created_at,search_location,search_radius,price_min,price_max,beds,baths"
       )

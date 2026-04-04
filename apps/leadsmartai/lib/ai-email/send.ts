@@ -15,18 +15,17 @@ export async function sendOutboundEmail(params: {
 }) {
   const deliver = params.deliver !== false;
   let externalId: string | null = null;
+  let delivered = false;
 
   if (deliver && process.env.RESEND_API_KEY?.trim()) {
-    try {
-      const result = await sendEmail({
-        to: params.to.trim(),
-        subject: params.subject,
-        text: params.body,
-      });
-      externalId = result?.id ? String(result.id) : null;
-    } catch (e) {
-      console.error("sendOutboundEmail: Resend failed", e);
-    }
+    // Let the error propagate so callers know the message was not sent.
+    const result = await sendEmail({
+      to: params.to.trim(),
+      subject: params.subject,
+      text: params.body,
+    });
+    externalId = result?.id ? String(result.id) : null;
+    delivered = true;
   }
 
   await logEmailMessage({
@@ -42,7 +41,7 @@ export async function sendOutboundEmail(params: {
     await supabaseAdmin.from("message_logs").insert({
       lead_id: params.leadId,
       type: "email",
-      status: deliver && process.env.RESEND_API_KEY?.trim() ? "sent" : "sent",
+      status: delivered ? "sent" : "queued",
       content: `${params.subject}\n\n${params.body}`,
     } as Record<string, unknown>);
   } catch {
@@ -59,12 +58,12 @@ export async function sendOutboundEmail(params: {
         externalMessageId: externalId,
         actorType: params.actorType ?? "system",
         actorName: params.actorName ?? null,
-        delivered: Boolean(deliver && process.env.RESEND_API_KEY?.trim() && externalId),
+        delivered,
       },
     });
   } catch {
     // optional
   }
 
-  return { success: true as const, externalMessageId: externalId };
+  return { success: true as const, delivered, externalMessageId: externalId };
 }

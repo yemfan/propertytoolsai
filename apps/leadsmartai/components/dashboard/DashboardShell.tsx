@@ -38,12 +38,7 @@ export default function AppDashboardShell({
   const showAgentBrokerPromotion = isAgentOrBrokerProfileRole(appRole);
 
   return (
-    <div
-      className={
-        "flex min-h-0 w-full min-w-0 flex-col overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900 " +
-        "min-h-screen lg:h-screen lg:max-h-screen lg:flex-row lg:overflow-hidden"
-      }
-    >
+    <div className="flex min-h-screen w-full min-w-0 flex-col overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900 lg:h-screen lg:max-h-screen lg:flex-row lg:overflow-hidden">
       <PremiumSidebar
         appName={APP_NAME}
         sections={navSections}
@@ -64,7 +59,7 @@ export default function AppDashboardShell({
         </div>
         <main
           id="agent-portal-main"
-          className="min-h-0 w-full max-w-none flex-1 overflow-x-hidden overflow-y-auto bg-slate-50/60 px-4 py-6 md:px-8 md:py-8 lg:px-10"
+          className="min-h-0 w-full flex-1 overflow-x-hidden overflow-y-auto bg-slate-50/60 px-4 py-6 md:px-8 md:py-8 lg:px-10"
         >
           {children}
         </main>

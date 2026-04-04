@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { getLeadLimit } from "@/lib/planLimits";
 import { scheduleEmailSequenceForLead } from "@/lib/emailSequences";
 import { runLeadMarketplacePipeline } from "@/lib/leadScorePipeline";
@@ -83,9 +84,9 @@ export async function POST(req: Request) {
     }
 
     const resendApiKey = process.env.RESEND_API_KEY;
-    const agentEmail = process.env.AGENT_NOTIFICATION_EMAIL || "fan.yes@gmail.com";
+    const agentEmail = process.env.AGENT_NOTIFICATION_EMAIL;
 
-    if (resendApiKey) {
+    if (resendApiKey && agentEmail) {
       try {
         await fetch("https://api.resend.com/emails", {
           method: "POST",
@@ -174,12 +175,28 @@ Timestamp: ${new Date().toISOString()}`,
 
 export async function GET() {
   try {
+    const supabase = supabaseServerClient();
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !userData.user) {
+      return NextResponse.json({ ok: false, error: "Not authenticated" }, { status: 401 });
+    }
+    const { data: agentRow } = await supabase
+      .from("agents")
+      .select("id")
+      .eq("auth_user_id", userData.user.id)
+      .maybeSingle();
+    if (!agentRow?.id) {
+      return NextResponse.json({ ok: false, error: "Agent profile not found" }, { status: 403 });
+    }
+    const agentId = String(agentRow.id);
+
     const { data, error } = await supabaseServer
       .from("leads")
       .select(
-        `id, agent_id, property_address, created_at, contact:contact_id (name, email, phone)`
+        `id, agent_id, property_address, created_at, name, email, phone`
       )
-      .eq("lead_source", "home_value_widget")
+      .eq("source", "home_value_widget")
+      .eq("agent_id", agentId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -188,10 +205,10 @@ export async function GET() {
 
     const leads =
       data?.map((row: any) => ({
-        name: row.contact?.name || "",
+        name: row.name || "",
         address: row.property_address || "",
-        email: row.contact?.email || "",
-        phone: row.contact?.phone || "",
+        email: row.email || "",
+        phone: row.phone || "",
         agent_id: row.agent_id || "",
         timestamp: row.created_at,
       })) ?? [];

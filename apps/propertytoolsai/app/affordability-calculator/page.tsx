@@ -8,6 +8,8 @@ import JsonLd from "../../components/JsonLd";
 
 function principalFromPmt(monthlyPmt: number, annualRate: number, years: number): number {
   if (monthlyPmt <= 0 || years <= 0) return 0;
+  // Guard against 0% rate: r=0 makes denominator zero → NaN. At 0% simply sum payments.
+  if (annualRate <= 0) return monthlyPmt * years * 12;
   const r = annualRate / 100 / 12;
   const n = years * 12;
   return (monthlyPmt * (Math.pow(1 + r, n) - 1)) / (r * Math.pow(1 + r, n));

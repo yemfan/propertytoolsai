@@ -22,7 +22,7 @@ export default function AboutPage() {
 
       {/* Intro */}
       <section className="border-t border-slate-100 px-6 py-16">
-        <div className="mx-auto max-w-3xl text-center">
+        <div className="mx-auto max-w-4xl text-center">
           <p className="text-lg leading-relaxed text-slate-700">
             Buying, selling, or investing in real estate can feel overwhelming. Information is scattered, tools are complicated, and
             decisions carry significant financial impact.
@@ -85,7 +85,7 @@ export default function AboutPage() {
 
       {/* How it works */}
       <section className="bg-slate-50/80 px-6 py-20">
-        <div className="mx-auto max-w-5xl text-center">
+        <div className="mx-auto max-w-6xl text-center">
           <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">How It Works</h2>
 
           <div className="mt-12 grid gap-6 text-sm md:grid-cols-5">

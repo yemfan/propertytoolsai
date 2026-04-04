@@ -6,11 +6,21 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export type { AssignedAgentPayload } from "@/lib/consumer/assignedAgentTypes";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function defaultAuthIdFromEnv(): string | null {
   const a =
     process.env.CONSUMER_ASSIGNED_AGENT_AUTH_ID_DEFAULT?.trim() ||
     process.env.CONSUMER_ASIGNED_AGENT_ID_DEFAULT?.trim();
-  return a || null;
+  if (!a) return null;
+  if (!UUID_RE.test(a)) {
+    console.warn(
+      "[assigned-agent] CONSUMER_ASSIGNED_AGENT_AUTH_ID_DEFAULT is not a valid UUID — ignoring.",
+      JSON.stringify(a)
+    );
+    return null;
+  }
+  return a;
 }
 
 function displayNameFromEmailFallback(email: string): string {
