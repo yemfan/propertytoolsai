@@ -10,7 +10,7 @@ export type NavLeafItem = {
   icon?: ReactNode;
   badge?: string;
   /**
-   * When set, only users whose `user_profiles.role` matches one of these strings (case-insensitive)
+   * When set, only users whose `leadsmart_users.role` matches one of these strings (case-insensitive)
    * see this item. Omit for all authenticated users.
    */
   roles?: string[];

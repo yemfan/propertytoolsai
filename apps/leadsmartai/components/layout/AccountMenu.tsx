@@ -12,13 +12,19 @@ import {
   getPropertyToolsConsumerAccountProfileUrl,
   getPropertyToolsConsumerPostLoginUrl,
 } from "@/lib/propertyToolsConsumerUrl";
+import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
 import {
   isAdminOrSupportRole,
   isAgentOrBrokerProfileRole,
   resolveRoleHomePath,
 } from "@/lib/rolePortalPaths";
 
-type MePayload = { role?: string; has_agent_record?: boolean; avatar_url?: string | null };
+type MePayload = {
+  role?: string;
+  has_agent_record?: boolean;
+  avatar_url?: string | null;
+  signup_origin_app?: string | null;
+};
 
 /** Match login / home redirect: consumers are `role === user` with no `agents` row. */
 function isProfessionalUser(role: string | null | undefined, hasAgentRecord: boolean): boolean {
@@ -126,7 +132,7 @@ export default function AccountMenu() {
     if (!me) {
       return {
         workspaceHref: "/",
-        profileHref: getPropertyToolsConsumerAccountProfileUrl(),
+        profileHref: "/account/profile",
         settingsHref: "/dashboard/settings",
         pricingHref: "/pricing",
         hideCommercialPricing: false,
@@ -138,10 +144,11 @@ export default function AccountMenu() {
     const hasAgent = Boolean(me.has_agent_record);
     const pro = isProfessionalUser(role, hasAgent);
     if (!pro) {
+      const pt = consumerShouldUsePropertyToolsApp(me.signup_origin_app);
       return {
-        workspaceHref: getPropertyToolsConsumerPostLoginUrl(),
-        profileHref: getPropertyToolsConsumerAccountProfileUrl(),
-        settingsHref: getPropertyToolsConsumerAccountProfileUrl(),
+        workspaceHref: pt ? getPropertyToolsConsumerPostLoginUrl() : "/",
+        profileHref: pt ? getPropertyToolsConsumerAccountProfileUrl() : "/account/profile",
+        settingsHref: pt ? getPropertyToolsConsumerAccountProfileUrl() : "/account/profile",
         pricingHref: "/pricing",
         hideCommercialPricing: false,
         slimAgentBrokerHeaderMenu: false,

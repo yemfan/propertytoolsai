@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { fullNameFromUserMetadata } from "@/lib/auth/canonicalUserContact";
 import {
   isSignupRoleAssigned,
   SIGNUP_ROLE_OPTIONS,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/auth/signupRoleOptions";
 import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
+import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { formatUsPhoneInput, formatUsPhoneStored, isValidUsPhone } from "@/lib/usPhone";
@@ -141,6 +143,7 @@ function CompleteProfileInner() {
           phone: phoneForProfile,
           role: dbRole,
           oauth_onboarding_completed: true,
+          signup_origin_app: "leadsmart",
         }),
       });
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
@@ -149,12 +152,24 @@ function CompleteProfileInner() {
       }
 
       const meRes = await fetch("/api/me", { credentials: "include" });
-      const me = meRes.ok ? ((await meRes.json()) as { role?: string; has_agent_record?: boolean }) : null;
+      const me = meRes.ok
+        ? ((await meRes.json()) as {
+            role?: string;
+            has_agent_record?: boolean;
+            signup_origin_app?: string | null;
+          })
+        : null;
       const role = me?.role ?? dbRole;
       const hasAgent = Boolean(me?.has_agent_record);
 
       if (dbRole === "user") {
-        window.location.href = getPropertyToolsConsumerPostLoginUrl();
+        if (consumerShouldUsePropertyToolsApp(me?.signup_origin_app)) {
+          window.location.href = getPropertyToolsConsumerPostLoginUrl();
+        } else {
+          const dest = next.startsWith("/") ? next : "/";
+          router.replace(dest);
+          router.refresh();
+        }
         return;
       }
 
@@ -164,7 +179,12 @@ function CompleteProfileInner() {
         return;
       }
 
-      window.location.href = getPropertyToolsConsumerPostLoginUrl();
+      if (consumerShouldUsePropertyToolsApp(me?.signup_origin_app)) {
+        window.location.href = getPropertyToolsConsumerPostLoginUrl();
+        return;
+      }
+      router.replace(next.startsWith("/") ? next : "/");
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -205,10 +225,11 @@ function CompleteProfileInner() {
             {cancelling ? "Signing out…" : "Cancel"}
           </button>
         </div>
-        <h1 className="text-xl font-bold text-slate-900">Complete your profile</h1>
+        <h1 className="text-xl font-bold text-slate-900">Complete your LeadSmart AI profile</h1>
         <p className="mt-2 text-sm text-slate-600">
-          You signed in with Google or Apple. Tell us your name, role, and how to reach you so we can route you to the
-          right experience.
+          You signed in with Google or Apple. Confirm your name, choose whether you&apos;re a{" "}
+          <span className="font-medium text-slate-800">consumer</span> (default) or a professional role, and add a phone
+          number if you pick a professional role—we use it for account and product notifications.
         </p>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">

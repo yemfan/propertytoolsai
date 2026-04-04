@@ -1,7 +1,7 @@
 import { supabaseServer } from "@/lib/supabaseServer";
 
 /**
- * Resolve billing/plan tier for rate limiting (agents.plan_type or user_profiles.plan_type).
+ * Resolve billing/plan tier for rate limiting (agents.plan_type or leadsmart_users.plan).
  */
 export async function resolveUserPlanType(userId: string): Promise<string> {
   try {

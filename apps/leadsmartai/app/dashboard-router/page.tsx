@@ -3,9 +3,11 @@ import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsume
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 import { fetchUserPortalContext } from "@/lib/rolePortalServer";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
+import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
 
 /**
- * Post-login landing: professionals → CRM; consumers → PropertyToolsAI consumer app (not LeadSmart).
+ * Post-login landing: professionals → CRM; PropertyTools-origin consumers → PropertyTools app;
+ * LeadSmart-origin consumers → marketing home on this site.
  */
 export default async function DashboardRouterPage() {
   const supabase = supabaseServerClient();
@@ -14,7 +16,10 @@ export default async function DashboardRouterPage() {
     redirect("/login");
   }
   if (!ctx.isPro) {
-    redirect(getPropertyToolsConsumerPostLoginUrl());
+    if (consumerShouldUsePropertyToolsApp(ctx.signupOriginApp)) {
+      redirect(getPropertyToolsConsumerPostLoginUrl());
+    }
+    redirect("/");
   }
   redirect(resolveRoleHomePath(ctx.role, ctx.hasAgentRow));
 }

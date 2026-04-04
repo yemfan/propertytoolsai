@@ -32,16 +32,24 @@ async function main() {
 
   console.log("Checking 20260319 schema (usage, CMA daily, tasks, daily_briefings)...\n");
 
-  const { error: up } = await supabase
-    .from("user_profiles")
-    .select("user_id,phone,trial_used,estimator_usage_count,cma_usage_count")
-    .limit(1);
+  const { error: up } = await supabase.from("user_profiles").select("user_id,phone").limit(1);
   if (up) {
-    console.error(`✗ user_profiles (20260319 columns): ${up.message}`);
+    console.error(`✗ user_profiles (contact): ${up.message}`);
     process.exitCode = 1;
     return;
   }
-  console.log("✓ user_profiles: phone / trial / usage columns");
+  console.log("✓ user_profiles: phone (trial/usage live on leadsmart_users after split)");
+
+  const { error: lsUsage } = await supabase
+    .from("leadsmart_users")
+    .select("user_id,trial_used,estimator_usage_count,cma_usage_count")
+    .limit(1);
+  if (lsUsage) {
+    console.error(`✗ leadsmart_users (trial + usage counters): ${lsUsage.message}`);
+    process.exitCode = 1;
+    return;
+  }
+  console.log("✓ leadsmart_users: trial_used, estimator/cma usage");
 
   const { error: leads } = await supabase
     .from("leads")

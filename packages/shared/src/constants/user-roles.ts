@@ -1,5 +1,6 @@
 /**
- * Canonical values for `public.user_profiles.role` (shared Supabase project).
+ * Canonical values for `public.leadsmart_users.role` (shared Supabase project).
+ * (`user` = consumer; app UIs may label that as “consumer”.)
  *
  * **Access control:** Enforce in server Route Handlers, Server Actions, and RLS policies.
  * UI may show this role for clarity; never rely on client-side role alone for authorization.
@@ -8,7 +9,7 @@
  * controlled signup flows (e.g. agent onboarding) to set `role`.
  */
 
-/** Values stored in `user_profiles.role` — keep migrations and dashboards aligned. */
+/** Values stored in `leadsmart_users.role` — keep migrations and dashboards aligned. */
 export const USER_PROFILE_ROLES = [
   "user",
   "agent",

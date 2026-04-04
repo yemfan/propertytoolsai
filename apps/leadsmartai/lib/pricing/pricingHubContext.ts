@@ -35,7 +35,7 @@ export const emptyPricingHubContext: PricingHubContext = {
 };
 
 /**
- * Maps `user_profiles.role` to a small set for pricing copy. Brokerage roles are treated as agent for hub.
+ * Maps `leadsmart_users.role` to a small set for pricing copy. Brokerage roles are treated as agent for hub.
  */
 export function normalizePricingHubRole(role: string | null): PricingHubRole | null {
   const r = String(role ?? "").toLowerCase().trim();

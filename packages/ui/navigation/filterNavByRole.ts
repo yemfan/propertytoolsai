@@ -34,7 +34,7 @@ function collapseNavDividers(sections: NavSection[]): NavSection[] {
 
 /**
  * Drops nav sections the user’s role is not allowed to see.
- * `userRole` is typically `user_profiles.role` (e.g. `admin`, `agent`).
+ * `userRole` is typically `leadsmart_users.role` (e.g. `admin`, `agent`).
  */
 export function filterNavSectionsByRole(
   sections: NavSection[],

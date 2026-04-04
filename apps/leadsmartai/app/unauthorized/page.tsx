@@ -3,6 +3,7 @@ import { ShieldAlert } from "lucide-react";
 import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 import { fetchUserPortalContext } from "@/lib/rolePortalServer";
+import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 
 export const metadata = {
@@ -14,7 +15,9 @@ function homeHref(ctx: Awaited<ReturnType<typeof fetchUserPortalContext>>): stri
   if (!ctx) return "/login";
   const r = String(ctx.role ?? "").toLowerCase().trim();
   if (r === "consumer" || r === "user" || r === "") {
-    return getPropertyToolsConsumerPostLoginUrl();
+    return consumerShouldUsePropertyToolsApp(ctx.signupOriginApp)
+      ? getPropertyToolsConsumerPostLoginUrl()
+      : "/";
   }
   return resolveRoleHomePath(ctx.role, ctx.hasAgentRow);
 }

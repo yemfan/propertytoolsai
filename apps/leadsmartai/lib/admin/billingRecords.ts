@@ -58,7 +58,7 @@ export function mapSubscriptionStatus(raw: string | null | undefined): BillingSt
   return "canceled";
 }
 
-/** Derive display plan from `user_profiles.plan` + `role`. */
+/** Derive display plan from `leadsmart_users.plan` + `role`. */
 export function deriveBillingPlan(plan: string | null | undefined, role: string | null | undefined): BillingPlan {
   const p = String(plan ?? "free").toLowerCase().trim();
   const r = String(role ?? "user").toLowerCase().trim();
@@ -86,7 +86,7 @@ export function deriveBillingPlan(plan: string | null | undefined, role: string 
   return "consumer_free";
 }
 
-/** Persist UI plan back to `user_profiles.plan` (free | pro | premium). */
+/** Persist UI plan back to `leadsmart_users.plan` (free | pro | premium). */
 export function billingPlanToDbPlan(bp: BillingPlan): "free" | "pro" | "premium" {
   switch (bp) {
     case "consumer_free":
@@ -103,7 +103,7 @@ export function billingPlanToDbPlan(bp: BillingPlan): "free" | "pro" | "premium"
   }
 }
 
-/** Map UI status to `user_profiles.subscription_status`. */
+/** Map UI status to `leadsmart_users.subscription_status`. */
 export function billingStatusToDb(status: BillingStatus): string {
   switch (status) {
     case "active":

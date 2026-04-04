@@ -122,6 +122,19 @@ export default function AgentSignupPage() {
       );
       if (upsertAgentErr) throw upsertAgentErr;
 
+      const token = data.session?.access_token;
+      if (token) {
+        await fetch("/api/me/profile", {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ signup_origin_app: "propertytools" }),
+        });
+      }
+
       router.push("/");
     } catch (e: any) {
       const msg = String(e?.message ?? "");

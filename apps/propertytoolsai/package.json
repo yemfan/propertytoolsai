@@ -24,6 +24,7 @@
     "smoke:migrations-20260326": "tsx scripts/smoke-migrations-20260326.ts",
     "smoke:leadsmart-ai-layer": "tsx scripts/smoke-leadsmart-ai-layer.ts",
     "smoke:20260319-schema": "tsx scripts/smoke-20260319-schema.ts",
+    "smoke:user-profiles-canonical": "tsx scripts/smoke-user-profiles-canonical-schema.ts",
     "smoke:profiles-20260315": "tsx scripts/smoke-profiles-20260315.ts",
     "smoke:profiles-invite-audit-20260325": "tsx scripts/smoke-profiles-invite-audit-20260325.ts",
     "smoke:property-seo": "tsx scripts/smoke-property-seo.ts",

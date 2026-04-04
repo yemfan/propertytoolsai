@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
+import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
 import {
   UNAUTHORIZED_PATH,
   BROKER_PORTAL_ROLES,
@@ -23,6 +24,8 @@ export type UserPortalContext = {
   role: string | null;
   hasAgentRow: boolean;
   isPro: boolean;
+  /** `user_profiles.signup_origin_app` — null for legacy rows */
+  signupOriginApp: string | null;
 };
 
 export async function fetchUserPortalContext(
@@ -38,6 +41,15 @@ export async function fetchUserPortalContext(
   let role: string | null = null;
   let hasAgentRow = false;
   let isPro = false;
+  let signupOriginApp: string | null = null;
+
+  const { data: originRow } = await supabase
+    .from("user_profiles")
+    .select("signup_origin_app")
+    .eq("user_id", userId)
+    .maybeSingle();
+  signupOriginApp =
+    (originRow as { signup_origin_app?: string | null } | null)?.signup_origin_app?.trim() || null;
 
   try {
     let userRow: { role?: string } | null = null;
@@ -78,7 +90,7 @@ export async function fetchUserPortalContext(
     role = null;
   }
 
-  return { userId, role, hasAgentRow, isPro };
+  return { userId, role, hasAgentRow, isPro, signupOriginApp };
 }
 
 /**
@@ -102,14 +114,20 @@ export function ensurePortalAccess(kind: PortalKind, ctx: UserPortalContext | nu
     if (!matchesPortalKind(ctx.role, "admin")) {
       redirect(UNAUTHORIZED_PATH);
     }
-    if (!ctx.isPro) {
+    if (!ctx.isPro && consumerShouldUsePropertyToolsApp(ctx.signupOriginApp)) {
       redirect(getPropertyToolsConsumerPostLoginUrl());
+    }
+    if (!ctx.isPro) {
+      redirect("/");
     }
     return;
   }
 
-  if (!ctx.isPro) {
+  if (!ctx.isPro && consumerShouldUsePropertyToolsApp(ctx.signupOriginApp)) {
     redirect(getPropertyToolsConsumerPostLoginUrl());
+  }
+  if (!ctx.isPro) {
+    redirect("/");
   }
   if (!matchesPortalKind(ctx.role, kind)) {
     redirect(resolveRoleHomePath(ctx.role, ctx.hasAgentRow));

@@ -5,6 +5,7 @@ import { oauthBackfillFullName } from "@/lib/auth/canonicalUserContact";
 import { supabaseAuthCookieOptions } from "@/lib/authCookieOptions";
 import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
 import { fetchUserPortalContext } from "@/lib/rolePortalServer";
+import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
 import { requireSupabasePublicEnv } from "@/lib/supabasePublicEnv";
 
 /**
@@ -76,7 +77,10 @@ export async function GET(request: Request) {
           }
           return out;
         }
-        const out = NextResponse.redirect(getPropertyToolsConsumerPostLoginUrl());
+        const consumerDest = consumerShouldUsePropertyToolsApp(ctx.signupOriginApp)
+          ? getPropertyToolsConsumerPostLoginUrl()
+          : new URL(next, url.origin).toString();
+        const out = NextResponse.redirect(consumerDest);
         for (const v of response.headers.getSetCookie()) {
           out.headers.append("Set-Cookie", v);
         }

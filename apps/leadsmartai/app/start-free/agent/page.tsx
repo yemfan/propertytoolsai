@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUserWithRole } from "@/lib/auth/getCurrentUser";
 import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
+import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
 import StartFreeAgentClientPage from "./page.client";
 
 export const metadata = {
@@ -12,7 +13,9 @@ export const metadata = {
 function signedInDashboardHref(user: NonNullable<Awaited<ReturnType<typeof getCurrentUserWithRole>>>): string {
   const r = String(user.role ?? "").toLowerCase().trim();
   if (r === "consumer" || r === "user" || r === "") {
-    return getPropertyToolsConsumerPostLoginUrl();
+    return consumerShouldUsePropertyToolsApp(user.signupOriginApp)
+      ? getPropertyToolsConsumerPostLoginUrl()
+      : "/";
   }
   return resolveRoleHomePath(user.role, user.hasAgentRow);
 }

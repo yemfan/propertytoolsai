@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/authFromRequest";
 import { supabaseAdmin, isSupabaseServiceConfigured } from "@/lib/supabase/admin";
 import { formatUsPhoneStored, isValidUsPhone } from "@/lib/usPhone";
+import { isAllowedSignupOriginApp } from "@/lib/signupOriginApp";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,8 @@ type Body = {
   role?: string;
   /** Set true when finishing Google/Apple onboarding or email signup form */
   oauth_onboarding_completed?: boolean;
+  /** First-write only: `leadsmart` | `propertytools` | `mobile` */
+  signup_origin_app?: string;
 };
 
 /**
@@ -43,6 +46,23 @@ export async function PATCH(req: Request) {
 
   const sharedUpdates: Record<string, string> = {};
   const lsUpdates: Record<string, string | boolean> = {};
+  const hadSignupOriginRequest = typeof body.signup_origin_app === "string";
+
+  if (hadSignupOriginRequest) {
+    const v = body.signup_origin_app.trim().toLowerCase();
+    if (!isAllowedSignupOriginApp(v)) {
+      return NextResponse.json({ ok: false, error: "Invalid signup_origin_app" }, { status: 400 });
+    }
+    const { data: existingOrigin } = await supabaseAdmin
+      .from("user_profiles")
+      .select("signup_origin_app")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const cur = (existingOrigin as { signup_origin_app?: string | null } | null)?.signup_origin_app;
+    if (!cur) {
+      sharedUpdates.signup_origin_app = v;
+    }
+  }
 
   if (typeof body.full_name === "string") {
     sharedUpdates.full_name = body.full_name.trim();
@@ -102,6 +122,12 @@ export async function PATCH(req: Request) {
   }
 
   if (Object.keys(sharedUpdates).length === 0 && Object.keys(lsUpdates).length === 0) {
+    if (hadSignupOriginRequest) {
+      const v = body.signup_origin_app!.trim().toLowerCase();
+      if (isAllowedSignupOriginApp(v)) {
+        return NextResponse.json({ ok: true });
+      }
+    }
     return NextResponse.json({ ok: false, error: "No valid fields to update" }, { status: 400 });
   }
 

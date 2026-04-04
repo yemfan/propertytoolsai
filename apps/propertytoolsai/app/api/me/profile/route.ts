@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/canonicalUserContact";
 import { getUserFromRequest } from "@/lib/authFromRequest";
 import { supabaseAdmin, isSupabaseServiceConfigured } from "@/lib/supabase/admin";
+import { isAllowedSignupOriginApp } from "@/lib/signupOriginApp";
 
 export const runtime = "nodejs";
 
@@ -20,6 +21,8 @@ type Body = {
   full_name?: string;
   phone?: string;
   email?: string;
+  /** First-write only on `user_profiles` */
+  signup_origin_app?: string;
 };
 
 /**
@@ -43,11 +46,48 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (
-    body.full_name === undefined &&
-    body.email === undefined &&
-    body.phone === undefined
-  ) {
+  const hadSignupOriginRequest = typeof body.signup_origin_app === "string";
+  if (hadSignupOriginRequest) {
+    const v = body.signup_origin_app!.trim().toLowerCase();
+    if (!isAllowedSignupOriginApp(v)) {
+      return NextResponse.json({ ok: false, error: "Invalid signup_origin_app" }, { status: 400 });
+    }
+    const { data: existingOrigin } = await supabaseAdmin
+      .from("user_profiles")
+      .select("signup_origin_app")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const cur = (existingOrigin as { signup_origin_app?: string | null } | null)?.signup_origin_app;
+    if (!cur) {
+      const { data: up, error } = await supabaseAdmin
+        .from("user_profiles")
+        .update({ signup_origin_app: v })
+        .eq("user_id", user.id)
+        .select("user_id");
+      if (error) {
+        return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+      }
+      if (!up?.length) {
+        const { error: insErr } = await supabaseAdmin.from("user_profiles").insert({
+          user_id: user.id,
+          signup_origin_app: v,
+        } as never);
+        if (insErr) {
+          return NextResponse.json({ ok: false, error: insErr.message }, { status: 500 });
+        }
+      }
+    }
+  }
+
+  const hasContactFields =
+    typeof body.full_name === "string" ||
+    typeof body.email === "string" ||
+    typeof body.phone === "string";
+
+  if (!hasContactFields) {
+    if (hadSignupOriginRequest) {
+      return NextResponse.json({ ok: true });
+    }
     return NextResponse.json({ ok: false, error: "No valid fields to update" }, { status: 400 });
   }
 

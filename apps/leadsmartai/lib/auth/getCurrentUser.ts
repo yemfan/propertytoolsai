@@ -35,11 +35,21 @@ export type CurrentUserWithRole = {
   role: string | null;
   hasAgentRow: boolean;
   isPro: boolean;
+  /** `user_profiles.signup_origin_app` — null for legacy */
+  signupOriginApp: string | null;
 };
 
 async function enrichUser(user: User): Promise<CurrentUserWithRole> {
 
   const userId = user.id;
+  const { data: originRow } = await supabaseAdmin
+    .from("user_profiles")
+    .select("signup_origin_app")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const signupOriginApp =
+    (originRow as { signup_origin_app?: string | null } | null)?.signup_origin_app?.trim() || null;
+
   const { data: profile } = await supabaseAdmin
     .from("leadsmart_users")
     .select("role")
@@ -55,7 +65,7 @@ async function enrichUser(user: User): Promise<CurrentUserWithRole> {
   const hasAgentRow = !!agentRow;
   const isPro = isRealEstateProfessionalRole(role) || hasAgentRow;
 
-  return { id: userId, email: user.email ?? null, role, hasAgentRow, isPro };
+  return { id: userId, email: user.email ?? null, role, hasAgentRow, isPro, signupOriginApp };
 }
 
 export async function getCurrentUserWithRole(req?: Request): Promise<CurrentUserWithRole | null> {

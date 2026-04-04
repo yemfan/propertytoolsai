@@ -9,6 +9,7 @@ import { sendPasswordResetEmail } from "@/lib/auth/sendPasswordResetEmail";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
 import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
+import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
 import {
   isSignupRoleAssigned,
   SIGNUP_ROLE_OPTIONS,
@@ -233,13 +234,16 @@ export default function AuthModal({
             const me = (await meRes.json()) as {
               role?: string;
               has_agent_record?: boolean;
+              signup_origin_app?: string | null;
             };
             const role = me?.role ?? null;
             const hasAgent = Boolean(me?.has_agent_record);
             if (isRealEstateProfessionalRole(role) || hasAgent) {
               router.replace(resolveRoleHomePath(role, hasAgent));
-            } else {
+            } else if (consumerShouldUsePropertyToolsApp(me?.signup_origin_app)) {
               window.location.assign(getPropertyToolsConsumerPostLoginUrl());
+            } else {
+              router.replace("/");
             }
           }
         } catch {
@@ -308,6 +312,21 @@ export default function AuthModal({
             { onConflict: "user_id" }
           );
         }
+        const {
+          data: { session: postSignUpSession },
+        } = await supabase.auth.getSession();
+        const tok = postSignUpSession?.access_token;
+        if (tok) {
+          await fetch("/api/me/profile", {
+            method: "PATCH",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${tok}`,
+            },
+            body: JSON.stringify({ signup_origin_app: "leadsmart" }),
+          });
+        }
       }
 
       onAuthenticated?.();
@@ -319,10 +338,24 @@ export default function AuthModal({
         return;
       }
 
-      // Consumers belong on PropertyToolsAI, not LeadSmart.
       if (userId && dbRole === "user") {
         onClose();
-        window.location.assign(getPropertyToolsConsumerPostLoginUrl());
+        const {
+          data: { session: s },
+        } = await supabase.auth.getSession();
+        const meRes = s?.access_token
+          ? await fetch("/api/me", {
+              credentials: "include",
+              headers: { Authorization: `Bearer ${s.access_token}` },
+            })
+          : null;
+        const me = meRes?.ok ? ((await meRes.json()) as { signup_origin_app?: string | null }) : null;
+        if (consumerShouldUsePropertyToolsApp(me?.signup_origin_app)) {
+          window.location.assign(getPropertyToolsConsumerPostLoginUrl());
+        } else {
+          router.replace("/");
+          router.refresh?.();
+        }
         return;
       }
 

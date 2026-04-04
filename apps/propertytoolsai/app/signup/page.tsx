@@ -104,6 +104,19 @@ export default function SignupPage() {
           { onConflict: "user_id" }
         );
         if (ptErr) console.error(ptErr.message);
+
+        const token = data.session?.access_token;
+        if (token) {
+          await fetch("/api/me/profile", {
+            method: "PATCH",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ signup_origin_app: "propertytools" }),
+          });
+        }
       }
 
       setSuccess("Account created. Please check your email to verify your account.");

@@ -5,6 +5,7 @@ import { PRODUCT_LEADSMART_AGENT } from "@/lib/entitlements/product";
 import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
 import { getSupabasePublicEnv } from "@/lib/supabasePublicEnv";
 import { fetchUserPortalContext } from "@/lib/rolePortalServer";
+import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
 import { matchesPortalKind } from "@/lib/rolePortalPaths";
 
 function isAgentPath(pathname: string) {
@@ -96,17 +97,26 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Consumers (buyer/seller) use PropertyToolsAI — not authenticated LeadSmart surfaces.
+  // Consumers: PropertyTools-first accounts → PropertyTools app; LeadSmart-first → stay (except pro-only areas).
   if (user && protectedPath) {
     const ctx = await fetchUserPortalContext(supabase);
     if (ctx && !ctx.isPro) {
-      return NextResponse.redirect(getPropertyToolsConsumerPostLoginUrl());
+      if (consumerShouldUsePropertyToolsApp(ctx.signupOriginApp)) {
+        return NextResponse.redirect(getPropertyToolsConsumerPostLoginUrl());
+      }
+      if (pathname.startsWith("/account/")) {
+        return res;
+      }
+      const home = req.nextUrl.clone();
+      home.pathname = "/";
+      home.search = "";
+      return NextResponse.redirect(home);
     }
   }
 
   if (isAuthPage(pathname) && user) {
     const ctx = await fetchUserPortalContext(supabase);
-    if (ctx && !ctx.isPro) {
+    if (ctx && !ctx.isPro && consumerShouldUsePropertyToolsApp(ctx.signupOriginApp)) {
       return NextResponse.redirect(getPropertyToolsConsumerPostLoginUrl());
     }
     const url = req.nextUrl.clone();

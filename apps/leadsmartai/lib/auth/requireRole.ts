@@ -26,7 +26,7 @@ export type RequireRoleOptions = {
 
 /**
  * Server-only guard for App Router pages. Redirects unauthenticated users to `/login`,
- * and users whose `user_profiles.role` is not in `allowed` to their role home,
+ * and users whose `leadsmart_users.role` is not in `allowed` to their role home,
  * unless `strictUnauthorized` or `upgradeRedirect` is set.
  */
 export async function requireRole(allowed: string[], options?: RequireRoleOptions) {
