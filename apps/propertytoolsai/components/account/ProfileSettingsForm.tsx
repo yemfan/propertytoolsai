@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { describeUserRole, formatUserRoleLabel } from "@leadsmart/shared";
+import { uploadProfilePhotoWithSessionClient } from "@/lib/profileAvatarClient";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type Me = {
@@ -106,35 +107,22 @@ export default function ProfileSettingsForm() {
     setError(null);
     setSuccess(null);
     try {
-      const { data: sessionData } = await supabaseBrowser().auth.getSession();
-      let token = sessionData.session?.access_token;
-      if (!token) {
-        const { data: refreshed } = await supabaseBrowser().auth.refreshSession();
-        token = refreshed.session?.access_token ?? undefined;
-      }
-      const fd = new FormData();
-      fd.set("file", file);
-      const res = await fetch("/api/me/avatar", {
-        method: "POST",
-        credentials: "include",
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        body: fd,
-      });
-      const json = (await res.json().catch(() => ({}))) as {
-        ok?: boolean;
-        error?: string;
-        hint?: string;
-        avatar_url?: string;
-      };
-      if (!res.ok || !json.ok) {
-        setError([json.error, json.hint].filter(Boolean).join(" "));
+      const supabase = supabaseBrowser();
+      const { data: refreshed } = await supabase.auth.refreshSession();
+      if (!refreshed.session) {
+        setError("Sign in again to upload a photo.");
         return;
       }
-      setMe((m) => ({ ...m, avatar_url: json.avatar_url ?? m?.avatar_url }));
+      const result = await uploadProfilePhotoWithSessionClient(supabase, file);
+      if (result.ok === false) {
+        setError(result.error);
+        return;
+      }
+      setMe((m) => ({ ...m, avatar_url: result.publicUrl }));
       setSuccess("Photo updated.");
       router.refresh();
-    } catch {
-      setError("Upload failed");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
     }
@@ -206,10 +194,6 @@ export default function ProfileSettingsForm() {
             autoComplete="email"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0066b3]/30"
           />
-          <p className="text-[11px] text-slate-500">
-            Used for login and notifications. If your project requires email confirmation, you may need to verify a new
-            address.
-          </p>
         </div>
         <div className="space-y-1">
           <label className="block text-xs font-medium text-slate-700">Full name</label>

@@ -10,7 +10,8 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const AVATAR_BUCKET = "avatars";
 
 /**
- * POST /api/me/avatar — multipart form field `file`. Uploads to Storage and saves `avatar_url` on `user_profiles`.
+ * POST /api/me/avatar — multipart form field `file`. Uses service role (requires `SUPABASE_SERVICE_ROLE_KEY`).
+ * The account profile page uploads from the browser via `uploadProfilePhotoWithSessionClient` so production works without this key.
  */
 export async function POST(req: Request) {
   const user = await getUserFromRequest(req);
