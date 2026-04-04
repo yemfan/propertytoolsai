@@ -126,6 +126,7 @@ export default function AuthModal({
       if (oauthError) throw oauthError;
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Sign in failed.");
+    } finally {
       setLoading(false);
     }
   }

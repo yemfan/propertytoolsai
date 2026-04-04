@@ -17,10 +17,11 @@ export default function RequireAuthGate({
 
   useEffect(() => {
     let cancelled = false;
+    const supabase = supabaseBrowser();
+
     (async () => {
       setChecking(true);
       try {
-        const supabase = supabaseBrowser();
         const { data } = await supabase.auth.getUser();
         if (cancelled) return;
         const hasUser = !!data?.user;
@@ -30,8 +31,19 @@ export default function RequireAuthGate({
         if (!cancelled) setChecking(false);
       }
     })();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) return;
+      const hasUser = !!session?.user;
+      setAuthed(hasUser);
+      if (hasUser) setOpen(false);
+    });
+
     return () => {
       cancelled = true;
+      subscription.unsubscribe();
     };
   }, []);
 

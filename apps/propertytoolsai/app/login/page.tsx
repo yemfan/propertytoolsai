@@ -43,6 +43,7 @@ function LoginPageInner() {
       if (oauthError) throw oauthError;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start social sign in");
+    } finally {
       setLoading(false);
     }
   }

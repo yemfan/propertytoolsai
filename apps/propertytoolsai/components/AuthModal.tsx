@@ -160,6 +160,7 @@ export default function AuthModal(props: {
       }
     } catch (e: any) {
       setError(e?.message ?? "OAuth sign in failed.");
+    } finally {
       setLoading(false);
     }
   }

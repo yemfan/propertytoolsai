@@ -60,8 +60,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     const supabase = supabaseBrowser();
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
+    } = supabase.auth.onAuthStateChange((event) => {
       void refresh();
+      if (event === "SIGNED_IN") {
+        setAuthOpen(false);
+      }
     });
 
     return () => {
