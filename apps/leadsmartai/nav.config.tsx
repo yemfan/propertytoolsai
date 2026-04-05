@@ -1,5 +1,5 @@
 import type { NavConfig } from "@repo/ui";
-import { BarChart3, CreditCard, Headphones, LayoutDashboard } from "lucide-react";
+import { BarChart3, CreditCard, Headphones, LayoutDashboard, LayoutGrid } from "lucide-react";
 
 function navEmoji(emoji: string) {
   return (
@@ -75,6 +75,12 @@ const navConfig = {
       href: "/account/profile",
       match: ["/account/profile"],
       icon: navEmoji("👤"),
+    },
+    {
+      label: "Portal",
+      href: "/portal",
+      match: ["/portal"],
+      icon: <LayoutGrid size={18} strokeWidth={2} aria-hidden />,
     },
     { kind: "divider" as const },
     {

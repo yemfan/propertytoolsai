@@ -383,8 +383,6 @@ export default function TopBar({
   const slimAccountBillingOnly =
     isAgentOrBrokerProfileRole(appRole) && !isAdminOrSupportRole(appRole);
   const router = useRouter();
-  const [tokens, setTokens] = useState<number | null>(null);
-  const [plan, setPlan] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   async function onLogout() {
@@ -404,8 +402,6 @@ export default function TopBar({
         });
         const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
         if (cancelled) return;
-        setTokens(typeof json?.tokens_remaining === "number" ? json.tokens_remaining : null);
-        setPlan(typeof json?.plan === "string" ? json.plan : null);
         const av = json?.avatar_url;
         setAvatarUrl(typeof av === "string" && av.trim() ? av.trim() : null);
       } catch {
@@ -425,13 +421,6 @@ export default function TopBar({
     if (q) params.set("q", q);
     router.push(`/dashboard/leads${params.toString() ? `?${params}` : ""}`);
   }
-
-  const creditsLabel =
-    typeof tokens === "number"
-      ? `${tokens} credits${plan ? ` · ${plan}` : ""}`
-      : plan
-        ? `— · ${plan}`
-        : "Credits";
 
   const searchField = (inputId: string) => (
     <form
@@ -498,27 +487,6 @@ export default function TopBar({
           >
             <Bell className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
           </Link>
-
-          {!hideCommercialPricing ? (
-            <Link
-              href="/agent/pricing"
-              title="Billing and credits"
-              className="inline-flex h-10 max-w-[140px] items-center gap-2 truncate rounded-2xl border border-slate-200/90 bg-white px-3 text-xs font-semibold text-slate-800 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50 sm:hidden"
-            >
-              <CreditCard className="h-3.5 w-3.5 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-              <span className="tabular-nums">{typeof tokens === "number" ? tokens : "—"}</span>
-            </Link>
-          ) : null}
-
-          {!hideCommercialPricing ? (
-            <Link
-              href="/agent/pricing"
-              className="hidden max-w-[220px] items-center gap-2 truncate rounded-2xl border border-slate-200/90 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50 sm:inline-flex"
-            >
-              <CreditCard className="h-[15px] w-[15px] shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-              <span className="truncate font-medium tabular-nums tracking-tight text-slate-900">{creditsLabel}</span>
-            </Link>
-          ) : null}
 
           <ProfileMenu
             email={email}
