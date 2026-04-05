@@ -59,7 +59,7 @@ export default function TrialSelfTest() {
           type="button"
           onClick={run}
           disabled={running}
-          className="inline-flex items-center justify-center rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2.5 disabled:opacity-60"
+          className="inline-flex items-center justify-center rounded-lg bg-[#0072ce] hover:bg-[#0062b5] text-white font-semibold px-4 py-2.5 disabled:opacity-60"
         >
           {running ? "Running..." : "Run test"}
         </button>

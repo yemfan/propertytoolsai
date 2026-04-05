@@ -257,7 +257,7 @@ export default function ProgressiveLeadCaptureModal(props: {
                   type="button"
                   onClick={() => capturePhone(true)}
                   disabled={loading}
-                  className="w-full inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full inline-flex items-center justify-center rounded-xl bg-[#0072ce] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0062b5] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Talk to an agent
                 </button>

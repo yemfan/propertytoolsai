@@ -251,7 +251,7 @@ export default function AuthModal(props: {
               type="button"
               disabled={loading}
               onClick={() => void handleOAuth("apple")}
-              className="inline-flex w-full items-center justify-center rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex w-full items-center justify-center rounded-xl bg-[#0072ce] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0062b5] disabled:cursor-not-allowed disabled:opacity-60"
             >
               Continue with Apple
             </button>

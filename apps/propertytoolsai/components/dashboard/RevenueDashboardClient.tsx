@@ -430,7 +430,7 @@ export default function RevenueDashboardClient() {
           <button
             type="button"
             onClick={() => void simulateFunnel()}
-            className="mt-4 inline-flex rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800"
+            className="mt-4 inline-flex rounded-xl bg-[#0072ce] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#0062b5]"
           >
             Simulate demo funnel
           </button>
@@ -493,7 +493,7 @@ export default function RevenueDashboardClient() {
               type="button"
               disabled={busy}
               onClick={() => void evaluateAlerts()}
-              className="rounded-xl border border-slate-200 bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-50"
+              className="rounded-xl border border-slate-200 bg-[#0072ce] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#0062b5] disabled:opacity-50"
             >
               Run alert check
             </button>

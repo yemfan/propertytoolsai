@@ -57,7 +57,7 @@ export default function GrowthShareButton(props: {
         type="button"
         onClick={() => void createShare()}
         disabled={busy}
-        className="inline-flex items-center justify-center rounded-xl bg-slate-900 text-white text-sm font-semibold px-4 py-2 disabled:opacity-50"
+        className="inline-flex items-center justify-center rounded-xl bg-[#0072ce] text-white text-sm font-semibold px-4 py-2 disabled:opacity-50"
       >
         {busy ? "Creating link…" : "Create share link"}
       </button>

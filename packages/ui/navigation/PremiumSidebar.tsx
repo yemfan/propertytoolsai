@@ -201,8 +201,8 @@ export function PremiumSidebar({
       ) : null}
 
       {/* Nav */}
-      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 [scrollbar-gutter:stable] [scrollbar-color:rgba(148,163,184,0.5)_transparent]">
-        <nav className="space-y-2.5">
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-3 [scrollbar-gutter:stable] [scrollbar-color:rgba(148,163,184,0.5)_transparent]">
+        <nav className="space-y-0.5">
           {sections.map((section, sectionIdx) => {
             if (isNavDivider(section)) {
               return (
@@ -225,7 +225,7 @@ export function PremiumSidebar({
                     "group/link flex items-center rounded-2xl transition-all duration-200 ease-out",
                     motionSafe,
                     focusRing,
-                    collapsed ? "justify-center px-3 py-3" : "gap-3 px-3 py-3",
+                    collapsed ? "justify-center px-3 py-2" : "gap-3 px-3 py-2",
                     active
                       ? "bg-slate-900 text-white shadow-md shadow-slate-900/15"
                       : "text-slate-600 hover:bg-slate-100/90 hover:text-slate-900"
@@ -281,7 +281,7 @@ export function PremiumSidebar({
                   "group/nav flex w-full items-center rounded-2xl text-left transition-all duration-200 ease-out",
                   motionSafe,
                   focusRing,
-                  collapsed ? "justify-center px-3 py-3" : "gap-3 px-3 py-3",
+                  collapsed ? "justify-center px-3 py-2" : "gap-3 px-3 py-2",
                   hasActiveChild
                     ? "bg-slate-100/90 text-slate-900"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
@@ -333,7 +333,7 @@ export function PremiumSidebar({
                                 setOpenGroups((prev) => ({ ...prev, [section.label]: true }));
                               }}
                               className={cn(
-                                "group/sublink flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
+                                "group/sublink flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm transition-all duration-200",
                                 motionSafe,
                                 focusRing,
                                 active

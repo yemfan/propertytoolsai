@@ -217,7 +217,7 @@ export default function AssignedAgentChatDialog({
                       isInternal
                         ? "border border-dashed bg-amber-50 text-amber-900"
                         : isCustomer
-                          ? "bg-slate-900 text-white"
+                          ? "bg-[#0072ce] text-white"
                           : "border border-slate-200 bg-white text-slate-900",
                     ].join(" ")}
                   >
@@ -252,7 +252,7 @@ export default function AssignedAgentChatDialog({
                 type="button"
                 disabled={!canStart || starting}
                 onClick={() => void handleStart()}
-                className="shrink-0 self-end rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-40"
+                className="shrink-0 self-end rounded-2xl bg-[#0072ce] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0062b5] disabled:opacity-40"
               >
                 {starting ? "…" : "Start"}
               </button>
@@ -261,7 +261,7 @@ export default function AssignedAgentChatDialog({
                 type="button"
                 disabled={!messageInput.trim() || sending}
                 onClick={() => void handleSend()}
-                className="shrink-0 self-end rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-40"
+                className="shrink-0 self-end rounded-2xl bg-[#0072ce] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0062b5] disabled:opacity-40"
               >
                 {sending ? "…" : "Send"}
               </button>

@@ -229,7 +229,7 @@ export function SmartMatch() {
             type="button"
             onClick={() => void submit()}
             disabled={loading}
-            className="rounded-lg bg-black px-5 py-3 text-white disabled:bg-gray-300"
+            className="rounded-lg bg-[#0072ce] px-5 py-3 text-white disabled:bg-gray-300"
           >
             {loading ? "Finding..." : "Find Matches"}
           </button>

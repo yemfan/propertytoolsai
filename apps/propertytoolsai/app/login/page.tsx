@@ -126,7 +126,7 @@ function LoginPageInner() {
               type="button"
               disabled={loading}
               onClick={() => void handleOAuth("apple")}
-              className="w-full rounded-2xl bg-black px-4 py-3 text-sm font-medium text-white transition hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-2xl bg-[#0072ce] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#0062b5] disabled:cursor-not-allowed disabled:opacity-60"
             >
               Continue with Apple
             </button>
