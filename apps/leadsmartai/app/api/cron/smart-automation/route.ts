@@ -3,6 +3,7 @@ import { userHasCrmFeature } from "@/lib/billing/subscriptionAccess";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { sendEmail } from "@/lib/email";
 import { generateAutomationMessage } from "@/lib/automationAI";
+import { verifyCronRequest } from "@/lib/cronAuth";
 
 const automationAllowedByAgent = new Map<string, boolean>();
 
@@ -34,7 +35,10 @@ function daysAgoIso(d: number) {
   return new Date(Date.now() - d * 24 * 60 * 60 * 1000).toISOString();
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  if (!verifyCronRequest(req)) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const nowIso = new Date().toISOString();
 

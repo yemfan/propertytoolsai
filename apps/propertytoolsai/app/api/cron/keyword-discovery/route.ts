@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { verifyCronRequest } from "@/lib/seoOptimization/cronAuth";
 import { runKeywordDiscovery } from "@/lib/keywordDiscovery/pipeline";
+import { pingSearchEngines } from "@/lib/seoOptimization/indexingPing";
+import { getSiteUrl } from "@/lib/siteUrl";
 
 export const runtime = "nodejs";
 
@@ -45,6 +47,12 @@ export async function GET(req: Request) {
     if (result.error) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 500 });
     }
+
+    // Ping search engines — sitemap has new content
+    const siteUrl = getSiteUrl();
+    pingSearchEngines({ siteUrl, newUrls: [] }).catch((e) =>
+      console.warn("[keyword-discovery] indexing ping failed:", e?.message)
+    );
 
     return NextResponse.json({
       ok: true,

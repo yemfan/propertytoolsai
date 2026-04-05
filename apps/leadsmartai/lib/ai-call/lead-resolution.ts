@@ -12,8 +12,21 @@ export type { SmsLeadSnapshot };
 /** Re-export CRM phone lookup (normalized display format). */
 export { findLeadByPhone };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Resolve a UUID auth_user_id to the agents.id bigint string. */
+async function authUserIdToAgentId(authUserId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from("agents")
+    .select("id")
+    .eq("auth_user_id", authUserId)
+    .maybeSingle();
+  const id = (data as { id?: unknown } | null)?.id;
+  return id != null ? String(id) : null;
+}
+
 /** Map inbound Twilio DID (E.164) → agent id (bigint string). */
-export function resolveVoiceAgentId(toE164: string): string | null {
+export async function resolveVoiceAgentId(toE164: string): Promise<string | null> {
   const raw = process.env.VOICE_INBOUND_AGENT_MAP?.trim();
   if (raw) {
     try {
@@ -24,8 +37,12 @@ export function resolveVoiceAgentId(toE164: string): string | null {
       // ignore
     }
   }
+  // Accepts a UUID (auth_user_id) — consistent with CONSUMER_ASSIGNED_AGENT_AUTH_ID_DEFAULT.
   const def = process.env.LEADSMART_VOICE_DEFAULT_AGENT_ID?.trim();
-  if (def && /^\d+$/.test(def)) return def;
+  if (def) {
+    if (UUID_RE.test(def)) return authUserIdToAgentId(def);
+    if (/^\d+$/.test(def)) return def; // legacy bigint fallback
+  }
   return null;
 }
 

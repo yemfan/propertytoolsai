@@ -1,0 +1,14 @@
+---
+description: Apply user-requested changes across the monorepo and surface related follow-ups
+alwaysApply: true
+---
+
+# Consistent changes & related work
+
+When the user asks to change copy, UX, behavior, branding, or configuration:
+
+1. **Find every usage** — search the repo (all apps: `propertytoolsai`, `leadsmartai`, `leadsmart-mobile`, shared packages) for the same strings, parallel screens, and API paths. Prefer updating **one shared module** (e.g. `lib/auth/signupRoleOptions.ts`) over duplicating edits.
+2. **Keep flows aligned** — if something appears in both a modal and a dedicated route (e.g. Auth modal vs `/auth/complete-profile`), treat them as one feature and update both.
+3. **End with a short “Related follow-ups” list** — call out what the user must do outside the repo (Supabase Dashboard SMTP/sender domain & Resend domain verification, Vercel env vars, duplicate Supabase migrations across app folders, mobile app parity, etc.).
+
+Do not stop after a single-file edit unless the user explicitly limits scope.

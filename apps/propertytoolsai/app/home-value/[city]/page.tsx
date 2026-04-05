@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import LocalSeoLeadForm from "@/components/LocalSeoLeadForm";
 import TrafficTracker from "@/components/TrafficTracker";
+import { BreadcrumbJsonLd } from "@/components/seo/BreadcrumbJsonLd";
+import { getSiteUrl } from "@/lib/siteUrl";
 import {
   estimateProgrammaticPageCount,
   formatCurrency,
@@ -47,8 +49,23 @@ export default async function HomeValueCityPage({
   const keywords = getPageKeywords("home-value", city.slug);
   const estimatedPages = estimateProgrammaticPageCount();
 
+  const siteUrl = getSiteUrl().replace(/\/$/, "");
+  const pageUrl = `${siteUrl}/home-value/${city.slug}`;
+  const pageTitle = `Free Home Value Estimate in ${city.city}, ${city.state} | PropertyTools AI`;
+  const pageDescription = `Get a localized home value estimate for ${city.city}, ${city.state} with market trends, seller demand insights, and ${keywords[0]} guidance.`;
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
+      <BreadcrumbJsonLd
+        title={pageTitle}
+        description={pageDescription}
+        url={pageUrl}
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Home Value", href: "/home-value" },
+          { label: `${city.city}, ${city.state}`, href: `/home-value/${city.slug}` },
+        ]}
+      />
       <TrafficTracker pagePath={`/home-value/${city.slug}`} city={city.city} source="seo_home_value_city" />
       <h1 className="text-3xl font-bold text-slate-900">
         Free Home Value Estimate in {city.city}, {city.state}

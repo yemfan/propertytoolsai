@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { verifyCronRequest } from "@/lib/cronAuth";
 
 function startOfTodayIso() {
   const d = new Date();
@@ -7,7 +8,10 @@ function startOfTodayIso() {
   return d.toISOString();
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  if (!verifyCronRequest(req)) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const todayIso = startOfTodayIso();
     const todayDate = todayIso.slice(0, 10);

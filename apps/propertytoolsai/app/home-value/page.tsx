@@ -18,14 +18,17 @@ export default function HomeValuePage() {
       <JsonLd
         data={{
           "@context": "https://schema.org",
-          "@type": "WebApplication",
-          name: "Free home value estimate",
+          "@type": "SoftwareApplication",
+          name: "Free Home Value Estimator",
           applicationCategory: "FinanceApplication",
-          operatingSystem: "All",
+          operatingSystem: "Web",
           browserRequirements: "Requires JavaScript",
           url: "https://propertytoolsai.com/home-value",
           description:
-            "Get a free estimated home value range and confidence score. Not an appraisal — for informational use.",
+            "Get a free AI-powered home value estimate with a confidence range and comparable sales — instantly, no agent required.",
+          featureList: "Instant home value estimate, Confidence range, Comparable sales data, No sign-up required",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+          provider: { "@type": "Organization", name: "PropertyTools AI", url: "https://propertytoolsai.com" },
         }}
       />
       <HomeValueEstimatePage />

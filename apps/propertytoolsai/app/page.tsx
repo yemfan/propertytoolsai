@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PropertyToolsHomePage from "@/components/landing/PropertyToolsHomePage";
+import ExitIntentPopup from "@/components/marketing/ExitIntentPopup";
 
 export const metadata: Metadata = {
   title: "PropertyTools AI — Free AI Real Estate Tools",
@@ -13,5 +14,10 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <PropertyToolsHomePage />;
+  return (
+    <>
+      <PropertyToolsHomePage />
+      <ExitIntentPopup />
+    </>
+  );
 }

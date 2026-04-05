@@ -48,14 +48,17 @@ export default function AffordabilityCalculator() {
       <JsonLd
         data={{
           "@context": "https://schema.org",
-          "@type": "WebApplication",
+          "@type": "SoftwareApplication",
           name: "Home Affordability Calculator",
           applicationCategory: "FinanceApplication",
           operatingSystem: "All",
           browserRequirements: "Requires JavaScript",
           url: "https://propertytoolsai.com/affordability-calculator",
           description:
-            "Estimate how much house you can afford based on income, debts, interest rate and loan term using a debt-to-income ratio.",
+            "Estimate how much house you can afford based on income, debts, interest rate and loan term using a debt-to-income ratio.",,
+          featureList: "Maximum home price calculation, Monthly payment estimate, Debt-to-income analysis, Down payment guidance",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+          provider: { "@type": "Organization", name: "PropertyTools AI", url: "https://propertytoolsai.com" },
         }}
       />
       <Link

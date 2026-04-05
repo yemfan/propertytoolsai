@@ -389,7 +389,7 @@ export async function handleInboundWebhookStart(params: {
 }) {
   const fromPhone = toE164Us(params.fromRaw) || params.fromRaw;
   const toPhone = toE164Us(params.toRaw) || params.toRaw;
-  const agentId = resolveVoiceAgentId(toPhone);
+  const agentId = await resolveVoiceAgentId(toPhone);
 
   const display = normalizeTwilioFromToUsPhone(fromPhone);
   let leadId: string | null = null;

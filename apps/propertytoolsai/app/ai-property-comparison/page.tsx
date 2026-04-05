@@ -14,14 +14,17 @@ export default function AiPropertyComparisonPage() {
       <JsonLd
         data={{
           "@context": "https://schema.org",
-          "@type": "WebApplication",
-          name: "AI Property Comparison",
+          "@type": "SoftwareApplication",
+          name: "AI Property Comparison Tool",
           applicationCategory: "FinanceApplication",
-          operatingSystem: "All",
+          operatingSystem: "Web",
           browserRequirements: "Requires JavaScript",
           url: "https://propertytoolsai.com/ai-property-comparison",
           description:
-            "Compare investment properties side-by-side with scoring and AI-powered recommendations.",
+            "Compare investment properties side-by-side with AI scoring on price, location, and investment potential — free.",
+          featureList: "Side-by-side property comparison, AI investment scoring, Price per sqft analysis, Monthly cost breakdown",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+          provider: { "@type": "Organization", name: "PropertyTools AI", url: "https://propertytoolsai.com" },
         }}
       />
       <Suspense

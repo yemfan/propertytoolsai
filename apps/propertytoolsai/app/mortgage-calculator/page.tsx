@@ -51,14 +51,17 @@ export default function MortgageCalculator() {
       <JsonLd
         data={{
           "@context": "https://schema.org",
-          "@type": "WebApplication",
+          "@type": "SoftwareApplication",
           name: "Mortgage Calculator",
           applicationCategory: "FinanceApplication",
-          operatingSystem: "All",
+          operatingSystem: "Web",
           browserRequirements: "Requires JavaScript",
           url: "https://propertytoolsai.com/mortgage-calculator",
           description:
-            "Calculate monthly mortgage payments including principal, interest, taxes and insurance for real estate purchases.",
+            "Calculate your exact monthly mortgage payment — principal, interest, taxes, and insurance — for any home price and rate.",
+          featureList: "Monthly payment calculation, Principal and interest breakdown, Tax and insurance estimate, Amortization schedule",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+          provider: { "@type": "Organization", name: "PropertyTools AI", url: "https://propertytoolsai.com" },
         }}
       />
       <Link

@@ -34,6 +34,9 @@ export default function VslSection({
 
   const hasSource = Boolean(videoIdOrUrl?.trim());
 
+  // Don't render anything if no video is configured — avoids showing dev note to users
+  if (!hasSource) return null;
+
   const emitPlay = useCallback(() => {
     trackLandingEvent("vsl_play_clicked", {
       video_type: videoType,

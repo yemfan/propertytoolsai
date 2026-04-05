@@ -48,8 +48,7 @@ function PropertyToolsTopChrome({
           : isLoggedOut
             ? [
                 { label: "Login", onClick: () => openAuth("login"), variant: "ghost" as const },
-                { label: "Sign Up", onClick: () => openAuth("signup"), variant: "outline" as const },
-                { label: "Unlock Premium", onClick: () => openPaywall() },
+                { label: "Sign Up Free", onClick: () => openAuth("signup"), variant: "outline" as const },
               ]
             : []
       }

@@ -11,6 +11,7 @@ export default function AdminPortalPage() {
         { href: "/admin/founder", label: "Founder analytics", description: "MRR, funnel, churn, and usage events" },
         { href: "/admin/billing", label: "Subscription & billing", description: "Plans, MRR, and subscription status" },
         { href: "/admin/support", label: "Support inbox", description: "Customer conversations and replies" },
+        { href: "/admin/jobs", label: "Cron job monitor", description: "View schedules, trigger jobs manually, inspect results" },
         { href: "/dashboard/overview", label: "Operations dashboard", description: "Overview, leads, and tools" },
         { href: "/dashboard/settings", label: "Account & settings", description: "Profile and preferences" },
         { href: "/portal", label: "Stripe billing portal", description: "Invoices and payment method" },

@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import LocalSeoLeadForm from "@/components/LocalSeoLeadForm";
 import TrafficTracker from "@/components/TrafficTracker";
+import { BreadcrumbJsonLd } from "@/components/seo/BreadcrumbJsonLd";
+import { getSiteUrl } from "@/lib/siteUrl";
 import {
   getCityBySlug,
   getMarketSnapshot,
@@ -43,8 +45,23 @@ export default async function SellHouseCityPage({
   const relatedPages = getRelatedPageLinks(city.slug).filter((page) => !page.href.endsWith(`/sell-house/${city.slug}`));
   const keywords = getPageKeywords("sell-house", city.slug);
 
+  const siteUrl = getSiteUrl().replace(/\/$/, "");
+  const pageUrl = `${siteUrl}/sell-house/${city.slug}`;
+  const pageTitle = `Sell Your House Fast in ${city.city}, ${city.state} | PropertyTools AI`;
+  const pageDescription = `Localized strategy to sell your house in ${city.city}, ${city.state} with demand and timing insights for ${keywords[0]}.`;
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
+      <BreadcrumbJsonLd
+        title={pageTitle}
+        description={pageDescription}
+        url={pageUrl}
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Sell Your House", href: "/sell-house" },
+          { label: `${city.city}, ${city.state}`, href: `/sell-house/${city.slug}` },
+        ]}
+      />
       <TrafficTracker pagePath={`/sell-house/${city.slug}`} city={city.city} source="seo_sell_house_city" />
       <h1 className="text-3xl font-bold text-slate-900">
         Sell Your House in {city.city}, {city.state}

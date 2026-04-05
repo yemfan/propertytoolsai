@@ -4,7 +4,7 @@ import { redirectAdminSupportAwayFromCommercialPricing } from "@/lib/auth/redire
 export const metadata = {
   title: "Pricing | LeadSmart AI",
   description:
-    "Plans for AI CMAs, lead management, CRM, and alerts — from free trial to team scale.",
+    "Free, Pro ($49), Elite ($99), and Team ($199) plans — full feature comparison for AI lead management, CRM, and automation.",
 };
 
 export default async function ConsumerPricingPage() {

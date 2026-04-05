@@ -687,8 +687,7 @@ export default function OnboardingFunnel() {
             </Link>
           </div>
           <p className="mt-6 text-center text-xs text-slate-500">
-            Engagement score: {engagementPoints} pts ·{" "}
-            {hasReplied ? "High intent — you replied in-session" : "Preview mode"}
+            No credit card required · Cancel anytime
           </p>
         </div>
       </Shell>
@@ -698,9 +697,9 @@ export default function OnboardingFunnel() {
   /* ——— Step 7: Pricing (embedded summary) ——— */
   if (step === 7) {
     const plans = [
-      { name: "Free", price: "$0", note: "Test core workflows", cta: "Start free trial", href: "/agent/pricing?from=onboarding", primary: false },
-      { name: "Pro", price: "$49/mo", note: "500 leads · full CRM", cta: "Upgrade Pro", href: "/agent/pricing?from=onboarding#plans", primary: true },
-      { name: "Premium", price: "$99/mo", note: "Teams · unlimited scale", cta: "Go Premium", href: "/agent/pricing?from=onboarding#plans", primary: false },
+      { name: "Free", price: "$0", note: "25 leads/mo · core pipeline", cta: "Start free", href: "/agent/pricing?from=onboarding", primary: false },
+      { name: "Pro", price: "$49/mo", note: "500 leads · full CRM · SMS", cta: "Start free trial", href: "/pricing?from=onboarding", primary: true },
+      { name: "Elite", price: "$99/mo", note: "Unlimited leads · top producers", cta: "Start free trial", href: "/pricing?from=onboarding", primary: false },
     ];
     return (
       <Shell step={7}>
@@ -764,7 +763,7 @@ export default function OnboardingFunnel() {
               href="/agent/pricing?from=onboarding#plans"
               className="rounded-xl border border-white/20 py-3.5 text-sm font-semibold text-white hover:bg-white/5"
             >
-              Stripe checkout · View plans
+              View all plans &amp; pricing
             </Link>
             <Link href="/login?redirect=/dashboard" className="text-sm font-semibold text-sky-400 hover:underline">
               Already registered? Log in

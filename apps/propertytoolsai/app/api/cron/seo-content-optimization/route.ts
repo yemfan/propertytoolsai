@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { verifyCronRequest } from "@/lib/seoOptimization/cronAuth";
 import { runWeeklyBatch } from "@/lib/seoOptimization";
 import { resolveWeeklyBatchLimit } from "@/lib/seoOptimization/resolveWeeklyLimit";
+import { pingSearchEngines } from "@/lib/seoOptimization/indexingPing";
+import { getSiteUrl } from "@/lib/siteUrl";
 
 export const runtime = "nodejs";
 
@@ -37,6 +39,16 @@ export async function GET(req: Request) {
 
   try {
     const out = await runWeeklyBatch({ limit, force });
+
+    // Notify search engines that pages have been updated
+    const siteUrl = getSiteUrl();
+    const updatedUrls: string[] = (out as any).updatedSlugs?.map(
+      (slug: string) => `${siteUrl.replace(/\/$/, "")}/${slug}`
+    ) ?? [];
+    pingSearchEngines({ siteUrl, newUrls: updatedUrls }).catch((e) =>
+      console.warn("[seo-content-optimization] indexing ping failed:", e?.message)
+    );
+
     return NextResponse.json({ ok: true, ...out });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Server error";

@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import LocalSeoLeadForm from "@/components/LocalSeoLeadForm";
 import TrafficTracker from "@/components/TrafficTracker";
+import { BreadcrumbJsonLd } from "@/components/seo/BreadcrumbJsonLd";
+import { getSiteUrl } from "@/lib/siteUrl";
 import {
   formatCurrency,
   getCityBySlug,
@@ -44,8 +46,23 @@ export default async function MarketReportCityPage({
   const relatedPages = getRelatedPageLinks(city.slug).filter((page) => !page.href.endsWith(`/market-report/${city.slug}`));
   const keywords = getPageKeywords("market-report", city.slug);
 
+  const siteUrl = getSiteUrl().replace(/\/$/, "");
+  const pageUrl = `${siteUrl}/market-report/${city.slug}`;
+  const pageTitle = `${city.city}, ${city.state} Market Report | PropertyTools AI`;
+  const pageDescription = `Current housing trends, demand, and pricing movement in ${city.city}, ${city.state}, including ${keywords[0]} analysis.`;
+
   return (
     <div className="w-full max-w-6xl py-6 sm:py-10">
+      <BreadcrumbJsonLd
+        title={pageTitle}
+        description={pageDescription}
+        url={pageUrl}
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Market Reports", href: "/market-report" },
+          { label: `${city.city}, ${city.state}`, href: `/market-report/${city.slug}` },
+        ]}
+      />
       <TrafficTracker pagePath={`/market-report/${city.slug}`} city={city.city} source="seo_market_report_city" />
       <h1 className="mb-2 text-3xl font-bold text-blue-600">
         {city.city}, {city.state} Housing Market Report

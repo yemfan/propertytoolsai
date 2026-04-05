@@ -9,16 +9,64 @@
   },
   "crons": [
     {
+      "comment": "Notifications – reminder digest sent to agents every 15 minutes.",
+      "path": "/api/cron/reminder-notification-digest",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "comment": "Greetings – daily personalised greeting emails to active leads (2 PM UTC).",
       "path": "/api/jobs/greetings/run",
       "schedule": "0 14 * * *"
     },
     {
+      "comment": "Re-engagement – daily re-engagement sequence for cold/inactive leads (3:30 PM UTC).",
       "path": "/api/jobs/reengagement/run",
       "schedule": "30 15 * * *"
     },
     {
-      "path": "/api/cron/reminder-notification-digest",
-      "schedule": "*/15 * * * *"
+      "comment": "AI Follow-ups – process scheduled 1h/24h/3d AI follow-up jobs. Runs hourly.",
+      "path": "/api/cron/ai-followups",
+      "schedule": "0 * * * *"
+    },
+    {
+      "comment": "Lead Follow-ups – process queued follow-up jobs (email + SMS + push). Runs hourly.",
+      "path": "/api/cron/lead-followups",
+      "schedule": "15 * * * *"
+    },
+    {
+      "comment": "Emails – send queued outbound emails and SMS. Runs hourly.",
+      "path": "/api/cron/send-emails",
+      "schedule": "45 * * * *"
+    },
+    {
+      "comment": "Smart Automation – rule-based follow-ups (report_view, high_engagement, inactivity). Every 6 h.",
+      "path": "/api/cron/smart-automation",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "comment": "Lead scoring – daily rescore all active leads.",
+      "path": "/api/cron/lead-score-refresh",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "comment": "Tasks – move deferred tasks to active when their due date arrives.",
+      "path": "/api/cron/tasks-deferred",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "comment": "Lead pricing – weekly learning loop to calibrate lead value model (Wednesday 2 AM UTC).",
+      "path": "/api/cron/lead-pricing-learning",
+      "schedule": "0 2 * * 3"
+    },
+    {
+      "comment": "City data – refresh local market stats (median price, inventory, DOM). Weekly Monday.",
+      "path": "/api/cron/city-data-refresh",
+      "schedule": "0 5 * * 1"
+    },
+    {
+      "comment": "LeadSmart sync – nightly refresh of lead batch from LeadSmart service.",
+      "path": "/api/cron/leadsmart-refresh",
+      "schedule": "30 5 * * *"
     }
   ]
 }
