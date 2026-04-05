@@ -33,7 +33,14 @@ function PropertyToolsTopChrome({
     <Topbar
       appName={APP_NAME}
       sections={navSections}
-      leadingExtra={null}
+      leadingExtra={
+        <Link
+          href="/"
+          className="flex min-w-0 items-center rounded-2xl py-1 outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
+        >
+          <PropertyToolsLogo className="max-w-[min(180px,55vw)] text-lg sm:max-w-[220px] sm:text-xl" />
+        </Link>
+      }
       searchSlot={null}
       rightActions={
         authLoading
@@ -132,28 +139,20 @@ function AppShellAuthedLayout({ children }: { children: ReactNode }) {
   }, [hideUnlockPremium, rbacRole, user]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900">
-      <div className="shrink-0 border-b border-slate-200/80 bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-[1920px] items-center justify-center px-4 lg:justify-start lg:pl-[272px]">
-          <Link
-            href="/"
-            className="flex min-w-0 items-center rounded-2xl py-1 outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
-          >
-            <PropertyToolsLogo className="max-w-[min(180px,55vw)] text-lg sm:max-w-[220px] sm:text-xl" />
-          </Link>
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900">
+      {/* Left: sidebar spans full height — agent card on top, nav below */}
+      <PremiumSidebar
+        appName={APP_NAME}
+        sections={navSections}
+        branding="none"
+        height="stretch"
+        topSlot={<AssignedAgentCard />}
+      />
+      {/* Right: header (logo + menu) then page content */}
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+        <div className="shrink-0">
+          <PropertyToolsTopChrome navSections={navSections} hideUnlockPremium={hideUnlockPremium} />
         </div>
-      </div>
-      <div className="shrink-0">
-        <PropertyToolsTopChrome navSections={navSections} hideUnlockPremium={hideUnlockPremium} />
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <PremiumSidebar
-          appName={APP_NAME}
-          sections={navSections}
-          branding="none"
-          height="stretch"
-          topSlot={<AssignedAgentCard />}
-        />
         <main className="min-h-0 min-w-0 flex-1 px-4 py-6 lg:px-8 lg:py-8">{children}</main>
       </div>
       <AgentChatWidget customerUserId={user?.id ?? null} />

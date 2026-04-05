@@ -120,18 +120,15 @@ export default function AgentChatWidget({ customerUserId }: { customerUserId: st
 
   if (!agent) return null;
 
-  const canStart =
-    customerName.trim().length >= 2 &&
-    /.+@.+\..+/.test(customerEmail.trim()) &&
-    messageInput.trim().length > 0;
+  const canStart = messageInput.trim().length > 0;
 
   async function handleStart() {
     if (!canStart || starting || !agent) return;
     setStarting(true);
     try {
       const result = await startSupportConversation({
-        customerName: customerName.trim(),
-        customerEmail: customerEmail.trim().toLowerCase(),
+        customerName: customerName.trim() || "Visitor",
+        customerEmail: customerEmail.trim().toLowerCase() || undefined,
         subject: `Message for ${agent.displayName}`,
         initialMessage: messageInput.trim(),
         source: "propertytools_assigned_agent",
@@ -197,24 +194,6 @@ export default function AgentChatWidget({ customerUserId }: { customerUserId: st
             </button>
           </div>
 
-          {/* Name / email fields (only before conversation starts) */}
-          {!conversationPublicId && (
-            <div className="grid shrink-0 grid-cols-2 gap-2 border-b border-slate-100 bg-slate-50/60 px-4 py-3">
-              <input
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0072ce]/60"
-                placeholder="Your name"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-              />
-              <input
-                type="email"
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#0072ce]/60"
-                placeholder="Your email"
-                value={customerEmail}
-                onChange={(e) => setCustomerEmail(e.target.value)}
-              />
-            </div>
-          )}
 
           {/* Messages */}
           <div ref={listRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
