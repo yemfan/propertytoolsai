@@ -63,7 +63,7 @@ async function loadAgentProfile(authUserId: string): Promise<{
 }
 
 /**
- * Resolves the consumer's assigned agent (`leadsmart_users.agent_id`), or the default
+ * Resolves the consumer's assigned agent (`leadsmart_users.agent_uuid`), or the default
  * env agent (`CONSUMER_ASSIGNED_AGENT_AUTH_ID_DEFAULT` = Supabase `auth.users` id).
  */
 export async function GET(req: Request) {
@@ -77,20 +77,20 @@ export async function GET(req: Request) {
     if (user) {
       const { data: prof } = await supabaseAdmin
         .from("user_profiles")
-        .select("leadsmart_users(agent_id)")
+        .select("leadsmart_users(agent_uuid)")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      const lsRaw = (prof as { leadsmart_users?: { agent_id?: string | null } | { agent_id?: string | null }[] | null })
+      const lsRaw = (prof as { leadsmart_users?: { agent_uuid?: string | null } | { agent_uuid?: string | null }[] | null })
         ?.leadsmart_users;
       const ls = lsRaw == null ? null : Array.isArray(lsRaw) ? lsRaw[0] : lsRaw;
-      const agentIdFromProfile = ls?.agent_id != null ? String(ls.agent_id).trim() : "";
+      const agentUuid = ls?.agent_uuid != null ? String(ls.agent_uuid).trim() : "";
 
-      if (agentIdFromProfile) {
+      if (agentUuid && UUID_RE.test(agentUuid)) {
         const { data: agentRow } = await supabaseAdmin
           .from("agents")
           .select("id, auth_user_id")
-          .eq("id", agentIdFromProfile)
+          .eq("auth_user_id", agentUuid)
           .maybeSingle();
 
         if (agentRow?.auth_user_id) {
