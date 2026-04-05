@@ -51,35 +51,39 @@ export async function ensureSharedUserTablesAfterOAuth(
     }
   }
 
-  const { data: existingLs } = await supabaseAdmin
-    .from("leadsmart_users")
-    .select("user_id")
-    .eq("user_id", uid)
-    .maybeSingle();
+  if (signupOriginApp === "leadsmart") {
+    const { data: existingLs } = await supabaseAdmin
+      .from("leadsmart_users")
+      .select("user_id")
+      .eq("user_id", uid)
+      .maybeSingle();
 
-  if (!existingLs) {
-    const { error: lsErr } = await supabaseAdmin.from("leadsmart_users").insert({
-      user_id: uid,
-      role: "user",
-    });
-    if (lsErr) {
-      console.error("[ensureSharedUserTablesAfterOAuth] leadsmart_users:", lsErr.message);
+    if (!existingLs) {
+      const { error: lsErr } = await supabaseAdmin.from("leadsmart_users").insert({
+        user_id: uid,
+        role: "user",
+      });
+      if (lsErr) {
+        console.error("[ensureSharedUserTablesAfterOAuth] leadsmart_users:", lsErr.message);
+      }
     }
   }
 
-  const { data: existingPt } = await supabaseAdmin
-    .from("propertytools_users")
-    .select("user_id")
-    .eq("user_id", uid)
-    .maybeSingle();
+  if (signupOriginApp === "propertytools") {
+    const { data: existingPt } = await supabaseAdmin
+      .from("propertytools_users")
+      .select("user_id")
+      .eq("user_id", uid)
+      .maybeSingle();
 
-  if (!existingPt) {
-    const { error: ptErr } = await supabaseAdmin.from("propertytools_users").insert({
-      user_id: uid,
-      tier: "basic",
-    });
-    if (ptErr) {
-      console.error("[ensureSharedUserTablesAfterOAuth] propertytools_users:", ptErr.message);
+    if (!existingPt) {
+      const { error: ptErr } = await supabaseAdmin.from("propertytools_users").insert({
+        user_id: uid,
+        tier: "basic",
+      });
+      if (ptErr) {
+        console.error("[ensureSharedUserTablesAfterOAuth] propertytools_users:", ptErr.message);
+      }
     }
   }
 }
