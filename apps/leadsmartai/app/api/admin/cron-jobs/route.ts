@@ -46,7 +46,7 @@ export const CRON_JOBS: CronJob[] = [
 
 export async function GET() {
   const auth = await requireRoleRoute(["admin", "support"]);
-  if (auth) return auth; // redirect response
+  if (!auth.ok) return auth.response;
 
   return NextResponse.json({ ok: true, jobs: CRON_JOBS });
 }
@@ -55,7 +55,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const auth = await requireRoleRoute(["admin", "support"]);
-  if (auth) return auth;
+  if (!auth.ok) return auth.response;
 
   const body = await req.json().catch(() => ({}));
   const path = typeof body.path === "string" ? body.path.trim() : "";
