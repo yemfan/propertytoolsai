@@ -1,11 +1,14 @@
 "use client";
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { safeInternalRedirect } from "@/lib/loginUrl";
 import { getOAuthRedirectOrigin } from "@/lib/siteUrl";
+
+// Note: Metadata is not available in client components. Use layout.tsx instead.
 
 export default function LoginPage() {
   return (
