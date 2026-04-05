@@ -4,11 +4,13 @@ import {
   BriefcaseBusiness,
   Calculator,
   DollarSign,
+  Headphones,
   Home,
   House,
   Landmark,
+  Settings,
   Sparkles,
-  Star,
+  User,
 } from "lucide-react";
 
 /**
@@ -118,25 +120,18 @@ const navConfig = {
       ],
     },
     {
-      label: "Recommended",
-      defaultOpen: true,
-      icon: <Star size={18} strokeWidth={2} aria-hidden />,
+      label: "Account",
+      icon: <Settings size={18} strokeWidth={2} aria-hidden />,
       items: [
         {
-          label: "Compare Properties",
-          href: "/ai-property-comparison",
-          icon: <Sparkles size={16} strokeWidth={2} aria-hidden />,
+          label: "Profile",
+          href: "/account/profile",
+          icon: <User size={16} strokeWidth={2} aria-hidden />,
         },
         {
-          label: "Check Mortgage",
-          href: "/mortgage-calculator",
-          icon: <Calculator size={16} strokeWidth={2} aria-hidden />,
-        },
-        {
-          label: "Unlock Premium",
-          href: "/pricing",
-          badge: "Upgrade",
-          icon: <Star size={16} strokeWidth={2} aria-hidden />,
+          label: "Support",
+          href: "/support",
+          icon: <Headphones size={16} strokeWidth={2} aria-hidden />,
         },
       ],
     },

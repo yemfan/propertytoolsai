@@ -208,7 +208,7 @@ export function PremiumSidebar({
               return (
                 <div
                   key={`nav-divider-${sectionIdx}`}
-                  className="my-1 border-t border-slate-200/90 pt-1"
+                  className="my-0.5 border-t border-slate-200/90 pt-0.5"
                   role="separator"
                   aria-hidden
                 />
@@ -225,7 +225,7 @@ export function PremiumSidebar({
                     "group/link flex items-center rounded-2xl transition-all duration-200 ease-out",
                     motionSafe,
                     focusRing,
-                    collapsed ? "justify-center px-3 py-2" : "gap-3 px-3 py-2",
+                    collapsed ? "justify-center px-3 py-1.5" : "gap-2.5 px-3 py-1.5",
                     active
                       ? "bg-slate-900 text-white shadow-md shadow-slate-900/15"
                       : "text-slate-600 hover:bg-slate-100/90 hover:text-slate-900"
@@ -281,7 +281,7 @@ export function PremiumSidebar({
                   "group/nav flex w-full items-center rounded-2xl text-left transition-all duration-200 ease-out",
                   motionSafe,
                   focusRing,
-                  collapsed ? "justify-center px-3 py-2" : "gap-3 px-3 py-2",
+                  collapsed ? "justify-center px-3 py-1.5" : "gap-2.5 px-3 py-1.5",
                   hasActiveChild
                     ? "bg-slate-100/90 text-slate-900"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
@@ -304,7 +304,7 @@ export function PremiumSidebar({
             );
 
             return (
-              <div key={section.label} className="space-y-1">
+              <div key={section.label} className="space-y-0.5">
                 <RailTooltip label={section.label} collapsed={collapsed}>
                   {groupBtn}
                 </RailTooltip>
@@ -321,7 +321,7 @@ export function PremiumSidebar({
                     )}
                   >
                     <div className="min-h-0">
-                      <div className="space-y-1 pl-3">
+                      <div className="space-y-0.5 pl-3">
                         {section.items.map((item) => {
                           const active = isLinkActive(pathname, item);
                           return (
@@ -333,7 +333,7 @@ export function PremiumSidebar({
                                 setOpenGroups((prev) => ({ ...prev, [section.label]: true }));
                               }}
                               className={cn(
-                                "group/sublink flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm transition-all duration-200",
+                                "group/sublink flex items-center gap-2.5 rounded-xl px-3 py-1 text-sm transition-all duration-200",
                                 motionSafe,
                                 focusRing,
                                 active
@@ -369,7 +369,7 @@ export function PremiumSidebar({
       </div>
 
       {footer ? (
-        <div className="shrink-0 border-t border-slate-200/80 bg-white/60 px-3 py-3 backdrop-blur-sm">
+        <div className="shrink-0 border-t border-slate-200/80 bg-white/60 px-3 py-2 backdrop-blur-sm">
           <div className="transition-opacity duration-200">{footer}</div>
         </div>
       ) : null}

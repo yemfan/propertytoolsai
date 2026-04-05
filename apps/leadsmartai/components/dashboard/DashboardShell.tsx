@@ -11,9 +11,9 @@ const APP_NAME = "LeadSmart AI";
 
 /** Matches PropertyTools AI {@link AppShell} sidebar promo card (slate gradient). */
 const sidebarFooter = (
-  <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 text-sm leading-snug text-white shadow-lg shadow-slate-900/25 ring-1 ring-white/10">
+  <div className="rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-3 py-2.5 text-sm leading-snug text-white shadow-lg shadow-slate-900/25 ring-1 ring-white/10">
     <p className="font-medium text-white/95">Grow with AI follow-ups</p>
-    <p className="mt-1 text-xs text-white/70">Upgrade for more credits and automation.</p>
+    <p className="mt-0.5 text-xs text-white/70">Upgrade for more credits and automation.</p>
   </div>
 );
 
