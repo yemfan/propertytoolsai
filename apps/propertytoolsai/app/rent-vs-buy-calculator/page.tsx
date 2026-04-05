@@ -56,7 +56,7 @@ export default function RentVsBuyCalculator() {
           browserRequirements: "Requires JavaScript",
           url: "https://propertytoolsai.com/rent-vs-buy-calculator",
           description:
-            "Compare the total cost of renting versus buying a home over your planned time horizon.",,
+            "Compare the total cost of renting versus buying a home over your planned time horizon.",
           featureList: "10-year cost comparison, Equity growth projection, Break-even timeline, Net worth impact",
           offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
           provider: { "@type": "Organization", name: "PropertyTools AI", url: "https://propertytoolsai.com" },

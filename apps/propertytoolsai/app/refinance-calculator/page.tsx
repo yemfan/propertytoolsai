@@ -45,7 +45,7 @@ export default function RefinanceCalculator() {
           browserRequirements: "Requires JavaScript",
           url: "https://propertytoolsai.com/refinance-calculator",
           description:
-            "Compare your current mortgage to a new rate and estimate monthly savings and break-even when refinancing.",,
+            "Compare your current mortgage to a new rate and estimate monthly savings and break-even when refinancing.",
           featureList: "Break-even analysis, Monthly savings calculation, Closing cost estimation, Rate comparison",
           offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
           provider: { "@type": "Organization", name: "PropertyTools AI", url: "https://propertytoolsai.com" },
