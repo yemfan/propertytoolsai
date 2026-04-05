@@ -134,7 +134,7 @@ function AppShellAuthedLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900">
       <div className="shrink-0 border-b border-slate-200/80 bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-[1920px] items-center justify-center px-4 lg:justify-start lg:px-8">
+        <div className="mx-auto flex h-14 max-w-[1920px] items-center justify-center px-4 lg:justify-start lg:pl-[272px]">
           <Link
             href="/"
             className="flex min-w-0 items-center rounded-2xl py-1 outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
