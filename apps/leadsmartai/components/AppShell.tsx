@@ -53,8 +53,7 @@ function isPlatformDashboardPath(pathname: string): boolean {
     pathname.startsWith("/agent/dashboard") ||
     pathname.startsWith("/loan-broker/") ||
     pathname.startsWith("/support/dashboard") ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/portal")
+    pathname.startsWith("/admin")
   );
 }
 
