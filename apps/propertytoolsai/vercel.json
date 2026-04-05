@@ -9,82 +9,66 @@
   },
   "crons": [
     {
-      "comment": "SEO – refresh stale pages (168 h+, up to 200). Runs nightly.",
       "path": "/api/jobs/seo-refresh",
       "schedule": "0 3 * * *"
     },
     {
-      "comment": "SEO – auto-queue + generate new topic×location cluster pages (batch 75).",
       "path": "/api/jobs/seo-expand",
       "schedule": "30 3 * * *"
     },
     {
-      "comment": "SEO – optimise high-traffic pages with low lead conversion.",
       "path": "/api/jobs/seo-optimize",
       "schedule": "0 4 * * *"
     },
     {
-      "comment": "SEO – weekly OpenAI content quality pass (requires SEO_OPT_WEEKLY_LIMIT env).",
       "path": "/api/cron/seo-content-optimization",
       "schedule": "0 5 * * 0"
     },
     {
-      "comment": "SEO – generate new cluster pages for missing topic×location pairs (programmable SEO / SERP domination).",
       "path": "/api/cron/cluster-generator",
       "schedule": "0 6 * * *"
     },
     {
-      "comment": "SEO – keyword discovery from seed list; expand keyword DB (requires KEYWORD_DISCOVERY_SEEDS env).",
       "path": "/api/cron/keyword-discovery",
       "schedule": "0 2 * * 1"
     },
     {
-      "comment": "Leads – daily lead scoring refresh for all active leads.",
       "path": "/api/cron/lead-score-refresh",
       "schedule": "0 1 * * *"
     },
     {
-      "comment": "Leads – process queued follow-up jobs (email + SMS). Runs hourly.",
       "path": "/api/cron/lead-followups",
       "schedule": "0 * * * *"
     },
     {
-      "comment": "Emails – send queued outbound emails and SMS. Runs hourly.",
       "path": "/api/cron/send-emails",
       "schedule": "30 * * * *"
     },
     {
-      "comment": "Tasks – move deferred tasks to active when their due date arrives.",
       "path": "/api/cron/tasks-deferred",
       "schedule": "0 7 * * *"
     },
     {
-      "comment": "Smart Match – send daily property-match digest emails to subscribers.",
       "path": "/api/cron/smart-match-daily",
       "schedule": "0 9 * * *"
     },
     {
-      "comment": "Smart Automation – trigger rule-based follow-ups (report_view, high_engagement, inactivity).",
       "path": "/api/cron/smart-automation",
       "schedule": "0 */6 * * *"
     },
     {
-      "comment": "Valuation – auto-calibrate AVM model weights from recent sold data.",
       "path": "/api/jobs/valuation-calibration",
       "schedule": "0 1 * * *"
     },
     {
-      "comment": "City data – refresh local market stats (median price, inventory, DOM).",
       "path": "/api/cron/city-data-refresh",
       "schedule": "0 5 * * 1"
     },
     {
-      "comment": "LeadSmart sync – refresh lead batch from LeadSmart service.",
       "path": "/api/cron/leadsmart-refresh",
       "schedule": "30 5 * * *"
     },
     {
-      "comment": "Valuation – learning loop for lead pricing model.",
       "path": "/api/cron/lead-pricing-learning",
       "schedule": "0 2 * * 3"
     }
