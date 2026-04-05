@@ -126,7 +126,7 @@ export default function LocalSeoLeadForm({
         </button>
       </form>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
-      {ok && <p className="mt-2 text-xs text-emerald-700">Submitted! We will follow up shortly.</p>}
+      {ok && <p className="mt-2 text-xs text-emerald-700">✅ Your free report has been sent to your email!</p>}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { sendEmail } from "@/lib/email";
-import { scheduleEmailSequenceForLead } from "@/lib/emailSequences";
+import { scheduleEmailSequenceForLeadSkipDay0 } from "@/lib/emailSequences";
 import { recordLeadEvent, scoreLead } from "@/lib/leadScoring";
 import { runLeadMarketplacePipeline } from "@/lib/leadScorePipeline";
 
@@ -67,7 +67,8 @@ export async function POST(req: Request) {
     }
 
     if (data?.id) {
-      await scheduleEmailSequenceForLead(data.id as string);
+      // Skip day-0 in the drip sequence since we send the report email immediately below.
+      await scheduleEmailSequenceForLeadSkipDay0(data.id as string);
       // Trigger initial scoring on lead creation.
       try {
         await recordLeadEvent({ lead_id: data.id as any, event_type: "visit", metadata: { source: source || "landing" } });
@@ -76,6 +77,56 @@ export async function POST(req: Request) {
       } catch {}
     }
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.propertytools.ai";
+    const firstName = (name || "").split(/\s+/)[0] || "there";
+
+    // Send the market report email immediately to the lead.
+    await sendEmail({
+      to: email,
+      subject: `Your Free Market Report for ${address}`,
+      text: `Hi ${firstName},\n\nThanks for requesting a market report! Here are your personalized tools for ${address}:\n\n• Home Value Estimate: ${siteUrl}/home-value\n• Mortgage Calculator: ${siteUrl}/mortgage-calculator\n• AI Property Comparison: ${siteUrl}/ai-property-comparison\n• Refinance Calculator: ${siteUrl}/refinance-calculator\n\nWant a detailed CMA or have questions about your property? Just reply to this email.\n\n— The PropertyTools AI Team`,
+      html: `
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;color:#1e293b">
+          <div style="padding:32px 24px;background:linear-gradient(135deg,#f8fafc,#fff);border-radius:16px;border:1px solid #e2e8f0">
+            <h1 style="font-size:22px;font-weight:700;margin:0 0 8px">Your Free Market Report</h1>
+            <p style="font-size:15px;color:#475569;margin:0 0 24px">Hi ${firstName}, here's your personalized report for <strong>${address}</strong>.</p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px">
+              <tr>
+                <td style="padding:12px 16px;background:#f1f5f9;border-radius:12px;margin-bottom:8px">
+                  <a href="${siteUrl}/home-value" style="color:#0072ce;text-decoration:none;font-weight:600;font-size:15px">🏠 Home Value Estimate</a>
+                  <p style="font-size:13px;color:#64748b;margin:4px 0 0">Get an AI-powered estimate of your property's current market value.</p>
+                </td>
+              </tr>
+              <tr><td style="height:8px"></td></tr>
+              <tr>
+                <td style="padding:12px 16px;background:#f1f5f9;border-radius:12px">
+                  <a href="${siteUrl}/mortgage-calculator" style="color:#0072ce;text-decoration:none;font-weight:600;font-size:15px">💰 Mortgage Calculator</a>
+                  <p style="font-size:13px;color:#64748b;margin:4px 0 0">Calculate your monthly payment, affordability, and rate options.</p>
+                </td>
+              </tr>
+              <tr><td style="height:8px"></td></tr>
+              <tr>
+                <td style="padding:12px 16px;background:#f1f5f9;border-radius:12px">
+                  <a href="${siteUrl}/ai-property-comparison" style="color:#0072ce;text-decoration:none;font-weight:600;font-size:15px">✨ AI Property Comparison</a>
+                  <p style="font-size:13px;color:#64748b;margin:4px 0 0">Compare similar properties side by side with AI-powered insights.</p>
+                </td>
+              </tr>
+              <tr><td style="height:8px"></td></tr>
+              <tr>
+                <td style="padding:12px 16px;background:#f1f5f9;border-radius:12px">
+                  <a href="${siteUrl}/refinance-calculator" style="color:#0072ce;text-decoration:none;font-weight:600;font-size:15px">📊 Refinance Calculator</a>
+                  <p style="font-size:13px;color:#64748b;margin:4px 0 0">See if refinancing could lower your monthly payment.</p>
+                </td>
+              </tr>
+            </table>
+            <p style="font-size:14px;color:#475569;margin:0 0 16px">Want a detailed CMA or have questions about your property? Just reply to this email — we'd love to help.</p>
+            <p style="font-size:13px;color:#94a3b8;margin:0">— The PropertyTools AI Team</p>
+          </div>
+        </div>
+      `,
+    });
+
+    // Notify the agent.
     const agentEmail = process.env.AGENT_NOTIFICATION_EMAIL;
     if (agentEmail) {
       await sendEmail({
