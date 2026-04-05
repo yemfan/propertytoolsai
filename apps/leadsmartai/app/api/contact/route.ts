@@ -3,7 +3,7 @@ import nodemailer from "nodemailer";
 
 export async function POST(req: Request) {
   try {
-    const { name, email, message } = await req.json();
+    const { name, email, subject, message } = await req.json();
 
     if (!name || !email) {
       return NextResponse.json(
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     await transporter.sendMail({
       from: `"LeadSmart AI Contact" <fan.yes@gmail.com>`,
       to: "fan.yes@gmail.com",
-      subject: "New LeadSmart AI lead",
+      subject: subject ? `[LeadSmart Contact] ${subject}` : "New LeadSmart AI contact",
       text: `Name: ${name}
 Email: ${email}
 

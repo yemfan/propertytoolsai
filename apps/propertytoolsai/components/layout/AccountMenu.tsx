@@ -21,7 +21,32 @@ export default function AccountMenu() {
   const { usage, refresh } = useAccess();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  /* Fetch avatar from /api/me (same approach as LeadSmart TopBar) */
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const supabase = supabaseBrowser();
+        const { data } = await supabase.auth.getSession();
+        const token = data?.session?.access_token;
+        const res = await fetch("/api/me", {
+          credentials: "include",
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+        if (cancelled) return;
+        const av = json?.avatar_url;
+        setAvatarUrl(typeof av === "string" && av.trim() ? av.trim() : null);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -74,8 +99,13 @@ export default function AccountMenu() {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-800 to-slate-900 text-xs font-bold text-white shadow-inner shadow-white/10 ring-2 ring-slate-100">
-          {initial}
+        <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-slate-800 to-slate-900 text-xs font-bold text-white shadow-inner shadow-white/10 ring-2 ring-slate-100">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="User profile photo" className="h-full w-full object-cover" />
+          ) : (
+            initial
+          )}
         </span>
         <span className="hidden min-w-0 flex-1 sm:block">
           <span className="block truncate text-sm font-semibold text-slate-900">Account</span>

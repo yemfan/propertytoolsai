@@ -2,7 +2,7 @@
 
 import {
   BarChart3,
-  Bell,
+  BellRing,
   Calendar,
   CreditCard,
   ChevronDown,
@@ -485,7 +485,7 @@ export default function TopBar({
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200/90 bg-white text-slate-600 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50"
             aria-label="Notifications"
           >
-            <Bell className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+            <BellRing className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
           </Link>
 
           <ProfileMenu

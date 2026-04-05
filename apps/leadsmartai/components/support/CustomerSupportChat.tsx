@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageCircle } from "lucide-react";
+import { LifeBuoy } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchConversation,
@@ -331,7 +331,7 @@ export function SupportChatLauncher({ buttonClassName }: SupportChatLauncherProp
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className={btn} aria-label="Open support chat">
-        <MessageCircle className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+        <LifeBuoy className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
       </button>
 
       {open ? (

@@ -1,22 +1,92 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LifeBuoy, Mail, MessageCircle } from "lucide-react";
+import ContactForm from "./ContactForm";
 
 export const metadata: Metadata = {
-  title: "Contact Us",
-  description: "Get in touch with the LeadSmart AI team. We'd love to hear from you about lead management and CRM solutions.",
+  title: "Contact Us | LeadSmart AI",
+  description:
+    "Get in touch with the LeadSmart AI team. We'd love to hear from you about lead management and CRM solutions for real estate professionals.",
   keywords: ["contact", "support", "LeadSmart AI", "CRM", "lead management"],
 };
 
 export default function ContactPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-16">
-      <h1 className="text-3xl font-bold text-slate-900 mb-4">Contact</h1>
-      <p className="text-slate-600 mb-6">
-        Get in touch with the LeadSmart AI team. We&apos;d love to hear from you.
-      </p>
-      <Link href="/" className="text-primary-600 hover:text-primary-700 font-medium">
-        ← Back to Home
-      </Link>
+    <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+          Get in touch
+        </h1>
+        <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
+          Have a question, need help, or want to learn more about LeadSmart AI?
+          We&apos;d love to hear from you.
+        </p>
+      </div>
+
+      <div className="mt-12 grid gap-8 lg:grid-cols-5">
+        {/* Contact form */}
+        <div className="lg:col-span-3">
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Send us a message
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Fill out the form below and we&apos;ll get back to you within 24 hours.
+            </p>
+            <ContactForm />
+          </div>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6 lg:col-span-2">
+          {/* Live chat card */}
+          <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/60 to-white p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                <LifeBuoy className="h-5 w-5" strokeWidth={2} />
+              </span>
+              <div>
+                <h3 className="font-semibold text-slate-900">Live support chat</h3>
+                <p className="text-sm text-slate-500">Chat with our team in real time</p>
+              </div>
+            </div>
+            <Link
+              href="/support"
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              <MessageCircle className="h-4 w-4" strokeWidth={2} />
+              Open support chat
+            </Link>
+          </div>
+
+          {/* Email card */}
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+                <Mail className="h-5 w-5" strokeWidth={2} />
+              </span>
+              <div>
+                <h3 className="font-semibold text-slate-900">Email us directly</h3>
+                <p className="text-sm text-slate-500">For partnerships or press</p>
+              </div>
+            </div>
+            <a
+              href="mailto:support@leadsmart-ai.com"
+              className="mt-3 block text-sm font-medium text-[#0072ce] hover:underline"
+            >
+              support@leadsmart-ai.com
+            </a>
+          </div>
+
+          {/* Back link */}
+          <Link
+            href="/"
+            className="inline-block text-sm font-medium text-slate-500 hover:text-slate-700"
+          >
+            &larr; Back to Home
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
