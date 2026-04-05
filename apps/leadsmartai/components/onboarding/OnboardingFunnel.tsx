@@ -697,28 +697,78 @@ export default function OnboardingFunnel() {
   /* ——— Step 7: Pricing (embedded summary) ——— */
   if (step === 7) {
     const plans = [
-      { name: "Free", price: "$0", note: "25 leads/mo · core pipeline", cta: "Start free", href: "/agent/pricing?from=onboarding", primary: false },
-      { name: "Pro", price: "$49/mo", note: "500 leads · full CRM · SMS", cta: "Start free trial", href: "/pricing?from=onboarding", primary: true },
-      { name: "Elite", price: "$99/mo", note: "Unlimited leads · top producers", cta: "Start free trial", href: "/pricing?from=onboarding", primary: false },
+      {
+        name: "Free", price: "$0", period: "forever", cta: "Start free", href: "/agent/pricing?from=onboarding", primary: false,
+        tagline: "Test the platform. See leads flow in.",
+        features: ["25 leads/mo", "Basic lead pipeline", "Email-only auto-response", "1 drip sequence", "Up to 50 contacts", "2 CMA reports/day", "Email support"],
+        limits: ["No SMS", "No AI conversations", "No lead scoring", "No CRM integrations"],
+      },
+      {
+        name: "Pro", price: "$49", period: "/mo", cta: "Start free trial", href: "/pricing?from=onboarding", primary: true, badge: "Most Popular",
+        tagline: "Full CRM and AI for active agents.",
+        features: ["500 leads/mo", "Full lead stage tracking", "SMS + Email auto-response (< 60s)", "Unlimited drip sequences", "AI conversation continuation", "Up to 500 contacts", "Contact enrichment", "CRM integrations", "Advanced lead scoring", "Buyer intent signals", "5 CMA reports/day", "Priority email support"],
+        limits: ["No custom drip campaigns", "No predictive deal probability", "No team features"],
+        trialNote: "14-day free trial · No credit card required",
+      },
+      {
+        name: "Elite", price: "$99", period: "/mo", cta: "Start free trial", href: "/pricing?from=onboarding", primary: false,
+        tagline: "For top producers closing 10+ deals/month.",
+        features: ["Unlimited leads", "SMS + Email auto-response (< 60s)", "Custom drip campaigns", "Predictive AI lead scoring", "Predictive deal probability", "Unlimited contacts", "10 CMA reports/day", "Advanced pipeline analytics", "Dedicated onboarding"],
+        limits: ["No team lead pool", "No lead routing rules", "No admin controls"],
+        trialNote: "14-day free trial",
+      },
+      {
+        name: "Team", price: "$199", period: "/mo", cta: "Contact sales", href: "/pricing?from=onboarding", primary: false,
+        tagline: "Multiple agents, one shared pipeline.",
+        features: ["Everything in Elite", "Up to 10 agents", "Shared team lead pool", "Lead routing rules", "Team performance dashboard", "Admin controls", "White-label option", "Unlimited CMA reports", "Priority SLA + dedicated CSM"],
+        limits: [],
+      },
     ];
     return (
       <Shell step={7}>
         <div className="space-y-6">
           <div className="text-center">
             <h1 className="font-heading text-2xl font-bold sm:text-3xl">Choose how you scale</h1>
-            <p className="mt-2 text-sm text-slate-400">Same checkout as the main app — trials available on the pricing page.</p>
+            <p className="mt-2 text-sm text-slate-400">Every paid plan includes a 14-day free trial. Cancel anytime.</p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {plans.map((p) => (
               <div
                 key={p.name}
-                className={`rounded-2xl border p-5 ${
+                className={`relative flex flex-col rounded-2xl border p-5 ${
                   p.primary ? "border-sky-500/50 bg-sky-500/10 shadow-lg shadow-sky-900/20" : "border-white/10 bg-white/5"
                 }`}
               >
+                {p.badge && (
+                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-[#0072ce] px-3 py-0.5 text-[10px] font-semibold text-white whitespace-nowrap">
+                    {p.badge}
+                  </span>
+                )}
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{p.name}</p>
-                <p className="mt-2 text-2xl font-bold text-white">{p.price}</p>
-                <p className="mt-1 text-xs text-slate-400">{p.note}</p>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span className="text-2xl font-bold text-white">{p.price}</span>
+                  <span className="text-xs text-slate-400">{p.period}</span>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">{p.tagline}</p>
+
+                {/* Features */}
+                <ul className="mt-4 flex-1 space-y-1.5">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex items-start gap-1.5 text-xs text-slate-300">
+                      <svg className="mt-0.5 h-3 w-3 shrink-0 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      {f}
+                    </li>
+                  ))}
+                  {p.limits.map((l) => (
+                    <li key={l} className="flex items-start gap-1.5 text-xs text-slate-500">
+                      <span className="mt-0.5 inline-block h-3 w-3 shrink-0 text-center leading-3">—</span>
+                      {l}
+                    </li>
+                  ))}
+                </ul>
+
                 <Link
                   href={p.href}
                   className={`mt-5 block w-full rounded-xl py-3 text-center text-sm font-bold ${
@@ -727,6 +777,9 @@ export default function OnboardingFunnel() {
                 >
                   {p.cta}
                 </Link>
+                {p.trialNote && (
+                  <p className="mt-1.5 text-center text-[10px] text-slate-500">{p.trialNote}</p>
+                )}
               </div>
             ))}
           </div>

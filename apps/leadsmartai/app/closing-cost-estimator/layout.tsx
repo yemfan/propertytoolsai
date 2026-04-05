@@ -1,8 +1,9 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Closing Cost Estimator | LeadSmart AI",
-  description: "Estimate closing costs for your home purchase. Loan origination, title, appraisal, and more.",
+  title: "Closing Cost Estimator",
+  description: "Estimate closing costs for home purchases. Calculate loan origination, title insurance, appraisal, and other buyer fees.",
+  keywords: ["closing costs", "home purchase", "loan fees", "title insurance", "real estate"],
 };
 
 export default function ClosingCostEstimatorLayout({

@@ -1,5 +1,19 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+
+export const metadata: Metadata = {
+  title: "About PropertyTools AI",
+  description:
+    "Learn how PropertyTools AI empowers home buyers, sellers, and investors with intelligent real estate tools and insights.",
+  keywords: [
+    "about PropertyTools AI",
+    "real estate tools",
+    "property valuation",
+    "investment analysis",
+    "home buying tools",
+  ],
+};
 
 export default function AboutPage() {
   return (

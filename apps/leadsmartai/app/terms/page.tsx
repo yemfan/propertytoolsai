@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description: "Terms of service for LeadSmart AI. Review the terms governing use of our lead management, CRM, and automation tools.",
+  keywords: ["terms", "terms of service", "agreement", "legal", "conditions"],
+};
 
 export default function TermsPage() {
   return (

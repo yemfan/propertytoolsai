@@ -45,13 +45,13 @@ function planFromEnv(priceId: string): InternalPlan | undefined {
   if (process.env.STRIPE_PRICE_ID_LOAN_BROKER_PRO && priceId === process.env.STRIPE_PRICE_ID_LOAN_BROKER_PRO) {
     return "loan_broker_pro";
   }
-  if (process.env.STRIPE_PRICE_ID_CRM_STARTER && priceId === process.env.STRIPE_PRICE_ID_CRM_STARTER) {
+  if (process.env.STRIPE_PRICE_ID_PRO && priceId === process.env.STRIPE_PRICE_ID_PRO) {
     return "crm_starter";
   }
-  if (process.env.STRIPE_PRICE_ID_CRM_PRO && priceId === process.env.STRIPE_PRICE_ID_CRM_PRO) {
+  if (process.env.STRIPE_PRICE_ID_ELITE && priceId === process.env.STRIPE_PRICE_ID_ELITE) {
     return "crm_pro";
   }
-  if (process.env.STRIPE_PRICE_ID_CRM_TEAM && priceId === process.env.STRIPE_PRICE_ID_CRM_TEAM) {
+  if (process.env.STRIPE_PRICE_ID_TEAM && priceId === process.env.STRIPE_PRICE_ID_TEAM) {
     return "crm_team";
   }
   return undefined;

@@ -68,7 +68,7 @@ export default function AssignedAgentCard() {
             {agent.avatarUrl ? (
               <Image
                 src={agent.avatarUrl}
-                alt=""
+                alt={`${agent.displayName} profile photo`}
                 fill
                 unoptimized
                 className="object-cover"

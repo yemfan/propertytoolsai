@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Contact Us",
+  description: "Get in touch with the LeadSmart AI team. We'd love to hear from you about lead management and CRM solutions.",
+  keywords: ["contact", "support", "LeadSmart AI", "CRM", "lead management"],
+};
 
 export default function ContactPage() {
   return (

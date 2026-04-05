@@ -105,7 +105,7 @@ export function useSupportRealtime(options: UseSupportRealtimeOptions): UseSuppo
         payload: { role: metaRef.current.role, typing },
       });
     } catch (e) {
-      console.warn("[support-realtime] broadcast typing failed", e);
+      console.error("[support-realtime] broadcast typing failed", e);
     }
   }, []);
 
@@ -161,12 +161,12 @@ export function useSupportRealtime(options: UseSupportRealtimeOptions): UseSuppo
             online_at: new Date().toISOString(),
           });
         } catch (e) {
-          console.warn("[support-realtime] presence track failed", e);
+          console.error("[support-realtime] presence track failed", e);
         }
       } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
         subscribedRef.current = false;
         setChannelStatus("error");
-        console.warn("[support-realtime] channel", status, err?.message ?? "");
+        console.error("[support-realtime] channel", status, err?.message ?? "");
       } else if (status === "CLOSED") {
         subscribedRef.current = false;
         setChannelStatus("idle");

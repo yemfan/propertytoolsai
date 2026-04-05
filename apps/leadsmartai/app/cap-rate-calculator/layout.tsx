@@ -1,8 +1,9 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Cap Rate Calculator | LeadSmart AI",
-  description: "Calculate capitalization rate from net operating income and purchase price.",
+  title: "Cap Rate Calculator",
+  description: "Calculate capitalization rate and NOI for rental properties. Analyze investment returns and compare deals with our property cap rate calculator.",
+  keywords: ["cap rate calculator", "NOI", "capitalization rate", "rental property", "real estate investing"],
 };
 
 export default function CapRateCalculatorLayout({

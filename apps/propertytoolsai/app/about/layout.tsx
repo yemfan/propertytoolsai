@@ -5,6 +5,11 @@ export const metadata: Metadata = {
   title: "About PropertyTools AI | Smarter Real Estate Decisions",
   description:
     "PropertyToolsAI helps you understand property value, financing, and investment potential with fast, intelligent tools.",
+  openGraph: {
+    title: "About PropertyTools AI | Smarter Real Estate Decisions",
+    description:
+      "PropertyToolsAI helps you understand property value, financing, and investment potential with fast, intelligent tools.",
+  },
 };
 
 export default function AboutLayout({ children }: { children: ReactNode }) {

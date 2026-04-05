@@ -471,7 +471,7 @@ export default function AIZillowRedfinLinkAnalyzerPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={property.imageUrl}
-                  alt=""
+                  alt={property.address || "Listing photo"}
                   className="h-full w-full object-cover"
                 />
               </div>

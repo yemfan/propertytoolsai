@@ -1,11 +1,19 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import PropertyComparisonClient from "@/components/property-comparison/PropertyComparisonClient";
 import JsonLd from "@/components/JsonLd";
 
-export const metadata = {
-  title: "AI Property Comparison | PropertyTools AI",
+export const metadata: Metadata = {
+  title: "AI Property Comparison — Compare Homes Side by Side",
   description:
-    "Compare multiple investment properties side-by-side with scores and AI-powered recommendations.",
+    "Compare multiple investment properties side-by-side with AI scoring, metrics, and data-driven recommendations.",
+  keywords: [
+    "property comparison",
+    "investment property analysis",
+    "property comparison tool",
+    "real estate analysis",
+    "property scoring",
+  ],
 };
 
 export default function AiPropertyComparisonPage() {

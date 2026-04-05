@@ -290,7 +290,7 @@ export default function AccountMenu() {
         <span className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-xs font-bold text-blue-800">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL
-            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+            <img src={avatarUrl} alt="User profile photo" className="h-full w-full object-cover" />
           ) : (
             initial
           )}

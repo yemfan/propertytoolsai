@@ -6,7 +6,7 @@
  *
  * Values without a scheme (e.g. `leadsmart-ai.com`) are normalized to `https://…` so `new URL()` never throws.
  */
-const DEFAULT_ORIGIN = "https://leadsmart-ai.com";
+const DEFAULT_ORIGIN = "https://www.leadsmart-ai.com";
 
 function normalizeOrigin(raw: string, fallback: string): string {
   const trimmed = raw.trim().replace(/\/$/, "");

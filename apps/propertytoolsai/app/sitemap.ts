@@ -6,7 +6,7 @@ import { getSeoSitemapEntries } from "@/lib/seo-generator/sitemap";
 import { getKeywordPagesForCity, TRAFFIC_CITIES } from "@/lib/trafficSeo";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001";
   const now = new Date();
 
   const programmaticToolLocationRoutes = getProgrammaticSeoUrlPaths();

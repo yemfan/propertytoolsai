@@ -170,7 +170,7 @@ export default function ProfileSettingsForm() {
           <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-gray-100">
             {avatarSrc ? (
               // eslint-disable-next-line @next/next/no-img-element -- dynamic Supabase Storage URL
-              <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
+              <img src={avatarSrc} alt="User profile photo" className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-blue-800">
                 {initial}

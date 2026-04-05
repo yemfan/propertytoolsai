@@ -3,11 +3,19 @@ import HomeValueEstimatePage from "@/components/home-value/HomeValueEstimatePage
 import JsonLd from "@/components/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Free Home Value Estimate | PropertyToolsAI",
-  description: "Get a free home value estimate with an estimated range and confidence score.",
+  title: "Free Home Value Estimate",
+  description:
+    "Get a free AI-powered home value estimate with confidence range and comparable sales data instantly.",
+  keywords: [
+    "home value estimate",
+    "home valuation",
+    "property value",
+    "home appraisal",
+    "house value",
+  ],
   openGraph: {
-    title: "Free Home Value Estimate | PropertyToolsAI",
-    description: "Get a free home value estimate with an estimated range and confidence score.",
+    title: "Free Home Value Estimate | PropertyTools AI",
+    description: "Get a free AI-powered home value estimate with confidence range and comparable sales data instantly.",
     type: "website",
   },
 };

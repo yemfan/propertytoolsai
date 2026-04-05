@@ -2,9 +2,9 @@ import type { InternalPlan } from "@/lib/billing/stripe-plan-map";
 import type { PlanSlug } from "@/lib/billing/plans";
 
 const ENV_KEYS: Record<PlanSlug, string> = {
-  starter: "STRIPE_PRICE_ID_CRM_STARTER",
-  pro: "STRIPE_PRICE_ID_CRM_PRO",
-  team: "STRIPE_PRICE_ID_CRM_TEAM",
+  starter: "STRIPE_PRICE_ID_PRO",
+  pro: "STRIPE_PRICE_ID_ELITE",
+  team: "STRIPE_PRICE_ID_TEAM",
 };
 
 /**

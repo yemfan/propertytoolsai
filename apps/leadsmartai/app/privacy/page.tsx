@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description: "Privacy policy for LeadSmart AI. Learn how we collect, use, and protect your personal and business information.",
+  keywords: ["privacy", "policy", "data protection", "GDPR", "terms"],
+};
 
 export default function PrivacyPage() {
   return (
