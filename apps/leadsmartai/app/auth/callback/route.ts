@@ -77,8 +77,8 @@ export async function GET(request: Request) {
         const row = prof as { oauth_onboarding_completed?: boolean | null } | null;
         const onboardingDone = row?.oauth_onboarding_completed === true;
         if (!onboardingDone) {
-          const completeUrl = new URL("/auth/complete-profile", url.origin);
-          completeUrl.searchParams.set("next", next);
+          const completeUrl = new URL("/agent-signup", url.origin);
+          completeUrl.searchParams.set("redirect", next);
           const out = NextResponse.redirect(completeUrl);
           for (const v of response.headers.getSetCookie()) {
             out.headers.append("Set-Cookie", v);
