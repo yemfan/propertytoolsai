@@ -12,6 +12,7 @@ import { getNavSectionsForRole } from "@/lib/auth/navByRole";
 import { parseUserRole, type UserRole } from "@/lib/auth/roles";
 import { stripUnlockPremiumNavItem } from "@/lib/nav/stripUnlockPremiumNav";
 import AssignedAgentCard from "@/components/assigned-agent/AssignedAgentCard";
+import AgentChatWidget from "@/components/assigned-agent/AgentChatWidget";
 import PropertyToolsLogo from "@/components/brand/PropertyToolsLogo";
 import { propertyToolsNav } from "@/nav.config";
 
@@ -33,9 +34,12 @@ function PropertyToolsTopChrome({
       appName={APP_NAME}
       sections={navSections}
       leadingExtra={
-        <span className="min-w-0 truncate text-sm font-semibold tracking-tight text-slate-800 sm:text-base">
-          {APP_NAME}
-        </span>
+        <Link
+          href="/"
+          className="flex min-w-0 items-center rounded-2xl py-1 outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
+        >
+          <PropertyToolsLogo className="max-w-[min(180px,55vw)] text-lg sm:max-w-[220px] sm:text-xl" />
+        </Link>
       }
       searchSlot={null}
       rightActions={
@@ -136,16 +140,6 @@ function AppShellAuthedLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900">
-      <div className="shrink-0 border-b border-slate-200/80 bg-white/95 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-[1920px] items-center justify-center px-4 lg:justify-start lg:px-8">
-          <Link
-            href="/"
-            className="flex min-w-0 items-center rounded-2xl py-1 outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
-          >
-            <PropertyToolsLogo className="max-w-[min(180px,55vw)] text-lg sm:max-w-[220px] sm:text-xl" />
-          </Link>
-        </div>
-      </div>
       <div className="shrink-0">
         <PropertyToolsTopChrome navSections={navSections} hideUnlockPremium={hideUnlockPremium} />
       </div>
@@ -159,6 +153,7 @@ function AppShellAuthedLayout({ children }: { children: ReactNode }) {
         />
         <main className="min-h-0 min-w-0 flex-1 px-4 py-6 lg:px-8 lg:py-8">{children}</main>
       </div>
+      <AgentChatWidget customerUserId={user?.id ?? null} />
     </div>
   );
 }
