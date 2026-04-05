@@ -15,7 +15,7 @@ import { trackEvent } from "@/lib/marketing/trackEvent";
 import { mergeAuthHeaders } from "@/lib/mergeAuthHeaders";
 import { scrollToSection } from "@/lib/scrollToSection";
 
-const LEADSMART_URL = process.env.NEXT_PUBLIC_LEADSMART_URL ?? "https://leadsmart.ai";
+const LEADSMART_URL = process.env.NEXT_PUBLIC_LEADSMART_URL ?? "https://www.leadsmart-ai.com";
 
 const tools = [
   {

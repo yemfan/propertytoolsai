@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-const LEADSMART_URL = process.env.NEXT_PUBLIC_LEADSMART_URL ?? "https://leadsmart.ai";
+const LEADSMART_URL = process.env.NEXT_PUBLIC_LEADSMART_URL ?? "https://www.leadsmart-ai.com";
 
 type ToolCard = {
   title: string;
