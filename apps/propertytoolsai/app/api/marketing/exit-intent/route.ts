@@ -30,8 +30,7 @@ export async function POST(req: Request) {
           source: "exit_intent",
           campaign: `exit_popup_${body.event ?? "open"}`,
           metadata: { source: body.source ?? "unknown" },
-        } as Record<string, unknown>)
-        .catch(() => {});
+        } as Record<string, unknown>);
       return NextResponse.json({ ok: true });
     }
 
@@ -62,7 +61,7 @@ export async function POST(req: Request) {
     }
 
     // Log growth event
-    await supabaseServer
+    const { error: insertErr } = await supabaseServer
       .from("traffic_events")
       .insert({
         event_type: "conversion",
@@ -73,8 +72,8 @@ export async function POST(req: Request) {
           email_hint: `${email.slice(0, 3)}***`,
           offer: "free_home_value_report",
         },
-      } as Record<string, unknown>)
-      .catch((e: unknown) => console.warn("[exit-intent] traffic_events:", (e as Error).message));
+      } as Record<string, unknown>);
+    if (insertErr) console.warn("[exit-intent] traffic_events:", insertErr.message);
 
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
