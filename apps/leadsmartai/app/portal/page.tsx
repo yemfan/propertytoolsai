@@ -93,17 +93,9 @@ export default function PortalPage() {
           </div>
         )}
 
-        {error ? (
+        {error && !error.includes("No Stripe customer") ? (
           <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
             {error}
-            {error.includes("No Stripe customer") ? (
-              <>
-                {" "}
-                <Link href="/pricing" className="font-semibold text-sky-700 underline">
-                  View plans
-                </Link>
-              </>
-            ) : null}
           </p>
         ) : null}
 
