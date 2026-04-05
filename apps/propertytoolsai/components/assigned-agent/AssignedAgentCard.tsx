@@ -1,10 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { Mail, MessageCircle, Phone } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/components/AuthProvider";
-import AssignedAgentChatDialog from "@/components/assigned-agent/AssignedAgentChatDialog";
 import type { AssignedAgentPayload } from "@/lib/consumer/assignedAgentTypes";
 
 function telHref(phone: string): string {
@@ -16,10 +14,8 @@ function telHref(phone: string): string {
 }
 
 export default function AssignedAgentCard() {
-  const { user } = useAuth();
   const [agent, setAgent] = useState<AssignedAgentPayload | null>(null);
   const [loading, setLoading] = useState(true);
-  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,8 +42,7 @@ export default function AssignedAgentCard() {
       <div className="animate-pulse space-y-3 rounded-2xl border border-slate-200/80 bg-white/90 p-3">
         <div className="mx-auto h-20 w-20 rounded-full bg-slate-200" />
         <div className="h-3 rounded bg-slate-200" />
-        <div className="grid grid-cols-3 gap-2">
-          <div className="h-9 rounded-xl bg-slate-200" />
+        <div className="grid grid-cols-2 gap-2">
           <div className="h-9 rounded-xl bg-slate-200" />
           <div className="h-9 rounded-xl bg-slate-200" />
         </div>
@@ -67,8 +62,7 @@ export default function AssignedAgentCard() {
   const phone = agent.phone?.trim();
 
   return (
-    <>
-      <div className="space-y-3">
+    <div className="space-y-3">
         <div className="text-center">
           <div className="relative mx-auto h-20 w-20 overflow-hidden rounded-full border border-slate-200/90 bg-slate-100 shadow-inner">
             {agent.avatarUrl ? (
@@ -97,7 +91,7 @@ export default function AssignedAgentCard() {
           ) : null}
         </div>
 
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-2 gap-1.5">
           {phone ? (
             <a
               href={telHref(phone)}
@@ -112,14 +106,6 @@ export default function AssignedAgentCard() {
               Call
             </span>
           )}
-          <button
-            type="button"
-            onClick={() => setChatOpen(true)}
-            className="inline-flex flex-col items-center justify-center gap-1 rounded-xl border border-slate-200/90 bg-white px-1 py-2 text-[11px] font-semibold text-slate-800 shadow-sm transition hover:border-[#0072ce]/40 hover:text-[#0072ce]"
-          >
-            <MessageCircle className="h-4 w-4" strokeWidth={2} />
-            Chat
-          </button>
           {email ? (
             <a
               href={`mailto:${encodeURIComponent(email)}`}
@@ -136,14 +122,5 @@ export default function AssignedAgentCard() {
           )}
         </div>
       </div>
-
-      <AssignedAgentChatDialog
-        open={chatOpen}
-        onClose={() => setChatOpen(false)}
-        agentAuthUserId={agent.authUserId}
-        agentDisplayName={agent.displayName}
-        customerUserId={user?.id ?? null}
-      />
-    </>
   );
 }
