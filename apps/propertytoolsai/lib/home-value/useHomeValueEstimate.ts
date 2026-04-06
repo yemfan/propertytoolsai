@@ -194,6 +194,20 @@ export function useHomeValueEstimate() {
       });
 
       setEstimateResult(result);
+
+      // Pre-populate refinement form with property data from the estimate
+      if (result.property) {
+        setDetails((prev) => ({
+          ...prev,
+          beds: prev.beds ?? result.property.beds,
+          baths: prev.baths ?? result.property.baths,
+          sqft: prev.sqft ?? result.property.sqft,
+          yearBuilt: prev.yearBuilt ?? result.property.yearBuilt,
+          lotSize: prev.lotSize ?? result.property.lotSize,
+          propertyType: prev.propertyType ?? (result.property.propertyType as EstimateDetails["propertyType"]) ?? "single_family",
+        }));
+      }
+
       const historyAddress = nextAddress ?? address;
       if (historyAddress) {
         const item = {
