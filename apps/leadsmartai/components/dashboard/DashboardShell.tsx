@@ -9,7 +9,6 @@ import { isAgentOrBrokerProfileRole } from "@/lib/rolePortalPaths";
 
 const APP_NAME = "LeadSmart AI";
 
-/** Matches PropertyTools AI {@link AppShell} sidebar promo card (slate gradient). */
 const sidebarFooter = (
   <div className="rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-3 py-2.5 text-sm leading-snug text-white shadow-lg shadow-slate-900/25 ring-1 ring-white/10">
     <p className="font-medium text-white/95">Grow with AI follow-ups</p>
@@ -18,7 +17,8 @@ const sidebarFooter = (
 );
 
 /**
- * Authenticated dashboard: same shell pattern as PropertyTools AI — {@link PremiumSidebar} + {@link Topbar} row.
+ * Authenticated dashboard shell — matches PropertyTools AI layout:
+ * PremiumSidebar (full height, stretch mode) + TopBar + scrollable main.
  */
 export default function AppDashboardShell({
   email,
@@ -26,7 +26,6 @@ export default function AppDashboardShell({
   children,
 }: {
   email: string | null | undefined;
-  /** `leadsmart_users.role` — used to show admin-only nav (e.g. Platform Overview). */
   appRole?: string | null;
   children: ReactNode;
 }) {
@@ -38,28 +37,24 @@ export default function AppDashboardShell({
   const showAgentBrokerPromotion = isAgentOrBrokerProfileRole(appRole);
 
   return (
-    <div className="flex min-h-screen w-full min-w-0 flex-col overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900 lg:h-screen lg:max-h-screen lg:flex-row lg:overflow-hidden">
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900">
+      {/* Left: sidebar spans full height (same as PropertyTools) */}
       <PremiumSidebar
         appName={APP_NAME}
         sections={navSections}
         workspaceLabel={navConfig.sidebarTitle ?? "Workspace"}
+        branding="none"
+        height="stretch"
         footer={showAgentBrokerPromotion ? sidebarFooter : undefined}
       />
-      {/*
-        Main column (sidebar | this):
-        ┌─────────────────────────────────────┐
-        │ Header: search + quick actions      │  ← shrink-0, white, bottom border (TopBar)
-        ├─────────────────────────────────────┤
-        │ Dashboard content (scroll)          │  ← flex-1 overflow-y-auto
-        └─────────────────────────────────────┘
-      */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col border-l border-slate-200/80 bg-white lg:min-h-0">
+      {/* Right: header then scrollable content */}
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <div className="shrink-0">
           <TopBar email={email} appRole={appRole} />
         </div>
         <main
           id="agent-portal-main"
-          className="min-h-0 w-full flex-1 overflow-x-hidden overflow-y-auto bg-slate-50/60 px-4 py-6 md:px-8 md:py-8 lg:px-10"
+          className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-slate-50/60 px-4 py-6 md:px-8 md:py-8 lg:px-10"
         >
           {children}
         </main>
@@ -73,7 +68,6 @@ export type DashboardShellProps = {
   subtitle: string;
   kpis: ReactNode;
   children: ReactNode;
-  /** Override KPI grid when you need 6 columns (e.g. admin platform overview). */
   kpiGridClassName?: string;
   className?: string;
 };
@@ -102,4 +96,3 @@ export function DashboardShell({
     </div>
   );
 }
-
