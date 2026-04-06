@@ -120,6 +120,17 @@ export default async function MarketingPage() {
         </div>
 
         <div className="border-t border-slate-100 pt-5 space-y-3">
+          <div className="ui-card-title text-slate-900">Marketing Plans</div>
+          <p className="text-xs text-slate-600">Create automated multi-step marketing sequences for your leads — SMS, email, tasks, and reminders.</p>
+          <Link
+            href="/dashboard/marketing/plans"
+            className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            Open Marketing Plans
+          </Link>
+        </div>
+
+        <div className="border-t border-slate-100 pt-5 space-y-3">
           <div className="ui-card-title text-slate-900">Follow-up Automation</div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
