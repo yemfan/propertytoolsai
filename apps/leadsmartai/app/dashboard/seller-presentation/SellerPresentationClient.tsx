@@ -35,6 +35,7 @@ type PresentationProperty = {
   estimatedValue: number | null;
   low: number | null;
   high: number | null;
+  avgPricePerSqft: number | null;
   comps: Array<{ address: string; price: number; soldDate: string }>;
   ai: PropertyAI | null;
 };
