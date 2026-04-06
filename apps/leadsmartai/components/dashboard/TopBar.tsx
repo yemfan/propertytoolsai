@@ -10,6 +10,7 @@ import {
   ListTodo,
   LogOut,
   MessageSquare,
+  Package,
   Plus,
   Search,
   Settings,
@@ -256,8 +257,17 @@ function ProfileMenu({
       {slimAccountBillingOnly ? (
         <>
           <Link
-            href="/account/profile"
+            href="/dashboard"
             className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            <House className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+            Home
+          </Link>
+          <Link
+            href="/account/profile"
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             role="menuitem"
             onClick={() => setOpen(false)}
           >
@@ -272,6 +282,15 @@ function ProfileMenu({
           >
             <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
             Billing
+          </Link>
+          <Link
+            href="/agent/pricing"
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            <Package className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+            Plans &amp; pricing
           </Link>
         </>
       ) : (

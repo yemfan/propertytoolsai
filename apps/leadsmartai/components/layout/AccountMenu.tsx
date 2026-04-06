@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, CreditCard, Home, LogOut, Settings, User } from "lucide-react";
+import { ChevronDown, CreditCard, Home, LogOut, Package, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -181,41 +181,30 @@ export default function AccountMenu() {
         {roleLabel ? <p className="mt-1 text-xs text-slate-500">{roleLabel}</p> : null}
       </div>
       <div className="mt-1 space-y-0.5">
-        {slimAgentBrokerHeaderMenu ? (
-          <>
-            <Link href="/account/profile" role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
-              <User className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-              Account
-            </Link>
-            <Link href="/portal" role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
-              <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-              Billing
-            </Link>
-          </>
-        ) : (
-          <>
-            <Link href={workspaceHref} role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
-              <Home className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-              Dashboard
-            </Link>
-            <Link href={profileHref} role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
-              <User className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-              My profile
-            </Link>
-            {settingsHref !== profileHref && !hideAccountSettings ? (
-              <Link href={settingsHref} role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
-                <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-                Account &amp; settings
-              </Link>
-            ) : null}
-            {!hideCommercialPricing ? (
-              <Link href={pricingHref} role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
-                <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-                Billing
-              </Link>
-            ) : null}
-          </>
-        )}
+        <Link href={workspaceHref} role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
+          <Home className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+          Home
+        </Link>
+        <Link href={profileHref} role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
+          <User className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+          My profile
+        </Link>
+        {settingsHref !== profileHref && !hideAccountSettings ? (
+          <Link href={settingsHref} role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
+            <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+            Account &amp; settings
+          </Link>
+        ) : null}
+        <Link href={slimAgentBrokerHeaderMenu ? "/portal" : (pricingHref || "/pricing")} role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
+          <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+          Billing
+        </Link>
+        {!hideCommercialPricing ? (
+          <Link href={pricingHref || "/pricing"} role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
+            <Package className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+            Plans &amp; pricing
+          </Link>
+        ) : null}
       </div>
       <div className="mt-1 border-t border-slate-100 pt-1">
         <button
