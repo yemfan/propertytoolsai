@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { resolvePostAuthHomePath } from "@/lib/rolePortalServer";
+import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import LeadSmartLanding from "@/components/marketing/LeadSmartLanding";
 
 export const metadata: Metadata = {
@@ -13,5 +16,14 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
+  try {
+    const supabase = supabaseServerClient();
+    const dashboardPath = await resolvePostAuthHomePath(supabase);
+    if (dashboardPath) redirect(dashboardPath);
+  } catch (e) {
+    // redirect() throws — rethrow it; swallow everything else so marketing page still renders.
+    if (e && typeof e === "object" && "digest" in e) throw e;
+  }
+
   return <LeadSmartLanding />;
 }
