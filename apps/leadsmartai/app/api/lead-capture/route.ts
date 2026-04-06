@@ -5,7 +5,7 @@ import { getPropertyByAddress } from "@/lib/propertyService";
 import { generateOpenHouseReportData } from "@/lib/openHouseReport";
 import { sendEmail } from "@/lib/email";
 import { scheduleEmailSequenceForLeadSkipDay0 } from "@/lib/emailSequences";
-import { runLeadMarketplacePipeline } from "@/lib/leadScorePipeline";
+import { notifyAllAgentsNewLead } from "@/lib/notifications/notifyAllAgentsNewLead";
 
 export const runtime = "nodejs";
 
@@ -183,9 +183,9 @@ Real Estate Advisor`;
     await scheduleEmailSequenceForLeadSkipDay0(leadId);
 
     try {
-      await runLeadMarketplacePipeline(leadId);
+      await notifyAllAgentsNewLead({ leadId, leadName: name, leadSource: "Home Value" });
     } catch (e) {
-      console.warn("lead-capture marketplace pipeline", e);
+      console.warn("lead-capture queue notification", e);
     }
 
     return NextResponse.json({

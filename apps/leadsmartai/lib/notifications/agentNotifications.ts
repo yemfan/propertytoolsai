@@ -81,7 +81,7 @@ export async function upsertAgentNotificationPreferences(
 
 export type InsertInboxParams = {
   agentId: string;
-  type: "hot_lead" | "missed_call" | "reminder";
+  type: "hot_lead" | "missed_call" | "reminder" | "new_lead";
   priority: "high" | "medium" | "low";
   title: string;
   body: string;

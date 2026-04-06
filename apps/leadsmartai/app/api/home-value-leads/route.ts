@@ -1,35 +1,14 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
-import { getLeadLimit } from "@/lib/planLimits";
 import { scheduleEmailSequenceForLead } from "@/lib/emailSequences";
-import { runLeadMarketplacePipeline } from "@/lib/leadScorePipeline";
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-async function resolveHomeValueAgentId(raw: string | undefined): Promise<string | null> {
-  const t = (raw ?? "").trim();
-  if (!t) return null;
-  if (/^\d+$/.test(t)) return t;
-  if (UUID_RE.test(t)) {
-    const { data, error } = await supabaseServer
-      .from("agents")
-      .select("id")
-      .eq("auth_user_id", t)
-      .maybeSingle();
-    if (error || (data as any)?.id == null) return null;
-    return String((data as any).id);
-  }
-  return null;
-}
+import { notifyAllAgentsNewLead } from "@/lib/notifications/notifyAllAgentsNewLead";
 
 type LeadPayload = {
   name?: string;
   address: string;
   email: string;
   phone?: string;
-  agentId?: string;
 };
 
 function formatUsPhone(input: string) {
@@ -41,46 +20,14 @@ function formatUsPhone(input: string) {
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as LeadPayload;
-    const { name, address, email, phone, agentId: agentIdRaw } = body;
+    const { name, address, email, phone } = body;
     const formattedPhone = phone ? formatUsPhone(phone) : null;
-    const resolvedAgentId = await resolveHomeValueAgentId(agentIdRaw);
 
     if (!address || !email) {
       return NextResponse.json(
         { ok: false, error: "Missing address or email" },
         { status: 400 }
       );
-    }
-
-    // Enforce monthly lead limits for the agent (if agentId provided)
-    if (resolvedAgentId) {
-      const { data: agent, error: agentErr } = await supabaseServer
-        .from("agents")
-        .select("plan_type")
-        .eq("id", resolvedAgentId)
-        .maybeSingle();
-      if (agentErr && (agentErr as any).code !== "PGRST116") throw agentErr;
-
-      const planType = (agent as any)?.plan_type ?? "free";
-      const limit = getLeadLimit(planType);
-
-      const now = new Date();
-      const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0));
-
-      const { count, error: countErr } = await supabaseServer
-        .from("leads")
-        .select("id", { count: "exact", head: true })
-        .eq("agent_id", resolvedAgentId)
-        .gte("created_at", start.toISOString());
-
-      if (countErr) throw countErr;
-
-      if (Number.isFinite(limit) && (count ?? 0) >= limit) {
-        return NextResponse.json(
-          { ok: false, error: "Upgrade required" },
-          { status: 402 }
-        );
-      }
     }
 
     const resendApiKey = process.env.RESEND_API_KEY;
@@ -104,7 +51,7 @@ Name: ${name || "(not provided)"}
 Email: ${email}
 Phone: ${phone || "(not provided)"}
 Address: ${address}
-Agent ID: ${resolvedAgentId || agentIdRaw || "(not provided)"}
+Agent ID: (queued for claim)
 Timestamp: ${new Date().toISOString()}`,
           }),
         });
@@ -124,7 +71,7 @@ Timestamp: ${new Date().toISOString()}`,
         .from("contacts")
         .upsert(
           {
-            agent_id: resolvedAgentId ?? null,
+            agent_id: null,
             name: name || address,
             email,
             phone: formattedPhone ?? null,
@@ -138,7 +85,7 @@ Timestamp: ${new Date().toISOString()}`,
     const { data: lead, error: leadError } = await supabaseServer
       .from("leads")
       .insert({
-        agent_id: resolvedAgentId ?? null,
+        agent_id: null,
         property_address: address,
         name: name || address,
         email,
@@ -160,9 +107,13 @@ Timestamp: ${new Date().toISOString()}`,
     } else if (lead?.id) {
       await scheduleEmailSequenceForLead(lead.id as string);
       try {
-        await runLeadMarketplacePipeline(String(lead.id));
+        await notifyAllAgentsNewLead({
+          leadId: String(lead.id),
+          leadName: name || address,
+          leadSource: "home_value_widget",
+        });
       } catch (e) {
-        console.warn("home-value-leads marketplace pipeline", e);
+        console.warn("home-value-leads queue notification", e);
       }
     }
 

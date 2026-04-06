@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
-import { runLeadMarketplacePipeline } from "@/lib/leadScorePipeline";
 
 type Body = {
   name?: string | null;
@@ -30,37 +29,15 @@ export async function POST(req: Request) {
 
     const { data: agent, error: agentErr } = await supabase
       .from("agents")
-      .select("id,plan_type,auth_user_id")
+      .select("id")
       .eq("auth_user_id", userId)
       .maybeSingle();
     if (agentErr) throw agentErr;
 
     const agentId = String((agent as any)?.id ?? "");
-    const planType = String((agent as any)?.plan_type ?? "free").toLowerCase();
 
     if (!agentId) {
       return NextResponse.json({ ok: false, error: "Agent not found" }, { status: 404 });
-    }
-
-    if (planType === "free") {
-      return NextResponse.json(
-        { ok: false, error: "CRM is not available on Free. Upgrade to Pro to add leads." },
-        { status: 402 }
-      );
-    }
-
-    // Pro lead limit = 500; Premium unlimited.
-    if (planType === "pro") {
-      const { count } = await supabase
-        .from("leads")
-        .select("id", { count: "exact", head: true })
-        .eq("agent_id", agentId);
-      if ((count ?? 0) >= 500) {
-        return NextResponse.json(
-          { ok: false, error: "Upgrade to Premium for unlimited leads." },
-          { status: 402 }
-        );
-      }
     }
 
     const body = (await req.json().catch(() => ({}))) as Body;
@@ -88,14 +65,6 @@ export async function POST(req: Request) {
       .select("id")
       .single();
     if (error) throw error;
-
-    if (data?.id != null) {
-      try {
-        await runLeadMarketplacePipeline(String(data.id));
-      } catch (e) {
-        console.warn("create lead marketplace pipeline", e);
-      }
-    }
 
     return NextResponse.json({ ok: true, id: data?.id ?? null });
   } catch (e: any) {
