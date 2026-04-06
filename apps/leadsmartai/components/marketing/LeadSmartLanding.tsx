@@ -110,46 +110,32 @@ export default function LeadSmartLanding() {
         </header>
 
         {/* HERO */}
-        <section className="relative overflow-hidden border-b border-slate-200/80 bg-gradient-to-b from-slate-50 via-white to-white dark:border-slate-800 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
-          {/* Gradient orbs */}
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.35]"
-            aria-hidden
-            style={{
-              backgroundImage:
-                "radial-gradient(ellipse 90% 60% at 50% -30%, rgba(0,114,206,0.18), transparent 55%)",
-            }}
-          />
-          <div
-            className="pointer-events-none absolute inset-0 opacity-30"
-            aria-hidden
-            style={{
-              backgroundImage:
-                "radial-gradient(ellipse 40% 40% at 85% 15%, rgba(79,70,229,0.1), transparent 50%)",
-            }}
-          />
+        <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-white dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
+          {/* Animated gradient mesh */}
+          <div className="pointer-events-none absolute inset-0 -z-0" aria-hidden>
+            <div className="absolute left-1/2 top-0 h-[600px] w-[900px] -translate-x-1/2 -translate-y-1/3 rounded-full opacity-[0.15] blur-[100px] dark:opacity-[0.08]" style={{ background: "conic-gradient(from 180deg at 50% 50%, #0072ce 0deg, #4F46E5 120deg, #0072ce 240deg, #7c3aed 360deg)" }} />
+            <div className="absolute right-0 top-1/4 h-[300px] w-[300px] rounded-full opacity-[0.06] blur-[80px]" style={{ background: "radial-gradient(circle, #ff8c42, transparent 70%)" }} />
+          </div>
 
           <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-6 py-16 md:grid-cols-2 md:gap-12 md:py-22 lg:py-28">
             <div className="max-w-xl lg:max-w-2xl">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#0072ce]/20 bg-white/80 px-4 py-1.5 text-xs font-medium text-[#0072ce] shadow-sm backdrop-blur-sm dark:border-[#0072ce]/30 dark:bg-slate-900/80 dark:text-[#4da3e8]" style={{ animation: "fadeInUp 0.7s ease-out both" }}>
+                <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0072ce] opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-[#0072ce]" /></span>
+                AI-powered CRM for agents
+              </div>
               <h1
-                className="font-heading text-4xl font-bold leading-[1.1] tracking-tight text-gray-950 md:text-5xl lg:text-[2.75rem] dark:text-white"
-                style={{ animation: "fadeInUp 0.6s ease-out both" }}
+                className="font-heading text-4xl font-extrabold leading-[1.08] tracking-tight text-gray-950 md:text-5xl lg:text-[3rem] dark:text-white"
+                style={{ animation: "fadeInUp 0.7s ease-out 0.06s both" }}
               >
-                The AI Deal Engine for Real Estate
+                The AI Deal Engine
+                <br />
+                <span className="bg-gradient-to-r from-[#0072ce] via-[#4F46E5] to-[#7c3aed] bg-clip-text text-transparent">for Real Estate</span>
               </h1>
               <p
-                className="mt-5 text-xl font-semibold text-gray-900 md:text-2xl md:leading-snug dark:text-slate-200"
-                style={{ animation: "fadeInUp 0.6s ease-out 0.1s both" }}
+                className="mt-5 text-lg leading-relaxed text-gray-600 md:text-xl dark:text-slate-400"
+                style={{ animation: "fadeInUp 0.7s ease-out 0.12s both" }}
               >
-                We don&apos;t just generate leads.
-              </p>
-              <p
-                className="mt-2 text-xl font-semibold leading-snug md:text-2xl"
-                style={{ animation: "fadeInUp 0.6s ease-out 0.15s both" }}
-              >
-                <span className="bg-gradient-to-r from-[#0072ce] to-[#4F46E5] bg-clip-text text-transparent">
-                  We turn them into closed deals — automatically.
-                </span>
+                We don&apos;t just generate leads — we <strong className="text-gray-900 dark:text-white">turn them into closed deals automatically</strong>. Capture, qualify, and convert high-intent buyers and sellers with AI.
               </p>
               <p
                 className="mt-5 text-base leading-relaxed text-gray-600 md:text-lg dark:text-slate-400"
@@ -206,29 +192,57 @@ export default function LeadSmartLanding() {
               </div>
             </div>
 
-            {/* Dashboard preview */}
+            {/* Dashboard preview — app window mockup */}
             <div
-              className="flex h-72 items-center justify-center rounded-2xl border border-gray-200 bg-gradient-to-br from-slate-100 to-slate-200/80 p-6 shadow-inner md:h-80 dark:border-slate-700 dark:from-slate-800 dark:to-slate-900"
-              style={{ animation: "fadeInUp 0.7s ease-out 0.35s both" }}
+              className="rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-2xl shadow-slate-900/[0.1] dark:border-slate-700 dark:bg-slate-800"
+              style={{ animation: "fadeInUp 0.8s ease-out 0.3s both" }}
             >
-              <div className="w-full max-w-md rounded-xl border border-white/80 bg-white p-4 shadow-lg dark:border-slate-600 dark:bg-slate-800">
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-slate-500">Dashboard preview</p>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+              {/* Window chrome */}
+              <div className="flex items-center gap-2 rounded-t-xl border-b border-slate-100 bg-slate-50 px-4 py-2.5 dark:border-slate-700 dark:bg-slate-900">
+                <div className="flex gap-1.5"><div className="h-2.5 w-2.5 rounded-full bg-red-400" /><div className="h-2.5 w-2.5 rounded-full bg-amber-400" /><div className="h-2.5 w-2.5 rounded-full bg-emerald-400" /></div>
+                <span className="ml-2 text-[10px] font-medium text-slate-400">LeadSmart AI — Dashboard</span>
+                <div className="ml-auto flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /><span className="text-[9px] font-medium text-emerald-600 dark:text-emerald-400">Live</span></div>
+              </div>
+              {/* Dashboard content */}
+              <div className="space-y-3 p-4">
+                <div className="grid grid-cols-3 gap-2">
                   {[
-                    ["12", "New leads"],
-                    ["94%", "Reply rate"],
-                    ["8", "Tours booked"],
-                  ].map(([n, l]) => (
-                    <div key={l} className="rounded-lg bg-slate-50 px-2 py-3 transition-all duration-200 hover:shadow-sm dark:bg-slate-700/50">
-                      <p className="text-xl font-bold text-[#0072ce]">{n}</p>
+                    { n: "12", l: "New leads", color: "text-[#0072ce]", bg: "bg-[#0072ce]/5" },
+                    { n: "94%", l: "Reply rate", color: "text-emerald-600", bg: "bg-emerald-50" },
+                    { n: "8", l: "Tours booked", color: "text-[#4F46E5]", bg: "bg-[#4F46E5]/5" },
+                  ].map(({ n, l, color, bg }) => (
+                    <div key={l} className={`rounded-xl ${bg} p-3 text-center dark:bg-slate-700/50`}>
+                      <p className={`text-2xl font-extrabold ${color}`}>{n}</p>
                       <p className="text-[10px] font-medium text-gray-500 dark:text-slate-400">{l}</p>
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
-                  <div className="h-full w-[72%] rounded-full bg-gradient-to-r from-[#0072ce] to-[#4F46E5] transition-all duration-1000" />
+                {/* Mini lead list */}
+                <div className="space-y-1.5">
+                  {[
+                    { name: "Sarah M.", status: "Hot", emoji: "🔥", time: "2m ago" },
+                    { name: "James W.", status: "Warm", emoji: "💬", time: "15m ago" },
+                    { name: "Lisa K.", status: "New", emoji: "✨", time: "1h ago" },
+                  ].map((lead) => (
+                    <div key={lead.name} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-700/30">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{lead.emoji}</span>
+                        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{lead.name}</span>
+                        <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${lead.status === "Hot" ? "bg-orange-100 text-orange-700" : lead.status === "Warm" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}`}>{lead.status}</span>
+                      </div>
+                      <span className="text-[10px] text-slate-400">{lead.time}</span>
+                    </div>
+                  ))}
                 </div>
-                <p className="mt-2 text-center text-[11px] text-gray-400 dark:text-slate-500">Pipeline health · live</p>
+                {/* Pipeline bar */}
+                <div>
+                  <div className="flex items-center justify-between text-[10px] font-medium text-slate-400">
+                    <span>Pipeline health</span><span>72%</span>
+                  </div>
+                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+                    <div className="h-full w-[72%] rounded-full bg-gradient-to-r from-[#0072ce] to-[#4F46E5]" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -370,6 +384,7 @@ export default function LeadSmartLanding() {
                   description:
                     "Respond to every new lead in under 60 seconds — automatically, day or night. Never lose a hot lead to a faster competitor.",
                   bullets: ["SMS + email replies", "Personalized by source", "24/7 automation"],
+                  iconBg: "from-[#0072ce]/10 to-[#4F46E5]/10",
                 },
                 {
                   accent: "primaryDark" as const,
@@ -378,6 +393,7 @@ export default function LeadSmartLanding() {
                   description:
                     "AI ranks every lead by buying intent so you spend your time on the people most likely to close — not tire-kickers.",
                   bullets: ["Behavioral scoring", "Hot / warm / cold labels", "Priority inbox view"],
+                  iconBg: "from-[#4F46E5]/10 to-[#7c3aed]/10",
                 },
                 {
                   accent: "success" as const,
@@ -386,6 +402,7 @@ export default function LeadSmartLanding() {
                   description:
                     "See every lead, every follow-up, and every scheduled tour in one place. Know exactly where your pipeline stands.",
                   bullets: ["Stage-by-stage tracking", "Tour & offer milestones", "Team visibility"],
+                  iconBg: "from-emerald-500/10 to-teal-500/10",
                 },
                 {
                   accent: "accent" as const,
@@ -394,16 +411,21 @@ export default function LeadSmartLanding() {
                   description:
                     "Multi-step nurture sequences keep leads warm for weeks without you lifting a finger — until they're ready to buy.",
                   bullets: ["Preset + custom drips", "Auto pause on reply", "CRM sync"],
+                  iconBg: "from-[#ff8c42]/10 to-amber-500/10",
                 },
               ].map((f, i) => (
                 <RevealSection key={f.title} delay={i * 100}>
-                  <div className="flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-900/[0.08] dark:border-slate-700 dark:bg-slate-900 dark:hover:shadow-[#0072ce]/[0.1]">
-                    <div className="mb-4 text-3xl">{f.emoji}</div>
-                    <h3 className="font-heading text-base font-semibold text-slate-900 dark:text-white">{f.title}</h3>
+                  <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/[0.06] dark:border-slate-700 dark:bg-slate-900 dark:hover:shadow-[#0072ce]/[0.08]">
+                    {/* Gradient overlay on hover */}
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#0072ce]/[0.02] via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${f.iconBg} text-2xl`}>
+                      {f.emoji}
+                    </div>
+                    <h3 className="font-heading text-base font-bold text-slate-900 dark:text-white">{f.title}</h3>
                     <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{f.description}</p>
-                    <ul className="mt-4 space-y-1.5">
+                    <ul className="mt-5 space-y-2">
                       {f.bullets.map((b) => (
-                        <li key={b} className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                        <li key={b} className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300">
                           <BrandCheck tone={f.accent} />
                           {b}
                         </li>
@@ -586,15 +608,19 @@ export default function LeadSmartLanding() {
         </section>
 
         {/* FINAL CTA */}
-        <section className="bg-gradient-to-br from-gray-900 via-gray-900 to-[#0072ce]/30 py-20 text-center text-white">
+        <section className="relative overflow-hidden py-24 text-center text-white md:py-32">
+          <div className="absolute inset-0 -z-10 bg-gray-950" />
+          <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
+            <div className="absolute left-1/2 top-1/2 h-[500px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.12] blur-[100px]" style={{ background: "conic-gradient(from 0deg at 50% 50%, #0072ce 0deg, #4F46E5 120deg, #7c3aed 240deg, #0072ce 360deg)" }} />
+          </div>
           <RevealSection>
-            <h2 className="font-heading text-3xl font-semibold">Stop Losing Deals</h2>
-            <p className="mt-4 text-gray-300">Start converting leads automatically</p>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <Button className="shadow-lg" href={primaryCtaHref}>
+            <h2 className="font-heading text-3xl font-extrabold md:text-4xl lg:text-5xl">Stop Losing Deals</h2>
+            <p className="mt-4 text-lg text-gray-400">Start converting leads automatically — no setup, no code, no contracts</p>
+            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+              <Button className="shadow-xl shadow-[#0072ce]/20 px-8 py-3 text-base" href={primaryCtaHref}>
                 Get My First Leads
               </Button>
-              <Button variant="inverse" href="/pricing">
+              <Button variant="inverse" href="/pricing" className="px-8 py-3 text-base">
                 Compare Plans
               </Button>
             </div>
