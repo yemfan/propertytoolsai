@@ -111,7 +111,10 @@ export default async function NotificationsPage() {
       .in("status", ["no_answer", "failed"])
       .order("created_at", { ascending: false })
       .limit(25),
-    getMobileReminders(agentId),
+    getMobileReminders(agentId).catch((err) => {
+      console.error("getMobileReminders failed:", err);
+      return { upcoming_appointments: [], overdue_tasks: [], follow_ups: [] } as Awaited<ReturnType<typeof getMobileReminders>>;
+    }),
     supabaseServer
       .from("notifications")
       .select("id,lead_id,property_id,type,message,sent_at")
