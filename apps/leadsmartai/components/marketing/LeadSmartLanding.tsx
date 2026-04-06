@@ -505,7 +505,7 @@ export default function LeadSmartLanding() {
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="primary" />{f}</li>
                       ))}
                     </ul>
-                    <Button className="mt-5 w-full text-xs" variant="outline" href={primaryCtaHref}>Get started free</Button>
+                    <Button className="mt-5 w-full text-xs" variant="outline" href="/signup">Get started free</Button>
                   </CardContent>
                 </Card>
               </RevealSection>
@@ -522,7 +522,7 @@ export default function LeadSmartLanding() {
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="primary" />{f}</li>
                       ))}
                     </ul>
-                    <Button className="mt-5 w-full text-xs shadow-lg shadow-[#0072ce]/20" href="/pricing">Start free trial</Button>
+                    <Button className="mt-5 w-full text-xs shadow-lg shadow-[#0072ce]/20" href="/pricing?checkout_plan=pro">Start free trial</Button>
                     <p className="mt-1.5 text-center text-[11px] text-gray-400 dark:text-slate-500">14-day trial · No card needed</p>
                   </CardContent>
                 </Card>
@@ -539,7 +539,7 @@ export default function LeadSmartLanding() {
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="success" />{f}</li>
                       ))}
                     </ul>
-                    <Button className="mt-5 w-full text-xs" variant="outline" href="/pricing">Start free trial</Button>
+                    <Button className="mt-5 w-full text-xs" variant="outline" href="/pricing?checkout_plan=premium">Start free trial</Button>
                   </CardContent>
                 </Card>
               </RevealSection>
