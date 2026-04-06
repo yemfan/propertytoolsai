@@ -17,7 +17,7 @@ export default async function StartFreeAgentPage() {
   }
 
   const supabase = supabaseServerClient();
-  const entitlement = await getActiveAgentEntitlement(supabase, user.userId).catch(() => null);
+  const entitlement = await getActiveAgentEntitlement(supabase, user.id).catch(() => null);
   const activePlan = entitlement ? String((entitlement as { plan?: string }).plan ?? "") : null;
 
   // Already has a plan — send to dashboard, not here.
