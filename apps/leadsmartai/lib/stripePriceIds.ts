@@ -14,13 +14,24 @@ export function getStripePriceIdForPlan(plan: "pro" | "premium"): string {
  * LeadSmart **agent** checkout (Growth vs Elite entitlements).
  * - `pro` → `STRIPE_PRICE_ID_AGENT_PRO` → internal `agent_starter` (Growth)
  * - `premium` → `STRIPE_PRICE_ID_AGENT_PREMIUM` → internal `agent_pro` (Elite)
+ *
+ * Falls back to legacy env var names (STRIPE_PRICE_ID_ELITE, STRIPE_PRICE_ID_TEAM)
+ * if the canonical names aren't set.
  */
 export function getStripePriceIdForAgentPlan(plan: "pro" | "premium"): string {
-  const envKey =
-    plan === "pro" ? "STRIPE_PRICE_ID_AGENT_PRO" : "STRIPE_PRICE_ID_AGENT_PREMIUM";
+  if (plan === "pro") {
+    const raw =
+      process.env.STRIPE_PRICE_ID_AGENT_PRO ||
+      process.env.STRIPE_PRICE_ID_PRO ||
+      "";
+    return validateStripePriceEnv(raw || undefined, "STRIPE_PRICE_ID_AGENT_PRO");
+  }
+  // premium / elite
   const raw =
-    plan === "pro" ? process.env.STRIPE_PRICE_ID_AGENT_PRO : process.env.STRIPE_PRICE_ID_AGENT_PREMIUM;
-  return validateStripePriceEnv(raw, envKey);
+    process.env.STRIPE_PRICE_ID_AGENT_PREMIUM ||
+    process.env.STRIPE_PRICE_ID_ELITE ||
+    "";
+  return validateStripePriceEnv(raw || undefined, "STRIPE_PRICE_ID_AGENT_PREMIUM");
 }
 
 function validateStripePriceEnv(raw: string | undefined, envKey: string): string {
