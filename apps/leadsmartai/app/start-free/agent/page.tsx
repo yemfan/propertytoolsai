@@ -1,24 +1,13 @@
 import { redirect } from "next/navigation";
 import { getCurrentUserWithRole } from "@/lib/auth/getCurrentUser";
-import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
-import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
-import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
+import { supabaseServerClient } from "@/lib/supabaseServerClient";
+import { getActiveAgentEntitlement } from "@/lib/entitlements/getEntitlements";
 import StartFreeAgentClientPage from "./page.client";
 
 export const metadata = {
-  title: "Start as Agent | LeadSmart AI",
-  description: "Activate LeadSmart AI Agent Starter — CMA, leads, CRM, and alerts in one workspace.",
+  title: "Choose Your Plan | LeadSmart AI",
+  description: "Pick a plan to unlock your LeadSmart AI Agent workspace.",
 };
-
-function signedInDashboardHref(user: NonNullable<Awaited<ReturnType<typeof getCurrentUserWithRole>>>): string {
-  const r = String(user.role ?? "").toLowerCase().trim();
-  if (r === "consumer" || r === "user" || r === "") {
-    return consumerShouldUsePropertyToolsApp(user.signupOriginApp)
-      ? getPropertyToolsConsumerPostLoginUrl()
-      : "/";
-  }
-  return resolveRoleHomePath(user.role, user.hasAgentRow);
-}
 
 export default async function StartFreeAgentPage() {
   const user = await getCurrentUserWithRole();
@@ -27,5 +16,14 @@ export default async function StartFreeAgentPage() {
     redirect("/login?next=/start-free/agent");
   }
 
-  return <StartFreeAgentClientPage backHref={signedInDashboardHref(user)} />;
+  const supabase = supabaseServerClient();
+  const entitlement = await getActiveAgentEntitlement(supabase, user.userId).catch(() => null);
+  const activePlan = entitlement ? String((entitlement as { plan?: string }).plan ?? "") : null;
+
+  // Already has a plan — send to dashboard, not here.
+  if (activePlan) {
+    redirect("/agent/dashboard");
+  }
+
+  return <StartFreeAgentClientPage />;
 }

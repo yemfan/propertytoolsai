@@ -1,20 +1,36 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, ArrowRight, Loader2 } from "lucide-react";
 import { PLAN_CATALOG } from "@/lib/entitlements/planCatalog";
 import type { AgentPlanId } from "@/lib/entitlements/types";
 import type { PlanCatalogEntry } from "@/lib/entitlements/planCatalog";
 
 const ORDER: AgentPlanId[] = ["starter", "growth", "elite"];
 
+const PLAN_CHECKOUT: Record<string, { plan: string; price: string } | null> = {
+  starter: null,
+  growth: { plan: "pro", price: "$49/mo" },
+  elite: { plan: "premium", price: "$99/mo" },
+};
+
 function PlanCard({
   id,
   entry,
   highlight,
+  onUpgrade,
+  upgrading,
 }: {
   id: AgentPlanId;
   entry: PlanCatalogEntry;
   highlight?: boolean;
+  onUpgrade: (checkoutPlan: string) => void;
+  upgrading: string | null;
 }) {
+  const checkout = PLAN_CHECKOUT[id];
+  const isUpgrading = checkout ? upgrading === checkout.plan : false;
+
   return (
     <div
       className={`flex flex-col rounded-2xl border p-6 shadow-sm ${
@@ -42,10 +58,37 @@ function PlanCard({
           </li>
         ))}
       </ul>
-      <div className="mt-6 text-xs text-slate-500">
+
+      {checkout ? (
+        <button
+          type="button"
+          disabled={!!upgrading}
+          onClick={() => onUpgrade(checkout.plan)}
+          className={`mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition disabled:opacity-60 ${
+            highlight
+              ? "bg-slate-900 text-white hover:bg-slate-800"
+              : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+          }`}
+        >
+          {isUpgrading ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <>
+              Upgrade to {entry.label} &mdash; {checkout.price}
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </>
+          )}
+        </button>
+      ) : (
+        <div className="mt-6 text-center text-xs font-medium text-slate-400">
+          Current free tier
+        </div>
+      )}
+
+      <div className="mt-4 text-xs text-slate-500">
         Upgrade path:{" "}
         <span className="font-medium text-slate-700">
-          Starter → Growth → Elite (higher caps + team)
+          Starter &rarr; Growth &rarr; Elite (higher caps + team)
         </span>
       </div>
     </div>
@@ -53,6 +96,33 @@ function PlanCard({
 }
 
 export function AgentPricingComparison() {
+  const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleUpgrade(checkoutPlan: string) {
+    setError(null);
+    setUpgrading(checkoutPlan);
+    try {
+      const res = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: checkoutPlan, cancel_surface: "agent" }),
+      });
+      const json = (await res.json()) as { url?: string; ok?: boolean; success?: boolean; error?: string };
+      const ok = json.ok ?? json.success;
+      if (!res.ok || !ok || !json.url) {
+        setError(json.error ?? "Could not start checkout. Please try again.");
+        return;
+      }
+      window.location.href = json.url;
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setUpgrading(null);
+    }
+  }
+
   return (
     <section id="plans" className="scroll-mt-24">
       <h2 className="text-2xl font-bold tracking-tight text-slate-900">Agent plans & limits</h2>
@@ -60,9 +130,21 @@ export function AgentPricingComparison() {
         Every tier unlocks the same LeadSmart AI Agent workspace — limits scale with your plan. Start on Starter, move
         to Growth for pipeline volume, and Elite when you need automation + team seats.
       </p>
+
+      {error ? (
+        <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>
+      ) : null}
+
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         {ORDER.map((id) => (
-          <PlanCard key={id} id={id} entry={PLAN_CATALOG[id]} highlight={id === "growth"} />
+          <PlanCard
+            key={id}
+            id={id}
+            entry={PLAN_CATALOG[id]}
+            highlight={id === "growth"}
+            onUpgrade={handleUpgrade}
+            upgrading={upgrading}
+          />
         ))}
       </div>
       <p className="mt-8 text-center text-sm text-slate-600">

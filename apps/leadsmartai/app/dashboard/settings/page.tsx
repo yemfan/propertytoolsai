@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import AgentAiSettingsPanel from "@/components/dashboard/AgentAiSettingsPanel";
 import AgentVoiceSettingsPanel from "@/components/dashboard/AgentVoiceSettingsPanel";
 import MlsCsvImportClient from "./MlsCsvImportClient";
 import HomeValueSmartLinkCopyShare from "@/components/dashboard/HomeValueSmartLinkCopyShare";
+import { CancelSubscriptionButton } from "./CancelSubscriptionButton";
 
 export default async function SettingsPage() {
   const ctx = await getCurrentAgentContext();
@@ -25,22 +27,19 @@ export default async function SettingsPage() {
         </div>
         <dl className="text-sm text-gray-700 space-y-2">
           <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Plan type</dt>
-            <dd className="font-semibold">{ctx.planType}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Agent ID</dt>
-            <dd className="font-mono text-xs">{ctx.agentId || "— (complete agent signup)"}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">User ID</dt>
-            <dd className="font-mono text-xs">{ctx.userId}</dd>
+            <dt className="text-gray-500">Plan</dt>
+            <dd className="font-semibold capitalize">{ctx.planType === "free" ? "Starter (Free)" : ctx.planType}</dd>
           </div>
         </dl>
-        <p className="mt-4 text-xs text-gray-500">
-          Free plan is limited to 20 lead rows. Upgrade logic can be enforced
-          in the data layer and RLS policies later.
-        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Link
+            href="/agent/pricing"
+            className="inline-flex items-center justify-center rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800"
+          >
+            Upgrade Plan
+          </Link>
+          <CancelSubscriptionButton planType={ctx.planType} />
+        </div>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">

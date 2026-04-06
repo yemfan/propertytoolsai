@@ -169,15 +169,23 @@ export default function AgentPricingClientPage() {
           <h1 className="text-4xl font-semibold tracking-tight text-gray-900 md:text-5xl">
             LeadSmart AI for Agents
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-gray-600 md:text-lg">
-            Start free, then upgrade as your pipeline grows. Paid plans include a <strong>14-day free trial</strong>{" "}
-            (card required; cancel anytime during the trial). Unlock more CMA reports, higher lead capacity, stronger
-            CRM tools, and advanced automation.
-          </p>
-          {hasAccess && currentPlan && (
-            <div className="mt-4 inline-flex rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white">
-              Current plan: {currentPlan}
-            </div>
+          {hasAccess && currentPlan ? (
+            <>
+              <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-gray-600 md:text-lg">
+                You&apos;re on the <strong>{currentPlan}</strong> plan. Upgrade to unlock more CMA reports, higher lead
+                capacity, stronger CRM tools, and advanced automation. Paid plans include a{" "}
+                <strong>14-day free trial</strong> (card required; cancel anytime).
+              </p>
+              <div className="mt-4 inline-flex rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white">
+                Current plan: {currentPlan}
+              </div>
+            </>
+          ) : (
+            <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-gray-600 md:text-lg">
+              Choose a plan to get started. Paid plans include a <strong>14-day free trial</strong>{" "}
+              (card required; cancel anytime during the trial). Unlock more CMA reports, higher lead capacity, stronger
+              CRM tools, and advanced automation.
+            </p>
           )}
         </div>
 
