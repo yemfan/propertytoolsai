@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+@source "../**/*.{js,ts,jsx,tsx}";
+@source "../../../packages/ui/**/*.{js,ts,jsx,tsx}";
+
 /* Tailwind v4 theme in CSS (avoids @config + TS on PostCSS/webpack — Linux/Vercel stability) */
 @theme {
   --color-brand-primary: #0072ce;

@@ -7,6 +7,7 @@ import { AgentWorkspaceProviders } from "@/components/entitlements/AgentWorkspac
 import { ADMIN_SUPPORT_HOME_PATH, isAdminOrSupportRole } from "@/lib/rolePortalPaths";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
+import { UpgradeBanner } from "@/components/upsell/UpgradeBanner";
 
 export default async function DashboardLayout({
   children,
@@ -78,6 +79,7 @@ export default async function DashboardLayout({
   return (
     <AgentWorkspaceProviders>
       <DashboardShell email={ctx?.email} appRole={appRole}>
+        <UpgradeBanner planType={ctx.planType} variant="banner" />
         {children}
       </DashboardShell>
     </AgentWorkspaceProviders>

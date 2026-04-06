@@ -97,36 +97,37 @@ export default function LeadsClient({
             Manage your inbound leads and update statuses.
           </p>
           {isFree && (
-            <p className="text-xs text-accent mt-1">
-              Free plan: showing up to 20 leads.
+            <p className="text-xs text-amber-700 mt-1">
+              Starter plan: up to 20 leads.{" "}
+              <a href="/agent/pricing" className="font-semibold underline hover:text-amber-900">
+                Upgrade for 500+
+              </a>
             </p>
           )}
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-          {!isFree && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setNewContactOpen(true)}
-                className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800"
-              >
-                New contact
-              </button>
-              <Link
-                href="/dashboard/leads/import"
-                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50"
-              >
-                Import CSV
-              </Link>
-              <Link
-                href="/dashboard/leads/add"
-                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 sm:hidden"
-              >
-                Add (full screen)
-              </Link>
-            </div>
-          )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setNewContactOpen(true)}
+              className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800"
+            >
+              New contact
+            </button>
+            <Link
+              href="/dashboard/leads/import"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50"
+            >
+              Import CSV
+            </Link>
+            <Link
+              href="/dashboard/leads/add"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 sm:hidden"
+            >
+              Add (full screen)
+            </Link>
+          </div>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}

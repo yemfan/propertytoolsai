@@ -55,7 +55,7 @@ export function LeadQueueClient() {
       if (res.ok && body.ok) {
         setLeads((prev) => prev.filter((l) => String(l.id) !== leadId));
         setTotal((prev) => Math.max(0, prev - 1));
-        setFeedback("Lead claimed! It's now in your CRM.");
+        setFeedback("Lead claimed! Upgrade to Pro for smart lead routing and AI prioritization.");
       } else if (res.status === 409) {
         setFeedback("This lead was already claimed by another agent.");
         fetchQueue();
@@ -107,7 +107,10 @@ export function LeadQueueClient() {
 
       {feedback && (
         <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-sm text-blue-800">
-          {feedback}
+          {feedback}{" "}
+          <a href="/agent/pricing" className="font-semibold text-blue-700 underline hover:text-blue-900">
+            View plans
+          </a>
         </div>
       )}
 

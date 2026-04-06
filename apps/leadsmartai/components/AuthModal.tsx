@@ -181,17 +181,16 @@ export default function AuthModal({
               You&apos;re in — welcome, agent
             </div>
             <p className="mt-2 text-sm text-blue-100">
-              Start free with LeadSmart AI: explore the CRM, AI tools, and your pipeline — no credit card required to
-              get started.
+              Your workspace is ready. Choose a plan to unlock CRM, AI tools, and your full pipeline.
             </p>
           </div>
           <div className="space-y-3 p-5">
             <a
-              href="/pricing"
+              href="/start-free/agent"
               className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
               onClick={() => finishAndCloseAgentStartFree()}
             >
-              Start free (view plans)
+              Choose a plan
             </a>
             <button
               type="button"
@@ -202,13 +201,6 @@ export default function AuthModal({
               }}
             >
               Go to dashboard
-            </button>
-            <button
-              type="button"
-              className="w-full rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-              onClick={() => finishAndCloseAgentStartFree()}
-            >
-              Maybe later
             </button>
           </div>
         </div>
