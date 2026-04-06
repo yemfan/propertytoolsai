@@ -213,7 +213,7 @@ export type MobilePushNotificationKind =
   | "reminder_digest";
 
 /** In-app / push routing target (strings for Expo `data`). */
-export type MobileNotificationDeepScreen = "lead" | "call_log" | "task" | "notifications";
+export type MobileNotificationDeepScreen = "lead" | "call_log" | "task" | "notifications" | "lead_queue";
 
 /**
  * Contract for `notification.request.content.data` on LeadSmart AI-originated pushes.
@@ -238,7 +238,7 @@ export type MobilePushNotificationData = {
 /** Row shape for `GET /api/mobile/notifications` (agent inbox). */
 export type MobileAgentInboxNotificationDto = {
   id: string;
-  type: "hot_lead" | "missed_call" | "reminder";
+  type: "hot_lead" | "missed_call" | "reminder" | "new_lead";
   priority: "high" | "medium" | "low";
   title: string;
   body: string;

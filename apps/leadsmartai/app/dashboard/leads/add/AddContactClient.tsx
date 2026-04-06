@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+type QueueLead = {
+  id: number | string;
+  name: string | null;
+  email: string | null;
+  property_address: string | null;
+  source: string | null;
+  created_at: string | null;
+};
 
 export function AddContactClient() {
   const router = useRouter();
@@ -15,6 +24,54 @@ export function AddContactClient() {
   const [error, setError] = useState<string | null>(null);
   const [dup, setDup] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Lead queue state
+  const [queueLeads, setQueueLeads] = useState<QueueLead[]>([]);
+  const [queueLoading, setQueueLoading] = useState(true);
+  const [claiming, setClaiming] = useState<string | null>(null);
+  const [claimFeedback, setClaimFeedback] = useState<string | null>(null);
+
+  const fetchQueue = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard/lead-queue?pageSize=5");
+      const body = await res.json().catch(() => ({}));
+      if (body.ok) setQueueLeads(body.leads ?? []);
+    } catch {
+      // silent
+    } finally {
+      setQueueLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchQueue();
+  }, [fetchQueue]);
+
+  async function claimLead(leadId: string) {
+    setClaiming(leadId);
+    setClaimFeedback(null);
+    try {
+      const res = await fetch("/api/dashboard/lead-queue/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && body.ok) {
+        setClaimFeedback("Lead claimed! Redirecting to your leads...");
+        setTimeout(() => { router.push("/dashboard/leads"); router.refresh(); }, 1000);
+      } else if (res.status === 409) {
+        setClaimFeedback("Already claimed by another agent.");
+        fetchQueue();
+      } else {
+        setClaimFeedback(body.error ?? "Failed to claim.");
+      }
+    } catch {
+      setClaimFeedback("Network error.");
+    } finally {
+      setClaiming(null);
+    }
+  }
 
   async function submit() {
     setSaving(true);
@@ -53,16 +110,81 @@ export function AddContactClient() {
     }
   }
 
+  function timeAgo(dateStr: string | null) {
+    if (!dateStr) return "";
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  }
+
   return (
     <div className="mx-auto max-w-lg space-y-6 px-4 py-8 pb-24 sm:pb-8">
       <Link href="/dashboard/leads" className="text-sm font-medium text-gray-600">
-        ← Leads
+        &larr; Leads
       </Link>
       <header>
         <h1 className="text-2xl font-semibold text-gray-900">Add contact</h1>
-        <p className="text-sm text-gray-600">Mobile-friendly form · same validation and intake pipeline as desktop.</p>
+        <p className="text-sm text-gray-600">Claim a lead from the queue or add one manually.</p>
       </header>
 
+      {/* Lead Queue Section */}
+      {!queueLoading && queueLeads.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-700">Available leads</h2>
+            <Link href="/dashboard/lead-queue" className="text-xs font-medium text-blue-600 hover:underline">
+              View all
+            </Link>
+          </div>
+
+          {claimFeedback && (
+            <p className="text-sm text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+              {claimFeedback}
+            </p>
+          )}
+
+          <div className="space-y-2">
+            {queueLeads.map((lead) => {
+              const id = String(lead.id);
+              return (
+                <div
+                  key={id}
+                  className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {lead.name || "Unnamed"}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {lead.property_address || lead.email || "No details"}
+                      {" · "}
+                      {lead.source ?? "unknown"}
+                      {" · "}
+                      {timeAgo(lead.created_at)}
+                    </p>
+                  </div>
+                  <button
+                    disabled={claiming === id}
+                    onClick={() => claimLead(id)}
+                    className="ml-3 shrink-0 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                  >
+                    {claiming === id ? "..." : "Claim"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="border-b border-gray-200" />
+          <p className="text-center text-xs text-gray-400">Or add a contact manually below</p>
+        </div>
+      )}
+
+      {/* Manual Add Form */}
       <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <label className="block text-sm font-medium text-gray-800">
           Name
@@ -123,7 +245,7 @@ export function AddContactClient() {
           className="w-full min-h-[48px] rounded-xl bg-gray-900 text-white text-base font-medium disabled:opacity-50"
           onClick={() => void submit()}
         >
-          {saving ? "Saving…" : "Save to CRM"}
+          {saving ? "Saving\u2026" : "Save to CRM"}
         </button>
       </div>
     </div>

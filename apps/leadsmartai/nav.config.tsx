@@ -41,6 +41,12 @@ const navConfig = {
           icon: navEmoji("📥"),
         },
         {
+          label: "Lead Queue",
+          href: "/dashboard/lead-queue",
+          match: ["/dashboard/lead-queue"],
+          icon: navEmoji("📋"),
+        },
+        {
           label: "Leads",
           href: "/dashboard/leads",
           match: ["/dashboard/leads"],
@@ -142,6 +148,13 @@ const navConfig = {
           roles: ["admin", "support"],
           match: ["/admin/support"],
           icon: <Headphones size={16} strokeWidth={2} aria-hidden />,
+        },
+        {
+          label: "Lead Queue",
+          href: "/admin/lead-queue",
+          roles: ["admin", "support"],
+          match: ["/admin/lead-queue"],
+          icon: navEmoji("📋"),
         },
       ],
     },
