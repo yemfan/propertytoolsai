@@ -238,7 +238,7 @@ export default function ConsumerPricingClientPage() {
         method: "POST",
         headers,
         credentials: "include",
-        body: JSON.stringify({ plan, with_trial: withTrial }),
+        body: JSON.stringify({ plan, with_trial: withTrial, cancel_surface: "agent" }),
       });
       const body = (await res.json().catch(() => ({}))) as any;
       if (!res.ok) throw new Error(body?.error || "Failed to open checkout");
