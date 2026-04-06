@@ -11,7 +11,9 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
     | "destructive"
     | "link"
     /** White text + border for dark backgrounds (hero bars, slate/gray-900 sections). */
-    | "inverse";
+    | "inverse"
+    /** Gradient CTA — eye-catching blue→indigo for primary actions. */
+    | "gradient";
   size?: "default" | "sm" | "lg" | "icon";
   /** When set, renders a Next.js `Link` with the same styles (better for navigation + SEO). */
   href?: string;
@@ -23,18 +25,23 @@ function buttonClasses(
   className = ""
 ) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
+    "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]";
   const variants: Record<NonNullable<ButtonProps["variant"]>, string> = {
     default:
-      "bg-blue-600 !text-white shadow-sm hover:bg-blue-700 focus-visible:ring-[#0072ce]",
+      "bg-[#0072ce] !text-white shadow-sm hover:bg-[#005ca8] hover:shadow-md focus-visible:ring-[#0072ce] dark:bg-[#0072ce] dark:hover:bg-[#4da3e8] dark:focus-visible:ring-offset-slate-900",
     outline:
-      "border-2 border-slate-200 bg-white !text-slate-900 hover:bg-slate-50 focus-visible:ring-[#0072ce]",
-    secondary: "bg-slate-100 !text-slate-900 hover:bg-slate-200 focus-visible:ring-[#0072ce]",
-    ghost: "!text-slate-900 hover:bg-slate-100 focus-visible:ring-[#0072ce]",
-    destructive: "bg-red-600 !text-white hover:bg-red-700 focus-visible:ring-red-500",
-    link: "!text-[#0072ce] underline-offset-4 hover:underline shadow-none focus-visible:ring-[#0072ce]",
+      "border-2 border-slate-200 bg-white !text-slate-900 hover:bg-slate-50 hover:border-slate-300 focus-visible:ring-[#0072ce] dark:border-slate-700 dark:bg-slate-900 dark:!text-slate-100 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900",
+    secondary:
+      "bg-slate-100 !text-slate-900 hover:bg-slate-200 focus-visible:ring-[#0072ce] dark:bg-slate-800 dark:!text-slate-100 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900",
+    ghost:
+      "!text-slate-900 hover:bg-slate-100 focus-visible:ring-[#0072ce] dark:!text-slate-100 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900",
+    destructive:
+      "bg-red-600 !text-white hover:bg-red-700 hover:shadow-md focus-visible:ring-red-500 dark:focus-visible:ring-offset-slate-900",
+    link: "!text-[#0072ce] underline-offset-4 hover:underline shadow-none focus-visible:ring-[#0072ce] dark:!text-[#4da3e8] dark:focus-visible:ring-offset-slate-900",
     inverse:
       "border-2 border-white/90 bg-transparent !text-white shadow-none hover:bg-white/15 hover:!text-white focus-visible:ring-white/70 focus-visible:ring-offset-gray-900",
+    gradient:
+      "bg-gradient-to-r from-[#0072ce] to-[#4F46E5] !text-white shadow-md shadow-[#0072ce]/20 hover:shadow-lg hover:shadow-[#0072ce]/30 hover:brightness-110 focus-visible:ring-[#0072ce] dark:focus-visible:ring-offset-slate-900",
   };
   const sizes: Record<NonNullable<ButtonProps["size"]>, string> = {
     default: "h-10 px-4 py-2 text-sm",
@@ -72,9 +79,9 @@ export { Button, buttonClasses };
 type LegacyVariant = "primary" | "secondary" | "cta" | "ghost";
 
 const legacyVariantClasses: Record<LegacyVariant, string> = {
-  primary: "bg-blue-600 !text-white shadow-sm hover:bg-blue-700 focus-visible:ring-[#0072ce]",
+  primary: "bg-[#0072ce] !text-white shadow-sm hover:bg-[#005ca8] hover:shadow-md focus-visible:ring-[#0072ce]",
   secondary: "bg-slate-100 !text-slate-900 shadow-sm hover:bg-slate-200 focus-visible:ring-[#0072ce]",
-  cta: "bg-[#ff8c42] !text-white shadow-sm hover:bg-[#e9732a] focus-visible:ring-[#ff8c42]",
+  cta: "bg-[#ff8c42] !text-white shadow-sm hover:bg-[#e9732a] hover:shadow-md focus-visible:ring-[#ff8c42]",
   ghost: "border border-slate-200 bg-white !text-slate-800 hover:bg-slate-50",
 };
 
@@ -89,7 +96,7 @@ export default function LegacyButton({
   return (
     <button
       type={type}
-      className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${legacyVariantClasses[variant]} ${className}`}
+      className={`inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${legacyVariantClasses[variant]} ${className}`}
       {...props}
     />
   );

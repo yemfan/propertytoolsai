@@ -148,6 +148,22 @@ a.text-white:focus-visible {
   color: var(--color-accent);
 }
 
+/* Hero entrance animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 /* Marketing landing — subtle motion (respects reduced motion) */
 @keyframes landing-in {
   from {

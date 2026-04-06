@@ -267,6 +267,25 @@ a.text-slate-800:focus-visible {
   }
 }
 
+/* Hero entrance animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Marketing landing — subtle motion + depth (aligned with leadsmartai; respects reduced motion) */
 @keyframes landing-in {
   from {
