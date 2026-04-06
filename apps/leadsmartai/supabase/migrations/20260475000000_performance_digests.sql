@@ -26,13 +26,20 @@ create index if not exists idx_performance_digests_agent_week
 
 alter table public.performance_digests enable row level security;
 
-create policy performance_digests_select_own
-  on public.performance_digests
-  for select to authenticated
-  using (
-    exists (
-      select 1 from public.agents a
-      where a.id = performance_digests.agent_id
-        and a.auth_user_id = auth.uid()
-    )
-  );
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies where policyname = 'performance_digests_select_own'
+  ) then
+    create policy performance_digests_select_own
+      on public.performance_digests
+      for select to authenticated
+      using (
+        exists (
+          select 1 from public.agents a
+          where a.id = performance_digests.agent_id
+            and a.auth_user_id = auth.uid()
+        )
+      );
+  end if;
+end $$;
