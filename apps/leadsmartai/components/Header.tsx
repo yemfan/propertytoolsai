@@ -21,10 +21,10 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="border-b border-gray-200 bg-white shadow-md">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between gap-3 py-2">
-          <Link href="/" className="flex min-w-0 items-center text-brand-primary hover:opacity-90">
+    <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-950/80">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="flex items-center justify-between gap-3 py-3">
+          <Link href="/" className="flex min-w-0 items-center transition-opacity hover:opacity-90">
             <LeadSmartLogo className="max-w-[min(100%,360px)]" />
           </Link>
 
@@ -32,7 +32,7 @@ export default function Header() {
             <HeaderAuthActions />
             <button
               type="button"
-              className="rounded p-2 text-brand-text hover:bg-brand-surface md:hidden"
+              className="rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 md:hidden dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Toggle menu"
             >
@@ -47,26 +47,26 @@ export default function Header() {
           </div>
         </div>
 
-        <nav className="hidden flex-wrap items-center justify-center gap-1 border-t border-gray-200 py-2 md:flex">
+        <nav className="hidden items-center justify-center gap-1 border-t border-slate-200/80 py-2 md:flex dark:border-slate-800">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="rounded px-3 py-2 text-sm font-medium text-brand-text hover:bg-brand-surface hover:text-brand-primary"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0072ce] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-[#4da3e8]"
             >
               {item.label}
             </Link>
           ))}
         </nav>
 
-        {mobileOpen ? (
-          <nav className="border-t border-gray-200 pb-4 pt-2 md:hidden">
-            <div className="flex flex-col gap-1">
+        {mobileOpen && (
+          <nav className="border-t border-slate-200/80 pb-4 pt-2 md:hidden dark:border-slate-800">
+            <div className="flex flex-col gap-0.5">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="rounded px-3 py-2 text-brand-text hover:bg-brand-surface hover:text-brand-primary"
+                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-[#0072ce] dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-[#4da3e8]"
                   onClick={() => setMobileOpen(false)}
                 >
                   {item.label}
@@ -74,7 +74,7 @@ export default function Header() {
               ))}
             </div>
           </nav>
-        ) : null}
+        )}
       </div>
     </header>
   );
