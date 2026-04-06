@@ -124,16 +124,21 @@ export default function OnboardingLoginScreen() {
       <View style={s.safePad}>
         <View style={s.centerBlock}>
           <Text style={s.kicker}>Sign in</Text>
-          <Text style={s.title}>Connect your account</Text>
-          <Text style={s.body}>
-            Use the same email and password as LeadSmart AI web. Your session is stored on this device; the app sends
-            your Supabase access token to the LeadSmart API automatically.
-          </Text>
+          <Text style={s.title}>Welcome back</Text>
+          {!showTokenFallback ? (
+            <Text style={s.body}>
+              Sign in with the same email and password you use on LeadSmart AI web.
+            </Text>
+          ) : (
+            <Text style={s.body}>
+              Paste a JWT only for troubleshooting or if email sign-in is unavailable.
+            </Text>
+          )}
           {!apiUrl ? (
             <Text style={s.error}>Missing API URL — set EXPO_PUBLIC_LEADSMART_API_URL in .env or app config.</Text>
           ) : (
             <Text style={s.muted} numberOfLines={2}>
-              API: {apiUrl}
+              Endpoint: {apiUrl}
             </Text>
           )}
 
@@ -164,6 +169,9 @@ export default function OnboardingLoginScreen() {
 
           {!showTokenFallback ? (
             <>
+              {!oauthAvailable && (
+                <View style={{ height: 8 }} />
+              )}
               <TextInput
                 style={inputCompact}
                 placeholder="Email"
@@ -191,10 +199,6 @@ export default function OnboardingLoginScreen() {
             </>
           ) : (
             <>
-              <Text style={s.body}>
-                Paste a JWT only for troubleshooting or if email sign-in is unavailable. Get it from the browser after
-                signing in at LeadSmart AI (session access token).
-              </Text>
               <TextInput
                 style={s.input}
                 placeholder="Paste JWT access token"
