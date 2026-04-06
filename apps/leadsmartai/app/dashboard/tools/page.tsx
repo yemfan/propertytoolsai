@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
 
 const tools = [
+  { href: "/dashboard/seller-presentation", label: "Seller Presentation Generator" },
   { href: getPropertyToolsConsumerPostLoginUrl(), label: "PropertyTools app (buyer / seller)" },
   { href: "/deal-assistant", label: "AI Deal Closer" },
   { href: "/home-value-estimator", label: "Home Value Estimator" },
