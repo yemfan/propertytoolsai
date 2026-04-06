@@ -38,45 +38,56 @@ async function fetchStageBySlug(agentId: string, slug: string): Promise<Pipeline
 
 /**
  * Ensures each canonical mobile slug resolves to a `crm_pipeline_stages` row (creates missing rows).
+ * Gracefully returns defaults if the table is inaccessible or inserts fail.
  */
 export async function listMobilePipelineStages(agentId: string): Promise<MobilePipelineStageOptionDto[]> {
   const out: MobilePipelineStageOptionDto[] = [];
 
   for (const def of STAGE_DEFS) {
-    let row = await fetchStageBySlug(agentId, def.slug);
-    if (!row) {
-      for (const alt of def.aliases) {
-        row = await fetchStageBySlug(agentId, alt);
-        if (row) break;
+    let row: PipelineStageRow | null = null;
+
+    try {
+      row = await fetchStageBySlug(agentId, def.slug);
+      if (!row) {
+        for (const alt of def.aliases) {
+          row = await fetchStageBySlug(agentId, alt);
+          if (row) break;
+        }
       }
+    } catch {
+      // Table may not exist or agent has no access — use default below
     }
 
     if (!row) {
-      const { data: created, error: insErr } = await supabaseAdmin
-        .from("crm_pipeline_stages")
-        .insert({
-          agent_id: agentId as never,
-          slug: def.slug,
-          name: def.name,
-          position: def.position,
-          color: def.color,
-        } as never)
-        .select("id,agent_id,name,slug,position,color,created_at")
-        .single();
+      try {
+        const { data: created, error: insErr } = await supabaseAdmin
+          .from("crm_pipeline_stages")
+          .insert({
+            agent_id: agentId as never,
+            slug: def.slug,
+            name: def.name,
+            position: def.position,
+            color: def.color,
+          } as never)
+          .select("id,agent_id,name,slug,position,color,created_at")
+          .single();
 
-      if (insErr) {
-        row = await fetchStageBySlug(agentId, def.slug);
-        if (!row) throw new Error(insErr.message);
-      } else {
-        row = created as PipelineStageRow;
+        if (insErr) {
+          // Race condition: another request may have inserted — try fetching again
+          row = await fetchStageBySlug(agentId, def.slug).catch(() => null);
+        } else {
+          row = created as PipelineStageRow;
+        }
+      } catch {
+        // Insert failed (permissions, table missing, etc.) — fall through to default
       }
     }
 
     out.push({
-      id: row.id,
+      id: row?.id ?? `default-${def.slug}`,
       mobile_slug: def.slug,
-      name: row.name || def.name,
-      color: row.color ?? def.color,
+      name: row?.name || def.name,
+      color: row?.color ?? def.color,
       position: def.position,
     });
   }
