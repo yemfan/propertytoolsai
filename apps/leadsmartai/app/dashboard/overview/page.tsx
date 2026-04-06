@@ -4,6 +4,7 @@ import { AgentHomeDashboard } from "@/components/dashboard/agent-portal/AgentHom
 import SendDailyBriefingButton from "@/components/dashboard/SendDailyBriefingButton";
 import TasksFromBriefing from "@/components/dashboard/TasksFromBriefing";
 import { UpgradeBanner } from "@/components/upsell/UpgradeBanner";
+import { getLatestDigest } from "@/lib/digest/digestBuilder";
 
 function startOfTodayIso() {
   const d = new Date();
@@ -256,6 +257,60 @@ export default async function OverviewPage() {
           <p className="mt-4 text-sm text-slate-600">No briefing for today yet — generate one to populate insights.</p>
         )}
       </section>
+
+      {await (async () => {
+        const digest = await getLatestDigest(ctx.agentId).catch(() => null);
+        if (!digest) return null;
+        const m = digest.metrics;
+        const ins = digest.insights;
+        return (
+          <section className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-900/[0.03]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">{digest.title}</h2>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Week of {new Date(digest.week_start).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  {" \u2013 "}
+                  {new Date(digest.week_end).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+              {[
+                { label: "Contacted", value: m.leads_contacted },
+                { label: "SMS sent", value: m.sms_sent },
+                { label: "Emails", value: m.emails_sent },
+                { label: "Calls", value: m.calls_logged },
+                { label: "Tasks done", value: m.tasks_completed },
+                { label: "Meetings", value: m.appointments_booked },
+              ].map((s) => (
+                <div key={s.label} className="rounded-xl bg-slate-50 px-3 py-2 text-center">
+                  <div className="text-lg font-bold text-slate-900">{s.value}</div>
+                  <div className="text-[11px] text-slate-500">{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {ins.length > 0 && (
+              <div className="mt-4 space-y-2 border-t border-slate-100 pt-4">
+                {ins.map((i) => (
+                  <div
+                    key={i.key}
+                    className={`rounded-lg px-3 py-2 text-sm ${
+                      i.tone === "warning"
+                        ? "bg-amber-50 text-amber-800"
+                        : i.tone === "positive"
+                          ? "bg-green-50 text-green-800"
+                          : "bg-slate-50 text-slate-700"
+                    }`}
+                  >
+                    <span className="font-medium">{i.label}:</span> {i.message}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        );
+      })()}
 
       <p className="text-center text-xs text-slate-400">
         Plan <span className="font-semibold text-slate-600">{usage.planType.toUpperCase()}</span>
