@@ -195,15 +195,17 @@ export default function AccountMenu() {
             Account &amp; settings
           </Link>
         ) : null}
-        <Link href={slimAgentBrokerHeaderMenu ? "/portal" : (pricingHref || "/pricing")} role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
-          <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-          Billing
-        </Link>
         {!hideCommercialPricing ? (
-          <Link href={pricingHref || "/pricing"} role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
-            <Package className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-            Plans &amp; pricing
-          </Link>
+          <>
+            <Link href={slimAgentBrokerHeaderMenu ? "/portal" : (pricingHref || "/pricing")} role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
+              <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+              Billing
+            </Link>
+            <Link href={pricingHref || "/pricing"} role="menuitem" className={menuItem} onClick={() => setOpen(false)}>
+              <Package className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+              Plans &amp; pricing
+            </Link>
+          </>
         ) : null}
       </div>
       <div className="mt-1 border-t border-slate-100 pt-1">
