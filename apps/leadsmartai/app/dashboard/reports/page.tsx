@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { getCurrentAgentContext, getLeads } from "@/lib/dashboardService";
+import { ShareReportButton } from "./ShareReportButton";
 
 type LeadLite = {
   id: string;
@@ -112,12 +113,15 @@ export default async function ReportsPage() {
                         {new Date(r.created_at).toLocaleString()}
                       </td>
                       <td className="px-4 py-3">
-                        <Link
-                          href={reportLink}
-                          className="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50"
-                        >
-                          Open →
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={reportLink}
+                            className="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50"
+                          >
+                            Open
+                          </Link>
+                          <ShareReportButton reportLink={reportLink} propertyAddress={propertyAddress} />
+                        </div>
                       </td>
                     </tr>
                   );

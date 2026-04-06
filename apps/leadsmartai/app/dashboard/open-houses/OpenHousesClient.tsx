@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import QRCode from "react-qr-code";
 
 type PropertyRow = {
@@ -40,6 +40,12 @@ export default function OpenHousesClient({
     properties[0]?.id ?? ""
   );
   const [copied, setCopied] = useState(false);
+  const [generatingFlyer, setGeneratingFlyer] = useState(false);
+  const [shareEmail, setShareEmail] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
+  const qrRef = useRef<HTMLDivElement>(null);
 
   const origin = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -75,6 +81,90 @@ export default function OpenHousesClient({
       setTimeout(() => setCopied(false), 1500);
     } catch (e) {
       console.error("Copy failed", e);
+    }
+  }
+
+  async function downloadFlyer() {
+    if (!selectedProperty || !qrRef.current) return;
+    setGeneratingFlyer(true);
+    try {
+      const { default: html2canvas } = await import("html2canvas");
+      const { default: jsPDF } = await import("jspdf");
+
+      const qrCanvas = await html2canvas(qrRef.current, { scale: 3, backgroundColor: "#ffffff" });
+      const qrDataUrl = qrCanvas.toDataURL("image/png");
+
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+      const w = doc.internal.pageSize.getWidth();
+
+      // Header
+      doc.setFillColor(15, 23, 42); // slate-900
+      doc.rect(0, 0, w, 40, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(28);
+      doc.text("OPEN HOUSE", w / 2, 22, { align: "center" });
+      doc.setFontSize(12);
+      doc.text("You're Invited!", w / 2, 32, { align: "center" });
+
+      // Property address
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(18);
+      const addr = labelForProperty(selectedProperty);
+      doc.text(addr, w / 2, 58, { align: "center", maxWidth: w - 40 });
+
+      // QR code
+      const qrSize = 80;
+      doc.addImage(qrDataUrl, "PNG", (w - qrSize) / 2, 72, qrSize, qrSize);
+
+      // Instructions
+      doc.setFontSize(13);
+      doc.setTextColor(71, 85, 105); // slate-600
+      doc.text("Scan to sign in and get your free property report", w / 2, 162, { align: "center" });
+
+      // Signup URL
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text(signupUrl, w / 2, 172, { align: "center", maxWidth: w - 30 });
+
+      // Footer
+      const brandName = "LeadSmart AI";
+      doc.setFontSize(10);
+      doc.setTextColor(148, 163, 184);
+      doc.text(brandName, w / 2, 260, { align: "center" });
+
+      doc.save(`open-house-flyer-${selectedProperty.id.slice(0, 8)}.pdf`);
+    } catch (e) {
+      console.error("Flyer generation failed", e);
+    } finally {
+      setGeneratingFlyer(false);
+    }
+  }
+
+  async function shareReport() {
+    if (!shareEmail.trim() || !selectedProperty) return;
+    setSharing(true);
+    setShareMsg(null);
+    try {
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: shareEmail.trim(),
+          subject: `Open House Report: ${labelForProperty(selectedProperty)}`,
+          text: `Hi,\n\nHere is the open house report for ${labelForProperty(selectedProperty)}.\n\nSign-up link: ${signupUrl}\n\nThis report includes estimated home value, market comparables, and investment insights.\n\nBest regards`,
+        }),
+      });
+      if (res.ok) {
+        setShareMsg("Report sent!");
+        setShareEmail("");
+        setTimeout(() => { setShareMsg(null); setShareOpen(false); }, 2000);
+      } else {
+        setShareMsg("Failed to send. Please try again.");
+      }
+    } catch {
+      setShareMsg("Network error.");
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -125,11 +215,8 @@ export default function OpenHousesClient({
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                 QR Code
               </div>
-              <div className="mt-3 flex justify-center">
+              <div ref={qrRef} className="mt-3 flex justify-center bg-white p-2 rounded-xl">
                 <QRCode value={signupUrl} size={160} />
-              </div>
-              <div className="mt-3 text-[11px] text-slate-500 font-mono break-all">
-                property_id: {selectedProperty.id}
               </div>
             </div>
 
@@ -156,9 +243,24 @@ export default function OpenHousesClient({
                 <button
                   type="button"
                   onClick={copyLink}
-                className="text-sm font-semibold px-4 py-2 rounded-xl bg-brand-primary text-white hover:bg-[#005ca8]"
+                  className="text-sm font-semibold px-4 py-2 rounded-xl bg-brand-primary text-white hover:bg-[#005ca8]"
                 >
                   {copied ? "Copied!" : "Copy link"}
+                </button>
+                <button
+                  type="button"
+                  disabled={generatingFlyer}
+                  onClick={() => void downloadFlyer()}
+                  className="text-sm font-semibold px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
+                >
+                  {generatingFlyer ? "Generating..." : "Download Flyer (PDF)"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShareOpen(!shareOpen)}
+                  className="text-sm font-semibold px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50"
+                >
+                  Share Report
                 </button>
                 <a
                   href={signupUrl}
@@ -169,6 +271,36 @@ export default function OpenHousesClient({
                   Open on phone
                 </a>
               </div>
+
+              {shareOpen && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Email the open house report to:
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={shareEmail}
+                      onChange={(e) => setShareEmail(e.target.value)}
+                      placeholder="seller@example.com"
+                      className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary"
+                    />
+                    <button
+                      type="button"
+                      disabled={sharing || !shareEmail.trim()}
+                      onClick={() => void shareReport()}
+                      className="rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-[#005ca8] disabled:opacity-50"
+                    >
+                      {sharing ? "Sending..." : "Send"}
+                    </button>
+                  </div>
+                  {shareMsg && (
+                    <p className={`text-xs ${shareMsg.includes("sent") ? "text-green-700" : "text-red-600"}`}>
+                      {shareMsg}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ) : null}
