@@ -698,27 +698,27 @@ export default function OnboardingFunnel() {
   if (step === 7) {
     const plans = [
       {
-        name: "Free", price: "$0", period: "forever", cta: "Start free", href: "/agent/pricing?from=onboarding", primary: false,
+        name: "Free", price: "$0", period: "forever", cta: "Start free", href: "/signup", primary: false,
         tagline: "Test the platform. See leads flow in.",
         features: ["25 leads/mo", "Basic lead pipeline", "Email-only auto-response", "1 drip sequence", "Up to 50 contacts", "2 CMA reports/day", "Email support"],
         limits: ["No SMS", "No AI conversations", "No lead scoring", "No CRM integrations"],
       },
       {
-        name: "Pro", price: "$49", period: "/mo", cta: "Start free trial", href: "/pricing?from=onboarding", primary: true, badge: "Most Popular",
+        name: "Pro", price: "$49", period: "/mo", cta: "Start free trial", href: "/pricing?checkout_plan=pro", primary: true, badge: "Most Popular",
         tagline: "Full CRM and AI for active agents.",
         features: ["500 leads/mo", "Full lead stage tracking", "SMS + Email auto-response (< 60s)", "Unlimited drip sequences", "AI conversation continuation", "Up to 500 contacts", "Contact enrichment", "CRM integrations", "Advanced lead scoring", "Buyer intent signals", "5 CMA reports/day", "Priority email support"],
         limits: ["No custom drip campaigns", "No predictive deal probability", "No team features"],
         trialNote: "14-day free trial · No credit card required",
       },
       {
-        name: "Elite", price: "$99", period: "/mo", cta: "Start free trial", href: "/pricing?from=onboarding", primary: false,
+        name: "Elite", price: "$99", period: "/mo", cta: "Start free trial", href: "/pricing?checkout_plan=premium", primary: false,
         tagline: "For top producers closing 10+ deals/month.",
         features: ["Unlimited leads", "SMS + Email auto-response (< 60s)", "Custom drip campaigns", "Predictive AI lead scoring", "Predictive deal probability", "Unlimited contacts", "10 CMA reports/day", "Advanced pipeline analytics", "Dedicated onboarding"],
         limits: ["No team lead pool", "No lead routing rules", "No admin controls"],
         trialNote: "14-day free trial",
       },
       {
-        name: "Team", price: "$199", period: "/mo", cta: "Contact sales", href: "/pricing?from=onboarding", primary: false,
+        name: "Team", price: "$199", period: "/mo", cta: "Contact sales", href: "/contact?from=pricing", primary: false,
         tagline: "Multiple agents, one shared pipeline.",
         features: ["Everything in Elite", "Up to 10 agents", "Shared team lead pool", "Lead routing rules", "Team performance dashboard", "Admin controls", "White-label option", "Unlimited CMA reports", "Priority SLA + dedicated CSM"],
         limits: [],
