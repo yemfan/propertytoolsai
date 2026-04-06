@@ -33,8 +33,8 @@ function MarketingTopChrome() {
       }
       trailing={
         <div className="flex items-center gap-2">
-          <SupportChatLauncher />
           <HeaderAuthActions />
+          <SupportChatLauncher />
         </div>
       }
     />

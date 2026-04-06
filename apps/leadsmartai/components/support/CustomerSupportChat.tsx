@@ -118,16 +118,18 @@ export default function CustomerSupportChat({
       setSending(true);
       flushTypingStop();
 
+      const body = messageInput.trim();
+      setMessageInput("");
+
       await sendSupportMessage({
         conversationPublicId,
         senderType: "customer",
         senderName: customerName.trim() || undefined,
         senderEmail: customerEmail.trim().toLowerCase() || undefined,
-        body: messageInput.trim(),
+        body,
       });
 
-      setMessageInput("");
-      await reload();
+      reload();
     } catch (err) {
       console.error(err);
     } finally {
@@ -309,19 +311,25 @@ export type SupportChatLauncherProps = {
 /** Navbar / shell chat icon: opens a slide-over with {@link CustomerSupportChat}. */
 export function SupportChatLauncher({ buttonClassName }: SupportChatLauncherProps) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
+    if (open) {
+      setMounted(true);
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key === "Escape") setOpen(false);
+      };
+      window.addEventListener("keydown", onKey);
+      return () => {
+        document.body.style.overflow = prev;
+        window.removeEventListener("keydown", onKey);
+      };
+    }
+    // Keep mounted briefly for exit animation
+    const t = setTimeout(() => setMounted(false), 300);
+    return () => clearTimeout(t);
   }, [open]);
 
   const btn =
@@ -334,16 +342,21 @@ export function SupportChatLauncher({ buttonClassName }: SupportChatLauncherProp
         <LifeBuoy className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
       </button>
 
-      {open ? (
+      {mounted && (
         <>
           <button
             type="button"
-            className="fixed inset-0 z-[80] bg-slate-900/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[80] transition-opacity duration-200"
+            style={{
+              backgroundColor: open ? "rgba(15,23,42,0.4)" : "transparent",
+              backdropFilter: open ? "blur(4px)" : "none",
+            }}
             aria-label="Close support chat"
             onClick={() => setOpen(false)}
           />
           <div
-            className="fixed inset-y-0 right-0 z-[90] flex w-full max-w-lg flex-col shadow-2xl ring-1 ring-slate-900/10"
+            className="fixed inset-y-0 right-0 z-[90] flex w-full max-w-lg flex-col bg-white shadow-2xl ring-1 ring-slate-900/10 transition-transform duration-200 ease-out"
+            style={{ transform: open ? "translateX(0)" : "translateX(100%)" }}
             role="dialog"
             aria-modal="true"
             aria-labelledby="ls-support-chat-title"
@@ -351,7 +364,7 @@ export function SupportChatLauncher({ buttonClassName }: SupportChatLauncherProp
             <CustomerSupportChat embedded onClose={() => setOpen(false)} />
           </div>
         </>
-      ) : null}
+      )}
     </>
   );
 }
