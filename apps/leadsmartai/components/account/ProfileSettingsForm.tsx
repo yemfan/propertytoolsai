@@ -27,6 +27,14 @@ export default function ProfileSettingsForm() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [savedFullName, setSavedFullName] = useState("");
+  const [savedPhone, setSavedPhone] = useState("");
+  const [savedEmail, setSavedEmail] = useState("");
+
+  const isDirty =
+    fullName !== savedFullName ||
+    phone !== savedPhone ||
+    email !== savedEmail;
 
   const load = useCallback(async () => {
     setError(null);
@@ -43,9 +51,15 @@ export default function ProfileSettingsForm() {
         return;
       }
       setMe(json);
-      setFullName((json.full_name ?? "").trim());
-      setPhone(formatUsPhoneInput((json.phone ?? "").trim()));
-      setEmail((json.email ?? "").trim());
+      const fn = (json.full_name ?? "").trim();
+      const ph = formatUsPhoneInput((json.phone ?? "").trim());
+      const em = (json.email ?? "").trim();
+      setFullName(fn);
+      setPhone(ph);
+      setEmail(em);
+      setSavedFullName(fn);
+      setSavedPhone(ph);
+      setSavedEmail(em);
     } catch {
       setError("Could not load profile");
     } finally {
@@ -223,7 +237,7 @@ export default function ProfileSettingsForm() {
         {success ? <p className="text-sm text-emerald-700">{success}</p> : null}
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || !isDirty}
           className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save changes"}

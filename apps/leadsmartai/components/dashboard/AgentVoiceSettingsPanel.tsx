@@ -11,11 +11,19 @@ const defaults: AgentVoiceSettings = { ...DEFAULT_AGENT_VOICE_SETTINGS };
 
 export default function AgentVoiceSettingsPanel() {
   const [settings, setSettings] = useState<AgentVoiceSettings>(defaults);
+  const [savedSettings, setSavedSettings] = useState<AgentVoiceSettings>(defaults);
   const [presets, setPresets] = useState<VoicePresetOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const isDirty =
+    settings.provider !== savedSettings.provider ||
+    settings.presetVoiceId !== savedSettings.presetVoiceId ||
+    settings.speakingStyle !== savedSettings.speakingStyle ||
+    settings.defaultLanguage !== savedSettings.defaultLanguage ||
+    settings.bilingualEnabled !== savedSettings.bilingualEnabled;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -32,6 +40,7 @@ export default function AgentVoiceSettingsPanel() {
         throw new Error(data.error || "Failed to load");
       }
       setSettings(data.settings);
+      setSavedSettings(data.settings);
       setPresets(data.presets ?? []);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Load failed");
@@ -76,6 +85,7 @@ export default function AgentVoiceSettingsPanel() {
         throw new Error(data.error || "Save failed");
       }
       setSettings(data.settings);
+      setSavedSettings(data.settings);
       setPresets(data.presets ?? []);
       setMessage("Saved.");
     } catch (e: unknown) {
@@ -214,7 +224,7 @@ export default function AgentVoiceSettingsPanel() {
         <button
           type="button"
           onClick={() => void save()}
-          disabled={saving}
+          disabled={saving || !isDirty}
           className="rounded-lg bg-brand-accent text-white text-sm font-medium px-4 py-2 disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save"}
