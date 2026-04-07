@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { createTask } from "@/lib/crm/pipeline/tasks";
 import { getTemplate } from "./templates";
 import type { PlanWithSteps, TemplateKey, TriggerType } from "./types";
 
@@ -76,9 +77,11 @@ export async function generatePlan(params: {
 }
 
 /**
- * Approve a plan — sets status to "approved" and records timestamp.
+ * Approve a plan — sets status to "approved", records timestamp,
+ * and creates CRM tasks from enabled "create_task" steps.
  */
 export async function approvePlan(planId: string): Promise<void> {
+  // Update plan status.
   const { error } = await supabaseAdmin
     .from("marketing_plans")
     .update({
@@ -90,6 +93,46 @@ export async function approvePlan(planId: string): Promise<void> {
     .eq("status", "draft");
 
   if (error) throw new Error(error.message);
+
+  // Fetch plan + steps to create CRM tasks.
+  try {
+    const { data: plan } = await supabaseAdmin
+      .from("marketing_plans")
+      .select("agent_id, lead_id, title")
+      .eq("id", planId)
+      .maybeSingle();
+
+    if (!plan) return;
+
+    const agentId = String((plan as Record<string, unknown>).agent_id);
+    const leadId = (plan as Record<string, unknown>).lead_id ? String((plan as Record<string, unknown>).lead_id) : null;
+
+    const { data: steps } = await supabaseAdmin
+      .from("marketing_plan_steps")
+      .select("action, body, delay_days, enabled")
+      .eq("plan_id", planId)
+      .eq("enabled", true)
+      .order("step_order", { ascending: true });
+
+    if (!steps?.length) return;
+
+    for (const step of steps as Array<Record<string, unknown>>) {
+      const dueAt = new Date(Date.now() + Number(step.delay_days ?? 0) * 86_400_000).toISOString();
+
+      await createTask({
+        agentId,
+        leadId,
+        title: String(step.body ?? "").slice(0, 200),
+        description: `From marketing plan: ${(plan as Record<string, unknown>).title ?? planId}`,
+        priority: "normal",
+        dueAt,
+        source: "automation",
+        aiRationale: "Auto-created when marketing plan was approved",
+      });
+    }
+  } catch (e) {
+    console.warn("approvePlan: task creation failed (non-blocking)", e);
+  }
 }
 
 /**
