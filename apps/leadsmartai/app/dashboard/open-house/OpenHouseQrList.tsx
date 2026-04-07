@@ -65,9 +65,6 @@ export default function OpenHouseQrList({
                   <div className="text-sm font-semibold text-brand-text truncate">
                     {codeLabel}
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-1 font-mono break-all">
-                    property_id: {p.id}
-                  </div>
                 </div>
               </div>
 

@@ -150,16 +150,9 @@ export default function ProfileSettingsForm() {
     <div className="space-y-6">
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">Account type</h2>
-        <p className="mt-1 text-sm text-gray-600">
-          Your role is stored in <span className="font-medium">leadsmart_users.role</span> and drives which apps and
-          menus you can access. It is not editable here.
-        </p>
         <div className="mt-4 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
           <p className="text-sm font-semibold text-gray-900">{roleLabel}</p>
           <p className="mt-1 text-sm text-gray-600 leading-relaxed">{roleDescription}</p>
-          {me?.has_agent_record ? (
-            <p className="mt-2 text-xs text-gray-500">CRM agent record: linked.</p>
-          ) : null}
         </div>
       </div>
 

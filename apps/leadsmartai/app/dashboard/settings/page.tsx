@@ -85,7 +85,7 @@ export default async function SettingsPage() {
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono bg-gray-50 text-gray-800"
           />
           <p className="text-[11px] text-gray-500">
-            Set this via server env var <span className="font-mono">AGENT_BRAND_NAME</span>.
+            This name appears in your email signatures and client-facing messages.
           </p>
         </div>
       </div>

@@ -142,9 +142,9 @@ export default async function MarketingPage() {
               <div className="mt-2 text-3xl font-extrabold text-slate-900">{sentCount ?? 0}</div>
             </div>
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-              <div className="ui-card-subtitle text-slate-600">Run Cron</div>
+              <div className="ui-card-subtitle text-slate-600">Status</div>
               <div className="mt-2 text-sm text-slate-700">
-                Ensure your Vercel cron hits <span className="font-mono">/api/cron/send-emails</span>.
+                Emails are sent automatically on schedule.
               </div>
             </div>
           </div>
