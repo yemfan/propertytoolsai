@@ -121,7 +121,7 @@ export async function PATCH(req: Request) {
     if (body.description !== undefined) patch.description = body.description;
     if (body.status !== undefined) patch.status = body.status;
     if (body.priority !== undefined) patch.priority = body.priority;
-    if (body.dueAt !== undefined) patch.dueAt = body.dueAt;
+    if (body.dueAt !== undefined) patch.due_at = body.dueAt;
 
     const updated = await updateTaskForAgent(agentId, body.taskId, patch);
 
