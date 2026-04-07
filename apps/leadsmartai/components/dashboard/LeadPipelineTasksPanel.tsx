@@ -50,6 +50,7 @@ export default function LeadPipelineTasksPanel({
   const [newTitle, setNewTitle] = useState("");
   const [adding, setAdding] = useState(false);
   const [stageSaving, setStageSaving] = useState(false);
+  const [stageSaved, setStageSaved] = useState(false);
   const [plan, setPlan] = useState<AiPlan | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [applyLoading, setApplyLoading] = useState(false);
@@ -97,6 +98,8 @@ export default function LeadPipelineTasksPanel({
       const json = (await res.json().catch(() => ({}))) as any;
       if (!res.ok || json?.error) throw new Error(json?.error ?? "Could not update stage.");
       onStageChange?.(nextId === "" ? null : nextId);
+      setStageSaved(true);
+      setTimeout(() => setStageSaved(false), 2000);
     } catch (e: any) {
       setErr(e?.message ?? "Stage update failed.");
     } finally {
@@ -211,7 +214,11 @@ export default function LeadPipelineTasksPanel({
       ) : (
         <>
           <label className="block">
-            <span className="text-xs font-semibold text-slate-700">Stage</span>
+            <span className="text-xs font-semibold text-slate-700">
+              Stage
+              {stageSaving && <span className="ml-2 text-gray-400">Saving...</span>}
+              {stageSaved && <span className="ml-2 text-green-600">Saved</span>}
+            </span>
             <select
               className="mt-1 w-full border border-slate-300 rounded-xl px-3 py-2 text-sm bg-white"
               value={pipelineStageId ?? ""}
