@@ -1,22 +1,19 @@
-import Link from "next/link";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import AgentAiSettingsPanel from "@/components/dashboard/AgentAiSettingsPanel";
 import AgentVoiceSettingsPanel from "@/components/dashboard/AgentVoiceSettingsPanel";
 import MlsCsvImportClient from "./MlsCsvImportClient";
 import HomeValueSmartLinkCopyShare from "@/components/dashboard/HomeValueSmartLinkCopyShare";
-import BrandingSettingsPanel from "@/components/dashboard/BrandingSettingsPanel";
 
 export default async function SettingsPage() {
   const ctx = await getCurrentAgentContext();
   const widgetAgentKey = ctx.agentId || ctx.userId;
-  const derivedName = ctx.email ? ctx.email.split("@")[0] : widgetAgentKey;
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="ui-page-title text-brand-text">Settings</h1>
         <p className="ui-page-subtitle text-brand-text/80">
-          Account and subscription information.
+          AI assistant, voice, and tool configuration.
         </p>
       </div>
 
@@ -28,32 +25,6 @@ export default async function SettingsPage() {
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
         <div className="ui-card-title text-brand-text">Phone assistant voice</div>
         <AgentVoiceSettingsPanel />
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
-        <div className="ui-card-title text-brand-text">Agent Profile</div>
-        <dl className="text-sm text-gray-700 space-y-2">
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Name</dt>
-            <dd className="font-semibold">{derivedName}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Email</dt>
-            <dd className="font-mono text-xs">{ctx.email ?? "—"}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Phone</dt>
-            <dd className="text-gray-600">Not collected yet</dd>
-          </div>
-        </dl>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
-        <div className="ui-card-title text-brand-text">Branding</div>
-        <p className="text-xs text-gray-600">
-          Customize your brand name, logo, and email signature for client-facing content.
-        </p>
-        <BrandingSettingsPanel />
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
