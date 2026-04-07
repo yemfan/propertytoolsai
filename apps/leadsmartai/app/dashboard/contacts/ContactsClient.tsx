@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 
 type LeadRow = {
   id: string;
@@ -263,7 +264,13 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
             <input value={addFields.name} onChange={(e) => setAddFields((f) => ({ ...f, name: e.target.value }))} placeholder="Name" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
             <input value={addFields.email} onChange={(e) => setAddFields((f) => ({ ...f, email: e.target.value }))} placeholder="Email" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
             <input value={addFields.phone} onChange={(e) => setAddFields((f) => ({ ...f, phone: e.target.value }))} placeholder="Phone" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-            <input value={addFields.property_address} onChange={(e) => setAddFields((f) => ({ ...f, property_address: e.target.value }))} placeholder="Address" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            <AddressAutocomplete
+              value={addFields.property_address}
+              onChange={(v) => setAddFields((f) => ({ ...f, property_address: v }))}
+              onSelect={(v) => setAddFields((f) => ({ ...f, property_address: v.formattedAddress }))}
+              placeholder="Address"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
           </div>
           <input value={addFields.notes} onChange={(e) => setAddFields((f) => ({ ...f, notes: e.target.value }))} placeholder="Notes / memo" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           <button type="button" onClick={() => void addContact()} disabled={actionLoading || !addFields.name}
