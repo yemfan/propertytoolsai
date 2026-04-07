@@ -5,10 +5,10 @@ import AgentVoiceSettingsPanel from "@/components/dashboard/AgentVoiceSettingsPa
 import MlsCsvImportClient from "./MlsCsvImportClient";
 import HomeValueSmartLinkCopyShare from "@/components/dashboard/HomeValueSmartLinkCopyShare";
 import { CancelSubscriptionButton } from "./CancelSubscriptionButton";
+import BrandingSettingsPanel from "@/components/dashboard/BrandingSettingsPanel";
 
 export default async function SettingsPage() {
   const ctx = await getCurrentAgentContext();
-  const agentBrandName = process.env.AGENT_BRAND_NAME || "LeadSmart AI";
   const widgetAgentKey = ctx.agentId || ctx.userId;
   const derivedName = ctx.email ? ctx.email.split("@")[0] : widgetAgentKey;
 
@@ -71,23 +71,11 @@ export default async function SettingsPage() {
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
-        <div className="ui-card-title text-brand-text">Branding (Email Signature)</div>
+        <div className="ui-card-title text-brand-text">Branding</div>
         <p className="text-xs text-gray-600">
-          This name is used in Resend email bodies (open house / follow-ups).
+          Customize your brand name, logo, and email signature for client-facing content.
         </p>
-        <div className="space-y-1">
-          <label className="block text-[11px] font-medium text-gray-500">
-            Branding Name
-          </label>
-          <input
-            readOnly
-            value={agentBrandName}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono bg-gray-50 text-gray-800"
-          />
-          <p className="text-[11px] text-gray-500">
-            This name appears in your email signatures and client-facing messages.
-          </p>
-        </div>
+        <BrandingSettingsPanel />
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
