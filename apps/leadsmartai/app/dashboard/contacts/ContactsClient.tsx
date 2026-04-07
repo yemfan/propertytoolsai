@@ -350,8 +350,8 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                       <td className="px-4 py-2 text-xs text-gray-500">{timeAgo(c.last_contacted_at)}</td>
                       <td className="px-4 py-2"><input value={editFields.notes ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, notes: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" placeholder="Notes" /></td>
                       <td className="px-4 py-2 whitespace-nowrap">
-                        <button onClick={() => void saveEdit(c.id)} disabled={actionLoading} className="text-xs font-medium text-blue-600 hover:text-blue-800 mr-2">Save</button>
-                        <button onClick={() => setEditingId(null)} className="text-xs font-medium text-gray-500 hover:text-gray-700">Cancel</button>
+                        <button onClick={() => void saveEdit(c.id)} disabled={actionLoading} className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 mr-2">Save</button>
+                        <button onClick={() => setEditingId(null)} className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
                       </td>
                     </tr>
                   );
@@ -374,8 +374,8 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                     <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{timeAgo(c.last_contacted_at)}</td>
                     <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] truncate">{c.notes ?? "\u2014"}</td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <button onClick={() => startEdit(c)} className="text-xs font-medium text-blue-600 hover:text-blue-800 mr-2">Edit</button>
-                      <button onClick={() => void markContacted(c.id)} disabled={actionLoading} className="text-xs font-medium text-green-600 hover:text-green-800">Contacted</button>
+                      <button onClick={() => startEdit(c)} className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 mr-2">Edit</button>
+                      <button onClick={() => void markContacted(c.id)} disabled={actionLoading} className="rounded-lg bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50">Contacted</button>
                     </td>
                   </tr>
                 );

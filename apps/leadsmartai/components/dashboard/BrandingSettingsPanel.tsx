@@ -242,7 +242,7 @@ export default function BrandingSettingsPanel() {
             <button
               type="button"
               onClick={() => { setEditingSignature(false); setBranding((b) => ({ ...b, signatureHtml: saved.signatureHtml })); }}
-              className="text-xs font-medium text-gray-500 hover:text-gray-700"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
             >
               Cancel
             </button>
