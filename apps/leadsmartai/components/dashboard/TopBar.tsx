@@ -326,7 +326,7 @@ function ProfileMenu({
           ) : null}
           {showCommercialPricing ? (
             <Link
-              href="/agent/pricing"
+              href="/dashboard/billing"
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               role="menuitem"
               onClick={() => setOpen(false)}
@@ -487,7 +487,7 @@ export default function TopBar({
         <>
           {showAgentBrokerPromotion ? (
             <Link
-              href="/agent/pricing"
+              href="/dashboard/billing"
               className="hidden sm:inline-flex h-10 items-center justify-center rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-xs font-semibold text-white shadow-md shadow-amber-500/20 transition hover:from-amber-600 hover:to-orange-600 md:text-sm"
             >
               Upgrade

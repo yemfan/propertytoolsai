@@ -142,7 +142,7 @@ export default function AccountMenu() {
       workspaceHref: home,
       profileHref: "/account/profile",
       settingsHref: settings,
-      pricingHref: "/agent/pricing",
+      pricingHref: "/dashboard/billing",
       hideCommercialPricing: staff,
       slimAgentBrokerHeaderMenu: slim,
       hideAccountSettings: staff,

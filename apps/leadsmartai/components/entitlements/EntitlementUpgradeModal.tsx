@@ -118,14 +118,14 @@ export default function EntitlementUpgradeModal({ open, onClose, reason, plan }:
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Link
-            href={crm ? "/dashboard/billing" : "/agent/pricing"}
+            href={crm ? "/dashboard/billing" : "/dashboard/billing"}
             className="rounded-2xl bg-gray-900 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-gray-800"
             onClick={onClose}
           >
             {crm ? "View plans & upgrade" : "Upgrade Now"}
           </Link>
           <Link
-            href="/agent/pricing"
+            href="/dashboard/billing"
             className="rounded-2xl border px-5 py-3 text-center text-sm font-medium text-gray-900 transition hover:bg-gray-50"
             onClick={onClose}
           >
