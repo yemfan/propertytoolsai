@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       .from("reports")
       .insert({
         property_id: subject.id,
-        lead_id,
+        lead_id: null,
         report_data: reportData,
       })
       .select("id")
