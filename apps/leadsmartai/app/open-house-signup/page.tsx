@@ -133,11 +133,6 @@ function OpenHouseSignupPageInner() {
             <p className="text-sm text-slate-600">
               Leave your info and we will follow up with open house updates.
             </p>
-            {propertyId ? (
-              <div className="text-xs font-mono text-slate-500 break-all">
-                Property ID: {propertyId}
-              </div>
-            ) : null}
           </div>
 
           <form noValidate onSubmit={onSubmit} className="mt-6 space-y-4">

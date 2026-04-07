@@ -409,7 +409,7 @@ function SmartCmaBuilderPageInner() {
                   Attach report to Lead (optional)
                 </div>
                 <div className="text-[11px] text-slate-500 mt-1">
-                  Saved reports will set <span className="font-mono">leads.report_id</span>.
+                  The report will be linked to this lead in your CRM.
                 </div>
               </div>
               <div className="flex-1 sm:max-w-[420px]">
