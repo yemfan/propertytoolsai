@@ -153,16 +153,38 @@ export function ImportWizardClient() {
         <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="text-base font-semibold text-gray-900">1. Upload CSV</h2>
           <p className="mt-1 text-sm text-gray-600">First row must be headers (e.g. Name, Email, Phone).</p>
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            disabled={loading}
-            className="mt-3 block text-sm"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void onUpload(f);
+          <label
+            className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-10 transition ${
+              loading
+                ? "border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
+                : "border-gray-300 bg-gray-50/50 hover:border-blue-400 hover:bg-blue-50/30"
+            }`}
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const f = e.dataTransfer.files?.[0];
+              if (f && !loading) void onUpload(f);
             }}
-          />
+          >
+            <svg className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+            <span className="mt-3 text-sm font-semibold text-gray-700">
+              {loading ? "Uploading..." : "Click to upload or drag and drop"}
+            </span>
+            <span className="mt-1 text-xs text-gray-500">CSV files only</span>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              disabled={loading}
+              className="sr-only"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void onUpload(f);
+              }}
+            />
+          </label>
         </section>
       )}
 
