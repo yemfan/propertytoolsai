@@ -99,7 +99,7 @@ export default function LeadsClient({
           {isFree && (
             <p className="text-xs text-amber-700 mt-1">
               Starter plan: up to 20 leads.{" "}
-              <a href="/agent/pricing" className="font-semibold underline hover:text-amber-900">
+              <a href="/dashboard/billing" className="font-semibold underline hover:text-amber-900">
                 Upgrade for 500+
               </a>
             </p>

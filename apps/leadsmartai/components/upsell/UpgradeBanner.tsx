@@ -22,7 +22,7 @@ export function UpgradeBanner({
   message,
   unlocks,
   cta,
-  href = "/agent/pricing",
+  href = "/dashboard/billing",
   variant = "banner",
 }: Props) {
   const isFree = !planType || planType === "free" || planType === "starter";

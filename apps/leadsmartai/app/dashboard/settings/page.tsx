@@ -4,7 +4,6 @@ import AgentAiSettingsPanel from "@/components/dashboard/AgentAiSettingsPanel";
 import AgentVoiceSettingsPanel from "@/components/dashboard/AgentVoiceSettingsPanel";
 import MlsCsvImportClient from "./MlsCsvImportClient";
 import HomeValueSmartLinkCopyShare from "@/components/dashboard/HomeValueSmartLinkCopyShare";
-import { CancelSubscriptionButton } from "./CancelSubscriptionButton";
 import BrandingSettingsPanel from "@/components/dashboard/BrandingSettingsPanel";
 
 export default async function SettingsPage() {
@@ -19,27 +18,6 @@ export default async function SettingsPage() {
         <p className="ui-page-subtitle text-brand-text/80">
           Account and subscription information.
         </p>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
-        <div className="ui-card-title text-brand-text mb-2">
-          Subscription
-        </div>
-        <dl className="text-sm text-gray-700 space-y-2">
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">Plan</dt>
-            <dd className="font-semibold capitalize">{ctx.planType === "free" ? "Starter (Free)" : ctx.planType}</dd>
-          </div>
-        </dl>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Link
-            href="/agent/pricing"
-            className="inline-flex items-center justify-center rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800"
-          >
-            Upgrade Plan
-          </Link>
-          <CancelSubscriptionButton planType={ctx.planType} />
-        </div>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-3">
