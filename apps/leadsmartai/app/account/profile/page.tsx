@@ -3,30 +3,31 @@ import ProfileSettingsForm from "@/components/account/ProfileSettingsForm";
 import BrandingSettingsPanel from "@/components/dashboard/BrandingSettingsPanel";
 
 export const metadata = {
-  title: "My profile | LeadSmart AI",
+  title: "My Profile | LeadSmart AI",
   description: "Update your name, phone, profile photo, and branding.",
 };
 
 export default function AccountProfilePage() {
   return (
-    <div className="mx-auto max-w-xl px-4 py-10">
-      <div className="mb-6">
-        <Link href="/dashboard" className="text-sm font-medium text-blue-700 hover:underline">
-          &larr; Back
+    <div className="mx-auto max-w-2xl px-4 py-8">
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">My Profile</h1>
+          <p className="mt-0.5 text-sm text-gray-500">Personal info and branding.</p>
+        </div>
+        <Link href="/dashboard" className="text-sm font-medium text-gray-500 hover:text-gray-900">
+          &larr; Dashboard
         </Link>
-        <h1 className="mt-4 text-2xl font-bold text-gray-900">My profile</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Manage your personal info, branding, and how you appear to clients.
-        </p>
       </div>
-      <ProfileSettingsForm />
 
-      <div className="mt-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-3">
-        <h2 className="text-lg font-semibold text-gray-900">Branding</h2>
-        <p className="text-xs text-gray-600">
-          Customize your brand name, logo, and email signature for client-facing content.
-        </p>
-        <BrandingSettingsPanel />
+      <div className="space-y-4">
+        <ProfileSettingsForm />
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-900">Branding</h2>
+          <p className="mt-0.5 text-xs text-gray-500 mb-4">Brand name, logo, and email signature.</p>
+          <BrandingSettingsPanel />
+        </div>
       </div>
     </div>
   );
