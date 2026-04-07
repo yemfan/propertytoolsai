@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { extractBusinessCardFieldsFromText } from "@/lib/contact-intake/businessCardOcr";
+import { extractBusinessCardFromImage, extractBusinessCardFieldsFromText } from "@/lib/contact-intake/businessCardOcr";
 import { requireMobileAgent } from "@/lib/mobile/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -40,16 +40,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const extracted = rawText.trim()
-      ? extractBusinessCardFieldsFromText(rawText)
-      : {
-          name: null,
-          email: null,
-          phone: null,
-          company: null,
-          title: null,
-          rawLines: [] as string[],
-        };
+    // Use GPT-4o Vision if image provided, fall back to text regex.
+    const extracted = parsed.data.imageBase64
+      ? await extractBusinessCardFromImage(parsed.data.imageBase64)
+      : rawText.trim()
+        ? extractBusinessCardFieldsFromText(rawText)
+        : { name: null, email: null, phone: null, company: null, title: null, address: null, rawLines: [] as string[] };
 
     const { data: job, error } = await supabaseAdmin
       .from("contact_import_jobs")
@@ -84,6 +80,7 @@ export async function POST(req: Request) {
         phone: extracted.phone,
         company: extracted.company,
         title: extracted.title,
+        address: (extracted as any).address ?? null,
         rawLines: extracted.rawLines,
       },
       message:

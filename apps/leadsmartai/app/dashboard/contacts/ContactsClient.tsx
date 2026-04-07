@@ -89,12 +89,19 @@ function MiniPie({ data, title }: { data: ChartItem[]; title: string }) {
 
 type SortKey = "name" | "email" | "rating" | "last_contacted_at" | "created_at";
 
-export default function ContactsClient({ leads }: { leads: LeadRow[] }) {
+export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow[] }) {
+  const [leads, setLeads] = useState(initialLeads);
   const [stats, setStats] = useState<Stats | null>(null);
   const [search, setSearch] = useState("");
   const [ratingFilter, setRatingFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortKey>("created_at");
   const [sortAsc, setSortAsc] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editFields, setEditFields] = useState<Partial<LeadRow>>({});
+  const [addFields, setAddFields] = useState({ name: "", email: "", phone: "", property_address: "", notes: "" });
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionMsg, setActionMsg] = useState<string | null>(null);
 
   const loadStats = useCallback(async () => {
     try {
@@ -105,6 +112,47 @@ export default function ContactsClient({ leads }: { leads: LeadRow[] }) {
   }, []);
 
   useEffect(() => { loadStats(); }, [loadStats]);
+
+  async function addContact() {
+    setActionLoading(true); setActionMsg(null);
+    try {
+      const res = await fetch("/api/dashboard/contacts/intake", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...addFields, source: "manual_entry", forceCreate: true }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) throw new Error(body.error ?? "Failed");
+      setAddFields({ name: "", email: "", phone: "", property_address: "", notes: "" });
+      setShowAddForm(false);
+      setActionMsg("Contact added.");
+      // Refresh page data
+      window.location.reload();
+    } catch (e) { setActionMsg(e instanceof Error ? e.message : "Error"); }
+    finally { setActionLoading(false); }
+  }
+
+  async function saveEdit(id: string) {
+    setActionLoading(true); setActionMsg(null);
+    try {
+      const res = await fetch(`/api/dashboard/leads/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editFields),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? "Update failed");
+      setLeads((prev) => prev.map((l) => l.id === id ? { ...l, ...editFields } as LeadRow : l));
+      setEditingId(null);
+      setActionMsg("Updated.");
+    } catch (e) { setActionMsg(e instanceof Error ? e.message : "Error"); }
+    finally { setActionLoading(false); }
+  }
+
+  function startEdit(lead: LeadRow) {
+    setEditingId(lead.id);
+    setEditFields({ name: lead.name, email: lead.email, phone: lead.phone, property_address: lead.property_address, notes: lead.notes, rating: lead.rating });
+  }
 
   function toggleSort(key: SortKey) {
     if (sortBy === key) setSortAsc((v) => !v);
@@ -164,34 +212,49 @@ export default function ContactsClient({ leads }: { leads: LeadRow[] }) {
       )}
 
       {/* Action buttons */}
+      {actionMsg && <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-800">{actionMsg}</div>}
       <div className="flex flex-wrap gap-2">
-        <Link
-          href="/dashboard/leads/add"
-          className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800"
-        >
-          Enter A Contact
-        </Link>
         <button
           type="button"
-          onClick={() => alert("Business card scanning coming soon!")}
+          onClick={() => setShowAddForm((v) => !v)}
+          className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800"
+        >
+          {showAddForm ? "Cancel" : "Enter A Contact"}
+        </button>
+        <Link
+          href="/dashboard/contacts/scan"
           className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           Scan Business Card
-        </button>
+        </Link>
         <Link
           href="/dashboard/leads/import"
           className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           Upload Contacts
         </Link>
-        <button
-          type="button"
-          onClick={downloadTemplate}
-          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
+        <button type="button" onClick={downloadTemplate} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
           Download Template
         </button>
       </div>
+
+      {/* Inline add form */}
+      {showAddForm && (
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm space-y-3">
+          <h3 className="text-sm font-semibold text-gray-900">New Contact</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input value={addFields.name} onChange={(e) => setAddFields((f) => ({ ...f, name: e.target.value }))} placeholder="Name" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            <input value={addFields.email} onChange={(e) => setAddFields((f) => ({ ...f, email: e.target.value }))} placeholder="Email" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            <input value={addFields.phone} onChange={(e) => setAddFields((f) => ({ ...f, phone: e.target.value }))} placeholder="Phone" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            <input value={addFields.property_address} onChange={(e) => setAddFields((f) => ({ ...f, property_address: e.target.value }))} placeholder="Address" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+          </div>
+          <input value={addFields.notes} onChange={(e) => setAddFields((f) => ({ ...f, notes: e.target.value }))} placeholder="Notes / memo" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+          <button type="button" onClick={() => void addContact()} disabled={actionLoading || !addFields.name}
+            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50">
+            {actionLoading ? "Saving..." : "Add Contact"}
+          </button>
+        </div>
+      )}
 
       {/* Search + Filter */}
       <div className="flex flex-wrap gap-2">
@@ -227,6 +290,7 @@ export default function ContactsClient({ leads }: { leads: LeadRow[] }) {
                   { key: "rating" as SortKey, label: "Rating" },
                   { key: "last_contacted_at" as SortKey, label: "Last Contacted" },
                   { key: null, label: "Memo" },
+                  { key: null, label: "" },
                 ] as const).map((col, i) => (
                   <th
                     key={i}
@@ -242,28 +306,58 @@ export default function ContactsClient({ leads }: { leads: LeadRow[] }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filtered.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-50/50">
-                  <td className="px-4 py-2.5 font-medium text-gray-900">{c.name ?? "\u2014"}</td>
-                  <td className="px-4 py-2.5 text-gray-600 max-w-[180px] truncate">{c.email ?? "\u2014"}</td>
-                  <td className="px-4 py-2.5 text-gray-600">{c.phone ?? "\u2014"}</td>
-                  <td className="px-4 py-2.5 text-gray-600 max-w-[180px] truncate">{c.property_address ?? "\u2014"}</td>
-                  <td className="px-4 py-2.5">
-                    {c.rating ? (
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${RATING_COLORS[c.rating.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}>
-                        {c.rating}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">\u2014</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{timeAgo(c.last_contacted_at)}</td>
-                  <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] truncate">{c.notes ?? "\u2014"}</td>
-                </tr>
-              ))}
+              {filtered.map((c) => {
+                const isEditing = editingId === c.id;
+                if (isEditing) {
+                  return (
+                    <tr key={c.id} className="bg-blue-50/30">
+                      <td className="px-4 py-2"><input value={editFields.name ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, name: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
+                      <td className="px-4 py-2"><input value={editFields.email ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, email: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
+                      <td className="px-4 py-2"><input value={editFields.phone ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, phone: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
+                      <td className="px-4 py-2"><input value={editFields.property_address ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, property_address: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
+                      <td className="px-4 py-2">
+                        <select value={editFields.rating ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, rating: e.target.value || null }))} className="rounded border border-gray-300 px-2 py-1 text-sm">
+                          <option value="">—</option>
+                          <option value="hot">Hot</option>
+                          <option value="warm">Warm</option>
+                          <option value="cold">Cold</option>
+                        </select>
+                      </td>
+                      <td className="px-4 py-2 text-xs text-gray-500">{timeAgo(c.last_contacted_at)}</td>
+                      <td className="px-4 py-2"><input value={editFields.notes ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, notes: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" placeholder="Notes" /></td>
+                      <td className="px-4 py-2 whitespace-nowrap">
+                        <button onClick={() => void saveEdit(c.id)} disabled={actionLoading} className="text-xs font-medium text-blue-600 hover:text-blue-800 mr-2">Save</button>
+                        <button onClick={() => setEditingId(null)} className="text-xs font-medium text-gray-500 hover:text-gray-700">Cancel</button>
+                      </td>
+                    </tr>
+                  );
+                }
+                return (
+                  <tr key={c.id} className="hover:bg-gray-50/50">
+                    <td className="px-4 py-2.5 font-medium text-gray-900">{c.name ?? "\u2014"}</td>
+                    <td className="px-4 py-2.5 text-gray-600 max-w-[180px] truncate">{c.email ?? "\u2014"}</td>
+                    <td className="px-4 py-2.5 text-gray-600">{c.phone ?? "\u2014"}</td>
+                    <td className="px-4 py-2.5 text-gray-600 max-w-[180px] truncate">{c.property_address ?? "\u2014"}</td>
+                    <td className="px-4 py-2.5">
+                      {c.rating ? (
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${RATING_COLORS[c.rating.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}>
+                          {c.rating}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">{"\u2014"}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{timeAgo(c.last_contacted_at)}</td>
+                    <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] truncate">{c.notes ?? "\u2014"}</td>
+                    <td className="px-4 py-2.5">
+                      <button onClick={() => startEdit(c)} className="text-xs font-medium text-blue-600 hover:text-blue-800">Edit</button>
+                    </td>
+                  </tr>
+                );
+              })}
               {!filtered.length && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                     {search ? "No contacts match your search." : "No contacts yet."}
                   </td>
                 </tr>
