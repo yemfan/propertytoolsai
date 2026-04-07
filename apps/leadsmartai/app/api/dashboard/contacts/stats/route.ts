@@ -35,11 +35,18 @@ export async function GET() {
       else ratingCounts["warm"]++; // default unrated to warm
     }
 
-    // Contacted in last 30 days
-    const thirtyDaysAgo = Date.now() - 30 * 86_400_000;
-    let contactedCount = 0;
+    // Last Contacted breakdown
+    const now30 = Date.now() - 30 * 86_400_000;
+    const now6m = Date.now() - 180 * 86_400_000;
+    const now1y = Date.now() - 365 * 86_400_000;
+    const lastContacted = { within30d: 0, within6m: 0, within1y: 0, over1y: 0, never: 0 };
     for (const r of rows) {
-      if (r.last_contacted_at && new Date(r.last_contacted_at).getTime() >= thirtyDaysAgo) contactedCount++;
+      if (!r.last_contacted_at) { lastContacted.never++; continue; }
+      const t = new Date(r.last_contacted_at).getTime();
+      if (t >= now30) lastContacted.within30d++;
+      else if (t >= now6m) lastContacted.within6m++;
+      else if (t >= now1y) lastContacted.within1y++;
+      else lastContacted.over1y++;
     }
 
     // Growth by month (last 12 months)
@@ -69,9 +76,12 @@ export async function GET() {
         { name: "Warm", value: ratingCounts.warm, color: "#f59e0b" },
         { name: "Cold", value: ratingCounts.cold, color: "#6b7280" },
       ],
-      contacted: [
-        { name: "Contacted", value: contactedCount, color: "#22c55e" },
-        { name: "Not contacted", value: rows.length - contactedCount, color: "#e5e7eb" },
+      lastContacted: [
+        { name: "Last 30 days", value: lastContacted.within30d, color: "#22c55e" },
+        { name: "6 months", value: lastContacted.within6m, color: "#3b82f6" },
+        { name: "1 year", value: lastContacted.within1y, color: "#f59e0b" },
+        { name: "Over 1 year", value: lastContacted.over1y, color: "#ef4444" },
+        { name: "Never", value: lastContacted.never, color: "#e5e7eb" },
       ],
       growth,
       total: rows.length,

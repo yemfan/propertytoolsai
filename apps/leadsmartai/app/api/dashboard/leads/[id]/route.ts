@@ -12,6 +12,7 @@ import {
   getCurrentAgentContext,
 } from "@/lib/dashboardService";
 import { updateLeadPipelineStage } from "@/lib/crm/pipeline/leadStage";
+import { supabaseServer } from "@/lib/supabaseServer";
 
 export async function PATCH(
   req: Request,
@@ -30,6 +31,11 @@ export async function PATCH(
       contact_frequency?: ContactFrequency;
       contact_method?: ContactMethod;
       pipeline_stage_id?: string | null;
+      last_contacted_at?: string;
+      name?: string;
+      email?: string;
+      phone?: string;
+      property_address?: string;
     };
 
     if (body.lead_status) {
@@ -53,6 +59,17 @@ export async function PATCH(
         pipelineStageId:
           body.pipeline_stage_id === "" ? null : (body.pipeline_stage_id ?? null),
       });
+    }
+
+    // Direct field updates (name, email, phone, address, last_contacted_at).
+    const directPatch: Record<string, unknown> = {};
+    if (typeof body.name === "string") directPatch.name = body.name;
+    if (typeof body.email === "string") directPatch.email = body.email;
+    if (typeof body.phone === "string") directPatch.phone = body.phone;
+    if (typeof body.property_address === "string") directPatch.property_address = body.property_address;
+    if (body.last_contacted_at) directPatch.last_contacted_at = body.last_contacted_at;
+    if (Object.keys(directPatch).length > 0) {
+      await supabaseServer.from("leads").update(directPatch).eq("id", id);
     }
 
     return NextResponse.json({ ok: true });
