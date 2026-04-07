@@ -489,22 +489,50 @@ export default function LeadsPage() {
       {selectedLead ? (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-3">
           <div className="w-full max-w-xl bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="p-5 border-b border-slate-100 flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-slate-900 truncate">
-                  {selectedLead.name ?? "Lead"}
+            <div className="p-5 border-b border-slate-100 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-slate-900 truncate">
+                    {selectedLead.name ?? "Lead"}
+                  </div>
+                  <div className="text-xs text-slate-600 mt-1">
+                    {selectedLead.email ?? "—"} • {selectedLead.phone ?? "—"}
+                  </div>
                 </div>
-                <div className="text-xs text-slate-600 mt-1">
-                  {selectedLead.email ?? "—"} • {selectedLead.phone ?? "—"}
-                </div>
+                <button
+                  type="button"
+                  className="text-sm font-semibold px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50"
+                  onClick={() => setSelectedLead(null)}
+                >
+                  Close
+                </button>
               </div>
-              <button
-                type="button"
-                className="text-sm font-semibold px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50"
-                onClick={() => setSelectedLead(null)}
-              >
-                Close
-              </button>
+              <div className="flex gap-2">
+                {selectedLead.phone && (
+                  <a
+                    href={`tel:${selectedLead.phone.replace(/\D/g, "")}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                  >
+                    <span>📞</span> Call
+                  </a>
+                )}
+                {selectedLead.phone && (
+                  <a
+                    href={`sms:${selectedLead.phone.replace(/\D/g, "")}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                  >
+                    <span>💬</span> SMS
+                  </a>
+                )}
+                {selectedLead.email && (
+                  <a
+                    href={`mailto:${selectedLead.email}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+                  >
+                    <span>✉️</span> Email
+                  </a>
+                )}
+              </div>
             </div>
 
             <div className="p-5 space-y-4 overflow-y-auto flex-1">
