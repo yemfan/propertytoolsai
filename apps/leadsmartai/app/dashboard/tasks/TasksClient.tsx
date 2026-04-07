@@ -310,7 +310,7 @@ export default function TasksClient({
                     <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] truncate">{t.description ?? "\u2014"}</td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       {t.status === "open" && (
-                        <button onClick={() => void markDone(t.id)} disabled={actionLoading} className="rounded-lg bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50 mr-2">Complete</button>
+                        <button onClick={() => void markDone(t.id)} disabled={actionLoading} className="rounded-lg bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50 mr-2">Done</button>
                       )}
                       <button onClick={() => startEdit(t)} className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">Edit</button>
                     </td>
