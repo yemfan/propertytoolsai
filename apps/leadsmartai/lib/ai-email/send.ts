@@ -65,5 +65,15 @@ export async function sendOutboundEmail(params: {
     // optional
   }
 
+  // Update last_contacted_at on the lead.
+  try {
+    await supabaseAdmin
+      .from("leads")
+      .update({ last_contacted_at: new Date().toISOString() } as Record<string, unknown>)
+      .eq("id", params.leadId);
+  } catch {
+    // optional column
+  }
+
   return { success: true as const, delivered, externalMessageId: externalId };
 }

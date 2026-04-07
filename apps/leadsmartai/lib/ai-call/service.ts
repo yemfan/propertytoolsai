@@ -144,6 +144,23 @@ export async function updateLeadCallStatus(params: {
     .eq("twilio_call_sid", params.twilioCallSid);
 
   if (error) throw error;
+
+  // Update last_contacted_at on the lead.
+  try {
+    const { data: call } = await supabaseAdmin
+      .from("lead_calls")
+      .select("lead_id")
+      .eq("twilio_call_sid", params.twilioCallSid)
+      .maybeSingle();
+    if (call?.lead_id) {
+      await supabaseAdmin
+        .from("leads")
+        .update({ last_contacted_at: new Date().toISOString() } as Record<string, unknown>)
+        .eq("id", call.lead_id);
+    }
+  } catch {
+    // best-effort
+  }
 }
 
 export async function appendLeadCallEvent(params: {

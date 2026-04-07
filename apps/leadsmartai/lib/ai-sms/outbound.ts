@@ -106,7 +106,7 @@ export async function sendOutboundSms(params: {
   try {
     await supabaseAdmin
       .from("leads")
-      .update({ sms_last_outbound_at: new Date().toISOString() } as Record<string, unknown>)
+      .update({ sms_last_outbound_at: new Date().toISOString(), last_contacted_at: new Date().toISOString() } as Record<string, unknown>)
       .eq("id", params.leadId);
   } catch {
     // optional column

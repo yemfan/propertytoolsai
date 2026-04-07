@@ -22,7 +22,7 @@ type GrowthItem = { month: string; label: string; count: number };
 
 type Stats = {
   rating: ChartItem[];
-  contacted: ChartItem[];
+  lastContacted: ChartItem[];
   growth: GrowthItem[];
   total: number;
 };
@@ -149,6 +149,23 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
     finally { setActionLoading(false); }
   }
 
+  async function markContacted(id: string) {
+    setActionLoading(true); setActionMsg(null);
+    try {
+      const now = new Date().toISOString();
+      const res = await fetch(`/api/dashboard/leads/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ last_contacted_at: now }),
+      });
+      if (!res.ok) throw new Error("Update failed");
+      setLeads((prev) => prev.map((l) => l.id === id ? { ...l, last_contacted_at: now } : l));
+      setActionMsg("Marked as contacted.");
+      loadStats();
+    } catch (e) { setActionMsg(e instanceof Error ? e.message : "Error"); }
+    finally { setActionLoading(false); }
+  }
+
   function startEdit(lead: LeadRow) {
     setEditingId(lead.id);
     setEditFields({ name: lead.name, email: lead.email, phone: lead.phone, property_address: lead.property_address, notes: lead.notes, rating: lead.rating });
@@ -192,7 +209,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
       {stats && (
         <div className="grid gap-3 md:grid-cols-3">
           <MiniPie data={stats.rating} title="Rating Distribution" />
-          <MiniPie data={stats.contacted} title="Contacted (30 days)" />
+          <MiniPie data={stats.lastContacted} title="Last Contacted" />
 
           <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <h3 className="text-xs font-semibold text-gray-500 mb-2">Contact Growth (12 months)</h3>
@@ -349,8 +366,9 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                     </td>
                     <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{timeAgo(c.last_contacted_at)}</td>
                     <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] truncate">{c.notes ?? "\u2014"}</td>
-                    <td className="px-4 py-2.5">
-                      <button onClick={() => startEdit(c)} className="text-xs font-medium text-blue-600 hover:text-blue-800">Edit</button>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <button onClick={() => startEdit(c)} className="text-xs font-medium text-blue-600 hover:text-blue-800 mr-2">Edit</button>
+                      <button onClick={() => void markContacted(c.id)} disabled={actionLoading} className="text-xs font-medium text-green-600 hover:text-green-800">Contacted</button>
                     </td>
                   </tr>
                 );
