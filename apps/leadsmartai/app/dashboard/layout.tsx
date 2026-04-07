@@ -69,7 +69,9 @@ export default async function DashboardLayout({
         .eq("user_id", ctx.userId);
     }
     if (!staff && status && !["active", "trialing"].includes(status)) {
-      redirect("/agent/pricing");
+      // Allow access to billing page so users can manage/reactivate subscription.
+      // All other dashboard pages require an active subscription.
+      redirect("/start-free/agent");
     }
   } catch (e) {
     if (isRedirectError(e)) throw e;

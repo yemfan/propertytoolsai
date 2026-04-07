@@ -98,8 +98,14 @@ const navConfig = {
         {
           label: "Settings",
           href: "/dashboard/settings",
-          match: ["/dashboard/settings", "/dashboard/billing", "/dashboard/notifications"],
+          match: ["/dashboard/settings", "/dashboard/notifications"],
           icon: navEmoji("⚙️"),
+        },
+        {
+          label: "Billing",
+          href: "/dashboard/billing",
+          match: ["/dashboard/billing"],
+          icon: navEmoji("💳"),
         },
         {
           label: "Profile",
