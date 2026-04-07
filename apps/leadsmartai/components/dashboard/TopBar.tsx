@@ -10,7 +10,6 @@ import {
   ListTodo,
   LogOut,
   MessageSquare,
-  Package,
   Plus,
   Search,
   Settings,
@@ -254,89 +253,42 @@ function ProfileMenu({
         <p className="truncate text-sm font-medium text-slate-900">{email || "Account"}</p>
         <p className="mt-1 truncate text-xs text-slate-500">{formatUserRoleLabel(appRole)}</p>
       </div>
-      {slimAccountBillingOnly ? (
-        <>
-          <Link
-            href="/dashboard"
-            className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-          >
-            <House className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-            Home
-          </Link>
-          <Link
-            href="/account/profile"
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-          >
-            <User className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-            Account
-          </Link>
-          <Link
-            href="/portal"
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-          >
-            <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-            Billing
-          </Link>
-          <Link
-            href="/agent/pricing"
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-          >
-            <Package className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-            Plans &amp; pricing
-          </Link>
-        </>
-      ) : (
-        <>
-          <Link
-            href="/dashboard"
-            className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-          >
-            <House className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-            Home
-          </Link>
-          <Link
-            href="/account/profile"
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            role="menuitem"
-            onClick={() => setOpen(false)}
-          >
-            <User className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-            My profile
-          </Link>
-          {!hideAccountSettings ? (
-            <Link
-              href="/dashboard/settings"
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              role="menuitem"
-              onClick={() => setOpen(false)}
-            >
-              <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-              Account &amp; settings
-            </Link>
-          ) : null}
-          {showCommercialPricing ? (
-            <Link
-              href="/dashboard/billing"
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-              role="menuitem"
-              onClick={() => setOpen(false)}
-            >
-              <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
-              Plans &amp; pricing
-            </Link>
-          ) : null}
-        </>
-      )}
+      <Link
+        href="/dashboard"
+        className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        role="menuitem"
+        onClick={() => setOpen(false)}
+      >
+        <House className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+        Home
+      </Link>
+      <Link
+        href="/account/profile"
+        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        role="menuitem"
+        onClick={() => setOpen(false)}
+      >
+        <User className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+        My Profile
+      </Link>
+      <Link
+        href="/dashboard/settings"
+        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        role="menuitem"
+        onClick={() => setOpen(false)}
+      >
+        <Settings className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+        My Settings
+      </Link>
+      <Link
+        href="/dashboard/billing"
+        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        role="menuitem"
+        onClick={() => setOpen(false)}
+      >
+        <CreditCard className="h-4 w-4 shrink-0 text-slate-500" strokeWidth={2} aria-hidden />
+        Billing &amp; Subscription
+      </Link>
       <div className="mt-1 border-t border-slate-100 pt-1">
         <button
           type="button"
@@ -482,7 +434,11 @@ export default function TopBar({
           {searchField("ls-dashboard-search-mobile")}
         </div>
       }
-      rightActions={[]}
+      rightActions={
+        hideCommercialPricing
+          ? []
+          : [{ label: "Plans & pricing", href: "/dashboard/billing", variant: "outline" }]
+      }
       trailing={
         <>
           {showAgentBrokerPromotion ? (
