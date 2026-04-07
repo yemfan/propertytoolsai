@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { NewContactModal } from "@/components/crm/NewContactModal";
 import LeadAiAssistantPanel from "@/components/dashboard/LeadAiAssistantPanel";
 import { HotLeadAlertPanel } from "@/components/crm/HotLeadAlertPanel";
@@ -35,6 +36,21 @@ export default function LeadsClient({
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [newContactOpen, setNewContactOpen] = useState(false);
+  const [leadStats, setLeadStats] = useState<{
+    status: Array<{ name: string; value: number; color: string }>;
+    bySource: Array<{ name: string; value: number; color: string }>;
+    growth: Array<{ label: string; count: number }>;
+  } | null>(null);
+
+  const loadLeadStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard/leads/stats");
+      const body = await res.json().catch(() => ({}));
+      if (body.ok) setLeadStats(body);
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => { loadLeadStats(); }, [loadLeadStats]);
 
   const sources = useMemo(() => {
     const set = new Set<string>();
@@ -88,8 +104,61 @@ export default function LeadsClient({
     }
   }
 
+  function MiniPie({ data, title }: { data: Array<{ name: string; value: number; color: string }>; title: string }) {
+    const total = data.reduce((s, d) => s + d.value, 0);
+    return (
+      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <h3 className="text-xs font-semibold text-gray-500 mb-2">{title}</h3>
+        <div className="flex items-center gap-3">
+          <div className="h-[110px] w-[110px] shrink-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={data} dataKey="value" cx="50%" cy="50%" outerRadius={45} innerRadius={25} strokeWidth={1}>
+                  {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+                </Pie>
+                <Tooltip formatter={(v: number) => v} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="space-y-1 text-xs">
+            {data.map((d) => (
+              <div key={d.name} className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                <span className="text-gray-600 truncate max-w-[80px]">{d.name}</span>
+                <span className="font-semibold text-gray-900">{d.value}</span>
+                {total > 0 && <span className="text-gray-400">({Math.round((d.value / total) * 100)}%)</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {/* Performance charts */}
+      {leadStats && (
+        <div className="grid gap-3 md:grid-cols-3">
+          <MiniPie data={leadStats.status} title="Lead Status" />
+          <MiniPie data={leadStats.bySource} title="Leads by Source" />
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">Lead Growth (12 months)</h3>
+            <div className="h-[110px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={leadStats.growth} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 9 }} stroke="#9ca3af" interval={1} />
+                  <YAxis tick={{ fontSize: 9 }} stroke="#9ca3af" allowDecimals={false} />
+                  <Tooltip formatter={(v: number) => [v, "Leads"]} />
+                  <Bar dataKey="count" fill="#3b82f6" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div>
           <h1 className="ui-page-title text-brand-text">Leads</h1>
