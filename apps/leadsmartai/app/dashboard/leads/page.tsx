@@ -539,6 +539,8 @@ export default function LeadsPage() {
               <LeadPipelineTasksPanel
                 leadId={selectedLead.id}
                 pipelineStageId={selectedLead.pipeline_stage_id ?? null}
+                leadPhone={selectedLead.phone ?? null}
+                leadEmail={selectedLead.email ?? null}
                 onStageChange={(stageId) => {
                   setSelectedLead((L) => (L ? { ...L, pipeline_stage_id: stageId } : null));
                   setLeads((prev) =>
