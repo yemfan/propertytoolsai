@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
-import { createTask, listTasksForAgent } from "@/lib/crm/pipeline/tasks";
+import { createTask, listTasksForAgent, updateTaskForAgent } from "@/lib/crm/pipeline/tasks";
 import { supabaseServer } from "@/lib/supabaseServer";
-import type { TaskPriority } from "@/lib/crm/pipeline/types";
+import type { TaskPriority, TaskStatus } from "@/lib/crm/pipeline/types";
 
 export const runtime = "nodejs";
 
@@ -93,6 +93,45 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, task });
   } catch (e: any) {
     console.error("dashboard tasks POST", e);
+    return NextResponse.json(
+      { ok: false, error: e?.message ?? "Server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const { agentId } = await getCurrentAgentContext();
+    const body = (await req.json().catch(() => ({}))) as {
+      taskId?: string;
+      title?: string;
+      description?: string | null;
+      status?: TaskStatus;
+      priority?: TaskPriority;
+      dueAt?: string | null;
+    };
+
+    if (!body.taskId) {
+      return NextResponse.json({ ok: false, error: "taskId is required" }, { status: 400 });
+    }
+
+    const patch: Record<string, unknown> = {};
+    if (body.title !== undefined) patch.title = body.title;
+    if (body.description !== undefined) patch.description = body.description;
+    if (body.status !== undefined) patch.status = body.status;
+    if (body.priority !== undefined) patch.priority = body.priority;
+    if (body.dueAt !== undefined) patch.dueAt = body.dueAt;
+
+    const updated = await updateTaskForAgent({
+      agentId,
+      taskId: body.taskId,
+      patch,
+    });
+
+    return NextResponse.json({ ok: true, task: updated });
+  } catch (e: any) {
+    console.error("dashboard tasks PATCH", e);
     return NextResponse.json(
       { ok: false, error: e?.message ?? "Server error" },
       { status: 500 }
