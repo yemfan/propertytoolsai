@@ -227,24 +227,6 @@ export default function LeadPipelineTasksPanel({
             </select>
           </label>
 
-          {/* Quick contact actions */}
-          <div className="flex gap-2">
-            {leadPhone && (
-              <a href={`tel:${leadPhone.replace(/\D/g, "")}`} className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700">
-                <span>📞</span> Call
-              </a>
-            )}
-            {leadPhone && (
-              <a href={`sms:${leadPhone.replace(/\D/g, "")}`} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">
-                <span>💬</span> SMS
-              </a>
-            )}
-            {leadEmail && (
-              <a href={`mailto:${leadEmail}`} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800">
-                <span>✉️</span> Email
-              </a>
-            )}
-          </div>
 
           <div className="space-y-2">
             <div className="text-xs font-semibold text-slate-700">Open tasks ({openTasks.length})</div>
