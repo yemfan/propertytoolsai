@@ -157,7 +157,7 @@ export default function TasksClient({
 
   function startEdit(task: TaskRow) {
     setEditingId(task.id);
-    setEditFields({ title: task.title, description: task.description, priority: task.priority, due_at: task.due_at });
+    setEditFields({ title: task.title, description: task.description, priority: task.priority, status: task.status, due_at: task.due_at });
   }
 
   const filtered = tasks.filter((t) => {
@@ -264,10 +264,14 @@ export default function TasksClient({
                           <option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option>
                         </select>
                       </td>
-                      <td className="px-4 py-2 text-xs">{t.status}</td>
+                      <td className="px-4 py-2">
+                        <select value={editFields.status ?? t.status} onChange={(e) => setEditFields((f) => ({ ...f, status: e.target.value }))} className="rounded border border-gray-300 px-2 py-1 text-sm">
+                          <option value="open">Open</option><option value="done">Done</option><option value="cancelled">Cancelled</option>
+                        </select>
+                      </td>
                       <td className="px-4 py-2"><input value={editFields.description ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, description: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" placeholder="Notes" /></td>
                       <td className="px-4 py-2 whitespace-nowrap">
-                        <button onClick={() => void updateTask(t.id, { title: editFields.title, description: editFields.description, priority: editFields.priority, dueAt: editFields.due_at })} disabled={actionLoading} className="text-xs font-medium text-blue-600 hover:text-blue-800 mr-2">Save</button>
+                        <button onClick={() => void updateTask(t.id, { title: editFields.title, description: editFields.description, priority: editFields.priority, status: editFields.status, dueAt: editFields.due_at })} disabled={actionLoading} className="text-xs font-medium text-blue-600 hover:text-blue-800 mr-2">Save</button>
                         <button onClick={() => setEditingId(null)} className="text-xs font-medium text-gray-500 hover:text-gray-700">Cancel</button>
                       </td>
                     </tr>
