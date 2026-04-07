@@ -195,6 +195,13 @@ export async function processDueFollowupJobs(limit = 25): Promise<{
       };
       await appendMessages(leadId, agentId, [msg]);
       await supabaseServer.from("ai_followup_jobs").update({ status: "sent" } as any).eq("id", jobId);
+      // Update last_contacted_at on the lead.
+      try {
+        await supabaseServer
+          .from("leads")
+          .update({ last_contacted_at: new Date().toISOString() } as Record<string, unknown>)
+          .eq("id", leadId);
+      } catch { /* best-effort */ }
       sent++;
     } else {
       await supabaseServer

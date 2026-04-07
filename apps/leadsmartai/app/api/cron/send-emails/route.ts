@@ -273,6 +273,14 @@ export async function GET(req: Request) {
           }
         }
 
+        // Update last_contacted_at on the lead.
+        try {
+          await supabaseServer
+            .from("leads")
+            .update({ last_contacted_at: new Date().toISOString() } as Record<string, unknown>)
+            .eq("id", leadIdNum);
+        } catch { /* best-effort */ }
+
         // Mark the step as sent and advance.
         await supabaseServer
           .from("sequence_steps")

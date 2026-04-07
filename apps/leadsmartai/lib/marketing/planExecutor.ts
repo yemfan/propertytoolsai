@@ -90,6 +90,16 @@ export async function executeActivePlans(): Promise<ExecutionResult> {
           .eq("id", step.id);
         result.stepsExecuted++;
 
+        // Update last_contacted_at for communication steps.
+        if (leadId && (step.action === "send_email" || step.action === "send_sms")) {
+          try {
+            await supabaseAdmin
+              .from("leads")
+              .update({ last_contacted_at: new Date().toISOString() } as Record<string, unknown>)
+              .eq("id", leadId);
+          } catch { /* best-effort */ }
+        }
+
         // Log to lead_events for CRM visibility.
         if (leadId) {
           await supabaseAdmin.from("lead_events").insert({
