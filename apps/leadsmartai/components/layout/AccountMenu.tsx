@@ -204,65 +204,38 @@ export default function AccountMenu() {
         ) : null}
       </div>
       <div className="py-1">
-        {slimAgentBrokerHeaderMenu ? (
-          <>
-            <Link
-              href="/account/profile"
-              role="menuitem"
-              className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
-              onClick={() => setOpen(false)}
-            >
-              Account
-            </Link>
-            <Link
-              href="/portal"
-              role="menuitem"
-              className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
-              onClick={() => setOpen(false)}
-            >
-              Billing
-            </Link>
-          </>
-        ) : (
-          <>
-            <Link
-              href={workspaceHref}
-              role="menuitem"
-              className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
-              onClick={() => setOpen(false)}
-            >
-              Dashboard
-            </Link>
-            <Link
-              href={profileHref}
-              role="menuitem"
-              className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
-              onClick={() => setOpen(false)}
-            >
-              My profile
-            </Link>
-            {settingsHref !== profileHref && !hideAccountSettings ? (
-              <Link
-                href={settingsHref}
-                role="menuitem"
-                className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
-                onClick={() => setOpen(false)}
-              >
-                Account &amp; settings
-              </Link>
-            ) : null}
-            {!hideCommercialPricing ? (
-              <Link
-                href={pricingHref}
-                role="menuitem"
-                className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
-                onClick={() => setOpen(false)}
-              >
-                Plans &amp; billing
-              </Link>
-            ) : null}
-          </>
-        )}
+        <Link
+          href="/dashboard"
+          role="menuitem"
+          className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
+          onClick={() => setOpen(false)}
+        >
+          Home
+        </Link>
+        <Link
+          href="/account/profile"
+          role="menuitem"
+          className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
+          onClick={() => setOpen(false)}
+        >
+          My Profile
+        </Link>
+        <Link
+          href="/dashboard/settings"
+          role="menuitem"
+          className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
+          onClick={() => setOpen(false)}
+        >
+          My Settings
+        </Link>
+        <Link
+          href="/dashboard/billing"
+          role="menuitem"
+          className="block px-4 py-2.5 text-sm text-gray-800 hover:bg-gray-50"
+          onClick={() => setOpen(false)}
+        >
+          Billing &amp; Subscription
+        </Link>
       </div>
       <div className="border-t border-gray-100 py-1">
         <button
