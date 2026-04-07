@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 type TaskRow = {
   id: string;
@@ -19,7 +19,8 @@ type TaskRow = {
 
 type LeadInfo = { id: string; name: string | null };
 type ChartItem = { name: string; value: number; color: string };
-type Stats = { completion: ChartItem[]; performed: number; total: number };
+type DayItem = { date: string; label: string; count: number };
+type Stats = { completion: ChartItem[]; performedByDay: DayItem[]; performed: number; total: number };
 
 const PRIORITY_COLORS: Record<string, string> = {
   urgent: "bg-red-100 text-red-700",
@@ -180,10 +181,19 @@ export default function TasksClient({
       {stats && (
         <div className="grid gap-3 md:grid-cols-2">
           <MiniPie data={stats.completion} title="Task Completion (30 days)" />
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm flex flex-col justify-center">
-            <h3 className="text-xs font-semibold text-gray-500">Tasks Performed (30 days)</h3>
-            <div className="mt-2 text-4xl font-bold text-gray-900">{stats.performed}</div>
-            <p className="mt-1 text-xs text-gray-500">out of {stats.total} total tasks</p>
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">Tasks Completed by Day (30 days) &mdash; {stats.performed} total</h3>
+            <div className="h-[120px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.performedByDay} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 8 }} stroke="#9ca3af" interval={4} />
+                  <YAxis tick={{ fontSize: 9 }} stroke="#9ca3af" allowDecimals={false} />
+                  <Tooltip formatter={(v: number) => [v, "Completed"]} />
+                  <Bar dataKey="count" fill="#22c55e" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       )}

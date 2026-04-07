@@ -58,6 +58,25 @@ export async function GET() {
     // Total performed in 30 days
     const performed = tasks.filter((t) => t.status === "done").length;
 
+    // Tasks completed per day (last 30 days)
+    const dailyCounts: Record<string, number> = {};
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86_400_000);
+      const key = d.toISOString().slice(0, 10);
+      dailyCounts[key] = 0;
+    }
+    for (const t of tasks) {
+      if (t.status === "done" && t.completed_at) {
+        const key = new Date(t.completed_at).toISOString().slice(0, 10);
+        if (key in dailyCounts) dailyCounts[key]++;
+      }
+    }
+    const performedByDay = Object.entries(dailyCounts).map(([date, count]) => ({
+      date,
+      label: new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      count,
+    }));
+
     return NextResponse.json({
       ok: true,
       completion: [
@@ -65,6 +84,7 @@ export async function GET() {
         { name: "Deferred", value: deferred, color: "#f59e0b" },
         { name: "Unfinished", value: unfinished, color: "#e5e7eb" },
       ],
+      performedByDay,
       performed,
       total: tasks.length,
     });
