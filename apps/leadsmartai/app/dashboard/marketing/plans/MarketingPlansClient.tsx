@@ -184,7 +184,7 @@ export default function MarketingPlansClient() {
     const p = selectedPlan;
     return (
       <div className="space-y-4">
-        <button onClick={() => setSelectedPlan(null)} className="text-sm text-gray-600 hover:text-gray-900">&larr; All plans</button>
+        <button onClick={() => { setSelectedPlan(null); setSearch(""); setStatusFilter("all"); }} className="text-sm text-gray-600 hover:text-gray-900">&larr; All plans</button>
 
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
