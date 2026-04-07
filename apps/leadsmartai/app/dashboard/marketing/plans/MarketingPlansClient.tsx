@@ -373,7 +373,7 @@ export default function MarketingPlansClient() {
                   <td className="px-4 py-2.5 text-xs text-gray-500">{stepProgress(p)}</td>
                   <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{timeAgo(p.updated_at)}</td>
                   <td className="px-4 py-2.5">
-                    <button onClick={() => loadPlanDetail(p.id)} className="text-xs font-medium text-blue-600 hover:text-blue-800">View</button>
+                    <button onClick={() => loadPlanDetail(p.id)} className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">View</button>
                   </td>
                 </tr>
               ))}

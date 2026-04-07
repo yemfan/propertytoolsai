@@ -144,7 +144,7 @@ export default function ComparisonReportBuilderClient({
                   <button
                     type="button"
                     onClick={() => removeRow(row.id)}
-                    className="text-xs font-medium text-red-600 hover:underline"
+                    className="rounded-lg border border-red-200 bg-white px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
                   >
                     Remove
                   </button>
