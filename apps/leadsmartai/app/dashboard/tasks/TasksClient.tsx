@@ -88,7 +88,7 @@ export default function TasksClient({
 }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [statusFilter, setStatusFilter] = useState("open");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [addFields, setAddFields] = useState({ title: "", description: "", priority: "normal", due_at: "", lead_id: "" });
@@ -238,10 +238,10 @@ export default function TasksClient({
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks..."
           className="flex-1 min-w-[200px] max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm" />
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+          <option value="all">All</option>
           <option value="open">Open</option>
           <option value="done">Done</option>
           <option value="cancelled">Cancelled</option>
-          <option value="all">All</option>
         </select>
       </div>
 
