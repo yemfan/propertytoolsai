@@ -1,5 +1,5 @@
 import type { NavConfig } from "@repo/ui";
-import { BarChart3, CreditCard, Headphones, LayoutDashboard, LayoutGrid } from "lucide-react";
+import { BarChart3, CreditCard, Headphones, LayoutDashboard } from "lucide-react";
 
 function navEmoji(emoji: string) {
   return (
@@ -13,44 +13,46 @@ function navEmoji(emoji: string) {
 }
 
 /**
- * LeadSmart AI — agent portal sidebar (desktop `lg+`) + mobile drawer.
- * Groups separated by dividers; admin routes are role-gated.
+ * LeadSmart AI — agent portal sidebar.
  *
- * Restructured to use collapsible groups (matching PropertyTools pattern)
- * so users can see everything at a glance without being overwhelmed.
+ * Groups:
+ *   Home        — daily overview
+ *   CRM         — leads, tasks, calendar, contacts
+ *   Communicate — inbox, calls, marketing plans
+ *   Tools       — property analysis, presentations, reports, open houses
+ *   Insights    — performance, growth
+ *   Account     — settings, billing, profile, support
+ *   Admin       — role-gated platform management
  */
 const navConfig = {
   id: "leadsmart",
   sidebarTitle: "Agent portal",
   sections: [
+    /* ── Home ── */
     {
       label: "Home",
       href: "/dashboard/overview",
       match: ["/dashboard", "/dashboard/overview", "/dashboard/broker"],
       icon: navEmoji("🏠"),
     },
+
+    /* ── CRM ── */
     {
       label: "CRM",
       defaultOpen: true,
       icon: navEmoji("👥"),
       items: [
         {
-          label: "Inbox",
-          href: "/dashboard/inbox",
-          match: ["/dashboard/inbox"],
-          icon: navEmoji("📥"),
+          label: "Leads",
+          href: "/dashboard/leads",
+          match: ["/dashboard/leads"],
+          icon: navEmoji("👥"),
         },
         {
           label: "Lead Queue",
           href: "/dashboard/lead-queue",
           match: ["/dashboard/lead-queue"],
           icon: navEmoji("📋"),
-        },
-        {
-          label: "Leads",
-          href: "/dashboard/leads",
-          match: ["/dashboard/leads"],
-          icon: navEmoji("👥"),
         },
         {
           label: "Tasks",
@@ -64,33 +66,95 @@ const navConfig = {
           match: ["/dashboard/calendar"],
           icon: navEmoji("📅"),
         },
+        {
+          label: "Contacts",
+          href: "/dashboard/contacts",
+          match: ["/dashboard/contacts"],
+          icon: navEmoji("📇"),
+        },
       ],
     },
+
+    /* ── Communicate ── */
     {
-      label: "Workspace",
+      label: "Communicate",
       defaultOpen: true,
+      icon: navEmoji("💬"),
+      items: [
+        {
+          label: "Inbox",
+          href: "/dashboard/inbox",
+          match: ["/dashboard/inbox"],
+          icon: navEmoji("📥"),
+        },
+        {
+          label: "Calls",
+          href: "/dashboard/calls",
+          match: ["/dashboard/calls"],
+          icon: navEmoji("📞"),
+        },
+        {
+          label: "Marketing Plans",
+          href: "/dashboard/marketing/plans",
+          match: ["/dashboard/marketing"],
+          icon: navEmoji("📣"),
+        },
+      ],
+    },
+
+    /* ── Tools ── */
+    {
+      label: "Tools",
       icon: navEmoji("🧰"),
       items: [
         {
-          label: "Tools",
+          label: "Property Tools",
           href: "/dashboard/tools",
           match: ["/dashboard/tools"],
-          icon: navEmoji("🧰"),
+          icon: navEmoji("🏡"),
         },
         {
-          label: "Templates",
-          href: "/dashboard/templates",
-          match: ["/dashboard/templates"],
-          icon: navEmoji("✉️"),
+          label: "Presentations",
+          href: "/dashboard/seller-presentation",
+          match: ["/dashboard/seller-presentation", "/dashboard/presentations"],
+          icon: navEmoji("📊"),
         },
         {
-          label: "Portal",
-          href: "/portal",
-          match: ["/portal"],
-          icon: <LayoutGrid size={16} strokeWidth={2} aria-hidden />,
+          label: "Reports",
+          href: "/dashboard/reports",
+          match: ["/dashboard/reports", "/dashboard/comparison-report"],
+          icon: navEmoji("📄"),
+        },
+        {
+          label: "Open Houses",
+          href: "/dashboard/open-houses",
+          match: ["/dashboard/open-houses", "/dashboard/open-house"],
+          icon: navEmoji("🏠"),
         },
       ],
     },
+
+    /* ── Insights ── */
+    {
+      label: "Insights",
+      icon: navEmoji("📈"),
+      items: [
+        {
+          label: "Performance",
+          href: "/dashboard/performance",
+          match: ["/dashboard/performance"],
+          icon: navEmoji("📈"),
+        },
+        {
+          label: "Growth",
+          href: "/dashboard/growth",
+          match: ["/dashboard/growth"],
+          icon: navEmoji("🚀"),
+        },
+      ],
+    },
+
+    /* ── Account ── */
     {
       label: "Account",
       icon: navEmoji("⚙️"),
@@ -121,6 +185,8 @@ const navConfig = {
         },
       ],
     },
+
+    /* ── Admin (role-gated) ── */
     { kind: "divider" as const },
     {
       label: "Admin",
@@ -135,7 +201,7 @@ const navConfig = {
           icon: <LayoutDashboard size={16} strokeWidth={2} aria-hidden />,
         },
         {
-          label: "Founder analytics",
+          label: "Analytics",
           href: "/admin/founder",
           roles: ["admin"],
           match: ["/admin/founder"],
@@ -149,7 +215,7 @@ const navConfig = {
           icon: <CreditCard size={16} strokeWidth={2} aria-hidden />,
         },
         {
-          label: "Support inbox",
+          label: "Support Inbox",
           href: "/admin/support",
           roles: ["admin", "support"],
           match: ["/admin/support"],
