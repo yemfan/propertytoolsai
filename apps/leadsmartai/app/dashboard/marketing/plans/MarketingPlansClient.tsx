@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Template = { key: string; title: string; description: string };
+type LeadOption = { id: string; name: string };
 type Step = {
   id: string;
   step_order: number;
@@ -22,9 +22,13 @@ type Plan = {
   status: string;
   template_key: string;
   lead_id: string | null;
+  lead_name: string | null;
   created_at: string;
+  updated_at: string;
   steps?: Step[];
 };
+
+type SortKey = "title" | "lead_name" | "status" | "updated_at";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-slate-100 text-slate-700",
@@ -35,15 +39,20 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "bg-red-100 text-red-700",
 };
 
-const CHANNEL_LABELS: Record<string, string> = {
-  sms: "SMS",
-  email: "Email",
-  task: "Task",
-  notification: "Alert",
-};
+const CHANNEL_LABELS: Record<string, string> = { sms: "SMS", email: "Email", task: "Task", notification: "Alert" };
+
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 export default function MarketingPlansClient() {
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [leads, setLeads] = useState<LeadOption[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -52,6 +61,12 @@ export default function MarketingPlansClient() {
   const [templateKey, setTemplateKey] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<SortKey>("updated_at");
+  const [sortAsc, setSortAsc] = useState(false);
+  const [leadSearch, setLeadSearch] = useState("");
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -59,19 +74,50 @@ export default function MarketingPlansClient() {
       const body = await res.json().catch(() => ({}));
       if (body.ok) {
         setPlans(body.plans ?? []);
+        setLeads(body.leads ?? []);
         setTemplates(body.templates ?? []);
       }
-    } catch { /* silent */ } finally {
-      setLoading(false);
-    }
+    } catch { /* silent */ } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchPlans(); }, [fetchPlans]);
 
+  const filteredLeads = useMemo(() => {
+    if (!leadSearch.trim()) return leads.slice(0, 50);
+    const s = leadSearch.toLowerCase();
+    return leads.filter((l) => l.name.toLowerCase().includes(s)).slice(0, 50);
+  }, [leads, leadSearch]);
+
+  function toggleSort(key: SortKey) {
+    if (sortBy === key) setSortAsc((v) => !v);
+    else { setSortBy(key); setSortAsc(false); }
+  }
+
+  const filtered = plans
+    .filter((p) => {
+      if (statusFilter !== "all" && p.status !== statusFilter) return false;
+      if (!search.trim()) return true;
+      const s = search.toLowerCase();
+      return p.title.toLowerCase().includes(s) || (p.lead_name ?? "").toLowerCase().includes(s);
+    })
+    .sort((a, b) => {
+      const dir = sortAsc ? 1 : -1;
+      const av = String((a as any)[sortBy] ?? "");
+      const bv = String((b as any)[sortBy] ?? "");
+      return av < bv ? -dir : av > bv ? dir : 0;
+    });
+
+  // Step completion progress.
+  function stepProgress(plan: Plan): string {
+    const steps = plan.steps ?? [];
+    if (!steps.length) return "\u2014";
+    const done = steps.filter((s) => s.status === "executed").length;
+    return `${done}/${steps.length}`;
+  }
+
   async function createPlan() {
     if (!leadId || !templateKey) return;
-    setCreating(true);
-    setFeedback(null);
+    setCreating(true); setFeedback(null);
     try {
       const res = await fetch("/api/dashboard/marketing-plans", {
         method: "POST",
@@ -80,14 +126,11 @@ export default function MarketingPlansClient() {
       });
       const body = await res.json().catch(() => ({}));
       if (body.ok) {
-        setFeedback("Plan created! Review and approve it to start.");
-        setLeadId("");
-        setTemplateKey("");
+        setFeedback("Plan created!");
+        setLeadId(""); setTemplateKey(""); setShowCreate(false);
         fetchPlans();
         if (body.plan) setSelectedPlan(body.plan);
-      } else {
-        setFeedback(body.error ?? "Failed to create plan.");
-      }
+      } else { setFeedback(body.error ?? "Failed."); }
     } catch { setFeedback("Network error."); } finally { setCreating(false); }
   }
 
@@ -108,12 +151,8 @@ export default function MarketingPlansClient() {
         body: JSON.stringify({ action }),
       });
       const body = await res.json().catch(() => ({}));
-      if (body.ok) {
-        fetchPlans();
-        loadPlanDetail(planId);
-      } else {
-        setFeedback(body.error ?? "Action failed.");
-      }
+      if (body.ok) { fetchPlans(); loadPlanDetail(planId); }
+      else { setFeedback(body.error ?? "Action failed."); }
     } catch { setFeedback("Network error."); } finally { setActionLoading(null); }
   }
 
@@ -128,86 +167,46 @@ export default function MarketingPlansClient() {
 
   if (loading) return <div className="py-20 text-center text-gray-400">Loading...</div>;
 
-  // Plan detail view
+  // ── Plan Detail View ──
   if (selectedPlan) {
     const p = selectedPlan;
     return (
-      <div className="space-y-6">
-        <button onClick={() => setSelectedPlan(null)} className="text-sm text-gray-600 hover:text-gray-900">
-          &larr; Back to plans
-        </button>
+      <div className="space-y-4">
+        <button onClick={() => setSelectedPlan(null)} className="text-sm text-gray-600 hover:text-gray-900">&larr; All plans</button>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">{p.title}</h2>
-              <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[p.status] ?? ""}`}>
-                {p.status}
-              </span>
+              <h2 className="text-lg font-semibold text-gray-900">{p.title}</h2>
+              <p className="text-xs text-gray-500">{p.lead_name ?? `Lead #${p.lead_id}`} &middot; {p.template_key}</p>
+              <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[p.status] ?? ""}`}>{p.status}</span>
             </div>
             <div className="flex gap-2">
-              {p.status === "draft" && (
-                <button disabled={!!actionLoading} onClick={() => planAction(p.id, "approve")} className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-                  {actionLoading === "approve" ? "..." : "Approve"}
-                </button>
-              )}
-              {p.status === "approved" && (
-                <button disabled={!!actionLoading} onClick={() => planAction(p.id, "start")} className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">
-                  {actionLoading === "start" ? "..." : "Start Execution"}
-                </button>
-              )}
-              {p.status === "active" && (
-                <button disabled={!!actionLoading} onClick={() => planAction(p.id, "pause")} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-                  Pause
-                </button>
-              )}
-              {["draft", "approved", "active", "paused"].includes(p.status) && (
-                <button disabled={!!actionLoading} onClick={() => planAction(p.id, "cancel")} className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50">
-                  Cancel
-                </button>
-              )}
+              {p.status === "draft" && <button disabled={!!actionLoading} onClick={() => planAction(p.id, "approve")} className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">Approve</button>}
+              {p.status === "approved" && <button disabled={!!actionLoading} onClick={() => planAction(p.id, "start")} className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">Start</button>}
+              {p.status === "active" && <button disabled={!!actionLoading} onClick={() => planAction(p.id, "pause")} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">Pause</button>}
+              {["draft", "approved", "active", "paused"].includes(p.status) && <button disabled={!!actionLoading} onClick={() => planAction(p.id, "cancel")} className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50">Cancel</button>}
             </div>
           </div>
         </div>
 
-        {/* Steps */}
+        {/* Pipeline steps */}
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-700">Plan Steps</h3>
+          <h3 className="text-sm font-semibold text-gray-700">Pipeline Steps</h3>
           {(p.steps ?? []).map((step) => (
-            <div
-              key={step.id}
-              className={`rounded-xl border p-4 ${!step.enabled ? "border-gray-100 bg-gray-50 opacity-60" : "border-gray-200 bg-white"}`}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={step.enabled}
-                      onChange={(e) => toggleStep(p.id, step.id, e.target.checked)}
-                      disabled={p.status !== "draft"}
-                      className="h-4 w-4 rounded border-gray-300"
-                    />
-                  </label>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
-                        Day {step.delay_days}
-                      </span>
-                      <span className="rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-                        {CHANNEL_LABELS[step.channel] ?? step.channel}
-                      </span>
-                      <span className={`rounded px-2 py-0.5 text-xs font-medium ${
-                        step.status === "executed" ? "bg-green-50 text-green-700" :
-                        step.status === "failed" ? "bg-red-50 text-red-700" :
-                        "bg-gray-50 text-gray-500"
-                      }`}>
-                        {step.status}
-                      </span>
-                    </div>
-                    {step.subject && <p className="mt-1 text-sm font-medium text-gray-900">{step.subject}</p>}
-                    <p className="mt-0.5 text-sm text-gray-600 line-clamp-2">{step.body}</p>
+            <div key={step.id} className={`rounded-xl border p-4 ${!step.enabled ? "border-gray-100 bg-gray-50 opacity-60" : "border-gray-200 bg-white"}`}>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={step.enabled} onChange={(e) => toggleStep(p.id, step.id, e.target.checked)} disabled={p.status !== "draft"} className="h-4 w-4 rounded border-gray-300" />
+                </label>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">Day {step.delay_days}</span>
+                    <span className="rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{CHANNEL_LABELS[step.channel] ?? step.channel}</span>
+                    <span className={`rounded px-2 py-0.5 text-xs font-medium ${step.status === "executed" ? "bg-green-50 text-green-700" : step.status === "failed" ? "bg-red-50 text-red-700" : "bg-gray-50 text-gray-500"}`}>{step.status}</span>
                   </div>
+                  {step.subject && <p className="mt-1 text-sm font-medium text-gray-900">{step.subject}</p>}
+                  <p className="mt-0.5 text-sm text-gray-600 line-clamp-2">{step.body}</p>
                 </div>
               </div>
             </div>
@@ -217,83 +216,121 @@ export default function MarketingPlansClient() {
     );
   }
 
-  // Plans list view
+  // ── Plans List View ──
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Marketing Plans</h1>
-        <p className="text-sm text-gray-500">Create automated marketing sequences for your leads.</p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">Marketing Plans</h1>
+          <p className="text-sm text-gray-500">{plans.length} total plans</p>
+        </div>
       </div>
 
-      {feedback && (
-        <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-sm text-blue-800">{feedback}</div>
-      )}
+      {feedback && <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-800">{feedback}</div>}
 
-      {/* Create new plan */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-3">
-        <h3 className="text-sm font-semibold text-gray-700">Create a new plan</h3>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <input
-            value={leadId}
-            onChange={(e) => setLeadId(e.target.value)}
-            placeholder="Lead ID"
-            className="flex-1 rounded-xl border border-gray-300 px-3 py-2 text-sm"
-          />
-          <select
-            value={templateKey}
-            onChange={(e) => setTemplateKey(e.target.value)}
-            className="flex-1 rounded-xl border border-gray-300 px-3 py-2 text-sm"
-          >
-            <option value="">Select template...</option>
-            {templates.map((t) => (
-              <option key={t.key} value={t.key}>{t.title}</option>
-            ))}
-          </select>
-          <button
-            disabled={!leadId || !templateKey || creating}
-            onClick={() => void createPlan()}
-            className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-          >
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => setShowCreate((v) => !v)} className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800">
+          {showCreate ? "Cancel" : "New Plan"}
+        </button>
+      </div>
+
+      {/* Create form */}
+      {showCreate && (
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm space-y-3">
+          <h3 className="text-sm font-semibold text-gray-900">Create a new plan</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="block text-[11px] font-medium text-gray-500 mb-1">Lead / Contact</label>
+              <input value={leadSearch} onChange={(e) => setLeadSearch(e.target.value)} placeholder="Search leads..." className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm mb-1" />
+              <select value={leadId} onChange={(e) => setLeadId(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                <option value="">Select a lead...</option>
+                {filteredLeads.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-gray-500 mb-1">Template</label>
+              <select value={templateKey} onChange={(e) => setTemplateKey(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm mt-6">
+                <option value="">Select template...</option>
+                {templates.map((t) => <option key={t.key} value={t.key}>{t.title}</option>)}
+              </select>
+              {templateKey && templates.find((t) => t.key === templateKey) && (
+                <p className="mt-1 text-xs text-gray-500">{templates.find((t) => t.key === templateKey)?.description}</p>
+              )}
+            </div>
+          </div>
+          <button disabled={!leadId || !templateKey || creating} onClick={() => void createPlan()}
+            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50">
             {creating ? "Creating..." : "Generate Plan"}
           </button>
         </div>
-        {templateKey && templates.find((t) => t.key === templateKey) && (
-          <p className="text-xs text-gray-500">
-            {templates.find((t) => t.key === templateKey)?.description}
-          </p>
-        )}
+      )}
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2">
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search plans or leads..."
+          className="flex-1 min-w-[200px] max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+          <option value="all">All statuses</option>
+          <option value="draft">Draft</option>
+          <option value="approved">Approved</option>
+          <option value="active">Active</option>
+          <option value="paused">Paused</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
       </div>
 
-      {/* Plans list */}
-      {plans.length === 0 ? (
-        <div className="rounded-2xl border border-gray-200 bg-white px-6 py-12 text-center shadow-sm">
-          <p className="text-gray-500">No marketing plans yet.</p>
-          <p className="mt-1 text-sm text-gray-400">Create one above to get started.</p>
+      {/* Plans table */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50 text-gray-600">
+              <tr>
+                {([
+                  { key: "title" as SortKey, label: "Plan" },
+                  { key: "lead_name" as SortKey, label: "Lead" },
+                  { key: "status" as SortKey, label: "Status" },
+                  { key: null, label: "Progress" },
+                  { key: "updated_at" as SortKey, label: "Last Updated" },
+                  { key: null, label: "" },
+                ] as const).map((col, i) => (
+                  <th key={i} className={`text-left px-4 py-2.5 font-medium ${col.key ? "cursor-pointer select-none hover:text-gray-900" : ""}`}
+                    onClick={() => col.key && toggleSort(col.key)}>
+                    {col.label}
+                    {col.key && sortBy === col.key && <span className="ml-1 text-[10px]">{sortAsc ? "\u25B2" : "\u25BC"}</span>}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {filtered.map((p) => (
+                <tr key={p.id} className="hover:bg-gray-50/50">
+                  <td className="px-4 py-2.5">
+                    <span className="font-medium text-gray-900">{p.title}</span>
+                    <span className="ml-1.5 text-[10px] text-gray-400">{p.template_key}</span>
+                  </td>
+                  <td className="px-4 py-2.5 text-gray-600">{p.lead_name ?? "\u2014"}</td>
+                  <td className="px-4 py-2.5">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_COLORS[p.status] ?? ""}`}>{p.status}</span>
+                  </td>
+                  <td className="px-4 py-2.5 text-xs text-gray-500">{stepProgress(p)}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{timeAgo(p.updated_at)}</td>
+                  <td className="px-4 py-2.5">
+                    <button onClick={() => loadPlanDetail(p.id)} className="text-xs font-medium text-blue-600 hover:text-blue-800">View</button>
+                  </td>
+                </tr>
+              ))}
+              {!filtered.length && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                    {search || statusFilter !== "all" ? "No plans match your filters." : "No marketing plans yet."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      ) : (
-        <div className="space-y-2">
-          {plans.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => loadPlanDetail(p.id)}
-              className="w-full text-left rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm hover:bg-gray-50"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{p.title}</p>
-                  <p className="text-xs text-gray-500">
-                    {p.template_key} &middot; {new Date(p.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[p.status] ?? ""}`}>
-                  {p.status}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
