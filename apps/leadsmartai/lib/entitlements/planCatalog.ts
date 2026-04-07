@@ -36,7 +36,7 @@ export const PLAN_CATALOG: Record<AgentPlan, PlanCatalogEntry> = {
     ],
   },
   growth: {
-    label: "Growth",
+    label: "Pro",
     cmaReportsPerDay: 5,
     maxLeads: 500,
     maxContacts: 500,

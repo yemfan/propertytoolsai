@@ -118,18 +118,16 @@ function LoginPageInner() {
       }
 
       const safe = redirectParam ? safeInternalRedirect(redirectParam) : null;
-      if (isPro) {
+      if (isPro || hasAgentRow) {
         if (safe) {
           router.replace(safe);
         } else {
           router.replace(resolveRoleHomePath(role, hasAgentRow));
         }
       } else {
-        const fallback = redirectParam ?? "/dashboard";
+        const fallback = redirectParam ?? "/";
         const safeFallback = safeInternalRedirect(fallback);
-        router.replace(
-          fallback.startsWith("/dashboard") ? "/" : (safeFallback ?? "/")
-        );
+        router.replace(safeFallback ?? "/");
       }
     } catch (e: any) {
       setError(e?.message ?? "Something went wrong. Please try again.");
