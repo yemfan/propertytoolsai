@@ -199,6 +199,14 @@ export async function GET(req: Request) {
           created_at: nowIso,
         } as any);
 
+        // Update last_contacted_at on the lead.
+        try {
+          await supabaseServer
+            .from("leads")
+            .update({ last_contacted_at: nowIso } as Record<string, unknown>)
+            .eq("id", leadId);
+        } catch { /* best-effort */ }
+
         sent++;
       } catch (e) {
         failed++;
