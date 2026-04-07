@@ -13,10 +13,17 @@ const empty: AgentAiSettings = {
 
 export default function AgentAiSettingsPanel() {
   const [settings, setSettings] = useState<AgentAiSettings>(empty);
+  const [savedSettings, setSavedSettings] = useState<AgentAiSettings>(empty);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const isDirty =
+    settings.personality !== savedSettings.personality ||
+    settings.defaultLanguage !== savedSettings.defaultLanguage ||
+    settings.bilingualEnabled !== savedSettings.bilingualEnabled ||
+    (settings.styleNotes ?? "") !== (savedSettings.styleNotes ?? "");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -28,6 +35,7 @@ export default function AgentAiSettingsPanel() {
         throw new Error(data.error || "Failed to load");
       }
       setSettings(data.settings);
+      setSavedSettings(data.settings);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Load failed");
     } finally {
@@ -59,6 +67,7 @@ export default function AgentAiSettingsPanel() {
         throw new Error(data.error || "Save failed");
       }
       setSettings(data.settings);
+      setSavedSettings(data.settings);
       setMessage("Saved.");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Save failed");
@@ -152,7 +161,7 @@ export default function AgentAiSettingsPanel() {
         <button
           type="button"
           onClick={() => void save()}
-          disabled={saving}
+          disabled={saving || !isDirty}
           className="rounded-lg bg-brand-accent text-white text-sm font-medium px-4 py-2 disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save"}
