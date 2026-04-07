@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AddressAutocomplete from "@/components/AddressAutocomplete";
 
 type Props = {
   open: boolean;
@@ -108,14 +109,16 @@ export function NewContactModal({ open, onClose, onCreated }: Props) {
               placeholder="10-digit US"
             />
           </label>
-          <label className="block text-sm font-medium text-gray-700">
+          <div className="block text-sm font-medium text-gray-700">
             Property / address
-            <input
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            <AddressAutocomplete
               value={property_address}
-              onChange={(e) => setPropertyAddress(e.target.value)}
+              onChange={(v) => setPropertyAddress(v)}
+              onSelect={(v) => setPropertyAddress(v.formattedAddress)}
+              placeholder="Start typing an address..."
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             />
-          </label>
+          </div>
           <label className="block text-sm font-medium text-gray-700">
             Notes
             <textarea
