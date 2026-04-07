@@ -212,14 +212,6 @@ export default async function OverviewPage() {
 
   return (
     <div className="space-y-8">
-      <UpgradeBanner
-        planType={ctx.planType}
-        variant="card"
-        message="Unlock your full potential"
-        unlocks={`You've used ${usage.used}${Number.isFinite(usage.limit) ? ` of ${usage.limit}` : ""} leads. Upgrade to Pro for 500 leads, full AI, and engagement tracking.`}
-        cta="Upgrade Now"
-      />
-
       <AgentHomeDashboard
         greetingName={greetingName}
         stats={stats}
