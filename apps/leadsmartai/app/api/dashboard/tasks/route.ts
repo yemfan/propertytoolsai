@@ -123,11 +123,7 @@ export async function PATCH(req: Request) {
     if (body.priority !== undefined) patch.priority = body.priority;
     if (body.dueAt !== undefined) patch.dueAt = body.dueAt;
 
-    const updated = await updateTaskForAgent({
-      agentId,
-      taskId: body.taskId,
-      patch,
-    });
+    const updated = await updateTaskForAgent(agentId, body.taskId, patch);
 
     return NextResponse.json({ ok: true, task: updated });
   } catch (e: any) {
