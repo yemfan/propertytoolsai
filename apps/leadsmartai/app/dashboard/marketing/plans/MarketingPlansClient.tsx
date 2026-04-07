@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 type Template = { key: string; title: string; description: string };
 type LeadOption = { id: string; name: string };
@@ -67,6 +68,7 @@ export default function MarketingPlansClient() {
   const [sortBy, setSortBy] = useState<SortKey>("updated_at");
   const [sortAsc, setSortAsc] = useState(false);
   const [leadSearch, setLeadSearch] = useState("");
+  const [stats, setStats] = useState<{ performance: Array<{ name: string; value: number; color: string }>; completedByMonth: Array<{ label: string; count: number }>; totalPlans: number } | null>(null);
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -81,6 +83,16 @@ export default function MarketingPlansClient() {
   }, []);
 
   useEffect(() => { fetchPlans(); }, [fetchPlans]);
+
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard/marketing-plans/stats");
+      const body = await res.json().catch(() => ({}));
+      if (body.ok) setStats(body);
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => { loadStats(); }, [loadStats]);
 
   const filteredLeads = useMemo(() => {
     if (!leadSearch.trim()) return leads.slice(0, 50);
@@ -226,6 +238,51 @@ export default function MarketingPlansClient() {
         </div>
       </div>
 
+      {/* Performance charts */}
+      {stats && (
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">Plan Performance (30 days)</h3>
+            <div className="flex items-center gap-3">
+              <div className="h-[120px] w-[120px] shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={stats.performance} dataKey="value" cx="50%" cy="50%" outerRadius={50} innerRadius={28} strokeWidth={1}>
+                      {stats.performance.map((d, i) => <Cell key={i} fill={d.color} />)}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => v} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-1 text-xs">
+                {stats.performance.map((d) => (
+                  <div key={d.name} className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                    <span className="text-gray-600">{d.name}</span>
+                    <span className="font-semibold text-gray-900">{d.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">Plans Completed by Month</h3>
+            <div className="h-[120px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.completedByMonth} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 9 }} stroke="#9ca3af" interval={1} />
+                  <YAxis tick={{ fontSize: 9 }} stroke="#9ca3af" allowDecimals={false} />
+                  <Tooltip formatter={(v: number) => [v, "Completed"]} />
+                  <Bar dataKey="count" fill="#22c55e" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
       {feedback && <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-800">{feedback}</div>}
 
       <div className="flex flex-wrap gap-2">
@@ -329,6 +386,26 @@ export default function MarketingPlansClient() {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Templates list */}
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">Available Templates</h3>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {templates.map((t) => (
+            <div key={t.key} className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+              <p className="text-sm font-medium text-gray-900">{t.title}</p>
+              <p className="mt-1 text-xs text-gray-500">{t.description}</p>
+              <button
+                type="button"
+                onClick={() => { setShowCreate(true); setTemplateKey(t.key); }}
+                className="mt-2 text-xs font-medium text-blue-600 hover:text-blue-800"
+              >
+                Use this template
+              </button>
+            </div>
+          ))}
         </div>
       </div>
     </div>
