@@ -25,13 +25,7 @@ export function EnrichmentQueuePanel({ isAdmin }: { isAdmin: boolean }) {
     }
   }
 
-  if (!isAdmin) {
-    return (
-      <section className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
-        AI enrichment batch runs are available to administrators only.
-      </section>
-    );
-  }
+  if (!isAdmin) return null;
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">

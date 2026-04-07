@@ -19,21 +19,25 @@ export function ContactHealthPanel() {
     void (async () => {
       try {
         const res = await fetch("/api/admin/contacts/summary", { cache: "no-store" });
+        if (res.status === 401 || res.status === 403) {
+          // Not admin — hide panel gracefully.
+          setSummary(null);
+          return;
+        }
         const json = (await res.json()) as { success?: boolean; summary?: Summary; error?: string };
-        if (!res.ok || !json?.success) throw new Error(json?.error || "Failed to load summary");
+        if (!res.ok || !json?.success) {
+          setSummary(null);
+          return;
+        }
         setSummary(json.summary ?? null);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load");
+      } catch {
+        setSummary(null);
       }
     })();
   }, []);
 
   if (error) {
-    return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-sm text-red-600">
-        {error}
-      </section>
-    );
+    return null;
   }
 
   if (!summary) {
