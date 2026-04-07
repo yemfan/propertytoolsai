@@ -110,7 +110,7 @@ export default function MarketingPlansClient() {
       if (statusFilter !== "all" && p.status !== statusFilter) return false;
       if (!search.trim()) return true;
       const s = search.toLowerCase();
-      return p.title.toLowerCase().includes(s) || (p.lead_name ?? "").toLowerCase().includes(s);
+      return p.title.toLowerCase().includes(s) || (p.lead_name ?? "").toLowerCase().includes(s) || (p.template_key ?? "").toLowerCase().includes(s) || (p.status ?? "").toLowerCase().includes(s);
     })
     .sort((a, b) => {
       const dir = sortAsc ? 1 : -1;
