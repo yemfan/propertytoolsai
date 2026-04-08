@@ -26,4 +26,6 @@ export const MOBILE_API_PATHS = {
   reminders: "/api/mobile/reminders",
   notifications: "/api/mobile/notifications",
   notificationPreferences: "/api/mobile/notification-preferences",
+  leadQueue: "/api/dashboard/lead-queue",
+  leadQueueClaim: "/api/dashboard/lead-queue/claim",
 } as const;
