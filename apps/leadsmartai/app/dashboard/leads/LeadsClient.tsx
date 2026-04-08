@@ -79,7 +79,7 @@ export default function LeadsClient({
 
   const filtered = useMemo(() => {
     return leads.filter((l) => {
-      if (statusFilter && l.lead_status !== statusFilter) return false;
+      if (statusFilter && (l as any).pipeline_stage_id !== statusFilter) return false;
       if (sourceFilter && (l.source ?? "") !== sourceFilter) return false;
       if (search.trim()) {
         const s = search.trim().toLowerCase();
@@ -246,7 +246,7 @@ export default function LeadsClient({
         <div>
           <h1 className="ui-page-title text-brand-text">Leads</h1>
           <p className="ui-page-subtitle text-brand-text/80">
-            Manage your inbound leads and update statuses.
+            Manage your inbound leads and update pipeline stages.
           </p>
           {isFree && (
             <p className="text-xs text-amber-700 mt-1">
@@ -291,10 +291,10 @@ export default function LeadsClient({
             onChange={(e) => setStatusFilter(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
           >
-            <option value="">All statuses</option>
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s}
+            <option value="">All stages</option>
+            {stageList.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
               </option>
             ))}
           </select>
@@ -390,8 +390,8 @@ export default function LeadsClient({
                   <td className="ui-table-cell px-4 py-3">{l.name ?? "—"}</td>
                   <td className="ui-table-cell px-4 py-3">{l.email ?? "—"}</td>
                   <td className="ui-table-cell px-4 py-3">{l.phone ?? "—"}</td>
-                  <td className="ui-table-cell px-4 py-3 min-w-[200px] max-w-[320px]">
-                    <span className="block truncate" title={l.property_address ?? ""}>{l.property_address ?? "—"}</span>
+                  <td className="ui-table-cell px-4 py-3 min-w-[220px]">
+                    <span className="block" title={l.property_address ?? ""}>{l.property_address ?? "—"}</span>
                   </td>
                   <td className="ui-table-cell px-4 py-3">{l.source ?? "—"}</td>
                   <td className="ui-table-cell px-4 py-3">
@@ -624,40 +624,22 @@ function LeadDetailPanel({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Stage
-              </label>
-              <select
-                value={stage}
-                onChange={(e) => setStage(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-              >
-                <option value="">— None —</option>
-                {stageList.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as LeadStatus)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-              >
-                {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">
+              Stage
+            </label>
+            <select
+              value={stage}
+              onChange={(e) => setStage(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+            >
+              <option value="">— None —</option>
+              {stageList.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
