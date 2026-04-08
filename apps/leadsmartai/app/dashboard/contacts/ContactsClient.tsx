@@ -363,7 +363,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                     <td className="px-4 py-2.5 font-medium text-gray-900">{c.name ?? "\u2014"}</td>
                     <td className="px-4 py-2.5 text-gray-600 max-w-[180px] truncate">{c.email ?? "\u2014"}</td>
                     <td className="px-4 py-2.5 text-gray-600">{c.phone ?? "\u2014"}</td>
-                    <td className="px-4 py-2.5 text-gray-600 max-w-[180px] truncate">{c.property_address ?? "\u2014"}</td>
+                    <td className="px-4 py-2.5 text-gray-600 min-w-[200px] max-w-[320px]"><span className="block truncate" title={c.property_address ?? ""}>{c.property_address ?? "\u2014"}</span></td>
                     <td className="px-4 py-2.5">
                       {c.rating ? (
                         <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${RATING_COLORS[c.rating.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}>
