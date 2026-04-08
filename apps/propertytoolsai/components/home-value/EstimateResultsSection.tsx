@@ -29,6 +29,7 @@ export function EstimateResultsSection({
   nextActions,
   onRefreshEstimate,
   onUnlockReport,
+  unlockError,
 }: {
   uiState: EstimateUiState;
   estimateResult: EstimateResponse | null;
@@ -40,6 +41,7 @@ export function EstimateResultsSection({
   nextActions: string[];
   onRefreshEstimate: () => void;
   onUnlockReport: () => void;
+  unlockError?: string | null;
 }) {
   if (!estimateResult) return null;
 
@@ -102,6 +104,7 @@ export function EstimateResultsSection({
         onFormChange={(patch) => setLeadForm((prev) => ({ ...prev, ...patch }))}
         onUnlock={onUnlockReport}
         isBusy={uiState === "unlocking"}
+        error={unlockError}
       />
 
       <FullReport estimate={estimateResult} unlockResult={unlockResult} />

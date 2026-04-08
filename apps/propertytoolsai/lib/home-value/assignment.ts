@@ -1,91 +1,72 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type AssignLeadInput = {
-  leadId: string;
+  leadId: string | number;
   zip?: string;
   city?: string;
 };
 
-type AgentProfile = {
-  agent_id: string;
-  full_name: string;
-  email?: string | null;
-  service_zip_codes?: string[] | null;
-  service_cities?: string[] | null;
-  is_active: boolean;
-  max_active_leads: number;
-  current_active_leads: number;
-  priority_weight: number;
-};
-
+/**
+ * Best-effort auto-assignment: pick an active agent that accepts new leads.
+ * Returns null (no assignment) if no agents qualify — caller continues normally.
+ */
 export async function autoAssignLeadToAgent(input: AssignLeadInput) {
-  const { data: agents, error } = await supabaseAdmin
-    .from("agent_profiles")
-    .select("*")
-    .eq("is_active", true);
+  try {
+    const { data: agents, error } = await supabaseAdmin
+      .from("agents")
+      .select("id, auth_user_id, service_areas, accepts_new_leads")
+      .eq("accepts_new_leads", true);
 
-  if (error) throw error;
+    if (error || !agents?.length) return null;
 
-  const rows = (agents ?? []) as AgentProfile[];
-  if (!rows.length) return null;
+    // Try to find an agent whose service_areas overlap with lead zip/city
+    const normalizedZip = input.zip?.trim();
+    const normalizedCity = input.city?.trim().toLowerCase();
 
-  const normalizedZip = input.zip?.trim();
-  const normalizedCity = input.city?.trim().toLowerCase();
+    let selected = agents.find((a) => {
+      const areas: string[] = Array.isArray(a.service_areas) ? a.service_areas : [];
+      return areas.some(
+        (area) =>
+          area === normalizedZip ||
+          area.toLowerCase() === normalizedCity
+      );
+    });
 
-  const territoryMatches = rows.filter((agent) => {
-    const zipMatch =
-      normalizedZip &&
-      Array.isArray(agent.service_zip_codes) &&
-      agent.service_zip_codes.includes(normalizedZip);
+    // Fallback: pick the first active agent
+    if (!selected) selected = agents[0];
 
-    const cityMatch =
-      normalizedCity &&
-      Array.isArray(agent.service_cities) &&
-      agent.service_cities.some((c) => c.toLowerCase() === normalizedCity);
+    // Look up user_profiles for name/email
+    let fullName: string | null = null;
+    let email: string | null = null;
 
-    return zipMatch || cityMatch;
-  });
+    if (selected.auth_user_id) {
+      const { data: profile } = await supabaseAdmin
+        .from("user_profiles")
+        .select("full_name, email")
+        .eq("user_id", selected.auth_user_id)
+        .single();
 
-  const candidatePool = territoryMatches.length ? territoryMatches : rows;
+      fullName = profile?.full_name ?? null;
+      email = profile?.email ?? null;
+    }
 
-  const scored = candidatePool
-    .filter((agent) => agent.current_active_leads < agent.max_active_leads)
-    .map((agent) => {
-      const capacityScore = agent.max_active_leads - agent.current_active_leads;
+    // Assign the lead
+    await supabaseAdmin
+      .from("leads")
+      .update({
+        assigned_agent_id: selected.auth_user_id,
+        status: "assigned",
+      })
+      .eq("id", input.leadId);
 
-      return {
-        ...agent,
-        assignmentScore: capacityScore + (agent.priority_weight ?? 1) * 10,
-      };
-    })
-    .sort((a, b) => b.assignmentScore - a.assignmentScore);
-
-  const selected = scored[0];
-  if (!selected) return null;
-
-  const { error: updateLeadError } = await supabaseAdmin
-    .from("leads")
-    .update({
-      assigned_agent_id: selected.agent_id,
-      status: "assigned",
-    })
-    .eq("id", input.leadId);
-
-  if (updateLeadError) throw updateLeadError;
-
-  const { error: updateAgentError } = await supabaseAdmin
-    .from("agent_profiles")
-    .update({
-      current_active_leads: selected.current_active_leads + 1,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("agent_id", selected.agent_id);
-
-  if (updateAgentError) throw updateAgentError;
-
-  return {
-    agentId: selected.agent_id,
-    fullName: selected.full_name,
-    email: selected.email ?? null,
-  };
+    return {
+      agentId: selected.auth_user_id ?? String(selected.id),
+      fullName,
+      email,
+    };
+  } catch (err) {
+    // Assignment is best-effort — log but don't block report unlock
+    console.error("autoAssignLeadToAgent failed (non-fatal):", err);
+    return null;
+  }
 }

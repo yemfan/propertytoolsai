@@ -26,16 +26,18 @@ export async function createLeadFromHomeValue(input: CreateLeadInput) {
       name: input.name,
       email: input.email,
       phone: input.phone || null,
-      address: input.address,
+      property_address: input.address,
+      full_address: input.address,
       city: input.city || null,
-      zip: input.zip || null,
+      zip_code: input.zip || null,
       source: "home_value_estimate",
-      source_detail: "propertytoolsai",
       lead_type: "seller",
       intent: "home_valuation",
       status: "new",
       engagement_score: engagementScore,
-      notes: `Home value report unlocked. Session: ${input.sessionId}. Estimated value: ${input.estimateValue}`,
+      estimated_home_value: input.estimateValue,
+      notes: `Home value report unlocked. Session: ${input.sessionId}. Estimated value: $${input.estimateValue.toLocaleString()}`,
+      source_session_id: input.sessionId,
     })
     .select()
     .single();
