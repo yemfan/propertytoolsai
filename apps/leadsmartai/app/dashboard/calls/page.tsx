@@ -1,16 +1,29 @@
-import { CallLogPanel } from "@/components/crm/CallLogPanel";
+import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { supabaseServer } from "@/lib/supabaseServer";
+import CallsClient from "./CallsClient";
 
-export default function CallsPage() {
-  return (
-    <div className="mx-auto max-w-6xl space-y-4 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Voice call log</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Inbound Twilio calls linked to leads. Configure webhooks in Twilio and apply DB migrations for{" "}
-          <code className="rounded bg-slate-100 px-1">lead_calls</code>.
-        </p>
-      </div>
-      <CallLogPanel />
-    </div>
-  );
+export default async function CallsPage() {
+  const ctx = await getCurrentAgentContext();
+
+  const { data: calls } = await supabaseServer
+    .from("lead_calls")
+    .select("id, lead_id, direction, from_phone, to_phone, status, duration_seconds, summary, transcript, recording_url, needs_human, hot_lead, started_at, created_at")
+    .eq("agent_id", ctx.agentId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  // Enrich with lead names
+  const leadIds = [...new Set((calls ?? []).map((c: any) => c.lead_id).filter(Boolean))];
+  let leadMap = new Map<string, string>();
+  if (leadIds.length) {
+    const { data: leads } = await supabaseServer.from("leads").select("id, name").in("id", leadIds);
+    for (const l of (leads ?? []) as any[]) leadMap.set(String(l.id), l.name);
+  }
+
+  const enriched = (calls ?? []).map((c: any) => ({
+    ...c,
+    lead_name: c.lead_id ? leadMap.get(String(c.lead_id)) ?? null : null,
+  }));
+
+  return <CallsClient calls={enriched} />;
 }
