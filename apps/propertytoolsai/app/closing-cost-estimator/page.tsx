@@ -5,6 +5,7 @@ import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
+import { ToolLeadGate } from "@/components/ToolLeadGate";
 
 export default function ClosingCostEstimator() {
   const [homePrice, setHomePrice] = useState<number>(400000);
@@ -101,6 +102,24 @@ export default function ClosingCostEstimator() {
             />
           </div>
         </div>
+      </div>
+
+      
+      <div className="mt-8">
+        <ToolLeadGate
+          tool="closing_cost_estimator"
+          source="closing_cost"
+          intent="buy"
+          show={true}
+          title="Get Your Closing Cost Breakdown"
+          description="Unlock the itemized closing cost report with negotiation tips."
+          benefits={[
+            "Itemized fee breakdown",
+            "Buyer vs seller cost split",
+            "Negotiation strategies",
+            "Connect with a local agent",
+          ]}
+        />
       </div>
 
       <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">

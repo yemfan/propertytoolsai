@@ -6,6 +6,7 @@ import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
+import { ToolLeadGate } from "@/components/ToolLeadGate";
 
 export default function CapRateCalculator() {
   const [purchasePrice, setPurchasePrice] = useState<number>(400000);
@@ -105,6 +106,24 @@ export default function CapRateCalculator() {
             />
           </div>
         </div>
+      </div>
+
+      
+      <div className="mt-8">
+        <ToolLeadGate
+          tool="cap_rate_calculator"
+          source="cap_rate"
+          intent="invest"
+          show={true}
+          title="Get Your Cap Rate Analysis"
+          description="Unlock market comparison and investment grade analysis."
+          benefits={[
+            "Market cap rate comparison",
+            "NOI optimization tips",
+            "Investment grade rating",
+            "Connect with an investment expert",
+          ]}
+        />
       </div>
 
       <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">

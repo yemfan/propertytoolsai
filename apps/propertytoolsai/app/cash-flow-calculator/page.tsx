@@ -5,6 +5,7 @@ import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
+import { ToolLeadGate } from "@/components/ToolLeadGate";
 
 export default function CashFlowCalculator() {
   const [monthlyRent, setMonthlyRent] = useState<number>(2500);
@@ -107,6 +108,24 @@ export default function CashFlowCalculator() {
             />
           </div>
         </div>
+      </div>
+
+      
+      <div className="mt-8">
+        <ToolLeadGate
+          tool="cash_flow_calculator"
+          source="cash_flow"
+          intent="invest"
+          show={true}
+          title="Get Your Cash Flow Report"
+          description="Unlock detailed projections and investment recommendations."
+          benefits={[
+            "Monthly cash flow projection",
+            "Expense breakdown analysis",
+            "ROI and cap rate comparison",
+            "Connect with an investment expert",
+          ]}
+        />
       </div>
 
       <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">
