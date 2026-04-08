@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import QRCode from "react-qr-code";
 
 type PropertyRow = {
@@ -11,456 +13,195 @@ type PropertyRow = {
   zip_code?: string | null;
 };
 
-type LeadRow = {
-  id: string;
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  property_address: string | null;
-  source: string | null;
-  lead_status: string | null;
-  created_at: string;
+type ChartItem = { name: string; value: number; color: string };
+type DayItem = { date: string; label: string; count: number };
+type PastOpenHouse = { address: string; visitors: number; leads: number; firstDate: string; lastDate: string };
+type Stats = {
+  rating: ChartItem[];
+  attendanceByDay: DayItem[];
+  pastOpenHouses: PastOpenHouse[];
+  totalLeads: number;
+  recentLeads: number;
 };
 
 function labelForProperty(p: PropertyRow) {
   return p.address?.trim() || [p.city, p.state, p.zip_code].filter(Boolean).join(", ") || p.id;
 }
 
+function MiniPie({ data, title }: { data: ChartItem[]; title: string }) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <h3 className="text-xs font-semibold text-gray-500 mb-2">{title}</h3>
+      <div className="flex items-center gap-3">
+        <div className="h-[120px] w-[120px] shrink-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={data} dataKey="value" cx="50%" cy="50%" outerRadius={50} innerRadius={28} strokeWidth={1}>
+                {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+              </Pie>
+              <Tooltip formatter={(v: number) => v} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="space-y-1 text-xs">
+          {data.map((d) => (
+            <div key={d.name} className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+              <span className="text-gray-600">{d.name}</span>
+              <span className="font-semibold text-gray-900">{d.value}</span>
+              {total > 0 && <span className="text-gray-400">({Math.round((d.value / total) * 100)}%)</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function OpenHousesClient({
   agentId,
   properties,
-  leads,
 }: {
   agentId: string;
   properties: PropertyRow[];
-  leads: LeadRow[];
 }) {
-  const [search, setSearch] = useState("");
-  const [selectedPropertyId, setSelectedPropertyId] = useState(
-    properties[0]?.id ?? ""
-  );
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [selectedPropertyId, setSelectedPropertyId] = useState(properties[0]?.id ?? "");
   const [copied, setCopied] = useState(false);
-  const [generatingFlyer, setGeneratingFlyer] = useState(false);
-  const [shareEmail, setShareEmail] = useState("");
-  const [shareOpen, setShareOpen] = useState(false);
-  const [sharing, setSharing] = useState(false);
-  const [shareMsg, setShareMsg] = useState<string | null>(null);
   const qrRef = useRef<HTMLDivElement>(null);
 
-  const origin = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    return window.location.origin;
-  }, []);
-
-  const filteredProperties = useMemo(() => {
-    const s = search.trim().toLowerCase();
-    if (!s) return properties;
-    return properties.filter((p) => labelForProperty(p).toLowerCase().includes(s));
-  }, [properties, search]);
-
+  const origin = useMemo(() => typeof window === "undefined" ? "" : window.location.origin, []);
   const selectedProperty = properties.find((p) => p.id === selectedPropertyId) ?? properties[0];
-
   const signupUrl = useMemo(() => {
     if (!selectedProperty?.id) return "";
-    return `${origin}/open-house-signup?property_id=${encodeURIComponent(
-      selectedProperty.id
-    )}&agent_id=${encodeURIComponent(agentId)}`;
+    return `${origin}/open-house-signup?property_id=${encodeURIComponent(selectedProperty.id)}&agent_id=${encodeURIComponent(agentId)}`;
   }, [origin, selectedProperty?.id, agentId]);
 
-  const attendees = useMemo(() => {
-    if (!selectedProperty?.address) return [];
-    const address = selectedProperty.address.trim().toLowerCase();
-    // open-house-lead stores `property_address` resolved from the warehouse.
-    return leads.filter((l) => (l.property_address ?? "").trim().toLowerCase() === address);
-  }, [leads, selectedProperty?.address]);
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard/open-houses");
+      const body = await res.json().catch(() => ({}));
+      if (body.ok) setStats(body);
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => { loadStats(); }, [loadStats]);
 
   async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(signupUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch (e) {
-      console.error("Copy failed", e);
-    }
-  }
-
-  async function downloadFlyer() {
-    if (!selectedProperty) return;
-    setGeneratingFlyer(true);
-    setShareMsg(null);
-    try {
-      // Render QR code to canvas via the SVG
-      const qrSvg = qrRef.current?.querySelector("svg");
-      let qrDataUrl = "";
-      if (qrSvg) {
-        const svgData = new XMLSerializer().serializeToString(qrSvg);
-        const canvas = document.createElement("canvas");
-        canvas.width = 600;
-        canvas.height = 600;
-        const ctx = canvas.getContext("2d");
-        const img = new Image();
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => { ctx?.drawImage(img, 0, 0, 600, 600); resolve(); };
-          img.onerror = reject;
-          img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
-        });
-        qrDataUrl = canvas.toDataURL("image/png");
-      }
-
-      const { default: jsPDF } = await import("jspdf");
-      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
-      const w = doc.internal.pageSize.getWidth();
-      const h = doc.internal.pageSize.getHeight();
-      const addr = labelForProperty(selectedProperty);
-
-      // === Professional Flyer Layout ===
-
-      // Top accent bar
-      doc.setFillColor(0, 114, 206); // brand blue
-      doc.rect(0, 0, w, 8, "F");
-
-      // "OPEN HOUSE" title
-      doc.setFontSize(42);
-      doc.setTextColor(15, 23, 42);
-      doc.text("OPEN HOUSE", w / 2, 35, { align: "center" });
-
-      // Decorative line
-      doc.setDrawColor(0, 114, 206);
-      doc.setLineWidth(0.8);
-      doc.line(w / 2 - 30, 40, w / 2 + 30, 40);
-
-      // "You're Invited" subtitle
-      doc.setFontSize(16);
-      doc.setTextColor(100, 116, 139);
-      doc.text("You're Invited!", w / 2, 50, { align: "center" });
-
-      // Property address (large)
-      doc.setFontSize(22);
-      doc.setTextColor(15, 23, 42);
-      doc.text(addr, w / 2, 68, { align: "center", maxWidth: w - 40 });
-
-      // Address underline
-      doc.setDrawColor(229, 231, 235);
-      doc.setLineWidth(0.3);
-      doc.line(30, 74, w - 30, 74);
-
-      // Info box background
-      doc.setFillColor(248, 250, 252); // slate-50
-      doc.roundedRect(25, 80, w - 50, 30, 3, 3, "F");
-
-      // Info text inside box
-      doc.setFontSize(11);
-      doc.setTextColor(71, 85, 105);
-      doc.text("Scan the QR code below to:", w / 2, 90, { align: "center" });
-      doc.setFontSize(10);
-      doc.text("\u2022  Register for the open house    \u2022  Get your free property report", w / 2, 100, { align: "center" });
-
-      // QR code (centered, large)
-      if (qrDataUrl) {
-        const qrSize = 70;
-        doc.addImage(qrDataUrl, "PNG", (w - qrSize) / 2, 118, qrSize, qrSize);
-      }
-
-      // "SCAN ME" label
-      doc.setFillColor(0, 114, 206);
-      doc.roundedRect(w / 2 - 18, 192, 36, 10, 2, 2, "F");
-      doc.setFontSize(10);
-      doc.setTextColor(255, 255, 255);
-      doc.text("SCAN ME", w / 2, 199, { align: "center" });
-
-      // Signup URL (small, below QR)
-      doc.setFontSize(7);
-      doc.setTextColor(148, 163, 184);
-      doc.text(signupUrl, w / 2, 210, { align: "center", maxWidth: w - 40 });
-
-      // Bottom section divider
-      doc.setDrawColor(229, 231, 235);
-      doc.line(30, 220, w - 30, 220);
-
-      // What to expect section
-      doc.setFontSize(14);
-      doc.setTextColor(15, 23, 42);
-      doc.text("What to Expect", w / 2, 232, { align: "center" });
-
-      doc.setFontSize(10);
-      doc.setTextColor(71, 85, 105);
-      const features = [
-        "\u2022  Tour the property at your own pace",
-        "\u2022  Meet the listing agent and ask questions",
-        "\u2022  Receive a complimentary home value report",
-      ];
-      features.forEach((f, i) => {
-        doc.text(f, w / 2, 242 + i * 7, { align: "center" });
-      });
-
-      // Bottom accent bar
-      doc.setFillColor(0, 114, 206);
-      doc.rect(0, h - 12, w, 12, "F");
-      doc.setFontSize(9);
-      doc.setTextColor(255, 255, 255);
-      doc.text("Powered by LeadSmart AI", w / 2, h - 4, { align: "center" });
-
-      doc.save(`open-house-flyer-${selectedProperty.id.slice(0, 8)}.pdf`);
-    } catch (e) {
-      console.error("Flyer generation failed", e);
-      setShareMsg("Flyer generation failed. Please try again.");
-    } finally {
-      setGeneratingFlyer(false);
-    }
-  }
-
-  async function shareReport() {
-    if (!shareEmail.trim() || !selectedProperty) return;
-    setSharing(true);
-    setShareMsg(null);
-    try {
-      const res = await fetch("/api/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: shareEmail.trim(),
-          subject: `Open House Report: ${labelForProperty(selectedProperty)}`,
-          text: `Hi,\n\nHere is the open house report for ${labelForProperty(selectedProperty)}.\n\nSign-up link: ${signupUrl}\n\nThis report includes estimated home value, market comparables, and investment insights.\n\nBest regards`,
-        }),
-      });
-      if (res.ok) {
-        setShareMsg("Report sent!");
-        setShareEmail("");
-        setTimeout(() => { setShareMsg(null); setShareOpen(false); }, 2000);
-      } else {
-        setShareMsg("Failed to send. Please try again.");
-      }
-    } catch {
-      setShareMsg("Network error.");
-    } finally {
-      setSharing(false);
-    }
+    try { await navigator.clipboard.writeText(signupUrl); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* */ }
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-brand-text">Open Houses</h1>
-          <p className="text-sm text-brand-text/80">
-            Pick a property to generate its QR code and view attendee sign-ups.
-          </p>
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">Open Houses</h1>
+          <p className="text-sm text-gray-500">{stats ? `${stats.totalLeads} total visitors` : "Loading..."}</p>
         </div>
-        <a
-          href="/dashboard/open-houses/flyer"
-          className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-        >
-          Create Flyer
-        </a>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-4">
-        <div className="flex flex-col lg:flex-row gap-3 lg:items-end lg:justify-between">
-          <div className="flex-1">
-            <label className="block text-xs font-semibold text-brand-text mb-2">
-              Search properties
-            </label>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Start typing an address..."
-              className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary"
-            />
+      {/* ── Section 1: Statistics ── */}
+      {stats && (
+        <div className="grid gap-3 md:grid-cols-2">
+          <MiniPie data={stats.rating} title="Lead Rating (30 days)" />
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">Attendance by Day (30 days) &mdash; {stats.recentLeads} visitors</h3>
+            <div className="h-[120px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.attendanceByDay} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 8 }} stroke="#9ca3af" interval={4} />
+                  <YAxis tick={{ fontSize: 9 }} stroke="#9ca3af" allowDecimals={false} />
+                  <Tooltip formatter={(v: number) => [v, "Visitors"]} />
+                  <Bar dataKey="count" fill="#3b82f6" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
+        </div>
+      )}
 
-          <div className="flex-1">
-            <label className="block text-xs font-semibold text-brand-text mb-2">
-              Select property
-            </label>
+      {/* ── Section 2: New Open House Flyer ── */}
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">Generate Open House Flyer</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Select a property or create a professional flyer with photos.</p>
+          </div>
+          <Link href="/dashboard/open-houses/flyer" className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+            Create Flyer
+          </Link>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Property</label>
             <select
               value={selectedPropertyId}
               onChange={(e) => setSelectedPropertyId(e.target.value)}
-              className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
             >
-              {filteredProperties.slice(0, 50).map((p) => (
-                <option key={p.id} value={p.id}>
-                  {labelForProperty(p)}
-                </option>
+              {properties.slice(0, 50).map((p) => (
+                <option key={p.id} value={p.id}>{labelForProperty(p)}</option>
               ))}
             </select>
           </div>
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Signup Link</label>
+              <input readOnly value={signupUrl} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono bg-gray-50" />
+            </div>
+            <button onClick={copyLink} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          </div>
         </div>
 
-        {selectedProperty ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-            <div className="md:col-span-1 bg-brand-surface border border-gray-200 rounded-2xl p-4">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                QR Code
-              </div>
-              <div ref={qrRef} className="mt-3 flex justify-center bg-white p-2 rounded-xl">
-                <QRCode value={signupUrl} size={160} />
-              </div>
+        {selectedProperty && (
+          <div className="flex items-center gap-4">
+            <div ref={qrRef} className="bg-white p-2 rounded-lg border border-gray-200 shrink-0">
+              <QRCode value={signupUrl} size={100} />
             </div>
-
-            <div className="md:col-span-2 space-y-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-900">
-                  {labelForProperty(selectedProperty)}
-                </div>
-                <div className="text-xs text-slate-600 mt-1">
-                  Scanning will open the mobile sign-up form and create an <span className="font-semibold">Open House</span> lead.
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="text-xs font-semibold text-slate-700">Sign-up link</div>
-                <input
-                  readOnly
-                  value={signupUrl}
-                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm font-mono bg-white"
-                />
-              </div>
-
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={copyLink}
-                  className="text-sm font-semibold px-4 py-2 rounded-xl bg-brand-primary text-white hover:bg-[#005ca8]"
-                >
-                  {copied ? "Copied!" : "Copy link"}
-                </button>
-                <button
-                  type="button"
-                  disabled={generatingFlyer}
-                  onClick={() => void downloadFlyer()}
-                  className="text-sm font-semibold px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
-                >
-                  {generatingFlyer ? "Generating..." : "Download Flyer (PDF)"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShareOpen(!shareOpen)}
-                  className="text-sm font-semibold px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50"
-                >
-                  Share Report
-                </button>
-                <a
-                  href={signupUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm font-semibold px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50"
-                >
-                  Open on phone
-                </a>
-              </div>
-
-              {shareOpen && (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
-                  <label className="block text-xs font-semibold text-slate-700">
-                    Email the open house report to:
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="email"
-                      value={shareEmail}
-                      onChange={(e) => setShareEmail(e.target.value)}
-                      placeholder="seller@example.com"
-                      className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-primary"
-                    />
-                    <button
-                      type="button"
-                      disabled={sharing || !shareEmail.trim()}
-                      onClick={() => void shareReport()}
-                      className="rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-[#005ca8] disabled:opacity-50"
-                    >
-                      {sharing ? "Sending..." : "Send"}
-                    </button>
-                  </div>
-                  {shareMsg && (
-                    <p className={`text-xs ${shareMsg.includes("sent") ? "text-green-700" : "text-red-600"}`}>
-                      {shareMsg}
-                    </p>
-                  )}
-                </div>
-              )}
+            <div className="text-xs text-gray-500">
+              <p className="font-medium text-gray-700">{labelForProperty(selectedProperty)}</p>
+              <p className="mt-1">Visitors scan this QR code to register and receive a property report.</p>
             </div>
           </div>
-        ) : null}
-
-        <div className="pt-2 border-t border-slate-100">
-          <div className="text-sm font-semibold text-slate-900">QR Codes (Recent Properties)</div>
-          <div className="text-xs text-slate-600 mt-1">
-            Click a card to switch the active QR code and refresh the attendee list below.
-          </div>
-          <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {filteredProperties.slice(0, 8).map((p) => {
-              const url = `${origin}/open-house-signup?property_id=${encodeURIComponent(p.id)}&agent_id=${encodeURIComponent(agentId)}`;
-              const active = p.id === selectedPropertyId;
-              return (
-                <button
-                  type="button"
-                  key={p.id}
-                  onClick={() => setSelectedPropertyId(p.id)}
-                  className={
-                    "text-left rounded-2xl border p-3 transition-colors " +
-                    (active
-                  ? "border-brand-primary/40 bg-brand-surface"
-                      : "border-gray-200 bg-white hover:bg-brand-surface")
-                  }
-                >
-                  <div className="text-xs font-semibold text-slate-900 truncate">
-                    {labelForProperty(p)}
-                  </div>
-                  <div className="mt-2 flex justify-center bg-brand-surface border border-gray-200 rounded-xl p-2">
-                    <QRCode value={url} size={78} />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        )}
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-slate-100">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-sm font-semibold text-slate-900">Attendee List</div>
-              <div className="text-xs text-slate-600 mt-1">
-                Source tagged as <span className="font-semibold">Open House</span>.
-              </div>
-            </div>
-            <div className="text-xs font-semibold text-slate-700">
-              {attendees.length} attendee{attendees.length === 1 ? "" : "s"}
-            </div>
-          </div>
+      {/* ── Section 3: Past Open Houses ── */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100">
+          <h2 className="text-sm font-semibold text-gray-900">Past Open Houses</h2>
         </div>
-
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
+            <thead className="bg-gray-50 text-gray-600">
               <tr>
-                <th className="text-left px-4 py-3 font-semibold">Name</th>
-                <th className="text-left px-4 py-3 font-semibold">Email</th>
-                <th className="text-left px-4 py-3 font-semibold">Phone</th>
-                <th className="text-left px-4 py-3 font-semibold">Status</th>
-                <th className="text-left px-4 py-3 font-semibold">Created</th>
+                <th className="text-left px-4 py-2.5 font-medium">Address</th>
+                <th className="text-left px-4 py-2.5 font-medium">Date</th>
+                <th className="text-right px-4 py-2.5 font-medium">Visitors</th>
+                <th className="text-right px-4 py-2.5 font-medium">Leads</th>
               </tr>
             </thead>
-            <tbody>
-              {attendees.length ? (
-                attendees
-                  .slice(0, 200)
-                  .map((l) => (
-                    <tr key={l.id} className="border-t border-slate-100 hover:bg-slate-50">
-                      <td className="px-4 py-3">{l.name ?? "—"}</td>
-                      <td className="px-4 py-3">{l.email ?? "—"}</td>
-                      <td className="px-4 py-3">{l.phone ?? "—"}</td>
-                      <td className="px-4 py-3 text-xs text-slate-600">{l.lead_status ?? "—"}</td>
-                      <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">
-                        {new Date(l.created_at).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))
+            <tbody className="divide-y divide-gray-50">
+              {stats?.pastOpenHouses?.length ? (
+                stats.pastOpenHouses.map((oh, i) => (
+                  <tr key={i} className="hover:bg-gray-50/50">
+                    <td className="px-4 py-2.5 font-medium text-gray-900 max-w-[250px] truncate">{oh.address}</td>
+                    <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">
+                      {new Date(oh.lastDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-gray-900">{oh.visitors}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-gray-900">{oh.leads}</td>
+                  </tr>
+                ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-sm text-slate-600">
-                    No attendees yet for this property. Print the QR and share it at the open house.
+                  <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
+                    No open house data yet. Share a QR code at your next open house.
                   </td>
                 </tr>
               )}
@@ -471,4 +212,3 @@ export default function OpenHousesClient({
     </div>
   );
 }
-
