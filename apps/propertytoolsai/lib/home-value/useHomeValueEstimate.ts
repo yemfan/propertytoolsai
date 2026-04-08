@@ -194,6 +194,20 @@ export function useHomeValueEstimate() {
       });
 
       setEstimateResult(result);
+
+      // Back-fill details with enriched property data from the pipeline
+      // so the RefinementForm shows actual values instead of empty fields
+      const p = result.property;
+      setDetails((prev) => ({
+        ...prev,
+        ...(p.beds != null && prev.beds == null ? { beds: p.beds } : {}),
+        ...(p.baths != null && prev.baths == null ? { baths: p.baths } : {}),
+        ...(p.sqft != null && prev.sqft == null ? { sqft: p.sqft } : {}),
+        ...(p.yearBuilt != null && prev.yearBuilt == null ? { yearBuilt: p.yearBuilt } : {}),
+        ...(p.lotSize != null && prev.lotSize == null ? { lotSize: p.lotSize } : {}),
+        ...(p.propertyType != null ? { propertyType: p.propertyType as EstimateDetails["propertyType"] } : {}),
+      }));
+
       const historyAddress = nextAddress ?? address;
       if (historyAddress) {
         const item = {
