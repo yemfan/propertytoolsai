@@ -219,13 +219,16 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
 
       {/* Filters */}
       <div className="flex gap-2">
-        <button onClick={() => setShowEvents((v) => !v)} className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${showEvents ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
+        <button onClick={() => { setShowEvents(true); setShowTasks(true); setShowFollowups(true); }} className={`rounded-lg px-3 py-1 text-xs font-medium ${showEvents && showTasks && showFollowups ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-500"}`}>
+          All
+        </button>
+        <button onClick={() => { setShowEvents(true); setShowTasks(false); setShowFollowups(false); }} className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${showEvents && !showTasks && !showFollowups ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
           <span className="h-2 w-2 rounded-full bg-blue-500" /> Appointments
         </button>
-        <button onClick={() => setShowTasks((v) => !v)} className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${showTasks ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+        <button onClick={() => { setShowEvents(false); setShowTasks(true); setShowFollowups(false); }} className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${!showEvents && showTasks && !showFollowups ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
           <span className="h-2 w-2 rounded-full bg-green-500" /> Tasks
         </button>
-        <button onClick={() => setShowFollowups((v) => !v)} className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${showFollowups ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-500"}`}>
+        <button onClick={() => { setShowEvents(false); setShowTasks(false); setShowFollowups(true); }} className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${!showEvents && !showTasks && showFollowups ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-500"}`}>
           <span className="h-2 w-2 rounded-full bg-amber-500" /> Follow-ups
         </button>
       </div>
