@@ -89,18 +89,18 @@ export default function OpenHousesClient({
     setGeneratingFlyer(true);
     setShareMsg(null);
     try {
-      // Render QR code to canvas via the hidden SVG
+      // Render QR code to canvas via the SVG
       const qrSvg = qrRef.current?.querySelector("svg");
       let qrDataUrl = "";
       if (qrSvg) {
         const svgData = new XMLSerializer().serializeToString(qrSvg);
         const canvas = document.createElement("canvas");
-        canvas.width = 480;
-        canvas.height = 480;
+        canvas.width = 600;
+        canvas.height = 600;
         const ctx = canvas.getContext("2d");
         const img = new Image();
         await new Promise<void>((resolve, reject) => {
-          img.onload = () => { ctx?.drawImage(img, 0, 0, 480, 480); resolve(); };
+          img.onload = () => { ctx?.drawImage(img, 0, 0, 600, 600); resolve(); };
           img.onerror = reject;
           img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
         });
@@ -110,42 +110,95 @@ export default function OpenHousesClient({
       const { default: jsPDF } = await import("jspdf");
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
       const w = doc.internal.pageSize.getWidth();
-
-      // Header
-      doc.setFillColor(15, 23, 42);
-      doc.rect(0, 0, w, 40, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(28);
-      doc.text("OPEN HOUSE", w / 2, 22, { align: "center" });
-      doc.setFontSize(12);
-      doc.text("You're Invited!", w / 2, 32, { align: "center" });
-
-      // Property address
-      doc.setTextColor(15, 23, 42);
-      doc.setFontSize(18);
+      const h = doc.internal.pageSize.getHeight();
       const addr = labelForProperty(selectedProperty);
-      doc.text(addr, w / 2, 58, { align: "center", maxWidth: w - 40 });
 
-      // QR code
+      // === Professional Flyer Layout ===
+
+      // Top accent bar
+      doc.setFillColor(0, 114, 206); // brand blue
+      doc.rect(0, 0, w, 8, "F");
+
+      // "OPEN HOUSE" title
+      doc.setFontSize(42);
+      doc.setTextColor(15, 23, 42);
+      doc.text("OPEN HOUSE", w / 2, 35, { align: "center" });
+
+      // Decorative line
+      doc.setDrawColor(0, 114, 206);
+      doc.setLineWidth(0.8);
+      doc.line(w / 2 - 30, 40, w / 2 + 30, 40);
+
+      // "You're Invited" subtitle
+      doc.setFontSize(16);
+      doc.setTextColor(100, 116, 139);
+      doc.text("You're Invited!", w / 2, 50, { align: "center" });
+
+      // Property address (large)
+      doc.setFontSize(22);
+      doc.setTextColor(15, 23, 42);
+      doc.text(addr, w / 2, 68, { align: "center", maxWidth: w - 40 });
+
+      // Address underline
+      doc.setDrawColor(229, 231, 235);
+      doc.setLineWidth(0.3);
+      doc.line(30, 74, w - 30, 74);
+
+      // Info box background
+      doc.setFillColor(248, 250, 252); // slate-50
+      doc.roundedRect(25, 80, w - 50, 30, 3, 3, "F");
+
+      // Info text inside box
+      doc.setFontSize(11);
+      doc.setTextColor(71, 85, 105);
+      doc.text("Scan the QR code below to:", w / 2, 90, { align: "center" });
+      doc.setFontSize(10);
+      doc.text("\u2022  Register for the open house    \u2022  Get your free property report", w / 2, 100, { align: "center" });
+
+      // QR code (centered, large)
       if (qrDataUrl) {
-        const qrSize = 80;
-        doc.addImage(qrDataUrl, "PNG", (w - qrSize) / 2, 72, qrSize, qrSize);
+        const qrSize = 70;
+        doc.addImage(qrDataUrl, "PNG", (w - qrSize) / 2, 118, qrSize, qrSize);
       }
 
-      // Instructions
-      doc.setFontSize(13);
-      doc.setTextColor(71, 85, 105);
-      doc.text("Scan to sign in and get your free property report", w / 2, 162, { align: "center" });
-
-      // Signup URL
-      doc.setFontSize(9);
-      doc.setTextColor(100, 116, 139);
-      doc.text(signupUrl, w / 2, 172, { align: "center", maxWidth: w - 30 });
-
-      // Footer
+      // "SCAN ME" label
+      doc.setFillColor(0, 114, 206);
+      doc.roundedRect(w / 2 - 18, 192, 36, 10, 2, 2, "F");
       doc.setFontSize(10);
+      doc.setTextColor(255, 255, 255);
+      doc.text("SCAN ME", w / 2, 199, { align: "center" });
+
+      // Signup URL (small, below QR)
+      doc.setFontSize(7);
       doc.setTextColor(148, 163, 184);
-      doc.text("LeadSmart AI", w / 2, 260, { align: "center" });
+      doc.text(signupUrl, w / 2, 210, { align: "center", maxWidth: w - 40 });
+
+      // Bottom section divider
+      doc.setDrawColor(229, 231, 235);
+      doc.line(30, 220, w - 30, 220);
+
+      // What to expect section
+      doc.setFontSize(14);
+      doc.setTextColor(15, 23, 42);
+      doc.text("What to Expect", w / 2, 232, { align: "center" });
+
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      const features = [
+        "\u2022  Tour the property at your own pace",
+        "\u2022  Meet the listing agent and ask questions",
+        "\u2022  Receive a complimentary home value report",
+      ];
+      features.forEach((f, i) => {
+        doc.text(f, w / 2, 242 + i * 7, { align: "center" });
+      });
+
+      // Bottom accent bar
+      doc.setFillColor(0, 114, 206);
+      doc.rect(0, h - 12, w, 12, "F");
+      doc.setFontSize(9);
+      doc.setTextColor(255, 255, 255);
+      doc.text("Powered by LeadSmart AI", w / 2, h - 4, { align: "center" });
 
       doc.save(`open-house-flyer-${selectedProperty.id.slice(0, 8)}.pdf`);
     } catch (e) {
