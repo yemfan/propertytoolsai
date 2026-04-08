@@ -36,6 +36,7 @@ export default function LeadsClient({
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [newContactOpen, setNewContactOpen] = useState(false);
+  const [stageMap, setStageMap] = useState<Map<string, string>>(new Map());
   const [leadStats, setLeadStats] = useState<{
     status: Array<{ name: string; value: number; color: string }>;
     bySource: Array<{ name: string; value: number; color: string }>;
@@ -51,6 +52,16 @@ export default function LeadsClient({
   }, []);
 
   useEffect(() => { loadLeadStats(); }, [loadLeadStats]);
+
+  useEffect(() => {
+    fetch("/api/dashboard/pipeline/stages").then((r) => r.json()).then((body) => {
+      if (body.ok && body.stages) {
+        const map = new Map<string, string>();
+        for (const s of body.stages as Array<{ id: string; name: string }>) map.set(s.id, s.name);
+        setStageMap(map);
+      }
+    }).catch(() => {});
+  }, []);
 
   const sources = useMemo(() => {
     const set = new Set<string>();
@@ -240,7 +251,7 @@ export default function LeadsClient({
                 <th className="ui-table-header text-left px-4 py-3">Phone</th>
                 <th className="ui-table-header text-left px-4 py-3">Property</th>
                 <th className="ui-table-header text-left px-4 py-3">Source</th>
-                <th className="ui-table-header text-left px-4 py-3">Status</th>
+                <th className="ui-table-header text-left px-4 py-3">Stage</th>
                 <th className="ui-table-header text-left px-4 py-3">AI Score</th>
                 <th className="ui-table-header text-left px-4 py-3">Engagement</th>
                 <th className="ui-table-header text-left px-4 py-3">Created</th>
@@ -260,7 +271,7 @@ export default function LeadsClient({
                   <td className="ui-table-cell px-4 py-3">{l.source ?? "—"}</td>
                   <td className="ui-table-cell px-4 py-3">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-semibold bg-brand-surface text-brand-primary border-blue-200">
-                      {l.lead_status}
+                      {(l as any).pipeline_stage_id ? stageMap.get((l as any).pipeline_stage_id) ?? "—" : "—"}
                     </span>
                   </td>
                   <td className="ui-table-cell px-4 py-3">

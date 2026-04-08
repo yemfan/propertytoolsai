@@ -747,3 +747,37 @@ export async function patchMobileNotificationPreferences(
   }
   return { ok: true, preferences: p };
 }
+
+// ── Lead Queue ──
+
+type QueueLead = {
+  id: string | number;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  property_address: string | null;
+  source: string | null;
+  created_at: string;
+};
+
+export async function fetchLeadQueue(): Promise<
+  ({ ok: true } & { leads: QueueLead[]; total: number }) | MobileApiFailure
+> {
+  const res = await mobileGet<{ ok: boolean; leads: QueueLead[]; total: number }>(
+    `${MOBILE_API_PATHS.leadQueue}?pageSize=30`
+  );
+  if (res.ok === false) return res;
+  return { ok: true, leads: res.data.leads ?? [], total: res.data.total ?? 0 };
+}
+
+export async function claimQueueLead(
+  leadId: string
+): Promise<({ ok: true } & { leadId: string }) | MobileApiFailure> {
+  const res = await mobilePost<{ ok: boolean; leadId?: string; error?: string }>(
+    MOBILE_API_PATHS.leadQueueClaim,
+    { leadId }
+  );
+  if (res.ok === false) return res;
+  if (!res.data.ok) return { ok: false, status: 200, message: res.data.error ?? "Claim failed" };
+  return { ok: true, leadId: String(res.data.leadId ?? leadId) };
+}
