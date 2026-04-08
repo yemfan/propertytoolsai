@@ -45,25 +45,34 @@ export async function GET() {
       // draft doesn't count
     }
 
-    // Completed plans by month (last 12 months)
-    const monthCounts: Record<string, number> = {};
+    // Plans by month (last 12 months) — completed + started
+    const monthCompleted: Record<string, number> = {};
+    const monthStarted: Record<string, number> = {};
     const now = new Date();
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      monthCounts[key] = 0;
+      monthCompleted[key] = 0;
+      monthStarted[key] = 0;
     }
     for (const p of plans) {
-      if (p.status !== "completed" || !p.completed_at) continue;
-      const d = new Date(p.completed_at);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      if (key in monthCounts) monthCounts[key]++;
+      // Completed
+      if (p.status === "completed" && p.completed_at) {
+        const d = new Date(p.completed_at);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        if (key in monthCompleted) monthCompleted[key]++;
+      }
+      // Started (created)
+      const cd = new Date(p.created_at);
+      const cKey = `${cd.getFullYear()}-${String(cd.getMonth() + 1).padStart(2, "0")}`;
+      if (cKey in monthStarted) monthStarted[cKey]++;
     }
 
-    const completedByMonth = Object.entries(monthCounts).map(([month, count]) => ({
+    const completedByMonth = Object.entries(monthCompleted).map(([month, count]) => ({
       month,
       label: new Date(month + "-01").toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
-      count,
+      completed: count,
+      started: monthStarted[month] ?? 0,
     }));
 
     return NextResponse.json({
