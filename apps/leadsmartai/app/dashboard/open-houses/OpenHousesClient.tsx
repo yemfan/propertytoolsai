@@ -85,20 +85,34 @@ export default function OpenHousesClient({
   }
 
   async function downloadFlyer() {
-    if (!selectedProperty || !qrRef.current) return;
+    if (!selectedProperty) return;
     setGeneratingFlyer(true);
+    setShareMsg(null);
     try {
-      const { default: html2canvas } = await import("html2canvas");
+      // Render QR code to canvas via the hidden SVG
+      const qrSvg = qrRef.current?.querySelector("svg");
+      let qrDataUrl = "";
+      if (qrSvg) {
+        const svgData = new XMLSerializer().serializeToString(qrSvg);
+        const canvas = document.createElement("canvas");
+        canvas.width = 480;
+        canvas.height = 480;
+        const ctx = canvas.getContext("2d");
+        const img = new Image();
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => { ctx?.drawImage(img, 0, 0, 480, 480); resolve(); };
+          img.onerror = reject;
+          img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+        });
+        qrDataUrl = canvas.toDataURL("image/png");
+      }
+
       const { default: jsPDF } = await import("jspdf");
-
-      const qrCanvas = await html2canvas(qrRef.current, { scale: 3, backgroundColor: "#ffffff" });
-      const qrDataUrl = qrCanvas.toDataURL("image/png");
-
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
       const w = doc.internal.pageSize.getWidth();
 
       // Header
-      doc.setFillColor(15, 23, 42); // slate-900
+      doc.setFillColor(15, 23, 42);
       doc.rect(0, 0, w, 40, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(28);
@@ -113,12 +127,14 @@ export default function OpenHousesClient({
       doc.text(addr, w / 2, 58, { align: "center", maxWidth: w - 40 });
 
       // QR code
-      const qrSize = 80;
-      doc.addImage(qrDataUrl, "PNG", (w - qrSize) / 2, 72, qrSize, qrSize);
+      if (qrDataUrl) {
+        const qrSize = 80;
+        doc.addImage(qrDataUrl, "PNG", (w - qrSize) / 2, 72, qrSize, qrSize);
+      }
 
       // Instructions
       doc.setFontSize(13);
-      doc.setTextColor(71, 85, 105); // slate-600
+      doc.setTextColor(71, 85, 105);
       doc.text("Scan to sign in and get your free property report", w / 2, 162, { align: "center" });
 
       // Signup URL
@@ -127,14 +143,14 @@ export default function OpenHousesClient({
       doc.text(signupUrl, w / 2, 172, { align: "center", maxWidth: w - 30 });
 
       // Footer
-      const brandName = "LeadSmart AI";
       doc.setFontSize(10);
       doc.setTextColor(148, 163, 184);
-      doc.text(brandName, w / 2, 260, { align: "center" });
+      doc.text("LeadSmart AI", w / 2, 260, { align: "center" });
 
       doc.save(`open-house-flyer-${selectedProperty.id.slice(0, 8)}.pdf`);
     } catch (e) {
       console.error("Flyer generation failed", e);
+      setShareMsg("Flyer generation failed. Please try again.");
     } finally {
       setGeneratingFlyer(false);
     }
