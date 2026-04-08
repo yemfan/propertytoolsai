@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createMobileCalendarEvent, listMobileCalendarEvents } from "@/lib/mobile/calendarMobile";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { syncEventToGoogle } from "@/lib/google-calendar/sync";
 import type { MobileCalendarProvider } from "@leadsmart/shared";
 
 export const runtime = "nodejs";
@@ -65,6 +66,20 @@ export async function POST(req: Request) {
       timezone: body.timezone,
       calendarProvider: body.calendarProvider ?? "local",
     });
+
+    // Best-effort sync to Google Calendar
+    if (event?.id) {
+      const defaultEnd = new Date(new Date(startsAt).getTime() + 60 * 60 * 1000).toISOString();
+      syncEventToGoogle({
+        agentId,
+        eventId: event.id,
+        title,
+        description: body.description ?? undefined,
+        startAt: startsAt,
+        endAt: body.endsAt ?? defaultEnd,
+        timezone: body.timezone ?? undefined,
+      }).catch((e) => console.error("Google Calendar sync (non-fatal):", e));
+    }
 
     return NextResponse.json({ ok: true, event });
   } catch (e: unknown) {
