@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     const { data: rows, error } = await supabaseAdmin
       .from("lead_calls")
       .select(
-        "id,lead_id,twilio_call_sid,from_phone,to_phone,status,inferred_intent,hot_lead,needs_human,summary,transcript,created_at,ended_at,duration_seconds,leads(name,phone,phone_number)"
+        "id,lead_id,twilio_call_sid,from_phone,to_phone,direction,status,call_status,hot_lead,escalation_reason,summary,transcript,recording_url,created_at,updated_at,duration_seconds,first_utterance"
       )
       .eq("agent_id", agentId as never)
       .order("created_at", { ascending: false })
@@ -39,9 +39,30 @@ export async function GET(req: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json({ calls: rows ?? [] });
+    // Enrich with lead names
+    const leadIds = [...new Set((rows ?? []).map((r: any) => r.lead_id).filter(Boolean))];
+    let leadMap = new Map<string, string>();
+    if (leadIds.length > 0) {
+      const { data: leads } = await supabaseAdmin
+        .from("leads")
+        .select("id,name,phone")
+        .in("id", leadIds);
+      if (leads) {
+        for (const l of leads) {
+          leadMap.set(String((l as any).id), (l as any).name ?? "");
+        }
+      }
+    }
+
+    const calls = (rows ?? []).map((r: any) => ({
+      ...r,
+      lead_name: r.lead_id ? leadMap.get(String(r.lead_id)) ?? null : null,
+    }));
+
+    return NextResponse.json({ calls });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "error";
+    console.error("lead-calls GET error:", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
