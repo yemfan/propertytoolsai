@@ -38,6 +38,8 @@ export default function LeadsClient({
   const [newContactOpen, setNewContactOpen] = useState(false);
   const [stageMap, setStageMap] = useState<Map<string, string>>(new Map());
   const [stageList, setStageList] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkSaving, setBulkSaving] = useState(false);
   const [leadStats, setLeadStats] = useState<{
     status: Array<{ name: string; value: number; color: string }>;
     bySource: Array<{ name: string; value: number; color: string }>;
@@ -116,6 +118,71 @@ export default function LeadsClient({
     } finally {
       setSaving(false);
     }
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((l) => String(l.id))));
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function bulkChangeStage(stageId: string) {
+    setBulkSaving(true);
+    try {
+      await Promise.allSettled(
+        Array.from(selectedIds).map((id) =>
+          fetch(`/api/dashboard/leads/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pipeline_stage_id: stageId }),
+          })
+        )
+      );
+      setLeads((prev) =>
+        prev.map((l) => (selectedIds.has(String(l.id)) ? { ...l, pipeline_stage_id: stageId } as any : l))
+      );
+      setSelectedIds(new Set());
+    } catch {
+      alert("Some updates may have failed.");
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
+  function exportSelectedCsv() {
+    const rows = filtered.filter((l) => selectedIds.has(String(l.id)));
+    if (!rows.length) return;
+    const headers = ["Name", "Email", "Phone", "Property", "Source", "Stage", "Created"];
+    const csvRows = [
+      headers.join(","),
+      ...rows.map((l) => [
+        `"${(l.name ?? "").replace(/"/g, '""')}"`,
+        `"${(l.email ?? "").replace(/"/g, '""')}"`,
+        `"${(l.phone ?? "").replace(/"/g, '""')}"`,
+        `"${(l.property_address ?? "").replace(/"/g, '""')}"`,
+        `"${(l.source ?? "").replace(/"/g, '""')}"`,
+        `"${stageMap.get((l as any).pipeline_stage_id ?? "") ?? ""}"`,
+        `"${new Date(l.created_at).toLocaleDateString()}"`,
+      ].join(",")),
+    ];
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `leads-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function MiniPie({ data, title }: { data: Array<{ name: string; value: number; color: string }>; title: string }) {
@@ -244,11 +311,54 @@ export default function LeadsClient({
         </div>
       </div>
 
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+          <span className="text-sm font-semibold text-blue-800">
+            {selectedIds.size} selected
+          </span>
+          <select
+            disabled={bulkSaving}
+            defaultValue=""
+            onChange={(e) => {
+              if (e.target.value) void bulkChangeStage(e.target.value);
+              e.target.value = "";
+            }}
+            className="border border-blue-300 rounded-lg px-3 py-1.5 text-sm bg-white text-blue-800"
+          >
+            <option value="" disabled>Move to stage...</option>
+            {stageList.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+          <button
+            onClick={exportSelectedCsv}
+            className="border border-blue-300 rounded-lg px-3 py-1.5 text-sm bg-white text-blue-800 hover:bg-blue-100"
+          >
+            Export CSV
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="ml-auto text-sm text-blue-600 hover:text-blue-800"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 text-gray-600">
               <tr>
+                <th className="ui-table-header px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                  />
+                </th>
                 <th className="ui-table-header text-left px-4 py-3">Name</th>
                 <th className="ui-table-header text-left px-4 py-3">Email</th>
                 <th className="ui-table-header text-left px-4 py-3">Phone</th>
@@ -267,6 +377,14 @@ export default function LeadsClient({
                   className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
                   onClick={() => setSelected(l)}
                 >
+                  <td className="ui-table-cell px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(String(l.id))}
+                      onChange={() => toggleSelect(String(l.id))}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                    />
+                  </td>
                   <td className="ui-table-cell px-4 py-3">{l.name ?? "—"}</td>
                   <td className="ui-table-cell px-4 py-3">{l.email ?? "—"}</td>
                   <td className="ui-table-cell px-4 py-3">{l.phone ?? "—"}</td>
@@ -300,7 +418,7 @@ export default function LeadsClient({
               ))}
               {!filtered.length && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-6 text-gray-600">
+                  <td colSpan={10} className="px-4 py-6 text-gray-600">
                     No leads found.
                   </td>
                 </tr>
