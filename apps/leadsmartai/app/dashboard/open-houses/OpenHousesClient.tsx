@@ -239,11 +239,19 @@ export default function OpenHousesClient({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-brand-text">Open Houses</h1>
-        <p className="text-sm text-brand-text/80">
-          Pick a property to generate its QR code and view attendee sign-ups.
-        </p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-brand-text">Open Houses</h1>
+          <p className="text-sm text-brand-text/80">
+            Pick a property to generate its QR code and view attendee sign-ups.
+          </p>
+        </div>
+        <a
+          href="/dashboard/open-houses/flyer"
+          className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+        >
+          Create Flyer
+        </a>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5 space-y-4">
