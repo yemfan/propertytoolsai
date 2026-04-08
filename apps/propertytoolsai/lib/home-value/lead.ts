@@ -30,7 +30,7 @@ export async function createLeadFromHomeValue(input: CreateLeadInput) {
       full_address: input.address,
       city: input.city || null,
       zip_code: input.zip || null,
-      source: "home_value_estimate",
+      source: "home_value",
       lead_type: "seller",
       intent: "home_valuation",
       status: "new",
