@@ -24,8 +24,8 @@ import {
 const STATUS_OPTIONS = LEAD_STATUS_ORDER;
 
 const SOURCE_LABELS: Record<string, string> = {
-  home_value: "Home Value Tool",
-  home_value_estimate: "Home Value Estimate",
+  home_value: "Home Value",
+  home_value_estimate: "Home Value",
   manual_entry: "Manual Entry",
   "Open House": "Open House",
   open_house: "Open House",
