@@ -28,6 +28,8 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
   const [showEvents, setShowEvents] = useState(true);
   const [showTasks, setShowTasks] = useState(true);
   const [showFollowups, setShowFollowups] = useState(true);
+  const [gcalStatus, setGcalStatus] = useState<{ configured: boolean; connected: boolean } | null>(null);
+  const [gcalDisconnecting, setGcalDisconnecting] = useState(false);
 
   const loadData = useCallback(async () => {
     const from = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString();
@@ -43,6 +45,12 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
   }, [currentMonth]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    fetch("/api/dashboard/calendar/google-status").then((r) => r.json()).then((b) => {
+      if (b.ok) setGcalStatus({ configured: b.configured, connected: b.connected });
+    }).catch(() => {});
+  }, []);
 
   // Build day → entries map
   const dayMap = useMemo(() => {
@@ -140,6 +148,43 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
           {showAdd ? "Cancel" : "Add Event"}
         </button>
       </div>
+
+      {/* Google Calendar integration */}
+      {gcalStatus?.configured && (
+        <div className={`flex items-center justify-between rounded-xl border p-4 ${gcalStatus.connected ? "border-green-200 bg-green-50" : "border-blue-200 bg-blue-50"}`}>
+          <div>
+            <p className="text-sm font-semibold text-gray-900">
+              {gcalStatus.connected ? "Google Calendar connected" : "Sync with Google Calendar"}
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {gcalStatus.connected
+                ? "New appointments auto-sync to your Google Calendar."
+                : "Connect to automatically sync appointments both ways."}
+            </p>
+          </div>
+          {gcalStatus.connected ? (
+            <button
+              onClick={async () => {
+                setGcalDisconnecting(true);
+                await fetch("/api/auth/google-calendar/disconnect", { method: "POST" }).catch(() => {});
+                setGcalStatus({ configured: true, connected: false });
+                setGcalDisconnecting(false);
+              }}
+              disabled={gcalDisconnecting}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            >
+              {gcalDisconnecting ? "..." : "Disconnect"}
+            </button>
+          ) : (
+            <a
+              href="/api/auth/google-calendar"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+            >
+              Connect
+            </a>
+          )}
+        </div>
+      )}
 
       {/* Add form */}
       {showAdd && (
