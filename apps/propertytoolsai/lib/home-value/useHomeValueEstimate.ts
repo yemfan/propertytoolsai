@@ -195,18 +195,18 @@ export function useHomeValueEstimate() {
 
       setEstimateResult(result);
 
-      // Pre-populate refinement form with property data from the estimate
-      if (result.property) {
-        setDetails((prev) => ({
-          ...prev,
-          beds: prev.beds ?? result.property.beds,
-          baths: prev.baths ?? result.property.baths,
-          sqft: prev.sqft ?? result.property.sqft,
-          yearBuilt: prev.yearBuilt ?? result.property.yearBuilt,
-          lotSize: prev.lotSize ?? result.property.lotSize,
-          propertyType: prev.propertyType ?? (result.property.propertyType as EstimateDetails["propertyType"]) ?? "single_family",
-        }));
-      }
+      // Back-fill details with enriched property data from the pipeline
+      // so the RefinementForm shows actual values instead of empty fields
+      const p = result.property;
+      setDetails((prev) => ({
+        ...prev,
+        ...(p.beds != null && prev.beds == null ? { beds: p.beds } : {}),
+        ...(p.baths != null && prev.baths == null ? { baths: p.baths } : {}),
+        ...(p.sqft != null && prev.sqft == null ? { sqft: p.sqft } : {}),
+        ...(p.yearBuilt != null && prev.yearBuilt == null ? { yearBuilt: p.yearBuilt } : {}),
+        ...(p.lotSize != null && prev.lotSize == null ? { lotSize: p.lotSize } : {}),
+        ...(p.propertyType != null ? { propertyType: p.propertyType as EstimateDetails["propertyType"] } : {}),
+      }));
 
       const historyAddress = nextAddress ?? address;
       if (historyAddress) {
