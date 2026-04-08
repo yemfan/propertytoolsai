@@ -5,6 +5,7 @@ import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
+import { ToolLeadGate } from "@/components/ToolLeadGate";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0 || annualRate <= 0) return 0;
@@ -132,6 +133,24 @@ export default function RefinanceCalculator() {
             />
           </div>
         </div>
+      </div>
+
+      
+      <div className="mt-8">
+        <ToolLeadGate
+          tool="refinance_calculator"
+          source="refinance_calculator"
+          intent="refinance"
+          show={true}
+          title="Get Your Refinance Savings Report"
+          description="Unlock the full break-even analysis and rate comparison."
+          benefits={[
+            "Break-even month calculation",
+            "Rate comparison across terms",
+            "Cash-out refinance analysis",
+            "Connect with a mortgage expert",
+          ]}
+        />
       </div>
 
       <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">

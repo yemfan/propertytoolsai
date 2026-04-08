@@ -5,6 +5,7 @@ import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
+import { ToolLeadGate } from "@/components/ToolLeadGate";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0) return 0;
@@ -130,6 +131,24 @@ export default function DownPaymentCalculator() {
             />
           </div>
         </div>
+      </div>
+
+      
+      <div className="mt-8">
+        <ToolLeadGate
+          tool="down_payment_calculator"
+          source="down_payment"
+          intent="buy"
+          show={true}
+          title="Get Your Down Payment Strategy"
+          description="Unlock PMI analysis and down payment saving strategies."
+          benefits={[
+            "PMI cost analysis",
+            "Down payment saving timeline",
+            "Loan program comparison",
+            "First-time buyer programs",
+          ]}
+        />
       </div>
 
       <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">

@@ -41,6 +41,16 @@ const SOURCE_LABELS: Record<string, string> = {
   google_ads: "Google Ads",
   test: "Test",
   propertytoolsai: "PropertyTools AI",
+  mortgage_calculator: "Mortgage Calculator",
+  rent_vs_buy: "Rent vs Buy",
+  closing_cost: "Closing Cost Estimator",
+  refinance_calculator: "Refinance Calculator",
+  down_payment: "Down Payment Calculator",
+  cash_flow: "Cash Flow Calculator",
+  roi_calculator: "ROI Calculator",
+  cap_rate: "Cap Rate Calculator",
+  investment_analyzer: "Investment Analyzer",
+  tool_capture: "Tool Capture",
 };
 
 function formatSource(raw: string | null): string {

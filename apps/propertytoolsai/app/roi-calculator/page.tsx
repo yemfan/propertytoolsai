@@ -5,6 +5,7 @@ import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
+import { ToolLeadGate } from "@/components/ToolLeadGate";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0) return 0;
@@ -126,6 +127,24 @@ export default function ROICalculator() {
             />
           </div>
         </div>
+      </div>
+
+      
+      <div className="mt-8">
+        <ToolLeadGate
+          tool="roi_calculator"
+          source="roi_calculator"
+          intent="invest"
+          show={true}
+          title="Get Your Investment ROI Report"
+          description="Unlock the full return analysis with multi-year projections."
+          benefits={[
+            "Multi-year ROI projection",
+            "Appreciation vs cash flow split",
+            "Tax benefit estimates",
+            "Investment strategy guidance",
+          ]}
+        />
       </div>
 
       <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">

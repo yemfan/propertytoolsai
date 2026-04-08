@@ -5,6 +5,7 @@ import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
+import { ToolLeadGate } from "@/components/ToolLeadGate";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0) return 0;
@@ -152,6 +153,24 @@ export default function RentVsBuyCalculator() {
             />
           </div>
         </div>
+      </div>
+
+      
+      <div className="mt-8">
+        <ToolLeadGate
+          tool="rent_vs_buy"
+          source="rent_vs_buy"
+          intent="buy"
+          show={true}
+          title="Get Your Rent vs Buy Analysis"
+          description="Unlock the full comparison with long-term projections and personalized guidance."
+          benefits={[
+            "5-year and 10-year cost comparison",
+            "Tax benefit estimates",
+            "Break-even timeline",
+            "Connect with a local expert",
+          ]}
+        />
       </div>
 
       <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">

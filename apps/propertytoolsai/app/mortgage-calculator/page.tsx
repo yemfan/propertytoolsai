@@ -6,6 +6,7 @@ import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
+import { ToolLeadGate } from "@/components/ToolLeadGate";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0 || annualRate <= 0) return 0;
@@ -122,6 +123,23 @@ export default function MortgageCalculator() {
             />
           </div>
         </div>
+      </div>
+
+      <div className="mt-8">
+        <ToolLeadGate
+          tool="mortgage_calculator"
+          source="mortgage_calculator"
+          intent="buy"
+          show={monthlyPayment > 0}
+          title="Get Your Mortgage Breakdown Report"
+          description="Unlock the full amortization schedule, rate comparison, and personalized lender recommendations."
+          benefits={[
+            "Month-by-month amortization schedule",
+            "Rate comparison across lenders",
+            "Pre-qualification guidance",
+            "Connect with a local mortgage expert",
+          ]}
+        />
       </div>
 
       <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">

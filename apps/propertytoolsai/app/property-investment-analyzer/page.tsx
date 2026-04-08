@@ -5,6 +5,7 @@ import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
+import { ToolLeadGate } from "@/components/ToolLeadGate";
 
 export default function PropertyInvestmentAnalyzer() {
   const [purchasePrice, setPurchasePrice] = useState<number>(350000);
@@ -122,6 +123,24 @@ export default function PropertyInvestmentAnalyzer() {
             />
           </div>
         </div>
+      </div>
+
+      
+      <div className="mt-8">
+        <ToolLeadGate
+          tool="property_investment_analyzer"
+          source="investment_analyzer"
+          intent="invest"
+          show={true}
+          title="Get Your Full Investment Analysis"
+          description="Unlock the complete property analysis with projections."
+          benefits={[
+            "Cash-on-cash return analysis",
+            "5-year appreciation forecast",
+            "Risk assessment scoring",
+            "Compare with similar investments",
+          ]}
+        />
       </div>
 
       <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">
