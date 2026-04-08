@@ -26,6 +26,9 @@ function OpenHouseSignupPageInner() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [wantMoreInfo, setWantMoreInfo] = useState(false);
+  const [wantSimilar, setWantSimilar] = useState(false);
+  const [wantValuation, setWantValuation] = useState(false);
 
   useEffect(() => {
     if (prefillLoading) return;
@@ -89,6 +92,11 @@ function OpenHouseSignupPageInner() {
           notes: notes.trim() ? notes : undefined,
           property_id: propertyId,
           agent_id: agentId || undefined,
+          preferences: {
+            want_more_info: wantMoreInfo,
+            want_similar_properties: wantSimilar,
+            want_home_valuation: wantValuation,
+          },
         }),
       });
 
@@ -186,6 +194,22 @@ function OpenHouseSignupPageInner() {
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Anything you'd like the agent to know?"
               />
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-slate-800">I&apos;m interested in:</p>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" checked={wantMoreInfo} onChange={(e) => setWantMoreInfo(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-blue-600" />
+                More information about this property
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" checked={wantSimilar} onChange={(e) => setWantSimilar(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-blue-600" />
+                Similar properties on the market
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" checked={wantValuation} onChange={(e) => setWantValuation(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-blue-600" />
+                A home valuation for my property
+              </label>
             </div>
 
             <input type="hidden" name="property_id" value={propertyId} />

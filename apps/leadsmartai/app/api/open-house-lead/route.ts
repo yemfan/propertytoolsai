@@ -49,6 +49,7 @@ export async function POST(req: Request) {
     const propertyId = (body.property_id ?? "").trim();
     const agentIdRaw = (body.agent_id ?? "").trim();
     const resolvedAgentId = await resolveLeadsAgentId(agentIdRaw);
+    const preferences = (body as any).preferences ?? null;
 
     if (!propertyId) {
       return NextResponse.json(
@@ -102,7 +103,12 @@ export async function POST(req: Request) {
         name,
         email,
         phone,
-        notes: notes ? notes : null,
+        notes: [
+          notes,
+          preferences?.want_more_info ? "Wants more info about property" : null,
+          preferences?.want_similar_properties ? "Wants similar properties" : null,
+          preferences?.want_home_valuation ? "Wants home valuation" : null,
+        ].filter(Boolean).join(" | ") || null,
         property_address: propertyRow.address,
         source: "Open House",
         lead_status: "new",
