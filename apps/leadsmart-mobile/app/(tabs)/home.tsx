@@ -21,6 +21,7 @@ import { ScreenLoading } from "../../components/ScreenLoading";
 import {
   fetchMobileDailyAgenda,
   fetchMobileDashboard,
+  fetchLeadQueue,
 } from "../../lib/leadsmartMobileApi";
 import type { MobileApiFailure } from "../../lib/leadsmartMobileApi";
 import { getSupabaseAuthClient } from "../../lib/supabaseAuthClient";
@@ -65,6 +66,13 @@ export default function HomeScreen() {
   const [alerts, setAlerts] = useState<MobileDashboardPriorityAlert[]>([]);
   const [agendaDate, setAgendaDate] = useState("");
   const [agendaItems, setAgendaItems] = useState<DailyAgendaItem[]>([]);
+  const [weeklyDigest, setWeeklyDigest] = useState<{
+    title: string;
+    body: string;
+    metrics: Record<string, number>;
+    insights: Array<{ key: string; label: string; message: string; tone: string }>;
+  } | null>(null);
+  const [queueCount, setQueueCount] = useState(0);
 
   useEffect(() => {
     const sb = getSupabaseAuthClient();
@@ -100,7 +108,12 @@ export default function HomeScreen() {
       setDashboardError(null);
       setStats(dash.stats);
       setAlerts(dash.priorityAlerts);
+      setWeeklyDigest((dash as any).weeklyDigest ?? null);
     }
+
+    // Best-effort queue count
+    const qRes = await fetchLeadQueue();
+    if (qRes.ok) setQueueCount(qRes.total);
 
     if (agenda.ok === false) {
       setAgendaError(agenda);
@@ -213,9 +226,8 @@ export default function HomeScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Hero greeting */}
         <View style={styles.heroBlock}>
           <Text style={styles.greeting}>
             {getGreeting()}, {displayName}
@@ -223,64 +235,44 @@ export default function HomeScreen() {
           <Text style={styles.summaryLine}>{summaryLine}</Text>
         </View>
 
-        {/* Stat cards — dashboard at a glance */}
-        <View style={styles.statRow}>
-          <View style={[styles.statCard, { borderLeftColor: theme.accent }]}>
-            <Text style={styles.statValue}>{stats.hotLeads}</Text>
-            <Text style={styles.statLabel}>🔥 Hot Leads</Text>
-          </View>
-          <View style={[styles.statCard, { borderLeftColor: theme.success }]}>
-            <Text style={styles.statValue}>{stats.tasksToday}</Text>
-            <Text style={styles.statLabel}>✅ Tasks</Text>
-          </View>
-          <View style={[styles.statCard, { borderLeftColor: theme.orange }]}>
-            <Text style={styles.statValue}>{stats.appointmentsToday}</Text>
-            <Text style={styles.statLabel}>📅 Appts</Text>
-          </View>
-        </View>
-
-        {/* Quick actions — icon + label grid */}
-        <View style={styles.quickGrid}>
-          {[
-            { key: "lead" as const, emoji: "👤", label: "Lead" },
-            { key: "task" as const, emoji: "✏️", label: "Task" },
-            { key: "booking" as const, emoji: "📅", label: "Booking" },
-            { key: "message" as const, emoji: "💬", label: "Message" },
-          ].map((action) => (
-            <Pressable
-              key={action.key}
-              onPress={() => handleFixedQuickAction(action.key)}
-              style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
-            >
-              <Text style={styles.quickBtnEmoji}>{action.emoji}</Text>
-              <Text style={styles.quickBtnText}>{action.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-
         <SectionRule />
 
-        {/* Filter chips */}
         <View style={styles.chipRow}>
-          {[
-            { label: "🔥 Hot", onPress: () => router.push({ pathname: "/(tabs)/leads", params: { filter: "hot" } }) },
-            { label: "💬 Unread", onPress: () => router.push("/(tabs)/inbox") },
-            { label: "⏰ Overdue", onPress: () => router.push("/tasks") },
-            { label: "🔔 Alerts", onPress: () => router.push("/notifications") },
-          ].map((chip) => (
-            <Pressable
-              key={chip.label}
-              onPress={chip.onPress}
-              style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-            >
-              <Text style={styles.chipText}>{chip.label}</Text>
-            </Pressable>
-          ))}
+          <Pressable
+            onPress={() => router.push({ pathname: "/(tabs)/leads", params: { filter: "hot" } })}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>Hot Leads</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/(tabs)/inbox")}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>Unread</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/tasks")}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>Tasks</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/(tabs)/calendar")}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>Appointments</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/notifications")}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>Alerts</Text>
+          </Pressable>
         </View>
 
         <SectionRule />
 
-        <Text style={styles.sectionHeading}>Today&apos;s Agenda</Text>
+        <Text style={styles.sectionHeading}>Today</Text>
         {agendaDate ? (
           <Text style={styles.agendaHint}>
             {formatAgendaDayLabel(agendaDate)} · times in your local timezone
@@ -307,10 +299,7 @@ export default function HomeScreen() {
           />
         ) : null}
         {alerts.length === 0 ? (
-          <View style={styles.emptyAlerts}>
-            <Text style={styles.emptyEmoji}>✨</Text>
-            <Text style={styles.muted}>All clear — you&apos;re caught up!</Text>
-          </View>
+          <Text style={styles.muted}>No priority alerts — you&apos;re caught up.</Text>
         ) : (
           alerts.map((a, i) => (
             <PriorityAlertCard
@@ -320,6 +309,81 @@ export default function HomeScreen() {
             />
           ))
         )}
+
+        <SectionRule />
+
+        {/* Weekly Digest */}
+        {weeklyDigest && (
+          <>
+            <Text style={styles.sectionHeading}>{weeklyDigest.title}</Text>
+            <View style={{ backgroundColor: "#f8fafc", borderRadius: 12, padding: 12, marginBottom: 8 }}>
+              <Text style={{ fontSize: 13, color: theme.textMuted, lineHeight: 20 }}>{weeklyDigest.body}</Text>
+              {weeklyDigest.insights?.length > 0 && (
+                <View style={{ marginTop: 8 }}>
+                  {weeklyDigest.insights.slice(0, 3).map((ins) => (
+                    <Text key={ins.key} style={{ fontSize: 12, color: ins.tone === "warning" ? "#b45309" : ins.tone === "positive" ? "#15803d" : theme.textMuted, marginTop: 4 }}>
+                      {ins.label}: {ins.message}
+                    </Text>
+                  ))}
+                </View>
+              )}
+            </View>
+            <SectionRule />
+          </>
+        )}
+
+        {/* Lead Queue */}
+        {queueCount > 0 && (
+          <>
+            <Pressable
+              onPress={() => router.push("/(tabs)/leads" as any)}
+              style={({ pressed }) => [{
+                backgroundColor: pressed ? "#eff6ff" : "#f0f9ff",
+                borderRadius: 12,
+                padding: 14,
+                borderWidth: 1,
+                borderColor: "#bfdbfe",
+                marginBottom: 8,
+              }]}
+            >
+              <Text style={{ fontSize: 15, fontWeight: "700", color: "#1e40af" }}>
+                {queueCount} lead{queueCount > 1 ? "s" : ""} available to claim
+              </Text>
+              <Text style={{ fontSize: 12, color: "#3b82f6", marginTop: 2 }}>
+                Tap to view the lead queue
+              </Text>
+            </Pressable>
+            <SectionRule />
+          </>
+        )}
+
+        <Text style={styles.sectionHeading}>Quick Actions</Text>
+        <View style={styles.quickGrid}>
+          <Pressable
+            onPress={() => handleFixedQuickAction("lead")}
+            style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
+          >
+            <Text style={styles.quickBtnText}>+ Lead</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleFixedQuickAction("task")}
+            style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
+          >
+            <Text style={styles.quickBtnText}>+ Task</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleFixedQuickAction("booking")}
+            style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
+          >
+            <Text style={styles.quickBtnText}>+ Booking</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleFixedQuickAction("message")}
+            style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
+          >
+            <Text style={styles.quickBtnText}>+ Message</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </View>
   );
@@ -328,7 +392,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.bg },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingBottom: 40, paddingTop: 16 },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 36, paddingTop: 12 },
   centered: {
     flex: 1,
     backgroundColor: theme.bg,
@@ -336,76 +400,20 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     justifyContent: "flex-start",
   },
-  heroBlock: { paddingBottom: 16 },
-  greeting: { fontSize: 28, fontWeight: "800", color: theme.text, letterSpacing: -0.5 },
+  heroBlock: { paddingBottom: 4 },
+  greeting: { fontSize: 26, fontWeight: "800", color: theme.text, letterSpacing: -0.3 },
   summaryLine: {
-    marginTop: 6,
-    fontSize: 14,
+    marginTop: 10,
+    fontSize: 15,
     fontWeight: "500",
     color: theme.textMuted,
-    lineHeight: 20,
+    lineHeight: 22,
   },
-  /* Stat cards */
-  statRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 16,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: theme.surface,
-    borderRadius: 16,
-    padding: 14,
-    borderLeftWidth: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: theme.text,
-    letterSpacing: -0.5,
-  },
-  statLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: theme.textMuted,
-    marginTop: 2,
-  },
-  /* Quick actions */
-  quickGrid: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 4,
-  },
-  quickBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-    borderRadius: 16,
-    backgroundColor: theme.surface,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  quickBtnPressed: {
-    backgroundColor: theme.accentLight,
-    transform: [{ scale: 0.97 }],
-  },
-  quickBtnEmoji: { fontSize: 22, marginBottom: 4 },
-  quickBtnText: { fontSize: 11, fontWeight: "700", color: theme.textMuted },
   rule: {
     height: 1,
-    backgroundColor: theme.borderSubtle,
+    backgroundColor: theme.border,
     marginVertical: 16,
   },
-  /* Chips */
   chipRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -413,30 +421,41 @@ const styles = StyleSheet.create({
   },
   chip: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: 10,
+    borderRadius: 999,
     backgroundColor: theme.surface,
     borderWidth: 1,
     borderColor: theme.border,
   },
-  chipPressed: {
-    backgroundColor: theme.accentLight,
-    borderColor: theme.accent,
-    transform: [{ scale: 0.97 }],
-  },
-  chipText: { fontSize: 13, fontWeight: "600", color: theme.text },
+  chipPressed: { backgroundColor: "#eff6ff", borderColor: "#bfdbfe" },
+  chipText: { fontSize: 13, fontWeight: "700", color: theme.text },
   sectionHeading: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
-    color: theme.text,
-    letterSpacing: 0.3,
-    marginBottom: 10,
+    color: theme.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 8,
   },
   agendaHint: { fontSize: 12, color: theme.textSubtle, marginBottom: 10, marginTop: -4 },
-  muted: { fontSize: 14, color: theme.textMuted, lineHeight: 20 },
-  emptyAlerts: {
-    alignItems: "center",
-    paddingVertical: 20,
+  muted: { fontSize: 14, color: theme.textMuted, paddingVertical: 8, lineHeight: 20 },
+  quickGrid: {
+    flexDirection: "row",
+    flexWrap: "nowrap",
+    gap: 8,
+    marginTop: 4,
   },
-  emptyEmoji: { fontSize: 28, marginBottom: 8 },
+  quickBtn: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderRadius: 14,
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    alignItems: "center",
+  },
+  quickBtnPressed: { backgroundColor: "#eff6ff", borderColor: "#bfdbfe" },
+  quickBtnText: { fontSize: 15, fontWeight: "700", color: theme.text },
 });
