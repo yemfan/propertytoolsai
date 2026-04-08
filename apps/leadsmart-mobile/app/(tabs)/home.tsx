@@ -21,6 +21,7 @@ import { ScreenLoading } from "../../components/ScreenLoading";
 import {
   fetchMobileDailyAgenda,
   fetchMobileDashboard,
+  fetchLeadQueue,
 } from "../../lib/leadsmartMobileApi";
 import type { MobileApiFailure } from "../../lib/leadsmartMobileApi";
 import { getSupabaseAuthClient } from "../../lib/supabaseAuthClient";
@@ -65,6 +66,13 @@ export default function HomeScreen() {
   const [alerts, setAlerts] = useState<MobileDashboardPriorityAlert[]>([]);
   const [agendaDate, setAgendaDate] = useState("");
   const [agendaItems, setAgendaItems] = useState<DailyAgendaItem[]>([]);
+  const [weeklyDigest, setWeeklyDigest] = useState<{
+    title: string;
+    body: string;
+    metrics: Record<string, number>;
+    insights: Array<{ key: string; label: string; message: string; tone: string }>;
+  } | null>(null);
+  const [queueCount, setQueueCount] = useState(0);
 
   useEffect(() => {
     const sb = getSupabaseAuthClient();
@@ -100,7 +108,12 @@ export default function HomeScreen() {
       setDashboardError(null);
       setStats(dash.stats);
       setAlerts(dash.priorityAlerts);
+      setWeeklyDigest((dash as any).weeklyDigest ?? null);
     }
+
+    // Best-effort queue count
+    const qRes = await fetchLeadQueue();
+    if (qRes.ok) setQueueCount(qRes.total);
 
     if (agenda.ok === false) {
       setAgendaError(agenda);
@@ -298,6 +311,51 @@ export default function HomeScreen() {
         )}
 
         <SectionRule />
+
+        {/* Weekly Digest */}
+        {weeklyDigest && (
+          <>
+            <Text style={styles.sectionHeading}>{weeklyDigest.title}</Text>
+            <View style={{ backgroundColor: "#f8fafc", borderRadius: 12, padding: 12, marginBottom: 8 }}>
+              <Text style={{ fontSize: 13, color: theme.textMuted, lineHeight: 20 }}>{weeklyDigest.body}</Text>
+              {weeklyDigest.insights?.length > 0 && (
+                <View style={{ marginTop: 8 }}>
+                  {weeklyDigest.insights.slice(0, 3).map((ins) => (
+                    <Text key={ins.key} style={{ fontSize: 12, color: ins.tone === "warning" ? "#b45309" : ins.tone === "positive" ? "#15803d" : theme.textMuted, marginTop: 4 }}>
+                      {ins.label}: {ins.message}
+                    </Text>
+                  ))}
+                </View>
+              )}
+            </View>
+            <SectionRule />
+          </>
+        )}
+
+        {/* Lead Queue */}
+        {queueCount > 0 && (
+          <>
+            <Pressable
+              onPress={() => router.push("/(tabs)/leads" as any)}
+              style={({ pressed }) => [{
+                backgroundColor: pressed ? "#eff6ff" : "#f0f9ff",
+                borderRadius: 12,
+                padding: 14,
+                borderWidth: 1,
+                borderColor: "#bfdbfe",
+                marginBottom: 8,
+              }]}
+            >
+              <Text style={{ fontSize: 15, fontWeight: "700", color: "#1e40af" }}>
+                {queueCount} lead{queueCount > 1 ? "s" : ""} available to claim
+              </Text>
+              <Text style={{ fontSize: 12, color: "#3b82f6", marginTop: 2 }}>
+                Tap to view the lead queue
+              </Text>
+            </Pressable>
+            <SectionRule />
+          </>
+        )}
 
         <Text style={styles.sectionHeading}>Quick Actions</Text>
         <View style={styles.quickGrid}>
