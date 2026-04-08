@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "react-qr-code";
-import AddressAutocomplete from "@/components/AddressAutocomplete";
-import { FLYER_TEMPLATES, getTemplate, type FlyerTemplate } from "@/lib/flyer/templates";
+import { FLYER_TEMPLATES, getTemplate } from "@/lib/flyer/templates";
 
 type PropertyData = {
   address: string;
@@ -27,10 +26,23 @@ type AgentInfo = {
   logoUrl: string;
 };
 
+type PropertyOption = { id: string; address: string | null; city?: string | null; state?: string | null };
 type SavedFlyer = { id: string; template_key: string; property_address: string; created_at: string };
 
-export default function FlyerBuilderClient() {
-  const [address, setAddress] = useState("");
+function labelFor(p: PropertyOption) {
+  return p.address?.trim() || [p.city, p.state].filter(Boolean).join(", ") || p.id;
+}
+
+export default function FlyerBuilderClient({
+  agentId,
+  properties: propertyOptions,
+}: {
+  agentId: string;
+  properties: PropertyOption[];
+}) {
+  const [selectedPropertyId, setSelectedPropertyId] = useState(propertyOptions[0]?.id ?? "");
+  const selectedOption = propertyOptions.find((p) => p.id === selectedPropertyId) ?? propertyOptions[0];
+  const address = selectedOption ? labelFor(selectedOption) : "";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [templateKey, setTemplateKey] = useState("classic");
@@ -56,7 +68,7 @@ export default function FlyerBuilderClient() {
   const origin = useMemo(() => typeof window !== "undefined" ? window.location.origin : "", []);
   const signupUrl = useMemo(() => {
     if (!property?.propertyId) return "";
-    return `${origin}/open-house-signup?property_id=${encodeURIComponent(property.propertyId)}&agent_id=`;
+    return `${origin}/open-house-signup?property_id=${encodeURIComponent(property.propertyId)}&agent_id=${encodeURIComponent(agentId)}`;
   }, [origin, property?.propertyId]);
 
   // Load agent info + saved flyers on mount
@@ -293,24 +305,55 @@ export default function FlyerBuilderClient() {
 
   // === RENDER ===
 
-  // Step 1: Address input
+  const previewSignupUrl = useMemo(() => {
+    if (!selectedOption?.id) return "";
+    return `${origin}/open-house-signup?property_id=${encodeURIComponent(selectedOption.id)}&agent_id=${encodeURIComponent(agentId)}`;
+  }, [origin, selectedOption?.id, agentId]);
+
+  // Step 1: Property selection
   if (!property) {
     return (
       <div className="space-y-4">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Open House Flyer Builder</h1>
-          <p className="text-sm text-gray-500">Enter a property address to generate a professional flyer.</p>
+          <p className="text-sm text-gray-500">Select a property and template to generate a professional flyer.</p>
         </div>
         {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">{error}</div>}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-3">
-          <label className="block text-sm font-medium text-gray-700">Property Address</label>
-          <AddressAutocomplete
-            value={address}
-            onChange={(v) => setAddress(v)}
-            onSelect={(v) => setAddress(v.formattedAddress)}
-            placeholder="Start typing an address..."
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-          />
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Property</label>
+              <select
+                value={selectedPropertyId}
+                onChange={(e) => setSelectedPropertyId(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              >
+                {propertyOptions.map((p) => (
+                  <option key={p.id} value={p.id}>{labelFor(p)}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Signup Link</label>
+                <input readOnly value={previewSignupUrl} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono bg-gray-50" />
+              </div>
+            </div>
+          </div>
+
+          {selectedOption && (
+            <div className="flex items-center gap-4">
+              <div className="bg-white p-2 rounded-lg border border-gray-200 shrink-0">
+                <QRCode value={previewSignupUrl} size={100} />
+              </div>
+              <div className="text-xs text-gray-500">
+                <p className="font-medium text-gray-700">{labelFor(selectedOption)}</p>
+                <p className="mt-1">Visitors scan this QR code to register and receive a property report.</p>
+              </div>
+            </div>
+          )}
+
           {/* Template picker */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Choose Template</label>
@@ -336,7 +379,7 @@ export default function FlyerBuilderClient() {
           <button
             type="button"
             onClick={() => void fetchProperty()}
-            disabled={loading || !address.trim()}
+            disabled={loading || !selectedPropertyId}
             className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
           >
             {loading ? "Loading property..." : "Generate Flyer"}
