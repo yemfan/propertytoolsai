@@ -7,6 +7,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -20,6 +21,14 @@ import type { MobileApiFailure } from "../../lib/leadsmartMobileApi";
 import { theme } from "../../lib/theme";
 
 const PAGE_SIZE = 30;
+
+type FilterKey = "all" | "hot" | "high_engagement" | "inactive";
+const FILTER_CHIPS: Array<{ key: FilterKey; label: string }> = [
+  { key: "all", label: "All" },
+  { key: "hot", label: "Hot" },
+  { key: "high_engagement", label: "Engaged" },
+  { key: "inactive", label: "Inactive" },
+];
 
 function paramStr(v: string | string[] | undefined): string | undefined {
   if (v == null) return undefined;
@@ -39,7 +48,7 @@ function LeadRow({
   const phone = lead.display_phone || leadField(lead, "phone") || leadField(lead, "phone_number");
   const address = leadField(lead, "property_address");
   const rating = leadField(lead, "rating");
-  const status = leadField(lead, "lead_status");
+  const stage = leadField(lead, "pipeline_stage_name") || leadField(lead, "lead_status");
   const hot = rating.toLowerCase() === "hot";
 
   return (
@@ -64,9 +73,13 @@ function LeadRow({
         </Text>
       ) : null}
       <View style={styles.footer}>
-        {status ? <Text style={styles.badge}>{status}</Text> : null}
+        {stage ? (
+          <View style={styles.stagePill}>
+            <Text style={styles.stageText}>{stage}</Text>
+          </View>
+        ) : null}
         {lead.ai_lead_score != null ? (
-          <Text style={styles.score}>AI score {Math.round(lead.ai_lead_score)}</Text>
+          <Text style={styles.score}>AI {Math.round(lead.ai_lead_score)}</Text>
         ) : null}
       </View>
     </Pressable>
@@ -77,10 +90,12 @@ export default function LeadsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ filter?: string | string[]; booking?: string | string[] }>();
   const filterRaw = paramStr(params.filter);
-  const listFilter =
-    filterRaw === "hot" ? "hot" : filterRaw === "inactive" ? "inactive" : undefined;
+  const initialFilter: FilterKey =
+    filterRaw === "hot" ? "hot" : filterRaw === "inactive" ? "inactive" : "all";
   const showBookingHint = paramStr(params.booking) === "1";
 
+  const [activeFilter, setActiveFilter] = useState<FilterKey>(initialFilter);
+  const [search, setSearch] = useState("");
   const [leads, setLeads] = useState<MobileLeadRecordDto[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -89,42 +104,47 @@ export default function LeadsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<MobileApiFailure | null>(null);
 
-  const loadPage = useCallback(async (nextPage: number, mode: "replace" | "append" | "refresh") => {
-    if (nextPage === 1 && mode === "replace") setLoading(true);
-    if (nextPage > 1) setLoadingMore(true);
-    if (mode === "refresh") setRefreshing(true);
+  const listFilter = activeFilter === "all" ? undefined : activeFilter;
 
-    const res = await fetchMobileLeads({
-      page: nextPage,
-      pageSize: PAGE_SIZE,
-      filter: listFilter,
-    });
+  const loadPage = useCallback(
+    async (nextPage: number, mode: "replace" | "append" | "refresh") => {
+      if (nextPage === 1 && mode === "replace") setLoading(true);
+      if (nextPage > 1) setLoadingMore(true);
+      if (mode === "refresh") setRefreshing(true);
 
-    if (nextPage === 1 && mode === "replace") setLoading(false);
-    if (nextPage > 1) setLoadingMore(false);
-    if (mode === "refresh") setRefreshing(false);
+      const res = await fetchMobileLeads({
+        page: nextPage,
+        pageSize: PAGE_SIZE,
+        filter: listFilter,
+      });
 
-    if (res.ok === false) {
-      setError(res);
-      if (mode === "replace" || mode === "refresh") setLeads([]);
-      return;
-    }
+      if (nextPage === 1 && mode === "replace") setLoading(false);
+      if (nextPage > 1) setLoadingMore(false);
+      if (mode === "refresh") setRefreshing(false);
 
-    setError(null);
-    setTotal(res.total);
-    let rows = res.leads;
-    const allowDemoFallback =
-      !listFilter && rows.length === 0 && res.total === 0 && (mode === "replace" || mode === "refresh");
-    if (allowDemoFallback) {
-      rows = [getDemoLeadRecord()];
-    }
-    if (mode === "append") {
-      setLeads((prev) => [...prev, ...rows]);
-    } else {
-      setLeads(rows);
-    }
-    setPage(res.page);
-  }, [listFilter]);
+      if (res.ok === false) {
+        setError(res);
+        if (mode === "replace" || mode === "refresh") setLeads([]);
+        return;
+      }
+
+      setError(null);
+      setTotal(res.total);
+      let rows = res.leads;
+      const allowDemoFallback =
+        !listFilter && rows.length === 0 && res.total === 0 && (mode === "replace" || mode === "refresh");
+      if (allowDemoFallback) {
+        rows = [getDemoLeadRecord()];
+      }
+      if (mode === "append") {
+        setLeads((prev) => [...prev, ...rows]);
+      } else {
+        setLeads(rows);
+      }
+      setPage(res.page);
+    },
+    [listFilter]
+  );
 
   useEffect(() => {
     void loadPage(1, "replace");
@@ -141,13 +161,28 @@ export default function LeadsScreen() {
     void loadPage(page + 1, "append");
   }, [loadPage, loading, loadingMore, hasMore, page, error]);
 
+  // Client-side search filter
+  const filtered = useMemo(() => {
+    if (!search.trim()) return leads;
+    const s = search.toLowerCase();
+    return leads.filter((l) => {
+      const name = leadField(l, "name").toLowerCase();
+      const phone = (l.display_phone || leadField(l, "phone")).toLowerCase();
+      const addr = leadField(l, "property_address").toLowerCase();
+      return name.includes(s) || phone.includes(s) || addr.includes(s);
+    });
+  }, [leads, search]);
+
   const listEmpty = useMemo(() => {
     if (error) return null;
+    if (search.trim()) {
+      return <EmptyState title="No matches" subtitle="Try a different search term." />;
+    }
     return <EmptyState title="No leads yet" subtitle="New leads from your funnels will appear here." />;
-  }, [error]);
+  }, [error, search]);
 
   if (loading && leads.length === 0) {
-    return <ScreenLoading message="Loading leads…" />;
+    return <ScreenLoading message="Loading leads..." />;
   }
 
   return (
@@ -156,13 +191,40 @@ export default function LeadsScreen() {
         <ErrorBanner
           title="Could not load leads"
           message={error.message}
-          onRetry={() => {
-            void loadPage(1, "replace");
-          }}
+          onRetry={() => void loadPage(1, "replace")}
         />
       ) : null}
+
+      {/* Search bar */}
+      <View style={styles.searchWrap}>
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search name, phone, address..."
+          placeholderTextColor={theme.textSubtle}
+          style={styles.searchInput}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+        />
+      </View>
+
+      {/* Filter chips */}
+      <View style={styles.chipRow}>
+        {FILTER_CHIPS.map((chip) => (
+          <Pressable
+            key={chip.key}
+            onPress={() => setActiveFilter(chip.key)}
+            style={[styles.chip, activeFilter === chip.key && styles.chipActive]}
+          >
+            <Text style={[styles.chipText, activeFilter === chip.key && styles.chipTextActive]}>
+              {chip.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
       <FlatList
-        data={leads}
+        data={filtered}
         keyExtractor={(l) => String(l.id)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         onEndReached={onEndReached}
@@ -185,13 +247,11 @@ export default function LeadsScreen() {
                 </Text>
               </View>
             ) : null}
-            {listFilter === "hot" ? (
-              <Text style={styles.count}>Hot leads · {total} total</Text>
-            ) : listFilter === "inactive" ? (
-              <Text style={styles.count}>Inactive · {total} total</Text>
-            ) : total > 0 ? (
+            {total > 0 ? (
               <Text style={styles.count}>
-                {leads.length} of {total} leads
+                {filtered.length === total
+                  ? `${total} lead${total !== 1 ? "s" : ""}`
+                  : `${filtered.length} of ${total} leads`}
               </Text>
             ) : leads.length === 1 && String(leads[0].id) === DEMO_LEAD_ID ? (
               <Text style={styles.count}>Sample lead — add real leads in LeadSmart CRM</Text>
@@ -209,7 +269,7 @@ export default function LeadsScreen() {
             }
           />
         )}
-        contentContainerStyle={leads.length === 0 ? styles.emptyList : styles.listPad}
+        contentContainerStyle={filtered.length === 0 ? styles.emptyList : styles.listPad}
       />
     </View>
   );
@@ -217,6 +277,38 @@ export default function LeadsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.bg },
+  searchWrap: { paddingHorizontal: 12, paddingTop: 8 },
+  searchInput: {
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: theme.text,
+  },
+  chipRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  chipActive: {
+    backgroundColor: "#1e40af",
+    borderColor: "#1e40af",
+  },
+  chipText: { fontSize: 12, fontWeight: "700", color: theme.text },
+  chipTextActive: { color: "#fff" },
   hintBanner: {
     marginHorizontal: 12,
     marginTop: 8,
@@ -229,12 +321,12 @@ const styles = StyleSheet.create({
   },
   hintText: { fontSize: 13, color: "#1e3a8a", lineHeight: 18 },
   count: { paddingHorizontal: 16, paddingVertical: 8, fontSize: 12, color: theme.textMuted },
-  listPad: { paddingVertical: 8 },
+  listPad: { paddingVertical: 4 },
   emptyList: { flexGrow: 1, justifyContent: "center" },
   footerLoad: { paddingVertical: 16 },
   row: {
     marginHorizontal: 12,
-    marginVertical: 6,
+    marginVertical: 5,
     padding: 14,
     backgroundColor: theme.surface,
     borderRadius: 12,
@@ -260,17 +352,16 @@ const styles = StyleSheet.create({
   },
   hotText: { fontSize: 10, fontWeight: "800", color: theme.hotPillText },
   sub: { fontSize: 14, color: "#475569", marginTop: 2 },
-  address: { fontSize: 13, color: theme.textMuted, marginTop: 6, lineHeight: 18 },
+  address: { fontSize: 13, color: theme.textMuted, marginTop: 4, lineHeight: 18 },
   footer: { flexDirection: "row", alignItems: "center", marginTop: 10, gap: 8, flexWrap: "wrap" },
-  badge: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#334155",
-    backgroundColor: "#f1f5f9",
+  stagePill: {
+    backgroundColor: "#eff6ff",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
   },
+  stageText: { fontSize: 11, fontWeight: "600", color: "#1e40af" },
   score: { fontSize: 11, color: theme.accent, fontWeight: "600" },
 });

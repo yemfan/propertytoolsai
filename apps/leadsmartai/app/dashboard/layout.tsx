@@ -9,6 +9,7 @@ import { supabaseServer } from "@/lib/supabaseServer";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { UpgradeBanner } from "@/components/upsell/UpgradeBanner";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
+import { AiChatPanel } from "@/components/dashboard/AiChatPanel";
 
 export default async function DashboardLayout({
   children,
@@ -85,6 +86,7 @@ export default async function DashboardLayout({
         <OnboardingGate />
         <UpgradeBanner planType={ctx.planType} variant="banner" />
         {children}
+        <AiChatPanel />
       </DashboardShell>
     </AgentWorkspaceProviders>
   );

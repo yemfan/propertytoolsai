@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
+import { CsvImportModal } from "@/components/crm/CsvImportModal";
 
 type LeadRow = {
   id: string;
@@ -98,6 +99,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
   const [sortBy, setSortBy] = useState<SortKey>("created_at");
   const [sortAsc, setSortAsc] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<Partial<LeadRow>>({});
   const [addFields, setAddFields] = useState({ name: "", email: "", phone: "", property_address: "", notes: "" });
@@ -245,12 +247,12 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
         >
           Scan Business Card
         </Link>
-        <Link
-          href="/dashboard/leads/import"
+        <button
+          onClick={() => setCsvImportOpen(true)}
           className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
-          Upload Contacts
-        </Link>
+          Upload CSV
+        </button>
         <button type="button" onClick={downloadTemplate} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
           Download Template
         </button>
@@ -391,6 +393,12 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
           </table>
         </div>
       </div>
+
+      <CsvImportModal
+        open={csvImportOpen}
+        onClose={() => setCsvImportOpen(false)}
+        onImported={() => window.location.reload()}
+      />
     </div>
   );
 }
