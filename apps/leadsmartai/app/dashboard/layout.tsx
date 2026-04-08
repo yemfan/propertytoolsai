@@ -10,6 +10,9 @@ import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { UpgradeBanner } from "@/components/upsell/UpgradeBanner";
 import { OnboardingGate } from "@/components/onboarding/OnboardingGate";
 import { AiChatPanel } from "@/components/dashboard/AiChatPanel";
+import { ToastProvider } from "@/components/ui/Toast";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { CommandPalette } from "@/components/ui/CommandPalette";
 
 export default async function DashboardLayout({
   children,
@@ -82,12 +85,17 @@ export default async function DashboardLayout({
 
   return (
     <AgentWorkspaceProviders>
-      <DashboardShell email={ctx?.email} appRole={appRole}>
-        <OnboardingGate />
-        <UpgradeBanner planType={ctx.planType} variant="banner" />
-        {children}
-        <AiChatPanel />
-      </DashboardShell>
+      <ToastProvider>
+        <DashboardShell email={ctx?.email} appRole={appRole}>
+          <OnboardingGate />
+          <UpgradeBanner planType={ctx.planType} variant="banner" />
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
+          <AiChatPanel />
+          <CommandPalette />
+        </DashboardShell>
+      </ToastProvider>
     </AgentWorkspaceProviders>
   );
 }

@@ -10,6 +10,7 @@ import { OutboundSmsComposer } from "@/components/crm/OutboundSmsComposer";
 import { AiEmailComposer } from "@/components/crm/AiEmailComposer";
 import { EmailConversationPanel } from "@/components/crm/EmailConversationPanel";
 import { GreetingHistoryPanel } from "@/components/crm/GreetingHistoryPanel";
+import { showToast } from "@/components/ui/Toast";
 import { GreetingPreviewPanel } from "@/components/crm/GreetingPreviewPanel";
 import {
   LEAD_STATUS_ORDER,
@@ -113,8 +114,9 @@ export default function LeadsClient({
         )
       );
       setSelected((prev) => (prev ? { ...prev, ...next } as any : prev));
+      showToast("Lead updated.", "success");
     } catch (e: any) {
-      alert(e?.message ?? "Error saving lead.");
+      showToast(e?.message ?? "Error saving lead.", "error");
     } finally {
       setSaving(false);
     }
@@ -154,7 +156,7 @@ export default function LeadsClient({
       );
       setSelectedIds(new Set());
     } catch {
-      alert("Some updates may have failed.");
+      showToast("Some updates may have failed.", "error");
     } finally {
       setBulkSaving(false);
     }
@@ -582,7 +584,7 @@ function LeadDetailPanel({
         setSmsTakeover(Boolean(json.lead.sms_agent_takeover));
       }
     } catch (e: any) {
-      alert(e?.message ?? "Failed to update SMS control");
+      showToast(e?.message ?? "Failed to update SMS control", "error");
     } finally {
       setSavingSmsControl(false);
     }
