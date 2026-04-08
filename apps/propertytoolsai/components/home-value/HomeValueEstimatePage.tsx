@@ -10,6 +10,7 @@ export default function HomeValuePage() {
   const {
     uiState,
     error,
+    unlockError,
     addressInput,
     setAddressInput,
     pendingAddress,
@@ -77,6 +78,7 @@ export default function HomeValuePage() {
           nextActions={nextActions}
           onRefreshEstimate={() => void runEstimate(undefined, details)}
           onUnlockReport={() => void unlockReport()}
+          unlockError={unlockError}
         />
       </div>
     </div>

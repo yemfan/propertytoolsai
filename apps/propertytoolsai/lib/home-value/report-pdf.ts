@@ -1,7 +1,11 @@
-import { chromium } from "playwright";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { buildHomeValueReportHtml } from "./report-template";
+/**
+ * Home-value report PDF generation.
+ *
+ * Playwright/Chromium is NOT available in Vercel serverless functions,
+ * so we skip server-side PDF generation and return a placeholder.
+ * The full report is rendered in the browser; a client-side "Download PDF"
+ * button can be added later using jsPDF or html2canvas.
+ */
 
 type GeneratePdfInput = {
   address: string;
@@ -17,35 +21,10 @@ type GeneratePdfInput = {
 };
 
 export async function generateHomeValueReportPdf(input: GeneratePdfInput) {
-  const browser = await chromium.launch({ headless: true });
-  try {
-    const page = await browser.newPage();
-
-    const html = buildHomeValueReportHtml(input);
-    await page.setContent(html, { waitUntil: "load" });
-
-    const outputDir = path.join(process.cwd(), "tmp", "home-value-reports");
-    await fs.mkdir(outputDir, { recursive: true });
-
-    const outputPath = path.join(outputDir, `${input.sessionId}.pdf`);
-
-    await page.pdf({
-      path: outputPath,
-      format: "A4",
-      printBackground: true,
-      margin: {
-        top: "20px",
-        right: "20px",
-        bottom: "20px",
-        left: "20px",
-      },
-    });
-
-    return {
-      outputPath,
-      filename: `${input.sessionId}.pdf`,
-    };
-  } finally {
-    await browser.close();
-  }
+  // PDF generation is deferred to the client side.
+  // Return a stub so callers don't break.
+  return {
+    outputPath: null as string | null,
+    filename: `${input.sessionId}.pdf`,
+  };
 }

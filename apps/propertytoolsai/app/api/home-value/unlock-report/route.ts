@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { generateHomeValueReportPdf } from "@/lib/home-value/report-pdf";
 import { createLeadFromHomeValue } from "@/lib/home-value/lead";
-import { sendHomeValueReportEmail } from "@/lib/home-value/email";
 import { autoAssignLeadToAgent } from "@/lib/home-value/assignment";
 import { queueHomeValueSequence } from "@/lib/home-value/followup-sequence";
 import { createAgentNotification } from "@/lib/home-value/agent-notification";
@@ -32,6 +30,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // --- Core: create lead (must succeed) ---
     const lead = await createLeadFromHomeValue({
       name,
       email,
@@ -44,16 +43,23 @@ export async function POST(req: Request) {
       city: session.city,
     });
 
-    const assignment = await autoAssignLeadToAgent({
-      leadId: lead.id,
-      zip: session.zip,
-      city: session.city,
-    });
+    // --- Best-effort: assignment, notification, followup, PDF, email ---
+    let assignment: { agentId: string; fullName: string | null; email: string | null } | null = null;
+    try {
+      assignment = await autoAssignLeadToAgent({
+        leadId: String(lead.id),
+        zip: session.zip,
+        city: session.city,
+      });
+    } catch (e) {
+      console.error("Assignment failed (non-fatal):", e);
+    }
 
+    // Agent notification (fire-and-forget)
     if (assignment?.agentId) {
-      await createAgentNotification({
+      createAgentNotification({
         agentId: assignment.agentId,
-        leadId: lead.id,
+        leadId: String(lead.id),
         type: "new_home_value_lead",
         title: "New Home Value Lead Assigned",
         message: `${name} unlocked a home value report for ${session.property_address}.`,
@@ -63,11 +69,12 @@ export async function POST(req: Request) {
           property_address: session.property_address,
           estimate_value: session.estimate_value,
         },
-      });
+      }).catch((e) => console.error("Agent notification failed:", e));
     }
 
-    await queueHomeValueSequence({
-      leadId: lead.id,
+    // Followup sequence (fire-and-forget)
+    queueHomeValueSequence({
+      leadId: String(lead.id),
       customerName: name,
       customerEmail: email,
       customerPhone: phone ?? null,
@@ -75,46 +82,65 @@ export async function POST(req: Request) {
       estimateValue: session.estimate_value,
       assignedAgentName: assignment?.fullName ?? null,
       assignedAgentId: assignment?.agentId ?? null,
-    });
+    }).catch((e) => console.error("Followup queue failed:", e));
 
-    const pdf = await generateHomeValueReportPdf({
-      sessionId,
-      address: session.property_address,
-      estimateValue: session.estimate_value,
-      rangeLow: session.range_low,
-      rangeHigh: session.range_high,
-      confidence: session.confidence,
-      medianPpsf: session.median_ppsf,
-      localTrendPct: session.local_trend_pct,
-      compCount: session.comp_count,
-      actions: session.recommendations?.actions ?? [],
-    });
+    // PDF generation (best-effort, may not be available in all environments)
+    let pdfUrl: string | null = null;
+    try {
+      const { generateHomeValueReportPdf } = await import("@/lib/home-value/report-pdf");
+      const pdf = await generateHomeValueReportPdf({
+        sessionId,
+        address: session.property_address,
+        estimateValue: session.estimate_value,
+        rangeLow: session.range_low,
+        rangeHigh: session.range_high,
+        confidence: session.confidence,
+        medianPpsf: session.median_ppsf,
+        localTrendPct: session.local_trend_pct,
+        compCount: session.comp_count,
+        actions: session.recommendations?.actions ?? [],
+      });
+      pdfUrl = `/reports/home-value/${pdf.filename}`;
+    } catch (e) {
+      console.error("PDF generation failed (non-fatal):", e);
+    }
 
-    const pdfUrl = `/reports/home-value/${pdf.filename}`;
+    // Persist report row
+    await supabaseAdmin
+      .from("home_value_reports")
+      .upsert({
+        session_id: sessionId,
+        lead_id: String(lead.id),
+        property_address: session.property_address,
+        estimate_value: session.estimate_value,
+        range_low: session.range_low,
+        range_high: session.range_high,
+        confidence: session.confidence,
+        report_json: session,
+        pdf_url: pdfUrl,
+        emailed_at: new Date().toISOString(),
+      })
+      .then(({ error }) => {
+        if (error) console.error("Report upsert failed:", error);
+      });
 
-    await supabaseAdmin.from("home_value_reports").upsert({
-      session_id: sessionId,
-      lead_id: lead.id,
-      property_address: session.property_address,
-      estimate_value: session.estimate_value,
-      range_low: session.range_low,
-      range_high: session.range_high,
-      confidence: session.confidence,
-      report_json: session,
-      pdf_url: pdfUrl,
-      emailed_at: new Date().toISOString(),
-    });
-
-    await sendHomeValueReportEmail({
-      to: email,
-      name,
-      address: session.property_address,
-      reportUrl: pdfUrl,
-    });
+    // Email (best-effort)
+    if (pdfUrl) {
+      import("@/lib/home-value/email")
+        .then(({ sendHomeValueReportEmail }) =>
+          sendHomeValueReportEmail({
+            to: email,
+            name,
+            address: session.property_address,
+            reportUrl: pdfUrl!,
+          })
+        )
+        .catch((e) => console.error("Report email failed:", e));
+    }
 
     return NextResponse.json({
       success: true,
-      leadId: lead.id,
+      leadId: String(lead.id),
       assignedAgent: assignment ?? null,
       report: {
         estimate: {
@@ -139,7 +165,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("unlock-report error:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to unlock report" },
+      { success: false, error: "Failed to unlock report. Please try again." },
       { status: 500 }
     );
   }
