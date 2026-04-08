@@ -82,16 +82,10 @@ const navConfig = {
       icon: navEmoji("💬"),
       items: [
         {
-          label: "Inbox",
+          label: "Messages",
           href: "/dashboard/inbox",
-          match: ["/dashboard/inbox"],
-          icon: navEmoji("📥"),
-        },
-        {
-          label: "Calls",
-          href: "/dashboard/calls",
-          match: ["/dashboard/calls"],
-          icon: navEmoji("📞"),
+          match: ["/dashboard/inbox", "/dashboard/calls"],
+          icon: navEmoji("💬"),
         },
         {
           label: "Marketing Plans",
