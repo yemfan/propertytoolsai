@@ -292,6 +292,17 @@ export function useHomeValueEstimate() {
           name: leadForm.name,
           email: leadForm.email,
           phone: leadForm.phone,
+          // Pass estimate data so the API doesn't need a session row
+          property_address: estimateResult?.property.fullAddress ?? address?.fullAddress ?? "",
+          city: estimateResult?.property.city ?? address?.city ?? "",
+          zip: estimateResult?.property.zip ?? address?.zip ?? "",
+          estimate_value: estimateResult?.estimate.value ?? 0,
+          range_low: estimateResult?.estimate.rangeLow ?? 0,
+          range_high: estimateResult?.estimate.rangeHigh ?? 0,
+          confidence: estimateResult?.estimate.confidence ?? "low",
+          confidence_score: estimateResult?.estimate.confidenceScore ?? 0,
+          median_ppsf: estimateResult?.supportingData.medianPpsf ?? 0,
+          recommendations: estimateResult?.recommendations ?? { actions: [] },
         }),
       });
 

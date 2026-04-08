@@ -17,25 +17,43 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: session, error: sessionError } = await supabaseAdmin
+    // Try to load session from DB; fall back to client-provided data
+    let session: Record<string, any> | null = null;
+    const { data: dbSession } = await supabaseAdmin
       .from("home_value_sessions")
       .select("*")
       .eq("session_id", sessionId)
       .single();
 
-    if (sessionError || !session) {
-      return NextResponse.json(
-        { success: false, error: "Session not found" },
-        { status: 404 }
-      );
+    if (dbSession) {
+      session = dbSession;
+    } else {
+      // Use data sent by client (estimate values already in browser state)
+      session = {
+        property_address: body.property_address || "",
+        full_address: body.property_address || "",
+        city: body.city || null,
+        zip: body.zip || null,
+        estimate_value: body.estimate_value || 0,
+        range_low: body.range_low || 0,
+        range_high: body.range_high || 0,
+        confidence: body.confidence || "low",
+        confidence_score: body.confidence_score || 0,
+        median_ppsf: body.median_ppsf || 0,
+        local_trend_pct: null,
+        comp_count: null,
+        recommendations: body.recommendations || { actions: [] },
+      };
     }
+
+    const propertyAddress = session.property_address || session.full_address || body.property_address || "";
 
     // --- Core: create lead (must succeed) ---
     const lead = await createLeadFromHomeValue({
       name,
       email,
       phone,
-      address: session.property_address,
+      address: propertyAddress,
       estimateValue: session.estimate_value,
       confidence: session.confidence,
       sessionId,
@@ -43,11 +61,11 @@ export async function POST(req: Request) {
       city: session.city,
     });
 
-    // --- Best-effort: assignment, notification, followup, PDF, email ---
+    // --- Best-effort: assignment, notification, followup ---
     let assignment: { agentId: string; fullName: string | null; email: string | null } | null = null;
     try {
       assignment = await autoAssignLeadToAgent({
-        leadId: String(lead.id),
+        leadId: lead.id,
         zip: session.zip,
         city: session.city,
       });
@@ -62,11 +80,11 @@ export async function POST(req: Request) {
         leadId: String(lead.id),
         type: "new_home_value_lead",
         title: "New Home Value Lead Assigned",
-        message: `${name} unlocked a home value report for ${session.property_address}.`,
+        message: `${name} unlocked a home value report for ${propertyAddress}.`,
         actionUrl: `/agent/leads/${lead.id}`,
         metadata: {
           source: "home_value_estimate",
-          property_address: session.property_address,
+          property_address: propertyAddress,
           estimate_value: session.estimate_value,
         },
       }).catch((e) => console.error("Agent notification failed:", e));
@@ -78,75 +96,40 @@ export async function POST(req: Request) {
       customerName: name,
       customerEmail: email,
       customerPhone: phone ?? null,
-      propertyAddress: session.property_address,
+      propertyAddress,
       estimateValue: session.estimate_value,
       assignedAgentName: assignment?.fullName ?? null,
       assignedAgentId: assignment?.agentId ?? null,
     }).catch((e) => console.error("Followup queue failed:", e));
 
-    // PDF generation (best-effort, may not be available in all environments)
-    let pdfUrl: string | null = null;
-    try {
-      const { generateHomeValueReportPdf } = await import("@/lib/home-value/report-pdf");
-      const pdf = await generateHomeValueReportPdf({
-        sessionId,
-        address: session.property_address,
-        estimateValue: session.estimate_value,
-        rangeLow: session.range_low,
-        rangeHigh: session.range_high,
-        confidence: session.confidence,
-        medianPpsf: session.median_ppsf,
-        localTrendPct: session.local_trend_pct,
-        compCount: session.comp_count,
-        actions: session.recommendations?.actions ?? [],
-      });
-      pdfUrl = `/reports/home-value/${pdf.filename}`;
-    } catch (e) {
-      console.error("PDF generation failed (non-fatal):", e);
-    }
-
-    // Persist report row
-    await supabaseAdmin
+    // Persist report row (best-effort)
+    supabaseAdmin
       .from("home_value_reports")
       .upsert({
         session_id: sessionId,
         lead_id: String(lead.id),
-        property_address: session.property_address,
+        property_address: propertyAddress,
         estimate_value: session.estimate_value,
         range_low: session.range_low,
         range_high: session.range_high,
         confidence: session.confidence,
         report_json: session,
-        pdf_url: pdfUrl,
+        pdf_url: null,
         emailed_at: new Date().toISOString(),
       })
       .then(({ error }) => {
         if (error) console.error("Report upsert failed:", error);
       });
 
-    // Email (best-effort)
-    if (pdfUrl) {
-      import("@/lib/home-value/email")
-        .then(({ sendHomeValueReportEmail }) =>
-          sendHomeValueReportEmail({
-            to: email,
-            name,
-            address: session.property_address,
-            reportUrl: pdfUrl!,
-          })
-        )
-        .catch((e) => console.error("Report email failed:", e));
-    }
-
     return NextResponse.json({
       success: true,
-      leadId: String(lead.id),
+      leadId: lead.id,
       assignedAgent: assignment ?? null,
       report: {
         estimate: {
           value: session.estimate_value,
-          rangeLow: session.range_low,
-          rangeHigh: session.range_high,
+          rangeLow: session.range_low ?? session.estimate_low,
+          rangeHigh: session.range_high ?? session.estimate_high,
           confidence: session.confidence,
           confidenceScore: session.confidence_score,
         },
@@ -159,7 +142,7 @@ export async function POST(req: Request) {
         recommendations: session.recommendations ?? {
           actions: [],
         },
-        pdfUrl,
+        pdfUrl: null,
       },
     });
   } catch (error) {
