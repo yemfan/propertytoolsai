@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import QRCode from "react-qr-code";
 
 type PropertyRow = {
   id: string;
@@ -61,22 +60,13 @@ function MiniPie({ data, title }: { data: ChartItem[]; title: string }) {
 
 export default function OpenHousesClient({
   agentId,
-  properties,
 }: {
   agentId: string;
   properties: PropertyRow[];
 }) {
   const [stats, setStats] = useState<Stats | null>(null);
-  const [selectedPropertyId, setSelectedPropertyId] = useState(properties[0]?.id ?? "");
-  const [copied, setCopied] = useState(false);
-  const qrRef = useRef<HTMLDivElement>(null);
-
-  const origin = useMemo(() => typeof window === "undefined" ? "" : window.location.origin, []);
-  const selectedProperty = properties.find((p) => p.id === selectedPropertyId) ?? properties[0];
-  const signupUrl = useMemo(() => {
-    if (!selectedProperty?.id) return "";
-    return `${origin}/open-house-signup?property_id=${encodeURIComponent(selectedProperty.id)}&agent_id=${encodeURIComponent(agentId)}`;
-  }, [origin, selectedProperty?.id, agentId]);
+  const [flyerAddress, setFlyerAddress] = useState("");
+  const [flyerTemplate, setFlyerTemplate] = useState("classic");
 
   const loadStats = useCallback(async () => {
     try {
@@ -87,10 +77,6 @@ export default function OpenHousesClient({
   }, []);
 
   useEffect(() => { loadStats(); }, [loadStats]);
-
-  async function copyLink() {
-    try { await navigator.clipboard.writeText(signupUrl); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* */ }
-  }
 
   return (
     <div className="space-y-6">
@@ -122,53 +108,53 @@ export default function OpenHousesClient({
         </div>
       )}
 
-      {/* ── Section 2: New Open House Flyer ── */}
+      {/* ── Section 2: Open House Flyer Builder ── */}
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900">Generate Open House Flyer</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Select a property or create a professional flyer with photos.</p>
-          </div>
-          <Link href="/dashboard/open-houses/flyer" className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
-            Create Flyer
-          </Link>
+        <div>
+          <h2 className="text-sm font-semibold text-gray-900">Open House Flyer Builder</h2>
+          <p className="text-xs text-gray-500 mt-0.5">Enter a property address to generate a professional flyer.</p>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Property</label>
-            <select
-              value={selectedPropertyId}
-              onChange={(e) => setSelectedPropertyId(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            >
-              {properties.slice(0, 50).map((p) => (
-                <option key={p.id} value={p.id}>{labelForProperty(p)}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-end gap-2">
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Signup Link</label>
-              <input readOnly value={signupUrl} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono bg-gray-50" />
-            </div>
-            <button onClick={copyLink} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              {copied ? "Copied!" : "Copy"}
-            </button>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Property Address</label>
+          <div className="flex gap-2">
+            <input
+              value={flyerAddress}
+              onChange={(e) => setFlyerAddress(e.target.value)}
+              placeholder="Start typing an address..."
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
           </div>
         </div>
 
-        {selectedProperty && (
-          <div className="flex items-center gap-4">
-            <div ref={qrRef} className="bg-white p-2 rounded-lg border border-gray-200 shrink-0">
-              <QRCode value={signupUrl} size={100} />
-            </div>
-            <div className="text-xs text-gray-500">
-              <p className="font-medium text-gray-700">{labelForProperty(selectedProperty)}</p>
-              <p className="mt-1">Visitors scan this QR code to register and receive a property report.</p>
-            </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Choose Template</label>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { key: "classic", name: "Classic", desc: "Clean, professional layout with blue accents. Great for any property.", color: "#0072CE" },
+              { key: "modern", name: "Modern", desc: "Bold dark header with a contemporary feel. Stands out at open houses.", color: "#6366F1" },
+              { key: "luxury", name: "Luxury", desc: "Elegant gold accents with refined styling. Perfect for high-end properties.", color: "#B8860B" },
+            ].map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setFlyerTemplate(t.key)}
+                className={`rounded-lg border-2 p-3 text-left transition ${flyerTemplate === t.key ? "border-blue-600 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}
+              >
+                <div className="h-2 w-full rounded-sm mb-2" style={{ backgroundColor: t.color }} />
+                <p className="text-sm font-medium text-gray-900">{t.name}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{t.desc}</p>
+              </button>
+            ))}
           </div>
-        )}
+        </div>
+
+        <Link
+          href={`/dashboard/open-houses/flyer`}
+          className="inline-block rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+        >
+          Generate Flyer
+        </Link>
       </div>
 
       {/* ── Section 3: Past Open Houses ── */}
