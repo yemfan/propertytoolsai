@@ -23,6 +23,33 @@ import {
 
 const STATUS_OPTIONS = LEAD_STATUS_ORDER;
 
+const SOURCE_LABELS: Record<string, string> = {
+  home_value: "Home Value Tool",
+  home_value_estimate: "Home Value Estimate",
+  manual_entry: "Manual Entry",
+  "Open House": "Open House",
+  open_house: "Open House",
+  seo_market_report_city: "Market Report",
+  seo_market_report: "Market Report",
+  sms_inbound: "SMS Inbound",
+  sms_webhook_test: "SMS Test",
+  referral: "Referral",
+  website: "Website",
+  zillow: "Zillow",
+  realtor: "Realtor.com",
+  facebook: "Facebook",
+  google_ads: "Google Ads",
+  test: "Test",
+  propertytoolsai: "PropertyTools AI",
+};
+
+function formatSource(raw: string | null): string {
+  if (!raw) return "—";
+  if (SOURCE_LABELS[raw]) return SOURCE_LABELS[raw];
+  // Fallback: capitalize and replace underscores
+  return raw.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function LeadsClient({
   initialLeads,
   planType,
@@ -173,7 +200,7 @@ export default function LeadsClient({
         `"${(l.email ?? "").replace(/"/g, '""')}"`,
         `"${(l.phone ?? "").replace(/"/g, '""')}"`,
         `"${(l.property_address ?? "").replace(/"/g, '""')}"`,
-        `"${(l.source ?? "").replace(/"/g, '""')}"`,
+        `"${formatSource(l.source).replace(/"/g, '""')}"`,
         `"${stageMap.get((l as any).pipeline_stage_id ?? "") ?? ""}"`,
         `"${new Date(l.created_at).toLocaleDateString()}"`,
       ].join(",")),
@@ -306,7 +333,7 @@ export default function LeadsClient({
             <option value="">All sources</option>
             {sources.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {formatSource(s)}
               </option>
             ))}
           </select>
@@ -393,7 +420,7 @@ export default function LeadsClient({
                   <td className="ui-table-cell px-4 py-3 min-w-[220px]">
                     <span className="block" title={l.property_address ?? ""}>{l.property_address ?? "—"}</span>
                   </td>
-                  <td className="ui-table-cell px-4 py-3">{l.source ?? "—"}</td>
+                  <td className="ui-table-cell px-4 py-3">{formatSource(l.source)}</td>
                   <td className="ui-table-cell px-4 py-3">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-semibold bg-brand-surface text-brand-primary border-blue-200">
                       {(l as any).pipeline_stage_id ? stageMap.get((l as any).pipeline_stage_id) ?? "—" : "—"}
@@ -618,7 +645,7 @@ function LeadDetailPanel({
             <div className="mt-2 text-xs text-gray-500">
               Property: {lead.property_address ?? "—"}
             </div>
-            <div className="text-xs text-gray-500">Source: {lead.source ?? "—"}</div>
+            <div className="text-xs text-gray-500">Source: {formatSource(lead.source)}</div>
             <div className="text-xs text-gray-500">
               Created: {new Date(lead.created_at).toLocaleString()}
             </div>
