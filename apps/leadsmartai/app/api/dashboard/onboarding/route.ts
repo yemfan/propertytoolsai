@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { sendAgentWelcomeEmail } from "@/lib/email/welcomeAgent";
 
 export async function GET() {
   try {
@@ -96,6 +97,27 @@ export async function POST(req: Request) {
         await supabaseServer
           .from("agent_notification_preferences")
           .insert({ agent_id: agentId as any, ...notifPatch });
+      }
+    }
+
+    // Send welcome email with app install link when onboarding completes
+    if (body.onboarding_completed === true) {
+      try {
+        const { data: profile } = await supabaseServer
+          .from("user_profiles")
+          .select("full_name, email")
+          .eq("user_id", (await getCurrentAgentContext()).userId)
+          .maybeSingle();
+
+        const email = (profile as any)?.email;
+        const name = (profile as any)?.full_name || "Agent";
+        if (email) {
+          sendAgentWelcomeEmail({ to: email, name }).catch((e) =>
+            console.error("Welcome email failed:", e)
+          );
+        }
+      } catch {
+        // Non-fatal
       }
     }
 
