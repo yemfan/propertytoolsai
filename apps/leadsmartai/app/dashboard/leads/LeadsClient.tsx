@@ -37,6 +37,7 @@ export default function LeadsClient({
   const [saving, setSaving] = useState(false);
   const [newContactOpen, setNewContactOpen] = useState(false);
   const [stageMap, setStageMap] = useState<Map<string, string>>(new Map());
+  const [stageList, setStageList] = useState<Array<{ id: string; name: string }>>([]);
   const [leadStats, setLeadStats] = useState<{
     status: Array<{ name: string; value: number; color: string }>;
     bySource: Array<{ name: string; value: number; color: string }>;
@@ -56,9 +57,11 @@ export default function LeadsClient({
   useEffect(() => {
     fetch("/api/dashboard/pipeline/stages").then((r) => r.json()).then((body) => {
       if (body.ok && body.stages) {
+        const stages = body.stages as Array<{ id: string; name: string }>;
         const map = new Map<string, string>();
-        for (const s of body.stages as Array<{ id: string; name: string }>) map.set(s.id, s.name);
+        for (const s of stages) map.set(s.id, s.name);
         setStageMap(map);
+        setStageList(stages);
       }
     }).catch(() => {});
   }, []);
@@ -86,7 +89,7 @@ export default function LeadsClient({
 
   const isFree = planType === "free";
 
-  async function saveLeadUpdates(next: { lead_status?: LeadStatus; notes?: string }) {
+  async function saveLeadUpdates(next: { lead_status?: LeadStatus; notes?: string; pipeline_stage_id?: string | null }) {
     if (!selected) return;
     setSaving(true);
     try {
@@ -249,7 +252,7 @@ export default function LeadsClient({
                 <th className="ui-table-header text-left px-4 py-3">Name</th>
                 <th className="ui-table-header text-left px-4 py-3">Email</th>
                 <th className="ui-table-header text-left px-4 py-3">Phone</th>
-                <th className="ui-table-header text-left px-4 py-3">Property</th>
+                <th className="ui-table-header text-left px-4 py-3 min-w-[200px]">Property</th>
                 <th className="ui-table-header text-left px-4 py-3">Source</th>
                 <th className="ui-table-header text-left px-4 py-3">Stage</th>
                 <th className="ui-table-header text-left px-4 py-3">AI Score</th>
@@ -267,7 +270,9 @@ export default function LeadsClient({
                   <td className="ui-table-cell px-4 py-3">{l.name ?? "—"}</td>
                   <td className="ui-table-cell px-4 py-3">{l.email ?? "—"}</td>
                   <td className="ui-table-cell px-4 py-3">{l.phone ?? "—"}</td>
-                  <td className="ui-table-cell px-4 py-3">{l.property_address ?? "—"}</td>
+                  <td className="ui-table-cell px-4 py-3 min-w-[200px] max-w-[320px]">
+                    <span className="block truncate" title={l.property_address ?? ""}>{l.property_address ?? "—"}</span>
+                  </td>
                   <td className="ui-table-cell px-4 py-3">{l.source ?? "—"}</td>
                   <td className="ui-table-cell px-4 py-3">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-semibold bg-brand-surface text-brand-primary border-blue-200">
@@ -311,6 +316,7 @@ export default function LeadsClient({
           onClose={() => setSelected(null)}
           onSave={saveLeadUpdates}
           saving={saving}
+          stageList={stageList}
         />
       )}
 
@@ -328,6 +334,7 @@ function LeadDetailPanel({
   onClose,
   onSave,
   saving,
+  stageList,
 }: {
   lead: CrmLeadRow;
   onClose: () => void;
@@ -337,10 +344,13 @@ function LeadDetailPanel({
     rating?: LeadRating;
     contact_frequency?: ContactFrequency;
     contact_method?: ContactMethod;
+    pipeline_stage_id?: string | null;
   }) => void;
   saving: boolean;
+  stageList: Array<{ id: string; name: string }>;
 }) {
   const [status, setStatus] = useState<LeadStatus>(lead.lead_status);
+  const [stage, setStage] = useState<string>((lead as any).pipeline_stage_id ?? "");
   const [notes, setNotes] = useState<string>(lead.notes ?? "");
   const [rating, setRating] = useState<LeadRating>(
     ((lead as any).rating as LeadRating) || "warm"
@@ -494,21 +504,40 @@ function LeadDetailPanel({
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as LeadStatus)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-            >
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Stage
+              </label>
+              <select
+                value={stage}
+                onChange={(e) => setStage(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+              >
+                <option value="">— None —</option>
+                {stageList.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as LeadStatus)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+              >
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -816,6 +845,7 @@ function LeadDetailPanel({
                 rating,
                 contact_frequency: frequency,
                 contact_method: method,
+                pipeline_stage_id: stage || null,
               })
             }
             disabled={saving}
