@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import QRCode from "react-qr-code";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
+import { FLYER_TEMPLATES, getTemplate, type FlyerTemplate } from "@/lib/flyer/templates";
 
 type PropertyData = {
   address: string;
@@ -27,10 +27,17 @@ type AgentInfo = {
   logoUrl: string;
 };
 
+type SavedFlyer = { id: string; template_key: string; property_address: string; created_at: string };
+
 export default function FlyerBuilderClient() {
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [templateKey, setTemplateKey] = useState("classic");
+  const [defaultTemplate, setDefaultTemplate] = useState("classic");
+  const [savedFlyers, setSavedFlyers] = useState<SavedFlyer[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
   // Property data (editable)
   const [property, setProperty] = useState<PropertyData | null>(null);
@@ -52,8 +59,16 @@ export default function FlyerBuilderClient() {
     return `${origin}/open-house-signup?property_id=${encodeURIComponent(property.propertyId)}&agent_id=`;
   }, [origin, property?.propertyId]);
 
-  // Load agent info on mount
+  // Load agent info + saved flyers on mount
   useEffect(() => {
+    fetch("/api/dashboard/flyer/saved").then((r) => r.json()).then((body) => {
+      if (body.ok) {
+        setSavedFlyers(body.flyers ?? []);
+        setDefaultTemplate(body.defaultTemplate ?? "classic");
+        setTemplateKey(body.defaultTemplate ?? "classic");
+      }
+    }).catch(() => {});
+
     Promise.all([
       fetch("/api/me").then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/branding").then((r) => r.json()).catch(() => ({})),
@@ -106,6 +121,33 @@ export default function FlyerBuilderClient() {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
   }
 
+  async function saveFlyer(setAsDefault = false) {
+    if (!property) return;
+    setSaving(true); setSaveMsg(null);
+    try {
+      const res = await fetch("/api/dashboard/flyer/saved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateKey,
+          propertyAddress: property.address,
+          flyerData: { property, description, listingPrice, agent, templateKey },
+          setAsDefault,
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!body.ok) throw new Error(body.error ?? "Save failed");
+      setSaveMsg(setAsDefault ? "Saved & set as default template!" : "Flyer saved!");
+      // Refresh saved list
+      const listRes = await fetch("/api/dashboard/flyer/saved").then((r) => r.json()).catch(() => ({}));
+      if (listRes.ok) setSavedFlyers(listRes.flyers ?? []);
+      if (setAsDefault) setDefaultTemplate(templateKey);
+    } catch (e) { setSaveMsg(e instanceof Error ? e.message : "Error"); }
+    finally { setSaving(false); }
+  }
+
+  const template = getTemplate(templateKey);
+
   async function downloadPdf() {
     if (!property) return;
     setGenerating(true);
@@ -133,14 +175,14 @@ export default function FlyerBuilderClient() {
       const h = doc.internal.pageSize.getHeight();
 
       // Top accent
-      doc.setFillColor(0, 114, 206);
+      doc.setFillColor(...template.colors.accentRgb);
       doc.rect(0, 0, w, 6, "F");
 
       // OPEN HOUSE title
       doc.setFontSize(36);
       doc.setTextColor(15, 23, 42);
       doc.text("OPEN HOUSE", w / 2, 22, { align: "center" });
-      doc.setDrawColor(0, 114, 206);
+      doc.setDrawColor(...template.colors.accentRgb);
       doc.setLineWidth(0.6);
       doc.line(w / 2 - 25, 26, w / 2 + 25, 26);
 
@@ -156,7 +198,7 @@ export default function FlyerBuilderClient() {
       // Listing price
       if (listingPrice) {
         doc.setFontSize(22);
-        doc.setTextColor(0, 114, 206);
+        doc.setTextColor(...template.colors.accentRgb);
         doc.text(listingPrice, w / 2, 55, { align: "center" });
       }
 
@@ -234,7 +276,7 @@ export default function FlyerBuilderClient() {
       }
 
       // Bottom bar
-      doc.setFillColor(0, 114, 206);
+      doc.setFillColor(...template.colors.accentRgb);
       doc.rect(0, h - 10, w, 10, "F");
       doc.setFontSize(8);
       doc.setTextColor(255, 255, 255);
@@ -269,6 +311,28 @@ export default function FlyerBuilderClient() {
             placeholder="Start typing an address..."
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
           />
+          {/* Template picker */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Choose Template</label>
+            <div className="grid grid-cols-3 gap-3">
+              {FLYER_TEMPLATES.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setTemplateKey(t.key)}
+                  className={`rounded-lg border-2 p-3 text-left transition ${templateKey === t.key ? "border-blue-600 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}
+                >
+                  <div className="h-2 w-full rounded-sm mb-2" style={{ backgroundColor: t.colors.accent }} />
+                  <p className="text-sm font-medium text-gray-900">{t.name}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{t.description}</p>
+                  {t.key === defaultTemplate && (
+                    <span className="mt-1 inline-block rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">Default</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
             type="button"
             onClick={() => void fetchProperty()}
@@ -278,6 +342,23 @@ export default function FlyerBuilderClient() {
             {loading ? "Loading property..." : "Generate Flyer"}
           </button>
         </div>
+
+        {/* Saved Flyers */}
+        {savedFlyers.length > 0 && (
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Saved Flyers</h3>
+            <div className="space-y-2">
+              {savedFlyers.map((f) => (
+                <div key={f.id} className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{f.property_address}</p>
+                    <p className="text-xs text-gray-500">{f.template_key} &middot; {new Date(f.created_at).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -290,9 +371,15 @@ export default function FlyerBuilderClient() {
           <h1 className="text-xl font-semibold text-gray-900">Open House Flyer</h1>
           <p className="text-sm text-gray-500">Edit details below, then download your flyer.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={() => setProperty(null)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
             Start Over
+          </button>
+          <button onClick={() => void saveFlyer(false)} disabled={saving} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+            {saving ? "Saving..." : "Save Flyer"}
+          </button>
+          <button onClick={() => void saveFlyer(true)} disabled={saving} className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50">
+            Save & Set as Default
           </button>
           <button onClick={() => void downloadPdf()} disabled={generating} className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50">
             {generating ? "Generating PDF..." : "Download PDF"}
@@ -301,11 +388,28 @@ export default function FlyerBuilderClient() {
       </div>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">{error}</div>}
+      {saveMsg && <div className="rounded-lg border border-green-100 bg-green-50 px-4 py-2 text-sm text-green-800">{saveMsg}</div>}
+
+      {/* Template selector */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500">Template:</span>
+        {FLYER_TEMPLATES.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTemplateKey(t.key)}
+            className={`rounded-lg px-3 py-1 text-xs font-medium transition ${templateKey === t.key ? "text-white" : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`}
+            style={templateKey === t.key ? { backgroundColor: t.colors.accent } : undefined}
+          >
+            {t.name}
+          </button>
+        ))}
+      </div>
 
       {/* Live Preview Card */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 text-white text-center">
+        <div className="px-6 py-4 text-center" style={{ backgroundColor: template.colors.headerBg, color: template.colors.headerText }}>
           <h2 className="text-2xl font-bold tracking-tight">OPEN HOUSE</h2>
         </div>
 
@@ -323,7 +427,8 @@ export default function FlyerBuilderClient() {
                 value={listingPrice}
                 onChange={(e) => setListingPrice(e.target.value)}
                 placeholder="$000,000"
-                className="text-xl font-bold text-blue-600 border-0 border-b border-dashed border-gray-300 focus:border-blue-500 focus:outline-none text-center w-40"
+                className="text-xl font-bold border-0 border-b border-dashed border-gray-300 focus:border-blue-500 focus:outline-none text-center w-40"
+                style={{ color: template.colors.priceColor }}
               />
             </div>
           </div>
