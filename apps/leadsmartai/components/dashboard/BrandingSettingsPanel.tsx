@@ -11,8 +11,16 @@ type Branding = {
 
 const empty: Branding = { brandName: "", signatureHtml: "", logoUrl: "" };
 
-const DEFAULT_SIGNATURE = `<p>Best regards,</p>
-<p><strong>Your Name</strong><br/>Your Brokerage<br/>(555) 123-4567</p>`;
+function buildDefaultSignature(profile: { name?: string; brokerage?: string; phone?: string }) {
+  const name = profile.name?.trim() || "Your Name";
+  const brokerage = profile.brokerage?.trim() || "";
+  const phone = profile.phone?.trim() || "";
+  const lines = [`<p>Best regards,</p>`, `<p><strong>${name}</strong>`];
+  if (brokerage) lines.push(`<br/>${brokerage}`);
+  if (phone) lines.push(`<br/>${phone}`);
+  lines.push(`</p>`);
+  return lines.join("\n");
+}
 
 export default function BrandingSettingsPanel() {
   const [branding, setBranding] = useState<Branding>(empty);
@@ -23,6 +31,7 @@ export default function BrandingSettingsPanel() {
   const [editingSignature, setEditingSignature] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [defaultSig, setDefaultSig] = useState("");
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const isDirty =
@@ -34,9 +43,19 @@ export default function BrandingSettingsPanel() {
     try {
       const res = await fetch("/api/dashboard/branding");
       const body = await res.json().catch(() => ({}));
-      if (body.ok && body.branding) {
-        setBranding(body.branding);
-        setSaved(body.branding);
+
+      if (body.ok) {
+        if (body.branding) {
+          setBranding(body.branding);
+          setSaved(body.branding);
+        }
+        const p = body.profile ?? {};
+        const sig = buildDefaultSignature({
+          name: p.fullName || "",
+          brokerage: p.brokerage || body.branding?.brandName || "",
+          phone: p.phone || "",
+        });
+        setDefaultSig(sig);
       }
     } catch {
       // silent
@@ -115,7 +134,7 @@ export default function BrandingSettingsPanel() {
     setBranding((b) => ({ ...b, logoUrl: "" }));
   }
 
-  const signatureToShow = branding.signatureHtml || DEFAULT_SIGNATURE;
+  const signatureToShow = branding.signatureHtml || defaultSig;
 
   if (loading) {
     return <div className="text-sm text-gray-500 py-4">Loading branding...</div>;
@@ -222,7 +241,7 @@ export default function BrandingSettingsPanel() {
             <textarea
               value={branding.signatureHtml}
               onChange={(e) => setBranding((b) => ({ ...b, signatureHtml: e.target.value }))}
-              placeholder={DEFAULT_SIGNATURE}
+              placeholder={defaultSig || "Best regards,\nYour Name"}
               maxLength={2000}
               rows={6}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
