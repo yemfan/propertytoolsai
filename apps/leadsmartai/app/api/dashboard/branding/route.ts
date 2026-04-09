@@ -8,13 +8,23 @@ export async function GET() {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
-    const { data: agent } = await supabase
-      .from("agents")
-      .select("id, brand_name, signature_html, logo_url")
-      .eq("auth_user_id", userData.user.id)
-      .maybeSingle();
+    const [agentRes, profileRes] = await Promise.all([
+      supabase
+        .from("agents")
+        .select("id, brand_name, signature_html, logo_url, brokerage, phone")
+        .eq("auth_user_id", userData.user.id)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("user_profiles")
+        .select("full_name, email, phone")
+        .eq("user_id", userData.user.id)
+        .maybeSingle(),
+    ]);
 
+    const agent = agentRes.data;
     if (!agent) return NextResponse.json({ ok: false, error: "Agent not found" }, { status: 403 });
+
+    const profile = profileRes.data as { full_name?: string; email?: string; phone?: string } | null;
 
     return NextResponse.json({
       ok: true,
@@ -22,6 +32,12 @@ export async function GET() {
         brandName: (agent as Record<string, unknown>).brand_name ?? "",
         signatureHtml: (agent as Record<string, unknown>).signature_html ?? "",
         logoUrl: (agent as Record<string, unknown>).logo_url ?? "",
+      },
+      profile: {
+        fullName: profile?.full_name ?? "",
+        email: profile?.email ?? userData.user.email ?? "",
+        phone: profile?.phone ?? (agent as any)?.phone ?? "",
+        brokerage: (agent as any)?.brokerage ?? "",
       },
     });
   } catch (e: unknown) {
