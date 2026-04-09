@@ -4,6 +4,7 @@ import { ReactNode, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { PremiumSidebar, filterNavSectionsByRole } from "@repo/ui";
 import navConfig, { leadSmartNav } from "@/nav.config";
+import brokerNavConfig from "@/brokerNav.config";
 import TopBar from "@/components/dashboard/TopBar";
 import { isAgentOrBrokerProfileRole } from "@/lib/rolePortalPaths";
 
@@ -24,17 +25,24 @@ export default function AppDashboardShell({
   email,
   appRole,
   children,
+  navConfigOverride,
 }: {
   email: string | null | undefined;
   /** `leadsmart_users.role` — used to show admin-only nav (e.g. Platform Overview). */
   appRole?: string | null;
   children: ReactNode;
+  /** Pass "broker" to use the loan broker sidebar instead of the agent sidebar. */
+  navConfigOverride?: "broker" | null;
 }) {
   const navSections = useMemo(
-    () => filterNavSectionsByRole(leadSmartNav, appRole),
-    [appRole]
+    () =>
+      navConfigOverride === "broker"
+        ? brokerNavConfig.sections
+        : filterNavSectionsByRole(leadSmartNav, appRole),
+    [appRole, navConfigOverride]
   );
 
+  const activeNavConfig = navConfigOverride === "broker" ? brokerNavConfig : navConfig;
   const showAgentBrokerPromotion = isAgentOrBrokerProfileRole(appRole);
 
   return (
@@ -42,7 +50,7 @@ export default function AppDashboardShell({
       <PremiumSidebar
         appName={APP_NAME}
         sections={navSections}
-        workspaceLabel={navConfig.sidebarTitle ?? "Workspace"}
+        workspaceLabel={activeNavConfig.sidebarTitle ?? "Workspace"}
         footer={showAgentBrokerPromotion ? sidebarFooter : undefined}
       />
       {/*
