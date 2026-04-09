@@ -88,7 +88,6 @@ export default async function DashboardLayout({
       <ToastProvider>
         <DashboardShell email={ctx?.email} appRole={appRole}>
           <OnboardingGate />
-          <UpgradeBanner planType={ctx.planType} variant="banner" />
           <ErrorBoundary>
             {children}
           </ErrorBoundary>

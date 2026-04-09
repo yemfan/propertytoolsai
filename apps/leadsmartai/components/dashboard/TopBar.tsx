@@ -434,11 +434,7 @@ export default function TopBar({
           {searchField("ls-dashboard-search-mobile")}
         </div>
       }
-      rightActions={
-        hideCommercialPricing
-          ? []
-          : [{ label: "Plans & pricing", href: "/dashboard/billing", variant: "outline" }]
-      }
+      rightActions={[]}
       trailing={
         <>
           {showAgentBrokerPromotion ? (
