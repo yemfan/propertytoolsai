@@ -131,7 +131,7 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
           />
           <div
             id="mobile-nav-panel"
-            className="absolute inset-y-0 left-0 flex w-[86%] max-w-[320px] flex-col overflow-y-auto border-r border-slate-200/80 bg-white p-4 shadow-[8px_0_48px_-12px_rgba(15,23,42,0.2)]"
+            className="absolute inset-y-0 left-0 flex w-[86%] min-w-0 max-w-[320px] flex-col overflow-x-hidden overflow-y-auto border-r border-slate-200/80 bg-white px-5 py-4 shadow-[8px_0_48px_-12px_rgba(15,23,42,0.2)]"
             style={{
               // iOS Safari: use 100dvh so the address-bar collapse doesn't
               // jump the panel mid-scroll, and pad the bottom for the home
@@ -140,22 +140,22 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
               paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)",
             }}
           >
-            <div className="mb-4 flex items-center justify-between gap-2 border-b border-slate-100 pb-4">
-              <div>
+            <div className="mb-3 flex min-w-0 items-center justify-between gap-2 border-b border-slate-100 pb-4">
+              <div className="min-w-0">
                 <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Menu</div>
-                <div className="truncate text-lg font-semibold tracking-tight text-slate-900">{appName}</div>
+                <div className="truncate text-base font-semibold tracking-tight text-slate-900">{appName}</div>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
                 aria-label="Close menu"
               >
                 <X className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
               </button>
             </div>
 
-            <nav className="space-y-2">
+            <nav className="flex min-w-0 flex-col">
               {sections.map((section, sectionIdx) => {
                 if (isNavDivider(section)) {
                   return (
@@ -176,19 +176,14 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
                       prefetch={section.prefetch === false ? false : undefined}
                       onClick={() => setOpen(false)}
                       className={[
-                        "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition",
-                        active ? "bg-slate-900 text-white shadow-sm" : "text-slate-700 hover:bg-slate-100",
+                        "flex min-w-0 items-center gap-2 px-1 py-2.5 text-base font-medium transition-colors",
+                        active ? "text-[#0072ce]" : "text-slate-700 hover:text-[#0072ce]",
                       ].join(" ")}
                     >
                       {section.icon ? <span className="shrink-0">{section.icon}</span> : null}
-                      <span className="truncate">{section.label}</span>
+                      <span className="min-w-0 flex-1 truncate">{section.label}</span>
                       {section.badge ? (
-                        <span
-                          className={[
-                            "ml-auto rounded-full px-2 py-0.5 text-xs",
-                            active ? "bg-white/15 text-white" : "bg-slate-200/90 text-slate-700",
-                          ].join(" ")}
-                        >
+                        <span className="ml-auto shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
                           {section.badge}
                         </span>
                       ) : null}
@@ -198,7 +193,7 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
 
                 const isGroupOpen = openGroups[section.label] ?? false;
                 return (
-                  <div key={section.label} className="rounded-xl border border-slate-100/90 bg-slate-50/40">
+                  <div key={section.label} className="min-w-0">
                     <button
                       type="button"
                       aria-expanded={isGroupOpen}
@@ -209,7 +204,7 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
                           [section.label]: !(prev[section.label] ?? false),
                         }))
                       }
-                      className="flex w-full items-center gap-2 rounded-t-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100/60"
+                      className="flex w-full min-w-0 items-center gap-2 px-1 py-2.5 text-left text-base font-semibold text-slate-900 transition-colors hover:text-[#0072ce]"
                     >
                       {section.icon ? <span className="shrink-0 text-slate-500">{section.icon}</span> : null}
                       <span className="min-w-0 flex-1 truncate">{section.label}</span>
@@ -224,7 +219,7 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
                       </span>
                     </button>
                     {isGroupOpen ? (
-                      <div className="space-y-1 px-2 pb-2">
+                      <div className="flex flex-col pl-7">
                         {section.items.map((item) => {
                           const active = isLinkActive(pathname, item);
                           return (
@@ -234,21 +229,16 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
                               prefetch={item.prefetch === false ? false : undefined}
                               onClick={() => setOpen(false)}
                               className={[
-                                "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition",
+                                "flex min-w-0 items-center gap-2 px-1 py-2 text-[15px] transition-colors",
                                 active
-                                  ? "bg-slate-900 text-white shadow-sm"
-                                  : "text-slate-600 hover:bg-white hover:text-slate-900",
+                                  ? "font-semibold text-[#0072ce]"
+                                  : "text-slate-600 hover:text-[#0072ce]",
                               ].join(" ")}
                             >
                               {item.icon ? <span className="shrink-0">{item.icon}</span> : null}
-                              <span className="truncate">{item.label}</span>
+                              <span className="min-w-0 flex-1 truncate">{item.label}</span>
                               {item.badge ? (
-                                <span
-                                  className={[
-                                    "ml-auto rounded-full px-2 py-0.5 text-xs",
-                                    active ? "bg-white/15 text-white" : "bg-slate-200/90 text-slate-700",
-                                  ].join(" ")}
-                                >
+                                <span className="ml-auto shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
                                   {item.badge}
                                 </span>
                               ) : null}
