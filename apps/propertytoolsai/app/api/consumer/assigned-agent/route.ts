@@ -8,10 +8,19 @@ export type { AssignedAgentPayload } from "@/lib/consumer/assignedAgentTypes";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Reads the default-agent UUID from `CONSUMER_ASSIGNED_AGENT_AUTH_ID_DEFAULT`.
+ *
+ * Historical note: an earlier release shipped with the misspelled variant
+ * `CONSUMER_ASIGNED_AGENT_ID_DEFAULT` (single S in "ASIGNED"). That fallback
+ * was removed in this commit because it created a footgun — `.env.local`
+ * could silently end up with the typo'd name pointing at a stale/invalid
+ * UUID while production correctly used the new name with a real UUID, so
+ * the bug only reproduced locally and was hard to spot. If you're updating
+ * an existing environment, rename the var to the canonical spelling.
+ */
 function defaultAuthIdFromEnv(): string | null {
-  const a =
-    process.env.CONSUMER_ASSIGNED_AGENT_AUTH_ID_DEFAULT?.trim() ||
-    process.env.CONSUMER_ASIGNED_AGENT_ID_DEFAULT?.trim();
+  const a = process.env.CONSUMER_ASSIGNED_AGENT_AUTH_ID_DEFAULT?.trim();
   if (!a) return null;
   if (!UUID_RE.test(a)) {
     console.warn(
@@ -126,6 +135,29 @@ export async function GET(req: Request) {
     }
 
     const prof = await loadAgentProfile(resolvedAuthUserId);
+
+    /**
+     * Dev-only sanity check: when the env-pointed default agent resolves
+     * to a profile with no contact info AND no real display name, the
+     * UUID is almost certainly stale or pointing at a deleted auth.users
+     * row. The card will render with greyed-out Call/Email buttons and a
+     * "Y" placeholder avatar, which reads as a broken widget.
+     *
+     * We log a clear warning here so the next developer who trips on this
+     * sees the cause immediately instead of debugging the UI. Production
+     * stays silent (no log spam) because `NODE_ENV === "production"`.
+     */
+    if (
+      process.env.NODE_ENV !== "production" &&
+      assignmentSource === "default" &&
+      !prof.email &&
+      !prof.phone &&
+      prof.displayName === "Your agent"
+    ) {
+      console.warn(
+        `[assigned-agent] CONSUMER_ASSIGNED_AGENT_AUTH_ID_DEFAULT="${resolvedAuthUserId}" did not resolve to a real auth.users row — the sidebar AssignedAgentCard will render an empty/placeholder state. Update .env.local (and Vercel env) to a UUID that exists in auth.users with email/phone populated.`
+      );
+    }
 
     const payload: AssignedAgentPayload = {
       authUserId: resolvedAuthUserId,
