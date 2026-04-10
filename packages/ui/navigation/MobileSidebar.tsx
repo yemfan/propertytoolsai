@@ -50,12 +50,32 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
     });
   }, [pathname]);
 
+  /**
+   * Body scroll lock while the drawer is open. Uses `position: fixed` +
+   * captured scroll offset rather than `overflow: hidden` because iOS
+   * Safari ignores `overflow: hidden` on <body> for touch scrolling — the
+   * background page would still scroll under the open drawer otherwise,
+   * which is the most common "the hamburger is broken on iPhone" symptom.
+   * Scroll position is captured before the lock and restored on close so
+   * the user lands back where they were.
+   */
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
+    const scrollY = window.scrollY;
+    const prevPosition = document.body.style.position;
+    const prevTop = document.body.style.top;
+    const prevWidth = document.body.style.width;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
     document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = prev;
+      document.body.style.position = prevPosition;
+      document.body.style.top = prevTop;
+      document.body.style.width = prevWidth;
+      document.body.style.overflow = prevOverflow;
+      window.scrollTo(0, scrollY);
     };
   }, [open]);
 
@@ -96,7 +116,14 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
           />
           <div
             id="mobile-nav-panel"
-            className="absolute left-0 top-0 flex h-full w-[86%] max-w-[320px] flex-col overflow-y-auto border-r border-slate-200/80 bg-white/95 p-4 shadow-[8px_0_48px_-12px_rgba(15,23,42,0.2)] backdrop-blur-xl"
+            className="absolute inset-y-0 left-0 flex w-[86%] max-w-[320px] flex-col overflow-y-auto border-r border-slate-200/80 bg-white p-4 shadow-[8px_0_48px_-12px_rgba(15,23,42,0.2)]"
+            style={{
+              // iOS Safari: use 100dvh so the address-bar collapse doesn't
+              // jump the panel mid-scroll, and pad the bottom for the home
+              // indicator so the last item isn't hidden behind it.
+              minHeight: "100dvh",
+              paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)",
+            }}
           >
             <div className="mb-4 flex items-center justify-between gap-2 border-b border-slate-100 pb-4">
               <div>
