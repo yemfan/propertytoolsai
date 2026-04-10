@@ -23,7 +23,7 @@ export default function Header() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex items-center justify-between py-3">
           <Link href="/" className="flex items-center text-[#0072ce] transition-opacity hover:opacity-90">
-            <PropertyToolsLogo className="text-2xl md:text-3xl" />
+            <PropertyToolsLogo />
           </Link>
 
           <button

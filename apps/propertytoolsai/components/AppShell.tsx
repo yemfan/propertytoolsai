@@ -38,7 +38,7 @@ function PropertyToolsTopChrome({
           href="/"
           className="flex min-w-0 items-center rounded-2xl py-1 outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
         >
-          <PropertyToolsLogo className="max-w-[min(180px,55vw)] text-lg sm:max-w-[220px] sm:text-xl" />
+          <PropertyToolsLogo />
         </Link>
       }
       searchSlot={null}
