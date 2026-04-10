@@ -177,6 +177,25 @@ const toolIcons: Record<string, React.ReactNode> = {
   ),
 };
 
+/**
+ * Accent palettes for tool card icon chips. Each entry is a pair of
+ * Tailwind class fragments: a tinted background for the chip and a
+ * matching saturated text color for the icon stroke. Colors picked to
+ * give each card a unique visual identity (audit item: "tool cards all
+ * look identical") while staying within a complementary set that reads
+ * as one coordinated palette rather than a clown-car rainbow.
+ */
+const ACCENTS = {
+  blue:    { chip: "bg-blue-50 text-[#0072ce]",    ring: "group-hover:bg-blue-100" },
+  emerald: { chip: "bg-emerald-50 text-emerald-600", ring: "group-hover:bg-emerald-100" },
+  amber:   { chip: "bg-amber-50 text-amber-600",     ring: "group-hover:bg-amber-100" },
+  violet:  { chip: "bg-violet-50 text-violet-600",   ring: "group-hover:bg-violet-100" },
+  teal:    { chip: "bg-teal-50 text-teal-600",       ring: "group-hover:bg-teal-100" },
+  rose:    { chip: "bg-rose-50 text-rose-600",       ring: "group-hover:bg-rose-100" },
+} as const;
+
+type ToolAccent = keyof typeof ACCENTS;
+
 type ToolCard = {
   title: string;
   description: string;
@@ -184,6 +203,7 @@ type ToolCard = {
   badge?: string;
   /** Bento grid: "featured" spans 2 cols on md */
   featured?: boolean;
+  accent: ToolAccent;
 };
 
 const tools: ToolCard[] = [
@@ -193,32 +213,38 @@ const tools: ToolCard[] = [
     href: "/home-value",
     badge: "Most Popular",
     featured: true,
+    accent: "blue",
   },
   {
     title: "Mortgage Calculator",
     description: "See your exact monthly payment broken down by principal, interest, taxes, and insurance.",
     href: "/mortgage-calculator",
+    accent: "emerald",
   },
   {
     title: "Affordability Calculator",
     description: "Find out exactly how much house you can afford based on your income, debt, and down payment.",
     href: "/affordability-calculator",
+    accent: "amber",
   },
   {
     title: "AI Property Comparison",
     description: "Let AI analyze two or more properties side by side — price per sqft, investment potential, and more.",
     href: "/ai-property-comparison",
     badge: "AI",
+    accent: "violet",
   },
   {
     title: "Refinance Analyzer",
     description: "See if refinancing saves you money with a real break-even analysis factoring in closing costs.",
     href: "/refinance-calculator",
+    accent: "teal",
   },
   {
     title: "Rent vs Buy Calculator",
     description: "Compare total cost of renting vs buying over 5, 10, or 20 years. See which builds more wealth.",
     href: "/rent-vs-buy-calculator",
+    accent: "rose",
   },
 ];
 
@@ -369,17 +395,17 @@ export default function PropertyToolsHomePage() {
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#0072ce]/[0.02] via-transparent to-[#4F46E5]/[0.02] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
                   {tool.badge && (
-                    <span className={`absolute right-4 top-4 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                    <span className={`absolute right-4 top-4 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
                       tool.badge === "AI"
-                        ? "bg-gradient-to-r from-[#4F46E5] to-[#7c3aed] text-white"
-                        : "bg-[#0072ce]/10 text-[#0072ce]"
+                        ? "bg-violet-600 text-white shadow-sm shadow-violet-600/20"
+                        : "bg-amber-400 text-amber-950"
                     }`}>
                       {tool.badge}
                     </span>
                   )}
 
-                  {/* Icon */}
-                  <div className={`flex items-center justify-center rounded-xl bg-gradient-to-br from-[#0072ce]/10 to-[#4F46E5]/10 text-[#0072ce] transition-colors group-hover:from-[#0072ce]/20 group-hover:to-[#4F46E5]/20 ${tool.featured ? "mb-5 h-14 w-14" : "mb-4 h-11 w-11"}`}>
+                  {/* Icon chip — color-coded per tool for at-a-glance differentiation */}
+                  <div className={`flex items-center justify-center rounded-xl transition-colors ${ACCENTS[tool.accent].chip} ${ACCENTS[tool.accent].ring} ${tool.featured ? "mb-5 h-14 w-14" : "mb-4 h-12 w-12"}`}>
                     {toolIcons[tool.title]}
                   </div>
 
@@ -389,7 +415,10 @@ export default function PropertyToolsHomePage() {
                   <p className={`mt-2 flex-1 leading-relaxed text-slate-600 ${tool.featured ? "text-base" : "text-sm"}`}>
                     {tool.description}
                   </p>
-                  <div className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-[#0072ce] transition-transform duration-200 group-hover:translate-x-1">
+                  <div
+                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#0072ce] opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100"
+                    aria-hidden
+                  >
                     Try free
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
                   </div>
