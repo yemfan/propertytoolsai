@@ -49,25 +49,69 @@ function Reveal({
   );
 }
 
-/* ── Animated counter ── */
+/* ── Animated counter ──
+ * Renders the real target value on SSR and initial client paint so the stats
+ * strip never flashes placeholder zeros (a trust-breaking first impression
+ * for scrapers, slow connections, reduced-motion users, and no-JS visitors).
+ *
+ * Animation policy:
+ *  - If the element is NOT yet in view on first mount, we animate from 0 →
+ *    target the first time it scrolls into view.
+ *  - If the element IS already in view on first mount (e.g. stats strip
+ *    above the fold on a large display), we skip the animation entirely —
+ *    the real value was already painted, no need to redraw from zero.
+ *  - Reduced-motion users always see the static target value.
+ */
 function CountUp({ target, suffix = "" }: { target: number; suffix?: string }) {
-  const [count, setCount] = useState(0);
-  const { ref, visible } = useScrollReveal();
+  const ref = useRef<HTMLSpanElement>(null);
+  const [count, setCount] = useState(target);
+  const hasAnimated = useRef(false);
+
   useEffect(() => {
-    if (!visible) return;
-    let frame: number;
-    const duration = 1200;
-    const start = performance.now();
-    const step = (now: number) => {
-      const progress = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.round(eased * target));
-      if (progress < 1) frame = requestAnimationFrame(step);
-    };
-    frame = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frame);
-  }, [visible, target]);
-  return <span ref={ref as any}>{visible ? `${count.toLocaleString()}${suffix}` : `0${suffix}`}</span>;
+    const el = ref.current;
+    if (!el) return;
+
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) return;
+
+    // If the element is already in the viewport on mount, the user has
+    // already seen the target value — don't flash back to 0 to animate.
+    const rect = el.getBoundingClientRect();
+    const alreadyVisible =
+      rect.top < (window.innerHeight || document.documentElement.clientHeight) &&
+      rect.bottom > 0;
+    if (alreadyVisible) {
+      hasAnimated.current = true;
+      return;
+    }
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting || hasAnimated.current) return;
+        hasAnimated.current = true;
+        io.disconnect();
+
+        let frame: number;
+        setCount(0);
+        const duration = 1200;
+        const start = performance.now();
+        const step = (now: number) => {
+          const progress = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          setCount(Math.round(eased * target));
+          if (progress < 1) frame = requestAnimationFrame(step);
+        };
+        frame = requestAnimationFrame(step);
+      },
+      { threshold: 0.25 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [target]);
+
+  return <span ref={ref}>{`${count.toLocaleString()}${suffix}`}</span>;
 }
 
 /* ── Interactive FAQ Accordion ── */
