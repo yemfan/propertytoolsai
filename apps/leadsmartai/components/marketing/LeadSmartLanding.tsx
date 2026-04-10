@@ -16,6 +16,19 @@ import VslSection from "@/components/VslSection";
 const primaryCtaHref = "/onboarding";
 const vslAnchorHref = "#vsl";
 
+/**
+ * Section anchor links shared between the desktop nav (md+) and the
+ * mobile drawer. Hash slugs are computed once here so they stay in sync
+ * if section IDs ever move.
+ */
+const NAV_SECTIONS: { label: string; hash: string }[] = [
+  { label: "Problem", hash: "#problem" },
+  { label: "Solution", hash: "#solution" },
+  { label: "How It Works", hash: "#how" },
+  { label: "Features", hash: "#features" },
+  { label: "Pricing", hash: "#pricing" },
+];
+
 /* ── Scroll-triggered fade-in ── */
 function useScrollReveal() {
   const ref = useRef<HTMLDivElement>(null);
@@ -75,39 +88,188 @@ function getVslConfig(): {
 export default function LeadSmartLanding() {
   const vslConfig = getVslConfig();
   const hasVsl = Boolean(vslConfig.videoIdOrUrl);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  /**
+   * Body scroll lock while the mobile nav drawer is open. Uses
+   * `position: fixed` (not just `overflow: hidden`) because iOS Safari
+   * ignores `overflow: hidden` on <body> for touch scrolling — the
+   * background page would still scroll under the open drawer otherwise.
+   * We restore the previous scroll position on close so the user lands
+   * back where they were.
+   */
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const scrollY = window.scrollY;
+    const prevPosition = document.body.style.position;
+    const prevTop = document.body.style.top;
+    const prevWidth = document.body.style.width;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    return () => {
+      document.body.style.position = prevPosition;
+      document.body.style.top = prevTop;
+      document.body.style.width = prevWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, [mobileNavOpen]);
+
+  /** Close drawer on Escape. */
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMobileNavOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mobileNavOpen]);
 
   return (
     <>
       <main className="bg-white text-gray-900 dark:bg-slate-950 dark:text-slate-100">
         {/* NAV */}
         <header className="sticky top-0 z-50 border-b border-gray-200/60 bg-white/80 backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-950/80">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
             <Link
               href="/"
-              className="flex items-center rounded-md transition hover:opacity-90 focus-visible:outline focus-visible:ring-2 focus-visible:ring-[#0072ce]/40"
+              className="flex min-w-0 items-center rounded-md transition hover:opacity-90 focus-visible:outline focus-visible:ring-2 focus-visible:ring-[#0072ce]/40"
             >
-              <LeadSmartLogo className="max-w-[min(100%,280px)] sm:max-w-[min(100%,320px)]" />
+              <LeadSmartLogo className="h-8 w-auto max-w-[180px] sm:h-9 sm:max-w-[280px] lg:max-w-[320px]" />
             </Link>
-            <nav className="hidden flex-wrap items-center justify-end gap-x-4 gap-y-2 text-sm lg:gap-x-6 md:flex" aria-label="Page sections">
-              {["Problem", "Solution", "How It Works", "Features", "Pricing"].map((item) => (
+
+            {/* Desktop section nav (md+) */}
+            <nav
+              className="hidden flex-wrap items-center justify-end gap-x-4 gap-y-2 text-sm lg:gap-x-6 md:flex"
+              aria-label="Page sections"
+            >
+              {NAV_SECTIONS.map((item) => (
                 <a
-                  key={item}
-                  href={`#${item.toLowerCase().replace(/\s+/g, "").replace("howitworks", "how")}`}
+                  key={item.hash}
+                  href={item.hash}
                   className="font-medium !text-gray-700 transition-colors hover:!text-[#0072ce] dark:!text-slate-300 dark:hover:!text-[#4da3e8]"
                 >
-                  {item}
+                  {item.label}
                 </a>
               ))}
             </nav>
+
+            {/* Right-side action cluster */}
             <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-              <Button size="sm" href={primaryCtaHref} className="whitespace-nowrap">
+              {/* Primary CTA — visible on sm+, hidden on the smallest viewports
+                  so the hamburger has room. The drawer also exposes it. */}
+              <Button
+                size="sm"
+                href={primaryCtaHref}
+                className="hidden whitespace-nowrap sm:inline-flex"
+              >
                 Get My First Leads
               </Button>
-              <HeaderAuthActions />
-              <SupportChatLauncher buttonClassName="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200/90 bg-white text-gray-600 shadow-sm transition hover:border-[#0072ce]/40 hover:bg-gray-50 hover:text-[#0072ce] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072ce]/40 sm:h-10 sm:w-10 sm:rounded-xl dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:text-[#4da3e8]" />
+
+              {/* Auth + support — shown md+ only, drawer shows them on mobile */}
+              <div className="hidden items-center gap-2 sm:gap-3 md:flex">
+                <HeaderAuthActions />
+                <SupportChatLauncher buttonClassName="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200/90 bg-white text-gray-600 shadow-sm transition hover:border-[#0072ce]/40 hover:bg-gray-50 hover:text-[#0072ce] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072ce]/40 sm:h-10 sm:w-10 sm:rounded-xl dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:text-[#4da3e8]" />
+              </div>
+
+              {/* Hamburger — visible below md only */}
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(true)}
+                aria-label="Open menu"
+                aria-expanded={mobileNavOpen}
+                aria-controls="leadsmart-mobile-nav"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200/90 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072ce]/40 active:scale-[0.97] md:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
             </div>
           </div>
         </header>
+
+        {/* Mobile nav drawer */}
+        {mobileNavOpen ? (
+          <div
+            className="fixed inset-0 z-[60] md:hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Site navigation"
+          >
+            {/* Backdrop — tap to close */}
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(false)}
+              aria-label="Close menu"
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+            />
+
+            {/* Panel — full height on iOS using `inset-y-0` instead of h-screen */}
+            <div
+              id="leadsmart-mobile-nav"
+              className="absolute right-0 top-0 bottom-0 flex w-[86%] max-w-[340px] flex-col overflow-y-auto border-l border-slate-200/80 bg-white shadow-[-8px_0_48px_-12px_rgba(15,23,42,0.25)] dark:border-slate-800 dark:bg-slate-950"
+              style={{
+                // iOS Safari rounding: pad-bottom by safe-area-inset-bottom so
+                // the last item isn't hidden by the home indicator, and use
+                // 100dvh for the inner min-height so the address bar collapse
+                // doesn't reflow the panel mid-scroll.
+                paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)",
+                minHeight: "100dvh",
+              }}
+            >
+              {/* Drawer header */}
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Menu</span>
+                <button
+                  type="button"
+                  onClick={() => setMobileNavOpen(false)}
+                  aria-label="Close menu"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200/90 bg-white text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072ce]/40 active:scale-[0.97] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Section anchor links */}
+              <nav className="flex flex-col px-3 py-3" aria-label="Page sections (mobile)">
+                {NAV_SECTIONS.map((item) => (
+                  <a
+                    key={item.hash}
+                    href={item.hash}
+                    onClick={() => setMobileNavOpen(false)}
+                    className="rounded-xl px-3 py-3 text-base font-medium text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072ce]/40 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </nav>
+
+              {/* Auth + primary CTA cluster */}
+              <div className="mt-auto flex flex-col gap-3 border-t border-slate-100 px-5 py-4 dark:border-slate-800">
+                <Button
+                  href={primaryCtaHref}
+                  size="default"
+                  className="w-full justify-center"
+                  onClick={() => setMobileNavOpen(false)}
+                >
+                  Get My First Leads
+                </Button>
+                <div
+                  className="flex items-center justify-center gap-2"
+                  onClick={() => setMobileNavOpen(false)}
+                >
+                  <HeaderAuthActions />
+                </div>
+                <div className="flex justify-center pt-1">
+                  <SupportChatLauncher buttonClassName="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200/90 bg-white text-gray-600 shadow-sm transition hover:border-[#0072ce]/40 hover:bg-gray-50 hover:text-[#0072ce] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072ce]/40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" />
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/* HERO */}
         <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-white dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
