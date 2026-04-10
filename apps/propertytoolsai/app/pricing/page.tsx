@@ -14,6 +14,63 @@ import Link from "next/link";
 /** Stripe checkout keys (see `create-checkout-session` + `stripePriceIds`). */
 type CheckoutPlanKey = "pro" | "premium";
 
+/**
+ * Feature comparison matrix for the Free vs Premium plans.
+ * Rows are grouped into category sections; within each category the
+ * cells are either a short string (e.g. "Unlimited", "With fair limits"),
+ * a check mark (✓) for "included", or a dash (—) for "not included".
+ * Kept as copy-only data so the table component below stays simple.
+ */
+type ComparisonCell = true | false | string;
+type ComparisonRow = { label: string; free: ComparisonCell; premium: ComparisonCell };
+type ComparisonGroup = { category: string; rows: ComparisonRow[] };
+
+const PLAN_COMPARISON: ComparisonGroup[] = [
+  {
+    category: "Valuation & CMA",
+    rows: [
+      { label: "Home value estimator", free: "With fair limits", premium: "Unlimited" },
+      { label: "AI CMA reports", free: "With fair limits", premium: "Unlimited" },
+      { label: "Confidence range + comparable sales", free: true, premium: true },
+      { label: "Downloadable PDF CMA packet", free: false, premium: true },
+    ],
+  },
+  {
+    category: "Calculators",
+    rows: [
+      { label: "Mortgage, affordability, refinance", free: true, premium: true },
+      { label: "Rent vs buy, down payment, closing cost", free: true, premium: true },
+      { label: "Cap rate, cash flow, ROI", free: true, premium: true },
+      { label: "Adjustable-rate & HOA tools", free: true, premium: true },
+    ],
+  },
+  {
+    category: "Reports & exports",
+    rows: [
+      { label: "Market reports & value trends", free: "Limited", premium: "Full depth" },
+      { label: "Saved analyses & shortlists", free: "Up to a few", premium: "Unlimited" },
+      { label: "Export reports to PDF", free: false, premium: true },
+      { label: "Raw data export (CSV)", free: false, premium: true },
+    ],
+  },
+  {
+    category: "Alerts & automation",
+    rows: [
+      { label: "Saved searches & shortlists", free: true, premium: true },
+      { label: "Standard listing alerts", free: true, premium: true },
+      { label: "Advanced alert automation", free: false, premium: true },
+      { label: "Priority notifications", free: false, premium: true },
+    ],
+  },
+  {
+    category: "Support",
+    rows: [
+      { label: "Email support", free: true, premium: true },
+      { label: "Priority support", free: false, premium: true },
+    ],
+  },
+];
+
 const PRICING_VALUE_HIGHLIGHTS: {
   accent: FeatureHighlightAccent;
   title: string;
@@ -94,6 +151,71 @@ const plans: (
     cta: "Get Consumer Premium",
   },
 ];
+
+/**
+ * Renders a single category header row followed by its feature rows.
+ * Category heading cell spans all three columns; feature rows render
+ * the label and one cell per plan with a check, dash, or text value.
+ */
+function ComparisonGroupRows({ group }: { group: ComparisonGroup }) {
+  return (
+    <>
+      <tr className="border-t border-slate-200/70">
+        <th
+          scope="colgroup"
+          colSpan={3}
+          className="bg-slate-50 px-5 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 sm:px-6"
+        >
+          {group.category}
+        </th>
+      </tr>
+      {group.rows.map((row) => (
+        <tr key={row.label} className="border-t border-slate-200/60">
+          <th scope="row" className="px-5 py-3 text-left font-medium text-slate-700 sm:px-6">
+            {row.label}
+          </th>
+          <td className="px-5 py-3 text-center text-sm">
+            <ComparisonCellView value={row.free} />
+          </td>
+          <td className="bg-[#0072ce]/[0.025] px-5 py-3 text-center text-sm">
+            <ComparisonCellView value={row.premium} highlight />
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Renders a single feature comparison cell. Accepts a boolean (check
+ * or dash), or a short string label (e.g. "Unlimited", "Limited").
+ */
+function ComparisonCellView({ value, highlight = false }: { value: ComparisonCell; highlight?: boolean }) {
+  if (value === true) {
+    return (
+      <span
+        className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${highlight ? "bg-[#0072ce]/15 text-[#0072ce]" : "bg-emerald-100 text-emerald-700"}`}
+        aria-label="Included"
+      >
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3} aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      </span>
+    );
+  }
+  if (value === false) {
+    return (
+      <span className="inline-block text-lg font-medium text-slate-300" aria-label="Not included">
+        —
+      </span>
+    );
+  }
+  return (
+    <span className={`text-xs font-medium ${highlight ? "text-[#005ca8]" : "text-slate-600"}`}>
+      {value}
+    </span>
+  );
+}
 
 export default function PricingPage() {
   const [loadingPlan, setLoadingPlan] = useState<CheckoutPlanKey | null>(null);
@@ -534,6 +656,65 @@ export default function PricingPage() {
             ) : null}
           </Card>
         ))}
+      </section>
+
+      {/* ═══ Full feature comparison ═══ */}
+      <section aria-labelledby="compare-heading" className="rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/[0.03]">
+        <div className="border-b border-slate-200/80 p-6 sm:p-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0072ce]">Compare plans</p>
+          <h2 id="compare-heading" className="font-heading mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">
+            Everything in Free, plus more in Premium
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm text-slate-600">
+            Both plans include the full calculator suite. Premium removes daily caps, unlocks PDF and CSV exports,
+            and adds advanced alerts and priority support.
+          </p>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left text-sm">
+            <thead>
+              <tr className="sticky top-0 bg-slate-50/80 backdrop-blur">
+                <th scope="col" className="w-[44%] px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600 sm:px-6 sm:w-[50%]">
+                  Feature
+                </th>
+                <th scope="col" className="w-[28%] px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-600 sm:w-[25%]">
+                  Free
+                </th>
+                <th scope="col" className="w-[28%] bg-[#0072ce]/[0.04] px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-[#005ca8] sm:w-[25%]">
+                  Premium
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {PLAN_COMPARISON.map((group) => (
+                <ComparisonGroupRows key={group.category} group={group} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-slate-50/60 px-6 py-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+          <p>
+            Not sure?{" "}
+            <Link href="/home-value" className="font-medium text-[#0072ce] underline-offset-4 hover:underline">
+              Try a free tool first
+            </Link>{" "}
+            — no sign-up needed.
+          </p>
+          <Button
+            type="button"
+            size="md"
+            onClick={startTrial}
+            disabled={trialLoading || Boolean(planInfo?.trial_used)}
+          >
+            {trialLoading
+              ? "Starting…"
+              : planInfo?.trial_used
+                ? "Subscribe — $19/mo"
+                : "Start 7-day free trial"}
+          </Button>
+        </div>
       </section>
 
       {/* CTA section */}
