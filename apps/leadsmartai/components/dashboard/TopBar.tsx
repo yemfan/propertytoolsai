@@ -437,19 +437,42 @@ export default function TopBar({
       rightActions={[]}
       trailing={
         <>
+          {/* Upgrade pill — md+ only (already hidden on small screens) */}
           {showAgentBrokerPromotion ? (
             <Link
               href="/dashboard/billing"
-              className="hidden sm:inline-flex h-10 items-center justify-center rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-xs font-semibold text-white shadow-md shadow-amber-500/20 transition hover:from-amber-600 hover:to-orange-600 md:text-sm"
+              className="hidden md:inline-flex h-10 items-center justify-center rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 text-xs font-semibold text-white shadow-md shadow-amber-500/20 transition hover:from-amber-600 hover:to-orange-600 md:text-sm"
             >
               Upgrade
             </Link>
           ) : null}
-          <SupportChatLauncher />
-          <QuickActionsDropdown />
+
+          {/*
+            Secondary actions (Support, Quick Actions, Notifications) are
+            hidden below md so the mobile topbar fits comfortably on a
+            375px iPhone alongside the hamburger + logo + profile avatar.
+            All three are still reachable from the dashboard sidebar
+            drawer (via the hamburger), the ProfileMenu, and the
+            in-page CTAs.
+          */}
+          <div className="hidden md:flex items-center gap-2">
+            <SupportChatLauncher />
+            <QuickActionsDropdown />
+            <Link
+              href="/dashboard/notifications"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200/90 bg-white text-slate-600 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50"
+              aria-label="Notifications"
+            >
+              <BellRing className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+            </Link>
+          </div>
+
+          {/* Mobile-only notifications icon — kept because it's a daily-use
+              quick glance, but as a single icon button (no quick-actions or
+              support cluster crowding it). md+ uses the version above. */}
           <Link
             href="/dashboard/notifications"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200/90 bg-white text-slate-600 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200/90 bg-white text-slate-600 shadow-sm ring-1 ring-slate-900/[0.03] transition hover:border-slate-300 hover:bg-slate-50 md:hidden"
             aria-label="Notifications"
           >
             <BellRing className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
