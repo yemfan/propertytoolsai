@@ -730,7 +730,7 @@ export default function PricingPage() {
           </p>
           <Button
             type="button"
-            size="md"
+            size="default"
             onClick={startTrial}
             disabled={trialLoading || Boolean(planInfo?.trial_used)}
           >
