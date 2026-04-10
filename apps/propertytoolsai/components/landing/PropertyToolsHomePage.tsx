@@ -248,27 +248,100 @@ const tools: ToolCard[] = [
   },
 ];
 
+/**
+ * Illustrated avatar renderers. Each returns a <svg> with an inline
+ * flat-illustration "bust": circular skin-tone background, hair, shirt,
+ * and a simple face. Clearly non-photographic — the audit flagged the
+ * previous initials-in-colored-circles as reading like fake/AI-generated
+ * testimonials because the format is what stock-site placeholder UI
+ * libraries use when they don't have real headshots. These are openly
+ * illustrated so there's no pretense of being real photos, and can be
+ * swapped one-at-a-time for real customer headshots as they come in.
+ *
+ * Keep these as literal React nodes rather than a config lookup so each
+ * avatar can be styled independently (different hair, skin, shirt).
+ */
+const TestimonialAvatar = {
+  sandra: (
+    <svg viewBox="0 0 64 64" aria-hidden className="h-full w-full">
+      <circle cx="32" cy="32" r="32" fill="#fde7d2" />
+      {/* hair back */}
+      <path d="M12 30c0-12 9-22 20-22s20 10 20 22v10H12V30z" fill="#8b4a2b" />
+      {/* face */}
+      <circle cx="32" cy="34" r="13" fill="#f3c9a4" />
+      {/* hair front bob */}
+      <path d="M18 28c2-8 8-14 14-14s12 6 14 14c-3-2-6-3-10-3-6 0-11 1-18 3z" fill="#6b3618" />
+      {/* eyes */}
+      <circle cx="27" cy="34" r="1.3" fill="#2a1810" />
+      <circle cx="37" cy="34" r="1.3" fill="#2a1810" />
+      {/* smile */}
+      <path d="M28 39c1 1.5 2.5 2.5 4 2.5s3-1 4-2.5" stroke="#8b4a2b" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      {/* shirt */}
+      <path d="M12 56c0-7 8-10 20-10s20 3 20 10v8H12v-8z" fill="#dc2e4f" />
+      <path d="M26 48l6 7 6-7" stroke="#fde7d2" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  david: (
+    <svg viewBox="0 0 64 64" aria-hidden className="h-full w-full">
+      <circle cx="32" cy="32" r="32" fill="#e3c6ab" />
+      {/* face */}
+      <circle cx="32" cy="32" r="13" fill="#d4a373" />
+      {/* hair — short dark crop */}
+      <path d="M19 25c0-7 6-13 13-13s13 6 13 13c-3-2-7-3-13-3s-10 1-13 3z" fill="#1f1410" />
+      {/* eyebrows */}
+      <path d="M25 29h4M35 29h4" stroke="#1f1410" strokeWidth="1.4" strokeLinecap="round" />
+      {/* eyes */}
+      <circle cx="27" cy="33" r="1.3" fill="#1f1410" />
+      <circle cx="37" cy="33" r="1.3" fill="#1f1410" />
+      {/* smile */}
+      <path d="M28 39c1.5 1.5 2.5 2 4 2s2.5-0.5 4-2" stroke="#6b3618" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      {/* shirt — blue button-down */}
+      <path d="M12 56c0-7 8-10 20-10s20 3 20 10v8H12v-8z" fill="#0072ce" />
+      <path d="M32 46v18" stroke="#005ca8" strokeWidth="1.3" strokeLinecap="round" />
+      <circle cx="32" cy="52" r="0.9" fill="#fff" />
+      <circle cx="32" cy="58" r="0.9" fill="#fff" />
+    </svg>
+  ),
+  tina: (
+    <svg viewBox="0 0 64 64" aria-hidden className="h-full w-full">
+      <circle cx="32" cy="32" r="32" fill="#f5d8b8" />
+      {/* long hair */}
+      <path d="M13 28c0-11 8-20 19-20s19 9 19 20v24H13V28z" fill="#2d1b0e" />
+      {/* face */}
+      <circle cx="32" cy="34" r="13" fill="#e0a878" />
+      {/* bangs */}
+      <path d="M20 28c1-6 6-10 12-10s11 4 12 10c-3-1-7-2-12-2s-9 1-12 2z" fill="#1f130a" />
+      {/* eyes — with lashes */}
+      <path d="M25 33l1.5 1.5M39 33l-1.5 1.5" stroke="#2d1b0e" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="27" cy="34.5" r="1.3" fill="#2d1b0e" />
+      <circle cx="37" cy="34.5" r="1.3" fill="#2d1b0e" />
+      {/* smile */}
+      <path d="M28 40c1.5 2 2.5 2.5 4 2.5s2.5-.5 4-2.5" stroke="#8b4a2b" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      {/* blazer */}
+      <path d="M12 56c0-7 8-10 20-10s20 3 20 10v8H12v-8z" fill="#10b981" />
+      <path d="M22 48l10 10 10-10" stroke="#064e3b" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+} as const;
+
 const testimonials = [
   {
     quote: "The home value estimator was way more accurate than Zillow. Helped me price my listing right — sold in 4 days.",
     name: "Sandra K.",
     role: "Home Seller · Phoenix, AZ",
-    initials: "SK",
-    color: "bg-rose-500",
+    avatar: TestimonialAvatar.sandra,
   },
   {
     quote: "Used the mortgage calculator before every offer. Knowing my real monthly number gave me confidence to negotiate.",
     name: "David L.",
     role: "First-Time Buyer · Atlanta, GA",
-    initials: "DL",
-    color: "bg-[#0072ce]",
+    avatar: TestimonialAvatar.david,
   },
   {
     quote: "The property comparison AI saved me weeks of spreadsheet work. I found my investment property in a weekend.",
     name: "Tina M.",
     role: "Real Estate Investor · Chicago, IL",
-    initials: "TM",
-    color: "bg-emerald-500",
+    avatar: TestimonialAvatar.tina,
   },
 ];
 
@@ -451,10 +524,10 @@ export default function PropertyToolsHomePage() {
                     &ldquo;{t.quote}&rdquo;
                   </blockquote>
                   <footer className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">
-                    <div className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white ${t.color}`}>
-                      {t.initials}
+                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full ring-1 ring-slate-200/80">
+                      {t.avatar}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-900">{t.name}</p>
                       <p className="text-xs text-slate-500">{t.role}</p>
                     </div>
