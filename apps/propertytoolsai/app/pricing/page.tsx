@@ -64,9 +64,9 @@ const plans: (
   {
     id: "consumer-basic",
     paid: false,
-    title: "Consumer Basic",
-    price: "Free",
-    subtitle: "Sign up at no cost — core tools with fair daily limits",
+    title: "Free",
+    price: "$0",
+    subtitle: "Core tools with fair daily limits — no credit card required",
     features: [
       "Home value estimator & AI CMA tools (daily usage limits apply)",
       "All standard calculators: mortgage, affordability, refinance, rent vs buy, closing costs, cap rate, and more",
@@ -80,18 +80,18 @@ const plans: (
     id: "consumer-premium",
     paid: true,
     checkoutKey: "premium",
-    title: "Consumer Premium",
+    title: "Premium",
     price: "$19/mo",
-    subtitle: "Unlimited access to everything PropertyToolsAI offers",
+    subtitle: "Unlimited access to every PropertyTools AI calculator and report",
     features: [
-      "Unlimited use of every consumer tool and AI feature — no daily caps",
+      "Unlimited use of every tool and AI feature — no daily caps",
       "Unlimited CMA & home value sessions, reports, and downloads",
       "Unlimited exports, PDFs, and saved analyses",
       "Advanced alerts, automation, and priority notifications where available",
-      "Full market analytics and comparison depth — same tools as Basic, without limits",
+      "Full market analytics and comparison depth — same tools as Free, without limits",
       "Priority support",
     ],
-    cta: "Get Consumer Premium",
+    cta: "Start 7-day free trial",
   },
 ];
 
@@ -354,9 +354,10 @@ export default function PricingPage() {
           Two simple plans for buyers and sellers
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-700 sm:text-base">
-          <span className="font-semibold text-slate-800">Consumer Basic</span> is free — create an account and use our
-          tools with fair usage limits. <span className="font-semibold text-slate-800">Consumer Premium</span> unlocks
-          unlimited access to every feature.
+          <span className="font-semibold text-slate-800">Free</span> forever — use every core tool with fair
+          daily limits, no credit card required.{" "}
+          <span className="font-semibold text-slate-800">Premium</span> unlocks unlimited access to every
+          feature, starting with a 7-day free trial.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Button
@@ -433,7 +434,7 @@ export default function PricingPage() {
               ) : null}
               {leadsPct >= 100 ? (
                 <div className="mt-2 text-xs text-red-700 font-semibold">
-                  You’ve reached your CMA or Lead limit. Upgrade to Consumer Premium for unlimited access.
+                  You’ve reached your CMA or Lead limit. Upgrade to Premium for unlimited access.
                 </div>
               ) : null}
             </>
@@ -452,7 +453,7 @@ export default function PricingPage() {
           ) : null}
           {cmaUsage?.reached ? (
             <div className="mt-2 text-xs text-red-700 font-semibold">
-              You’ve reached your CMA or Lead limit. Upgrade to Consumer Premium for unlimited access.
+              You’ve reached your CMA or Lead limit. Upgrade to Premium for unlimited access.
             </div>
           ) : null}
         </Card>
@@ -496,31 +497,56 @@ export default function PricingPage() {
 
             <div className="mt-6 space-y-2">
               {p.paid && p.id === "consumer-premium" ? (
-                <button
-                  type="button"
-                  onClick={() => startCheckout(p.checkoutKey)}
-                  disabled={loadingPlan === p.checkoutKey}
-                  className="w-full rounded-xl bg-[#0072ce] py-2.5 font-semibold text-white shadow-sm hover:bg-[#005ca8] disabled:opacity-60"
-                >
-                  {loadingPlan === p.checkoutKey ? "Redirecting…" : p.cta}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={startTrial}
+                    disabled={trialLoading || Boolean(planInfo?.trial_used)}
+                    className="w-full rounded-xl bg-gradient-to-r from-[#0072ce] to-[#005ca8] py-2.5 font-semibold text-white shadow-sm shadow-[#0072ce]/20 transition hover:shadow-md hover:brightness-[1.05] disabled:opacity-60"
+                  >
+                    {trialLoading
+                      ? "Starting…"
+                      : planInfo?.trial_used
+                        ? "Subscribe — $19/mo"
+                        : p.cta}
+                  </button>
+                  <p className="text-center text-xs text-slate-500">
+                    {planInfo?.trial_used
+                      ? "Cancel anytime. 7-day trial already used on this account."
+                      : "No credit card for trial · $19/mo after · Cancel anytime"}
+                  </p>
+                  {planInfo?.trial_used ? null : (
+                    <button
+                      type="button"
+                      onClick={() => startCheckout(p.checkoutKey)}
+                      disabled={loadingPlan === p.checkoutKey}
+                      className="w-full rounded-xl border border-slate-200 bg-white py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                    >
+                      {loadingPlan === p.checkoutKey
+                        ? "Redirecting…"
+                        : "Skip trial · subscribe now"}
+                    </button>
+                  )}
+                </>
               ) : !p.paid ? (
-                <Link
-                  href={loggedIn ? "/dashboard" : "/signup"}
-                  className="flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
-                >
-                  {loggedIn ? "Open dashboard" : "Sign up free"}
-                </Link>
-              ) : null}
-              {p.paid && p.id === "consumer-premium" ? (
-                <button
-                  type="button"
-                  onClick={startTrial}
-                  disabled={trialLoading || Boolean(planInfo?.trial_used)}
-                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60"
-                >
-                  {trialLoading ? "Starting…" : "Start 7-day Premium trial"}
-                </button>
+                <>
+                  <Link
+                    href={loggedIn ? "/dashboard" : "/signup"}
+                    className="flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
+                  >
+                    {loggedIn ? "Open dashboard" : "Create free account"}
+                  </Link>
+                  <p className="text-center text-xs text-slate-500">
+                    Or{" "}
+                    <Link
+                      href="/home-value"
+                      className="underline underline-offset-4 hover:text-[#0072ce]"
+                    >
+                      jump straight into the tools
+                    </Link>{" "}
+                    — no sign-up needed
+                  </p>
+                </>
               ) : null}
             </div>
             {p.id === "consumer-basic" &&
@@ -528,8 +554,8 @@ export default function PricingPage() {
             leadsPct >= 90 ? (
               <div className="mt-3 text-[11px] text-amber-700 font-medium">
                 {leadsPct >= 100
-                  ? "You’ve reached your Basic usage limits. Consumer Premium includes unlimited access."
-                  : "You’re close to your Basic limits — Consumer Premium includes unlimited access."}
+                  ? "You’ve reached your Free plan usage limits. Premium includes unlimited access."
+                  : "You’re close to your Free plan limits — Premium includes unlimited access."}
               </div>
             ) : null}
           </Card>
@@ -542,12 +568,12 @@ export default function PricingPage() {
           Ready to unlock smarter buy &amp; sell decisions?
         </h2>
         <p className="mt-2 max-w-3xl text-sm text-slate-700">
-          Use <span className="font-semibold">Consumer Basic</span> free with an account, or try{" "}
-          <span className="font-semibold">Consumer Premium</span> with a 7-day trial / subscription for unlimited access.
+          Start with the <span className="font-semibold">Free</span> plan — no credit card needed — or try{" "}
+          <span className="font-semibold">Premium</span> with a 7-day free trial for unlimited access.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Button href={loggedIn ? "/dashboard" : "/signup"} variant="outline" size="lg">
-            {loggedIn ? "Open dashboard" : "Start free (Basic)"}
+            {loggedIn ? "Open dashboard" : "Start free"}
           </Button>
           <Button
             type="button"
