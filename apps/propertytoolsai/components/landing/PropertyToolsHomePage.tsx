@@ -118,14 +118,14 @@ function CountUp({ target, suffix = "" }: { target: number; suffix?: string }) {
 function FaqItem({ q, a, defaultOpen = false }: { q: string; a: string; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white transition-all duration-200 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600">
+    <div className="rounded-2xl border border-slate-200/80 bg-white transition-all duration-200 hover:border-slate-300">
       <button
         type="button"
         className="flex w-full items-center justify-between gap-4 p-5 text-left"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
       >
-        <h3 className="font-semibold text-slate-900 dark:text-white">{q}</h3>
+        <h3 className="font-semibold text-slate-900">{q}</h3>
         <svg
           className={`h-5 w-5 flex-shrink-0 text-slate-400 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
           fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
@@ -137,7 +137,7 @@ function FaqItem({ q, a, defaultOpen = false }: { q: string; a: string; defaultO
         className="overflow-hidden transition-all duration-300"
         style={{ maxHeight: open ? "200px" : "0px", opacity: open ? 1 : 0 }}
       >
-        <p className="px-5 pb-5 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{a}</p>
+        <p className="px-5 pb-5 text-sm leading-relaxed text-slate-600">{a}</p>
       </div>
     </div>
   );
@@ -278,29 +278,29 @@ const exploreLinks = [
 
 export default function PropertyToolsHomePage() {
   return (
-    <div className="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="bg-white text-slate-900">
 
       {/* ═══ HERO — animated gradient mesh background ═══ */}
       <section className="relative overflow-hidden px-4 pb-8 pt-20 text-center md:px-6 md:pb-12 md:pt-28 lg:pt-32">
         {/* Animated gradient mesh */}
         <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white to-white dark:from-slate-950 dark:via-slate-950 dark:to-slate-900" />
-          <div className="absolute left-1/2 top-0 h-[600px] w-[900px] -translate-x-1/2 -translate-y-1/3 rounded-full opacity-[0.15] blur-[100px] dark:opacity-[0.08]" style={{ background: "conic-gradient(from 180deg at 50% 50%, #0072ce 0deg, #4F46E5 120deg, #0072ce 240deg, #7c3aed 360deg)" }} />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white to-white" />
+          <div className="absolute left-1/2 top-0 h-[600px] w-[900px] -translate-x-1/2 -translate-y-1/3 rounded-full opacity-[0.15] blur-[100px]" style={{ background: "conic-gradient(from 180deg at 50% 50%, #0072ce 0deg, #4F46E5 120deg, #0072ce 240deg, #7c3aed 360deg)" }} />
           <div className="absolute right-0 top-1/4 h-[400px] w-[400px] rounded-full opacity-[0.08] blur-[80px]" style={{ background: "radial-gradient(circle, #ff8c42, transparent 70%)" }} />
         </div>
 
         <div className="relative mx-auto max-w-4xl">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#0072ce]/20 bg-white/80 px-4 py-1.5 text-xs font-medium text-[#0072ce] shadow-sm shadow-[#0072ce]/5 backdrop-blur-sm dark:border-[#0072ce]/30 dark:bg-slate-900/80 dark:text-[#4da3e8]" style={{ animation: "fadeInUp 0.7s ease-out" }}>
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#0072ce]/20 bg-white/80 px-4 py-1.5 text-xs font-medium text-[#0072ce] shadow-sm shadow-[#0072ce]/5 backdrop-blur-sm" style={{ animation: "fadeInUp 0.7s ease-out" }}>
             <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0072ce] opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-[#0072ce]" /></span>
             Free AI-powered real estate tools
           </div>
-          <h1 className="font-heading text-5xl font-extrabold leading-[1.02] tracking-[-0.02em] text-slate-950 sm:text-6xl lg:text-7xl xl:text-[88px] dark:text-white" style={{ animation: "fadeInUp 0.7s ease-out 0.08s both" }}>
+          <h1 className="font-heading text-5xl font-extrabold leading-[1.02] tracking-[-0.02em] text-slate-950 sm:text-6xl lg:text-7xl xl:text-[88px]" style={{ animation: "fadeInUp 0.7s ease-out 0.08s both" }}>
             Know What a Home Is Worth
             <br />
             <span className="bg-gradient-to-r from-[#0072ce] to-[#005ca8] bg-clip-text text-transparent">Before Anyone Else</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-xl leading-relaxed text-slate-600 md:text-2xl dark:text-slate-400" style={{ animation: "fadeInUp 0.7s ease-out 0.16s both" }}>
-            AI calculators that give you <strong className="text-slate-900 dark:text-white">real numbers</strong> — not ballpark guesses. Trusted by buyers, sellers, and investors making smarter decisions.
+          <p className="mx-auto mt-6 max-w-2xl text-xl leading-relaxed text-slate-600 md:text-2xl" style={{ animation: "fadeInUp 0.7s ease-out 0.16s both" }}>
+            AI calculators that give you <strong className="text-slate-900">real numbers</strong> — not ballpark guesses. Trusted by buyers, sellers, and investors making smarter decisions.
           </p>
           <div className="mt-10 flex flex-col items-center gap-4" style={{ animation: "fadeInUp 0.7s ease-out 0.24s both" }}>
             <Link
@@ -312,24 +312,24 @@ export default function PropertyToolsHomePage() {
             </Link>
             <Link
               href="#tools"
-              className="group inline-flex items-center gap-1 text-sm font-medium text-slate-600 underline-offset-4 transition-colors hover:text-[#0072ce] hover:underline focus-visible:outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-[#0072ce]/40 dark:text-slate-300 dark:hover:text-[#4da3e8]"
+              className="group inline-flex items-center gap-1 text-sm font-medium text-slate-600 underline-offset-4 transition-colors hover:text-[#0072ce] hover:underline focus-visible:outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-[#0072ce]/40"
             >
               or browse all free tools
               <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-0.5">→</span>
             </Link>
           </div>
-          <p className="mt-5 text-sm font-medium text-slate-600 dark:text-slate-300" style={{ animation: "fadeInUp 0.7s ease-out 0.32s both" }}>
-            <span className="text-emerald-600 dark:text-emerald-400">✓</span> No sign-up required
-            <span className="mx-2 text-slate-300 dark:text-slate-600">·</span>
-            <span className="text-emerald-600 dark:text-emerald-400">✓</span> Instant results
-            <span className="mx-2 text-slate-300 dark:text-slate-600">·</span>
-            <span className="text-emerald-600 dark:text-emerald-400">✓</span> Free forever
+          <p className="mt-5 text-sm font-medium text-slate-600" style={{ animation: "fadeInUp 0.7s ease-out 0.32s both" }}>
+            <span className="text-emerald-600">✓</span> No sign-up required
+            <span className="mx-2 text-slate-300">·</span>
+            <span className="text-emerald-600">✓</span> Instant results
+            <span className="mx-2 text-slate-300">·</span>
+            <span className="text-emerald-600">✓</span> Free forever
           </p>
         </div>
       </section>
 
       {/* ═══ SOCIAL PROOF STRIP — with animated counters ═══ */}
-      <section className="border-y border-slate-100 bg-white px-4 py-8 md:px-6 dark:border-slate-800 dark:bg-slate-900/50">
+      <section className="border-y border-slate-100 bg-white px-4 py-8 md:px-6">
         <div className="mx-auto grid max-w-4xl grid-cols-2 gap-6 md:grid-cols-4">
           {[
             { value: 50000, suffix: "+", label: "Estimates generated" },
@@ -338,21 +338,21 @@ export default function PropertyToolsHomePage() {
             { value: 30, suffix: "s", label: "Average result time" },
           ].map((s) => (
             <Reveal key={s.label} className="text-center">
-              <p className="text-2xl font-extrabold text-slate-900 md:text-3xl dark:text-white">
+              <p className="text-2xl font-extrabold text-slate-900 md:text-3xl">
                 {s.isStatic ? `${s.value}${s.suffix}` : <CountUp target={s.value} suffix={s.suffix} />}
               </p>
-              <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">{s.label}</p>
+              <p className="mt-1 text-xs font-medium text-slate-500">{s.label}</p>
             </Reveal>
           ))}
         </div>
       </section>
 
       {/* ═══ BENTO TOOL GRID ═══ */}
-      <section id="tools" className="px-4 py-16 md:px-6 md:py-24 dark:bg-slate-950">
+      <section id="tools" className="px-4 py-16 md:px-6 md:py-24">
         <div className="mx-auto max-w-6xl">
           <Reveal className="text-center">
-            <p className="text-sm font-semibold uppercase tracking-widest text-[#0072ce] dark:text-[#4da3e8]">All Free. No Account Required.</p>
-            <h2 className="mt-3 text-3xl font-extrabold text-slate-900 md:text-4xl dark:text-white">Real Estate Tools That Actually Help</h2>
+            <p className="text-sm font-semibold uppercase tracking-widest text-[#0072ce]">All Free. No Account Required.</p>
+            <h2 className="mt-3 text-3xl font-extrabold text-slate-900 md:text-4xl">Real Estate Tools That Actually Help</h2>
           </Reveal>
 
           {/* Bento grid: featured card spans 2 cols */}
@@ -361,7 +361,7 @@ export default function PropertyToolsHomePage() {
               <Reveal key={tool.title} delay={i * 70} className={tool.featured ? "md:col-span-2 md:row-span-2" : ""}>
                 <Link
                   href={tool.href}
-                  className={`group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/[0.06] dark:border-slate-700/60 dark:bg-slate-900 dark:hover:shadow-[#0072ce]/[0.08] ${
+                  className={`group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/[0.06] ${
                     tool.featured ? "p-8 md:p-10" : "p-6"
                   }`}
                 >
@@ -372,24 +372,24 @@ export default function PropertyToolsHomePage() {
                     <span className={`absolute right-4 top-4 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                       tool.badge === "AI"
                         ? "bg-gradient-to-r from-[#4F46E5] to-[#7c3aed] text-white"
-                        : "bg-[#0072ce]/10 text-[#0072ce] dark:bg-[#0072ce]/20 dark:text-[#4da3e8]"
+                        : "bg-[#0072ce]/10 text-[#0072ce]"
                     }`}>
                       {tool.badge}
                     </span>
                   )}
 
                   {/* Icon */}
-                  <div className={`flex items-center justify-center rounded-xl bg-gradient-to-br from-[#0072ce]/10 to-[#4F46E5]/10 text-[#0072ce] transition-colors group-hover:from-[#0072ce]/20 group-hover:to-[#4F46E5]/20 dark:from-[#0072ce]/15 dark:to-[#4F46E5]/15 ${tool.featured ? "mb-5 h-14 w-14" : "mb-4 h-11 w-11"}`}>
+                  <div className={`flex items-center justify-center rounded-xl bg-gradient-to-br from-[#0072ce]/10 to-[#4F46E5]/10 text-[#0072ce] transition-colors group-hover:from-[#0072ce]/20 group-hover:to-[#4F46E5]/20 ${tool.featured ? "mb-5 h-14 w-14" : "mb-4 h-11 w-11"}`}>
                     {toolIcons[tool.title]}
                   </div>
 
-                  <h3 className={`font-heading font-bold text-slate-900 transition-colors group-hover:text-[#0072ce] dark:text-white dark:group-hover:text-[#4da3e8] ${tool.featured ? "text-xl" : "text-base"}`}>
+                  <h3 className={`font-heading font-bold text-slate-900 transition-colors group-hover:text-[#0072ce] ${tool.featured ? "text-xl" : "text-base"}`}>
                     {tool.title}
                   </h3>
-                  <p className={`mt-2 flex-1 leading-relaxed text-slate-600 dark:text-slate-400 ${tool.featured ? "text-base" : "text-sm"}`}>
+                  <p className={`mt-2 flex-1 leading-relaxed text-slate-600 ${tool.featured ? "text-base" : "text-sm"}`}>
                     {tool.description}
                   </p>
-                  <div className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-[#0072ce] transition-transform duration-200 group-hover:translate-x-1 dark:text-[#4da3e8]">
+                  <div className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-[#0072ce] transition-transform duration-200 group-hover:translate-x-1">
                     Try free
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
                   </div>
@@ -401,16 +401,16 @@ export default function PropertyToolsHomePage() {
       </section>
 
       {/* ═══ SOCIAL PROOF — with avatars ═══ */}
-      <section className="bg-slate-50 px-4 py-16 md:px-6 md:py-24 dark:bg-slate-900/30">
+      <section className="bg-slate-50 px-4 py-16 md:px-6 md:py-24">
         <div className="mx-auto max-w-6xl">
           <Reveal className="text-center">
-            <h2 className="text-3xl font-extrabold text-slate-900 md:text-4xl dark:text-white">Trusted by Real People</h2>
-            <p className="mt-3 text-base text-slate-500 dark:text-slate-400">Hear from buyers, sellers, and investors who use our tools</p>
+            <h2 className="text-3xl font-extrabold text-slate-900 md:text-4xl">Trusted by Real People</h2>
+            <p className="mt-3 text-base text-slate-500">Hear from buyers, sellers, and investors who use our tools</p>
           </Reveal>
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {testimonials.map((t, i) => (
               <Reveal key={t.name} delay={i * 120}>
-                <div className="flex h-full flex-col rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700/50 dark:bg-slate-900">
+                <div className="flex h-full flex-col rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
                   <div className="mb-4 flex gap-0.5 text-amber-400">
                     {Array.from({ length: 5 }).map((_, j) => (
                       <svg key={j} className="h-4 w-4 fill-current" viewBox="0 0 20 20" aria-hidden>
@@ -418,15 +418,15 @@ export default function PropertyToolsHomePage() {
                       </svg>
                     ))}
                   </div>
-                  <blockquote className="flex-1 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                  <blockquote className="flex-1 text-sm leading-relaxed text-slate-700">
                     &ldquo;{t.quote}&rdquo;
                   </blockquote>
-                  <footer className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+                  <footer className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">
                     <div className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white ${t.color}`}>
                       {t.initials}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{t.name}</p>
+                      <p className="text-sm font-semibold text-slate-900">{t.name}</p>
                       <p className="text-xs text-slate-500">{t.role}</p>
                     </div>
                   </footer>
@@ -438,33 +438,33 @@ export default function PropertyToolsHomePage() {
       </section>
 
       {/* ═══ PRICING ═══ */}
-      <section id="pricing" className="px-4 py-16 md:px-6 md:py-24 dark:bg-slate-950">
+      <section id="pricing" className="px-4 py-16 md:px-6 md:py-24">
         <div className="mx-auto max-w-4xl text-center">
           <Reveal>
-            <h2 className="text-3xl font-extrabold text-slate-900 md:text-4xl dark:text-white">Simple, Transparent Pricing</h2>
-            <p className="mt-3 text-base text-slate-500 dark:text-slate-400">Start free. Upgrade when you need more.</p>
+            <h2 className="text-3xl font-extrabold text-slate-900 md:text-4xl">Simple, Transparent Pricing</h2>
+            <p className="mt-3 text-base text-slate-500">Start free. Upgrade when you need more.</p>
           </Reveal>
           <div className="mx-auto mt-12 grid max-w-3xl gap-6 md:grid-cols-2">
             {pricingPlans.map((plan, i) => (
               <Reveal key={plan.name} delay={i * 120}>
                 <div className={`relative overflow-hidden rounded-2xl border p-7 text-left transition-all duration-300 hover:shadow-lg ${
                   plan.highlighted
-                    ? "border-[#0072ce]/40 bg-gradient-to-b from-white to-[#0072ce]/[0.03] shadow-lg shadow-[#0072ce]/[0.08] ring-1 ring-[#0072ce]/20 dark:from-slate-900 dark:to-[#0072ce]/[0.06] dark:ring-[#0072ce]/30"
-                    : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
+                    ? "border-[#0072ce]/40 bg-gradient-to-b from-white to-[#0072ce]/[0.03] shadow-lg shadow-[#0072ce]/[0.08] ring-1 ring-[#0072ce]/20"
+                    : "border-slate-200 bg-white"
                 }`}>
                   {plan.highlighted && (
                     <div className="absolute -right-8 top-5 rotate-45 bg-gradient-to-r from-[#0072ce] to-[#4F46E5] px-10 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">Popular</div>
                   )}
-                  <h3 className="font-heading text-lg font-bold dark:text-white">{plan.name}</h3>
+                  <h3 className="font-heading text-lg font-bold">{plan.name}</h3>
                   <div className="mt-2 flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-slate-900 dark:text-white">{plan.price}</span>
-                    <span className="text-sm text-slate-500 dark:text-slate-400">{plan.period}</span>
+                    <span className="text-4xl font-extrabold text-slate-900">{plan.price}</span>
+                    <span className="text-sm text-slate-500">{plan.period}</span>
                   </div>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{plan.description}</p>
+                  <p className="mt-2 text-sm text-slate-500">{plan.description}</p>
                   <ul className="mt-6 space-y-3">
                     {plan.features.map((f) => (
-                      <li key={f} className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-300">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0072ce]/10 dark:bg-[#0072ce]/20">
+                      <li key={f} className="flex items-center gap-2.5 text-sm text-slate-700">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0072ce]/10">
                           <svg className="h-3 w-3 text-[#0072ce]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         </div>
                         {f}
@@ -474,7 +474,7 @@ export default function PropertyToolsHomePage() {
                   <Link href={plan.href} className={`mt-7 block w-full rounded-xl py-3 text-center text-sm font-semibold transition-all duration-200 active:scale-[0.98] ${
                     plan.highlighted
                       ? "bg-gradient-to-r from-[#0072ce] to-[#4F46E5] text-white shadow-lg shadow-[#0072ce]/20 hover:shadow-xl hover:brightness-110"
-                      : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
+                      : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
                   }`}>
                     {plan.cta}
                   </Link>
@@ -486,37 +486,37 @@ export default function PropertyToolsHomePage() {
       </section>
 
       {/* ═══ CROSS-PROMO — LeadSmart AI ═══ */}
-      <section className="relative overflow-hidden bg-slate-50 px-4 py-16 md:px-6 md:py-24 dark:bg-slate-900/30">
+      <section className="relative overflow-hidden bg-slate-50 px-4 py-16 md:px-6 md:py-24">
         <div className="pointer-events-none absolute right-0 top-0 h-[300px] w-[300px] rounded-full opacity-[0.06] blur-[80px]" style={{ background: "#ff8c42" }} aria-hidden />
         <div className="mx-auto grid max-w-5xl items-center gap-12 md:grid-cols-2">
           <Reveal>
-            <div className="inline-flex rounded-full border border-orange-200/80 bg-orange-50 px-4 py-1.5 text-xs font-semibold text-orange-700 dark:border-orange-500/30 dark:bg-orange-900/20 dark:text-orange-300">
+            <div className="inline-flex rounded-full border border-orange-200/80 bg-orange-50 px-4 py-1.5 text-xs font-semibold text-orange-700">
               For Real Estate Agents
             </div>
-            <h2 className="mt-4 text-3xl font-extrabold leading-tight text-slate-900 md:text-4xl dark:text-white">
+            <h2 className="mt-4 text-3xl font-extrabold leading-tight text-slate-900 md:text-4xl">
               Turn Traffic into<br />Signed Clients
             </h2>
-            <p className="mt-5 text-base leading-relaxed text-slate-600 dark:text-slate-400">
-              PropertyTools drives traffic. <strong className="text-slate-900 dark:text-white">LeadSmart AI</strong> converts it into closed deals — instant AI follow-up, lead scoring, and automated nurture sequences.
+            <p className="mt-5 text-base leading-relaxed text-slate-600">
+              PropertyTools drives traffic. <strong className="text-slate-900">LeadSmart AI</strong> converts it into closed deals — instant AI follow-up, lead scoring, and automated nurture sequences.
             </p>
-            <ul className="mt-6 space-y-3 text-sm text-slate-700 dark:text-slate-300">
+            <ul className="mt-6 space-y-3 text-sm text-slate-700">
               {["AI responds to new leads in under 60 seconds", "Scores and prioritizes your hottest buyers", "Drip sequences that nurture until they're ready"].map((f) => (
                 <li key={f} className="flex items-center gap-3">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0072ce]/10 dark:bg-[#0072ce]/20">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0072ce]/10">
                     <svg className="h-3.5 w-3.5 text-[#0072ce]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                   </div>
                   {f}
                 </li>
               ))}
             </ul>
-            <a href={LEADSMART_URL} target="_blank" rel="noopener noreferrer" className="group mt-8 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-7 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-slate-800 hover:shadow-lg active:scale-[0.97] dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100">
+            <a href={LEADSMART_URL} target="_blank" rel="noopener noreferrer" className="group mt-8 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-7 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-slate-800 hover:shadow-lg active:scale-[0.97]">
               See LeadSmart AI
               <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
             </a>
           </Reveal>
           <Reveal delay={150}>
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xl shadow-slate-900/[0.06] dark:border-slate-700 dark:bg-slate-800">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-700">
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xl shadow-slate-900/[0.06]">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                 <div className="h-3 w-3 rounded-full bg-red-400" /><div className="h-3 w-3 rounded-full bg-amber-400" /><div className="h-3 w-3 rounded-full bg-emerald-400" />
                 <span className="ml-2 text-[10px] font-medium text-slate-400">LeadSmart AI Dashboard</span>
               </div>
@@ -527,9 +527,9 @@ export default function PropertyToolsHomePage() {
                   { n: "3x", l: "More tours booked", color: "text-[#4F46E5]" },
                   { n: "$0", l: "Manual follow-up", color: "text-[#ff8c42]" },
                 ].map(({ n, l, color }) => (
-                  <div key={l} className="rounded-xl bg-slate-50 p-3.5 text-center transition-all duration-200 hover:bg-slate-100 dark:bg-slate-700/50 dark:hover:bg-slate-700">
+                  <div key={l} className="rounded-xl bg-slate-50 p-3.5 text-center transition-all duration-200 hover:bg-slate-100">
                     <p className={`text-xl font-extrabold ${color}`}>{n}</p>
-                    <p className="mt-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400">{l}</p>
+                    <p className="mt-0.5 text-[10px] font-medium text-slate-500">{l}</p>
                   </div>
                 ))}
               </div>
@@ -537,7 +537,7 @@ export default function PropertyToolsHomePage() {
                 <div className="flex items-center justify-between text-[10px] font-medium text-slate-400">
                   <span>Pipeline health</span><span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />Live</span>
                 </div>
-                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
                   <div className="h-full w-[72%] rounded-full bg-gradient-to-r from-[#0072ce] to-[#4F46E5]" />
                 </div>
               </div>
@@ -547,12 +547,12 @@ export default function PropertyToolsHomePage() {
       </section>
 
       {/* ═══ SEO EXPLORE ═══ */}
-      <section className="border-y border-slate-100 px-4 py-10 md:px-6 dark:border-slate-800 dark:bg-slate-950">
+      <section className="border-y border-slate-100 px-4 py-10 md:px-6">
         <div className="mx-auto max-w-5xl">
-          <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Explore by City &amp; Tool</h2>
+          <h2 className="text-lg font-semibold text-slate-800">Explore by City &amp; Tool</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {exploreLinks.map((link) => (
-              <Link key={link.label} href={link.href} className="group flex items-center gap-2 text-sm text-[#0072ce] transition-colors hover:text-[#005ca8] dark:text-[#4da3e8]">
+              <Link key={link.label} href={link.href} className="group flex items-center gap-2 text-sm text-[#0072ce] transition-colors hover:text-[#005ca8]">
                 <svg className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
                 {link.label}
               </Link>
@@ -562,10 +562,10 @@ export default function PropertyToolsHomePage() {
       </section>
 
       {/* ═══ FAQ — Interactive Accordion ═══ */}
-      <section className="px-4 py-16 md:px-6 md:py-24 dark:bg-slate-950">
+      <section className="px-4 py-16 md:px-6 md:py-24">
         <div className="mx-auto max-w-3xl">
           <Reveal className="text-center">
-            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">Questions? We&apos;ve Got Answers</h2>
+            <h2 className="text-3xl font-extrabold text-slate-900">Questions? We&apos;ve Got Answers</h2>
           </Reveal>
           <div className="mt-10 space-y-3">
             <FaqItem q="How accurate is the home value estimate?" a="Our AI uses recent comparable sales, neighborhood trends, and property data to generate estimates. For most homes, the estimate is within 5–10% of market value. The Premium report includes a confidence range and data sources so you can see exactly how we got there." defaultOpen />
