@@ -302,17 +302,28 @@ export default function PropertyToolsHomePage() {
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-600 md:text-xl dark:text-slate-400" style={{ animation: "fadeInUp 0.7s ease-out 0.16s both" }}>
             AI calculators that give you <strong className="text-gray-900 dark:text-white">real numbers</strong> — not ballpark guesses. Trusted by buyers, sellers, and investors making smarter decisions.
           </p>
-          <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center" style={{ animation: "fadeInUp 0.7s ease-out 0.24s both" }}>
-            <Link href="/home-value" className="group relative rounded-2xl bg-gradient-to-r from-[#0072ce] to-[#4F46E5] px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-[#0072ce]/25 transition-all duration-300 hover:shadow-2xl hover:shadow-[#0072ce]/30 active:scale-[0.97]">
+          <div className="mt-10 flex flex-col items-center gap-4" style={{ animation: "fadeInUp 0.7s ease-out 0.24s both" }}>
+            <Link
+              href="/home-value"
+              className="group relative rounded-2xl bg-gradient-to-r from-[#0072ce] to-[#4F46E5] px-8 py-4 text-base font-semibold text-white shadow-xl shadow-[#0072ce]/25 transition-all duration-300 hover:shadow-2xl hover:shadow-[#0072ce]/30 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#0072ce]/40 active:scale-[0.97]"
+            >
               <span className="relative z-10">Check Your Home Value Free</span>
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#005ca8] to-[#3730a3] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
             </Link>
-            <Link href="#tools" className="rounded-2xl border border-slate-200 bg-white/80 px-8 py-4 text-sm font-semibold text-gray-900 backdrop-blur-sm transition-all duration-200 hover:border-slate-300 hover:bg-white active:scale-[0.97] dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:hover:bg-slate-700">
-              Browse All Tools
+            <Link
+              href="#tools"
+              className="group inline-flex items-center gap-1 text-sm font-medium text-slate-600 underline-offset-4 transition-colors hover:text-[#0072ce] hover:underline focus-visible:outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-[#0072ce]/40 dark:text-slate-300 dark:hover:text-[#4da3e8]"
+            >
+              or browse all free tools
+              <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-0.5">→</span>
             </Link>
           </div>
-          <p className="mt-5 text-xs text-slate-400 dark:text-slate-500" style={{ animation: "fadeInUp 0.7s ease-out 0.32s both" }}>
-            No sign-up required · Instant results · Free forever
+          <p className="mt-5 text-sm font-medium text-slate-600 dark:text-slate-300" style={{ animation: "fadeInUp 0.7s ease-out 0.32s both" }}>
+            <span className="text-emerald-600 dark:text-emerald-400">✓</span> No sign-up required
+            <span className="mx-2 text-slate-300 dark:text-slate-600">·</span>
+            <span className="text-emerald-600 dark:text-emerald-400">✓</span> Instant results
+            <span className="mx-2 text-slate-300 dark:text-slate-600">·</span>
+            <span className="text-emerald-600 dark:text-emerald-400">✓</span> Free forever
           </p>
         </div>
       </section>
