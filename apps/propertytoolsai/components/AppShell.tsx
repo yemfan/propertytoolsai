@@ -14,7 +14,31 @@ import { stripUnlockPremiumNavItem } from "@/lib/nav/stripUnlockPremiumNav";
 import AssignedAgentCard from "@/components/assigned-agent/AssignedAgentCard";
 import AgentChatWidget from "@/components/assigned-agent/AgentChatWidget";
 import PropertyToolsLogo from "@/components/brand/PropertyToolsLogo";
+import Footer from "@/components/Footer";
 import { propertyToolsNav } from "@/nav.config";
+
+/**
+ * Paths where the global {@link Footer} is suppressed. App/dashboard surfaces
+ * have their own chrome and shouldn't show the marketing footer; everything
+ * else (homepage, pricing, tool landing pages, blog, legal pages, etc.) gets
+ * the footer automatically.
+ */
+const FOOTER_SUPPRESSED_PREFIXES = [
+  "/dashboard",
+  "/agent",
+  "/admin",
+  "/account",
+  "/portal",
+  "/loan-broker",
+  "/layout-preview",
+];
+
+function shouldShowFooter(pathname: string | null): boolean {
+  if (!pathname) return true;
+  return !FOOTER_SUPPRESSED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
 
 const APP_NAME = "PropertyTools AI";
 
@@ -107,6 +131,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
 /** Uses {@link useAccess} — must render inside {@link AccessProvider}. */
 function AppShellAuthedLayout({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const showFooter = shouldShowFooter(pathname);
   const { user } = useAuth();
   const [rbacRole, setRbacRole] = useState<UserRole>("consumer");
 
@@ -153,6 +179,7 @@ function AppShellAuthedLayout({ children }: { children: ReactNode }) {
           <PropertyToolsTopChrome navSections={navSections} hideUnlockPremium={hideUnlockPremium} />
         </div>
         <main className="min-h-0 min-w-0 flex-1 px-4 py-6 lg:px-8 lg:py-8">{children}</main>
+        {showFooter ? <Footer /> : null}
       </div>
       <AgentChatWidget customerUserId={user?.id ?? null} />
     </div>

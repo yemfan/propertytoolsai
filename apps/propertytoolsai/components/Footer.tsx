@@ -28,6 +28,8 @@ const resourceLinks = [
 const legalLinks = [
   { label: "Privacy Policy", href: "/privacy" },
   { label: "Terms of Service", href: "/terms" },
+  { label: "Cookie Policy", href: "/privacy#cookies" },
+  { label: "Do Not Sell My Info", href: "/privacy#ccpa" },
 ];
 
 export default function Footer() {
@@ -46,7 +48,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-slate-500 transition-colors hover:text-[#0072ce] dark:text-slate-400 dark:hover:text-[#4da3e8]"
+                    className="text-sm text-slate-600 transition-colors hover:text-[#0072ce] dark:text-slate-400 dark:hover:text-[#4da3e8]"
                   >
                     {link.label}
                   </Link>
@@ -65,7 +67,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-slate-500 transition-colors hover:text-[#0072ce] dark:text-slate-400 dark:hover:text-[#4da3e8]"
+                    className="text-sm text-slate-600 transition-colors hover:text-[#0072ce] dark:text-slate-400 dark:hover:text-[#4da3e8]"
                   >
                     {link.label}
                   </Link>
@@ -84,7 +86,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-slate-500 transition-colors hover:text-[#0072ce] dark:text-slate-400 dark:hover:text-[#4da3e8]"
+                    className="text-sm text-slate-600 transition-colors hover:text-[#0072ce] dark:text-slate-400 dark:hover:text-[#4da3e8]"
                   >
                     {link.label}
                   </Link>
@@ -103,7 +105,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-slate-500 transition-colors hover:text-[#0072ce] dark:text-slate-400 dark:hover:text-[#4da3e8]"
+                    className="text-sm text-slate-600 transition-colors hover:text-[#0072ce] dark:text-slate-400 dark:hover:text-[#4da3e8]"
                   >
                     {link.label}
                   </Link>
@@ -116,16 +118,21 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-200/80 pt-8 sm:flex-row dark:border-slate-800">
           {/* Brand */}
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0072ce] text-xs font-bold text-white">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0072ce] text-xs font-bold text-white">
               PT
             </div>
-            <span className="text-sm font-semibold text-slate-900 dark:text-white">
-              PropertyTools AI
-            </span>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                PropertyTools AI
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Smarter real estate decisions, powered by AI.
+              </span>
+            </div>
           </div>
 
-          <p className="text-xs text-slate-400 dark:text-slate-500">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             &copy; {new Date().getFullYear()} PropertyTools AI. All rights
             reserved.
           </p>
