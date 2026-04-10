@@ -14,9 +14,42 @@ import { stripUnlockPremiumNavItem } from "@/lib/nav/stripUnlockPremiumNav";
 import AssignedAgentCard from "@/components/assigned-agent/AssignedAgentCard";
 import AgentChatWidget from "@/components/assigned-agent/AgentChatWidget";
 import PropertyToolsLogo from "@/components/brand/PropertyToolsLogo";
+import MarketingTopNav from "@/components/marketing/MarketingTopNav";
 import { propertyToolsNav } from "@/nav.config";
 
 const APP_NAME = "PropertyTools AI";
+
+/**
+ * Paths that belong to the logged-in product surface. Visiting any of these
+ * always gets the full {@link PremiumSidebar} + {@link Topbar} chrome, even
+ * if the user somehow arrives unauthenticated (they'll be bounced by the
+ * page-level auth guard). Everything else is treated as a marketing surface:
+ * homepage, pricing, tool landing pages, blog, about, contact, legal, etc.
+ */
+const APP_CHROME_PREFIXES = [
+  "/dashboard",
+  "/agent",
+  "/admin",
+  "/account",
+  "/portal",
+  "/loan-broker",
+  "/match",
+  "/smart-cma-builder",
+  "/ai-cma-analyzer",
+  "/listing",
+  "/presentation",
+  "/billing",
+  "/invite",
+  "/checkout-success",
+  "/content",
+];
+
+function isAppChromePath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return APP_CHROME_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
 
 function PropertyToolsTopChrome({
   navSections,
@@ -107,7 +140,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
 /** Uses {@link useAccess} — must render inside {@link AccessProvider}. */
 function AppShellAuthedLayout({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const pathname = usePathname();
+  const { user, loading: authLoading } = useAuth();
   const [rbacRole, setRbacRole] = useState<UserRole>("consumer");
 
   useEffect(() => {
@@ -136,6 +170,31 @@ function AppShellAuthedLayout({ children }: { children: ReactNode }) {
     const base = user ? getNavSectionsForRole(rbacRole) : propertyToolsNav;
     return hideUnlockPremium ? stripUnlockPremiumNavItem(base) : base;
   }, [hideUnlockPremium, rbacRole, user]);
+
+  /**
+   * Route unauthenticated visitors on public marketing pages through the
+   * lightweight {@link MarketingTopNav} instead of the full product chrome
+   * (272px sidebar + top bar). Once auth is resolved and the user is
+   * logged in — or the path is a known app-chrome prefix — we fall through
+   * to the normal authed layout below.
+   *
+   * While `authLoading` is true we default to the marketing shell on
+   * marketing paths so the first paint doesn't flash a sidebar that will
+   * disappear a moment later.
+   *
+   * NOTE: all hooks above MUST run before this branching point. Do not add
+   * an early `return` above this line — it would violate the Rules of Hooks.
+   */
+  const onAppPath = isAppChromePath(pathname);
+  const isMarketingVisitor = !onAppPath && (authLoading || !user);
+  if (isMarketingVisitor) {
+    return (
+      <div className="flex min-h-screen flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        <MarketingTopNav />
+        <main className="min-w-0 flex-1">{children}</main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900">
