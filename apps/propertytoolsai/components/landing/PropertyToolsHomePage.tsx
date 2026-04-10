@@ -297,7 +297,7 @@ export default function PropertyToolsHomePage() {
           <h1 className="font-heading text-4xl font-extrabold leading-[1.08] tracking-tight text-gray-950 sm:text-5xl lg:text-6xl dark:text-white" style={{ animation: "fadeInUp 0.7s ease-out 0.08s both" }}>
             Know What a Home Is Worth
             <br />
-            <span className="bg-gradient-to-r from-[#0072ce] via-[#4F46E5] to-[#7c3aed] bg-clip-text text-transparent">Before Anyone Else</span>
+            <span className="bg-gradient-to-r from-[#0072ce] to-[#005ca8] bg-clip-text text-transparent">Before Anyone Else</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-600 md:text-xl dark:text-slate-400" style={{ animation: "fadeInUp 0.7s ease-out 0.16s both" }}>
             AI calculators that give you <strong className="text-gray-900 dark:text-white">real numbers</strong> — not ballpark guesses. Trusted by buyers, sellers, and investors making smarter decisions.
