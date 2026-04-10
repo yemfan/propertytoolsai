@@ -4,6 +4,7 @@ import { ChevronDown, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { NavSection } from "./types";
 import { isNavDivider, isNavGroup } from "./types";
 import { isLinkActive } from "./matchPath";
@@ -88,6 +89,19 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
+  /**
+   * The modal is rendered into `document.body` via portal (further down)
+   * so it escapes the Topbar `<header>`'s `backdrop-filter` ancestor.
+   *
+   * CSS spec: any element with `transform`, `filter`, `perspective`, or
+   * `backdrop-filter` not equal to `none` becomes the containing block for
+   * any descendant `position: fixed` element. Without the portal, our
+   * `fixed inset-0` modal would re-anchor to the 60px-tall topbar instead
+   * of the viewport, so the drawer panel would only be 60px tall and clip
+   * every nav item past the first one. This is the most common "the
+   * hamburger drawer only shows one item" symptom on iOS Safari.
+   */
+
   return (
     <>
       <button
@@ -106,8 +120,9 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
         <Menu className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
       </button>
 
-      {open ? (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
           <button
             type="button"
             className="absolute inset-0 bg-slate-900/35 backdrop-blur-[2px]"
@@ -247,8 +262,10 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
               })}
             </nav>
           </div>
-        </div>
-      ) : null}
+        </div>,
+            document.body
+          )
+        : null}
     </>
   );
 }
