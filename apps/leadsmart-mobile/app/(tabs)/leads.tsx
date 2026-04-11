@@ -1,7 +1,6 @@
 import type { MobileLeadRecordDto } from "@leadsmart/shared";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   RefreshControl,
@@ -13,12 +12,13 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
-import { ScreenLoading } from "../../components/ScreenLoading";
 import { leadField } from "../../lib/leadRecord";
 import { DEMO_LEAD_ID, getDemoLeadRecord } from "../../lib/demoLead";
 import { fetchMobileLeads } from "../../lib/leadsmartMobileApi";
 import type { MobileApiFailure, MobileLeadsFilter } from "../../lib/leadsmartMobileApi";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
+import { LeadRowSkeleton, SkeletonList } from "../../components/Skeleton";
 
 const PAGE_SIZE = 30;
 
@@ -55,6 +55,8 @@ function LeadRowInner({
   lead: MobileLeadRecordDto;
   onPress: () => void;
 }) {
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const name = leadField(lead, "name") || `Lead ${lead.id}`;
   const phone = lead.display_phone || leadField(lead, "phone") || leadField(lead, "phone_number");
   const address = leadField(lead, "property_address");
@@ -119,6 +121,8 @@ const LeadRow = memo(LeadRowInner);
 
 export default function LeadsScreen() {
   const router = useRouter();
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const params = useLocalSearchParams<{ filter?: string | string[]; booking?: string | string[] }>();
   const filterRaw = paramStr(params.filter);
   const initialFilter: FilterKey =
@@ -246,8 +250,42 @@ export default function LeadsScreen() {
     return <EmptyState title="No leads yet" subtitle="New leads from your funnels will appear here." />;
   }, [error, search]);
 
+  /*
+   * First-load state: show a stack of skeleton rows inside the
+   * same list container so the search bar and filter chips stay
+   * stable (no layout shift when real data arrives). Previously
+   * this routed to a full-screen `ScreenLoading` spinner, which
+   * made the screen feel like it was "booting" on every tab
+   * switch on slow networks.
+   */
   if (loading && leads.length === 0) {
-    return <ScreenLoading message="Loading leads..." />;
+    return (
+      <View style={styles.container}>
+        <View style={styles.searchWrap}>
+          <TextInput
+            editable={false}
+            placeholder="Search name, phone, address..."
+            placeholderTextColor={tokens.textSubtle}
+            style={styles.searchInput}
+          />
+        </View>
+        <View style={styles.chipRow}>
+          {FILTER_CHIPS.map((chip) => (
+            <View
+              key={chip.key}
+              style={[styles.chip, activeFilter === chip.key && styles.chipActive]}
+            >
+              <Text
+                style={[styles.chipText, activeFilter === chip.key && styles.chipTextActive]}
+              >
+                {chip.label}
+              </Text>
+            </View>
+          ))}
+        </View>
+        <SkeletonList count={6} renderRow={() => <LeadRowSkeleton />} />
+      </View>
+    );
   }
 
   return (
@@ -266,7 +304,7 @@ export default function LeadsScreen() {
           value={search}
           onChangeText={setSearch}
           placeholder="Search name, phone, address..."
-          placeholderTextColor={theme.textSubtle}
+          placeholderTextColor={tokens.textSubtle}
           style={styles.searchInput}
           returnKeyType="search"
           clearButtonMode="while-editing"
@@ -306,9 +344,10 @@ export default function LeadsScreen() {
         removeClippedSubviews
         ListFooterComponent={
           loadingMore ? (
-            <View style={styles.footerLoad}>
-              <ActivityIndicator color={theme.accent} />
-            </View>
+            // Skeleton row during pagination — matches the height
+            // of a real row so the end-of-list spring bounce
+            // doesn't jump when the real data arrives.
+            <LeadRowSkeleton />
           ) : null
         }
         ListEmptyComponent={listEmpty}
@@ -340,7 +379,15 @@ export default function LeadsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+/**
+ * Style factory — rebuilt inside each component via `useMemo`
+ * whenever `tokens` changes (OS dark-mode toggle, accessibility
+ * theme swap). Previously this StyleSheet was module-scoped and
+ * captured the light palette at import time, which meant the
+ * leads screen stayed stuck in light mode even after the rest of
+ * the app learned to honor `useColorScheme()`.
+ */
+const createStyles = (theme: ThemeTokens) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.bg },
   searchWrap: { paddingHorizontal: 12, paddingTop: 8 },
   searchInput: {
@@ -430,3 +477,4 @@ const styles = StyleSheet.create({
   stageText: { fontSize: 11, fontWeight: "600", color: theme.infoText },
   score: { fontSize: 11, color: theme.accent, fontWeight: "600" },
 });
+

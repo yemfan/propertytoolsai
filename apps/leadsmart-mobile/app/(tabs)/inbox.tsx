@@ -11,14 +11,15 @@ import {
 import { useRouter } from "expo-router";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
-import { ScreenLoading } from "../../components/ScreenLoading";
+import { InboxRowSkeleton, SkeletonList } from "../../components/Skeleton";
 import { formatShortDateTime } from "../../lib/format";
 import { getLeadsmartAccessToken } from "../../lib/env";
 import { DEMO_LEAD_ID, getDemoInboxThread } from "../../lib/demoLead";
 import { fetchMobileInbox, fetchMobileLeads } from "../../lib/leadsmartMobileApi";
 import type { MobileApiFailure } from "../../lib/leadsmartMobileApi";
 import { useInboxRealtime } from "../../lib/realtime/useInboxRealtime";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
 /** Hot threads first, then by recency (matches server ordering within each group). */
 function sortInboxThreads(threads: MobileInboxThreadDto[]): MobileInboxThreadDto[] {
@@ -35,6 +36,8 @@ function ThreadRow({
   item: MobileInboxThreadDto;
   onPress: () => void;
 }) {
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const channel = item.channel === "sms" ? "SMS" : "Email";
   const hot = item.isHotLead;
 
@@ -82,6 +85,8 @@ function ThreadRow({
 
 export default function InboxScreen() {
   const router = useRouter();
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [threads, setThreads] = useState<MobileInboxThreadDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -137,8 +142,19 @@ export default function InboxScreen() {
     );
   }, [error]);
 
+  /*
+   * First-load skeleton state. Matches the shape of a real inbox
+   * row so the layout doesn't reflow when data arrives. The old
+   * `ScreenLoading` spinner flashed a full-screen centered
+   * "Loading inbox…" text that made the tab feel like a cold
+   * start on every network hiccup.
+   */
   if (loading && threads.length === 0) {
-    return <ScreenLoading message="Loading inbox…" />;
+    return (
+      <View style={styles.container}>
+        <SkeletonList count={6} renderRow={() => <InboxRowSkeleton />} />
+      </View>
+    );
   }
 
   return (
@@ -174,7 +190,11 @@ export default function InboxScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+/**
+ * Style factory — invoked from `useMemo` inside each component
+ * so the StyleSheet rebuilds whenever the OS color scheme flips.
+ */
+const createStyles = (theme: ThemeTokens) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.bg },
   listPad: { paddingVertical: 8 },
   emptyList: { flexGrow: 1, justifyContent: "center" },

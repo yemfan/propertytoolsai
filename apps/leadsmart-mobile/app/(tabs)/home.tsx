@@ -5,7 +5,7 @@ import type {
 } from "@leadsmart/shared";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -17,7 +17,7 @@ import {
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { DailyAgendaList } from "../../components/home/DailyAgendaList";
 import { PriorityAlertCard } from "../../components/home/PriorityAlertCard";
-import { ScreenLoading } from "../../components/ScreenLoading";
+import { Skeleton } from "../../components/Skeleton";
 import {
   fetchMobileDailyAgenda,
   fetchMobileDashboard,
@@ -25,7 +25,8 @@ import {
 } from "../../lib/leadsmartMobileApi";
 import type { MobileApiFailure } from "../../lib/leadsmartMobileApi";
 import { getSupabaseAuthClient } from "../../lib/supabaseAuthClient";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -51,12 +52,14 @@ function formatAgendaDayLabel(agendaDate: string): string {
   }
 }
 
-function SectionRule() {
-  return <View style={styles.rule} />;
+function SectionRule({ color }: { color: string }) {
+  return <View style={{ height: 1, backgroundColor: color, marginVertical: 16 }} />;
 }
 
 export default function HomeScreen() {
   const router = useRouter();
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [firstName, setFirstName] = useState<string | null>(null);
   const [initialDone, setInitialDone] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -194,8 +197,65 @@ export default function HomeScreen() {
     [router]
   );
 
+  /*
+   * First-load skeleton — mirrors the shape of the real home
+   * screen (hero line + chip row + agenda list + two cards) so
+   * the layout doesn't jump when the dashboard + agenda
+   * responses arrive. Replaces the previous full-screen
+   * `ScreenLoading` spinner, which made cold starts feel
+   * longer than they actually were.
+   */
   if (!initialDone) {
-    return <ScreenLoading message="Loading your day…" />;
+    return (
+      <View style={styles.root}>
+        <View style={styles.scrollContent}>
+          <View style={styles.heroBlock}>
+            <Skeleton width="70%" height={28} borderRadius={8} />
+            <Skeleton
+              width="85%"
+              height={14}
+              borderRadius={6}
+              style={{ marginTop: 14 }}
+            />
+          </View>
+          <SectionRule color={tokens.border} />
+          <View style={styles.chipRow}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton
+                key={i}
+                width={88}
+                height={36}
+                borderRadius={999}
+              />
+            ))}
+          </View>
+          <SectionRule color={tokens.border} />
+          <Skeleton width="30%" height={12} borderRadius={4} />
+          <View style={{ marginTop: 12, gap: 10 }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <View
+                key={i}
+                style={{
+                  padding: 14,
+                  borderRadius: 12,
+                  backgroundColor: tokens.surface,
+                  borderWidth: 1,
+                  borderColor: tokens.border,
+                }}
+              >
+                <Skeleton width="60%" height={14} borderRadius={4} />
+                <Skeleton
+                  width="90%"
+                  height={12}
+                  borderRadius={4}
+                  style={{ marginTop: 8 }}
+                />
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    );
   }
 
   if (dashboardError && !stats) {
@@ -235,7 +295,7 @@ export default function HomeScreen() {
           <Text style={styles.summaryLine}>{summaryLine}</Text>
         </View>
 
-        <SectionRule />
+        <SectionRule color={tokens.border} />
 
         <View style={styles.chipRow}>
           <Pressable
@@ -270,7 +330,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <SectionRule />
+        <SectionRule color={tokens.border} />
 
         <Text style={styles.sectionHeading}>Today</Text>
         {agendaDate ? (
@@ -288,7 +348,7 @@ export default function HomeScreen() {
         ) : null}
         <DailyAgendaList items={agendaItems} onItemPress={handleAgendaItem} />
 
-        <SectionRule />
+        <SectionRule color={tokens.border} />
 
         <Text style={styles.sectionHeading}>Priority Alerts</Text>
         {dashboardError ? (
@@ -310,25 +370,25 @@ export default function HomeScreen() {
           ))
         )}
 
-        <SectionRule />
+        <SectionRule color={tokens.border} />
 
         {/* Weekly Digest */}
         {weeklyDigest && (
           <>
             <Text style={styles.sectionHeading}>{weeklyDigest.title}</Text>
-            <View style={{ backgroundColor: theme.surfaceMuted, borderRadius: 12, padding: 12, marginBottom: 8 }}>
-              <Text style={{ fontSize: 13, color: theme.textMuted, lineHeight: 20 }}>{weeklyDigest.body}</Text>
+            <View style={{ backgroundColor: tokens.surfaceMuted, borderRadius: 12, padding: 12, marginBottom: 8 }}>
+              <Text style={{ fontSize: 13, color: tokens.textMuted, lineHeight: 20 }}>{weeklyDigest.body}</Text>
               {weeklyDigest.insights?.length > 0 && (
                 <View style={{ marginTop: 8 }}>
                   {weeklyDigest.insights.slice(0, 3).map((ins) => (
-                    <Text key={ins.key} style={{ fontSize: 12, color: ins.tone === "warning" ? theme.warning : ins.tone === "positive" ? theme.successDark : theme.textMuted, marginTop: 4 }}>
+                    <Text key={ins.key} style={{ fontSize: 12, color: ins.tone === "warning" ? tokens.warning : ins.tone === "positive" ? tokens.successDark : tokens.textMuted, marginTop: 4 }}>
                       {ins.label}: {ins.message}
                     </Text>
                   ))}
                 </View>
               )}
             </View>
-            <SectionRule />
+            <SectionRule color={tokens.border} />
           </>
         )}
 
@@ -341,23 +401,23 @@ export default function HomeScreen() {
               accessibilityLabel={`${queueCount} lead${queueCount > 1 ? "s" : ""} available to claim`}
               accessibilityHint="Opens the lead queue"
               style={({ pressed }) => [{
-                backgroundColor: pressed ? theme.accentPressed : theme.infoBgAlt,
+                backgroundColor: pressed ? tokens.accentPressed : tokens.infoBgAlt,
                 borderRadius: 12,
                 padding: 14,
                 borderWidth: 1,
-                borderColor: theme.infoBorder,
+                borderColor: tokens.infoBorder,
                 marginBottom: 8,
                 minHeight: 44, // WCAG 44pt touch target
               }]}
             >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: theme.infoText }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: tokens.infoText }}>
                 {queueCount} lead{queueCount > 1 ? "s" : ""} available to claim
               </Text>
-              <Text style={{ fontSize: 12, color: theme.infoAccent, marginTop: 2 }}>
+              <Text style={{ fontSize: 12, color: tokens.infoAccent, marginTop: 2 }}>
                 Tap to view the lead queue
               </Text>
             </Pressable>
-            <SectionRule />
+            <SectionRule color={tokens.border} />
           </>
         )}
 
@@ -393,7 +453,11 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+/**
+ * Style factory — consumed via `useMemo` in `HomeScreen` so the
+ * stylesheet rebuilds when the OS color scheme flips.
+ */
+const createStyles = (theme: ThemeTokens) => StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.bg },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 36, paddingTop: 12 },
