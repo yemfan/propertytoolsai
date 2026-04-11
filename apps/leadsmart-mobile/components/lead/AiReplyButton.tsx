@@ -35,13 +35,17 @@ export function AiReplyButton({
 
 const styles = StyleSheet.create({
   btn: {
+    // iOS HIG minimum tap target is 44x44pt. Earlier revision used
+    // paddingVertical:10 which yielded ~34pt height — too small for
+    // field agents using gloves or tapping on the move.
+    minHeight: 44,
+    minWidth: 52,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: theme.accent,
     backgroundColor: "#eff6ff",
-    minWidth: 52,
     alignItems: "center",
     justifyContent: "center",
   },

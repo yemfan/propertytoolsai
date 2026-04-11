@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { onboardingStyles as s } from "../../lib/onboarding/styles";
 
@@ -44,8 +45,8 @@ export default function OnboardingValueScreen() {
   }, [page, router]);
 
   return (
-    <View style={s.flex}>
-      <View style={{ flex: 1, paddingTop: 48 }}>
+    <SafeAreaView style={s.flex} edges={["top", "bottom"]}>
+      <View style={{ flex: 1, paddingTop: 16 }}>
         <ScrollView
           ref={scrollRef}
           horizontal
@@ -71,7 +72,7 @@ export default function OnboardingValueScreen() {
           ))}
         </View>
 
-        <View style={{ paddingHorizontal: 24, paddingBottom: 32 }}>
+        <View style={{ paddingHorizontal: 24, paddingBottom: 16 }}>
           <Pressable
             style={s.primaryBtn}
             onPress={goNext}
@@ -90,6 +91,6 @@ export default function OnboardingValueScreen() {
           </Pressable>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

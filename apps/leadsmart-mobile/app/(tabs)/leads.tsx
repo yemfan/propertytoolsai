@@ -51,9 +51,27 @@ function LeadRow({
   const stage = leadField(lead, "pipeline_stage_name") || leadField(lead, "lead_status");
   const hot = rating.toLowerCase() === "hot";
 
+  /**
+   * Accessibility label: assembled from name + hot state + phone + stage
+   * so screen reader users hear a complete description of each row.
+   * Previously the row was an unlabeled <Pressable> so VoiceOver / TalkBack
+   * announced only "double-tap to activate" with no content context.
+   */
+  const accessibilityLabel = [
+    name,
+    hot ? "hot lead" : null,
+    phone ? `phone ${phone}` : null,
+    stage ? `stage ${stage}` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint="Opens lead details"
       style={({ pressed }) => [styles.row, hot && styles.rowHot, pressed && styles.rowPressed]}
     >
       <View style={styles.rowTop}>

@@ -4,12 +4,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { getLeadsmartApiBaseUrl, getSupabaseAnonKey, getSupabaseUrl } from "../../lib/env";
 import { onboardingStyles as s } from "../../lib/onboarding/styles";
@@ -117,11 +119,31 @@ export default function OnboardingLoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={s.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <View style={s.safePad}>
+    /*
+     * Keyboard handling — before this refactor, the form used
+     * `<KeyboardAvoidingView>` + a flex `<View>` with
+     * `justifyContent: space-between`. When the iOS keyboard slid up,
+     * the submit button (anchored at the bottom) was covered on
+     * smaller Android devices and older iPhones because "padding"
+     * KAV behavior doesn't move a center-aligned flex block — it
+     * only adds bottom inset, which the centerBlock ignores.
+     *
+     * New pattern: SafeAreaView (for notch) → KeyboardAvoidingView →
+     * ScrollView. When the keyboard appears, the ScrollView pushes
+     * content up so the focused input + the submit button below it
+     * stay visible. `keyboardShouldPersistTaps="handled"` lets users
+     * tap buttons without losing the keyboard focus first.
+     */
+    <SafeAreaView style={s.flex} edges={["top", "bottom"]}>
+      <KeyboardAvoidingView
+        style={s.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          contentContainerStyle={[s.safePad, { flexGrow: 1 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         <View style={s.centerBlock}>
           <Text style={s.kicker}>Sign in</Text>
           <Text style={s.title}>Welcome back</Text>
@@ -282,7 +304,8 @@ export default function OnboardingLoginScreen() {
             </Pressable>
           )}
         </View>
-      </View>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

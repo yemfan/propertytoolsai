@@ -3,11 +3,19 @@ import { theme } from "../theme";
 
 export const onboardingStyles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: theme.bg },
+  /**
+   * Pairs with a <SafeAreaView edges={["top","bottom"]}> wrapper in each
+   * onboarding screen. The SafeAreaView adds the notch/home-indicator
+   * insets dynamically, then this block adds the usual 24 horizontal
+   * + 20 vertical padding on top of the safe area. Earlier revisions
+   * hardcoded `paddingTop: 56` as a fixed notch estimate, which was
+   * too tall on iPhone SE and too short on Dynamic Island devices.
+   */
   safePad: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 56,
-    paddingBottom: 32,
+    paddingTop: 20,
+    paddingBottom: 20,
     justifyContent: "space-between",
   },
   centerBlock: { flex: 1, justifyContent: "center" },
