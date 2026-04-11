@@ -211,10 +211,10 @@ const createStyles = (theme: ThemeTokens) =>
     borderWidth: 1,
     borderColor: theme.border,
   },
-  chipOn: { backgroundColor: "#dbeafe", borderColor: theme.accent },
+  chipOn: { backgroundColor: theme.infoBg, borderColor: theme.accent },
   chipText: { fontSize: 13, fontWeight: "700", color: theme.textMuted },
   chipTextOn: { color: theme.accent },
-  error: { color: theme.errorTitle, marginTop: 8, fontSize: 14 },
+  error: { color: theme.dangerTitle, marginTop: 8, fontSize: 14 },
   actions: {
     flexDirection: "row",
     justifyContent: "flex-end",

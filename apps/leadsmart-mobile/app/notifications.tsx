@@ -188,7 +188,13 @@ const createStyles = (theme: ThemeTokens) =>
     padding: 14,
     marginBottom: 12,
   },
-  cardUnread: { borderColor: "#93c5fd", backgroundColor: "#f8fafc" },
+  /**
+   * Unread card — tinted surface with an info-blue border to
+   * pull attention. Uses `surfaceMuted` so the tint direction
+   * is correct in both modes (slightly darker than `surface`
+   * on light, slightly lifted from `bg` on dark).
+   */
+  cardUnread: { borderColor: theme.infoBorder, backgroundColor: theme.surfaceMuted },
   cardPressed: { opacity: 0.92 },
   cardTop: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
   typeTag: { fontSize: 11, fontWeight: "800", color: theme.textSubtle, letterSpacing: 0.4 },

@@ -132,7 +132,7 @@ const createStyles = (theme: ThemeTokens) =>
     paddingHorizontal: 8,
   },
   chipPressed: {
-    backgroundColor: "#e2e8f0",
+    backgroundColor: theme.surfaceElevated,
   },
   chipDisabled: {
     opacity: 0.45,
