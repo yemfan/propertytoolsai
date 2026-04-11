@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { onboardingStyles as s } from "../../lib/onboarding/styles";
 import { useLeadsmartSession } from "../../lib/session/LeadsmartSessionContext";
+import { BackRow } from "../../components/onboarding/BackRow";
 
 export default function OnboardingNotificationsScreen() {
   const router = useRouter();
@@ -44,6 +45,7 @@ export default function OnboardingNotificationsScreen() {
 
   return (
     <SafeAreaView style={s.flex} edges={["top", "bottom"]}>
+      <BackRow fallbackHref="/(onboarding)/login" />
       <View style={s.safePad}>
         <View style={s.centerBlock}>
           <Text style={s.kicker}>Stay in the loop</Text>
