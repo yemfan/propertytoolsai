@@ -123,10 +123,16 @@ export default function AffordabilityCalculator() {
 
         <div className="lg:col-span-1">
           <div className="lg:sticky lg:top-24">
+            {/*
+             * `value` already displays the maximum home price as the big
+             * headline number. `details` previously duplicated it on a
+             * second line ("Maximum home price: $...") — removed the
+             * duplication and kept only the monthly payment breakdown.
+             */}
             <ResultCard
-              title="What you can afford"
+              title="Maximum home price"
               value={`$${Math.round(maxHomePrice).toLocaleString()}`}
-              details={`Maximum home price: $${Math.round(maxHomePrice).toLocaleString()}\nEstimated monthly payment: $${estimatedMonthlyPayment.toFixed(2)}`}
+              details={`Estimated monthly payment: $${estimatedMonthlyPayment.toFixed(2)}`}
             />
           </div>
         </div>
