@@ -58,20 +58,17 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: SITE_NAME,
     description: SITE_DESCRIPTION,
-    images: [
-      {
-        url: `${SITE_URL}/images/og-default.png`,
-        width: 1200,
-        height: 630,
-        alt: `${SITE_NAME} — Real Estate Tools`,
-      },
-    ],
+    // `images` is intentionally omitted: Next.js App Router auto-detects
+    // `app/opengraph-image.tsx` and wires it as the og:image for this
+    // route. Previously this hardcoded `/images/og-default.png` which
+    // never existed on disk, so every social share had a broken preview.
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_NAME,
     description: SITE_DESCRIPTION,
-    images: [`${SITE_URL}/images/og-default.png`],
+    // Same as openGraph.images — Next auto-picks up opengraph-image.tsx
+    // for twitter:image as well.
     creator: "@propertytoolsai",
   },
   icons: {
@@ -87,9 +84,59 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * JSON-LD structured data for Google rich results. Two graphs:
+ *
+ *   1. Organization — brand identity, logo, name. Surfaces as the
+ *      knowledge panel + logo in search results.
+ *
+ *   2. WebSite with SearchAction — enables the "Sitelinks search box"
+ *      in Google SERPs pointing at /home-value. Users can type an
+ *      address straight into Google and land on the tool.
+ *
+ * These are JSON.stringify'd and injected as an inline <script
+ * type="application/ld+json"> in the document <head> via Next.js's
+ * app router layout.
+ */
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: `${SITE_URL}/images/ptlogo.png`,
+    description: SITE_DESCRIPTION,
+    sameAs: [] as string[],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: SITE_URL,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SITE_URL}/home-value?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  },
+];
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {jsonLd.map((schema, i) => (
+          <script
+            key={`ld-json-${i}`}
+            type="application/ld+json"
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+          />
+        ))}
+      </head>
       <body className={`${fontHeading.variable} ${fontBody.variable} bg-brand-surface text-brand-text font-body`}>
         <AppShell>{children}</AppShell>
       </body>

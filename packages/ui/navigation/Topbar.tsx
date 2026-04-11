@@ -99,12 +99,12 @@ export function Topbar({
 
         <div className="min-w-0 flex-1">
           {searchSlot === undefined ? (
-            <div className="flex h-11 min-w-0 items-center gap-3 rounded-2xl border border-gray-200/90 bg-gray-50/90 px-3.5 shadow-sm transition-colors focus-within:border-gray-300 focus-within:bg-white focus-within:shadow-md md:px-4">
-              <Search className="h-4 w-4 shrink-0 text-gray-400" strokeWidth={2} aria-hidden />
+            <div className="flex h-11 min-w-0 items-center gap-3 rounded-2xl border border-slate-200/90 bg-slate-50/90 px-3.5 shadow-sm transition-colors focus-within:border-slate-300 focus-within:bg-white focus-within:shadow-md md:px-4">
+              <Search className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
               <input
                 type="search"
                 placeholder={searchPlaceholder}
-                className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-gray-900 outline-none ring-0 placeholder:text-gray-400"
+                className="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400"
               />
             </div>
           ) : searchSlot === null ? (
