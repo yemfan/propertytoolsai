@@ -1,0 +1,37 @@
+# EAS Build ignore file — monorepo root.
+#
+# EAS Build detects this pnpm workspace and uploads the entire
+# monorepo so the mobile app's workspace dependencies resolve.
+# That means `.easignore` needs to live here, at the monorepo
+# root, not just under `apps/leadsmart-mobile/`. Patterns below
+# are excluded from the tar shipped to Expo's build workers.
+#
+# Root cause for this file existing: Android build
+# 2d6af698-bf27-4bd9-9a7c-34f630ed9bc3 errored in the
+# PREPARE_PROJECT phase because tar tried to archive
+# `.claude/worktrees/` — the parent of sibling git worktrees
+# managed by Claude Code sessions — and those worktrees
+# reference files that don't exist in the current checkout's
+# index, producing thousands of "Cannot open: No such file or
+# directory" errors. `.claude/` has no business in a production
+# bundle regardless.
+
+# Claude Code local working directory (worktrees, sessions, logs)
+.claude/
+
+# Scratch / caches
+**/.turbo/
+**/.next/
+apps/propertytoolsai/tmp/
+apps/propertytoolsai/ml/valuation/artifacts/
+apps/leadsmart-mobile/dist/
+
+# Local env + secrets
+.env
+.env.*.local
+**/.env
+**/.env.*.local
+
+# Large asset source archives
+*.zip
+*.tar.gz
