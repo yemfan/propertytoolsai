@@ -1,0 +1,39 @@
+# EAS Build ignore file — belt-and-suspenders for patterns that
+# must never end up in the tar shipped to Expo's build workers,
+# even if `.gitignore` or the monorepo-root `.easignore` somehow
+# doesn't catch them.
+#
+# EAS Build uploads the entire monorepo (needed for pnpm
+# workspace resolution) and respects both `.gitignore` and
+# `.easignore`. When both exist, `.easignore` takes precedence.
+#
+# Root cause for this file existing: a previous Android build
+# (2d6af698-bf27-4bd9-9a7c-34f630ed9bc3) errored in the
+# PREPARE_PROJECT phase because tar tried to archive
+# `.claude/worktrees/` — the parent of sibling git worktrees
+# managed by Claude Code sessions — and those worktrees
+# reference files that don't exist in the current checkout's
+# index, producing thousands of "Cannot open: No such file or
+# directory" errors. `.claude/` has no business in a production
+# bundle regardless.
+
+# Claude Code local working directory (worktrees, sessions, logs).
+# The leading `..` variant is belt-and-suspenders in case EAS
+# ever treats this file's root as `apps/leadsmart-mobile/`
+# rather than the monorepo root.
+.claude/
+../../.claude/
+
+# Local scratch / caches
+.turbo/
+**/.turbo/
+.next/
+**/.next/
+apps/propertytoolsai/tmp/
+apps/propertytoolsai/ml/valuation/artifacts/
+
+# Local env + secrets (already gitignored, but re-assert)
+.env
+.env.*.local
+**/.env
+**/.env.*.local

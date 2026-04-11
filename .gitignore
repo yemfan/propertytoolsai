@@ -48,3 +48,15 @@ next-env.d.ts
 # valuation ML training (local / admin workflow)
 apps/propertytoolsai/tmp/
 apps/propertytoolsai/ml/valuation/artifacts/
+
+# Claude Code local working directory.
+#
+# `.claude/worktrees/` holds sibling git worktrees (one per
+# Claude Code session), each a full checkout of a different
+# branch. EAS Build's tar step choked on these because the
+# worktree contents reference files that don't exist in the
+# current checkout's index — "tar: ... Cannot open: No such
+# file or directory" flooded PREPARE_PROJECT and errored the
+# build. `.claude/` has no business in a production bundle, so
+# exclude the whole directory.
+.claude/
