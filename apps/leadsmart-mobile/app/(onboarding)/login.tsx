@@ -299,7 +299,7 @@ export default function OnboardingLoginScreen() {
               accessibilityLabel="Sign in"
             >
               {busy ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={tokens.textOnAccent} />
               ) : (
                 <Text style={s.primaryBtnText}>Sign in</Text>
               )}
@@ -313,7 +313,7 @@ export default function OnboardingLoginScreen() {
               accessibilityLabel="Sign in with token"
             >
               {busy ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={tokens.textOnAccent} />
               ) : (
                 <Text style={s.primaryBtnText}>Continue with token</Text>
               )}

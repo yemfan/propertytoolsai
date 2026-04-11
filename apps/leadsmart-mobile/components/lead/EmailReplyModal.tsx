@@ -184,7 +184,7 @@ const createStyles = (theme: ThemeTokens) =>
   },
   title: { fontSize: 18, fontWeight: "800", color: theme.text, marginBottom: 8 },
   hint: { fontSize: 13, color: theme.textMuted, marginBottom: 8 },
-  error: { fontSize: 13, color: theme.errorTitle, marginBottom: 8 },
+  error: { fontSize: 13, color: theme.dangerTitle, marginBottom: 8 },
   fieldLabel: {
     fontSize: 11,
     fontWeight: "700",

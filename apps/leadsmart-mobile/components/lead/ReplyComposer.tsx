@@ -105,7 +105,7 @@ const createStyles = (theme: ThemeTokens) =>
       letterSpacing: 0.6,
       marginBottom: 8,
     },
-    error: { fontSize: 13, color: theme.errorTitle, marginBottom: 8 },
+    error: { fontSize: 13, color: theme.dangerTitle, marginBottom: 8 },
     success: { fontSize: 13, color: theme.successTextDark, marginBottom: 8, fontWeight: "600" },
     composerRow: {
       flexDirection: "row",

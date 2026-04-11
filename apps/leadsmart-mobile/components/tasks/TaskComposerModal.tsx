@@ -221,7 +221,7 @@ const createStyles = (theme: ThemeTokens) =>
     borderColor: theme.border,
   },
   priorityChipOn: {
-    backgroundColor: "#dbeafe",
+    backgroundColor: theme.infoBg,
     borderColor: theme.accent,
   },
   priorityChipText: { fontSize: 12, fontWeight: "700", color: theme.textMuted, textTransform: "capitalize" },
@@ -238,7 +238,7 @@ const createStyles = (theme: ThemeTokens) =>
   dueChipOn: { backgroundColor: theme.accent, borderColor: theme.accent },
   dueChipText: { fontSize: 14, fontWeight: "700", color: theme.text },
   dueChipTextOn: { color: theme.textOnAccent },
-  error: { color: theme.errorTitle, marginTop: 8, fontSize: 14 },
+  error: { color: theme.dangerTitle, marginTop: 8, fontSize: 14 },
   actions: {
     flexDirection: "row",
     justifyContent: "flex-end",

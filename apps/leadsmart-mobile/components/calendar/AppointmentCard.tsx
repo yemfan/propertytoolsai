@@ -100,9 +100,9 @@ const createStyles = (theme: ThemeTokens) =>
       paddingHorizontal: 14,
       borderRadius: 8,
       borderWidth: 1,
-      borderColor: theme.errorBorder,
-      backgroundColor: theme.errorBg,
+      borderColor: theme.dangerBorder,
+      backgroundColor: theme.dangerBg,
     },
     cancelBtnPressed: { opacity: 0.88 },
-    cancelText: { fontSize: 13, fontWeight: "700", color: theme.errorTitle },
+    cancelText: { fontSize: 13, fontWeight: "700", color: theme.dangerTitle },
   });

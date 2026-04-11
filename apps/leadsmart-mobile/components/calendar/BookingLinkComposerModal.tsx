@@ -162,7 +162,7 @@ const createStyles = (theme: ThemeTokens) =>
     backgroundColor: theme.bg,
   },
   inputMultiline: { minHeight: 80, textAlignVertical: "top" },
-  error: { color: theme.errorTitle, marginTop: 4, fontSize: 14 },
+  error: { color: theme.dangerTitle, marginTop: 4, fontSize: 14 },
   actions: {
     flexDirection: "row",
     justifyContent: "flex-end",
