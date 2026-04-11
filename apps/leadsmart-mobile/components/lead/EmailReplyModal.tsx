@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
+import { hapticError, hapticSuccess } from "../../lib/haptics";
 import { AiReplyButton } from "./AiReplyButton";
 
 export function defaultEmailReplySubject(thread: MobileEmailMessageDto[]): string {
@@ -82,8 +83,10 @@ export function EmailReplyModal({
     setSending(true);
     try {
       await onSend(sub, txt);
+      hapticSuccess();
       onClose();
     } catch (e) {
+      hapticError();
       setError(e instanceof Error ? e.message : "Send failed");
     } finally {
       setSending(false);

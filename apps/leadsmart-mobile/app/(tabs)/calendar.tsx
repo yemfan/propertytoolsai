@@ -30,6 +30,13 @@ import {
 import type { MobileApiFailure } from "../../lib/leadsmartMobileApi";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
+import {
+  hapticButtonPress,
+  hapticError,
+  hapticRowTap,
+  hapticSuccess,
+  hapticWarning,
+} from "../../lib/haptics";
 
 function Section({
   title,
@@ -130,11 +137,16 @@ export default function CalendarScreen() {
   }, [load]);
 
   const cancelEvent = useCallback(async (id: string) => {
+    // Warning haptic before the server roundtrip — same feel as
+    // iOS's own "confirm destructive" interaction, so users know
+    // something irreversible is in flight.
+    hapticWarning();
     setActionError(null);
     setCancellingId(id);
     const res = await patchMobileCalendarEvent(id, { status: "cancelled" });
     setCancellingId(null);
     if (res.ok === false) {
+      hapticError();
       setActionError(res.message);
       return;
     }
@@ -147,9 +159,13 @@ export default function CalendarScreen() {
     const res = await patchMobileTask(taskId, { status: "done" });
     setCompletingTaskId(null);
     if (res.ok === false) {
+      hapticError();
       setActionError(res.message);
       return;
     }
+    // Success pattern — ascending double-tap — fires when the
+    // task actually persisted, not before.
+    hapticSuccess();
     setOverdueTasks((prev) => prev.filter((t) => t.id !== taskId));
   }, []);
 
@@ -179,7 +195,12 @@ export default function CalendarScreen() {
       <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>Calendar</Text>
         <Pressable
-          onPress={() => setComposerOpen(true)}
+          onPress={() => {
+            hapticButtonPress();
+            setComposerOpen(true);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="New appointment"
           style={({ pressed }) => [styles.newBtn, pressed && styles.newBtnPressed]}
         >
           <Text style={styles.newBtnText}>New</Text>
@@ -229,7 +250,10 @@ export default function CalendarScreen() {
               <AppointmentCard
                 key={e.id}
                 event={e}
-                onPress={() => router.push(`/lead/${e.lead_id}`)}
+                onPress={() => {
+                  hapticRowTap();
+                  router.push(`/lead/${e.lead_id}`);
+                }}
                 onCancel={() => void cancelEvent(e.id)}
                 cancelling={cancellingId === e.id}
               />
@@ -246,7 +270,10 @@ export default function CalendarScreen() {
                 key={t.id}
                 task={t}
                 showLeadName
-                onPress={() => router.push(`/lead/${t.lead_id}`)}
+                onPress={() => {
+                  hapticRowTap();
+                  router.push(`/lead/${t.lead_id}`);
+                }}
                 onComplete={() => void completeTask(t.id)}
                 completing={completingTaskId === t.id}
               />
@@ -262,7 +289,10 @@ export default function CalendarScreen() {
               <ReminderCard
                 key={`${f.lead_id}-${f.next_contact_at}`}
                 reminder={f}
-                onPress={() => router.push(`/lead/${f.lead_id}`)}
+                onPress={() => {
+                  hapticRowTap();
+                  router.push(`/lead/${f.lead_id}`);
+                }}
               />
             ))
           )}

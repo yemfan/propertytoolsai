@@ -14,6 +14,7 @@ import {
 import { postMobileBookingLink } from "../../lib/leadsmartMobileApi";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
+import { hapticError, hapticSuccess } from "../../lib/haptics";
 
 type Props = {
   visible: boolean;
@@ -61,9 +62,11 @@ export function BookingLinkComposerModal({ visible, leadId, onClose, onCreated }
     });
     setSubmitting(false);
     if (res.ok === false) {
+      hapticError();
       setError(res.message);
       return;
     }
+    hapticSuccess();
     onCreated?.(res.booking_link);
     reset();
     onClose();

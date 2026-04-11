@@ -14,6 +14,7 @@ import {
 import { postMobileTask } from "../../lib/leadsmartMobileApi";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
+import { hapticError, hapticSuccess } from "../../lib/haptics";
 
 function utcNoonTodayIso(): string {
   const n = new Date();
@@ -73,9 +74,11 @@ export function TaskComposerModal({ visible, leadId, onClose, onCreated }: Props
     });
     setSubmitting(false);
     if (res.ok === false) {
+      hapticError();
       setError(res.message);
       return;
     }
+    hapticSuccess();
     onCreated?.(res.task);
     reset();
     onClose();
