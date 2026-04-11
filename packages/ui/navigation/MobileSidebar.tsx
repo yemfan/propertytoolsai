@@ -108,7 +108,7 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
         type="button"
         onClick={() => setOpen(true)}
         className={[
-          "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-gray-200/90 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 lg:hidden",
+          "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200/90 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 lg:hidden",
           className,
         ]
           .filter(Boolean)

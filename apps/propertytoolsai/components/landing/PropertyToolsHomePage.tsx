@@ -368,11 +368,35 @@ const pricingPlans = [
   },
 ];
 
-const exploreLinks = [
-  { label: "Home Value in Los Angeles", href: "/growth/seo/home-value-estimator/los-angeles-ca" },
-  { label: "Mortgage Calculator California", href: "/growth/seo/mortgage-calculator/los-angeles-ca" },
-  { label: "Affordability Calculator 2026", href: "/affordability-calculator" },
-  { label: "Rent vs Buy Los Angeles", href: "/growth/seo/rent-vs-buy-calculator/los-angeles-ca" },
+/**
+ * Popular-city × tool grid for SEO internal linking. Grouped by city so
+ * crawlers and visitors both see a clean "browse by location" matrix
+ * instead of a flat link list. Each entry is a (city, tool) pair pointing
+ * at the programmatic SEO page at /growth/seo/<tool>/<city-slug>.
+ */
+const EXPLORE_CITIES = [
+  {
+    city: "Los Angeles, CA",
+    slug: "los-angeles-ca",
+  },
+  {
+    city: "San Diego, CA",
+    slug: "san-diego-ca",
+  },
+  {
+    city: "Phoenix, AZ",
+    slug: "phoenix-az",
+  },
+  {
+    city: "Atlanta, GA",
+    slug: "atlanta-ga",
+  },
+] as const;
+
+const EXPLORE_TOOLS = [
+  { label: "Home Value", seoSlug: "home-value-estimator" },
+  { label: "Mortgage", seoSlug: "mortgage-calculator" },
+  { label: "Rent vs Buy", seoSlug: "rent-vs-buy-calculator" },
 ] as const;
 
 export default function PropertyToolsHomePage() {
@@ -388,20 +412,29 @@ export default function PropertyToolsHomePage() {
           <div className="absolute right-0 top-1/4 h-[400px] w-[400px] rounded-full opacity-[0.08] blur-[80px]" style={{ background: "radial-gradient(circle, #ff8c42, transparent 70%)" }} />
         </div>
 
+        {/*
+         * Hero content paints INSTANTLY (no fadeInUp animation on
+         * above-the-fold elements) — the previous 5-staggered fadeInUp
+         * chain pushed LCP out by ~700ms because the last element
+         * wasn't visible until `0.32s delay + 0.7s duration = 1.02s`
+         * after first paint. For SEO and conversion, hero must be
+         * there instantly. We still keep the scroll-triggered Reveal
+         * animations on below-the-fold sections.
+         */}
         <div className="relative mx-auto max-w-4xl">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#0072ce]/20 bg-white/80 px-4 py-1.5 text-xs font-medium text-[#0072ce] shadow-sm shadow-[#0072ce]/5 backdrop-blur-sm" style={{ animation: "fadeInUp 0.7s ease-out" }}>
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#0072ce]/20 bg-white/80 px-4 py-1.5 text-xs font-medium text-[#0072ce] shadow-sm shadow-[#0072ce]/5 backdrop-blur-sm">
             <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0072ce] opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-[#0072ce]" /></span>
             Free AI-powered real estate tools
           </div>
-          <h1 className="font-heading text-5xl font-extrabold leading-[1.02] tracking-[-0.02em] text-slate-950 sm:text-6xl lg:text-7xl xl:text-[88px]" style={{ animation: "fadeInUp 0.7s ease-out 0.08s both" }}>
+          <h1 className="font-heading text-5xl font-extrabold leading-[1.02] tracking-[-0.02em] text-slate-950 sm:text-6xl lg:text-7xl xl:text-[88px]">
             Know What a Home Is Worth
             <br />
             <span className="bg-gradient-to-r from-[#0072ce] to-[#005ca8] bg-clip-text text-transparent">Before Anyone Else</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-xl leading-relaxed text-slate-600 md:text-2xl" style={{ animation: "fadeInUp 0.7s ease-out 0.16s both" }}>
+          <p className="mx-auto mt-6 max-w-2xl text-xl leading-relaxed text-slate-600 md:text-2xl">
             AI calculators that give you <strong className="text-slate-900">real numbers</strong> — not ballpark guesses. Trusted by buyers, sellers, and investors making smarter decisions.
           </p>
-          <div className="mt-10 flex flex-col items-center gap-4" style={{ animation: "fadeInUp 0.7s ease-out 0.24s both" }}>
+          <div className="mt-10 flex flex-col items-center gap-4">
             <Link
               href="/home-value"
               className="group relative rounded-2xl bg-gradient-to-r from-[#0072ce] to-[#4F46E5] px-8 py-4 text-base font-semibold text-white shadow-xl shadow-[#0072ce]/25 transition-all duration-300 hover:shadow-2xl hover:shadow-[#0072ce]/30 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#0072ce]/40 active:scale-[0.97]"
@@ -417,7 +450,7 @@ export default function PropertyToolsHomePage() {
               <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-0.5">→</span>
             </Link>
           </div>
-          <p className="mt-5 text-sm font-medium text-slate-600" style={{ animation: "fadeInUp 0.7s ease-out 0.32s both" }}>
+          <p className="mt-5 text-sm font-medium text-slate-600">
             <span className="text-emerald-600">✓</span> No sign-up required
             <span className="mx-2 text-slate-300">·</span>
             <span className="text-emerald-600">✓</span> Instant results
@@ -447,11 +480,12 @@ export default function PropertyToolsHomePage() {
       </section>
 
       {/* ═══ BENTO TOOL GRID ═══ */}
-      <section id="tools" className="px-4 py-16 md:px-6 md:py-24">
+      <section id="tools" className="px-4 py-20 md:px-6 md:py-28">
         <div className="mx-auto max-w-6xl">
           <Reveal className="text-center">
-            <p className="text-sm font-semibold uppercase tracking-widest text-[#0072ce]">All Free. No Account Required.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0072ce]">Features</p>
             <h2 className="mt-3 text-3xl font-extrabold text-slate-900 md:text-4xl">Real Estate Tools That Actually Help</h2>
+            <p className="mt-3 text-base text-slate-600">Twelve AI-powered calculators and analyzers. No sign-up, no paywall on the basics.</p>
           </Reveal>
 
           {/* Bento grid: featured card spans 2 cols */}
@@ -503,11 +537,12 @@ export default function PropertyToolsHomePage() {
       </section>
 
       {/* ═══ SOCIAL PROOF — with avatars ═══ */}
-      <section className="bg-slate-50 px-4 py-16 md:px-6 md:py-24">
+      <section className="bg-slate-50 px-4 py-16 md:px-6 md:py-20">
         <div className="mx-auto max-w-6xl">
           <Reveal className="text-center">
-            <h2 className="text-3xl font-extrabold text-slate-900 md:text-4xl">Trusted by Real People</h2>
-            <p className="mt-3 text-base text-slate-500">Hear from buyers, sellers, and investors who use our tools</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0072ce]">Customer stories</p>
+            <h2 className="mt-3 text-3xl font-extrabold text-slate-900 md:text-4xl">Trusted by Real People</h2>
+            <p className="mt-3 text-base text-slate-600">Hear from buyers, sellers, and investors who use our tools.</p>
           </Reveal>
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {testimonials.map((t, i) => (
@@ -540,11 +575,12 @@ export default function PropertyToolsHomePage() {
       </section>
 
       {/* ═══ PRICING ═══ */}
-      <section id="pricing" className="px-4 py-16 md:px-6 md:py-24">
+      <section id="pricing" className="px-4 py-20 md:px-6 md:py-28">
         <div className="mx-auto max-w-4xl text-center">
           <Reveal>
-            <h2 className="text-3xl font-extrabold text-slate-900 md:text-4xl">Simple, Transparent Pricing</h2>
-            <p className="mt-3 text-base text-slate-500">Start free. Upgrade when you need more.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0072ce]">Pricing</p>
+            <h2 className="mt-3 text-3xl font-extrabold text-slate-900 md:text-4xl">Simple, Transparent Pricing</h2>
+            <p className="mt-3 text-base text-slate-600">Start free. Upgrade when you need more.</p>
           </Reveal>
           <div className="mx-auto mt-12 grid max-w-3xl gap-6 md:grid-cols-2">
             {pricingPlans.map((plan, i) => (
@@ -588,7 +624,7 @@ export default function PropertyToolsHomePage() {
       </section>
 
       {/* ═══ CROSS-PROMO — LeadSmart AI ═══ */}
-      <section className="relative overflow-hidden bg-slate-50 px-4 py-16 md:px-6 md:py-24">
+      <section className="relative overflow-hidden bg-slate-50 px-4 py-16 md:px-6 md:py-20">
         <div className="pointer-events-none absolute right-0 top-0 h-[300px] w-[300px] rounded-full opacity-[0.06] blur-[80px]" style={{ background: "#ff8c42" }} aria-hidden />
         <div className="mx-auto grid max-w-5xl items-center gap-12 md:grid-cols-2">
           <Reveal>
@@ -648,26 +684,66 @@ export default function PropertyToolsHomePage() {
         </div>
       </section>
 
-      {/* ═══ SEO EXPLORE ═══ */}
-      <section className="border-y border-slate-100 px-4 py-10 md:px-6">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="text-lg font-semibold text-slate-800">Explore by City &amp; Tool</h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {exploreLinks.map((link) => (
-              <Link key={link.label} href={link.href} className="group flex items-center gap-2 text-sm text-[#0072ce] transition-colors hover:text-[#005ca8]">
-                <svg className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
-                {link.label}
-              </Link>
+      {/* ═══ SEO EXPLORE — city × tool grid ═══ */}
+      <section className="border-y border-slate-200/70 bg-slate-50/60 px-4 py-16 md:px-6 md:py-20">
+        <div className="mx-auto max-w-6xl">
+          <Reveal className="text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0072ce]">Browse by location</p>
+            <h2 className="mt-3 text-3xl font-extrabold text-slate-900 md:text-4xl">
+              Local data for every major market
+            </h2>
+            <p className="mt-3 text-base text-slate-600">
+              Pick your city to get home value estimates, mortgage rates, and rent-vs-buy comparisons tuned to local data.
+            </p>
+          </Reveal>
+
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {EXPLORE_CITIES.map((city, i) => (
+              <Reveal key={city.slug} delay={i * 60}>
+                <div className="flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <span className="text-base" aria-hidden>📍</span>
+                    <h3 className="font-heading text-base font-bold text-slate-900">{city.city}</h3>
+                  </div>
+                  <ul className="mt-3 flex flex-col gap-1">
+                    {EXPLORE_TOOLS.map((tool) => (
+                      <li key={`${city.slug}-${tool.seoSlug}`}>
+                        <Link
+                          href={`/growth/seo/${tool.seoSlug}/${city.slug}`}
+                          className="group flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 hover:text-[#0072ce] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0072ce]/40"
+                        >
+                          <span>{tool.label}</span>
+                          <svg
+                            className="h-3.5 w-3.5 shrink-0 text-slate-300 transition-all group-hover:translate-x-0.5 group-hover:text-[#0072ce]"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2.5}
+                            aria-hidden
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Reveal>
             ))}
           </div>
+
+          <p className="mt-8 text-center text-sm text-slate-500">
+            Don&apos;t see your city? <Link href="/home-value" className="font-medium text-[#0072ce] underline-offset-4 hover:underline">Check your home value for any address</Link>.
+          </p>
         </div>
       </section>
 
       {/* ═══ FAQ — Interactive Accordion ═══ */}
-      <section className="px-4 py-16 md:px-6 md:py-24">
+      <section className="px-4 py-16 md:px-6 md:py-20">
         <div className="mx-auto max-w-3xl">
           <Reveal className="text-center">
-            <h2 className="text-3xl font-extrabold text-slate-900">Questions? We&apos;ve Got Answers</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0072ce]">FAQ</p>
+            <h2 className="mt-3 text-3xl font-extrabold text-slate-900 md:text-4xl">Questions? We&apos;ve Got Answers</h2>
           </Reveal>
           <div className="mt-10 space-y-3">
             <FaqItem q="How accurate is the home value estimate?" a="Our AI uses recent comparable sales, neighborhood trends, and property data to generate estimates. For most homes, the estimate is within 5–10% of market value. The Premium report includes a confidence range and data sources so you can see exactly how we got there." defaultOpen />
@@ -679,7 +755,7 @@ export default function PropertyToolsHomePage() {
       </section>
 
       {/* ═══ FINAL CTA ═══ */}
-      <section className="relative overflow-hidden px-4 py-20 text-center text-white md:px-6 md:py-28">
+      <section className="relative overflow-hidden px-4 py-24 text-center text-white md:px-6 md:py-32">
         <div className="absolute inset-0 -z-10 bg-slate-950" />
         <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
           <div className="absolute left-1/2 top-1/2 h-[500px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.12] blur-[100px]" style={{ background: "conic-gradient(from 0deg at 50% 50%, #0072ce 0deg, #4F46E5 120deg, #7c3aed 240deg, #0072ce 360deg)" }} />
