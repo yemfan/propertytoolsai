@@ -95,6 +95,14 @@ export default function LeadSmartLanding() {
   const vslConfig = getVslConfig();
   const hasVsl = Boolean(vslConfig.videoIdOrUrl);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  /**
+   * Pricing billing-cycle toggle. Annual billing gives users two
+   * months free (monthly * 10 = annual equivalent), which renders as
+   * a ~17% savings badge above the toggle. Persisted only in local
+   * component state — downstream checkout URLs accept the same plan
+   * slug regardless of cycle, so no routing changes are required.
+   */
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
 
   /**
    * Body scroll lock while the mobile nav drawer is open. Uses
@@ -647,6 +655,64 @@ export default function LeadSmartLanding() {
               <h2 className="font-heading text-2xl font-semibold md:text-3xl dark:text-white">Start Closing Deals Today</h2>
               <p className="mt-2 text-gray-600 dark:text-slate-400">Simple pricing. No contracts. Cancel anytime.</p>
             </RevealSection>
+
+            {/*
+             * Monthly / Annual billing toggle. Annual = monthly × 10
+             * (two months free, ~17% savings). Pricing is computed
+             * inline per-card from the cycle state so we don't have
+             * to maintain a separate plan table.
+             */}
+            <RevealSection delay={50}>
+              <div className="mt-8 flex flex-col items-center gap-3">
+                <div
+                  role="tablist"
+                  aria-label="Billing cycle"
+                  className="inline-flex items-center rounded-full border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={billingCycle === "monthly"}
+                    onClick={() => setBillingCycle("monthly")}
+                    className={`rounded-full px-5 py-1.5 text-sm font-medium transition-colors ${
+                      billingCycle === "monthly"
+                        ? "bg-gradient-to-r from-[#0072ce] to-[#4F46E5] text-white shadow"
+                        : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                    }`}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={billingCycle === "annual"}
+                    onClick={() => setBillingCycle("annual")}
+                    className={`flex items-center gap-2 rounded-full px-5 py-1.5 text-sm font-medium transition-colors ${
+                      billingCycle === "annual"
+                        ? "bg-gradient-to-r from-[#0072ce] to-[#4F46E5] text-white shadow"
+                        : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                    }`}
+                  >
+                    Annual
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                        billingCycle === "annual"
+                          ? "bg-white/20 text-white"
+                          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                      }`}
+                    >
+                      Save 17%
+                    </span>
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-slate-500">
+                  {billingCycle === "annual"
+                    ? "Billed yearly — two months free vs monthly"
+                    : "Switch to annual billing for 2 months free"}
+                </p>
+              </div>
+            </RevealSection>
+
             <div className="mx-auto mt-10 grid max-w-5xl gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {/* Free */}
               <RevealSection delay={0}>
@@ -670,14 +736,25 @@ export default function LeadSmartLanding() {
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#0072ce] to-[#4F46E5] px-3 py-0.5 text-xs font-semibold text-white shadow-md">Most Popular</div>
                   <CardContent className="p-5 text-left">
                     <h3 className="font-heading text-base font-semibold dark:text-white">Pro</h3>
-                    <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">$49 <span className="text-xs font-normal text-gray-500 dark:text-slate-400">/mo</span></p>
+                    <div className="mt-1 flex items-baseline gap-2">
+                      <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                        ${billingCycle === "annual" ? 41 : 49}{" "}
+                        <span className="text-xs font-normal text-gray-500 dark:text-slate-400">/mo</span>
+                      </p>
+                      {billingCycle === "annual" && (
+                        <span className="text-xs font-normal text-gray-400 line-through dark:text-slate-500">$49</span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-500">
+                      {billingCycle === "annual" ? "$490 billed yearly" : "Billed monthly"}
+                    </p>
                     <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Full CRM and AI for active agents.</p>
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 dark:text-slate-300">
                       {["500 leads/month", "SMS + email AI follow-up", "Advanced lead scoring", "Unlimited drip sequences", "Tour & offer tracking", "CRM integrations"].map((f) => (
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="primary" />{f}</li>
                       ))}
                     </ul>
-                    <Button className="mt-5 w-full text-xs shadow-lg shadow-[#0072ce]/20" href="/pricing?checkout_plan=pro">Start free trial</Button>
+                    <Button className="mt-5 w-full text-xs shadow-lg shadow-[#0072ce]/20" href={`/pricing?checkout_plan=pro&cycle=${billingCycle}`}>Start free trial</Button>
                     <p className="mt-1.5 text-center text-[11px] text-gray-400 dark:text-slate-500">14-day trial · No card needed</p>
                   </CardContent>
                 </Card>
@@ -687,14 +764,25 @@ export default function LeadSmartLanding() {
                 <Card className="h-full dark:border-slate-700 dark:bg-slate-900">
                   <CardContent className="p-5 text-left">
                     <h3 className="font-heading text-base font-semibold dark:text-white">Elite</h3>
-                    <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">$99 <span className="text-xs font-normal text-gray-500 dark:text-slate-400">/mo</span></p>
+                    <div className="mt-1 flex items-baseline gap-2">
+                      <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                        ${billingCycle === "annual" ? 82 : 99}{" "}
+                        <span className="text-xs font-normal text-gray-500 dark:text-slate-400">/mo</span>
+                      </p>
+                      {billingCycle === "annual" && (
+                        <span className="text-xs font-normal text-gray-400 line-through dark:text-slate-500">$99</span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-500">
+                      {billingCycle === "annual" ? "$990 billed yearly" : "Billed monthly"}
+                    </p>
                     <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">For top producers closing 10+ deals/month.</p>
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 dark:text-slate-300">
                       {["Unlimited leads", "Priority AI routing", "Multi-channel automation", "Predictive lead scoring", "Custom drip campaigns", "Dedicated onboarding"].map((f) => (
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="success" />{f}</li>
                       ))}
                     </ul>
-                    <Button className="mt-5 w-full text-xs" variant="outline" href="/pricing?checkout_plan=premium">Start free trial</Button>
+                    <Button className="mt-5 w-full text-xs" variant="outline" href={`/pricing?checkout_plan=premium&cycle=${billingCycle}`}>Start free trial</Button>
                   </CardContent>
                 </Card>
               </RevealSection>
@@ -703,7 +791,18 @@ export default function LeadSmartLanding() {
                 <Card className="h-full dark:border-slate-700 dark:bg-slate-900">
                   <CardContent className="p-5 text-left">
                     <h3 className="font-heading text-base font-semibold dark:text-white">Team</h3>
-                    <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">$199 <span className="text-xs font-normal text-gray-500 dark:text-slate-400">/mo</span></p>
+                    <div className="mt-1 flex items-baseline gap-2">
+                      <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                        ${billingCycle === "annual" ? 165 : 199}{" "}
+                        <span className="text-xs font-normal text-gray-500 dark:text-slate-400">/mo</span>
+                      </p>
+                      {billingCycle === "annual" && (
+                        <span className="text-xs font-normal text-gray-400 line-through dark:text-slate-500">$199</span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-500">
+                      {billingCycle === "annual" ? "$1,990 billed yearly" : "Billed monthly"}
+                    </p>
                     <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Multiple agents, one shared pipeline.</p>
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 dark:text-slate-300">
                       {["Up to 10 agents", "Shared lead pool & routing", "Team performance dashboard", "Admin controls", "White-label option", "Priority support SLA"].map((f) => (
@@ -782,28 +881,116 @@ export default function LeadSmartLanding() {
           </RevealSection>
         </section>
 
-        {/* Footer — uses shared Footer component from layout, but landing has its own inline */}
-        <footer className="border-t border-gray-200 bg-white px-6 py-10 dark:border-slate-800 dark:bg-slate-950">
-          <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 sm:flex-row">
-            <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <LeadSmartLogo compact className="max-w-[220px] opacity-90" priority={false} />
-              <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">&copy; {new Date().getFullYear()} LeadSmart AI</p>
+        {/*
+         * Footer — expanded to a 4-column layout (Product / Tools /
+         * Company / Legal) for the Batch 2 audit. The earlier single-
+         * row nav collapsed all links into one list, which hurt
+         * discoverability of the free calculators and made the site
+         * look unfinished. On mobile the columns stack as a 2×2 grid.
+         */}
+        <footer className="border-t border-gray-200 bg-white px-6 py-12 dark:border-slate-800 dark:bg-slate-950">
+          <div className="mx-auto max-w-7xl">
+            <div className="grid grid-cols-2 gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]">
+              {/* Brand column */}
+              <div className="col-span-2 md:col-span-1">
+                <LeadSmartLogo compact className="max-w-[200px] opacity-90" priority={false} />
+                <p className="mt-4 max-w-xs text-sm text-gray-600 dark:text-slate-400">
+                  AI-powered lead follow-up, scoring, and pipeline management built for top-producing real estate agents.
+                </p>
+              </div>
+
+              {/* Product */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200">Product</h3>
+                <ul className="mt-4 space-y-2 text-sm">
+                  {[
+                    { label: "Features", href: "#features" },
+                    { label: "Pricing", href: "/pricing" },
+                    { label: "How it works", href: "#how" },
+                    { label: "Sign in", href: "/login" },
+                    { label: "Get started", href: "/signup" },
+                  ].map((link) => (
+                    <li key={link.label}>
+                      <Link
+                        href={link.href}
+                        className="!text-gray-600 transition-colors hover:!text-[#0072ce] dark:!text-slate-400 dark:hover:!text-[#4da3e8]"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Free Tools */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200">Free Tools</h3>
+                <ul className="mt-4 space-y-2 text-sm">
+                  {[
+                    { label: "Mortgage Calculator", href: "/mortgage-calculator" },
+                    { label: "Affordability Calculator", href: "/affordability-calculator" },
+                    { label: "Rent vs Buy", href: "/rent-vs-buy-calculator" },
+                    { label: "Down Payment", href: "/down-payment-calculator" },
+                    { label: "Cash Flow", href: "/cash-flow-calculator" },
+                  ].map((link) => (
+                    <li key={link.label}>
+                      <Link
+                        href={link.href}
+                        className="!text-gray-600 transition-colors hover:!text-[#0072ce] dark:!text-slate-400 dark:hover:!text-[#4da3e8]"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Company */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200">Company</h3>
+                <ul className="mt-4 space-y-2 text-sm">
+                  {[
+                    { label: "About", href: "/about" },
+                    { label: "Contact", href: "/contact" },
+                    { label: "Support", href: "/support" },
+                  ].map((link) => (
+                    <li key={link.label}>
+                      <Link
+                        href={link.href}
+                        className="!text-gray-600 transition-colors hover:!text-[#0072ce] dark:!text-slate-400 dark:hover:!text-[#4da3e8]"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Legal */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200">Legal</h3>
+                <ul className="mt-4 space-y-2 text-sm">
+                  {[
+                    { label: "Privacy", href: "/privacy" },
+                    { label: "Terms", href: "/terms" },
+                  ].map((link) => (
+                    <li key={link.label}>
+                      <Link
+                        href={link.href}
+                        className="!text-gray-600 transition-colors hover:!text-[#0072ce] dark:!text-slate-400 dark:hover:!text-[#4da3e8]"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
-            <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
-              {[
-                { label: "Contact", href: "/contact" },
-                { label: "Privacy", href: "/privacy" },
-                { label: "Terms", href: "/terms" },
-                { label: "Pricing", href: "/pricing" },
-                { label: "About", href: "/about" },
-                // Blog link removed — `/blog` returns 404 (only sub-routes exist).
-                // Restore once a proper /blog index page exists with LeadSmart content.
-              ].map((link) => (
-                <Link key={link.label} href={link.href} className="!text-gray-600 transition-colors hover:!text-[#0072ce] dark:!text-slate-400 dark:hover:!text-[#4da3e8]">
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
+
+            <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-gray-100 pt-6 text-xs text-gray-500 dark:border-slate-800/80 dark:text-slate-500 sm:flex-row">
+              <p>&copy; {new Date().getFullYear()} LeadSmart AI. All rights reserved.</p>
+              <p>Built for top-producing real estate agents.</p>
+            </div>
           </div>
         </footer>
       </main>
