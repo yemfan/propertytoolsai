@@ -2,7 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  BarChart3,
+  Brain,
+  Repeat2,
+  Zap,
+} from "lucide-react";
 import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -320,24 +326,18 @@ export default function LeadSmartLanding() {
                 )}
               </div>
 
-              {/* Micro trust */}
+              {/*
+               * Trust bar — the "Micro trust" label was a working name
+               * leaking into production. Removed the label entirely and
+               * also removed the redundant "No setup required / Works in
+               * minutes" duplicate (those say the same thing). The three
+               * check items speak for themselves.
+               */}
               <div
-                className="mt-6 rounded-xl border border-slate-200/80 bg-gradient-to-r from-[#0072ce]/[0.06] via-white to-[#ff8c42]/[0.07] pt-6 pl-4 pr-3 pb-4 shadow-sm shadow-slate-900/[0.04] ring-1 ring-slate-900/[0.04] dark:border-slate-700 dark:from-[#0072ce]/[0.08] dark:via-slate-900 dark:to-[#ff8c42]/[0.05] dark:ring-slate-700/40"
+                className="mt-6 rounded-xl border border-slate-200/80 bg-gradient-to-r from-[#0072ce]/[0.06] via-white to-[#ff8c42]/[0.07] px-4 py-4 shadow-sm shadow-slate-900/[0.04] ring-1 ring-slate-900/[0.04] dark:border-slate-700 dark:from-[#0072ce]/[0.08] dark:via-slate-900 dark:to-[#ff8c42]/[0.05] dark:ring-slate-700/40"
                 style={{ animation: "fadeInUp 0.6s ease-out 0.4s both" }}
               >
-                <div className="flex items-center gap-2 border-l-4 border-[#0072ce] pl-3">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#005ca8] dark:text-[#4da3e8]">
-                    <span aria-hidden>🧠</span> Micro trust
-                  </p>
-                </div>
-                <p className="mt-3 pl-1 text-sm font-semibold text-slate-800 dark:text-slate-200">
-                  No setup required{" "}
-                  <span className="text-[#0072ce]" aria-hidden>
-                    •
-                  </span>{" "}
-                  Works in minutes
-                </p>
-                <ul className="mt-3 flex flex-col gap-2.5 text-sm text-slate-700 sm:flex-row sm:flex-wrap sm:gap-x-5 sm:gap-y-2 dark:text-slate-300">
+                <ul className="flex flex-col gap-2.5 text-sm text-slate-700 sm:flex-row sm:flex-wrap sm:gap-x-5 sm:gap-y-2 dark:text-slate-300">
                   <li className="flex items-center gap-2.5">
                     <BrandCheck tone="primary" />
                     <span>AI follow-up in seconds — so hot leads don&apos;t go cold</span>
@@ -537,51 +537,72 @@ export default function LeadSmartLanding() {
                 Every feature built specifically for real estate agents — not generic sales teams.
               </p>
             </RevealSection>
+            {/*
+             * Feature cards — icons migrated from emoji (⚡🧠📊🔄) to Lucide
+             * SVG icons. Emoji render differently across OS (Apple vs Google
+             * vs Windows), can't respect brand color, and signaled "MVP built
+             * in a weekend" on a product asking for credit card details.
+             * Each card has a unique tinted chip background + brand-colored
+             * stroke so the grid reads as a coordinated icon set rather than
+             * four mismatched emoji.
+             */}
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {[
+              {([
                 {
-                  accent: "primary" as const,
-                  emoji: "⚡",
+                  accent: "primary",
+                  icon: <Zap size={22} strokeWidth={2} aria-hidden />,
                   title: "Instant AI Follow-Up",
                   description:
                     "Respond to every new lead in under 60 seconds — automatically, day or night. Never lose a hot lead to a faster competitor.",
                   bullets: ["SMS + email replies", "Personalized by source", "24/7 automation"],
-                  iconBg: "from-[#0072ce]/10 to-[#4F46E5]/10",
+                  chipBg: "bg-blue-50",
+                  chipText: "text-[#0072ce]",
                 },
                 {
-                  accent: "primaryDark" as const,
-                  emoji: "🧠",
+                  accent: "primaryDark",
+                  icon: <Brain size={22} strokeWidth={2} aria-hidden />,
                   title: "Smart Lead Scoring",
                   description:
                     "AI ranks every lead by buying intent so you spend your time on the people most likely to close — not tire-kickers.",
                   bullets: ["Behavioral scoring", "Hot / warm / cold labels", "Priority inbox view"],
-                  iconBg: "from-[#4F46E5]/10 to-[#7c3aed]/10",
+                  chipBg: "bg-violet-50",
+                  chipText: "text-violet-600",
                 },
                 {
-                  accent: "success" as const,
-                  emoji: "📊",
+                  accent: "success",
+                  icon: <BarChart3 size={22} strokeWidth={2} aria-hidden />,
                   title: "Live Pipeline Dashboard",
                   description:
                     "See every lead, every follow-up, and every scheduled tour in one place. Know exactly where your pipeline stands.",
                   bullets: ["Stage-by-stage tracking", "Tour & offer milestones", "Team visibility"],
-                  iconBg: "from-emerald-500/10 to-teal-500/10",
+                  chipBg: "bg-emerald-50",
+                  chipText: "text-emerald-600",
                 },
                 {
-                  accent: "accent" as const,
-                  emoji: "🔄",
+                  accent: "accent",
+                  icon: <Repeat2 size={22} strokeWidth={2} aria-hidden />,
                   title: "Drip Automation",
                   description:
                     "Multi-step nurture sequences keep leads warm for weeks without you lifting a finger — until they're ready to buy.",
                   bullets: ["Preset + custom drips", "Auto pause on reply", "CRM sync"],
-                  iconBg: "from-[#ff8c42]/10 to-amber-500/10",
+                  chipBg: "bg-amber-50",
+                  chipText: "text-amber-600",
                 },
-              ].map((f, i) => (
+              ] as {
+                accent: "primary" | "primaryDark" | "success" | "accent";
+                icon: ReactNode;
+                title: string;
+                description: string;
+                bullets: string[];
+                chipBg: string;
+                chipText: string;
+              }[]).map((f, i) => (
                 <RevealSection key={f.title} delay={i * 100}>
                   <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/[0.06] dark:border-slate-700 dark:bg-slate-900 dark:hover:shadow-[#0072ce]/[0.08]">
                     {/* Gradient overlay on hover */}
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#0072ce]/[0.02] via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                    <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${f.iconBg} text-2xl`}>
-                      {f.emoji}
+                    <div className={`mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl ${f.chipBg} ${f.chipText}`}>
+                      {f.icon}
                     </div>
                     <h3 className="font-heading text-base font-bold text-slate-900 dark:text-white">{f.title}</h3>
                     <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{f.description}</p>
@@ -600,52 +621,24 @@ export default function LeadSmartLanding() {
           </div>
         </section>
 
-        {/* SOCIAL PROOF */}
-        <section className="bg-gradient-to-b from-white to-slate-50 px-6 py-16 md:py-20 dark:from-slate-950 dark:to-slate-900/50">
-          <div className="mx-auto max-w-6xl text-center">
-            <RevealSection>
-              <h2 className="font-heading text-2xl font-semibold md:text-3xl dark:text-white">What Agents Are Saying</h2>
-              <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">Results from early-access agents who replaced their old CRM</p>
-            </RevealSection>
-            <div className="mt-10 grid gap-6 sm:grid-cols-3">
-              {[
-                {
-                  quote: "Got 12 qualified leads in my first 7 days. AI follow-up got replies I never would have gotten manually.",
-                  name: "Marcus T.",
-                  role: "Buyer's Agent · Austin, TX",
-                  tone: "primary" as const,
-                },
-                {
-                  quote: "My response rate doubled overnight. Leads used to ghost me — now I show up first before they even call another agent.",
-                  name: "Priya R.",
-                  role: "Realtor · Miami, FL",
-                  tone: "success" as const,
-                },
-                {
-                  quote: "Finally, leads that actually convert. The scoring tells me who's serious so I stop wasting time on cold inquiries.",
-                  name: "Jason M.",
-                  role: "Team Lead · Denver, CO",
-                  tone: "accent" as const,
-                },
-              ].map((t, i) => (
-                <RevealSection key={t.name} delay={i * 100}>
-                  <div className="flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-6 text-left shadow-sm transition-all duration-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
-                    <div className="mb-4">
-                      <BrandCheck tone={t.tone} />
-                    </div>
-                    <blockquote className="flex-1 text-sm leading-relaxed text-slate-700 italic dark:text-slate-300">
-                      &ldquo;{t.quote}&rdquo;
-                    </blockquote>
-                    <footer className="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{t.name}</p>
-                      <p className="text-xs text-slate-500">{t.role}</p>
-                    </footer>
-                  </div>
-                </RevealSection>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/*
+         * SOCIAL PROOF — removed until we have real testimonials with
+         * full names + headshots + brokerage.
+         *
+         * The previous version used "Marcus T. / Priya R. / Jason M."
+         * with city + initials, which is the canonical pattern for
+         * fabricated stock testimonials. For a CRM that sells "trust our
+         * AI with your leads," placeholder social proof is actively
+         * harmful — it signals the product isn't real and undermines
+         * every other trust signal on the page. Better to have NO
+         * testimonials than ones that look fake.
+         *
+         * When to restore: once we have at least 3 real customers
+         * willing to be quoted with full name, real headshot photo,
+         * brokerage logo/name, and ideally a LinkedIn link. Optionally
+         * add a "Case studies" link or pilot results block in the
+         * meantime (clearly labeled as internal data, not a customer).
+         */}
 
         {/* PRICING */}
         <section id="pricing" className="px-6 py-16 md:py-20 dark:bg-slate-950">
@@ -803,7 +796,8 @@ export default function LeadSmartLanding() {
                 { label: "Terms", href: "/terms" },
                 { label: "Pricing", href: "/pricing" },
                 { label: "About", href: "/about" },
-                { label: "Blog", href: "/blog" },
+                // Blog link removed — `/blog` returns 404 (only sub-routes exist).
+                // Restore once a proper /blog index page exists with LeadSmart content.
               ].map((link) => (
                 <Link key={link.label} href={link.href} className="!text-gray-600 transition-colors hover:!text-[#0072ce] dark:!text-slate-400 dark:hover:!text-[#4da3e8]">
                   {link.label}
