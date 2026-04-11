@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { onboardingStyles as s } from "../../lib/onboarding/styles";
+import { BackRow } from "../../components/onboarding/BackRow";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
@@ -46,7 +47,8 @@ export default function OnboardingValueScreen() {
 
   return (
     <SafeAreaView style={s.flex} edges={["top", "bottom"]}>
-      <View style={{ flex: 1, paddingTop: 16 }}>
+      <BackRow fallbackHref="/(onboarding)/welcome" />
+      <View style={{ flex: 1, paddingTop: 8 }}>
         <ScrollView
           ref={scrollRef}
           horizontal

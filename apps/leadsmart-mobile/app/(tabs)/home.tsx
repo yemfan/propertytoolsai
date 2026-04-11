@@ -316,12 +316,12 @@ export default function HomeScreen() {
         {weeklyDigest && (
           <>
             <Text style={styles.sectionHeading}>{weeklyDigest.title}</Text>
-            <View style={{ backgroundColor: "#f8fafc", borderRadius: 12, padding: 12, marginBottom: 8 }}>
+            <View style={{ backgroundColor: theme.surfaceMuted, borderRadius: 12, padding: 12, marginBottom: 8 }}>
               <Text style={{ fontSize: 13, color: theme.textMuted, lineHeight: 20 }}>{weeklyDigest.body}</Text>
               {weeklyDigest.insights?.length > 0 && (
                 <View style={{ marginTop: 8 }}>
                   {weeklyDigest.insights.slice(0, 3).map((ins) => (
-                    <Text key={ins.key} style={{ fontSize: 12, color: ins.tone === "warning" ? "#b45309" : ins.tone === "positive" ? "#15803d" : theme.textMuted, marginTop: 4 }}>
+                    <Text key={ins.key} style={{ fontSize: 12, color: ins.tone === "warning" ? theme.warning : ins.tone === "positive" ? theme.successDark : theme.textMuted, marginTop: 4 }}>
                       {ins.label}: {ins.message}
                     </Text>
                   ))}
@@ -337,19 +337,23 @@ export default function HomeScreen() {
           <>
             <Pressable
               onPress={() => router.push("/(tabs)/leads" as any)}
+              accessibilityRole="button"
+              accessibilityLabel={`${queueCount} lead${queueCount > 1 ? "s" : ""} available to claim`}
+              accessibilityHint="Opens the lead queue"
               style={({ pressed }) => [{
-                backgroundColor: pressed ? "#eff6ff" : "#f0f9ff",
+                backgroundColor: pressed ? theme.accentPressed : theme.infoBgAlt,
                 borderRadius: 12,
                 padding: 14,
                 borderWidth: 1,
-                borderColor: "#bfdbfe",
+                borderColor: theme.infoBorder,
                 marginBottom: 8,
+                minHeight: 44, // WCAG 44pt touch target
               }]}
             >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: "#1e40af" }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: theme.infoText }}>
                 {queueCount} lead{queueCount > 1 ? "s" : ""} available to claim
               </Text>
-              <Text style={{ fontSize: 12, color: "#3b82f6", marginTop: 2 }}>
+              <Text style={{ fontSize: 12, color: theme.infoAccent, marginTop: 2 }}>
                 Tap to view the lead queue
               </Text>
             </Pressable>
@@ -427,7 +431,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
   },
-  chipPressed: { backgroundColor: "#eff6ff", borderColor: "#bfdbfe" },
+  chipPressed: { backgroundColor: theme.accentPressed, borderColor: theme.infoBorder },
   chipText: { fontSize: 13, fontWeight: "700", color: theme.text },
   sectionHeading: {
     fontSize: 12,
@@ -456,6 +460,6 @@ const styles = StyleSheet.create({
     borderColor: theme.border,
     alignItems: "center",
   },
-  quickBtnPressed: { backgroundColor: "#eff6ff", borderColor: "#bfdbfe" },
+  quickBtnPressed: { backgroundColor: theme.accentPressed, borderColor: theme.infoBorder },
   quickBtnText: { fontSize: 15, fontWeight: "700", color: theme.text },
 });

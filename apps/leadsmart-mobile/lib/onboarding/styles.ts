@@ -45,7 +45,34 @@ export const onboardingStyles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
   },
-  primaryBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  primaryBtnText: { color: theme.textOnAccent, fontSize: 16, fontWeight: "700" },
+  /**
+   * Back-chevron row used at the top of value/login/notifications.
+   * A 44×44 hit target (WCAG 2.5.5) with a subtle background so
+   * first-time users can actually tell it's tappable. Fixed height
+   * so screens that hide it keep the same content offset.
+   */
+  backRow: {
+    height: 44,
+    paddingHorizontal: 20,
+    justifyContent: "center",
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backButtonPressed: {
+    backgroundColor: theme.surfaceElevated,
+  },
+  backButtonText: {
+    fontSize: 24,
+    fontWeight: "600",
+    color: theme.accent,
+    lineHeight: 24,
+  },
   secondaryBtn: {
     marginTop: 12,
     paddingVertical: 14,

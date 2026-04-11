@@ -1,5 +1,5 @@
 import type { MobileLeadRecordDto } from "@leadsmart/shared";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -17,12 +17,17 @@ import { ScreenLoading } from "../../components/ScreenLoading";
 import { leadField } from "../../lib/leadRecord";
 import { DEMO_LEAD_ID, getDemoLeadRecord } from "../../lib/demoLead";
 import { fetchMobileLeads } from "../../lib/leadsmartMobileApi";
-import type { MobileApiFailure } from "../../lib/leadsmartMobileApi";
+import type { MobileApiFailure, MobileLeadsFilter } from "../../lib/leadsmartMobileApi";
 import { theme } from "../../lib/theme";
 
 const PAGE_SIZE = 30;
 
-type FilterKey = "all" | "hot" | "high_engagement" | "inactive";
+/**
+ * Local UI filter key — `"all"` is the UI-only "no filter" state,
+ * the rest correspond 1:1 with `MobileLeadsFilter` from the API
+ * client so this union stays narrow.
+ */
+type FilterKey = "all" | MobileLeadsFilter;
 const FILTER_CHIPS: Array<{ key: FilterKey; label: string }> = [
   { key: "all", label: "All" },
   { key: "hot", label: "Hot" },
@@ -37,7 +42,13 @@ function paramStr(v: string | string[] | undefined): string | undefined {
   return s.length ? s : undefined;
 }
 
-function LeadRow({
+/**
+ * Row body (unwrapped). Exported as a memo below so FlatList only
+ * re-renders rows whose `lead` or `onPress` identity changed — a
+ * large list previously re-rendered every row on every scroll
+ * because `renderItem` built a fresh arrow function each cycle.
+ */
+function LeadRowInner({
   lead,
   onPress,
 }: {
@@ -104,12 +115,20 @@ function LeadRow({
   );
 }
 
+const LeadRow = memo(LeadRowInner);
+
 export default function LeadsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ filter?: string | string[]; booking?: string | string[] }>();
   const filterRaw = paramStr(params.filter);
   const initialFilter: FilterKey =
-    filterRaw === "hot" ? "hot" : filterRaw === "inactive" ? "inactive" : "all";
+    filterRaw === "hot"
+      ? "hot"
+      : filterRaw === "inactive"
+        ? "inactive"
+        : filterRaw === "high_engagement"
+          ? "high_engagement"
+          : "all";
   const showBookingHint = paramStr(params.booking) === "1";
 
   const [activeFilter, setActiveFilter] = useState<FilterKey>(initialFilter);
@@ -179,6 +198,34 @@ export default function LeadsScreen() {
     void loadPage(page + 1, "append");
   }, [loadPage, loading, loadingMore, hasMore, page, error]);
 
+  /**
+   * Stable navigation handler passed to every row. Row memoization
+   * only helps when `onPress` identity is stable — the previous
+   * inline arrow function in `renderItem` invalidated the memo on
+   * every parent render, negating the optimization entirely.
+   */
+  const handleRowPress = useCallback(
+    (leadId: string | number) => {
+      router.push({
+        pathname: "/lead/[id]",
+        params: { id: String(leadId) },
+      });
+    },
+    [router]
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: MobileLeadRecordDto }) => (
+      <LeadRow lead={item} onPress={() => handleRowPress(item.id)} />
+    ),
+    [handleRowPress]
+  );
+
+  const keyExtractor = useCallback(
+    (l: MobileLeadRecordDto) => String(l.id),
+    []
+  );
+
   // Client-side search filter
   const filtered = useMemo(() => {
     if (!search.trim()) return leads;
@@ -243,10 +290,20 @@ export default function LeadsScreen() {
 
       <FlatList
         data={filtered}
-        keyExtractor={(l) => String(l.id)}
+        keyExtractor={keyExtractor}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         onEndReached={onEndReached}
         onEndReachedThreshold={0.3}
+        /*
+         * Performance knobs for long lead lists. Defaults are fine
+         * for ~50 rows but the inbox can grow to hundreds; these
+         * trade a small amount of scroll-in latency for much
+         * lower memory + fewer layout passes while scrolling.
+         */
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={7}
+        removeClippedSubviews
         ListFooterComponent={
           loadingMore ? (
             <View style={styles.footerLoad}>
@@ -276,17 +333,7 @@ export default function LeadsScreen() {
             ) : null}
           </>
         }
-        renderItem={({ item }) => (
-          <LeadRow
-            lead={item}
-            onPress={() =>
-              router.push({
-                pathname: "/lead/[id]",
-                params: { id: String(item.id) },
-              })
-            }
-          />
-        )}
+        renderItem={renderItem}
         contentContainerStyle={filtered.length === 0 ? styles.emptyList : styles.listPad}
       />
     </View>
@@ -322,22 +369,22 @@ const styles = StyleSheet.create({
     borderColor: theme.border,
   },
   chipActive: {
-    backgroundColor: "#1e40af",
-    borderColor: "#1e40af",
+    backgroundColor: theme.chipActiveBg,
+    borderColor: theme.chipActiveBorder,
   },
   chipText: { fontSize: 12, fontWeight: "700", color: theme.text },
-  chipTextActive: { color: "#fff" },
+  chipTextActive: { color: theme.chipActiveText },
   hintBanner: {
     marginHorizontal: 12,
     marginTop: 8,
     marginBottom: 4,
     padding: 12,
     borderRadius: 10,
-    backgroundColor: "#eff6ff",
+    backgroundColor: theme.infoBg,
     borderWidth: 1,
-    borderColor: "#bfdbfe",
+    borderColor: theme.infoBorder,
   },
-  hintText: { fontSize: 13, color: "#1e3a8a", lineHeight: 18 },
+  hintText: { fontSize: 13, color: theme.infoTextDeep, lineHeight: 18 },
   count: { paddingHorizontal: 16, paddingVertical: 8, fontSize: 12, color: theme.textMuted },
   listPad: { paddingVertical: 4 },
   emptyList: { flexGrow: 1, justifyContent: "center" },
@@ -369,17 +416,17 @@ const styles = StyleSheet.create({
     borderColor: theme.hotBorder,
   },
   hotText: { fontSize: 10, fontWeight: "800", color: theme.hotPillText },
-  sub: { fontSize: 14, color: "#475569", marginTop: 2 },
+  sub: { fontSize: 14, color: theme.textSecondary, marginTop: 2 },
   address: { fontSize: 13, color: theme.textMuted, marginTop: 4, lineHeight: 18 },
   footer: { flexDirection: "row", alignItems: "center", marginTop: 10, gap: 8, flexWrap: "wrap" },
   stagePill: {
-    backgroundColor: "#eff6ff",
+    backgroundColor: theme.infoBg,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#bfdbfe",
+    borderColor: theme.infoBorder,
   },
-  stageText: { fontSize: 11, fontWeight: "600", color: "#1e40af" },
+  stageText: { fontSize: 11, fontWeight: "600", color: theme.infoText },
   score: { fontSize: 11, color: theme.accent, fontWeight: "600" },
 });

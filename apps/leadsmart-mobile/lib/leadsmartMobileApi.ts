@@ -299,10 +299,22 @@ export const fetchMobileAgenda = fetchMobileDailyAgenda;
 
 type LeadsJson = MobileJsonError & MobileLeadsListResponseDto;
 
+/**
+ * Filter keys accepted by `/api/dashboard/leads`. Keep in sync with the
+ * web handler at `apps/leadsmartai/app/api/dashboard/leads/route.ts` —
+ * the server branches on each of these values, so widening the union
+ * here without adding a branch there will silently return the default
+ * list. `high_engagement` was previously missing from this type even
+ * though the server and the mobile leads screen already supported it,
+ * which caused a pre-existing TS error whenever the "Engaged" filter
+ * chip was selected.
+ */
+export type MobileLeadsFilter = "hot" | "inactive" | "high_engagement";
+
 export async function fetchMobileLeads(params: {
   page?: number;
   pageSize?: number;
-  filter?: "hot" | "inactive";
+  filter?: MobileLeadsFilter;
 }): Promise<MobileLeadsSuccess | MobileApiFailure> {
   const page = params.page ?? 1;
   const pageSize = params.pageSize ?? 30;

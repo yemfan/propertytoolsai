@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 import { getLeadsmartApiBaseUrl, getSupabaseAnonKey, getSupabaseUrl } from "../../lib/env";
 import { onboardingStyles as s } from "../../lib/onboarding/styles";
 import { useLeadsmartSession } from "../../lib/session/LeadsmartSessionContext";
+import { BackRow } from "../../components/onboarding/BackRow";
 
 const oauthBtn = StyleSheet.create({
   row: {
@@ -135,6 +136,7 @@ export default function OnboardingLoginScreen() {
      * tap buttons without losing the keyboard focus first.
      */
     <SafeAreaView style={s.flex} edges={["top", "bottom"]}>
+      <BackRow fallbackHref="/(onboarding)/value" />
       <KeyboardAvoidingView
         style={s.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}

@@ -150,6 +150,25 @@ export default function SettingsScreen() {
         <Text style={styles.secondaryBtnText}>Notification center</Text>
       </Pressable>
 
+      {/*
+       * Re-entry path back into the onboarding walkthrough. Users
+       * who swiped past the value slides on their first launch had
+       * no way to see them again — this button lets them revisit
+       * the "why LeadSmart" pitch and notification permissions.
+       * It enters the onboarding stack at the value screen (not
+       * welcome), which avoids the "Get started" CTA repeating
+       * while still showing the back button.
+       */}
+      <Pressable
+        onPress={() => router.push("/(onboarding)/value")}
+        style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
+        accessibilityRole="button"
+        accessibilityLabel="Replay onboarding walkthrough"
+        accessibilityHint="Shows the app intro and notification setup again"
+      >
+        <Text style={styles.secondaryBtnText}>Replay onboarding</Text>
+      </Pressable>
+
       <View style={styles.card}>
         <Text style={styles.label}>App</Text>
         <Text style={styles.meta}>LeadSmart AI · v{version}</Text>
@@ -163,7 +182,7 @@ export default function SettingsScreen() {
         accessibilityLabel="Sign out"
       >
         {signingOut ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={theme.textOnAccent} />
         ) : (
           <Text style={styles.signOutText}>Sign out</Text>
         )}
@@ -219,7 +238,7 @@ const styles = StyleSheet.create({
   secondaryBtnText: { fontSize: 16, fontWeight: "700", color: theme.accent },
   signOut: {
     marginTop: 28,
-    backgroundColor: "#b91c1c",
+    backgroundColor: theme.danger,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",
@@ -227,5 +246,5 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   signOutPressed: { opacity: 0.9 },
-  signOutText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  signOutText: { color: theme.textOnAccent, fontSize: 16, fontWeight: "700" },
 });

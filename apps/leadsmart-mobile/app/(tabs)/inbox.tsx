@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   hotStripeText: {
-    color: "#fff",
+    color: theme.textOnAccent,
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1,
@@ -226,6 +226,6 @@ const styles = StyleSheet.create({
   time: { marginLeft: "auto", fontSize: 11, color: theme.textSubtle },
   name: { fontSize: 16, fontWeight: "600", color: theme.text, marginBottom: 4 },
   nameHot: { color: theme.hotLabel },
-  preview: { fontSize: 14, color: "#475569", lineHeight: 20 },
+  preview: { fontSize: 14, color: theme.textSecondary, lineHeight: 20 },
   meta: { marginTop: 8, fontSize: 11, color: theme.textSubtle },
 });
