@@ -1,6 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { useState } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { onboardingStyles as s } from "../../lib/onboarding/styles";
 import { useLeadsmartSession } from "../../lib/session/LeadsmartSessionContext";
@@ -42,7 +43,7 @@ export default function OnboardingNotificationsScreen() {
   };
 
   return (
-    <View style={s.flex}>
+    <SafeAreaView style={s.flex} edges={["top", "bottom"]}>
       <View style={s.safePad}>
         <View style={s.centerBlock}>
           <Text style={s.kicker}>Stay in the loop</Text>
@@ -73,6 +74,6 @@ export default function OnboardingNotificationsScreen() {
           </Pressable>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

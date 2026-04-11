@@ -41,12 +41,14 @@ function ThreadRow({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${hot ? "Hot lead. " : ""}${channel} thread for ${item.leadName ?? item.leadId}`}
+      accessibilityHint="Opens the conversation"
       style={({ pressed }) => [
         styles.row,
         hot && styles.rowHot,
         pressed && styles.rowPressed,
       ]}
-      accessibilityLabel={`${hot ? "Hot lead. " : ""}${channel} thread for ${item.leadName ?? item.leadId}`}
     >
       {hot ? (
         <View style={styles.hotStripe}>

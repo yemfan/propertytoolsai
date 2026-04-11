@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { onboardingStyles as s } from "../../lib/onboarding/styles";
 
@@ -6,7 +7,7 @@ export default function OnboardingWelcomeScreen() {
   const router = useRouter();
 
   return (
-    <View style={s.flex}>
+    <SafeAreaView style={s.flex} edges={["top", "bottom"]}>
       <View style={s.safePad}>
         <View style={s.centerBlock}>
           <Text style={s.kicker}>LeadSmart AI</Text>
@@ -34,6 +35,6 @@ export default function OnboardingWelcomeScreen() {
           </Pressable>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

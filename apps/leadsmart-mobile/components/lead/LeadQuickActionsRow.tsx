@@ -111,6 +111,7 @@ const styles = StyleSheet.create({
     flexWrap: "nowrap",
   },
   chip: {
+    minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 10,
@@ -119,6 +120,7 @@ const styles = StyleSheet.create({
     borderColor: theme.border,
     minWidth: 72,
     alignItems: "center",
+    justifyContent: "center",
   },
   chipToolbar: {
     flex: 1,
