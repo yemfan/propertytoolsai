@@ -1,7 +1,9 @@
 import type { MobileLeadTaskDto } from "@leadsmart/shared";
+import { useMemo } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { formatTaskDueLabel } from "../../lib/format";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
 const priorityStyle: Record<string, { bg: string; fg: string }> = {
   low: { bg: "#f1f5f9", fg: "#64748b" },
@@ -27,6 +29,8 @@ export function TaskCard({
   onComplete,
   completing,
 }: Props) {
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const open = task.status === "open";
   const pri = priorityStyle[task.priority] ?? priorityStyle.medium;
   const compact = variant === "compact";
@@ -57,7 +61,7 @@ export function TaskCard({
           style={({ pressed }) => [styles.doneBtn, pressed && styles.doneBtnPressed]}
         >
           {completing ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={tokens.textOnAccent} />
           ) : (
             <Text style={styles.doneBtnText}>Done</Text>
           )}
@@ -84,46 +88,47 @@ export function TaskCard({
   return <View style={[styles.card, compact && styles.cardCompact]}>{body}</View>;
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: theme.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.border,
-    padding: 14,
-    marginVertical: 6,
-  },
-  cardCompact: { padding: 12, marginVertical: 0 },
-  cardPressed: { opacity: 0.92 },
-  topRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  title: { flex: 1, fontSize: 16, fontWeight: "600", color: theme.text, lineHeight: 22 },
-  titleCompact: { fontSize: 15 },
-  priorityPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  priorityText: { fontSize: 11, fontWeight: "800", textTransform: "uppercase" },
-  leadName: { marginTop: 6, fontSize: 13, color: theme.accent, fontWeight: "600" },
-  metaRow: {
-    marginTop: 8,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 8,
-  },
-  due: { fontSize: 13, color: theme.textMuted, fontWeight: "500" },
-  typeHint: { fontSize: 12, color: theme.textSubtle },
-  doneBtn: {
-    marginTop: 12,
-    alignSelf: "flex-start",
-    backgroundColor: theme.accent,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    minWidth: 88,
-    alignItems: "center",
-  },
-  doneBtnPressed: { opacity: 0.9 },
-  doneBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
-});
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    card: {
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 14,
+      marginVertical: 6,
+    },
+    cardCompact: { padding: 12, marginVertical: 0 },
+    cardPressed: { opacity: 0.92 },
+    topRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+    title: { flex: 1, fontSize: 16, fontWeight: "600", color: theme.text, lineHeight: 22 },
+    titleCompact: { fontSize: 15 },
+    priorityPill: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    priorityText: { fontSize: 11, fontWeight: "800", textTransform: "uppercase" },
+    leadName: { marginTop: 6, fontSize: 13, color: theme.accent, fontWeight: "600" },
+    metaRow: {
+      marginTop: 8,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      alignItems: "center",
+      gap: 8,
+    },
+    due: { fontSize: 13, color: theme.textMuted, fontWeight: "500" },
+    typeHint: { fontSize: 12, color: theme.textSubtle },
+    doneBtn: {
+      marginTop: 12,
+      alignSelf: "flex-start",
+      backgroundColor: theme.accent,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 10,
+      minWidth: 88,
+      alignItems: "center",
+    },
+    doneBtnPressed: { opacity: 0.9 },
+    doneBtnText: { color: theme.textOnAccent, fontSize: 14, fontWeight: "700" },
+  });

@@ -1,5 +1,5 @@
 import type { MobileEmailMessageDto, MobileSmsMessageDto } from "@leadsmart/shared";
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import {
   postMobileEmailAiReply,
@@ -7,7 +7,8 @@ import {
   postMobileSmsAiReply,
   postMobileSmsSend,
 } from "../../lib/leadsmartMobileApi";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 import { defaultEmailReplySubject, EmailReplyModal } from "./EmailReplyModal";
 import { ReplyComposer } from "./ReplyComposer";
 
@@ -39,6 +40,8 @@ export function LeadReplySection({
   setEmail,
   demo = false,
 }: LeadReplySectionProps) {
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [smsText, setSmsText] = useState("");
   const [smsSending, setSmsSending] = useState(false);
   const [smsAiLoading, setSmsAiLoading] = useState(false);
@@ -157,8 +160,9 @@ export function LeadReplySection({
   );
 }
 
-const styles = StyleSheet.create({
-  block: { backgroundColor: theme.surface },
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    block: { backgroundColor: theme.surface },
   emailBtn: {
     paddingVertical: 12,
     marginHorizontal: 12,

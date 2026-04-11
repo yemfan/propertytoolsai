@@ -1,5 +1,5 @@
 import type { MobileBookingLinkDto } from "@leadsmart/shared";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,7 +12,8 @@ import {
   View,
 } from "react-native";
 import { postMobileBookingLink } from "../../lib/leadsmartMobileApi";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
 type Props = {
   visible: boolean;
@@ -22,6 +23,8 @@ type Props = {
 };
 
 export function BookingLinkComposerModal({ visible, leadId, onClose, onCreated }: Props) {
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [url, setUrl] = useState("");
   const [label, setLabel] = useState("");
   const [shareMessage, setShareMessage] = useState("");
@@ -83,7 +86,7 @@ export function BookingLinkComposerModal({ visible, leadId, onClose, onCreated }
             <TextInput
               style={styles.input}
               placeholder="https://…"
-              placeholderTextColor={theme.textSubtle}
+              placeholderTextColor={tokens.textSubtle}
               value={url}
               onChangeText={setUrl}
               editable={!submitting}
@@ -94,7 +97,7 @@ export function BookingLinkComposerModal({ visible, leadId, onClose, onCreated }
             <TextInput
               style={styles.input}
               placeholder="Label (optional)"
-              placeholderTextColor={theme.textSubtle}
+              placeholderTextColor={tokens.textSubtle}
               value={label}
               onChangeText={setLabel}
               editable={!submitting}
@@ -102,7 +105,7 @@ export function BookingLinkComposerModal({ visible, leadId, onClose, onCreated }
             <TextInput
               style={[styles.input, styles.inputMultiline]}
               placeholder="Message for SMS/email when sharing (optional)"
-              placeholderTextColor={theme.textSubtle}
+              placeholderTextColor={tokens.textSubtle}
               value={shareMessage}
               onChangeText={setShareMessage}
               multiline
@@ -115,7 +118,7 @@ export function BookingLinkComposerModal({ visible, leadId, onClose, onCreated }
               </Pressable>
               <Pressable onPress={() => void submit()} disabled={submitting} style={styles.saveBtn}>
                 {submitting ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={tokens.textOnAccent} />
                 ) : (
                   <Text style={styles.saveText}>Save link</Text>
                 )}
@@ -128,8 +131,9 @@ export function BookingLinkComposerModal({ visible, leadId, onClose, onCreated }
   );
 }
 
-const styles = StyleSheet.create({
-  modalRoot: { flex: 1, justifyContent: "flex-end" },
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    modalRoot: { flex: 1, justifyContent: "flex-end" },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(15,23,42,0.45)",
@@ -168,12 +172,12 @@ const styles = StyleSheet.create({
   cancelBtn: { paddingVertical: 12, paddingHorizontal: 8 },
   cancelText: { fontSize: 16, fontWeight: "600", color: theme.textMuted },
   saveBtn: {
-    backgroundColor: "#16a34a",
+    backgroundColor: theme.successButton,
     paddingHorizontal: 22,
     paddingVertical: 12,
     borderRadius: 10,
     minWidth: 108,
     alignItems: "center",
   },
-  saveText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  saveText: { color: theme.textOnAccent, fontSize: 16, fontWeight: "700" },
 });

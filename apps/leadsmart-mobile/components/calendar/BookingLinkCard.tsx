@@ -1,8 +1,10 @@
 import type { MobileBookingLinkDto } from "@leadsmart/shared";
 import * as Linking from "expo-linking";
+import { useMemo } from "react";
 import { Pressable, Share, StyleSheet, Text, View } from "react-native";
 import { formatShortDateTime } from "../../lib/format";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
 type Props = {
   link: MobileBookingLinkDto;
@@ -10,6 +12,9 @@ type Props = {
 };
 
 export function BookingLinkCard({ link, compact }: Props) {
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
+
   const open = () => {
     void Linking.openURL(link.booking_url);
   };
@@ -44,36 +49,37 @@ export function BookingLinkCard({ link, compact }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "#f0fdf4",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#bbf7d0",
-    padding: 12,
-    marginTop: 8,
-  },
-  cardCompact: { marginTop: 6, padding: 10 },
-  label: { fontSize: 15, fontWeight: "700", color: "#14532d" },
-  labelMuted: { fontSize: 14, fontWeight: "600", color: theme.textMuted },
-  url: { marginTop: 6, fontSize: 13, color: "#166534", lineHeight: 18 },
-  created: { marginTop: 6, fontSize: 11, color: theme.textSubtle },
-  row: { flexDirection: "row", gap: 10, marginTop: 12 },
-  btn: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: "#16a34a",
-  },
-  btnOutline: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#16a34a",
-    backgroundColor: theme.surface,
-  },
-  btnPressed: { opacity: 0.9 },
-  btnTextPrimary: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  btnTextOutline: { color: "#15803d", fontWeight: "700", fontSize: 14 },
-});
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    card: {
+      backgroundColor: theme.successLight,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.successBorder,
+      padding: 12,
+      marginTop: 8,
+    },
+    cardCompact: { marginTop: 6, padding: 10 },
+    label: { fontSize: 15, fontWeight: "700", color: theme.successText },
+    labelMuted: { fontSize: 14, fontWeight: "600", color: theme.textMuted },
+    url: { marginTop: 6, fontSize: 13, color: theme.successTextDark, lineHeight: 18 },
+    created: { marginTop: 6, fontSize: 11, color: theme.textSubtle },
+    row: { flexDirection: "row", gap: 10, marginTop: 12 },
+    btn: {
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 10,
+      backgroundColor: theme.successButton,
+    },
+    btnOutline: {
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.successButton,
+      backgroundColor: theme.surface,
+    },
+    btnPressed: { opacity: 0.9 },
+    btnTextPrimary: { color: theme.textOnAccent, fontWeight: "700", fontSize: 14 },
+    btnTextOutline: { color: theme.successTextDark, fontWeight: "700", fontSize: 14 },
+  });

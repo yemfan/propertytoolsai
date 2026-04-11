@@ -3,12 +3,13 @@ import { useState } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { onboardingStyles as s } from "../../lib/onboarding/styles";
+import { useOnboardingStyles } from "../../lib/onboarding/styles";
 import { useLeadsmartSession } from "../../lib/session/LeadsmartSessionContext";
 import { BackRow } from "../../components/onboarding/BackRow";
 
 export default function OnboardingNotificationsScreen() {
   const router = useRouter();
+  const s = useOnboardingStyles();
   const { markOnboardingComplete } = useLeadsmartSession();
   const [busy, setBusy] = useState(false);
 

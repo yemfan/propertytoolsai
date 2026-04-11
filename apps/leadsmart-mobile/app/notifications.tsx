@@ -1,7 +1,7 @@
 import type { MobileAgentInboxNotificationDto, MobileNotificationDeepScreen } from "@leadsmart/shared";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -17,7 +17,8 @@ import {
   postMobileNotificationRead,
 } from "../lib/leadsmartMobileApi";
 import type { MobileApiFailure } from "../lib/leadsmartMobileApi";
-import { theme } from "../lib/theme";
+import { useThemeTokens } from "../lib/useThemeTokens";
+import type { ThemeTokens } from "../lib/theme";
 
 function priorityLabel(p: MobileAgentInboxNotificationDto["priority"]): string {
   if (p === "high") return "High";
@@ -54,6 +55,8 @@ function navigateForDeepLink(
 
 export default function NotificationsCenterScreen() {
   const router = useRouter();
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [items, setItems] = useState<MobileAgentInboxNotificationDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -159,8 +162,9 @@ export default function NotificationsCenterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.bg },
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: theme.bg },
   toolbar: {
     flexDirection: "row",
     alignItems: "center",

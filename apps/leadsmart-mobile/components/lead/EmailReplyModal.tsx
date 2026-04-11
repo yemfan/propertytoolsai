@@ -1,5 +1,5 @@
 import type { MobileEmailMessageDto } from "@leadsmart/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,7 +12,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 import { AiReplyButton } from "./AiReplyButton";
 
 export function defaultEmailReplySubject(thread: MobileEmailMessageDto[]): string {
@@ -40,6 +41,8 @@ export function EmailReplyModal({
   onRequestAiDraft,
 }: EmailReplyModalProps) {
   const insets = useSafeAreaInsets();
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [subject, setSubject] = useState(initialSubject);
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
@@ -107,7 +110,7 @@ export function EmailReplyModal({
             value={subject}
             onChangeText={setSubject}
             placeholder="Subject"
-            placeholderTextColor={theme.textSubtle}
+            placeholderTextColor={tokens.textSubtle}
             editable={!sending}
             accessibilityLabel="Email subject"
           />
@@ -120,7 +123,7 @@ export function EmailReplyModal({
             value={body}
             onChangeText={setBody}
             placeholder="Write your reply…"
-            placeholderTextColor={theme.textSubtle}
+            placeholderTextColor={tokens.textSubtle}
             multiline
             textAlignVertical="top"
             editable={!sending}
@@ -144,7 +147,7 @@ export function EmailReplyModal({
               accessibilityLabel="Send email"
             >
               {sending ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={tokens.textOnAccent} />
               ) : (
                 <Text style={styles.primaryText}>Send</Text>
               )}
@@ -156,8 +159,9 @@ export function EmailReplyModal({
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: {
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    backdrop: {
     flex: 1,
     justifyContent: "flex-end",
     backgroundColor: "rgba(15,23,42,0.45)",
@@ -224,5 +228,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryDisabled: { opacity: 0.6 },
-  primaryText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  primaryText: { color: theme.textOnAccent, fontSize: 16, fontWeight: "700" },
 });

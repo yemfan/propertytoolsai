@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { onboardingStyles as s } from "../../lib/onboarding/styles";
+import { useOnboardingStyles } from "../../lib/onboarding/styles";
 import { BackRow } from "../../components/onboarding/BackRow";
 
 const { width: SCREEN_W } = Dimensions.get("window");
@@ -28,6 +28,7 @@ const SLIDES = [
 
 export default function OnboardingValueScreen() {
   const router = useRouter();
+  const s = useOnboardingStyles();
   const scrollRef = useRef<ScrollView>(null);
   const [page, setPage] = useState(0);
 

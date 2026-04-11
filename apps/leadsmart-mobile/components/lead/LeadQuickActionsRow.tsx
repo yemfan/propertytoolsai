@@ -1,9 +1,10 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { presentAiQuickReplyPlaceholder } from "../../lib/lead/aiQuickReplyPlaceholder";
 import { buildMailtoUrl, buildSmsUrl, buildTelUrl, normalizePhoneForLinking } from "../../lib/lead/contactLinking";
 import { openExternalUrl } from "../../lib/lead/openExternalUrl";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
 export type LeadQuickActionsRowProps = {
   leadId: string;
@@ -23,6 +24,8 @@ const ACTIONS: { key: ActionKey; label: string; hint: string }[] = [
 ];
 
 export function LeadQuickActionsRow({ leadId, displayPhone, email, toolbar }: LeadQuickActionsRowProps) {
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const phone = normalizePhoneForLinking(displayPhone);
   const emailTrimmed = email.trim();
   const canCall = Boolean(phone);
@@ -94,8 +97,9 @@ export function LeadQuickActionsRow({ leadId, displayPhone, email, toolbar }: Le
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    wrap: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
