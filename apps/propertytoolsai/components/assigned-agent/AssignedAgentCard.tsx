@@ -81,9 +81,6 @@ export default function AssignedAgentCard() {
           )}
         </div>
         <p className="mt-2 truncate text-sm font-semibold text-slate-900">{agent.displayName}</p>
-        <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
-          {agent.assignmentSource === "profile" ? "Your agent" : "Default agent"}
-        </p>
       </div>
 
       {/*
