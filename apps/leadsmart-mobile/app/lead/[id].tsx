@@ -9,7 +9,7 @@ import type {
   MobilePipelineStageOptionDto,
   MobileSmsMessageDto,
 } from "@leadsmart/shared";
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -45,7 +45,8 @@ import {
 } from "../../lib/leadsmartMobileApi";
 import type { MobileApiFailure } from "../../lib/leadsmartMobileApi";
 import { useLeadDetailRealtime } from "../../lib/realtime/useLeadDetailRealtime";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
 const emptyPipeline: MobileLeadPipelineDto = {
   stage_id: null,
@@ -81,16 +82,14 @@ function mergeConversation(
   return rows;
 }
 
-function SectionRule() {
-  return <View style={styles.sectionRule} />;
-}
-
 function MessageBubble({
   m,
   kind,
+  styles,
 }: {
   m: MobileSmsMessageDto | MobileEmailMessageDto;
   kind: "sms" | "email";
+  styles: ReturnType<typeof createStyles>;
 }) {
   const inbound = m.direction === "inbound";
   const subject = kind === "email" && "subject" in m && m.subject ? m.subject : null;
@@ -110,6 +109,9 @@ function MessageBubble({
 export default function LeadDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const SectionRule = () => <View style={styles.sectionRule} />;
   const leadId = typeof id === "string" ? id : Array.isArray(id) ? id[0] : "";
 
   const [lead, setLead] = useState<MobileLeadRecordDto | null>(null);
@@ -432,7 +434,7 @@ export default function LeadDetailScreen() {
           </View>
         ) : (
           mergedThread.map((row) => (
-            <MessageBubble key={row.key} m={row.m} kind={row.kind} />
+            <MessageBubble key={row.key} m={row.m} kind={row.kind} styles={styles} />
           ))
         )}
       </ScrollView>
@@ -478,7 +480,7 @@ export default function LeadDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeTokens) => StyleSheet.create({
   kav: { flex: 1, backgroundColor: theme.bg },
   scroll: { flex: 1, backgroundColor: theme.bg },
   scrollContent: { paddingBottom: 28, paddingHorizontal: 16 },

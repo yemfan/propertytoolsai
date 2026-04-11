@@ -1,10 +1,11 @@
 import { Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { onboardingStyles as s } from "../../lib/onboarding/styles";
+import { useOnboardingStyles } from "../../lib/onboarding/styles";
 
 export default function OnboardingWelcomeScreen() {
   const router = useRouter();
+  const s = useOnboardingStyles();
 
   return (
     <SafeAreaView style={s.flex} edges={["top", "bottom"]}>

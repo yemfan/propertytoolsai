@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
 type Props = {
   label: string;
@@ -9,6 +11,9 @@ type Props = {
 };
 
 export function DashboardStatCard({ label, value, onPress, variant = "default" }: Props) {
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
+
   const inner = (
     <>
       <Text style={styles.value}>{value}</Text>
@@ -37,27 +42,28 @@ export function DashboardStatCard({ label, value, onPress, variant = "default" }
   return <View style={[styles.card, variant === "hot" && styles.cardHot]}>{inner}</View>;
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    minWidth: "42%",
-    backgroundColor: theme.surface,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  cardHot: {
-    borderColor: theme.hotBorder,
-    backgroundColor: theme.hotBg,
-  },
-  pressed: { opacity: 0.92 },
-  value: { fontSize: 26, fontWeight: "800", color: theme.text },
-  label: {
-    marginTop: 4,
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.textMuted,
-    lineHeight: 16,
-  },
-});
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    card: {
+      flex: 1,
+      minWidth: "42%",
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    cardHot: {
+      borderColor: theme.hotBorder,
+      backgroundColor: theme.hotBg,
+    },
+    pressed: { opacity: 0.92 },
+    value: { fontSize: 26, fontWeight: "800", color: theme.text },
+    label: {
+      marginTop: 4,
+      fontSize: 12,
+      fontWeight: "600",
+      color: theme.textMuted,
+      lineHeight: 16,
+    },
+  });

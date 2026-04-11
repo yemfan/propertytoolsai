@@ -1,7 +1,9 @@
 import type { MobileFollowUpReminderDto } from "@leadsmart/shared";
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { formatShortDateTime } from "../../lib/format";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
 type Props = {
   reminder: MobileFollowUpReminderDto;
@@ -10,6 +12,8 @@ type Props = {
 
 /** CRM follow-up touchpoint (`leads.next_contact_at`). */
 export function ReminderCard({ reminder, onPress }: Props) {
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const title = reminder.lead_name ?? `Lead ${reminder.lead_id}`;
   const status = reminder.overdue ? "Overdue follow-up" : "Follow-up scheduled";
 
@@ -36,21 +40,22 @@ export function ReminderCard({ reminder, onPress }: Props) {
   return body;
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: theme.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.border,
-    padding: 14,
-    marginVertical: 6,
-  },
-  cardOverdue: {
-    borderColor: "#fecaca",
-    backgroundColor: "#fffbeb",
-  },
-  pressed: { opacity: 0.92 },
-  title: { fontSize: 16, fontWeight: "600", color: theme.text },
-  sub: { marginTop: 6, fontSize: 14, color: theme.textMuted, fontWeight: "500" },
-  hint: { marginTop: 8, fontSize: 12, color: theme.accent, fontWeight: "600" },
-});
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    card: {
+      backgroundColor: theme.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 14,
+      marginVertical: 6,
+    },
+    cardOverdue: {
+      borderColor: theme.overdueBorder,
+      backgroundColor: theme.overdueBg,
+    },
+    pressed: { opacity: 0.92 },
+    title: { fontSize: 16, fontWeight: "600", color: theme.text },
+    sub: { marginTop: 6, fontSize: 14, color: theme.textMuted, fontWeight: "500" },
+    hint: { marginTop: 8, fontSize: 12, color: theme.accent, fontWeight: "600" },
+  });

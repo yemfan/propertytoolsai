@@ -1,6 +1,6 @@
 import type { MobileLeadTaskDto, MobileTasksGroupedResponseDto } from "@leadsmart/shared";
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   RefreshControl,
   ScrollView,
@@ -15,16 +15,19 @@ import { ScreenLoading } from "../components/ScreenLoading";
 import { TaskCard } from "../components/tasks/TaskCard";
 import { fetchMobileTasks, patchMobileTask } from "../lib/leadsmartMobileApi";
 import type { MobileApiFailure } from "../lib/leadsmartMobileApi";
-import { theme } from "../lib/theme";
+import { useThemeTokens } from "../lib/useThemeTokens";
+import type { ThemeTokens } from "../lib/theme";
 
 function Section({
   title,
   hint,
   children,
+  styles,
 }: {
   title: string;
   hint?: string;
   children: ReactNode;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <View style={styles.section}>
@@ -37,6 +40,8 @@ function Section({
 
 export default function TasksScreen() {
   const router = useRouter();
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [grouped, setGrouped] = useState<MobileTasksGroupedResponseDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -148,7 +153,7 @@ export default function TasksScreen() {
       ) : null}
 
       {g.overdue.length > 0 ? (
-        <Section title="Overdue" hint="Due before today (UTC)">
+        <Section title="Overdue" hint="Due before today (UTC)" styles={styles}>
           {g.overdue.map((t) => (
             <TaskCard
               key={t.id}
@@ -163,7 +168,7 @@ export default function TasksScreen() {
       ) : null}
 
       {g.today.length > 0 ? (
-        <Section title="Today" hint="Due today (UTC)">
+        <Section title="Today" hint="Due today (UTC)" styles={styles}>
           {g.today.map((t) => (
             <TaskCard
               key={t.id}
@@ -178,7 +183,7 @@ export default function TasksScreen() {
       ) : null}
 
       {g.upcoming.length > 0 ? (
-        <Section title="Upcoming" hint="No date or future due dates">
+        <Section title="Upcoming" hint="No date or future due dates" styles={styles}>
           {g.upcoming.map((t) => (
             <TaskCard
               key={t.id}
@@ -195,8 +200,9 @@ export default function TasksScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: theme.bg },
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    scroll: { flex: 1, backgroundColor: theme.bg },
   scrollContent: { paddingBottom: 32 },
   centered: {
     flex: 1,

@@ -1,5 +1,5 @@
 import type { MobileLeadTaskDto, MobileTaskPriority } from "@leadsmart/shared";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,7 +12,8 @@ import {
   View,
 } from "react-native";
 import { postMobileTask } from "../../lib/leadsmartMobileApi";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
 function utcNoonTodayIso(): string {
   const n = new Date();
@@ -30,6 +31,8 @@ type Props = {
 };
 
 export function TaskComposerModal({ visible, leadId, onClose, onCreated }: Props) {
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<MobileTaskPriority>("medium");
@@ -91,7 +94,7 @@ export function TaskComposerModal({ visible, leadId, onClose, onCreated }: Props
           <TextInput
             style={styles.input}
             placeholder="Title"
-            placeholderTextColor={theme.textSubtle}
+            placeholderTextColor={tokens.textSubtle}
             value={title}
             onChangeText={setTitle}
             editable={!submitting}
@@ -99,7 +102,7 @@ export function TaskComposerModal({ visible, leadId, onClose, onCreated }: Props
           <TextInput
             style={[styles.input, styles.inputMultiline]}
             placeholder="Notes (optional)"
-            placeholderTextColor={theme.textSubtle}
+            placeholderTextColor={tokens.textSubtle}
             value={description}
             onChangeText={setDescription}
             multiline
@@ -151,7 +154,7 @@ export function TaskComposerModal({ visible, leadId, onClose, onCreated }: Props
               style={styles.saveBtn}
             >
               {submitting ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={tokens.textOnAccent} />
               ) : (
                 <Text style={styles.saveText}>Save</Text>
               )}
@@ -164,8 +167,9 @@ export function TaskComposerModal({ visible, leadId, onClose, onCreated }: Props
   );
 }
 
-const styles = StyleSheet.create({
-  modalRoot: {
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    modalRoot: {
     flex: 1,
     justifyContent: "flex-end",
   },
@@ -233,7 +237,7 @@ const styles = StyleSheet.create({
   },
   dueChipOn: { backgroundColor: theme.accent, borderColor: theme.accent },
   dueChipText: { fontSize: 14, fontWeight: "700", color: theme.text },
-  dueChipTextOn: { color: "#fff" },
+  dueChipTextOn: { color: theme.textOnAccent },
   error: { color: theme.errorTitle, marginTop: 8, fontSize: 14 },
   actions: {
     flexDirection: "row",
@@ -251,5 +255,5 @@ const styles = StyleSheet.create({
     minWidth: 100,
     alignItems: "center",
   },
-  saveText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  saveText: { color: theme.textOnAccent, fontSize: 16, fontWeight: "700" },
 });

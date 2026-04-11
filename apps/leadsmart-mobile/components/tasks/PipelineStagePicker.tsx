@@ -1,7 +1,9 @@
 import type { MobilePipelineSlug, MobilePipelineStageOptionDto } from "@leadsmart/shared";
 import { MOBILE_PIPELINE_LABELS } from "@leadsmart/shared";
+import { useMemo } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
 type Props = {
   stages: MobilePipelineStageOptionDto[];
@@ -22,6 +24,9 @@ export function PipelineStagePicker({
   busySlug,
   onSelect,
 }: Props) {
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
+
   if (!stages.length) {
     return (
       <View style={styles.unavailable}>
@@ -52,7 +57,7 @@ export function PipelineStagePicker({
             ]}
           >
             {busy ? (
-              <ActivityIndicator size="small" color={selected ? "#fff" : theme.accent} />
+              <ActivityIndicator size="small" color={selected ? tokens.textOnAccent : tokens.accent} />
             ) : (
               <Text style={[styles.chipText, selected && styles.chipTextSelected]} numberOfLines={1}>
                 {labelFor(s)}
@@ -65,40 +70,41 @@ export function PipelineStagePicker({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    flexWrap: "nowrap",
-    gap: 8,
-    paddingVertical: 4,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: "#f1f5f9",
-    borderWidth: 1,
-    borderColor: theme.border,
-    minWidth: 72,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  chipSelected: {
-    backgroundColor: theme.accent,
-    borderColor: theme.accent,
-  },
-  chipPressed: { opacity: 0.85 },
-  chipText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.text,
-  },
-  chipTextSelected: { color: "#fff" },
-  unavailable: {
-    paddingVertical: 8,
-  },
-  unavailableText: {
-    fontSize: 13,
-    color: theme.textMuted,
-  },
-});
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      flexWrap: "nowrap",
+      gap: 8,
+      paddingVertical: 4,
+    },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 999,
+      backgroundColor: theme.surfaceElevated,
+      borderWidth: 1,
+      borderColor: theme.border,
+      minWidth: 72,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    chipSelected: {
+      backgroundColor: theme.accent,
+      borderColor: theme.accent,
+    },
+    chipPressed: { opacity: 0.85 },
+    chipText: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: theme.text,
+    },
+    chipTextSelected: { color: theme.textOnAccent },
+    unavailable: {
+      paddingVertical: 8,
+    },
+    unavailableText: {
+      fontSize: 13,
+      color: theme.textMuted,
+    },
+  });

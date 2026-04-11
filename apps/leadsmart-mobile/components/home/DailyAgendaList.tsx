@@ -1,8 +1,10 @@
 import type { DailyAgendaItem } from "@leadsmart/shared";
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { EmptyState } from "../EmptyState";
 import { formatAgendaClock } from "../../lib/format";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
 type Props = {
   items: DailyAgendaItem[];
@@ -10,6 +12,9 @@ type Props = {
 };
 
 export function DailyAgendaList({ items, onItemPress }: Props) {
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
+
   if (items.length === 0) {
     return (
       <EmptyState
@@ -48,25 +53,26 @@ export function DailyAgendaList({ items, onItemPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.border,
-  },
-  pressed: { opacity: 0.88 },
-  clock: {
-    width: 72,
-    fontSize: 15,
-    fontWeight: "700",
-    color: theme.accent,
-    paddingTop: 1,
-  },
-  body: { flex: 1, minWidth: 0, paddingRight: 8 },
-  title: { fontSize: 16, fontWeight: "600", color: theme.text, lineHeight: 22 },
-  sub: { fontSize: 14, color: theme.textMuted, marginTop: 2, lineHeight: 20 },
-  chev: { fontSize: 20, color: theme.textSubtle, paddingTop: 2 },
-});
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      paddingVertical: 12,
+      paddingHorizontal: 4,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.border,
+    },
+    pressed: { opacity: 0.88 },
+    clock: {
+      width: 72,
+      fontSize: 15,
+      fontWeight: "700",
+      color: theme.accent,
+      paddingTop: 1,
+    },
+    body: { flex: 1, minWidth: 0, paddingRight: 8 },
+    title: { fontSize: 16, fontWeight: "600", color: theme.text, lineHeight: 22 },
+    sub: { fontSize: 14, color: theme.textMuted, marginTop: 2, lineHeight: 20 },
+    chev: { fontSize: 20, color: theme.textSubtle, paddingTop: 2 },
+  });

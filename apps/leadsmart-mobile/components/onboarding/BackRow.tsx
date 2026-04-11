@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { onboardingStyles as s } from "../../lib/onboarding/styles";
+import { useOnboardingStyles } from "../../lib/onboarding/styles";
 
 /**
  * Thin back-chevron row for onboarding screens.
@@ -21,6 +21,7 @@ import { onboardingStyles as s } from "../../lib/onboarding/styles";
  */
 export function BackRow({ fallbackHref }: { fallbackHref?: string }) {
   const router = useRouter();
+  const s = useOnboardingStyles();
   const canGoBack = router.canGoBack();
 
   if (!canGoBack && !fallbackHref) {

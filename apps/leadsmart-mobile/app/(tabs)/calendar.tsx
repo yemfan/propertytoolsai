@@ -1,5 +1,5 @@
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -28,9 +28,20 @@ import {
   patchMobileTask,
 } from "../../lib/leadsmartMobileApi";
 import type { MobileApiFailure } from "../../lib/leadsmartMobileApi";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
-function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+function Section({
+  title,
+  hint,
+  children,
+  styles,
+}: {
+  title: string;
+  hint?: string;
+  children: ReactNode;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -42,6 +53,8 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
 
 export default function CalendarScreen() {
   const router = useRouter();
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const { newAppt } = useLocalSearchParams<{ newAppt?: string | string[] }>();
   const newApptFlag = Array.isArray(newAppt) ? newAppt[0] : newAppt;
   const [events, setEvents] = useState<MobileCalendarEventDto[]>([]);
@@ -208,7 +221,7 @@ export default function CalendarScreen() {
           </View>
         ) : null}
 
-        <Section title="Appointments" hint="Scheduled on your leads (CRM)">
+        <Section title="Appointments" hint="Scheduled on your leads (CRM)" styles={styles}>
           {events.length === 0 ? (
             <Text style={styles.muted}>No upcoming appointments in this window.</Text>
           ) : (
@@ -224,7 +237,7 @@ export default function CalendarScreen() {
           )}
         </Section>
 
-        <Section title="Overdue tasks" hint="Open tasks past due (UTC day)">
+        <Section title="Overdue tasks" hint="Open tasks past due (UTC day)" styles={styles}>
           {overdueTasks.length === 0 ? (
             <Text style={styles.muted}>You’re caught up on overdue tasks.</Text>
           ) : (
@@ -241,7 +254,7 @@ export default function CalendarScreen() {
           )}
         </Section>
 
-        <Section title="Follow-ups" hint="From lead next contact date">
+        <Section title="Follow-ups" hint="From lead next contact date" styles={styles}>
           {followUpsState.length === 0 ? (
             <Text style={styles.muted}>No follow-up dates on your leads.</Text>
           ) : (
@@ -268,48 +281,53 @@ export default function CalendarScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.bg },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
-  headerTitle: { fontSize: 22, fontWeight: "800", color: theme.text },
-  newBtn: {
-    backgroundColor: theme.accent,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  newBtnPressed: { opacity: 0.9 },
-  newBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 32 },
-  centered: {
-    flex: 1,
-    backgroundColor: theme.bg,
-    padding: 16,
-    paddingTop: 24,
-  },
-  bannerPad: { paddingHorizontal: 12, paddingBottom: 8 },
-  emptyWrap: { paddingHorizontal: 12, paddingTop: 8 },
-  section: { marginTop: 4, paddingHorizontal: 12 },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: theme.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 4,
-  },
-  sectionHint: {
-    fontSize: 12,
-    color: theme.textSubtle,
-    marginBottom: 4,
-  },
-  muted: { fontSize: 14, color: theme.textMuted, paddingVertical: 8 },
-});
+/**
+ * Style factory — consumed via `useMemo` in `CalendarScreen` so
+ * the StyleSheet rebuilds whenever the OS color scheme flips.
+ */
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: theme.bg },
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 4,
+    },
+    headerTitle: { fontSize: 22, fontWeight: "800", color: theme.text },
+    newBtn: {
+      backgroundColor: theme.accent,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 10,
+    },
+    newBtnPressed: { opacity: 0.9 },
+    newBtnText: { color: theme.textOnAccent, fontWeight: "700", fontSize: 15 },
+    scroll: { flex: 1 },
+    scrollContent: { paddingBottom: 32 },
+    centered: {
+      flex: 1,
+      backgroundColor: theme.bg,
+      padding: 16,
+      paddingTop: 24,
+    },
+    bannerPad: { paddingHorizontal: 12, paddingBottom: 8 },
+    emptyWrap: { paddingHorizontal: 12, paddingTop: 8 },
+    section: { marginTop: 4, paddingHorizontal: 12 },
+    sectionTitle: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: theme.textMuted,
+      textTransform: "uppercase",
+      letterSpacing: 0.6,
+      marginBottom: 4,
+    },
+    sectionHint: {
+      fontSize: 12,
+      color: theme.textSubtle,
+      marginBottom: 4,
+    },
+    muted: { fontSize: 14, color: theme.textMuted, paddingVertical: 8 },
+  });

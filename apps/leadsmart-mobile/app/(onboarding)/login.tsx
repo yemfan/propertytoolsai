@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -14,33 +14,47 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { getLeadsmartApiBaseUrl, getSupabaseAnonKey, getSupabaseUrl } from "../../lib/env";
-import { onboardingStyles as s } from "../../lib/onboarding/styles";
+import { useOnboardingStyles } from "../../lib/onboarding/styles";
+import type { ThemeTokens } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
 import { useLeadsmartSession } from "../../lib/session/LeadsmartSessionContext";
 import { BackRow } from "../../components/onboarding/BackRow";
 
-const oauthBtn = StyleSheet.create({
-  row: {
-    marginTop: 12,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    backgroundColor: "#fff",
-  },
-  rowApple: {
-    marginTop: 10,
-    backgroundColor: "#000",
-    borderColor: "#000",
-  },
-  label: { fontSize: 15, fontWeight: "600", color: "#0f172a" },
-  labelApple: { color: "#fff" },
-});
-
-const inputCompact = [s.input, { minHeight: 52, textAlignVertical: "center" as const }];
+/**
+ * OAuth button styles — factory form so Google button surface
+ * flips to a dark-compatible color in dark mode. Apple button
+ * stays pure black regardless of theme (that's the Apple brand
+ * requirement from HIG).
+ */
+const createOAuthStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    row: {
+      marginTop: 12,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: theme.border,
+      backgroundColor: theme.surface,
+    },
+    rowApple: {
+      marginTop: 10,
+      backgroundColor: "#000",
+      borderColor: "#000",
+    },
+    label: { fontSize: 15, fontWeight: "600", color: theme.text },
+    labelApple: { color: "#fff" },
+  });
 
 export default function OnboardingLoginScreen() {
   const router = useRouter();
+  const s = useOnboardingStyles();
+  const tokens = useThemeTokens();
+  const oauthBtn = useMemo(() => createOAuthStyles(tokens), [tokens]);
+  const inputCompact = useMemo(
+    () => [s.input, { minHeight: 52, textAlignVertical: "center" as const }],
+    [s.input]
+  );
   const {
     signInWithEmailPassword,
     signInWithToken,

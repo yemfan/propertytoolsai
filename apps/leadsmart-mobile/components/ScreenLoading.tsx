@@ -1,25 +1,30 @@
+import { useMemo } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { theme } from "../lib/theme";
+import { useThemeTokens } from "../lib/useThemeTokens";
+import type { ThemeTokens } from "../lib/theme";
 
 type Props = {
   message: string;
 };
 
 export function ScreenLoading({ message }: Props) {
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   return (
     <View style={styles.wrap}>
-      <ActivityIndicator size="large" color={theme.accent} />
+      <ActivityIndicator size="large" color={tokens.accent} />
       <Text style={styles.text}>{message}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.bg,
-  },
-  text: { marginTop: 12, fontSize: 14, color: theme.textMuted },
-});
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    wrap: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.bg,
+    },
+    text: { marginTop: 12, fontSize: 14, color: theme.textMuted },
+  });

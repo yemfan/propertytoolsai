@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,7 +12,8 @@ import {
 } from "react-native";
 import { postMobileCalendarEvent } from "../../lib/leadsmartMobileApi";
 import type { MobileCalendarEventDto } from "@leadsmart/shared";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
 function hoursFromNow(h: number): string {
   return new Date(Date.now() + h * 60 * 60 * 1000).toISOString();
@@ -35,6 +36,8 @@ type Props = {
 };
 
 export function AppointmentComposerModal({ visible, leadIdFixed, onClose, onCreated }: Props) {
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [leadIdInput, setLeadIdInput] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -101,7 +104,7 @@ export function AppointmentComposerModal({ visible, leadIdFixed, onClose, onCrea
               <TextInput
                 style={styles.input}
                 placeholder="Lead ID"
-                placeholderTextColor={theme.textSubtle}
+                placeholderTextColor={tokens.textSubtle}
                 value={leadIdInput}
                 onChangeText={setLeadIdInput}
                 editable={!submitting}
@@ -112,7 +115,7 @@ export function AppointmentComposerModal({ visible, leadIdFixed, onClose, onCrea
             <TextInput
               style={styles.input}
               placeholder="Title (e.g. Showing · 123 Main St)"
-              placeholderTextColor={theme.textSubtle}
+              placeholderTextColor={tokens.textSubtle}
               value={title}
               onChangeText={setTitle}
               editable={!submitting}
@@ -120,7 +123,7 @@ export function AppointmentComposerModal({ visible, leadIdFixed, onClose, onCrea
             <TextInput
               style={[styles.input, styles.inputMultiline]}
               placeholder="Notes (optional)"
-              placeholderTextColor={theme.textSubtle}
+              placeholderTextColor={tokens.textSubtle}
               value={description}
               onChangeText={setDescription}
               multiline
@@ -148,7 +151,7 @@ export function AppointmentComposerModal({ visible, leadIdFixed, onClose, onCrea
               </Pressable>
               <Pressable onPress={() => void submit()} disabled={submitting} style={styles.saveBtn}>
                 {submitting ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={tokens.textOnAccent} />
                 ) : (
                   <Text style={styles.saveText}>Save</Text>
                 )}
@@ -161,8 +164,9 @@ export function AppointmentComposerModal({ visible, leadIdFixed, onClose, onCrea
   );
 }
 
-const styles = StyleSheet.create({
-  modalRoot: { flex: 1, justifyContent: "flex-end" },
+const createStyles = (theme: ThemeTokens) =>
+  StyleSheet.create({
+    modalRoot: { flex: 1, justifyContent: "flex-end" },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(15,23,42,0.45)",
@@ -227,5 +231,5 @@ const styles = StyleSheet.create({
     minWidth: 100,
     alignItems: "center",
   },
-  saveText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  saveText: { color: theme.textOnAccent, fontSize: 16, fontWeight: "700" },
 });

@@ -1,6 +1,6 @@
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -16,10 +16,13 @@ import {
   patchMobileNotificationPreferences,
 } from "../../lib/leadsmartMobileApi";
 import { getSupabaseAuthClient } from "../../lib/supabaseAuthClient";
-import { theme } from "../../lib/theme";
+import { useThemeTokens } from "../../lib/useThemeTokens";
+import type { ThemeTokens } from "../../lib/theme";
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const tokens = useThemeTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const { signOut } = useLeadsmartSession();
   const [email, setEmail] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
@@ -98,7 +101,7 @@ export default function SettingsScreen() {
           Hot leads send immediately. Reminders are batched on the server to reduce noise.
         </Text>
         {prefsLoading ? (
-          <ActivityIndicator style={styles.prefsSpinner} color={theme.accent} />
+          <ActivityIndicator style={styles.prefsSpinner} color={tokens.accent} />
         ) : (
           <>
             <View style={styles.row}>
@@ -182,7 +185,7 @@ export default function SettingsScreen() {
         accessibilityLabel="Sign out"
       >
         {signingOut ? (
-          <ActivityIndicator color={theme.textOnAccent} />
+          <ActivityIndicator color={tokens.textOnAccent} />
         ) : (
           <Text style={styles.signOutText}>Sign out</Text>
         )}
@@ -191,7 +194,11 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+/**
+ * Style factory — consumed via `useMemo` inside `SettingsScreen`
+ * so the StyleSheet rebuilds when the OS color scheme flips.
+ */
+const createStyles = (theme: ThemeTokens) => StyleSheet.create({
   scroll: { flex: 1, backgroundColor: theme.bg },
   content: { padding: 20, paddingBottom: 40 },
   h1: { fontSize: 28, fontWeight: "700", color: theme.text },
