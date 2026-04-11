@@ -2,7 +2,6 @@ import type { MobileLeadTaskDto, MobileTasksGroupedResponseDto } from "@leadsmar
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +11,7 @@ import { useRouter } from "expo-router";
 import { EmptyState } from "../components/EmptyState";
 import { ErrorBanner } from "../components/ErrorBanner";
 import { ScreenLoading } from "../components/ScreenLoading";
+import { BrandRefreshControl } from "../components/BrandRefreshControl";
 import { TaskCard } from "../components/tasks/TaskCard";
 import { fetchMobileTasks, patchMobileTask } from "../lib/leadsmartMobileApi";
 import type { MobileApiFailure } from "../lib/leadsmartMobileApi";
@@ -133,7 +133,7 @@ export default function TasksScreen() {
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={styles.scrollContent}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<BrandRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       {actionError ? (
         <View style={styles.bannerPad}>

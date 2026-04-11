@@ -5,13 +5,13 @@ import { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
   Pressable,
-  RefreshControl,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { ErrorBanner } from "../components/ErrorBanner";
 import { ScreenLoading } from "../components/ScreenLoading";
+import { BrandRefreshControl } from "../components/BrandRefreshControl";
 import {
   fetchMobileNotifications,
   postMobileNotificationRead,
@@ -134,7 +134,7 @@ export default function NotificationsCenterScreen() {
       <FlatList
         data={items}
         keyExtractor={(n) => n.id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load("refresh")} />}
+        refreshControl={<BrandRefreshControl refreshing={refreshing} onRefresh={() => void load("refresh")} />}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <Text style={styles.empty}>You’re all caught up. Hot leads and reminders will show here.</Text>
