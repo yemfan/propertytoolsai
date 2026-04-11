@@ -23,6 +23,12 @@ import {
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
+import {
+  hapticError,
+  hapticSelectionChange,
+  hapticSuccess,
+  hapticWarning,
+} from "../../lib/haptics";
 import { LeadQuickActionsRow } from "../../components/lead/LeadQuickActionsRow";
 import { LeadReplySection } from "../../components/lead/LeadReplySection";
 import { PipelineBreadcrumb } from "../../components/lead/PipelineBreadcrumb";
@@ -230,11 +236,16 @@ export default function LeadDetailScreen() {
   const onSelectPipelineStage = useCallback(
     async (slug: MobilePipelineSlug) => {
       if (!leadId || isDemoLeadId(leadId)) return;
+      // Selection tick on pick — fires immediately so the
+      // breadcrumb stage feels responsive even while the API
+      // call is in flight.
+      hapticSelectionChange();
       setPipelineActionError(null);
       setPipelineBusySlug(slug);
       const res = await patchLeadPipelineStage(leadId, { stage_slug: slug });
       setPipelineBusySlug(null);
       if (res.ok === false) {
+        hapticError();
         setPipelineActionError(res.message);
         return;
       }
@@ -255,19 +266,25 @@ export default function LeadDetailScreen() {
     const res = await patchMobileTask(nextOpenTask.id, { status: "done" });
     setNextTaskCompleting(false);
     if (res.ok === false) {
+      hapticError();
       setPipelineActionError(res.message);
       return;
     }
+    // Success pattern fires once the task is actually persisted
+    // — not optimistically — so the user knows the state is real.
+    hapticSuccess();
     await silentRefresh();
   }, [nextOpenTask, leadId, silentRefresh]);
 
   const onCancelNextAppointment = useCallback(async () => {
     if (!nextAppointment || !leadId || isDemoLeadId(leadId)) return;
+    hapticWarning();
     setScheduleError(null);
     setAppointmentCancelling(true);
     const res = await patchMobileCalendarEvent(nextAppointment.id, { status: "cancelled" });
     setAppointmentCancelling(false);
     if (res.ok === false) {
+      hapticError();
       setScheduleError(res.message);
       return;
     }

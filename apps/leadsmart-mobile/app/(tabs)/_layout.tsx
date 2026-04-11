@@ -2,6 +2,7 @@ import { Tabs } from "expo-router";
 import { Platform, StatusBar } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useThemeTokens, useIsDarkMode } from "../../lib/useThemeTokens";
+import { hapticTabSwitch } from "../../lib/haptics";
 
 /**
  * Bottom tab bar — batch-3 dark mode wiring.
@@ -21,6 +22,15 @@ export default function TabsLayout() {
     <>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <Tabs
+        screenListeners={{
+          // Light "selection changed" tick on every tab press.
+          // Fires via React Navigation's tabPress event so both
+          // the active and inactive presses get feedback (the
+          // active tap feels like a "pop-to-top" acknowledgment).
+          tabPress: () => {
+            hapticTabSwitch();
+          },
+        }}
         screenOptions={{
           headerTitle: "LeadSmart AI",
           headerShadowVisible: false,

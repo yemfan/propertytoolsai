@@ -1,5 +1,5 @@
 import type { MobileInboxThreadDto } from "@leadsmart/shared";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -20,6 +20,7 @@ import type { MobileApiFailure } from "../../lib/leadsmartMobileApi";
 import { useInboxRealtime } from "../../lib/realtime/useInboxRealtime";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
+import { hapticRowTap } from "../../lib/haptics";
 
 /** Hot threads first, then by recency (matches server ordering within each group). */
 function sortInboxThreads(threads: MobileInboxThreadDto[]): MobileInboxThreadDto[] {
@@ -29,7 +30,14 @@ function sortInboxThreads(threads: MobileInboxThreadDto[]): MobileInboxThreadDto
   });
 }
 
-function ThreadRow({
+/**
+ * Row body (unwrapped). Exported as a memo below so FlatList
+ * only re-renders rows whose `item` or `onPress` identity
+ * changed — the same optimization the leads screen got in
+ * batch 3. Without memoization, every scroll forced all visible
+ * rows to re-render when the parent re-rendered.
+ */
+function ThreadRowInner({
   item,
   onPress,
 }: {
@@ -83,6 +91,8 @@ function ThreadRow({
   );
 }
 
+const ThreadRow = memo(ThreadRowInner);
+
 export default function InboxScreen() {
   const router = useRouter();
   const tokens = useThemeTokens();
@@ -132,6 +142,36 @@ export default function InboxScreen() {
     void load("refresh");
   }, [load]);
 
+  /**
+   * Stable navigation handler passed to every row. Pairs with
+   * the `memo`-wrapped `ThreadRow` above — inline arrows in
+   * `renderItem` would invalidate row memoization on every
+   * parent render and scroll would re-render every visible row.
+   * Fires a light "row tap" haptic on iOS before navigating.
+   */
+  const handleRowPress = useCallback(
+    (leadId: string) => {
+      hapticRowTap();
+      router.push({
+        pathname: "/lead/[id]",
+        params: { id: leadId },
+      });
+    },
+    [router]
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: MobileInboxThreadDto }) => (
+      <ThreadRow item={item} onPress={() => handleRowPress(item.leadId)} />
+    ),
+    [handleRowPress]
+  );
+
+  const keyExtractor = useCallback(
+    (t: MobileInboxThreadDto) => `${t.leadId}-${t.channel}-${t.messageId}`,
+    []
+  );
+
   const listEmpty = useMemo(() => {
     if (error) return null;
     return (
@@ -170,20 +210,21 @@ export default function InboxScreen() {
       ) : null}
       <FlatList
         data={threads}
-        keyExtractor={(t) => `${t.leadId}-${t.channel}-${t.messageId}`}
+        keyExtractor={keyExtractor}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={listEmpty}
-        renderItem={({ item }) => (
-          <ThreadRow
-            item={item}
-            onPress={() =>
-              router.push({
-                pathname: "/lead/[id]",
-                params: { id: item.leadId },
-              })
-            }
-          />
-        )}
+        /*
+         * Performance knobs matching what leads.tsx got in
+         * batch 3. The inbox can grow to hundreds of threads
+         * for active agents; these trade a small amount of
+         * scroll-in latency for much lower memory + fewer
+         * layout passes while scrolling.
+         */
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={7}
+        removeClippedSubviews
+        renderItem={renderItem}
         contentContainerStyle={threads.length === 0 ? styles.emptyList : styles.listPad}
       />
     </View>

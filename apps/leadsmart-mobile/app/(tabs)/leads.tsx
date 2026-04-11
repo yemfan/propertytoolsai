@@ -19,6 +19,7 @@ import type { MobileApiFailure, MobileLeadsFilter } from "../../lib/leadsmartMob
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
 import { LeadRowSkeleton, SkeletonList } from "../../components/Skeleton";
+import { hapticRowTap } from "../../lib/haptics";
 
 const PAGE_SIZE = 30;
 
@@ -210,6 +211,7 @@ export default function LeadsScreen() {
    */
   const handleRowPress = useCallback(
     (leadId: string | number) => {
+      hapticRowTap();
       router.push({
         pathname: "/lead/[id]",
         params: { id: String(leadId) },

@@ -11,6 +11,7 @@ import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
 import { defaultEmailReplySubject, EmailReplyModal } from "./EmailReplyModal";
 import { ReplyComposer } from "./ReplyComposer";
+import { hapticError, hapticSuccess } from "../../lib/haptics";
 
 function appendSms(prev: MobileSmsMessageDto[], msg: MobileSmsMessageDto): MobileSmsMessageDto[] {
   if (prev.some((m) => m.id === msg.id)) return prev;
@@ -94,9 +95,15 @@ export function LeadReplySection({
     try {
       const res = await postMobileSmsSend(leadId, text);
       if (res.ok === false) {
+        hapticError();
         setSmsError(res.message);
         return;
       }
+      // Success haptic fires once the SMS is actually on the
+      // wire — agents use this button under time pressure, so
+      // the feedback has to match reality (not an optimistic
+      // pre-network tick).
+      hapticSuccess();
       setSms((prev) => appendSms(prev, res.message));
       setSmsText("");
       flashSent();

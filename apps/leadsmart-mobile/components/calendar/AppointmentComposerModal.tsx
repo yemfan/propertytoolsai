@@ -14,6 +14,7 @@ import { postMobileCalendarEvent } from "../../lib/leadsmartMobileApi";
 import type { MobileCalendarEventDto } from "@leadsmart/shared";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
+import { hapticError, hapticSuccess } from "../../lib/haptics";
 
 function hoursFromNow(h: number): string {
   return new Date(Date.now() + h * 60 * 60 * 1000).toISOString();
@@ -82,9 +83,11 @@ export function AppointmentComposerModal({ visible, leadIdFixed, onClose, onCrea
     });
     setSubmitting(false);
     if (res.ok === false) {
+      hapticError();
       setError(res.message);
       return;
     }
+    hapticSuccess();
     onCreated?.(res.event);
     reset();
     onClose();

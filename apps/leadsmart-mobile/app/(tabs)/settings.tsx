@@ -18,6 +18,12 @@ import {
 import { getSupabaseAuthClient } from "../../lib/supabaseAuthClient";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
+import {
+  hapticButtonPress,
+  hapticError,
+  hapticSelectionChange,
+  hapticWarning,
+} from "../../lib/haptics";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -61,10 +67,17 @@ export default function SettingsScreen() {
       push_reminder?: boolean;
       reminder_digest_minutes?: number;
     }) => {
+      // Lightweight "selection changed" tick when toggling any
+      // preference switch. Fires before the network round-trip
+      // so the switch feels instant even on flaky connections.
+      hapticSelectionChange();
       setPrefsSaving(true);
       const res = await patchMobileNotificationPreferences(patch);
       setPrefsSaving(false);
-      if (res.ok === false) return;
+      if (res.ok === false) {
+        hapticError();
+        return;
+      }
       setPushHot(res.preferences.push_hot_lead);
       setPushMissed(res.preferences.push_missed_call);
       setPushReminder(res.preferences.push_reminder);
@@ -74,10 +87,17 @@ export default function SettingsScreen() {
   );
 
   const onSignOut = useCallback(async () => {
+    // Warning haptic before the destructive path — same vocab
+    // iOS uses for any "are you sure?" moment. The actual sign
+    // out happens right after because the red button press is
+    // already the confirmation.
+    hapticWarning();
     setSigningOut(true);
     try {
       await signOut();
       router.replace("/(onboarding)/login");
+    } catch {
+      hapticError();
     } finally {
       setSigningOut(false);
     }
@@ -145,7 +165,10 @@ export default function SettingsScreen() {
       </View>
 
       <Pressable
-        onPress={() => router.push("/notifications")}
+        onPress={() => {
+          hapticButtonPress();
+          router.push("/notifications");
+        }}
         style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
         accessibilityRole="button"
         accessibilityLabel="Open notification center"
@@ -163,7 +186,10 @@ export default function SettingsScreen() {
        * while still showing the back button.
        */}
       <Pressable
-        onPress={() => router.push("/(onboarding)/value")}
+        onPress={() => {
+          hapticButtonPress();
+          router.push("/(onboarding)/value");
+        }}
         style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
         accessibilityRole="button"
         accessibilityLabel="Replay onboarding walkthrough"
