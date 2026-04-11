@@ -1,16 +1,25 @@
 import type { NavConfig } from "@repo/ui";
 import {
-  BarChart3,
+  Banknote,
   BriefcaseBusiness,
   Calculator,
   DollarSign,
-  Headphones,
+  FileBarChart,
+  GitCompare,
   Home,
-  House,
-  Landmark,
-  Settings,
+  LayoutDashboard,
+  LifeBuoy,
+  Lightbulb,
+  PiggyBank,
+  RefreshCw,
+  Scale,
   Sparkles,
+  Target,
+  TrendingUp,
   User,
+  UserCircle2,
+  Wallet,
+  Wand2,
 } from "lucide-react";
 
 /**
@@ -20,6 +29,14 @@ import {
  * Types: import `NavConfig` / `NavSection` from `@repo/ui` (not `@/packages/ui/...`).
  *
  * Pretty paths like `/cma-report` are redirected in `next.config.js` to existing tools.
+ *
+ * ── Icon guidelines ────────────────────────────────────────────────
+ * Every item should have a DISTINCT icon. Earlier versions had three
+ * calculators all using `<Calculator>`, three investing items all
+ * using `<BarChart3>`, and three AI items all using `<Sparkles>`,
+ * which made the sidebar feel repetitive. Current mapping tries to
+ * give each item a unique visual anchor while keeping the parent-
+ * group icons recognizable as category headers.
  */
 const navConfig = {
   id: "property-tools",
@@ -29,7 +46,7 @@ const navConfig = {
       label: "Home",
       href: "/",
       match: ["/"],
-      icon: <House size={18} strokeWidth={2} aria-hidden />,
+      icon: <LayoutDashboard size={18} strokeWidth={2} aria-hidden />,
     },
     {
       label: "Home Value",
@@ -39,17 +56,17 @@ const navConfig = {
         {
           label: "Estimate",
           href: "/home-value",
-          icon: <Home size={16} strokeWidth={2} aria-hidden />,
+          icon: <Target size={16} strokeWidth={2} aria-hidden />,
         },
         {
           label: "CMA Report",
           href: "/cma-report",
-          icon: <BarChart3 size={16} strokeWidth={2} aria-hidden />,
+          icon: <FileBarChart size={16} strokeWidth={2} aria-hidden />,
         },
         {
           label: "Market Value Trends",
           href: "/market-value-trends",
-          icon: <Landmark size={16} strokeWidth={2} aria-hidden />,
+          icon: <TrendingUp size={16} strokeWidth={2} aria-hidden />,
         },
       ],
     },
@@ -66,12 +83,12 @@ const navConfig = {
         {
           label: "Affordability Calculator",
           href: "/affordability-calculator",
-          icon: <Calculator size={16} strokeWidth={2} aria-hidden />,
+          icon: <Wallet size={16} strokeWidth={2} aria-hidden />,
         },
         {
           label: "Refinance Calculator",
           href: "/refinance-calculator",
-          icon: <Calculator size={16} strokeWidth={2} aria-hidden />,
+          icon: <RefreshCw size={16} strokeWidth={2} aria-hidden />,
         },
       ],
     },
@@ -82,17 +99,17 @@ const navConfig = {
         {
           label: "Rent Estimator",
           href: "/rent-estimator",
-          icon: <BarChart3 size={16} strokeWidth={2} aria-hidden />,
+          icon: <Banknote size={16} strokeWidth={2} aria-hidden />,
         },
         {
           label: "ROI / Cash Flow",
           href: "/roi-cash-flow",
-          icon: <BarChart3 size={16} strokeWidth={2} aria-hidden />,
+          icon: <PiggyBank size={16} strokeWidth={2} aria-hidden />,
         },
         {
           label: "Rent vs Buy",
           href: "/rent-vs-buy",
-          icon: <BarChart3 size={16} strokeWidth={2} aria-hidden />,
+          icon: <Scale size={16} strokeWidth={2} aria-hidden />,
         },
       ],
     },
@@ -105,23 +122,23 @@ const navConfig = {
           label: "AI Property Comparison",
           href: "/ai-property-comparison",
           badge: "Pro",
-          icon: <Sparkles size={16} strokeWidth={2} aria-hidden />,
+          icon: <GitCompare size={16} strokeWidth={2} aria-hidden />,
         },
         {
           label: "AI Recommended Properties",
           href: "/ai-recommended-properties",
-          icon: <Sparkles size={16} strokeWidth={2} aria-hidden />,
+          icon: <Wand2 size={16} strokeWidth={2} aria-hidden />,
         },
         {
           label: "Smart Next Steps",
           href: "/smart-next-steps",
-          icon: <Sparkles size={16} strokeWidth={2} aria-hidden />,
+          icon: <Lightbulb size={16} strokeWidth={2} aria-hidden />,
         },
       ],
     },
     {
       label: "Account",
-      icon: <Settings size={18} strokeWidth={2} aria-hidden />,
+      icon: <UserCircle2 size={18} strokeWidth={2} aria-hidden />,
       items: [
         {
           label: "Profile",
@@ -131,7 +148,7 @@ const navConfig = {
         {
           label: "Support",
           href: "/support",
-          icon: <Headphones size={16} strokeWidth={2} aria-hidden />,
+          icon: <LifeBuoy size={16} strokeWidth={2} aria-hidden />,
         },
       ],
     },
