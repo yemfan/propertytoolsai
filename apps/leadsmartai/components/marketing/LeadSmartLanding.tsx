@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   BarChart3,
   Brain,
@@ -129,19 +129,75 @@ export default function LeadSmartLanding() {
     };
   }, [mobileNavOpen]);
 
-  /** Close drawer on Escape. */
+  /**
+   * Refs for focus management. When the drawer opens, focus moves
+   * to the close button. When it closes, focus returns to the
+   * hamburger. WCAG 2.4.3 requires modal focus to stay inside.
+   */
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
+  const drawerCloseRef = useRef<HTMLButtonElement>(null);
+  const drawerPanelRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Focus trap + Escape handler for the mobile drawer.
+   *
+   * When the drawer opens:
+   * 1. Move focus to the close button (`drawerCloseRef`)
+   * 2. Set `aria-hidden="true"` on `<main>` so screen readers
+   *    can't reach the background content
+   * 3. Intercept Tab/Shift+Tab and cycle focus within the drawer
+   * 4. On Escape, close the drawer and return focus to the
+   *    hamburger button
+   */
   useEffect(() => {
     if (!mobileNavOpen) return;
+
+    // (a) Set aria-hidden on the <main> behind the drawer
+    const mainEl = document.getElementById("main-content");
+    if (mainEl) mainEl.setAttribute("aria-hidden", "true");
+
+    // (b) Focus the close button after a frame so React has
+    //     finished mounting the drawer DOM.
+    requestAnimationFrame(() => {
+      drawerCloseRef.current?.focus();
+    });
+
+    // (c) Tab/Shift+Tab focus trap + Escape
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMobileNavOpen(false);
+      if (e.key === "Escape") {
+        setMobileNavOpen(false);
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const panel = drawerPanelRef.current;
+      if (!panel) return;
+      const focusable = panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      if (mainEl) mainEl.removeAttribute("aria-hidden");
+      // Return focus to the hamburger button on close.
+      hamburgerRef.current?.focus();
+    };
   }, [mobileNavOpen]);
 
   return (
     <>
-      <main className="bg-white text-gray-900 dark:bg-slate-950 dark:text-slate-100">
+      <main id="main-content" className="bg-white text-gray-900 dark:bg-slate-950 dark:text-slate-100">
         {/* NAV */}
         <header className="sticky top-0 z-50 border-b border-gray-200/60 bg-white/80 backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-950/80">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
@@ -188,6 +244,7 @@ export default function LeadSmartLanding() {
 
               {/* Hamburger — visible below md only */}
               <button
+                ref={hamburgerRef}
                 type="button"
                 onClick={() => setMobileNavOpen(true)}
                 aria-label="Open menu"
@@ -221,6 +278,7 @@ export default function LeadSmartLanding() {
 
             {/* Panel — full height on iOS using `inset-y-0` instead of h-screen */}
             <div
+              ref={drawerPanelRef}
               id="leadsmart-mobile-nav"
               className="absolute right-0 top-0 bottom-0 flex w-[86%] max-w-[340px] flex-col overflow-y-auto border-l border-slate-200/80 bg-white shadow-[-8px_0_48px_-12px_rgba(15,23,42,0.25)] dark:border-slate-800 dark:bg-slate-950"
               style={{
@@ -236,6 +294,7 @@ export default function LeadSmartLanding() {
               <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Menu</span>
                 <button
+                  ref={drawerCloseRef}
                   type="button"
                   onClick={() => setMobileNavOpen(false)}
                   aria-label="Close menu"
@@ -324,7 +383,23 @@ export default function LeadSmartLanding() {
                 className="mt-8 flex flex-wrap gap-3"
                 style={{ animation: "fadeInUp 0.6s ease-out 0.3s both" }}
               >
-                <Button href={primaryCtaHref} className="min-h-11 px-6 text-base shadow-lg shadow-[#0072ce]/20 hover:shadow-xl hover:shadow-[#0072ce]/30">
+                <Button
+                  href={primaryCtaHref}
+                  aria-describedby="hero-trust-bar"
+                  className="group relative min-h-[48px] overflow-hidden px-7 text-base shadow-lg shadow-[#0072ce]/20 hover:shadow-xl hover:shadow-[#0072ce]/30 sm:min-h-11 sm:px-6"
+                >
+                  {/* Subtle shimmer sweep — CSS-only. The pseudo
+                    * element slides a white highlight across the
+                    * button on a 3s loop, drawing the eye without
+                    * being obnoxious. Pauses on hover so the
+                    * interaction doesn't compete with the shimmer. */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                    style={{
+                      animation: "cta-shimmer 3s ease-in-out infinite",
+                    }}
+                  />
                   Get My First Leads
                 </Button>
                 {hasVsl && (
@@ -345,7 +420,7 @@ export default function LeadSmartLanding() {
                 className="mt-6 rounded-xl border border-slate-200/80 bg-gradient-to-r from-[#0072ce]/[0.06] via-white to-[#ff8c42]/[0.07] px-4 py-4 shadow-sm shadow-slate-900/[0.04] ring-1 ring-slate-900/[0.04] dark:border-slate-700 dark:from-[#0072ce]/[0.08] dark:via-slate-900 dark:to-[#ff8c42]/[0.05] dark:ring-slate-700/40"
                 style={{ animation: "fadeInUp 0.6s ease-out 0.4s both" }}
               >
-                <ul className="flex flex-col gap-2.5 text-sm text-slate-700 sm:flex-row sm:flex-wrap sm:gap-x-5 sm:gap-y-2 dark:text-slate-300">
+                <ul id="hero-trust-bar" className="flex flex-col gap-2.5 text-sm text-slate-700 sm:flex-row sm:flex-wrap sm:gap-x-5 sm:gap-y-2 dark:text-slate-300">
                   <li className="flex items-center gap-2.5">
                     <BrandCheck tone="primary" />
                     <span>AI follow-up in seconds — so hot leads don&apos;t go cold</span>
@@ -726,7 +801,7 @@ export default function LeadSmartLanding() {
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="primary" />{f}</li>
                       ))}
                     </ul>
-                    <Button className="mt-5 w-full text-xs" variant="outline" href="/signup">Get started free</Button>
+                    <Button className="mt-5 w-full text-xs" variant="outline" href="/signup" aria-label="Get started free — Free plan at $0 per month">Get started free</Button>
                   </CardContent>
                 </Card>
               </RevealSection>
@@ -754,7 +829,7 @@ export default function LeadSmartLanding() {
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="primary" />{f}</li>
                       ))}
                     </ul>
-                    <Button className="mt-5 w-full text-xs shadow-lg shadow-[#0072ce]/20" href={`/pricing?checkout_plan=pro&cycle=${billingCycle}`}>Start free trial</Button>
+                    <Button className="mt-5 w-full text-xs shadow-lg shadow-[#0072ce]/20" href={`/pricing?checkout_plan=pro&cycle=${billingCycle}`} aria-label={`Start free trial — Pro plan at $${billingCycle === "annual" ? 41 : 49} per month`}>Start free trial</Button>
                     <p className="mt-1.5 text-center text-[11px] text-gray-400 dark:text-slate-500">14-day trial · No card needed</p>
                   </CardContent>
                 </Card>
@@ -782,7 +857,7 @@ export default function LeadSmartLanding() {
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="success" />{f}</li>
                       ))}
                     </ul>
-                    <Button className="mt-5 w-full text-xs" variant="outline" href={`/pricing?checkout_plan=premium&cycle=${billingCycle}`}>Start free trial</Button>
+                    <Button className="mt-5 w-full text-xs" variant="outline" href={`/pricing?checkout_plan=premium&cycle=${billingCycle}`} aria-label={`Start free trial — Elite plan at $${billingCycle === "annual" ? 82 : 99} per month`}>Start free trial</Button>
                   </CardContent>
                 </Card>
               </RevealSection>
@@ -809,7 +884,7 @@ export default function LeadSmartLanding() {
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="accent" />{f}</li>
                       ))}
                     </ul>
-                    <Button className="mt-5 w-full text-xs" variant="outline" href="/contact">Contact sales</Button>
+                    <Button className="mt-5 w-full text-xs" variant="outline" href="/contact" aria-label={`Contact sales — Team plan at $${billingCycle === "annual" ? 165 : 199} per month`}>Contact sales</Button>
                   </CardContent>
                 </Card>
               </RevealSection>
