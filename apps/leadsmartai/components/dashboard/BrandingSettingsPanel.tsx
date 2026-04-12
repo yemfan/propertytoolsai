@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 type Branding = {
   brandName: string;
@@ -254,7 +255,7 @@ export default function BrandingSettingsPanel() {
                 <div className="text-[11px] font-medium text-gray-500 mb-1">Preview</div>
                 <div
                   className="text-sm text-gray-700"
-                  dangerouslySetInnerHTML={{ __html: branding.signatureHtml }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(branding.signatureHtml) }}
                 />
               </div>
             )}
@@ -270,7 +271,7 @@ export default function BrandingSettingsPanel() {
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
             <div
               className="text-sm text-gray-700"
-              dangerouslySetInnerHTML={{ __html: signatureToShow }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(signatureToShow) }}
             />
             {!branding.signatureHtml && (
               <p className="mt-2 text-[11px] text-gray-400 italic">Default signature</p>

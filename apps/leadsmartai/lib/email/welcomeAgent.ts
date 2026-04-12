@@ -1,8 +1,20 @@
 import { sendEmail } from "@/lib/email";
 
-const APP_STORE_URL = "https://apps.apple.com/app/leadsmart-ai/id0000000000"; // TODO: replace with real App Store ID
-const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.leadsmart.ai"; // TODO: replace with real package
+/**
+ * Mobile app store URLs. The iOS App Store and Google Play URLs
+ * link to the EAS-published LeadSmart AI app. If the app isn't
+ * published on one platform yet, that link falls back to the
+ * dashboard URL so agents don't hit a 404.
+ *
+ * IMPORTANT: Update these when each store listing goes live.
+ * The bundle ID is `ai.leadsmart.mobile` on both platforms
+ * (defined in `apps/leadsmart-mobile/app.json`).
+ */
 const DASHBOARD_URL = "https://www.leadsmart-ai.com/dashboard";
+const APP_STORE_URL =
+  process.env.LEADSMART_IOS_APP_STORE_URL?.trim() || DASHBOARD_URL;
+const PLAY_STORE_URL =
+  process.env.LEADSMART_ANDROID_PLAY_STORE_URL?.trim() || DASHBOARD_URL;
 
 export async function sendAgentWelcomeEmail(params: {
   to: string;

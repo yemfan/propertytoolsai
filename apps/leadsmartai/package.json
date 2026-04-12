@@ -49,6 +49,7 @@
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.99.2",
     "@tailwindcss/postcss": "^4.2.1",
+    "dompurify": "^3.2.4",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "lightningcss": "1.31.1",
@@ -69,6 +70,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.2.0",
     "@types/google.maps": "^3.58.1",
     "@types/node": "^20.4.2",
     "@types/nodemailer": "^7.0.11",
