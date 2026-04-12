@@ -115,25 +115,33 @@ function CountUp({ target, suffix = "" }: { target: number; suffix?: string }) {
 }
 
 /* ── Interactive FAQ Accordion ── */
+let faqId = 0;
 function FaqItem({ q, a, defaultOpen = false }: { q: string; a: string; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [id] = useState(() => `faq-${++faqId}`);
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white transition-all duration-200 hover:border-slate-300">
       <button
         type="button"
+        id={`${id}-trigger`}
         className="flex w-full items-center justify-between gap-4 p-5 text-left"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
+        aria-controls={`${id}-panel`}
       >
         <h3 className="font-semibold text-slate-900">{q}</h3>
         <svg
           className={`h-5 w-5 flex-shrink-0 text-slate-400 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
           fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+          aria-hidden="true"
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
       <div
+        id={`${id}-panel`}
+        role="region"
+        aria-labelledby={`${id}-trigger`}
         className="overflow-hidden transition-all duration-300"
         style={{ maxHeight: open ? "200px" : "0px", opacity: open ? 1 : 0 }}
       >
@@ -146,32 +154,32 @@ function FaqItem({ q, a, defaultOpen = false }: { q: string; a: string; defaultO
 /* ── Tool icons (inline SVGs) ── */
 const toolIcons: Record<string, React.ReactNode> = {
   "Home Value Estimator": (
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
     </svg>
   ),
   "Mortgage Calculator": (
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 15.75V18m-7.5-6.75h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25v-.008zm2.498-6.75h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007v-.008zm2.504-6.75h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008v-.008zm2.498-6.75h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008v-.008zM8.25 6h7.5v2.25h-7.5V6zM12 2.25c-1.892 0-3.758.11-5.593.322C5.307 2.7 4.5 3.65 4.5 4.757V19.5a2.25 2.25 0 002.25 2.25h10.5a2.25 2.25 0 002.25-2.25V4.757c0-1.108-.806-2.057-1.907-2.185A48.507 48.507 0 0012 2.25z" />
     </svg>
   ),
   "Affordability Calculator": (
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
   "AI Property Comparison": (
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
     </svg>
   ),
   "Refinance Analyzer": (
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
     </svg>
   ),
   "Rent vs Buy Calculator": (
-    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5m.75-9l3-3 2.148 2.148A12.061 12.061 0 0116.5 7.605" />
     </svg>
   ),
@@ -401,7 +409,7 @@ const EXPLORE_TOOLS = [
 
 export default function PropertyToolsHomePage() {
   return (
-    <div className="bg-white text-slate-900">
+    <div id="main-content" className="bg-white text-slate-900">
 
       {/* ═══ HERO — animated gradient mesh background ═══ */}
       <section className="relative overflow-hidden px-4 pb-8 pt-20 text-center md:px-6 md:pb-12 md:pt-28 lg:pt-32">
@@ -527,7 +535,7 @@ export default function PropertyToolsHomePage() {
                     aria-hidden
                   >
                     Try free
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
                   </div>
                 </Link>
               </Reveal>
@@ -603,13 +611,13 @@ export default function PropertyToolsHomePage() {
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-center gap-2.5 text-sm text-slate-700">
                         <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0072ce]/10">
-                          <svg className="h-3 w-3 text-[#0072ce]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          <svg className="h-3 w-3 text-[#0072ce]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                         </div>
                         {f}
                       </li>
                     ))}
                   </ul>
-                  <Link href={plan.href} className={`mt-7 block w-full rounded-xl py-3 text-center text-sm font-semibold transition-all duration-200 active:scale-[0.98] ${
+                  <Link href={plan.href} aria-label={`${plan.cta} - ${plan.name} plan`} className={`mt-7 block w-full rounded-xl py-3 text-center text-sm font-semibold transition-all duration-200 active:scale-[0.98] ${
                     plan.highlighted
                       ? "bg-gradient-to-r from-[#0072ce] to-[#4F46E5] text-white shadow-lg shadow-[#0072ce]/20 hover:shadow-xl hover:brightness-110"
                       : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
@@ -641,7 +649,7 @@ export default function PropertyToolsHomePage() {
               {["AI responds to new leads in under 60 seconds", "Scores and prioritizes your hottest buyers", "Drip sequences that nurture until they're ready"].map((f) => (
                 <li key={f} className="flex items-center gap-3">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0072ce]/10">
-                    <svg className="h-3.5 w-3.5 text-[#0072ce]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    <svg className="h-3.5 w-3.5 text-[#0072ce]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                   </div>
                   {f}
                 </li>
@@ -649,7 +657,7 @@ export default function PropertyToolsHomePage() {
             </ul>
             <a href={LEADSMART_URL} target="_blank" rel="noopener noreferrer" className="group mt-8 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-7 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-slate-800 hover:shadow-lg active:scale-[0.97]">
               See LeadSmart AI
-              <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+              <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
             </a>
           </Reveal>
           <Reveal delay={150}>
