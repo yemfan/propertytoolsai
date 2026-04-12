@@ -193,6 +193,29 @@ html {
   animation: landing-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Primary CTA shimmer sweep — a white highlight slides across
+   the button surface on a 3s loop. Pauses on hover so user
+   interaction doesn't compete with the animation. Respects
+   prefers-reduced-motion. */
+@keyframes cta-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  30% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta-shimmer,
+  [style*="cta-shimmer"] {
+    animation: none !important;
+  }
+}
+
 .landing-delay-1 {
   animation-delay: 0.06s;
 }

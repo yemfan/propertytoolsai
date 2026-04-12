@@ -157,6 +157,20 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         ))}
       </head>
       <body className={`${fontHeading.variable} ${fontBody.variable} bg-brand-surface text-brand-text font-body`}>
+        {/*
+         * Skip-to-content link — WCAG 2.4.1 "Bypass Blocks".
+         * Hidden by default with `sr-only`, becomes visible on
+         * keyboard focus via `focus:not-sr-only` so sighted
+         * keyboard users can jump past the nav. Points at
+         * `#main-content` which lives on the `<main>` element
+         * in `LeadSmartLanding.tsx` and `DashboardShell.tsx`.
+         */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[999] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[#0072ce] focus:shadow-lg focus:ring-2 focus:ring-[#0072ce]/40 dark:focus:bg-slate-900 dark:focus:text-[#4da3e8]"
+        >
+          Skip to content
+        </a>
         <AuthProvider>
           <AppShell>{children}</AppShell>
         </AuthProvider>
