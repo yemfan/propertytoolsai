@@ -3,7 +3,6 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Pressable,
-  RefreshControl,
   StyleSheet,
   Text,
   View,
@@ -11,7 +10,9 @@ import {
 import { useRouter } from "expo-router";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
+import { BrandRefreshControl } from "../../components/BrandRefreshControl";
 import { InboxRowSkeleton, SkeletonList } from "../../components/Skeleton";
+import { FadeIn } from "../../components/Reveal";
 import { formatShortDateTime } from "../../lib/format";
 import { getLeadsmartAccessToken } from "../../lib/env";
 import { DEMO_LEAD_ID, getDemoInboxThread } from "../../lib/demoLead";
@@ -198,7 +199,7 @@ export default function InboxScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <FadeIn style={styles.container}>
       {error ? (
         <ErrorBanner
           title="Could not load inbox"
@@ -211,7 +212,7 @@ export default function InboxScreen() {
       <FlatList
         data={threads}
         keyExtractor={keyExtractor}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<BrandRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={listEmpty}
         /*
          * Performance knobs matching what leads.tsx got in
@@ -227,7 +228,7 @@ export default function InboxScreen() {
         renderItem={renderItem}
         contentContainerStyle={threads.length === 0 ? styles.emptyList : styles.listPad}
       />
-    </View>
+    </FadeIn>
   );
 }
 

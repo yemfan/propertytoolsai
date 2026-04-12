@@ -8,16 +8,17 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { ErrorBanner } from "../../components/ErrorBanner";
+import { BrandRefreshControl } from "../../components/BrandRefreshControl";
 import { DailyAgendaList } from "../../components/home/DailyAgendaList";
 import { PriorityAlertCard } from "../../components/home/PriorityAlertCard";
 import { Skeleton } from "../../components/Skeleton";
+import { FadeIn } from "../../components/Reveal";
 import {
   fetchMobileDailyAgenda,
   fetchMobileDashboard,
@@ -282,11 +283,11 @@ export default function HomeScreen() {
   const summaryLine = `${stats.hotLeads} hot leads • ${stats.tasksToday} tasks • ${stats.appointmentsToday} appointments`;
 
   return (
-    <View style={styles.root}>
+    <FadeIn style={styles.root}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<BrandRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <View style={styles.heroBlock}>
           <Text style={styles.greeting}>
@@ -449,7 +450,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
       </ScrollView>
-    </View>
+    </FadeIn>
   );
 }
 

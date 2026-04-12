@@ -3,7 +3,6 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Pressable,
-  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +11,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
+import { BrandRefreshControl } from "../../components/BrandRefreshControl";
 import { leadField } from "../../lib/leadRecord";
 import { DEMO_LEAD_ID, getDemoLeadRecord } from "../../lib/demoLead";
 import { fetchMobileLeads } from "../../lib/leadsmartMobileApi";
@@ -19,6 +19,7 @@ import type { MobileApiFailure, MobileLeadsFilter } from "../../lib/leadsmartMob
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
 import { LeadRowSkeleton, SkeletonList } from "../../components/Skeleton";
+import { FadeIn } from "../../components/Reveal";
 import { hapticRowTap } from "../../lib/haptics";
 
 const PAGE_SIZE = 30;
@@ -291,7 +292,7 @@ export default function LeadsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <FadeIn style={styles.container}>
       {error ? (
         <ErrorBanner
           title="Could not load leads"
@@ -331,7 +332,7 @@ export default function LeadsScreen() {
       <FlatList
         data={filtered}
         keyExtractor={keyExtractor}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<BrandRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         onEndReached={onEndReached}
         onEndReachedThreshold={0.3}
         /*
@@ -377,7 +378,7 @@ export default function LeadsScreen() {
         renderItem={renderItem}
         contentContainerStyle={filtered.length === 0 ? styles.emptyList : styles.listPad}
       />
-    </View>
+    </FadeIn>
   );
 }
 

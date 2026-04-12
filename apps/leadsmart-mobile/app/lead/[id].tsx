@@ -14,7 +14,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,6 +22,8 @@ import {
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
+import { BrandRefreshControl } from "../../components/BrandRefreshControl";
+import { FadeIn } from "../../components/Reveal";
 import {
   hapticError,
   hapticSelectionChange,
@@ -320,11 +321,12 @@ export default function LeadDetailScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
     >
+      <FadeIn>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<BrandRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {isDemoLeadId(lead.id) ? (
           <View style={styles.demoBanner}>
@@ -455,6 +457,7 @@ export default function LeadDetailScreen() {
           ))
         )}
       </ScrollView>
+      </FadeIn>
       <LeadReplySection
         leadId={lead.id}
         sms={sms}

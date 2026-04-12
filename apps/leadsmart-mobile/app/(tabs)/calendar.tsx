@@ -2,7 +2,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +14,7 @@ import { ReminderCard } from "../../components/calendar/ReminderCard";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { ScreenLoading } from "../../components/ScreenLoading";
+import { BrandRefreshControl } from "../../components/BrandRefreshControl";
 import { TaskCard } from "../../components/tasks/TaskCard";
 import type {
   MobileCalendarEventDto,
@@ -209,7 +209,7 @@ export default function CalendarScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<BrandRefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {remindersLoadError ? (
           <View style={styles.bannerPad}>
