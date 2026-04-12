@@ -17,7 +17,7 @@ export function DashboardShell({
   kpiGridClassName = "grid gap-4 sm:grid-cols-2 lg:grid-cols-5",
 }: Props) {
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8 md:px-8">
+    <main id="main-content" className="min-h-screen bg-gray-50 px-4 py-8 md:px-8">
       <div className="mx-auto max-w-7xl space-y-8">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900 md:text-3xl">{title}</h1>
@@ -26,6 +26,6 @@ export function DashboardShell({
         <div className={kpiGridClassName}>{kpis}</div>
         <div className="space-y-6">{children}</div>
       </div>
-    </div>
+    </main>
   );
 }

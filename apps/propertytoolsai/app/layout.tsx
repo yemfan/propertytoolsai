@@ -138,6 +138,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         ))}
       </head>
       <body className={`${fontHeading.variable} ${fontBody.variable} bg-brand-surface text-brand-text font-body`}>
+        {/* Skip-to-content — WCAG 2.4.1 "Bypass Blocks" */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[999] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[#0072ce] focus:shadow-lg focus:ring-2 focus:ring-[#0072ce]/40 dark:focus:bg-slate-900 dark:focus:text-[#4da3e8]"
+        >
+          Skip to content
+        </a>
         <AppShell>{children}</AppShell>
       </body>
     </html>
