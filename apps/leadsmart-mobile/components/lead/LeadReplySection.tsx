@@ -12,6 +12,8 @@ import type { ThemeTokens } from "../../lib/theme";
 import { defaultEmailReplySubject, EmailReplyModal } from "./EmailReplyModal";
 import { ReplyComposer } from "./ReplyComposer";
 import { hapticError, hapticSuccess } from "../../lib/haptics";
+import { useNetwork } from "../../lib/offline/NetworkContext";
+import { useWriteQueue } from "../../lib/offline/useWriteQueue";
 
 function appendSms(prev: MobileSmsMessageDto[], msg: MobileSmsMessageDto): MobileSmsMessageDto[] {
   if (prev.some((m) => m.id === msg.id)) return prev;
@@ -43,6 +45,8 @@ export function LeadReplySection({
 }: LeadReplySectionProps) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { isConnected } = useNetwork();
+  const { queueWrite } = useWriteQueue();
   const [smsText, setSmsText] = useState("");
   const [smsSending, setSmsSending] = useState(false);
   const [smsAiLoading, setSmsAiLoading] = useState(false);
@@ -91,6 +95,17 @@ export function LeadReplySection({
       setSmsError("Sample lead — connect your CRM to send messages.");
       return;
     }
+
+    // Offline: queue the write and show optimistic success
+    if (!isConnected) {
+      await queueWrite("sms-send", [leadId, text]);
+      hapticSuccess();
+      setSmsText("");
+      // Flash "Queued" via the same sent flash mechanism
+      flashSent();
+      return;
+    }
+
     setSmsSending(true);
     try {
       const res = await postMobileSmsSend(leadId, text);
@@ -110,7 +125,7 @@ export function LeadReplySection({
     } finally {
       setSmsSending(false);
     }
-  }, [leadId, smsText, setSms, flashSent, demo]);
+  }, [leadId, smsText, setSms, flashSent, demo, isConnected, queueWrite]);
 
   const onEmailAi = useCallback(async () => {
     const res = await postMobileEmailAiReply(leadId);

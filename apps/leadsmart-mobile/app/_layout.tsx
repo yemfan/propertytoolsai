@@ -1,4 +1,5 @@
 import { Stack } from "expo-router";
+import { NetworkProvider } from "../lib/offline/NetworkContext";
 import { LeadsmartSessionProvider } from "../lib/session/LeadsmartSessionContext";
 import { useLeadsmartPush } from "../lib/useLeadsmartPush";
 
@@ -25,8 +26,10 @@ function RootNavigation() {
 
 export default function RootLayout() {
   return (
-    <LeadsmartSessionProvider>
-      <RootNavigation />
-    </LeadsmartSessionProvider>
+    <NetworkProvider>
+      <LeadsmartSessionProvider>
+        <RootNavigation />
+      </LeadsmartSessionProvider>
+    </NetworkProvider>
   );
 }

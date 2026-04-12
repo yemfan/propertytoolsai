@@ -37,6 +37,8 @@ import {
   hapticSuccess,
   hapticWarning,
 } from "../../lib/haptics";
+import { useNetwork } from "../../lib/offline/NetworkContext";
+import { useWriteQueue } from "../../lib/offline/useWriteQueue";
 
 function Section({
   title,
@@ -62,6 +64,8 @@ export default function CalendarScreen() {
   const router = useRouter();
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { isConnected } = useNetwork();
+  const { queueWrite } = useWriteQueue();
   const { newAppt } = useLocalSearchParams<{ newAppt?: string | string[] }>();
   const newApptFlag = Array.isArray(newAppt) ? newAppt[0] : newAppt;
   const [events, setEvents] = useState<MobileCalendarEventDto[]>([]);
@@ -155,6 +159,15 @@ export default function CalendarScreen() {
 
   const completeTask = useCallback(async (taskId: string) => {
     setActionError(null);
+
+    if (!isConnected) {
+      await queueWrite("task-complete", [taskId]);
+      hapticSuccess();
+      // Optimistic removal
+      setOverdueTasks((prev) => prev.filter((t) => t.id !== taskId));
+      return;
+    }
+
     setCompletingTaskId(taskId);
     const res = await patchMobileTask(taskId, { status: "done" });
     setCompletingTaskId(null);
@@ -167,7 +180,7 @@ export default function CalendarScreen() {
     // task actually persisted, not before.
     hapticSuccess();
     setOverdueTasks((prev) => prev.filter((t) => t.id !== taskId));
-  }, []);
+  }, [isConnected, queueWrite]);
 
   if (initialLoad) {
     return <ScreenLoading message="Loading calendar…" />;
