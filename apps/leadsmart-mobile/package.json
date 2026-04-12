@@ -23,6 +23,7 @@
     "@leadsmart/api-client": "workspace:*",
     "@leadsmart/shared": "workspace:*",
     "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-native-community/netinfo": "11.4.1",
     "@supabase/supabase-js": "^2.99.2",
     "expo": "~52.0.35",
     "expo-apple-authentication": "~7.1.3",

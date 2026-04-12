@@ -6,6 +6,7 @@ import type {
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCachedFetch } from "../../lib/offline/useCachedFetch";
 import {
   Pressable,
   ScrollView,
@@ -62,21 +63,57 @@ export default function HomeScreen() {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [firstName, setFirstName] = useState<string | null>(null);
-  const [initialDone, setInitialDone] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [dashboardError, setDashboardError] = useState<MobileApiFailure | null>(null);
-  const [agendaError, setAgendaError] = useState<MobileApiFailure | null>(null);
-  const [stats, setStats] = useState<MobileDashboardStats | null>(null);
-  const [alerts, setAlerts] = useState<MobileDashboardPriorityAlert[]>([]);
-  const [agendaDate, setAgendaDate] = useState("");
-  const [agendaItems, setAgendaItems] = useState<DailyAgendaItem[]>([]);
-  const [weeklyDigest, setWeeklyDigest] = useState<{
-    title: string;
-    body: string;
-    metrics: Record<string, number>;
-    insights: Array<{ key: string; label: string; message: string; tone: string }>;
-  } | null>(null);
   const [queueCount, setQueueCount] = useState(0);
+
+  // ── Cached fetches for dashboard + agenda ──────────────────────
+  type DashboardPayload = {
+    stats: MobileDashboardStats;
+    priorityAlerts: MobileDashboardPriorityAlert[];
+    weeklyDigest: {
+      title: string;
+      body: string;
+      metrics: Record<string, number>;
+      insights: Array<{ key: string; label: string; message: string; tone: string }>;
+    } | null;
+  };
+  type AgendaPayload = { agendaDate: string; items: DailyAgendaItem[] };
+
+  const dashFetcher = useCallback(async (): Promise<DashboardPayload | MobileApiFailure> => {
+    const res = await fetchMobileDashboard();
+    if (res.ok === false) return res;
+    return {
+      stats: res.stats,
+      priorityAlerts: res.priorityAlerts,
+      weeklyDigest: (res as any).weeklyDigest ?? null,
+    };
+  }, []);
+
+  const agendaFetcher = useCallback(async (): Promise<AgendaPayload | MobileApiFailure> => {
+    const res = await fetchMobileDailyAgenda();
+    if (res.ok === false) return res;
+    return { agendaDate: res.agendaDate, items: res.items };
+  }, []);
+
+  const {
+    data: dashData,
+    loading: dashLoading,
+    error: dashboardError,
+    refresh: dashRefresh,
+  } = useCachedFetch<DashboardPayload>("home:dashboard", dashFetcher);
+
+  const {
+    data: agendaData,
+    loading: agendaLoading,
+    error: agendaError,
+    refresh: agendaRefresh,
+  } = useCachedFetch<AgendaPayload>("home:agenda", agendaFetcher);
+
+  const stats = dashData?.stats ?? null;
+  const alerts = dashData?.priorityAlerts ?? [];
+  const weeklyDigest = dashData?.weeklyDigest ?? null;
+  const agendaDate = agendaData?.agendaDate ?? "";
+  const agendaItems = agendaData?.items ?? [];
+  const initialDone = !dashLoading || dashData !== null;
 
   useEffect(() => {
     const sb = getSupabaseAuthClient();
@@ -90,53 +127,25 @@ export default function HomeScreen() {
     });
   }, []);
 
-  const load = useCallback(async (mode: "full" | "refresh") => {
-    if (mode === "refresh") setRefreshing(true);
-    if (mode === "full") {
-      setDashboardError(null);
-      setAgendaError(null);
-    }
-
-    const [dash, agenda] = await Promise.all([fetchMobileDashboard(), fetchMobileDailyAgenda()]);
-
-    if (mode === "refresh") setRefreshing(false);
-    setInitialDone(true);
-
-    if (dash.ok === false) {
-      setDashboardError(dash);
-      if (mode === "full") {
-        setStats(null);
-        setAlerts([]);
-      }
-    } else {
-      setDashboardError(null);
-      setStats(dash.stats);
-      setAlerts(dash.priorityAlerts);
-      setWeeklyDigest((dash as any).weeklyDigest ?? null);
-    }
-
-    // Best-effort queue count
-    const qRes = await fetchLeadQueue();
-    if (qRes.ok) setQueueCount(qRes.total);
-
-    if (agenda.ok === false) {
-      setAgendaError(agenda);
-    } else {
-      setAgendaError(null);
-      setAgendaDate(agenda.agendaDate);
-      setAgendaItems(agenda.items);
-    }
-  }, []);
-
+  // Queue count stays as a focus-effect fetch (low-value for caching)
   useFocusEffect(
     useCallback(() => {
-      void load("full");
-    }, [load])
+      void fetchLeadQueue().then((qRes) => {
+        if (qRes.ok) setQueueCount(qRes.total);
+      });
+    }, [])
   );
 
+  const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(() => {
-    void load("refresh");
-  }, [load]);
+    setRefreshing(true);
+    dashRefresh();
+    agendaRefresh();
+    // Clear refreshing flag after a short delay — the hooks manage
+    // their own loading state, but the pull-to-refresh spinner
+    // needs a boolean driven from here.
+    setTimeout(() => setRefreshing(false), 600);
+  }, [dashRefresh, agendaRefresh]);
 
   const handleFixedQuickAction = useCallback(
     (key: "lead" | "task" | "booking" | "message") => {
@@ -265,7 +274,7 @@ export default function HomeScreen() {
         <ErrorBanner
           title="Could not load home"
           message={dashboardError.message}
-          onRetry={() => void load("full")}
+          onRetry={dashRefresh}
         />
       </View>
     );
@@ -274,7 +283,7 @@ export default function HomeScreen() {
   if (!stats) {
     return (
       <View style={styles.centered}>
-        <ErrorBanner title="Dashboard unavailable" message="Unexpected empty response." onRetry={() => void load("full")} />
+        <ErrorBanner title="Dashboard unavailable" message="Unexpected empty response." onRetry={dashRefresh} />
       </View>
     );
   }
@@ -344,7 +353,7 @@ export default function HomeScreen() {
           <ErrorBanner
             title="Agenda unavailable"
             message={agendaError.message}
-            onRetry={() => void load("refresh")}
+            onRetry={agendaRefresh}
           />
         ) : null}
         <DailyAgendaList items={agendaItems} onItemPress={handleAgendaItem} />
@@ -356,7 +365,7 @@ export default function HomeScreen() {
           <ErrorBanner
             title="Dashboard update failed"
             message={dashboardError.message}
-            onRetry={() => void load("refresh")}
+            onRetry={dashRefresh}
           />
         ) : null}
         {alerts.length === 0 ? (

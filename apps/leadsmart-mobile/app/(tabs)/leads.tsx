@@ -1,5 +1,5 @@
 import type { MobileLeadRecordDto } from "@leadsmart/shared";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -21,6 +21,7 @@ import type { ThemeTokens } from "../../lib/theme";
 import { LeadRowSkeleton, SkeletonList } from "../../components/Skeleton";
 import { FadeIn } from "../../components/Reveal";
 import { hapticRowTap } from "../../lib/haptics";
+import { useCachedFetch } from "../../lib/offline/useCachedFetch";
 
 const PAGE_SIZE = 30;
 
@@ -148,60 +149,82 @@ export default function LeadsScreen() {
   const [error, setError] = useState<MobileApiFailure | null>(null);
 
   const listFilter = activeFilter === "all" ? undefined : activeFilter;
+  const cacheKey = "leads:" + (listFilter ?? "all");
 
+  // ── Cached first-page fetch ────────────────────────────────────
+  type LeadsPage1 = { leads: MobileLeadRecordDto[]; total: number; page: number };
+  const page1Fetcher = useCallback(async (): Promise<LeadsPage1 | MobileApiFailure> => {
+    const res = await fetchMobileLeads({ page: 1, pageSize: PAGE_SIZE, filter: listFilter });
+    if (res.ok === false) return res;
+    let rows = res.leads;
+    if (!listFilter && rows.length === 0 && res.total === 0) {
+      rows = [getDemoLeadRecord()];
+    }
+    return { leads: rows, total: res.total, page: res.page };
+  }, [listFilter]);
+
+  const {
+    data: cachedPage1,
+    loading: cacheLoading,
+    error: cacheError,
+    refresh: cacheRefresh,
+  } = useCachedFetch<LeadsPage1>(cacheKey, page1Fetcher);
+
+  // Sync cached first page into local state
+  const prevCacheKey = useRef(cacheKey);
+  useEffect(() => {
+    if (cachedPage1) {
+      setLeads(cachedPage1.leads);
+      setTotal(cachedPage1.total);
+      setPage(cachedPage1.page);
+      setError(null);
+      setLoading(false);
+    }
+    if (cacheError) {
+      setError(cacheError);
+      if (prevCacheKey.current !== cacheKey) setLeads([]);
+    }
+    if (cacheLoading && !cachedPage1) {
+      setLoading(true);
+    }
+    prevCacheKey.current = cacheKey;
+  }, [cachedPage1, cacheError, cacheLoading, cacheKey]);
+
+  // ── Pagination (page 2+) — not cached ─────────────────────────
   const loadPage = useCallback(
-    async (nextPage: number, mode: "replace" | "append" | "refresh") => {
-      if (nextPage === 1 && mode === "replace") setLoading(true);
-      if (nextPage > 1) setLoadingMore(true);
-      if (mode === "refresh") setRefreshing(true);
-
+    async (nextPage: number, mode: "append") => {
+      setLoadingMore(true);
       const res = await fetchMobileLeads({
         page: nextPage,
         pageSize: PAGE_SIZE,
         filter: listFilter,
       });
-
-      if (nextPage === 1 && mode === "replace") setLoading(false);
-      if (nextPage > 1) setLoadingMore(false);
-      if (mode === "refresh") setRefreshing(false);
+      setLoadingMore(false);
 
       if (res.ok === false) {
         setError(res);
-        if (mode === "replace" || mode === "refresh") setLeads([]);
         return;
       }
 
       setError(null);
       setTotal(res.total);
-      let rows = res.leads;
-      const allowDemoFallback =
-        !listFilter && rows.length === 0 && res.total === 0 && (mode === "replace" || mode === "refresh");
-      if (allowDemoFallback) {
-        rows = [getDemoLeadRecord()];
-      }
-      if (mode === "append") {
-        setLeads((prev) => [...prev, ...rows]);
-      } else {
-        setLeads(rows);
-      }
+      setLeads((prev) => [...prev, ...res.leads]);
       setPage(res.page);
     },
     [listFilter]
   );
 
-  useEffect(() => {
-    void loadPage(1, "replace");
-  }, [loadPage]);
-
   const onRefresh = useCallback(() => {
-    void loadPage(1, "refresh");
-  }, [loadPage]);
+    setRefreshing(true);
+    cacheRefresh();
+    setTimeout(() => setRefreshing(false), 600);
+  }, [cacheRefresh]);
 
   const hasMore = leads.length < total;
 
   const onEndReached = useCallback(() => {
     if (loading || loadingMore || !hasMore || error) return;
-    void loadPage(page + 1, "append");
+    void loadPage(page + 1, "append" as const);
   }, [loadPage, loading, loadingMore, hasMore, page, error]);
 
   /**
@@ -297,7 +320,7 @@ export default function LeadsScreen() {
         <ErrorBanner
           title="Could not load leads"
           message={error.message}
-          onRetry={() => void loadPage(1, "replace")}
+          onRetry={cacheRefresh}
         />
       ) : null}
 

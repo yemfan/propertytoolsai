@@ -9,7 +9,7 @@ import type {
   MobilePipelineStageOptionDto,
   MobileSmsMessageDto,
 } from "@leadsmart/shared";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -54,6 +54,9 @@ import type { MobileApiFailure } from "../../lib/leadsmartMobileApi";
 import { useLeadDetailRealtime } from "../../lib/realtime/useLeadDetailRealtime";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
+import { useCachedFetch } from "../../lib/offline/useCachedFetch";
+import { useNetwork } from "../../lib/offline/NetworkContext";
+import { useWriteQueue } from "../../lib/offline/useWriteQueue";
 
 const emptyPipeline: MobileLeadPipelineDto = {
   stage_id: null,
@@ -121,6 +124,9 @@ export default function LeadDetailScreen() {
   const SectionRule = () => <View style={styles.sectionRule} />;
   const leadId = typeof id === "string" ? id : Array.isArray(id) ? id[0] : "";
 
+  const { isConnected } = useNetwork();
+  const { queueWrite } = useWriteQueue();
+
   const [lead, setLead] = useState<MobileLeadRecordDto | null>(null);
   const [sms, setSms] = useState<MobileSmsMessageDto[]>([]);
   const [email, setEmail] = useState<MobileEmailMessageDto[]>([]);
@@ -137,71 +143,82 @@ export default function LeadDetailScreen() {
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const [bookingLinkModalOpen, setBookingLinkModalOpen] = useState(false);
   const [appointmentCancelling, setAppointmentCancelling] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<MobileApiFailure | null>(null);
 
-  const load = useCallback(async (mode: "full" | "refresh") => {
-    if (!leadId) {
-      setError({ ok: false, status: 0, message: "Missing lead id." });
-      setLoading(false);
-      return;
-    }
-    if (isDemoLeadId(leadId)) {
-      if (mode === "full") setLoading(false);
-      if (mode === "refresh") setRefreshing(false);
-      setLead(getDemoLeadRecord());
-      setSms(getDemoSmsThread());
-      setEmail([]);
-      setPipeline(emptyPipeline);
-      setPipelineStages([]);
-      setNextOpenTask(null);
-      setNextAppointment(null);
-      setBookingLinks([]);
-      setPipelineActionError(null);
-      setScheduleError(null);
-      setError(null);
-      return;
-    }
-    if (mode === "full") {
-      setLoading(true);
-      setError(null);
-    }
-    if (mode === "refresh") setRefreshing(true);
+  // Demo leads bypass the cache entirely
+  const isDemo = isDemoLeadId(leadId);
 
+  type LeadDetailPayload = {
+    lead: MobileLeadRecordDto;
+    sms: MobileSmsMessageDto[];
+    email: MobileEmailMessageDto[];
+    pipeline: MobileLeadPipelineDto;
+    pipeline_stages: MobilePipelineStageOptionDto[];
+    next_open_task: MobileLeadTaskDto | null;
+    next_appointment: MobileCalendarEventDto | null;
+    booking_links: MobileBookingLinkDto[];
+  };
+
+  const detailFetcher = useCallback(async (): Promise<LeadDetailPayload | MobileApiFailure> => {
+    if (!leadId) return { ok: false, status: 0, message: "Missing lead id." } as MobileApiFailure;
     const res = await fetchMobileLeadDetail(leadId);
-
-    if (mode === "full") setLoading(false);
-    if (mode === "refresh") setRefreshing(false);
-
-    if (res.ok === false) {
-      setError(res);
-      setLead(null);
-      setSms([]);
-      setEmail([]);
-      setPipeline(emptyPipeline);
-      setPipelineStages([]);
-      setNextOpenTask(null);
-      setNextAppointment(null);
-      setBookingLinks([]);
-      return;
-    }
-    setLead(res.lead);
-    setSms(res.conversations.sms);
-    setEmail(res.conversations.email);
-    setPipeline(res.pipeline);
-    setPipelineStages(res.pipeline_stages);
-    setNextOpenTask(res.next_open_task);
-    setNextAppointment(res.next_appointment);
-    setBookingLinks(res.booking_links);
-    setPipelineActionError(null);
-    setScheduleError(null);
-    setError(null);
+    if (res.ok === false) return res;
+    return {
+      lead: res.lead,
+      sms: res.conversations.sms,
+      email: res.conversations.email,
+      pipeline: res.pipeline,
+      pipeline_stages: res.pipeline_stages,
+      next_open_task: res.next_open_task,
+      next_appointment: res.next_appointment,
+      booking_links: res.booking_links,
+    };
   }, [leadId]);
 
+  const {
+    data: cachedDetail,
+    loading: cacheLoading,
+    error: cacheError,
+    refresh: cacheRefresh,
+  } = useCachedFetch<LeadDetailPayload>(
+    "lead:" + leadId,
+    detailFetcher,
+    { enabled: !!leadId && !isDemo }
+  );
+
+  // Sync cached data into local state
+  const prevDetail = useRef(cachedDetail);
   useEffect(() => {
-    void load("full");
-  }, [load]);
+    if (cachedDetail && cachedDetail !== prevDetail.current) {
+      setLead(cachedDetail.lead);
+      setSms(cachedDetail.sms);
+      setEmail(cachedDetail.email);
+      setPipeline(cachedDetail.pipeline);
+      setPipelineStages(cachedDetail.pipeline_stages);
+      setNextOpenTask(cachedDetail.next_open_task);
+      setNextAppointment(cachedDetail.next_appointment);
+      setBookingLinks(cachedDetail.booking_links);
+      setPipelineActionError(null);
+      setScheduleError(null);
+    }
+    prevDetail.current = cachedDetail;
+  }, [cachedDetail]);
+
+  // Handle demo lead
+  useEffect(() => {
+    if (!isDemo) return;
+    setLead(getDemoLeadRecord());
+    setSms(getDemoSmsThread());
+    setEmail([]);
+    setPipeline(emptyPipeline);
+    setPipelineStages([]);
+    setNextOpenTask(null);
+    setNextAppointment(null);
+    setBookingLinks([]);
+  }, [isDemo]);
+
+  const loading = isDemo ? false : cacheLoading && !cachedDetail;
+  const error = isDemo ? null : cacheError;
 
   const silentRefresh = useCallback(async () => {
     if (!leadId || isDemoLeadId(leadId)) return;
@@ -215,7 +232,6 @@ export default function LeadDetailScreen() {
     setNextOpenTask(res.next_open_task);
     setNextAppointment(res.next_appointment);
     setBookingLinks(res.booking_links);
-    setError(null);
   }, [leadId]);
 
   useLeadDetailRealtime(
@@ -231,8 +247,10 @@ export default function LeadDetailScreen() {
   }, [lead, navigation]);
 
   const onRefresh = useCallback(() => {
-    void load("refresh");
-  }, [load]);
+    setRefreshing(true);
+    cacheRefresh();
+    setTimeout(() => setRefreshing(false), 600);
+  }, [cacheRefresh]);
 
   const onSelectPipelineStage = useCallback(
     async (slug: MobilePipelineSlug) => {
@@ -242,6 +260,19 @@ export default function LeadDetailScreen() {
       // call is in flight.
       hapticSelectionChange();
       setPipelineActionError(null);
+
+      if (!isConnected) {
+        await queueWrite("pipeline-stage", [leadId, slug]);
+        // Optimistic local update
+        const stage = pipelineStages.find((s) => s.mobile_slug === slug);
+        setPipeline({
+          stage_id: null,
+          mobile_slug: slug,
+          name: stage?.name ?? null,
+        });
+        return;
+      }
+
       setPipelineBusySlug(slug);
       const res = await patchLeadPipelineStage(leadId, { stage_slug: slug });
       setPipelineBusySlug(null);
@@ -257,7 +288,7 @@ export default function LeadDetailScreen() {
         name: stage?.name ?? null,
       });
     },
-    [leadId, pipelineStages]
+    [leadId, pipelineStages, isConnected, queueWrite]
   );
 
   const onCompleteNextTask = useCallback(async () => {
@@ -302,9 +333,7 @@ export default function LeadDetailScreen() {
         <ErrorBanner
           title="Unable to load lead"
           message={error?.message ?? "Not found."}
-          onRetry={() => {
-            void load("full");
-          }}
+          onRetry={cacheRefresh}
         />
       </View>
     );

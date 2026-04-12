@@ -1,5 +1,5 @@
 import type { MobileInboxThreadDto } from "@leadsmart/shared";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -22,6 +22,7 @@ import { useInboxRealtime } from "../../lib/realtime/useInboxRealtime";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
 import { hapticRowTap } from "../../lib/haptics";
+import { useCachedFetch } from "../../lib/offline/useCachedFetch";
 
 /** Hot threads first, then by recency (matches server ordering within each group). */
 function sortInboxThreads(threads: MobileInboxThreadDto[]): MobileInboxThreadDto[] {
@@ -99,26 +100,46 @@ export default function InboxScreen() {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [threads, setThreads] = useState<MobileInboxThreadDto[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<MobileApiFailure | null>(null);
 
-  const load = useCallback(async (mode: "full" | "refresh" | "silent") => {
-    if (mode === "full") setLoading(true);
-    if (mode === "refresh") setRefreshing(true);
-    if (mode !== "silent") setError(null);
+  // ── Cached inbox fetch ─────────────────────────────────────────
+  const inboxFetcher = useCallback(async (): Promise<MobileInboxThreadDto[] | MobileApiFailure> => {
     const res = await fetchMobileInbox();
-    if (mode === "full") setLoading(false);
-    if (mode === "refresh") setRefreshing(false);
-
-    if (res.ok === false) {
-      if (mode === "silent") return;
-      setError(res);
-      if (mode === "full") setThreads([]);
-      return;
-    }
+    if (res.ok === false) return res;
     let next = sortInboxThreads(res.threads);
-    if (next.length === 0 && mode !== "silent") {
+    if (next.length === 0) {
+      const lr = await fetchMobileLeads({ page: 1, pageSize: 1 });
+      if (lr.ok && lr.total === 0) {
+        next = [getDemoInboxThread()];
+      }
+    }
+    return next;
+  }, []);
+
+  const {
+    data: cachedThreads,
+    loading,
+    error,
+    refresh: cacheRefresh,
+  } = useCachedFetch<MobileInboxThreadDto[]>("inbox", inboxFetcher);
+
+  // Sync cached data into local threads state so realtime can
+  // layer on top without losing the cached baseline.
+  const prevCachedRef = useRef(cachedThreads);
+  useEffect(() => {
+    if (cachedThreads && cachedThreads !== prevCachedRef.current) {
+      setThreads(cachedThreads);
+    }
+    prevCachedRef.current = cachedThreads;
+  }, [cachedThreads]);
+
+  // Silent refresh for realtime — bypasses cache, updates
+  // local state directly.
+  const silentRefresh = useCallback(async () => {
+    const res = await fetchMobileInbox();
+    if (res.ok === false) return;
+    let next = sortInboxThreads(res.threads);
+    if (next.length === 0) {
       const lr = await fetchMobileLeads({ page: 1, pageSize: 1 });
       if (lr.ok && lr.total === 0) {
         next = [getDemoInboxThread()];
@@ -127,21 +148,19 @@ export default function InboxScreen() {
     setThreads(next);
   }, []);
 
-  useEffect(() => {
-    void load("full");
-  }, [load]);
-
   const accessToken = getLeadsmartAccessToken();
   useInboxRealtime(
     useCallback(() => {
-      void load("silent");
-    }, [load]),
+      void silentRefresh();
+    }, [silentRefresh]),
     Boolean(accessToken) && !loading
   );
 
   const onRefresh = useCallback(() => {
-    void load("refresh");
-  }, [load]);
+    setRefreshing(true);
+    cacheRefresh();
+    setTimeout(() => setRefreshing(false), 600);
+  }, [cacheRefresh]);
 
   /**
    * Stable navigation handler passed to every row. Pairs with
@@ -204,9 +223,7 @@ export default function InboxScreen() {
         <ErrorBanner
           title="Could not load inbox"
           message={error.message}
-          onRetry={() => {
-            void load("full");
-          }}
+          onRetry={cacheRefresh}
         />
       ) : null}
       <FlatList

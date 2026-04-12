@@ -3,6 +3,7 @@ import { Platform, StatusBar } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useThemeTokens, useIsDarkMode } from "../../lib/useThemeTokens";
 import { hapticTabSwitch } from "../../lib/haptics";
+import { OfflineBanner } from "../../components/OfflineBanner";
 
 /**
  * Bottom tab bar — batch-3 dark mode wiring.
@@ -21,6 +22,7 @@ export default function TabsLayout() {
   return (
     <>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <OfflineBanner />
       <Tabs
         screenListeners={{
           // Light "selection changed" tick on every tab press.
