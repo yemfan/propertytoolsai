@@ -1,6 +1,13 @@
 import DelayedLeadCapture from "@/components/DelayedLeadCapture";
 import LocalSeoLeadForm from "@/components/LocalSeoLeadForm";
 import TrafficTracker from "@/components/TrafficTracker";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Mortgage Payment Estimator",
+  description: "Estimate your monthly mortgage payment and buying power with personalized lender-ready next steps.",
+  keywords: ["mortgage calculator", "monthly payment", "buying power", "mortgage estimator"],
+};
 
 export default function MortgageLandingPage() {
   return (

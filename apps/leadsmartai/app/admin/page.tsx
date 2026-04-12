@@ -1,4 +1,12 @@
 import RolePortalHub from "@/components/portals/RolePortalHub";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Admin Portal",
+  description: "Platform administration and operational tools.",
+  keywords: ["admin", "platform", "operations"],
+  robots: { index: false },
+};
 
 export default function AdminPortalPage() {
   return (

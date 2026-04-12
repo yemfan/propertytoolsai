@@ -3,6 +3,14 @@ import AgentAiSettingsPanel from "@/components/dashboard/AgentAiSettingsPanel";
 import AgentVoiceSettingsPanel from "@/components/dashboard/AgentVoiceSettingsPanel";
 import MlsCsvImportClient from "./MlsCsvImportClient";
 import HomeValueSmartLinkCopyShare from "@/components/dashboard/HomeValueSmartLinkCopyShare";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Settings",
+  description: "Configure your account, AI preferences, and integrations.",
+  keywords: ["settings", "account", "preferences"],
+  robots: { index: false },
+};
 
 export default async function SettingsPage() {
   const ctx = await getCurrentAgentContext();

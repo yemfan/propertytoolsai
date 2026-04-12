@@ -1,6 +1,13 @@
 import DelayedLeadCapture from "@/components/DelayedLeadCapture";
 import LocalSeoLeadForm from "@/components/LocalSeoLeadForm";
 import TrafficTracker from "@/components/TrafficTracker";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Free Home Value Estimate",
+  description: "Get a fast home value estimate, local demand score, and custom selling strategy in under 2 minutes.",
+  keywords: ["home value estimate", "home worth", "property value", "selling strategy"],
+};
 
 export default function HomeValueLandingPage() {
   return (

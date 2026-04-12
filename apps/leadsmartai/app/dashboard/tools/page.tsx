@@ -1,5 +1,13 @@
 import Link from "next/link";
 import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Tools",
+  description: "Access calculators, analyzers, and AI-powered tools.",
+  keywords: ["tools", "calculators", "AI tools"],
+  robots: { index: false },
+};
 
 const tools = [
   { href: "/dashboard/seller-presentation", label: "Seller Presentation Generator" },

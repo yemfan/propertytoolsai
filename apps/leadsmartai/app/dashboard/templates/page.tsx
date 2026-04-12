@@ -1,5 +1,13 @@
 import Link from "next/link";
 import { LayoutTemplate } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Templates",
+  description: "Browse and customize message and campaign templates.",
+  keywords: ["templates", "email templates", "campaigns"],
+  robots: { index: false },
+};
 
 export default function TemplatesPage() {
   return (

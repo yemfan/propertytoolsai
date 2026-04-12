@@ -2,6 +2,14 @@ import Link from "next/link";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import HomeValueSmartLinkCopyShare from "@/components/dashboard/HomeValueSmartLinkCopyShare";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Marketing",
+  description: "Create and manage marketing campaigns and assets.",
+  keywords: ["marketing", "campaigns", "real estate marketing"],
+  robots: { index: false },
+};
 
 export default async function MarketingPage() {
   const { agentId, userId } = await getCurrentAgentContext();

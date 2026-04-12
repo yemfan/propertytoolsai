@@ -1,6 +1,14 @@
 import { supabaseServer } from "@/lib/supabaseServer";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import OpenHousesClient from "./OpenHousesClient";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Open Houses",
+  description: "Manage open house events and captured leads.",
+  keywords: ["open houses", "events", "lead capture"],
+  robots: { index: false },
+};
 
 export default async function OpenHousesPage() {
   const { agentId, userId } = await getCurrentAgentContext();

@@ -1,6 +1,14 @@
 import { notFound } from "next/navigation";
 import { supabaseServer } from "@/lib/supabaseServer";
 import PresentationPublicClient from "@/app/presentation/PresentationPublicClient";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Listing Presentation",
+  description: "View a personalized listing or seller presentation.",
+  keywords: ["presentation", "listing", "seller"],
+  robots: { index: false },
+};
 
 type PresentationRow = {
   id: string;

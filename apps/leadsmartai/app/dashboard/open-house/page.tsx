@@ -1,6 +1,14 @@
 import { supabaseServer } from "@/lib/supabaseServer";
 import OpenHouseQrList from "./OpenHouseQrList";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Open House QR Codes",
+  description: "Generate QR codes for open house lead capture.",
+  keywords: ["open house", "QR codes", "lead capture"],
+  robots: { index: false },
+};
 
 export default async function OpenHouseDashboardPage() {
   // Admin-style view: show QR codes for recent known properties.
