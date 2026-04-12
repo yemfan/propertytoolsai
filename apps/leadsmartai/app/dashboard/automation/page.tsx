@@ -4,6 +4,14 @@ import { supabaseServer } from "@/lib/supabaseServer";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { fetchUserPortalContext } from "@/lib/rolePortalServer";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Automation",
+  description: "Automate lead follow-ups and re-engagement campaigns.",
+  keywords: ["automation", "lead follow-up", "drip campaigns"],
+  robots: { index: false },
+};
 
 export default async function AutomationPage() {
   await getCurrentAgentContext(); // auth guard via dashboard layout

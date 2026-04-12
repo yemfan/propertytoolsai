@@ -1,5 +1,13 @@
 import { supabaseServer } from "@/lib/supabaseServer";
 import PropertiesClient from "./PropertiesClient";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Properties",
+  description: "Track your active listings and property pipeline.",
+  keywords: ["properties", "listings", "inventory"],
+  robots: { index: false },
+};
 
 export default async function PropertiesPage() {
   const { data } = await supabaseServer

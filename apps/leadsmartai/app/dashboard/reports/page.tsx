@@ -1,6 +1,14 @@
 import { supabaseServer } from "@/lib/supabaseServer";
 import { getCurrentAgentContext, getLeads } from "@/lib/dashboardService";
 import ReportsClient from "./ReportsClient";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Reports",
+  description: "Generate CMA and market reports for your clients.",
+  keywords: ["reports", "CMA", "market analysis"],
+  robots: { index: false },
+};
 
 export default async function ReportsPage() {
   await getCurrentAgentContext();

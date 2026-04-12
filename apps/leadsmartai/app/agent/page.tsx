@@ -1,4 +1,12 @@
 import RolePortalHub from "@/components/portals/RolePortalHub";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Agent Portal",
+  description: "Your command center for leads, CMAs, and AI tools.",
+  keywords: ["agent portal", "leads", "CMA", "AI tools"],
+  robots: { index: false },
+};
 
 export default function AgentPortalPage() {
   return (

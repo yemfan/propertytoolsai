@@ -4,6 +4,14 @@ import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 import { fetchUserPortalContext } from "@/lib/rolePortalServer";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Redirecting",
+  description: "Routing to your personalized dashboard.",
+  keywords: ["dashboard", "redirect"],
+  robots: { index: false },
+};
 
 /**
  * Post-login landing: professionals → CRM; PropertyTools-origin consumers → PropertyTools app;

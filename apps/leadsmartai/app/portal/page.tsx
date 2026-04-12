@@ -2,6 +2,14 @@ import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { getProfessionalPortalPath } from "@/lib/rolePortalPaths";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Billing Portal",
+  description: "Manage your Stripe subscription and invoices.",
+  keywords: ["billing portal", "subscription", "invoices"],
+  robots: { index: false },
+};
 
 export const dynamic = "force-dynamic";
 

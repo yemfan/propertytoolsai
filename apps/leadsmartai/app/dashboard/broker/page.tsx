@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { getCurrentAgentContext, getLeadUsageThisMonth } from "@/lib/dashboardService";
 import { supabaseServer } from "@/lib/supabaseServer";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Broker Dashboard",
+  description: "Brokerage pipeline, growth tools, and team performance.",
+  keywords: ["broker", "brokerage", "pipeline"],
+  robots: { index: false },
+};
 
 /**
  * Brokerage home — leadership-focused entry to pipeline, growth, and marketing.

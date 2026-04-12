@@ -11,6 +11,14 @@ import {
   checkoutSuccessShouldSyncSubscription,
   persistAgentAndProfileFromSubscription,
 } from "@/lib/stripeSubscriptionApply";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Checkout Success",
+  description: "Your subscription is now active.",
+  keywords: ["checkout", "success", "subscription"],
+  robots: { index: false },
+};
 
 /**
  * Stripe `success_url` lands here first. We sync subscription from Stripe immediately so

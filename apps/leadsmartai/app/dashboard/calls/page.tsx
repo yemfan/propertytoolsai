@@ -1,6 +1,14 @@
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { supabaseServer } from "@/lib/supabaseServer";
 import CallsClient from "./CallsClient";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Calls",
+  description: "Track and manage client calls and follow-ups.",
+  keywords: ["calls", "phone tracking", "communication"],
+  robots: { index: false },
+};
 
 export default async function CallsPage() {
   const ctx = await getCurrentAgentContext();

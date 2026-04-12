@@ -1,6 +1,14 @@
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { supabaseServer } from "@/lib/supabaseServer";
 import CalendarClient from "./CalendarClient";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Calendar",
+  description: "Schedule and manage showings, calls, and follow-ups.",
+  keywords: ["calendar", "scheduling", "appointments"],
+  robots: { index: false },
+};
 
 export default async function CalendarPage() {
   const ctx = await getCurrentAgentContext();

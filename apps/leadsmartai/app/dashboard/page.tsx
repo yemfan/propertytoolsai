@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import OverviewPage from "./overview/page";
 import { redirect } from "next/navigation";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { BROKER_PORTAL_ROLES } from "@/lib/rolePortalPaths";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description: "Your LeadSmart AI agent dashboard — manage leads, tasks, and tools.",
+  robots: { index: false },
+};
 
 /**
  * `/dashboard` — agents see the standard overview; brokerage roles land on the broker dashboard.

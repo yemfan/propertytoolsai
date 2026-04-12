@@ -1,4 +1,12 @@
 import RolePortalHub from "@/components/portals/RolePortalHub";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Broker Portal",
+  description: "Lead your brokerage with pipeline visibility and growth tools.",
+  keywords: ["broker portal", "brokerage", "pipeline"],
+  robots: { index: false },
+};
 
 export default function BrokerPortalPage() {
   return (

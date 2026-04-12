@@ -4,6 +4,14 @@ import { Bell, Flame, PhoneMissed } from "lucide-react";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { getCurrentAgentContext, getLeads } from "@/lib/dashboardService";
 import { getMobileReminders } from "@/lib/mobile/remindersMobile";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Notifications",
+  description: "View alerts for new leads, tasks, and activity.",
+  keywords: ["notifications", "alerts", "activity feed"],
+  robots: { index: false },
+};
 
 type LeadLite = {
   id: string;

@@ -1,6 +1,14 @@
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { supabaseServer } from "@/lib/supabaseServer";
 import ContactsClient from "./ContactsClient";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Contacts",
+  description: "Manage your contact database and client relationships.",
+  keywords: ["contacts", "CRM", "client management"],
+  robots: { index: false },
+};
 
 export default async function ContactsPage() {
   const ctx = await getCurrentAgentContext();
