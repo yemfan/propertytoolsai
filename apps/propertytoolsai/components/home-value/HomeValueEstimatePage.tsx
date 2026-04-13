@@ -38,10 +38,14 @@ export default function HomeValuePage() {
         <AddressAutocompleteInput
           value={addressInput}
           onChange={setAddressInput}
-          onSelect={prepareAddressSelection}
+          onSelect={(addr) => {
+            // Run the estimate immediately when the user picks
+            // from the autocomplete dropdown — no confirm card.
+            void confirmSelectedAddress(addr);
+          }}
           onSubmit={() => void startEstimateFromTypedInput()}
           isBusy={busyRefine}
-          awaitingAddressConfirm={!!pendingAddress}
+          awaitingAddressConfirm={false}
         />
 
         <RecentHistory
@@ -55,17 +59,8 @@ export default function HomeValuePage() {
           </div>
         ) : null}
 
-        {pendingAddress ? (
-          <AddressConfirmCard
-            address={pendingAddress}
-            onConfirm={() => void confirmSelectedAddress()}
-            onEdit={() => {
-              clearPendingAddress();
-              setAddressInput(pendingAddress.fullAddress);
-            }}
-            isBusy={busyRefine}
-          />
-        ) : null}
+        {/* Confirm card removed — selecting from autocomplete now
+          runs the estimate immediately. No extra step needed. */}
 
         <EstimateResultsSection
           uiState={uiState}
