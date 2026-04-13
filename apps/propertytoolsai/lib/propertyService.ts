@@ -521,6 +521,60 @@ export async function getComparables(address: string, limit = 10) {
     }
   }
 
+  /**
+   * If the warehouse candidates existed but none had sale
+   * history, we still need to try Rentcast. The original code
+   * only triggered the ingest when `candidateProps.length === 0`
+   * (no properties at all in the zip), missing the common case
+   * where properties exist but lack sold snapshots. This second
+   * fallback catches that scenario.
+   */
+  if (priced.length === 0) {
+    try {
+      const { ingestRentcastSoldCompsForPropertyRow } = await import(
+        "@/lib/comps-ingestion/rentcastWarehouseIngest"
+      );
+      await ingestRentcastSoldCompsForPropertyRow(subject, 35);
+    } catch (e) {
+      console.error("getComparables: Rentcast comp ingest (sold-fallback) failed", e);
+    }
+
+    // Re-scan after ingest: fresh candidates + history
+    let freshCandidates = await loadZipCompCandidateProperties(subject);
+    if (freshCandidates.length === 0) {
+      freshCandidates = await loadWarehousePropertiesNearSubject(subject, 5, COMP_CANDIDATE_POOL);
+    }
+    const freshOrdered = (freshCandidates as PropertyRow[])
+      .map((p) => ({ property: p, score: similarityScore(subject, p) }))
+      .sort((a, b) => b.score - a.score);
+
+    const freshCap = Math.min(freshOrdered.length, COMP_MAX_HISTORY_SCANS);
+    for (let i = 0; i < freshCap && priced.length < limit; i += COMP_HISTORY_FETCH_BATCH) {
+      const batch = freshOrdered.slice(i, Math.min(i + COMP_HISTORY_FETCH_BATCH, freshCap));
+      const resolved = await Promise.all(
+        batch.map(async (c) => {
+          const history = await getPropertyHistory(c.property.id, COMP_SNAPSHOT_HISTORY_LIMIT);
+          const { soldPrice, soldDate } = extractCompSaleFromHistory(history);
+          return { ...c, soldPrice, soldDate };
+        })
+      );
+      for (const row of resolved) {
+        const p =
+          row.soldPrice != null && Number.isFinite(Number(row.soldPrice))
+            ? Number(row.soldPrice)
+            : NaN;
+        if (!Number.isFinite(p) || p <= 0) continue;
+        priced.push({
+          property: row.property,
+          score: row.score,
+          sold_price: p,
+          sold_date: row.soldDate,
+        });
+        if (priced.length >= limit) break;
+      }
+    }
+  }
+
   const compsWithSold = priced;
 
   const upserts = compsWithSold.map((c) => ({
