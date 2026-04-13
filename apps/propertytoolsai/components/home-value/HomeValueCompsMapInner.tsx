@@ -1,28 +1,61 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import type { ComparableHome, SubjectHome } from "./homeValueCompsShared";
 import { comparableHomeKey, fmtDate, money } from "./homeValueCompsShared";
 
-/* ── Leaflet CSS (loaded once) ── */
-import "leaflet/dist/leaflet.css";
+/**
+ * Leaflet CSS — loaded via <link> tag at runtime to avoid
+ * Next.js / Turbopack issues with CSS imports inside
+ * dynamically-loaded (ssr: false) components.
+ */
+const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 
-/* ── Custom marker icons (inline SVG → data URI so we don't need image files) ── */
+const MARKER_CSS_ID = "ptai-marker-css";
+const MARKER_CSS = `.ptai-marker{background:transparent!important;border:none!important;overflow:visible!important;}`;
+
+function useLeafletCss() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    // Inject marker override styles
+    if (!document.getElementById(MARKER_CSS_ID)) {
+      const style = document.createElement("style");
+      style.id = MARKER_CSS_ID;
+      style.textContent = MARKER_CSS;
+      document.head.appendChild(style);
+    }
+
+    if (document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
+      setReady(true);
+      return;
+    }
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = LEAFLET_CSS;
+    link.onload = () => setReady(true);
+    document.head.appendChild(link);
+  }, []);
+  return ready;
+}
+
+/* ── Custom marker icons using DivIcon (no image files needed) ── */
 function svgIcon(label: string, bg: string, text: string, border: string): L.DivIcon {
   return L.divIcon({
-    className: "",
+    className: "ptai-marker",
     iconSize: [0, 0],
-    iconAnchor: [0, 36],
-    popupAnchor: [0, -38],
+    iconAnchor: [0, 0],
+    popupAnchor: [0, -6],
     html: `<div style="
+      position:absolute;left:0;top:0;
+      transform:translate(-50%,-100%);
       display:inline-flex;align-items:center;justify-content:center;
       padding:6px 12px;border-radius:9999px;
       background:${bg};color:${text};border:2px solid ${border};
       font-size:12px;font-weight:600;white-space:nowrap;
-      box-shadow:0 1px 3px rgba(0,0,0,.18);
-      transform:translate(-50%,0);
+      box-shadow:0 2px 6px rgba(0,0,0,.22);
+      pointer-events:auto;
     ">${label}</div>`,
   });
 }
@@ -59,11 +92,21 @@ export default function HomeValueCompsMapInner({
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 }) {
+  const cssReady = useLeafletCss();
+
   const selectedComp = useMemo(() => {
     if (selectedId == null) return null;
     const idx = comps.findIndex((comp, i) => comparableHomeKey(comp, i) === selectedId);
     return idx >= 0 ? comps[idx] : null;
   }, [comps, selectedId]);
+
+  if (!cssReady) {
+    return (
+      <div className="flex h-[520px] items-center justify-center border-b bg-gray-50 text-sm text-gray-500 lg:border-b-0 lg:border-r">
+        Loading map...
+      </div>
+    );
+  }
 
   return (
     <div className="h-[520px] border-b lg:border-b-0 lg:border-r">
