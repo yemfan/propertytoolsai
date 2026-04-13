@@ -54,7 +54,18 @@ export async function POST(req: Request) {
       );
     }
 
-    const { comps } = await getComparables(normalized.address, 12).catch(() => ({ comps: [] as any[] }));
+    let comps: Awaited<ReturnType<typeof getComparables>>["comps"] = [];
+    try {
+      const result2 = await getComparables(normalized.address, 12);
+      comps = result2.comps;
+      console.log(
+        `[home-value-estimate] getComparables for "${normalized.address}": ` +
+        `subject=${result2.subject ? "found" : "NOT FOUND"}, ` +
+        `comps=${comps.length}`
+      );
+    } catch (compErr) {
+      console.error("[home-value-estimate] getComparables THREW:", compErr);
+    }
     const compsMapped = (comps ?? []).map((comp) => {
       const soldPrice = comp.sold_price != null ? Number(comp.sold_price) : 0;
       const soldDate = comp.sold_date ? String(comp.sold_date) : "";
@@ -126,6 +137,12 @@ export async function POST(req: Request) {
       provider: {
         source: result.market.source ?? "pipeline",
         cached: false,
+      },
+      _debug: {
+        pipelinePricedCount: result.comps.pricedCount,
+        pipelineTotalConsidered: result.comps.totalConsidered,
+        getComparablesReturned: compsMapped.length,
+        normalizedAddress: normalized.address,
       },
     });
   } catch (e: unknown) {
