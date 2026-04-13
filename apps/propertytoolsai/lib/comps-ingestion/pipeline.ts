@@ -129,7 +129,18 @@ export async function resolveSubjectAndComparables(address: string, targetCompCo
 
   stats.subjectResolved = true;
 
-  const minAccept = Math.min(3, targetCompCount);
+  /**
+   * Minimum comps to accept before trying the next tier.
+   *
+   * Previously hardcoded to 3 — which meant a market with only
+   * 1-2 valid comps would exhaust all tiers + the Rentcast
+   * fallback and STILL report "no comparables found" even though
+   * it had usable data. Downstream valuation now handles low-
+   * comp scenarios by lowering the confidence score instead of
+   * refusing to estimate entirely. Even a single comp is better
+   * than nothing for the user.
+   */
+  const minAccept = 1;
   let allValid: NearbyCompCandidate[] = [];
   let tierUsed: string | null = null;
 
@@ -165,7 +176,12 @@ export async function resolveSubjectAndComparables(address: string, targetCompCo
 
   if (allValid.length < minAccept) {
     stats.fallbackUsed = true;
-    stats.notes.push("Warehouse tier search was insufficient; running Rentcast comp ingest + warehouse retry.");
+    const hasRentcastKey = Boolean(process.env.RENTCAST_API_KEY?.trim());
+    stats.notes.push(
+      hasRentcastKey
+        ? "Warehouse tier search was insufficient; running Rentcast comp ingest + warehouse retry."
+        : "Warehouse tier search was insufficient. RENTCAST_API_KEY is not configured — upstream fallback skipped."
+    );
 
     const fallbackTier = COMP_SEARCH_TIERS[COMP_SEARCH_TIERS.length - 1]!;
     const upstreamCandidates = await fetchNearbySoldCompsFromUpstream(

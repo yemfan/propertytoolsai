@@ -8,11 +8,26 @@ import { supabaseServer } from "@/lib/supabaseServer";
 import { daysSince, milesBetween } from "./normalize";
 import type { CompSearchTier, NearbyCompCandidate, SubjectLookupResult } from "./types";
 
+/**
+ * Progressive comp search tiers — each tier widens the radius,
+ * lookback, and sqft tolerance. The system tries Tier 1 first
+ * and escalates until it finds enough valid comps.
+ *
+ * Previous Tier 1 (0.5 mi / 90d / ±15%) was too restrictive
+ * for most markets outside dense urban cores. Real-world
+ * agents expect estimates to "just work" for suburban and
+ * semi-rural properties where sales are sparse.
+ *
+ * Relaxed in batch fix (April 2026) to double the Tier 1
+ * radius and lookback, giving the engine a fighting chance
+ * before escalating to slower/wider tiers or the Rentcast
+ * fallback.
+ */
 export const COMP_SEARCH_TIERS: CompSearchTier[] = [
-  { key: "tier_1", maxMiles: 0.5, maxSoldAgeDays: 90, sqftTolerancePct: 0.15, batchSize: 12 },
-  { key: "tier_2", maxMiles: 1.0, maxSoldAgeDays: 180, sqftTolerancePct: 0.2, batchSize: 12 },
-  { key: "tier_3", maxMiles: 1.5, maxSoldAgeDays: 270, sqftTolerancePct: 0.25, batchSize: 12 },
-  { key: "tier_4", maxMiles: 3.0, maxSoldAgeDays: 365, sqftTolerancePct: 0.3, batchSize: 16 },
+  { key: "tier_1", maxMiles: 1.0, maxSoldAgeDays: 180, sqftTolerancePct: 0.20, batchSize: 16 },
+  { key: "tier_2", maxMiles: 2.0, maxSoldAgeDays: 270, sqftTolerancePct: 0.25, batchSize: 16 },
+  { key: "tier_3", maxMiles: 3.0, maxSoldAgeDays: 365, sqftTolerancePct: 0.30, batchSize: 16 },
+  { key: "tier_4", maxMiles: 5.0, maxSoldAgeDays: 540, sqftTolerancePct: 0.35, batchSize: 20 },
 ];
 
 function normType(t: string | null | undefined) {

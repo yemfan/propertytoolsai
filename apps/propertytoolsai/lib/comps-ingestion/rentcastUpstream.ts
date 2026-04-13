@@ -59,7 +59,16 @@ export async function fetchNearbySoldCompsFromUpstream(
   maxMiles: number,
   limit = 100
 ): Promise<NearbyCompCandidate[]> {
-  if (!process.env.RENTCAST_API_KEY?.trim()) return [];
+  if (!process.env.RENTCAST_API_KEY?.trim()) {
+    console.warn(
+      "[comps-ingestion] RENTCAST_API_KEY is not set — Rentcast " +
+      "fallback is disabled. The comp search can only use the " +
+      "local warehouse, which may not have enough recent sales. " +
+      "Set RENTCAST_API_KEY in your environment to enable the " +
+      "upstream comp feed."
+    );
+    return [];
+  }
 
   const bundle = await loadValuationBundleFromRentcast(subjectToRentcastInput(subject));
 
