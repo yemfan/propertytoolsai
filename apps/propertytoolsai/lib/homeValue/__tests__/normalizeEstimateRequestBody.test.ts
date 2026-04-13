@@ -16,7 +16,7 @@ describe("normalizeHomeValueEstimateRequestBody", () => {
         sqft: 1650,
         yearBuilt: 1988,
         condition: "good",
-        renovatedRecently: false,
+        renovation: { done: false },
       },
       context: { sessionId: "sess_123", source: "tool_page" },
     });

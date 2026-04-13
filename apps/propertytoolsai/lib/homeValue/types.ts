@@ -110,6 +110,10 @@ export type HomeValueEstimateRequest = {
   propertyType?: string | null;
   condition?: PropertyCondition;
   renovation?: RenovationLevel;
+  renovationYear?: number;
+  renovationScope?: "full" | "partial" | "addition";
+  renovationRooms?: string[];
+  sqftAdded?: number;
   /** User-selected intent; omit for auto (signal-based inference). */
   intent?: UserIntent;
   /** Behavioral signals — combined with server hints for LikelyIntent. */

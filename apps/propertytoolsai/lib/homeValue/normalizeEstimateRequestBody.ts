@@ -14,10 +14,51 @@ function asCondition(v: unknown): PropertyCondition | undefined {
   return undefined;
 }
 
-function renovatedToRenovation(renovatedRecently: unknown): RenovationLevel | undefined {
-  if (renovatedRecently === true) return "cosmetic";
-  if (renovatedRecently === false) return "none";
-  return undefined;
+function mapRenovation(d: Record<string, unknown>): {
+  renovation: RenovationLevel;
+  sqftAdded: number | undefined;
+  renovationYear: number | undefined;
+  renovationScope: "full" | "partial" | "addition" | undefined;
+  renovationRooms: string[] | undefined;
+} {
+  const reno = d.renovation as Record<string, unknown> | undefined;
+
+  // Legacy boolean support
+  if (d.renovatedRecently === true && !reno) {
+    return { renovation: "cosmetic", sqftAdded: undefined, renovationYear: undefined, renovationScope: undefined, renovationRooms: undefined };
+  }
+  if (d.renovatedRecently === false && !reno) {
+    return { renovation: "none", sqftAdded: undefined, renovationYear: undefined, renovationScope: undefined, renovationRooms: undefined };
+  }
+
+  if (!reno || reno.done !== true) {
+    return { renovation: "none", sqftAdded: undefined, renovationYear: undefined, renovationScope: undefined, renovationRooms: undefined };
+  }
+
+  const scope = String(reno.scope ?? "").trim();
+  const rooms = Array.isArray(reno.rooms) ? reno.rooms.map(String) : [];
+  const sqftAdded = reno.sqftAdded != null ? Number(reno.sqftAdded) : undefined;
+  const year = reno.year != null ? Number(reno.year) : undefined;
+
+  let level: RenovationLevel = "cosmetic";
+  if (scope === "full") {
+    level = "full";
+  } else if (scope === "partial") {
+    // kitchen+bath = major, single room = cosmetic
+    const hasKitchen = rooms.includes("kitchen");
+    const hasBath = rooms.includes("bath");
+    level = (hasKitchen && hasBath) ? "major" : rooms.length >= 2 ? "major" : "cosmetic";
+  } else if (scope === "addition") {
+    level = "major";
+  }
+
+  return {
+    renovation: level,
+    sqftAdded: scope === "addition" && sqftAdded && sqftAdded > 0 ? sqftAdded : undefined,
+    renovationYear: year && year > 1900 ? year : undefined,
+    renovationScope: (scope === "full" || scope === "partial" || scope === "addition") ? scope : undefined,
+    renovationRooms: rooms.length > 0 ? rooms : undefined,
+  };
 }
 
 /**
@@ -54,7 +95,7 @@ export function normalizeHomeValueEstimateRequestBody(raw: unknown): HomeValueEs
       yearBuilt: num(d.yearBuilt ?? d.year_built),
       propertyType: d.propertyType != null ? String(d.propertyType) : d.property_type != null ? String(d.property_type) : null,
       condition: asCondition(d.condition) ?? "average",
-      renovation: renovatedToRenovation(d.renovatedRecently ?? d.renovated_recently) ?? "none",
+      ...mapRenovation(d),
       session_id: sessionRaw != null ? String(sessionRaw) : undefined,
       intent_signals: { homeValueUsed: true },
     };
