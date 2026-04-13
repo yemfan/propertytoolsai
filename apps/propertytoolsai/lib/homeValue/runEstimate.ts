@@ -254,35 +254,58 @@ export async function runHomeValueEstimatePipeline(
   );
 
   /**
-   * Rentcast AVM override — when our comp-based estimate has low
-   * confidence (no local comps, falling back to city-level PPSF),
-   * the Rentcast AVM is significantly more accurate because it
-   * uses nationwide MLS data that we don't have. Use it as the
-   * primary estimate in these cases.
+   * Rentcast AVM blending — the Rentcast AVM uses nationwide MLS
+   * data and tends to be within 5-10% of Zillow/Redfin. Our comp-
+   * based PPSF × sqft approach can diverge significantly when the
+   * subject property is much larger/smaller than nearby comps.
    *
-   * When comps ARE available, keep our estimate (which factors in
-   * the user's refinement inputs like condition and renovation)
-   * but still log the Rentcast AVM for comparison.
+   * Strategy:
+   * - 0 local comps → use Rentcast AVM directly
+   * - 1-3 comps → blend 70% AVM + 30% comp-based
+   * - 4+ comps → blend 50% AVM + 50% comp-based
+   *
+   * This prevents wild over/under-estimates while still respecting
+   * user refinement inputs (condition, renovation) from the comp-
+   * based calculation.
    */
-  if (rentcastAvm && rentcastAvm > 0 && pricedCompCount === 0) {
-    const avmLow = rentcastAvmLow ?? Math.round(rentcastAvm * 0.85);
-    const avmHigh = rentcastAvmHigh ?? Math.round(rentcastAvm * 1.15);
+  if (rentcastAvm && rentcastAvm > 0) {
+    const avmWeight =
+      pricedCompCount === 0 ? 1.0 : pricedCompCount <= 3 ? 0.7 : 0.5;
+    const compWeight = 1 - avmWeight;
+
+    const blended = Math.round(avmWeight * rentcastAvm + compWeight * estimate.point);
+    const blendedPpsf = sqft > 0 ? Math.round(blended / sqft) : estimate.baselinePpsf;
+
+    // Apply the same range band percentage from confidence engine
+    const blendedLow = Math.round(blended * (1 - rangeBandPct));
+    const blendedHigh = Math.round(blended * (1 + rangeBandPct));
+
     console.log(
-      `[estimate] Using Rentcast AVM ($${rentcastAvm.toLocaleString()}) ` +
-      `instead of comp-based estimate ($${estimate.point.toLocaleString()}) — 0 local comps`
+      `[estimate] Blending: AVM=$${rentcastAvm.toLocaleString()} (${Math.round(avmWeight * 100)}%) ` +
+      `+ comp-based=$${estimate.point.toLocaleString()} (${Math.round(compWeight * 100)}%) ` +
+      `→ $${blended.toLocaleString()} (${pricedCompCount} comps)`
     );
+
     estimate = {
       ...estimate,
-      point: rentcastAvm,
-      low: avmLow,
-      high: avmHigh,
-      baselinePpsf: sqft > 0 ? Math.round(rentcastAvm / sqft) : estimate.baselinePpsf,
+      point: blended,
+      low: blendedLow,
+      high: blendedHigh,
+      baselinePpsf: blendedPpsf,
       summary:
-        `Estimated value near $${rentcastAvm.toLocaleString()} ` +
-        `(range about $${avmLow.toLocaleString()}–$${avmHigh.toLocaleString()}) ` +
-        `based on automated valuation model and your property details.`,
+        pricedCompCount === 0
+          ? `Estimated value near $${blended.toLocaleString()} ` +
+            `(range about $${blendedLow.toLocaleString()}–$${blendedHigh.toLocaleString()}) ` +
+            `based on automated valuation model and your property details.`
+          : `Estimated value near $${blended.toLocaleString()} ` +
+            `(range about $${blendedLow.toLocaleString()}–$${blendedHigh.toLocaleString()}) ` +
+            `blending ${pricedCompCount} comparable sale${pricedCompCount > 1 ? "s" : ""} ` +
+            `with automated valuation model.`,
     };
-    marketBlock.source = "rentcast_avm";
+    marketBlock.source =
+      pricedCompCount === 0
+        ? "rentcast_avm"
+        : `${marketBlock.source}+rentcast_avm_blend`;
   }
 
   const priceSpreadRatio =

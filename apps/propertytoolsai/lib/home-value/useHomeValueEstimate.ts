@@ -196,15 +196,16 @@ export function useHomeValueEstimate() {
       setEstimateResult(result);
 
       // Back-fill details with enriched property data from the pipeline
-      // so the RefinementForm shows actual values instead of empty fields
+      // so the RefinementForm shows actual values instead of empty fields.
+      // Always overwrite empty/undefined fields; preserve user-typed values.
       const p = result.property;
       setDetails((prev) => ({
         ...prev,
-        ...(p.beds != null && prev.beds == null ? { beds: p.beds } : {}),
-        ...(p.baths != null && prev.baths == null ? { baths: p.baths } : {}),
-        ...(p.sqft != null && prev.sqft == null ? { sqft: p.sqft } : {}),
-        ...(p.yearBuilt != null && prev.yearBuilt == null ? { yearBuilt: p.yearBuilt } : {}),
-        ...(p.lotSize != null && prev.lotSize == null ? { lotSize: p.lotSize } : {}),
+        beds: prev.beds ?? p.beds,
+        baths: prev.baths ?? p.baths,
+        sqft: prev.sqft ?? p.sqft,
+        yearBuilt: prev.yearBuilt ?? p.yearBuilt,
+        lotSize: prev.lotSize ?? p.lotSize,
         ...(p.propertyType != null ? { propertyType: p.propertyType as EstimateDetails["propertyType"] } : {}),
       }));
 
@@ -242,9 +243,25 @@ export function useHomeValueEstimate() {
     const finalAddress = addressToConfirm ?? pendingAddress;
     if (!finalAddress) return;
 
+    /**
+     * Reset details when the address changes so the pipeline uses
+     * fresh data from Rentcast/warehouse instead of stale values
+     * from the previous address. Keep only user-set preferences
+     * (condition) that are property-agnostic.
+     */
+    const isNewAddress =
+      !address || address.fullAddress !== finalAddress.fullAddress;
+    const freshDetails: EstimateDetails = isNewAddress
+      ? { condition: details.condition }
+      : details;
+
+    if (isNewAddress) {
+      setDetails(freshDetails);
+    }
+
     setAddress(finalAddress);
     setPendingAddress(null);
-    await runEstimate(finalAddress, details);
+    await runEstimate(finalAddress, freshDetails);
   }
 
   function clearPendingAddress() {
