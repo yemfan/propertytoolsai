@@ -44,10 +44,30 @@ export async function loadValuationBundleFromRentcast(subject: SubjectPropertyIn
     fetch(`https://api.rentcast.io/v1/properties?${params.toString()}`, { headers, cache: "no-store" }),
   ]);
 
+  // Log response status for every endpoint so silent failures are
+  // visible in server logs. A 401/403 means the API key is invalid
+  // or expired; 429 means rate-limited; 200 with empty body means
+  // no data for this area.
+  console.log(
+    `[rentcast] API responses for "${subject.address}": ` +
+    `estimate=${estimateRes.status}, ` +
+    `sales=${salesRes.status}, ` +
+    `active=${activeRes.status}, ` +
+    `property=${propertyRes.status}`
+  );
+
   const estimateJson = estimateRes.ok ? ((await estimateRes.json()) as Record<string, unknown>) : null;
   const salesJson = salesRes.ok ? await salesRes.json() : null;
   const activeJson = activeRes.ok ? await activeRes.json() : null;
   const propertyJson = propertyRes.ok ? await propertyRes.json() : null;
+
+  // Log sales comp count so we know if the API returned data
+  const salesRows_raw = Array.isArray(salesJson) ? salesJson : (salesJson as { data?: unknown[] })?.data ?? [];
+  console.log(
+    `[rentcast] Sales comps returned: ${salesRows_raw.length} ` +
+    `(estimate=${estimateJson ? "yes" : "null"}, ` +
+    `property=${propertyJson ? "yes" : "null"})`
+  );
 
   const propertyRecord = firstPropertyRecord(propertyJson);
   const taxAnchorEstimate = propertyRecord ? computeTaxAnchorEstimate(propertyRecord) : null;

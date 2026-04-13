@@ -36,9 +36,16 @@ export async function ingestRentcastSoldCompsForPropertyRow(
   let bundle;
   try {
     bundle = await loadValuationBundleFromRentcast(rowToSubjectInput(subject));
-  } catch {
+  } catch (e) {
+    console.error("[rentcast-ingest] loadValuationBundleFromRentcast THREW:", e);
     return 0;
   }
+  console.log(
+    `[rentcast-ingest] Bundle for "${subject.address}": ` +
+    `comps=${bundle.comps.length}, ` +
+    `activeListings=${bundle.activeListings.length}, ` +
+    `apiEstimate=${bundle.apiEstimate}`
+  );
 
   const tables = await detectWarehouseWriteTables();
   let inserted = 0;
