@@ -72,3 +72,19 @@ export function trackAffordabilityUsed(metadata?: Record<string, unknown>) {
 export function trackRentVsBuyUsed(metadata?: Record<string, unknown>) {
   return trackBehavior("rent_vs_buy_used", metadata ?? {});
 }
+
+export function trackDownPaymentUsed(metadata?: Record<string, unknown>) {
+  return trackBehavior("down_payment_used", metadata ?? {});
+}
+export function trackCashFlowUsed(metadata?: Record<string, unknown>) {
+  return trackBehavior("cash_flow_used", metadata ?? {});
+}
+export function trackCapRateRoiUsed(metadata?: Record<string, unknown>) {
+  return trackBehavior("cap_rate_roi_used", metadata ?? {});
+}
+export function trackAdjustableRateUsed(metadata?: Record<string, unknown>) {
+  return trackBehavior("adjustable_rate_used", metadata ?? {});
+}
+export function trackRefinanceUsed(metadata?: Record<string, unknown>) {
+  return trackBehavior("refinance_used", metadata ?? {});
+}

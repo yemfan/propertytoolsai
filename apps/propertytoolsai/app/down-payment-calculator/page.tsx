@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { trackDownPaymentUsed } from "@/lib/tracking";
 import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
@@ -23,6 +24,11 @@ export default function DownPaymentCalculator() {
   const [propertyTax, setPropertyTax] = useState<number>(4000);
   const [homeInsurance, setHomeInsurance] = useState<number>(1200);
   const [hoaFees, setHoaFees] = useState<number>(0);
+
+  useEffect(() => {
+    void trackDownPaymentUsed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one behavioral snapshot per visit
+  }, []);
 
   const { downPaymentAmount, remainingLoanAmount, monthlyPayment } = useMemo(() => {
     const desiredDown = (homePrice * downPaymentPercent) / 100;

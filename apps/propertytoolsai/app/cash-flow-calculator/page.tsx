@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { trackCashFlowUsed } from "@/lib/tracking";
 import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
@@ -8,6 +9,11 @@ import JsonLd from "../../components/JsonLd";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
 
 export default function CashFlowCalculator() {
+  useEffect(() => {
+    void trackCashFlowUsed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one behavioral snapshot per visit
+  }, []);
+
   const [monthlyRent, setMonthlyRent] = useState<number>(2500);
   const [monthlyMortgage, setMonthlyMortgage] = useState<number>(1800);
   const [propertyTax, setPropertyTax] = useState<number>(400);

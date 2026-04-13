@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { trackAffordabilityUsed } from "@/lib/tracking";
 import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
@@ -28,6 +29,11 @@ export default function AffordabilityCalculator() {
   const [downPayment, setDownPayment] = useState<number>(60000);
   const [interestRate, setInterestRate] = useState<number>(6.5);
   const [loanTerm, setLoanTerm] = useState<number>(30);
+
+  useEffect(() => {
+    void trackAffordabilityUsed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one behavioral snapshot per visit
+  }, []);
 
   const { maxHomePrice, estimatedMonthlyPayment } = useMemo(() => {
     const monthlyIncome = annualIncome / 12;

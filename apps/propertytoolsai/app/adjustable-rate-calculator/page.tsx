@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { trackAdjustableRateUsed } from "@/lib/tracking";
 import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
@@ -28,6 +29,11 @@ function balanceAfterPayments(
 }
 
 export default function AdjustableRateCalculator() {
+  useEffect(() => {
+    void trackAdjustableRateUsed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one behavioral snapshot per visit
+  }, []);
+
   const [homePrice, setHomePrice] = useState<number>(400000);
   const [downPayment, setDownPayment] = useState<number>(80000);
   const [loanTerm, setLoanTerm] = useState<number>(30);

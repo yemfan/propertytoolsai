@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { trackCapRateRoiUsed } from "@/lib/tracking";
 import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
@@ -14,6 +15,11 @@ function pmt(principal: number, annualRate: number, years: number): number {
 }
 
 export default function CapRateRoiCalculator() {
+  useEffect(() => {
+    void trackCapRateRoiUsed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one behavioral snapshot per visit
+  }, []);
+
   const [purchasePrice, setPurchasePrice] = useState<number>(400000);
   const [downPayment, setDownPayment] = useState<number>(80000);
   const [annualRent, setAnnualRent] = useState<number>(28800);
