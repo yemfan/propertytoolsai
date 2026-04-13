@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { trackRentVsBuyUsed } from "@/lib/tracking";
 import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
@@ -22,6 +23,11 @@ export default function RentVsBuyCalculator() {
   const [propertyTaxRate, setPropertyTaxRate] = useState<number>(1.2);
   const [expectedAppreciation, setExpectedAppreciation] = useState<number>(3);
   const [yearsToStay, setYearsToStay] = useState<number>(5);
+
+  useEffect(() => {
+    void trackRentVsBuyUsed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one behavioral snapshot per visit
+  }, []);
 
   const { totalCostRenting, totalCostBuying, recommendation } = useMemo(() => {
     const totalCostRenting = monthlyRent * 12 * yearsToStay;
