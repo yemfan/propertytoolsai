@@ -79,7 +79,7 @@ export async function runHomeValueEstimatePipeline(
   let rentcastAvm: number | null = null;
   let rentcastAvmLow: number | null = null;
   let rentcastAvmHigh: number | null = null;
-  let rentcastSubject: Record<string, unknown> | null = null;
+  let rentcastBundle: Awaited<ReturnType<typeof loadValuationBundleFromRentcast>> | null = null;
   try {
     if (process.env.RENTCAST_API_KEY?.trim()) {
       const bundle = await loadValuationBundleFromRentcast({
@@ -88,6 +88,7 @@ export async function runHomeValueEstimatePipeline(
         state: body.state ?? row?.state ?? undefined,
         zip: body.zip ?? row?.zip_code ?? undefined,
       });
+      rentcastBundle = bundle;
       rentcastAvm = bundle.apiEstimate;
       // Extract range + subject property from the raw response
       // The bundle doesn't expose these directly, so we'll
@@ -128,6 +129,24 @@ export async function runHomeValueEstimatePipeline(
   const renovation = (body.renovation ?? "none") as RenovationLevel;
 
   const merged = mergeNormalizedProperty(addressRaw, row, body);
+
+  /**
+   * Enrich merged property with Rentcast subject details when
+   * the warehouse/body doesn't have real values. This fixes the
+   * persistent "1500 sqft / 3 bed / 2 bath" default problem —
+   * the Rentcast /v1/properties endpoint returns the actual
+   * property attributes (e.g., 1633 sqft, 3 bed, 3 bath, 2003)
+   * but they weren't being used.
+   */
+  const rd = rentcastBundle?.subjectDetails;
+  if (rd) {
+    if (!merged.sqft && rd.sqft && rd.sqft > 0) merged.sqft = rd.sqft;
+    if (!merged.beds && rd.beds && rd.beds > 0) merged.beds = rd.beds;
+    if (!merged.baths && rd.baths && rd.baths > 0) merged.baths = rd.baths;
+    if (!merged.yearBuilt && rd.yearBuilt && rd.yearBuilt > 1800) merged.yearBuilt = rd.yearBuilt;
+    if (!merged.lotSqft && rd.lotSize && rd.lotSize > 0) merged.lotSqft = rd.lotSize;
+    if (!merged.propertyType && rd.propertyType) merged.propertyType = rd.propertyType;
+  }
 
   const sqft = merged.sqft && merged.sqft > 0 ? merged.sqft : DEFAULT_SQFT;
   const beds = merged.beds && merged.beds > 0 ? merged.beds : DEFAULT_BEDS;

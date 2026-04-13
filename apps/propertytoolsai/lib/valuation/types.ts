@@ -48,6 +48,22 @@ export type ValuationDataBundle = {
   taxAnchorEstimate?: number | null;
   comps: ComparableSale[];
   activeListings: ActiveListing[];
+  /**
+   * Enriched subject property details from the upstream data
+   * source (e.g., Rentcast /v1/properties). When present, the
+   * pipeline uses these instead of defaults for sqft, beds, baths,
+   * yearBuilt, and propertyType.
+   */
+  subjectDetails?: {
+    sqft?: number;
+    beds?: number;
+    baths?: number;
+    yearBuilt?: number;
+    lotSize?: number;
+    propertyType?: string;
+    lastSalePrice?: number;
+    lastSaleDate?: string;
+  };
 };
 
 export type ValuationFactor = {

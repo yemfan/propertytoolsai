@@ -4,6 +4,8 @@ import {
   getComparables,
   type PropertyRow,
 } from "@/lib/propertyService";
+import { getPropertyData } from "@/lib/getPropertyData";
+import { loadValuationBundleFromRentcast } from "@/lib/valuation/adapters/rentcast";
 import { consumeTokensForTool } from "@/lib/consumeTokens";
 import { getCmaUsage, incrementCmaUsage } from "@/lib/cmaUsage";
 import { getUserFromRequest } from "@/lib/authFromRequest";
@@ -84,21 +86,75 @@ export async function POST(request: Request) {
       );
     }
 
-    // Ensure the property exists in the warehouse (and/or cache) before matching comps.
-    // If you uploaded MLS CSV recently, the imported cache should make this resolve without mocks.
-    // If no cache entry exists, this may still fall back to your existing fetchPropertyData flow.
-    // (We keep this best-effort to avoid breaking existing behavior.)
-    if (forceRefresh) {
-      // Optional: forceRefresh is currently handled by the property layer itself.
-      // Keeping it as a no-op here avoids changing warehouse ingestion semantics mid-flight.
+    /**
+     * Ensure the property exists in the warehouse. If not, hydrate
+     * it from the property data source (Rentcast). Previously the
+     * CMA returned a hard 404 when the property wasn't in the
+     * warehouse — now it creates the record on-demand.
+     */
+    try {
+      await getPropertyData(address, forceRefresh);
+    } catch {
+      /* best-effort — getPropertyByAddress below handles the miss */
     }
 
-    const subject = await getPropertyByAddress(address);
+    let subject = await getPropertyByAddress(address);
+
+    /**
+     * Rentcast AVM + property enrichment. Called early so we have:
+     * 1. A professional AVM to fall back on when local comps = 0
+     * 2. Real property details (sqft, beds, baths, yearBuilt)
+     */
+    let rentcastAvm: number | null = null;
+    let rentcastDetails: Record<string, unknown> | null = null;
+    try {
+      if (process.env.RENTCAST_API_KEY?.trim()) {
+        const bundle = await loadValuationBundleFromRentcast({ address });
+        rentcastAvm = bundle.apiEstimate ?? null;
+        if (bundle.subjectDetails) {
+          rentcastDetails = bundle.subjectDetails as Record<string, unknown>;
+        }
+      }
+    } catch (e) {
+      console.error("[smart-cma] Rentcast fetch failed:", e);
+    }
+
     if (!subject) {
-      return NextResponse.json(
-        { error: "Property not found in warehouse. Import MLS or use Zillow/Redfin links first." },
-        { status: 404 }
-      );
+      // Even without a warehouse record, we can still produce a
+      // CMA using Rentcast data. Build a minimal subject object.
+      if (rentcastAvm && rentcastAvm > 0) {
+        subject = {
+          id: "",
+          address,
+          city: null,
+          state: null,
+          zip_code: null,
+          lat: null,
+          lng: null,
+          property_type: rentcastDetails?.propertyType != null ? String(rentcastDetails.propertyType) : null,
+          beds: rentcastDetails?.beds != null ? Number(rentcastDetails.beds) : null,
+          baths: rentcastDetails?.baths != null ? Number(rentcastDetails.baths) : null,
+          sqft: rentcastDetails?.sqft != null ? Number(rentcastDetails.sqft) : null,
+          lot_size: rentcastDetails?.lotSize != null ? Number(rentcastDetails.lotSize) : null,
+          year_built: rentcastDetails?.yearBuilt != null ? Number(rentcastDetails.yearBuilt) : null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as PropertyRow;
+      } else {
+        return NextResponse.json(
+          { error: "Property not found. Try a different address or check the spelling." },
+          { status: 404 }
+        );
+      }
+    }
+
+    // Enrich subject with Rentcast details if warehouse data is sparse
+    if (rentcastDetails) {
+      if (!subject.sqft && rentcastDetails.sqft) subject = { ...subject, sqft: Number(rentcastDetails.sqft) };
+      if (!subject.beds && rentcastDetails.beds) subject = { ...subject, beds: Number(rentcastDetails.beds) };
+      if (!subject.baths && rentcastDetails.baths) subject = { ...subject, baths: Number(rentcastDetails.baths) };
+      if (!subject.year_built && rentcastDetails.yearBuilt) subject = { ...subject, year_built: Number(rentcastDetails.yearBuilt) };
+      if (!subject.property_type && rentcastDetails.propertyType) subject = { ...subject, property_type: String(rentcastDetails.propertyType) };
     }
 
     const compsResult = await getComparables(address, 10);
@@ -133,7 +189,15 @@ export async function POST(request: Request) {
         ? comps.reduce((sum, c) => sum + c.pricePerSqft, 0) / comps.length
         : 0;
 
-    const estimatedValue = avgPricePerSqft * subjectSqft;
+    /**
+     * Estimate: use comp-based value when comps are available,
+     * Rentcast AVM when they're not. Previously returned $0 with
+     * a "not enough comparables" message when comps were missing.
+     */
+    let estimatedValue = avgPricePerSqft * subjectSqft;
+    if (estimatedValue <= 0 && rentcastAvm && rentcastAvm > 0) {
+      estimatedValue = rentcastAvm;
+    }
     const low = estimatedValue * 0.92;
     const high = estimatedValue * 1.08;
 
@@ -170,7 +234,9 @@ export async function POST(request: Request) {
         ).toLocaleString()} with an expected range of $${Math.round(
           low
         ).toLocaleString()} to $${Math.round(high).toLocaleString()}.`
-      : `We couldn’t find enough comparable sold history for this address yet. Import an MLS CSV (sold prices + sale dates) or try a Zillow/Redfin link to populate comparables.`;
+      : rentcastAvm && rentcastAvm > 0
+        ? `Estimated value of $${Math.round(estimatedValue).toLocaleString()} based on automated valuation model (range $${Math.round(low).toLocaleString()} to $${Math.round(high).toLocaleString()}). Local comparable data is limited — the estimate may improve as more nearby sales are recorded.`
+        : `We couldn’t find enough comparable sold history for this address yet. Try a different address or check the spelling.`;
 
     // Marketplace tracking: log that CMA was generated for this address.
     // Best-effort: failures must not break the tool response.
