@@ -32,47 +32,66 @@ export async function loadValuationBundleFromRentcast(subject: SubjectPropertyIn
   if (subject.state) params.set("state", subject.state);
   if (subject.zip) params.set("zipCode", subject.zip);
 
+  /**
+   * Rentcast API endpoints (as of 2026):
+   *
+   * - `/v1/avm/value` returns the AVM estimate AND comparable
+   *   sales when `compCount` is set. There is NO separate
+   *   `/v1/avm/sales` endpoint — that was returning 404 and was
+   *   the root cause of zero comparables being found.
+   *
+   * - `/v1/listings/sale` needs the address as a single string
+   *   in the `address` param (city/state/zip are optional
+   *   refinements, not standalone).
+   *
+   * - `/v1/properties` returns the property record (for tax
+   *   anchor estimate).
+   */
+  const estimateParams = new URLSearchParams(params);
+  estimateParams.set("compCount", "25");
+
   const headers = {
     Accept: "application/json",
     "X-Api-Key": apiKey,
   };
 
-  const [estimateRes, salesRes, activeRes, propertyRes] = await Promise.all([
-    fetch(`https://api.rentcast.io/v1/avm/value?${params.toString()}`, { headers, cache: "no-store" }),
-    fetch(`https://api.rentcast.io/v1/avm/sales?${params.toString()}`, { headers, cache: "no-store" }),
+  const [estimateRes, activeRes, propertyRes] = await Promise.all([
+    fetch(`https://api.rentcast.io/v1/avm/value?${estimateParams.toString()}`, { headers, cache: "no-store" }),
     fetch(`https://api.rentcast.io/v1/listings/sale?${params.toString()}`, { headers, cache: "no-store" }),
     fetch(`https://api.rentcast.io/v1/properties?${params.toString()}`, { headers, cache: "no-store" }),
   ]);
 
-  // Log response status for every endpoint so silent failures are
-  // visible in server logs. A 401/403 means the API key is invalid
-  // or expired; 429 means rate-limited; 200 with empty body means
-  // no data for this area.
   console.log(
     `[rentcast] API responses for "${subject.address}": ` +
     `estimate=${estimateRes.status}, ` +
-    `sales=${salesRes.status}, ` +
     `active=${activeRes.status}, ` +
     `property=${propertyRes.status}`
   );
 
   const estimateJson = estimateRes.ok ? ((await estimateRes.json()) as Record<string, unknown>) : null;
-  const salesJson = salesRes.ok ? await salesRes.json() : null;
   const activeJson = activeRes.ok ? await activeRes.json() : null;
   const propertyJson = propertyRes.ok ? await propertyRes.json() : null;
 
-  // Log sales comp count so we know if the API returned data
-  const salesRows_raw = Array.isArray(salesJson) ? salesJson : (salesJson as { data?: unknown[] })?.data ?? [];
+  /**
+   * Sale comparables come from the `/v1/avm/value` response
+   * under `comparables` (array of recent nearby sales). Previous
+   * code tried `/v1/avm/sales` which doesn't exist (404).
+   */
+  const salesRows = (() => {
+    if (!estimateJson) return [];
+    const compsField = estimateJson.comparables ?? estimateJson.comps ?? estimateJson.saleComparables;
+    if (Array.isArray(compsField)) return compsField;
+    return [];
+  })();
+
   console.log(
-    `[rentcast] Sales comps returned: ${salesRows_raw.length} ` +
+    `[rentcast] Sales comps returned: ${salesRows.length} ` +
     `(estimate=${estimateJson ? "yes" : "null"}, ` +
     `property=${propertyJson ? "yes" : "null"})`
   );
 
   const propertyRecord = firstPropertyRecord(propertyJson);
   const taxAnchorEstimate = propertyRecord ? computeTaxAnchorEstimate(propertyRecord) : null;
-
-  const salesRows = Array.isArray(salesJson) ? salesJson : (salesJson as { data?: unknown[] })?.data ?? [];
 
   const comps: ComparableSale[] = salesRows
     .filter((row): row is Record<string, unknown> => row != null && typeof row === "object")
