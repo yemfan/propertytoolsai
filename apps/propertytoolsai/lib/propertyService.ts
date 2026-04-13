@@ -427,6 +427,39 @@ export async function getComparables(address: string, limit = 10) {
     return { subject: null, comps: [] as PropertyCompRow[] };
   }
 
+  /**
+   * Zip-code self-heal. Many warehouse rows were ingested with a
+   * wrong or missing zip_code (e.g., a default "90001" when the
+   * address string contains the real zip). Extract the 5-digit
+   * zip from the normalized address and update the record if it
+   * differs. Without this, the zip-based comp search queries the
+   * wrong neighborhood entirely.
+   */
+  const zipFromAddr = (() => {
+    const m = subject.address.match(/\b(\d{5})(?:\s*,?\s*(?:usa|us))?\s*$/i);
+    return m?.[1] ?? null;
+  })();
+  if (zipFromAddr && subject.zip_code !== zipFromAddr) {
+    console.log(
+      `[getComparables] Fixing zip for "${subject.address}": ` +
+      `"${subject.zip_code}" → "${zipFromAddr}"`
+    );
+    subject = await upsertPropertyWarehouse({
+      address: subject.address,
+      city: subject.city ?? undefined,
+      state: subject.state ?? undefined,
+      zip_code: zipFromAddr,
+      lat: subject.lat ?? undefined,
+      lng: subject.lng ?? undefined,
+      property_type: subject.property_type ?? undefined,
+      beds: subject.beds ?? undefined,
+      baths: subject.baths ?? undefined,
+      sqft: subject.sqft ?? undefined,
+      lot_size: subject.lot_size ?? undefined,
+      year_built: subject.year_built ?? undefined,
+    });
+  }
+
   if (
     (subject.lat == null ||
       subject.lng == null ||
@@ -539,11 +572,17 @@ export async function getComparables(address: string, limit = 10) {
       console.error("getComparables: Rentcast comp ingest (sold-fallback) failed", e);
     }
 
-    // Re-scan after ingest: fresh candidates + history
-    let freshCandidates = await loadZipCompCandidateProperties(subject);
-    if (freshCandidates.length === 0) {
-      freshCandidates = await loadWarehousePropertiesNearSubject(subject, 5, COMP_CANDIDATE_POOL);
-    }
+    // Re-scan after ingest. Use BOTH zip + proximity to catch
+    // comps regardless of whether the subject's zip_code is
+    // correct or the ingested comps landed in a different zip.
+    const freshZip = await loadZipCompCandidateProperties(subject);
+    const freshNearby = await loadWarehousePropertiesNearSubject(subject, 5, COMP_CANDIDATE_POOL);
+    // Deduplicate by property id
+    const seenIds = new Set(freshZip.map((p) => p.id));
+    const freshCandidates = [
+      ...freshZip,
+      ...freshNearby.filter((p) => !seenIds.has(p.id)),
+    ];
     const freshOrdered = (freshCandidates as PropertyRow[])
       .map((p) => ({ property: p, score: similarityScore(subject, p) }))
       .sort((a, b) => b.score - a.score);
