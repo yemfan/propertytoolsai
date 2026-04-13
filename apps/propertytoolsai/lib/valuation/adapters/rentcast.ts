@@ -157,11 +157,41 @@ export async function loadValuationBundleFromRentcast(subject: SubjectPropertyIn
   const apiEstimate =
     Number(estimateJson?.price ?? estimateJson?.value ?? estimateJson?.estimate ?? 0) || null;
 
+  /**
+   * Extract real property details from the /v1/properties response
+   * so the pipeline can use actual sqft/beds/baths/yearBuilt
+   * instead of defaults. This is the critical enrichment that was
+   * missing — without it, every estimate used 1500 sqft / 3 bed /
+   * 2 bath regardless of the actual property.
+   */
+  const subjectDetails = propertyRecord
+    ? {
+        sqft: propertyRecord.squareFootage != null ? Number(propertyRecord.squareFootage) : undefined,
+        beds: propertyRecord.bedrooms != null ? Number(propertyRecord.bedrooms) : undefined,
+        baths: propertyRecord.bathrooms != null ? Number(propertyRecord.bathrooms) : undefined,
+        yearBuilt: propertyRecord.yearBuilt != null ? Number(propertyRecord.yearBuilt) : undefined,
+        lotSize: propertyRecord.lotSize != null ? Number(propertyRecord.lotSize) : undefined,
+        propertyType: mapPropertyType(
+          propertyRecord.propertyType != null ? String(propertyRecord.propertyType) : undefined
+        ),
+        lastSalePrice: propertyRecord.lastSalePrice != null ? Number(propertyRecord.lastSalePrice) : undefined,
+        lastSaleDate: propertyRecord.lastSaleDate != null ? String(propertyRecord.lastSaleDate) : undefined,
+      }
+    : undefined;
+
+  if (subjectDetails) {
+    console.log(
+      `[rentcast] Property enrichment: sqft=${subjectDetails.sqft}, beds=${subjectDetails.beds}, ` +
+      `baths=${subjectDetails.baths}, year=${subjectDetails.yearBuilt}, type=${subjectDetails.propertyType}`
+    );
+  }
+
   return {
     apiEstimate,
     taxAnchorEstimate,
     comps,
     activeListings,
+    subjectDetails,
   };
 }
 
