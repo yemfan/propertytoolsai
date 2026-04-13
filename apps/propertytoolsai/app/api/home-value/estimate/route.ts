@@ -98,6 +98,29 @@ export async function POST(req: Request) {
       };
     });
 
+    /**
+     * Geocode comps that lack lat/lng so they show on the map.
+     * Many warehouse property records don't have coordinates.
+     * Batch-geocode up to 10 comps in parallel (Mapbox free tier
+     * allows 100K requests/month, so this is fine).
+     */
+    const compsToGeocode = compsMapped.filter(
+      (c) => typeof c.lat !== "number" || typeof c.lng !== "number" || !Number.isFinite(c.lat) || !Number.isFinite(c.lng)
+    );
+    if (compsToGeocode.length > 0) {
+      const geocodeResults = await Promise.allSettled(
+        compsToGeocode.slice(0, 10).map(async (comp) => {
+          const geo = await forwardGeocodeAddress(comp.address);
+          if (geo) {
+            comp.lat = geo.lat;
+            comp.lng = geo.lng;
+          }
+        })
+      );
+      const geocoded = geocodeResults.filter((r) => r.status === "fulfilled").length;
+      console.log(`[home-value-estimate] Geocoded ${geocoded}/${compsToGeocode.length} comps`);
+    }
+
     return NextResponse.json({
       success: true,
       sessionId: result.sessionId,

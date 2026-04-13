@@ -29,6 +29,8 @@ export type ComparableSale = {
   distanceMiles?: number;
   propertyType?: string;
   pricePerSqft?: number;
+  lat?: number;
+  lng?: number;
 };
 
 export type ActiveListing = {

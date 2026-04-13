@@ -125,6 +125,14 @@ export async function loadValuationBundleFromRentcast(subject: SubjectPropertyIn
             : sqft && sqft > 0
               ? soldPrice / sqft
               : undefined,
+        lat:
+          row.latitude != null && Number.isFinite(Number(row.latitude))
+            ? Number(row.latitude)
+            : undefined,
+        lng:
+          row.longitude != null && Number.isFinite(Number(row.longitude))
+            ? Number(row.longitude)
+            : undefined,
       };
     })
     .filter((x) => x.soldPrice > 0);
