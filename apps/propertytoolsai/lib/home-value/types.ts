@@ -28,7 +28,13 @@ export type EstimateDetails = {
   yearBuilt?: number;
   lotSize?: number;
   condition?: PropertyCondition;
-  renovatedRecently?: boolean;
+  renovation?: {
+    done: boolean;
+    year?: number;
+    scope?: "full" | "partial" | "addition";
+    rooms?: ("kitchen" | "bath" | "bedroom")[];
+    sqftAdded?: number;
+  };
 };
 
 export type EstimateRequest = {

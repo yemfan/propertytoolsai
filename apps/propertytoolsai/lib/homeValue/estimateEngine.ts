@@ -24,6 +24,7 @@ export type EstimateEngineInput = {
   condition: PropertyCondition;
   renovation: RenovationLevel;
   marketTrend: "up" | "down" | "stable";
+  sqftAdded?: number;
 };
 
 function clamp(n: number, min: number, max: number) {
@@ -118,7 +119,7 @@ export function computeHomeValueEstimate(
   input: EstimateEngineInput,
   rangeBandPct: number
 ): HomeValueEstimateOutput {
-  const sqft = input.sqft > 0 ? input.sqft : DEFAULT_SQFT;
+  const effectiveSqft = (input.sqft > 0 ? input.sqft : DEFAULT_SQFT) + (input.sqftAdded ?? 0);
 
   const lines: AdjustmentLine[] = [];
   const push = (key: string, label: string, m: number) => {
@@ -131,7 +132,7 @@ export function computeHomeValueEstimate(
   push("bedbath", t2.label, t2.m);
   const t3 = ageMultiplier(input.yearBuilt);
   push("age", t3.label, t3.m);
-  const t4 = lotMultiplier(sqft, input.lotSqft);
+  const t4 = lotMultiplier(effectiveSqft, input.lotSqft);
   push("lot", t4.label, t4.m);
   const t5 = conditionMultiplier(input.condition);
   push("condition", t5.label, t5.m);
@@ -141,7 +142,7 @@ export function computeHomeValueEstimate(
   push("trend", t7.label, t7.m);
 
   const combined = lines.reduce((acc, x) => acc * x.multiplier, 1);
-  const baseline = input.baselinePpsf * sqft;
+  const baseline = input.baselinePpsf * effectiveSqft;
   const point = Math.round(baseline * combined);
   const band = clamp(rangeBandPct, 0.03, 0.15);
   const low = Math.round(point * (1 - band));

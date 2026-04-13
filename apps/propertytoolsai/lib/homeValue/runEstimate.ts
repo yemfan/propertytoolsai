@@ -248,6 +248,7 @@ export async function runHomeValueEstimatePipeline(
       condition,
       renovation,
       marketTrend: marketBlock.trend,
+      sqftAdded: body.sqftAdded,
     },
     rangeBandPct
   );
