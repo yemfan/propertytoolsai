@@ -138,14 +138,26 @@ export async function runHomeValueEstimatePipeline(
    * property attributes (e.g., 1633 sqft, 3 bed, 3 bath, 2003)
    * but they weren't being used.
    */
+  /**
+   * Rentcast property enrichment. Use Rentcast data when the
+   * user's request body didn't explicitly provide a value.
+   * This fixes stale warehouse defaults (1500 sqft, 2 bath,
+   * Single Family) while still respecting user refinement
+   * choices from the form.
+   *
+   * Priority: user form input > Rentcast > warehouse > defaults
+   */
   const rd = rentcastBundle?.subjectDetails;
   if (rd) {
-    if (!merged.sqft && rd.sqft && rd.sqft > 0) merged.sqft = rd.sqft;
-    if (!merged.beds && rd.beds && rd.beds > 0) merged.beds = rd.beds;
-    if (!merged.baths && rd.baths && rd.baths > 0) merged.baths = rd.baths;
-    if (!merged.yearBuilt && rd.yearBuilt && rd.yearBuilt > 1800) merged.yearBuilt = rd.yearBuilt;
-    if (!merged.lotSqft && rd.lotSize && rd.lotSize > 0) merged.lotSqft = rd.lotSize;
-    if (!merged.propertyType && rd.propertyType) merged.propertyType = rd.propertyType;
+    // body.sqft/beds/baths are set when the user typed them in
+    // the refinement form. When null/undefined, the user didn't
+    // provide a value and we should use Rentcast.
+    if (body.sqft == null && rd.sqft && rd.sqft > 0) merged.sqft = rd.sqft;
+    if (body.beds == null && rd.beds && rd.beds > 0) merged.beds = rd.beds;
+    if (body.baths == null && rd.baths && rd.baths > 0) merged.baths = rd.baths;
+    if (body.yearBuilt == null && rd.yearBuilt && rd.yearBuilt > 1800) merged.yearBuilt = rd.yearBuilt;
+    if (body.lotSqft == null && rd.lotSize && rd.lotSize > 0) merged.lotSqft = rd.lotSize;
+    if (body.propertyType == null && rd.propertyType) merged.propertyType = rd.propertyType;
   }
 
   const sqft = merged.sqft && merged.sqft > 0 ? merged.sqft : DEFAULT_SQFT;

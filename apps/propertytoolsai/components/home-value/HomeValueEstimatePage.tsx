@@ -39,18 +39,11 @@ export default function HomeValuePage() {
           value={addressInput}
           onChange={setAddressInput}
           onSelect={(addr) => {
-            // Run the estimate immediately when the user picks
-            // from the autocomplete dropdown — no confirm card.
             void confirmSelectedAddress(addr);
           }}
           onSubmit={() => void startEstimateFromTypedInput()}
           isBusy={busyRefine}
           awaitingAddressConfirm={false}
-        />
-
-        <RecentHistory
-          items={history}
-          onOpen={(sessionId) => void restoreFromHistory(sessionId)}
         />
 
         {error ? (
@@ -59,8 +52,16 @@ export default function HomeValuePage() {
           </div>
         ) : null}
 
-        {/* Confirm card removed — selecting from autocomplete now
-          runs the estimate immediately. No extra step needed. */}
+        {/* Show recent estimates ONLY when there's no active result
+          (i.e., the user hasn't run an estimate yet). Once an
+          estimate is showing, Recent Estimates moves below it as
+          a compact list so the results aren't pushed down. */}
+        {!estimateResult && history.length > 0 ? (
+          <RecentHistory
+            items={history}
+            onOpen={(sessionId) => void restoreFromHistory(sessionId)}
+          />
+        ) : null}
 
         <EstimateResultsSection
           uiState={uiState}
@@ -75,6 +76,34 @@ export default function HomeValuePage() {
           onUnlockReport={() => void unlockReport()}
           unlockError={unlockError}
         />
+
+        {/* Recent estimates as a compact list below the results */}
+        {estimateResult && history.length > 0 ? (
+          <div className="rounded-2xl border border-gray-200 bg-white p-5">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Recent Estimates</h3>
+            <div className="divide-y divide-gray-100">
+              {history.map((item) => (
+                <button
+                  key={item.sessionId}
+                  type="button"
+                  onClick={() => void restoreFromHistory(item.sessionId)}
+                  className="flex w-full items-center justify-between gap-4 py-3 text-left transition hover:bg-gray-50 rounded-lg px-2 -mx-2"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{item.address?.fullAddress ?? "Unknown"}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {item.confidence} · {new Date(item.savedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-gray-900">${item.estimateValue?.toLocaleString()}</p>
+                    <p className="text-[11px] text-gray-400">${item.rangeLow?.toLocaleString()} – ${item.rangeHigh?.toLocaleString()}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
