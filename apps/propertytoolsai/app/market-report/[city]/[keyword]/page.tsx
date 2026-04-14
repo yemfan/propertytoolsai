@@ -35,6 +35,7 @@ export async function generateMetadata({
   return {
     title: `${keyword} | ${city.city}, ${city.state} | PropertyTools AI`,
     description: `Track ${keyword} with local pricing and trend data for ${city.city}, ${city.state}.`,
+    alternates: { canonical: `/market-report/${p.city}/${p.keyword}` },
   };
 }
 

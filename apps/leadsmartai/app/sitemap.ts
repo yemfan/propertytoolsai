@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { getKeywordPagesForCity, TRAFFIC_CITIES } from "@/lib/trafficSeo";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const base = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
   const now = new Date();
 
   const staticRoutes = [

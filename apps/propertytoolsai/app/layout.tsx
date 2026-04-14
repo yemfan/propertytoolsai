@@ -79,9 +79,13 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
     apple: [{ url: "/apple-icon.png", sizes: "180x180" }],
   },
-  alternates: {
-    canonical: SITE_URL,
-  },
+  // NOTE: Do NOT set a root-level canonical here. Next.js merges root
+  // layout metadata into every child page that doesn't override it,
+  // which causes all subpages (e.g. /about, /blog, /contact) to emit
+  // <link rel="canonical" href="https://www.propertytoolsai.com/"> —
+  // telling Google every page is a duplicate of the homepage.
+  // Individual pages should set their own canonical via generateMetadata.
+  alternates: {},
 };
 
 /**

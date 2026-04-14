@@ -4,6 +4,9 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Blog | PropertyTools AI",
   description: "Real estate investing, cap rate, mortgages, and property analysis articles.",
+  alternates: {
+    canonical: "/blog",
+  },
 };
 
 const POSTS: { href: string; title: string }[] = [

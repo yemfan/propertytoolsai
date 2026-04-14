@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: "LeadSmart AI — The AI Deal Engine for Real Estate",
   description:
     "We don’t just generate leads — we turn them into closed deals, automatically. Capture, qualify, and convert buyers and sellers with AI. Focus on closing, not chasing.",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "LeadSmart AI — The AI Deal Engine for Real Estate",
     description:

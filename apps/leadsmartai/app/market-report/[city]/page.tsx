@@ -28,6 +28,7 @@ export async function generateMetadata({
   return {
     title: `${city.city}, ${city.state} Market Report | LeadSmart AI`,
     description: `Current housing trends, demand, and pricing movement in ${city.city}, ${city.state}, including ${keywords[0]} analysis.`,
+    alternates: { canonical: `/market-report/${p.city}` },
   };
 }
 

@@ -34,6 +34,7 @@ export async function generateMetadata({
   return {
     title: `${keyword} | ${city.city}, ${city.state} Seller Guide | LeadSmart AI`,
     description: `Localized selling strategy for ${keyword} in ${city.city}, ${city.state}.`,
+    alternates: { canonical: `/sell-house/${p.city}/${p.keyword}` },
   };
 }
 

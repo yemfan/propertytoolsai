@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: "PropertyTools AI — Free AI Real Estate Tools",
   description:
     "Instantly check your home value, compare properties, and estimate your mortgage — free AI-powered tools for buyers, sellers, and investors.",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "PropertyTools AI — Smarter Tools to Buy, Sell, or Finance a Home",
     description:

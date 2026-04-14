@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: "About PropertyTools AI",
   description:
     "Learn how PropertyTools AI empowers home buyers, sellers, and investors with intelligent real estate tools and insights.",
+  alternates: {
+    canonical: "/about",
+  },
   keywords: [
     "about PropertyTools AI",
     "real estate tools",

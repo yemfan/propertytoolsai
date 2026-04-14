@@ -1,4 +1,14 @@
+import type { Metadata } from "next";
 import MarketingContentLayout from "@/components/layout/MarketingContentLayout";
+
+export const metadata: Metadata = {
+  title: "Contact Us | PropertyTools AI",
+  description:
+    "Get in touch with the PropertyTools AI team for support, partnerships, or press inquiries.",
+  alternates: {
+    canonical: "/contact",
+  },
+};
 
 export default function ContactPage() {
   return (

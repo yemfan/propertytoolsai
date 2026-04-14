@@ -5,6 +5,9 @@ export const metadata = {
   title: "Pricing | LeadSmart AI",
   description:
     "Free, Pro ($49), Elite ($99), and Team ($199) plans — full feature comparison for AI lead management, CRM, and automation.",
+  alternates: {
+    canonical: "/pricing",
+  },
 };
 
 export default async function ConsumerPricingPage() {
