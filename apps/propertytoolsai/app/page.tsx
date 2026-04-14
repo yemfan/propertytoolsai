@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
-import dynamic from "next/dynamic";
 import PropertyToolsHomePage from "@/components/landing/PropertyToolsHomePage";
-
-const ExitIntentPopup = dynamic(
-  () => import("@/components/marketing/ExitIntentPopup"),
-  { ssr: false }
-);
+import { ExitIntentPopupLoader } from "@/components/marketing/ExitIntentPopupLoader";
 
 export const metadata: Metadata = {
   title: "PropertyTools AI — Free AI Real Estate Tools",
@@ -25,7 +20,7 @@ export default function HomePage() {
   return (
     <>
       <PropertyToolsHomePage />
-      <ExitIntentPopup />
+      <ExitIntentPopupLoader />
     </>
   );
 }
