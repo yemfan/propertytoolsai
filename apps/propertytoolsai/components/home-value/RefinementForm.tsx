@@ -210,7 +210,7 @@ export function RefinementForm({ details, onChange, onRefresh, isBusy }: Props) 
                     {details.renovation.scope === "partial" ? "Rooms renovated" : "Rooms added"}
                   </label>
                   <div className="flex flex-wrap gap-3">
-                    {(["kitchen", "bath", "bedroom"] as const).map((room) => {
+                    {(["kitchen", "bath", "bedroom", "other"] as const).map((room) => {
                       const checked = details.renovation?.rooms?.includes(room) ?? false;
                       return (
                         <label

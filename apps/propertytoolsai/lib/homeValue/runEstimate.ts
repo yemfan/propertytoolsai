@@ -284,16 +284,17 @@ export async function runHomeValueEstimatePipeline(
    *
    * Strategy:
    * - 0 local comps → use Rentcast AVM directly
-   * - 1-3 comps → blend 70% AVM + 30% comp-based
-   * - 4+ comps → blend 50% AVM + 50% comp-based
+   * - 1-3 comps → blend 80% AVM + 20% comp-based
+   * - 4+ comps → blend 65% AVM + 35% comp-based
    *
-   * This prevents wild over/under-estimates while still respecting
-   * user refinement inputs (condition, renovation) from the comp-
-   * based calculation.
+   * The Rentcast AVM is an ML model trained on nationwide MLS data
+   * and closely tracks Zillow/Redfin estimates. Our comp-based PPSF
+   * calculation is a simpler heuristic that can diverge significantly,
+   * so we weight the professional AVM more heavily.
    */
   if (rentcastAvm && rentcastAvm > 0) {
     const avmWeight =
-      pricedCompCount === 0 ? 1.0 : pricedCompCount <= 3 ? 0.7 : 0.5;
+      pricedCompCount === 0 ? 1.0 : pricedCompCount <= 3 ? 0.8 : 0.65;
     const compWeight = 1 - avmWeight;
 
     const blended = Math.round(avmWeight * rentcastAvm + compWeight * estimate.point);
