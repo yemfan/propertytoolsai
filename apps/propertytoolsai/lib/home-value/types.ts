@@ -32,7 +32,7 @@ export type EstimateDetails = {
     done: boolean;
     year?: number;
     scope?: "full" | "partial" | "addition";
-    rooms?: ("kitchen" | "bath" | "bedroom")[];
+    rooms?: ("kitchen" | "bath" | "bedroom" | "other")[];
     sqftAdded?: number;
   };
 };

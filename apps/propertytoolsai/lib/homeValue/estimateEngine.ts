@@ -33,8 +33,8 @@ function clamp(n: number, min: number, max: number) {
 
 function propertyTypeMultiplier(type: string): { m: number; label: string } {
   const t = type.toLowerCase();
-  if (/condo|apartment|coop/.test(t)) return { m: 0.92, label: "Condo / apartment adjustment" };
-  if (/town|row/.test(t)) return { m: 0.97, label: "Townhome adjustment" };
+  if (/condo|apartment|coop/.test(t)) return { m: 0.97, label: "Condo / apartment adjustment" };
+  if (/town|row/.test(t)) return { m: 0.98, label: "Townhome adjustment" };
   if (/multi|duplex|triplex|fourplex/.test(t)) return { m: 1.05, label: "Multi-unit adjustment" };
   return { m: 1, label: "Single-family baseline" };
 }
@@ -57,11 +57,11 @@ function ageMultiplier(yearBuilt: number | null): { m: number; label: string } {
   const age = clamp(y - yearBuilt, 0, 120);
   // Newer = slight premium up to 15 yrs, then gradual discount
   let m = 1;
-  if (age <= 5) m = 1.04;
-  else if (age <= 15) m = 1.02;
+  if (age <= 5) m = 1.03;
+  else if (age <= 15) m = 1.01;
   else if (age <= 30) m = 1;
-  else if (age <= 50) m = 0.97;
-  else m = 0.93;
+  else if (age <= 50) m = 0.98;
+  else m = 0.96;
   return { m, label: `Age (${yearBuilt}, ~${age} yrs)` };
 }
 
