@@ -392,6 +392,8 @@ export async function runHomeValueEstimatePipeline(
       pricedCount: pricedCompCount,
       totalConsidered: totalComp,
     },
+    /** Rentcast comparable sales — used as fallback when warehouse has no comps */
+    rentcastComps: rentcastBundle?.comps ?? [],
     recommendations,
     intentInference,
   };

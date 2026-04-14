@@ -99,6 +99,32 @@ export async function POST(req: Request) {
     });
 
     /**
+     * Fall back to Rentcast pipeline comps when the local warehouse
+     * returned zero comps. Rentcast comps come with lat/lng from
+     * the API so they're more map-friendly.
+     */
+    if (compsMapped.length === 0 && result.rentcastComps.length > 0) {
+      console.log(`[home-value-estimate] Warehouse returned 0 comps — falling back to ${result.rentcastComps.length} Rentcast comps`);
+      for (const rc of result.rentcastComps) {
+        compsMapped.push({
+          id: rc.id,
+          address: rc.address,
+          soldPrice: rc.soldPrice,
+          soldDate: rc.soldDate,
+          pricePerSqft: rc.pricePerSqft,
+          sqft: rc.sqft,
+          beds: rc.beds,
+          baths: rc.baths,
+          distanceMiles: rc.distanceMiles ?? 0,
+          similarityScore: 0,
+          matchReasons: [],
+          lat: rc.lat,
+          lng: rc.lng,
+        });
+      }
+    }
+
+    /**
      * Geocode comps that lack lat/lng so they show on the map.
      * Many warehouse property records don't have coordinates.
      * Batch-geocode up to 10 comps in parallel (Mapbox free tier
