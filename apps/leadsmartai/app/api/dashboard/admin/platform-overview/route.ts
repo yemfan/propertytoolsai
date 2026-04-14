@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const auth = await requireRoleRoute(["admin"]);
-  if (!auth.ok) return auth.response;
+  if (auth.ok === false) return auth.response;
 
   try {
     const data = await getPlatformOverview();
