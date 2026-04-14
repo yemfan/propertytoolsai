@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LifeBuoy, Mail, MessageCircle } from "lucide-react";
 import ContactForm from "./ContactForm";
+import JsonLd from "@/components/JsonLd";
 
 export const metadata: Metadata = {
   title: "Contact Us | LeadSmart AI",
@@ -16,6 +17,17 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "ContactPoint",
+          contactType: "Customer Service",
+          url: "https://leadsmart-ai.com/contact",
+          name: "LeadSmart AI Contact",
+          availableLanguage: ["en"],
+          email: "support@leadsmart-ai.com",
+        }}
+      />
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
           Get in touch

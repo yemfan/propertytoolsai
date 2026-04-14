@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import MarketingContentLayout from "@/components/layout/MarketingContentLayout";
+import JsonLd from "@/components/JsonLd";
 
 export const metadata: Metadata = {
   title: "Contact Us | PropertyTools AI",
@@ -12,15 +13,27 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <MarketingContentLayout
-      eyebrow="Contact"
-      title="Get in touch"
-      intro="We’d love to hear from buyers, sellers, agents, and partners."
-    >
-      <p>
-        For support, partnerships, or press inquiries, use the contact path linked from your account or campaign
-        materials. We aim to respond within one business day.
-      </p>
-    </MarketingContentLayout>
+    <>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "ContactPoint",
+          contactType: "Customer Service",
+          url: "https://propertytoolsai.com/contact",
+          name: "PropertyTools AI Contact",
+          availableLanguage: ["en"],
+        }}
+      />
+      <MarketingContentLayout
+        eyebrow="Contact"
+        title="Get in touch"
+        intro="We’d love to hear from buyers, sellers, agents, and partners."
+      >
+        <p>
+          For support, partnerships, or press inquiries, use the contact path linked from your account or campaign
+          materials. We aim to respond within one business day.
+        </p>
+      </MarketingContentLayout>
+    </>
   );
 }

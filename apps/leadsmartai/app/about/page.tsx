@@ -3,10 +3,31 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import JsonLd from "@/components/JsonLd";
 
 export default function AboutLeadSmartAIPage() {
   return (
     <main className="bg-white text-slate-900">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "LeadSmart AI",
+          description:
+            "LeadSmart AI helps real estate agents and financing professionals capture, qualify, and convert leads with AI — so they can spend less time chasing and more time closing. The AI growth engine for real estate professionals.",
+          url: "https://leadsmart-ai.com",
+          logo: "https://leadsmart-ai.com/logo.png",
+          sameAs: [
+            "https://twitter.com/leadsmart-ai",
+            "https://linkedin.com/company/leadsmart-ai",
+          ],
+          contactPoint: {
+            "@type": "ContactPoint",
+            url: "https://leadsmart-ai.com/contact",
+            contactType: "Customer Service",
+          },
+        }}
+      />
       {/* Hero */}
       <section className="border-b border-slate-100 bg-gradient-to-b from-slate-50 to-white">
         <div className="mx-auto max-w-7xl px-6 py-20 md:py-24">

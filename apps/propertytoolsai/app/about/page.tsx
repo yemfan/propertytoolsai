@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import JsonLd from "@/components/JsonLd";
 
 export const metadata: Metadata = {
   title: "About PropertyTools AI",
@@ -21,6 +22,26 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "PropertyTools AI",
+          description:
+            "PropertyTools AI empowers home buyers, sellers, and investors with intelligent real estate tools and insights. Our platform provides instant property valuations, financing analysis, and AI-powered property comparisons.",
+          url: "https://propertytoolsai.com",
+          logo: "https://propertytoolsai.com/logo.png",
+          sameAs: [
+            "https://twitter.com/propertytoolsai",
+            "https://linkedin.com/company/propertytoolsai",
+          ],
+          contactPoint: {
+            "@type": "ContactPoint",
+            url: "https://propertytoolsai.com/contact",
+            contactType: "Customer Service",
+          },
+        }}
+      />
       {/* Hero */}
       <section className="px-6 py-20 text-center md:py-28">
         <div className="mx-auto max-w-4xl">

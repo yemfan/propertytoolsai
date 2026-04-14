@@ -9,12 +9,14 @@ const fontHeading = Montserrat({
   subsets: ["latin"],
   variable: "--font-heading",
   weight: ["600", "700", "800"],
+  display: "swap",
 });
 
 const fontBody = Roboto({
   subsets: ["latin"],
   variable: "--font-body",
   weight: ["400", "500", "700"],
+  display: "swap",
 });
 
 const SITE_URL = getSiteUrl().replace(/\/$/, "");
@@ -89,7 +91,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * JSON-LD structured data for Google rich results. Two graphs:
+ * JSON-LD structured data for Google rich results. Three graphs:
  *
  *   1. Organization — brand identity, logo, name. Surfaces as the
  *      knowledge panel + logo in search results.
@@ -97,6 +99,11 @@ export const metadata: Metadata = {
  *   2. WebSite with SearchAction — enables the "Sitelinks search box"
  *      in Google SERPs pointing at /home-value. Users can type an
  *      address straight into Google and land on the tool.
+ *
+ *   3. SoftwareApplication — describes PropertyTools AI as a real estate
+ *      tool with freemium pricing model (Free / Premium).
+ *      Improves E-E-A-T signals by establishing product category,
+ *      capabilities, and pricing structure.
  *
  * These are JSON.stringify'd and injected as an inline <script
  * type="application/ld+json"> in the document <head> via Next.js's
@@ -124,6 +131,22 @@ const jsonLd = [
         urlTemplate: `${SITE_URL}/home-value?q={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
+    },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: SITE_NAME,
+    applicationCategory: "FinanceApplication",
+    operatingSystem: "Web",
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    offers: {
+      "@type": "AggregateOffer",
+      priceCurrency: "USD",
+      lowPrice: "0",
+      highPrice: "0",
+      offerCount: "2",
     },
   },
 ];

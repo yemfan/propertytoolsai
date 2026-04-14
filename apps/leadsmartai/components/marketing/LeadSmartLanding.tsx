@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   BarChart3,
@@ -14,10 +15,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FeatureHighlightCard } from "@/components/ui/FeatureHighlightCard";
 import { BrandCheck } from "@/components/brand/BrandCheck";
-import ExitIntentPopup from "@/components/marketing/ExitIntentPopup";
 import HeaderAuthActions from "@/components/HeaderAuthActions";
-import { SupportChatLauncher } from "@/components/support/CustomerSupportChat";
 import VslSection from "@/components/VslSection";
+
+const ExitIntentPopup = dynamic(
+  () => import("@/components/marketing/ExitIntentPopup"),
+  { ssr: false }
+);
+
+const SupportChatLauncher = dynamic(
+  () => import("@/components/support/CustomerSupportChat").then(mod => ({ default: mod.SupportChatLauncher })),
+  { ssr: false }
+);
 
 const primaryCtaHref = "/onboarding";
 const vslAnchorHref = "#vsl";

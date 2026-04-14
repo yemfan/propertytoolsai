@@ -9,12 +9,14 @@ const fontHeading = Montserrat({
   subsets: ["latin"],
   variable: "--font-heading",
   weight: ["600", "700", "800"],
+  display: "swap",
 });
 
 const fontBody = Roboto({
   subsets: ["latin"],
   variable: "--font-body",
   weight: ["400", "500", "700"],
+  display: "swap",
 });
 
 import type { Metadata } from "next";

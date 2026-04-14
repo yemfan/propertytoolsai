@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import JsonLd from "@/components/JsonLd";
 
 export const metadata: Metadata = {
   title: "Blog | PropertyTools AI",
@@ -21,6 +22,25 @@ const POSTS: { href: string; title: string }[] = [
 export default function BlogIndexPage() {
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-slate-50 via-white to-white">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "PropertyTools AI Blog",
+          description:
+            "Real estate investing, cap rate, mortgages, and property analysis articles.",
+          url: "https://propertytoolsai.com/blog",
+          mainEntity: {
+            "@type": "ItemList",
+            itemListElement: POSTS.map((post, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              name: post.title,
+              url: `https://propertytoolsai.com${post.href}`,
+            })),
+          },
+        }}
+      />
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.28]"
         aria-hidden
