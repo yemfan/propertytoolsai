@@ -54,6 +54,11 @@ export default async function MarketReportKeywordPage({
   return (
     <div className="w-full max-w-6xl py-6 sm:py-10">
       <TrafficTracker pagePath={`/market-report/${city.slug}/${p.keyword}`} city={city.city} source="seo_market_report_keyword" />
+      <div className="mb-4 flex items-center gap-2">
+        <a href={`/market-report/${city.slug}`} className="text-blue-700 hover:underline">
+          ← Back to {city.city}
+        </a>
+      </div>
       <h1 className="mb-2 text-3xl font-bold text-blue-600">{keyword}</h1>
       <p className="mb-2 text-gray-600">
         Local market report content for {city.city}, {city.state}, built for long-tail SEO intent.

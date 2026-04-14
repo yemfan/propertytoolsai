@@ -53,6 +53,11 @@ export default async function SellHouseKeywordPage({
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
       <TrafficTracker pagePath={`/sell-house/${city.slug}/${p.keyword}`} city={city.city} source="seo_sell_house_keyword" />
+      <div className="mb-4 flex items-center gap-2">
+        <a href={`/sell-house/${city.slug}`} className="text-blue-700 hover:underline">
+          ← Back to {city.city}
+        </a>
+      </div>
       <h1 className="text-3xl font-bold text-slate-900">{keyword}</h1>
       <p className="mt-2 text-slate-700">
         Seller-focused local page for {city.city}. Get timing, pricing, and demand insights built for this market.

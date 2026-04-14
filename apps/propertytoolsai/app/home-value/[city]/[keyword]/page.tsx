@@ -54,6 +54,11 @@ export default async function HomeValueKeywordPage({
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
       <TrafficTracker pagePath={`/home-value/${city.slug}/${p.keyword}`} city={city.city} source="seo_home_value_keyword" />
+      <div className="mb-4 flex items-center gap-2">
+        <a href={`/home-value/${city.slug}`} className="text-blue-700 hover:underline">
+          ← Back to {city.city}
+        </a>
+      </div>
       <h1 className="text-3xl font-bold text-slate-900">{keyword}</h1>
       <p className="mt-2 text-slate-700">
         Local SEO page for {city.city}, {city.state}. Review current home value signals and build a seller-ready pricing strategy.

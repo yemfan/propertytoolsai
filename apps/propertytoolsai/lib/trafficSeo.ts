@@ -163,6 +163,8 @@ export function getRelatedPageLinks(slug: string) {
     { href: `/home-value/${slug}`, label: "Home Value Page" },
     { href: `/sell-house/${slug}`, label: "Sell House Guide" },
     { href: `/market-report/${slug}`, label: "Market Report" },
+    { href: `/blog`, label: "Real Estate Insights" },
+    { href: `/`, label: "Property Tools" },
   ];
 }
 
