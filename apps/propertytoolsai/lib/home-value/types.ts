@@ -142,6 +142,7 @@ export type SessionResponse = {
     details?: EstimateDetails;
     estimate?: EstimateResponse["estimate"];
   };
+  comps?: EstimateComp[];
 };
 
 export type LeadForm = {

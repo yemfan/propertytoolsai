@@ -163,7 +163,7 @@ export function useHomeValueEstimate() {
               },
               estimate: data.session.estimate,
               supportingData: { medianPpsf: 0 },
-              comps: [],
+              comps: data.comps ?? [],
               recommendations: { actions: [] },
             });
             setUiState("preview_ready");
@@ -378,7 +378,7 @@ export function useHomeValueEstimate() {
             },
             estimate: data.session.estimate,
             supportingData: { medianPpsf: 0 },
-            comps: [],
+            comps: data.comps ?? [],
             recommendations: { actions: [] },
           });
           setUiState("preview_ready");

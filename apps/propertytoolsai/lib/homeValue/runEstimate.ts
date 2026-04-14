@@ -4,7 +4,7 @@
  */
 import { randomUUID } from "crypto";
 import { getPropertyData } from "@/lib/getPropertyData";
-import { getPropertyByAddress, getComparables, type PropertyRow } from "@/lib/propertyService";
+import { getPropertyByAddress, getComparables, upsertPropertyWarehouse, type PropertyRow } from "@/lib/propertyService";
 import { getCityData } from "@/lib/cityDataEngine";
 import { computeConfidence } from "@/lib/homeValue/confidenceEngine";
 import {
@@ -63,6 +63,29 @@ export async function runHomeValueEstimatePipeline(
     row = await getPropertyByAddress(addressRaw);
   } catch {
     row = await getPropertyByAddress(addressRaw);
+  }
+
+  // Fix ZIP if user-provided ZIP differs from upstream (upstream APIs sometimes return wrong ZIP)
+  const userZip = body.zip?.trim();
+  if (row && userZip && row.zip_code !== userZip) {
+    try {
+      row = await upsertPropertyWarehouse({
+        address: addressRaw,
+        zip_code: userZip,
+        city: row.city ?? undefined,
+        state: row.state ?? undefined,
+        lat: row.lat ?? undefined,
+        lng: row.lng ?? undefined,
+        beds: row.beds ?? undefined,
+        baths: row.baths ?? undefined,
+        sqft: row.sqft ?? undefined,
+        year_built: row.year_built ?? undefined,
+        lot_size: row.lot_size ?? undefined,
+        property_type: row.property_type ?? undefined,
+      });
+    } catch {
+      // non-fatal: continue with possibly wrong ZIP
+    }
   }
 
   /**
