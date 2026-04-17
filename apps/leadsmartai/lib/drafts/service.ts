@@ -37,6 +37,20 @@ function initialsFor(first: string, last: string | null): string {
   return (first[0] ?? "").toUpperCase() + (last?.[0] ?? "").toUpperCase();
 }
 
+/**
+ * `message_drafts` / `templates` / `sphere_contacts` come from migrations
+ * 20260479100000 / 20260479200000 / 20260479300000. If a deploy environment
+ * hasn't run them yet, the queries below would throw "relation does not
+ * exist" and crash the drafts dashboard. We detect that specific class of
+ * error and return an empty state so the page renders the "no drafts
+ * waiting" copy instead of a red error boundary.
+ */
+function isMissingRelationError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { code?: string; message?: string };
+  return e.code === "42P01" || /does not exist|schema cache/i.test(e.message ?? "");
+}
+
 export async function listDrafts(
   agentId: string,
   status: DraftStatus | "all" = "pending",
@@ -51,7 +65,15 @@ export async function listDrafts(
   if (status !== "all") q = q.eq("status", status);
 
   const { data, error } = await q;
-  if (error) throw error;
+  if (error) {
+    if (isMissingRelationError(error)) {
+      console.warn("[drafts] message_drafts or joined table not reachable — rendering empty state", {
+        code: (error as { code?: string }).code,
+      });
+      return [];
+    }
+    throw error;
+  }
   return (data ?? []).map((row) => {
     const r = row as Record<string, unknown> & {
       sphere_contacts: {
@@ -254,10 +276,11 @@ export async function editDraft(
 }
 
 export async function countPendingDrafts(agentId: string): Promise<number> {
-  const { count } = await supabaseAdmin
+  const { count, error } = await supabaseAdmin
     .from("message_drafts")
     .select("id", { count: "exact", head: true })
     .eq("agent_id", agentId as never)
     .eq("status", "pending");
+  if (error) return 0; // fail-open for the header badge
   return count ?? 0;
 }
