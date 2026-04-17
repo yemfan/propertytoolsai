@@ -1,0 +1,108 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
+
+export type SettingsTabId = "voice" | "messages" | "tools" | "channels";
+
+type Tab = {
+  id: SettingsTabId;
+  label: string;
+  description: string;
+};
+
+const TABS: readonly Tab[] = [
+  { id: "voice", label: "Voice & Style", description: "How LeadSmart sounds." },
+  { id: "messages", label: "Messages", description: "What LeadSmart sends, and when." },
+  { id: "tools", label: "Data & Tools", description: "Links and imports you share with clients." },
+  {
+    id: "channels",
+    label: "Channels & Compliance",
+    description: "The plumbing behind every send.",
+  },
+];
+
+const isTabId = (v: string): v is SettingsTabId =>
+  TABS.some((t) => t.id === v);
+
+export default function SettingsTabsClient({
+  voice,
+  messages,
+  tools,
+  channels,
+}: {
+  voice: ReactNode;
+  messages: ReactNode;
+  tools: ReactNode;
+  channels: ReactNode;
+}) {
+  // Default tab is "messages" per handoff — returning agents are usually here
+  // to tune a rule, not change their personality.
+  const [activeTab, setActiveTab] = useState<SettingsTabId>("messages");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash.replace("#", "");
+    if (isTabId(hash)) setActiveTab(hash);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const target = `#${activeTab}`;
+    if (window.location.hash !== target) {
+      window.history.replaceState(null, "", target);
+    }
+  }, [activeTab]);
+
+  const active = TABS.find((t) => t.id === activeTab) ?? TABS[1];
+
+  const body =
+    activeTab === "voice"
+      ? voice
+      : activeTab === "messages"
+        ? messages
+        : activeTab === "tools"
+          ? tools
+          : channels;
+
+  return (
+    <>
+      <nav
+        aria-label="Settings sections"
+        className="sticky top-0 z-10 -mx-4 mb-6 border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 sm:-mx-6"
+      >
+        <div
+          role="tablist"
+          className="mx-auto flex max-w-3xl gap-6 overflow-x-auto px-4 sm:px-6"
+        >
+          {TABS.map((tab) => {
+            const isActive = tab.id === activeTab;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveTab(tab.id)}
+                className={`whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "border-brand-accent text-brand-accent"
+                    : "border-transparent text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      <div className="mb-5">
+        <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
+        <p className="mt-0.5 text-sm text-gray-500">{active.description}</p>
+      </div>
+
+      <div className="space-y-4">{body}</div>
+    </>
+  );
+}

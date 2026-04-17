@@ -1,0 +1,341 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import type { ParsedSphereRow, CommitRow } from "@/lib/sphere/import";
+
+type ParseResponse = {
+  ok: boolean;
+  parsed?: { rows: ParsedSphereRow[]; headers: string[]; skipped: number };
+  error?: string;
+};
+
+type CommitResponse = {
+  ok: boolean;
+  result?: { inserted: number; errors: string[] };
+  error?: string;
+};
+
+type UIRow = ParsedSphereRow & {
+  include: boolean;
+  confirmedOptIn: boolean;
+};
+
+export default function SphereImportClient() {
+  const [file, setFile] = useState<File | null>(null);
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [rows, setRows] = useState<UIRow[] | null>(null);
+  const [skipped, setSkipped] = useState(0);
+
+  const [committing, setCommitting] = useState(false);
+  const [commitResult, setCommitResult] = useState<CommitResponse["result"] | null>(null);
+  const [commitError, setCommitError] = useState<string | null>(null);
+
+  const stats = useMemo(() => {
+    const total = rows?.length ?? 0;
+    const included = rows?.filter((r) => r.include).length ?? 0;
+    const optIns = rows?.filter((r) => r.include && r.confirmedOptIn).length ?? 0;
+    const withErrors = rows?.filter((r) => r.errors.length > 0).length ?? 0;
+    return { total, included, optIns, withErrors };
+  }, [rows]);
+
+  async function handleParse() {
+    if (!file) {
+      setParseError("Choose a CSV file first.");
+      return;
+    }
+    setParsing(true);
+    setParseError(null);
+    setCommitResult(null);
+    setCommitError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/dashboard/sphere/import", { method: "POST", body: form });
+      const data = (await res.json()) as ParseResponse;
+      if (!res.ok || !data.ok || !data.parsed) {
+        throw new Error(data.error || "Parse failed");
+      }
+      const uiRows: UIRow[] = data.parsed.rows.map((r) => ({
+        ...r,
+        include: r.errors.length === 0,
+        confirmedOptIn: false, // spec §2.8 — user must explicitly tick
+      }));
+      setRows(uiRows);
+      setSkipped(data.parsed.skipped);
+    } catch (e: unknown) {
+      setParseError(e instanceof Error ? e.message : "Parse failed");
+    } finally {
+      setParsing(false);
+    }
+  }
+
+  async function handleCommit() {
+    if (!rows) return;
+    const payload: CommitRow[] = rows
+      .filter((r) => r.include)
+      .map((r) => ({
+        firstName: r.firstName,
+        lastName: r.lastName,
+        email: r.email,
+        phone: r.phone,
+        address: r.address,
+        closingAddress: r.closingAddress,
+        closingDate: r.closingDate,
+        closingPrice: r.closingPrice,
+        relationshipType: r.relationshipType,
+        relationshipTag: r.relationshipTag,
+        preferredLanguage: r.preferredLanguage,
+        anniversaryOptIn: r.confirmedOptIn,
+      }));
+    if (!payload.length) {
+      setCommitError("No rows selected.");
+      return;
+    }
+    setCommitting(true);
+    setCommitError(null);
+    try {
+      const res = await fetch("/api/dashboard/sphere/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows: payload }),
+      });
+      const data = (await res.json()) as CommitResponse;
+      if (!res.ok || !data.ok || !data.result) {
+        throw new Error(data.error || "Import failed");
+      }
+      setCommitResult(data.result);
+      // Clear the included rows so the user sees progress.
+      setRows((prev) =>
+        prev ? prev.map((r) => (r.include ? { ...r, include: false } : r)) : prev,
+      );
+    } catch (e: unknown) {
+      setCommitError(e instanceof Error ? e.message : "Import failed");
+    } finally {
+      setCommitting(false);
+    }
+  }
+
+  function update(i: number, patch: Partial<UIRow>) {
+    setRows((prev) =>
+      prev ? prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)) : prev,
+    );
+  }
+
+  function bulkOptIn(value: boolean) {
+    setRows((prev) =>
+      prev
+        ? prev.map((r) =>
+            r.include && r.closingDate ? { ...r, confirmedOptIn: value } : r,
+          )
+        : prev,
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <Link
+        href="/dashboard/sphere"
+        className="inline-flex text-sm font-medium text-gray-500 hover:text-gray-800"
+      >
+        ← Back to Sphere
+      </Link>
+
+      <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <h1 className="text-lg font-semibold text-gray-900">Import Sphere contacts</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Upload a CSV. Columns are matched by name — First name, Last name, Email, Phone,
+          Closing date, Closing price, Relationship, Tag, and Language are all recognized.
+        </p>
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          <strong>Spec §2.8:</strong> anniversary triggers do not fire until you explicitly
+          confirm each contact has consented to SMS. The CSV can pre-fill this column, but we
+          still require a per-row tick before the contact is imported with opt-in = true.
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="block text-sm text-gray-700"
+          />
+          <button
+            type="button"
+            onClick={() => void handleParse()}
+            disabled={!file || parsing}
+            className="rounded-lg bg-brand-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          >
+            {parsing ? "Parsing…" : "Parse CSV"}
+          </button>
+          {parseError && <span className="text-sm text-red-600">{parseError}</span>}
+        </div>
+      </div>
+
+      {rows && (
+        <div className="rounded-xl border border-gray-200 bg-white">
+          <div className="border-b border-gray-100 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="text-sm text-gray-700">
+                <strong>{stats.included}</strong> of {stats.total} rows included ·{" "}
+                <strong>{stats.optIns}</strong> with anniversary opt-in confirmed
+                {skipped > 0 && <> · {skipped} empty rows skipped</>}
+                {stats.withErrors > 0 && (
+                  <> · <span className="text-amber-700">{stats.withErrors} with warnings</span></>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => bulkOptIn(true)}
+                  className="rounded border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                >
+                  Confirm opt-in for all included
+                </button>
+                <button
+                  type="button"
+                  onClick={() => bulkOptIn(false)}
+                  className="rounded border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                >
+                  Uncheck all opt-ins
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleCommit()}
+                  disabled={committing || !stats.included}
+                  className="rounded-lg bg-brand-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  {committing ? "Importing…" : `Import ${stats.included} contact${stats.included === 1 ? "" : "s"}`}
+                </button>
+              </div>
+            </div>
+            {commitError && <div className="mt-2 text-sm text-red-600">{commitError}</div>}
+            {commitResult && (
+              <div className="mt-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">
+                ✓ Inserted {commitResult.inserted} contact{commitResult.inserted === 1 ? "" : "s"}.
+                {commitResult.errors.length > 0 && (
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-xs text-green-800">
+                      {commitResult.errors.length} warnings
+                    </summary>
+                    <ul className="mt-1 list-disc pl-5 text-xs text-green-800">
+                      {commitResult.errors.map((e, i) => (
+                        <li key={i}>{e}</li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="max-h-[70vh] overflow-auto">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-gray-50">
+                <tr>
+                  <Th>Include</Th>
+                  <Th>Name</Th>
+                  <Th>Relationship</Th>
+                  <Th>Closing</Th>
+                  <Th>Email / Phone</Th>
+                  <Th>Opt-in ✓</Th>
+                  <Th>Warnings</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {rows.map((r, i) => (
+                  <tr key={i} className={r.errors.length ? "bg-amber-50/40" : ""}>
+                    <td className="px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={r.include}
+                        onChange={(e) => update(i, { include: e.target.checked })}
+                        className="h-4 w-4 accent-brand-accent"
+                        aria-label={`Include row ${r.rowNumber}`}
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="font-medium text-gray-900">
+                        {r.firstName} {r.lastName ?? ""}
+                      </div>
+                      {r.address && (
+                        <div className="text-[11px] text-gray-500">{r.address}</div>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-gray-600">
+                        {r.relationshipType.replace("_", " ")}
+                      </span>
+                      {r.relationshipTag && (
+                        <div className="mt-0.5 text-[11px] text-gray-500 italic">
+                          {r.relationshipTag}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {r.closingDate ? (
+                        <>
+                          <div>{r.closingDate}</div>
+                          {r.closingPrice && (
+                            <div className="text-[11px] text-gray-500">
+                              ${r.closingPrice.toLocaleString()}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {r.email && <div className="truncate text-gray-700">{r.email}</div>}
+                      {r.phone && <div className="text-[11px] text-gray-500">{r.phone}</div>}
+                      {!r.email && !r.phone && <span className="text-gray-400">—</span>}
+                    </td>
+                    <td className="px-3 py-2">
+                      <label className="inline-flex items-center gap-1">
+                        <input
+                          type="checkbox"
+                          checked={r.confirmedOptIn}
+                          disabled={!r.include || !r.closingDate}
+                          onChange={(e) => update(i, { confirmedOptIn: e.target.checked })}
+                          className="h-4 w-4 accent-brand-accent disabled:opacity-40"
+                          aria-label={`Confirm anniversary opt-in for ${r.firstName}`}
+                        />
+                        {r.csvAnniversaryOptIn && (
+                          <span
+                            className="text-[9px] uppercase tracking-wide text-gray-400"
+                            title="CSV indicated opt-in — still requires explicit confirmation"
+                          >
+                            csv
+                          </span>
+                        )}
+                      </label>
+                    </td>
+                    <td className="px-3 py-2">
+                      {r.errors.length > 0 && (
+                        <ul className="list-disc space-y-0.5 pl-4 text-[11px] text-amber-700">
+                          {r.errors.map((e, j) => (
+                            <li key={j}>{e}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Th({ children }: { children: React.ReactNode }) {
+  return (
+    <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+      {children}
+    </th>
+  );
+}

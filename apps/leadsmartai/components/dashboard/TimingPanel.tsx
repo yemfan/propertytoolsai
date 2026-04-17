@@ -1,0 +1,282 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import type { AgentMessageSettings } from "@/lib/agent-messaging/types";
+
+type State = Pick<
+  AgentMessageSettings,
+  | "quietHoursStart"
+  | "quietHoursEnd"
+  | "useContactTimezone"
+  | "noSundayMorning"
+  | "pauseChineseNewYear"
+  | "maxPerContactPerDay"
+  | "pauseOnReplyDays"
+>;
+
+const DEFAULT_STATE: State = {
+  quietHoursStart: "21:00",
+  quietHoursEnd: "08:00",
+  useContactTimezone: true,
+  noSundayMorning: true,
+  pauseChineseNewYear: true,
+  maxPerContactPerDay: 2,
+  pauseOnReplyDays: 7,
+};
+
+function same(a: State, b: State): boolean {
+  return (
+    a.quietHoursStart === b.quietHoursStart &&
+    a.quietHoursEnd === b.quietHoursEnd &&
+    a.useContactTimezone === b.useContactTimezone &&
+    a.noSundayMorning === b.noSundayMorning &&
+    a.pauseChineseNewYear === b.pauseChineseNewYear &&
+    a.maxPerContactPerDay === b.maxPerContactPerDay &&
+    a.pauseOnReplyDays === b.pauseOnReplyDays
+  );
+}
+
+export default function TimingPanel() {
+  const [state, setState] = useState<State>(DEFAULT_STATE);
+  const [saved, setSaved] = useState<State>(DEFAULT_STATE);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const isDirty = !same(state, saved);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/dashboard/agent-message-settings");
+      const data = (await res.json()) as {
+        ok?: boolean;
+        settings?: AgentMessageSettings;
+        error?: string;
+      };
+      if (!res.ok || !data.ok || !data.settings) {
+        throw new Error(data.error || "Failed to load");
+      }
+      const next: State = {
+        quietHoursStart: data.settings.quietHoursStart,
+        quietHoursEnd: data.settings.quietHoursEnd,
+        useContactTimezone: data.settings.useContactTimezone,
+        noSundayMorning: data.settings.noSundayMorning,
+        pauseChineseNewYear: data.settings.pauseChineseNewYear,
+        maxPerContactPerDay: data.settings.maxPerContactPerDay,
+        pauseOnReplyDays: data.settings.pauseOnReplyDays,
+      };
+      setState(next);
+      setSaved(next);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Load failed");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function save() {
+    setSaving(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/dashboard/agent-message-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        settings?: AgentMessageSettings;
+        error?: string;
+      };
+      if (!res.ok || !data.ok || !data.settings) {
+        throw new Error(data.error || "Save failed");
+      }
+      const next: State = {
+        quietHoursStart: data.settings.quietHoursStart,
+        quietHoursEnd: data.settings.quietHoursEnd,
+        useContactTimezone: data.settings.useContactTimezone,
+        noSundayMorning: data.settings.noSundayMorning,
+        pauseChineseNewYear: data.settings.pauseChineseNewYear,
+        maxPerContactPerDay: data.settings.maxPerContactPerDay,
+        pauseOnReplyDays: data.settings.pauseOnReplyDays,
+      };
+      setState(next);
+      setSaved(next);
+      setMessage("Saved.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="text-sm text-gray-500" aria-busy="true">
+        Loading timing rules…
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <Label>Quiet hours begin</Label>
+          <Hint>No outbound SMS or email after this time.</Hint>
+          <input
+            type="time"
+            value={state.quietHoursStart}
+            onChange={(e) => setState((s) => ({ ...s, quietHoursStart: e.target.value }))}
+            className="mt-1 block w-full max-w-[8rem] rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
+          <Label>Quiet hours end</Label>
+          <Hint>Messages resume at this time.</Hint>
+          <input
+            type="time"
+            value={state.quietHoursEnd}
+            onChange={(e) => setState((s) => ({ ...s, quietHoursEnd: e.target.value }))}
+            className="mt-1 block w-full max-w-[8rem] rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-3 border-t border-gray-100 pt-4">
+        <CheckboxRow
+          checked={state.useContactTimezone}
+          onChange={(v) => setState((s) => ({ ...s, useContactTimezone: v }))}
+          label="Use the contact's local timezone"
+          hint="Your 9pm cutoff becomes their 9pm cutoff. Recommended for out-of-state referrals."
+        />
+        <CheckboxRow
+          checked={state.noSundayMorning}
+          onChange={(v) => setState((s) => ({ ...s, noSundayMorning: v }))}
+          label="No outbound messages Sunday before noon"
+          hint="A real-estate-specific rule — Sunday morning texting annoys people."
+        />
+        <CheckboxRow
+          checked={state.pauseChineseNewYear}
+          onChange={(v) => setState((s) => ({ ...s, pauseChineseNewYear: v }))}
+          label="Pause all outbound during Chinese New Year (5-day window)"
+          hint="Automatically detected by contact language preference. Resumes the Monday after."
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 border-t border-gray-100 pt-4 sm:grid-cols-2">
+        <div>
+          <Label>Max messages per contact per day</Label>
+          <Hint>Across SMS and email combined. Hard cap — no template overrides.</Hint>
+          <Stepper
+            value={state.maxPerContactPerDay}
+            onChange={(v) => setState((s) => ({ ...s, maxPerContactPerDay: v }))}
+            min={1}
+            max={5}
+          />
+        </div>
+        <div>
+          <Label>Pause triggers for (days) after a contact replies</Label>
+          <Hint>Gives you time to take over the conversation without the AI talking over you.</Hint>
+          <Stepper
+            value={state.pauseOnReplyDays}
+            onChange={(v) => setState((s) => ({ ...s, pauseOnReplyDays: v }))}
+            min={0}
+            max={30}
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 border-t border-gray-100 pt-4">
+        <button
+          type="button"
+          onClick={() => void save()}
+          disabled={saving || !isDirty}
+          className="rounded-lg bg-brand-accent text-white text-sm font-medium px-4 py-2 disabled:opacity-50"
+        >
+          {saving ? "Saving…" : "Save"}
+        </button>
+        {message ? <span className="text-sm text-green-700">{message}</span> : null}
+        {error ? <span className="text-sm text-red-600">{error}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return <div className="text-[11px] font-medium text-gray-500">{children}</div>;
+}
+function Hint({ children }: { children: React.ReactNode }) {
+  return <div className="text-[11px] text-gray-400 mb-1.5">{children}</div>;
+}
+
+function CheckboxRow({
+  checked,
+  onChange,
+  label,
+  hint,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 accent-brand-accent"
+      />
+      <span>
+        <span className="block text-sm font-medium text-gray-900">{label}</span>
+        <span className="block text-xs text-gray-500">{hint}</span>
+      </span>
+    </label>
+  );
+}
+
+function Stepper({
+  value,
+  onChange,
+  min,
+  max,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+}) {
+  return (
+    <div className="mt-1 inline-flex items-center rounded-lg border border-gray-300 bg-white">
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(min, value - 1))}
+        disabled={value <= min}
+        aria-label="Decrement"
+        className="px-3 py-2 text-gray-600 disabled:opacity-30"
+      >
+        −
+      </button>
+      <div className="min-w-[2ch] px-2 text-center text-sm font-semibold tabular-nums">{value}</div>
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(max, value + 1))}
+        disabled={value >= max}
+        aria-label="Increment"
+        className="px-3 py-2 text-gray-600 disabled:opacity-30"
+      >
+        +
+      </button>
+    </div>
+  );
+}
