@@ -1,0 +1,68 @@
+# Lighthouse CI — Core Web Vitals monitoring against propertytoolsai.com.
+#
+# Scope per validation report PERF-01: we need a CWV baseline so future
+# ship regressions are visible. This workflow runs Lighthouse against the
+# live production site and uploads full HTML reports as build artifacts.
+#
+# Triggers:
+#   - On schedule (weekdays at 13:00 UTC / 09:00 ET) — establishes trend
+#     data over time.
+#   - On manual dispatch — so a dev can run it after a risky ship.
+#
+# Thresholds are `warn` (not `error`) initially so we capture the baseline
+# without blocking anything. Once we know the production numbers, flip
+# to `error` and connect to required status checks. See NEXT STEPS below.
+
+name: Lighthouse CI
+
+on:
+  schedule:
+    - cron: "0 13 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      target_host:
+        description: "Override target host (defaults to production)"
+        required: false
+        default: "https://propertytoolsai.com"
+
+jobs:
+  lighthouse:
+    name: Run Lighthouse on production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: |
+            ${{ github.event.inputs.target_host || 'https://propertytoolsai.com' }}/
+            ${{ github.event.inputs.target_host || 'https://propertytoolsai.com' }}/home-value
+            ${{ github.event.inputs.target_host || 'https://propertytoolsai.com' }}/pricing
+            ${{ github.event.inputs.target_host || 'https://propertytoolsai.com' }}/methodology
+            ${{ github.event.inputs.target_host || 'https://propertytoolsai.com' }}/home-value/austin-tx
+          configPath: ./.lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+# NEXT STEPS (tracked in validation plan P1-5):
+#
+#   1. Once a 2-week baseline is captured, tighten assertions in
+#      .lighthouserc.json from `warn` to `error` so regressions fail CI.
+#      Target gates per the validation report:
+#        - LCP < 2.5s
+#        - CLS < 0.1
+#        - INP < 200ms
+#        - TBT < 200ms
+#
+#   2. Wire to Vercel preview deployments so each PR gets Lighthouse
+#      signal BEFORE merging, not only post-ship. Requires:
+#        - Vercel deployment-ready webhook, OR
+#        - Waiting on the GitHub deployment status from Vercel.
+#
+#   3. Add axe-core (accessibility) to the same workflow. The validation
+#      report explicitly flagged a11y as deferred — add it before any
+#      paid-acquisition push given the 50+ demographic.

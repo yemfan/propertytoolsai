@@ -104,6 +104,26 @@ export async function listSerpHubPathsForSitemap(): Promise<string[]> {
   return data.map((r) => r.path as string);
 }
 
+/**
+ * Same set as {@link listSerpHubPathsForSitemap} but with per-row
+ * `updated_at`. Used by app/sitemap.ts to emit honest per-URL lastmod
+ * (validation report SEO-03 fix).
+ */
+export async function listSerpHubEntriesForSitemap(): Promise<
+  { path: string; updatedAt: string | null }[]
+> {
+  const { data, error } = await supabaseServer
+    .from("serp_dominator_pages")
+    .select("path, updated_at")
+    .eq("status", "published")
+    .limit(10000);
+  if (error || !data) return [];
+  return data.map((r) => ({
+    path: r.path as string,
+    updatedAt: (r.updated_at as string | null) ?? null,
+  }));
+}
+
 /** Hub index: campaigns that have at least one published page (deduped, newest first). */
 export type SerpHubCampaignListItem = {
   seed_keyword: string;

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import LocalSeoLeadForm from "@/components/LocalSeoLeadForm";
 import TrafficTracker from "@/components/TrafficTracker";
+import { BreadcrumbJsonLd } from "@/components/seo/BreadcrumbJsonLd";
+import { getSiteUrl } from "@/lib/siteUrl";
 import {
   estimateKeywordRouteCount,
   formatCurrency,
@@ -51,8 +53,24 @@ export default async function MarketReportKeywordPage({
   const market = getMarketSnapshot(p.city);
   const nearby = getNearbyCities(p.city, 4);
 
+  const siteUrl = getSiteUrl().replace(/\/$/, "");
+  const pageUrl = `${siteUrl}/market-report/${city.slug}/${p.keyword}`;
+  const pageTitle = `${keyword} | ${city.city}, ${city.state} | PropertyTools AI`;
+  const pageDescription = `Track ${keyword} with local pricing and trend data for ${city.city}, ${city.state}.`;
+
   return (
     <div className="w-full max-w-6xl py-6 sm:py-10">
+      <BreadcrumbJsonLd
+        title={pageTitle}
+        description={pageDescription}
+        url={pageUrl}
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Market Report", href: "/market-report" },
+          { label: `${city.city}, ${city.state}`, href: `/market-report/${city.slug}` },
+          { label: keyword, href: `/market-report/${city.slug}/${p.keyword}` },
+        ]}
+      />
       <TrafficTracker pagePath={`/market-report/${city.slug}/${p.keyword}`} city={city.city} source="seo_market_report_keyword" />
       <div className="mb-4 flex items-center gap-2">
         <a href={`/market-report/${city.slug}`} className="text-blue-700 hover:underline">

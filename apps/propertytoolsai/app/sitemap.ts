@@ -1,28 +1,39 @@
 import type { MetadataRoute } from "next";
-import { getClusterGuidePathsForSitemap } from "@/lib/clusterGenerator/db";
-import { listSerpHubPathsForSitemap } from "@/lib/serpDominator/db";
+import { listClusterGuideEntriesForSitemap } from "@/lib/clusterGenerator/db";
+import { listSerpHubEntriesForSitemap } from "@/lib/serpDominator/db";
 import { getProgrammaticSeoUrlPaths } from "@/lib/programmaticSeo";
 import { getSeoSitemapEntries } from "@/lib/seo-generator/sitemap";
 import { getKeywordPagesForCity, TRAFFIC_CITIES } from "@/lib/trafficSeo";
 
+/**
+ * `lastModified` and `changeFrequency` are intentionally omitted for routes
+ * where we cannot produce an honest per-URL timestamp. Previously every entry
+ * was stamped with `new Date()` at generation time, which Google's spam
+ * classifier reads as a manipulation signal — a uniform lastmod across ~1,000
+ * programmatic URLs is exactly the profile the March 2024 scaled-content-abuse
+ * guidance targets. When the timestamp isn't real, the sitemap spec explicitly
+ * allows (and Google prefers) omitting it. See validation report SEO-03/QA-01.
+ *
+ * Routes that DO have real timestamps (DB-backed programmatic SEO pages via
+ * `getSeoSitemapEntries`) continue to emit a real lastModified.
+ */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001").replace(/\/$/, "");
-  const now = new Date();
 
   const programmaticToolLocationRoutes = getProgrammaticSeoUrlPaths();
 
-  let clusterGuideRoutes: string[] = [];
-  let serpHubRoutes: string[] = [];
+  let clusterGuideEntries: { path: string; updatedAt: string | null }[] = [];
+  let serpHubEntries: { path: string; updatedAt: string | null }[] = [];
   if (process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
     try {
-      clusterGuideRoutes = await getClusterGuidePathsForSitemap();
+      clusterGuideEntries = await listClusterGuideEntriesForSitemap();
     } catch {
-      clusterGuideRoutes = [];
+      clusterGuideEntries = [];
     }
     try {
-      serpHubRoutes = await listSerpHubPathsForSitemap();
+      serpHubEntries = await listSerpHubEntriesForSitemap();
     } catch {
-      serpHubRoutes = [];
+      serpHubEntries = [];
     }
   }
 
@@ -30,6 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/",
     "/guides",
     "/home-value",
+    "/methodology",
     "/affordability",
     "/match",
     "/landing/home-value",
@@ -85,20 +97,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     programmaticCitySeo = [];
   }
 
+  // Routes without a trustworthy per-URL timestamp — omit lastmod entirely.
   const pathEntries: MetadataRoute.Sitemap = [
     ...staticRoutes,
     ...seoRoutes,
     ...keywordRoutes,
     ...programmaticToolLocationRoutes,
-    ...clusterGuideRoutes,
-    ...serpHubRoutes,
   ].map((path) => ({
     url: `${base}${path}`,
-    lastModified: now,
-    changeFrequency: "weekly" as const,
     priority: path === "/" ? 1 : 0.7,
   }));
 
-  return [...pathEntries, ...programmaticCitySeo];
+  // DB-backed routes with real updated_at — emit honest lastmod.
+  const dynamicEntries: MetadataRoute.Sitemap = [
+    ...clusterGuideEntries,
+    ...serpHubEntries,
+  ].map((entry) => ({
+    url: `${base}${entry.path}`,
+    lastModified: entry.updatedAt ? new Date(entry.updatedAt) : undefined,
+    priority: 0.7,
+  }));
+
+  return [...pathEntries, ...dynamicEntries, ...programmaticCitySeo];
 }
 
