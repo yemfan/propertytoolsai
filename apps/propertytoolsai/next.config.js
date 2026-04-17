@@ -11,6 +11,22 @@ const nextConfig = {
   /** Nav-friendly URLs → existing tool routes */
   async redirects() {
     return [
+      // ──────────────────────────────────────────────────────────────────
+      // Canonical host — validation report SEO-05.
+      // lib/siteUrl.ts + app/robots.ts both declare www.propertytoolsai.com
+      // as canonical. Without a 301 from apex → www, Google splits link
+      // equity + crawl budget across the two hosts. This rule is
+      // defense-in-depth — Vercel's Domains UI typically handles this at
+      // the edge, but the Next-level rule guarantees the behavior even if
+      // the Vercel alias config drifts.
+      // ──────────────────────────────────────────────────────────────────
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "propertytoolsai.com" }],
+        destination: "https://www.propertytoolsai.com/:path*",
+        permanent: true, // 308 — preserve link equity
+      },
+      // Nav-friendly URLs → existing tool routes
       { source: "/cma-report", destination: "/smart-cma-builder", permanent: false },
       {
         source: "/market-value-trends",
