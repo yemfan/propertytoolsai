@@ -110,6 +110,27 @@ export async function getClusterGuidePathsForSitemap(): Promise<string[]> {
   return params.map((p) => buildGuidePath(p.topicSlug, p.locationSlug));
 }
 
+/**
+ * Same set as {@link getClusterGuidePathsForSitemap} but with per-row
+ * `updated_at`. Used by app/sitemap.ts to emit an honest, per-URL lastmod
+ * instead of the synthetic `new Date()` that was flagged in the April 2026
+ * validation report (SEO-03).
+ */
+export async function listClusterGuideEntriesForSitemap(): Promise<
+  { path: string; updatedAt: string | null }[]
+> {
+  const { data, error } = await supabaseServer
+    .from("seo_cluster_pages")
+    .select("topic_slug, location_slug, updated_at")
+    .eq("status", "published")
+    .limit(20000);
+  if (error || !data) return [];
+  return data.map((r) => ({
+    path: buildGuidePath(r.topic_slug as string, r.location_slug as string),
+    updatedAt: (r.updated_at as string | null) ?? null,
+  }));
+}
+
 export async function insertClusterGenerationRun(input: {
   kind?: string;
   inputSummary?: unknown;

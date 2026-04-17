@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
-import { getClusterGuidePathsForSitemap } from "@/lib/clusterGenerator/db";
-import { listSerpHubPathsForSitemap } from "@/lib/serpDominator/db";
+import { listClusterGuideEntriesForSitemap } from "@/lib/clusterGenerator/db";
+import { listSerpHubEntriesForSitemap } from "@/lib/serpDominator/db";
 import { getProgrammaticSeoUrlPaths } from "@/lib/programmaticSeo";
 import { getSeoSitemapEntries } from "@/lib/seo-generator/sitemap";
 import { getKeywordPagesForCity, TRAFFIC_CITIES } from "@/lib/trafficSeo";
@@ -22,18 +22,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const programmaticToolLocationRoutes = getProgrammaticSeoUrlPaths();
 
-  let clusterGuideRoutes: string[] = [];
-  let serpHubRoutes: string[] = [];
+  let clusterGuideEntries: { path: string; updatedAt: string | null }[] = [];
+  let serpHubEntries: { path: string; updatedAt: string | null }[] = [];
   if (process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
     try {
-      clusterGuideRoutes = await getClusterGuidePathsForSitemap();
+      clusterGuideEntries = await listClusterGuideEntriesForSitemap();
     } catch {
-      clusterGuideRoutes = [];
+      clusterGuideEntries = [];
     }
     try {
-      serpHubRoutes = await listSerpHubPathsForSitemap();
+      serpHubEntries = await listSerpHubEntriesForSitemap();
     } catch {
-      serpHubRoutes = [];
+      serpHubEntries = [];
     }
   }
 
@@ -97,19 +97,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     programmaticCitySeo = [];
   }
 
+  // Routes without a trustworthy per-URL timestamp — omit lastmod entirely.
   const pathEntries: MetadataRoute.Sitemap = [
     ...staticRoutes,
     ...seoRoutes,
     ...keywordRoutes,
     ...programmaticToolLocationRoutes,
-    ...clusterGuideRoutes,
-    ...serpHubRoutes,
   ].map((path) => ({
     url: `${base}${path}`,
-    // lastModified + changeFrequency intentionally omitted — see file header.
     priority: path === "/" ? 1 : 0.7,
   }));
 
-  return [...pathEntries, ...programmaticCitySeo];
+  // DB-backed routes with real updated_at — emit honest lastmod.
+  const dynamicEntries: MetadataRoute.Sitemap = [
+    ...clusterGuideEntries,
+    ...serpHubEntries,
+  ].map((entry) => ({
+    url: `${base}${entry.path}`,
+    lastModified: entry.updatedAt ? new Date(entry.updatedAt) : undefined,
+    priority: 0.7,
+  }));
+
+  return [...pathEntries, ...dynamicEntries, ...programmaticCitySeo];
 }
 
