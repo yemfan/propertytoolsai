@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { Montserrat, Roboto } from "next/font/google";
 import AuthProvider from "@/components/AuthProvider";
 import AppShell from "@/components/AppShell";
+import { CookieConsentProvider } from "@/components/cookie-consent/CookieConsent";
 import { getSiteUrl } from "@/lib/siteUrl";
 
 const fontHeading = Montserrat({
@@ -178,7 +179,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           Skip to content
         </a>
         <AuthProvider>
-          <AppShell>{children}</AppShell>
+          <CookieConsentProvider>
+            <AppShell>{children}</AppShell>
+          </CookieConsentProvider>
         </AuthProvider>
       </body>
     </html>

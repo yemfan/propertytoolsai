@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CookieSettingsLink } from "@/components/cookie-consent/CookieConsent";
 
 const productLinks = [
   { label: "Lead Management", href: "/dashboard" },
@@ -130,9 +131,12 @@ export default function Footer() {
             </span>
           </div>
 
-          <p className="text-xs text-slate-400 dark:text-slate-500">
-            &copy; {new Date().getFullYear()} LeadSmart AI. All rights reserved.
-          </p>
+          <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500">
+            <CookieSettingsLink className="hover:text-[#0072ce] hover:underline dark:hover:text-[#4da3e8]" />
+            <span>
+              &copy; {new Date().getFullYear()} LeadSmart AI. All rights reserved.
+            </span>
+          </div>
         </div>
       </div>
     </footer>
