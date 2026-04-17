@@ -98,6 +98,16 @@ function SignupForm() {
           if (!missingUserId) throw ptErr;
         }
 
+        // Same TCPA persistence as the signup branch below — fire-and-forget.
+        if (smsConsent && phone.trim()) {
+          void fetch("/api/consent/sms", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ version: "v1" }),
+          }).catch(() => {});
+        }
+
         const after = safeInternalRedirect(searchParams.get("redirect"));
         router.push(after ?? "/");
       } catch (err: unknown) {
@@ -182,6 +192,19 @@ function SignupForm() {
         if (!missingUserId) {
           throw ptErr1;
         }
+      }
+
+      // TCPA audit: persist consent via the server endpoint so the IP +
+      // user-agent are captured server-side. Fire-and-forget — if this fails
+      // we still want the signup to succeed (the UI already validated that
+      // the checkbox was ticked; the DB record is defense-in-depth).
+      if (smsConsent && phone.trim()) {
+        void fetch("/api/consent/sms", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ version: "v1" }),
+        }).catch(() => {});
       }
 
       router.push("/");
