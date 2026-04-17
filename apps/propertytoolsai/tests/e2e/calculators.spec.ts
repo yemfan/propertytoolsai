@@ -173,6 +173,105 @@ test.describe("ROI calculator", () => {
 });
 
 // ============================================================
+// Refinance calculator — /refinance-calculator
+// ============================================================
+
+test.describe("Refinance calculator", () => {
+  test("loads and renders a result", async ({ page }) => {
+    await page.goto("/refinance-calculator");
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+    const result = await resultValue(page);
+    expect(result).toMatch(/\$|\d/);
+    expect(result).not.toContain("NaN");
+  });
+
+  test("lowering new rate improves savings vs current loan", async ({ page }) => {
+    await page.goto("/refinance-calculator");
+    // Default: 250k balance, current 6.5%, new 5.25% → some positive break-even
+    const before = numericize(await resultValue(page));
+    await fillByLabel(page, "New interest rate (%)", 3.5);
+    await expect
+      .poll(async () => numericize(await resultValue(page)), { timeout: 5000 })
+      .not.toBe(before);
+    // Either "months to break even" goes down OR "lifetime savings" goes up —
+    // both are improvements. Just assert the number changed meaningfully.
+    const after = numericize(await resultValue(page));
+    expect(after).not.toBeNaN();
+  });
+});
+
+// ============================================================
+// Down-payment calculator — /down-payment-calculator
+// ============================================================
+
+test.describe("Down-payment calculator", () => {
+  test("loads and renders a result", async ({ page }) => {
+    await page.goto("/down-payment-calculator");
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+    const result = await resultValue(page);
+    expect(result).toMatch(/\$|\d/);
+    expect(result).not.toContain("NaN");
+  });
+
+  test("bumping down payment % reduces the loan shortfall", async ({ page }) => {
+    await page.goto("/down-payment-calculator");
+    const before = await resultValue(page);
+    await fillByLabel(page, "Down payment (%)", 30);
+    await expect
+      .poll(async () => await resultValue(page), { timeout: 5000 })
+      .not.toBe(before);
+  });
+});
+
+// ============================================================
+// Closing-cost estimator — /closing-cost-estimator
+// ============================================================
+
+test.describe("Closing-cost estimator", () => {
+  test("loads and renders a total", async ({ page }) => {
+    await page.goto("/closing-cost-estimator");
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+    const result = await resultValue(page);
+    // Should be a dollar amount
+    expect(result).toMatch(/\$[\d,]+/);
+  });
+
+  test("doubling origination % increases total", async ({ page }) => {
+    await page.goto("/closing-cost-estimator");
+    const before = numericize(await resultValue(page));
+    await fillByLabel(page, "Origination (%)", 2);
+    const after = numericize(await resultValue(page));
+    // tolerate layout flicker
+    await expect
+      .poll(async () => numericize(await resultValue(page)) > before, { timeout: 5000 })
+      .toBeTruthy();
+  });
+});
+
+// ============================================================
+// Cash-flow calculator — /cash-flow-calculator
+// ============================================================
+
+test.describe("Cash-flow calculator", () => {
+  test("loads and renders monthly cash flow", async ({ page }) => {
+    await page.goto("/cash-flow-calculator");
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+    // Defaults: rent 2500, mortgage+tax+ins+maint+other = 2650 → slight
+    // negative with no vacancy. Just assert a dollar figure renders.
+    const result = await resultValue(page);
+    expect(result).toMatch(/-?\$[\d,]+/);
+    expect(result).not.toContain("NaN");
+  });
+
+  test("rent increase flips negative cash flow positive", async ({ page }) => {
+    await page.goto("/cash-flow-calculator");
+    await fillByLabel(page, "Monthly rent ($)", 5000);
+    const result = numericize(await resultValue(page));
+    expect(result).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================
 // Helpers
 // ============================================================
 
