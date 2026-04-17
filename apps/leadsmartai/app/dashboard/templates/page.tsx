@@ -1,45 +1,31 @@
-import Link from "next/link";
-import { LayoutTemplate } from "lucide-react";
 import type { Metadata } from "next";
+import { LayoutTemplate } from "lucide-react";
+import TemplatePickerClient from "@/components/dashboard/TemplatePickerClient";
 
 export const metadata: Metadata = {
-  title: "Templates",
-  description: "Browse and customize message and campaign templates.",
-  keywords: ["templates", "email templates", "campaigns"],
+  title: "Message Templates",
+  description: "Browse and customize SMS and email templates for Sphere, Lead Response, and Lifecycle.",
+  keywords: ["templates", "sms", "email", "messaging"],
   robots: { index: false },
 };
 
 export default function TemplatesPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-5">
       <div className="flex items-start gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-md shadow-slate-900/15">
           <LayoutTemplate className="h-5 w-5" strokeWidth={2} aria-hidden />
         </span>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Templates</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Message Templates</h1>
           <p className="mt-1 text-sm text-slate-600">
-            Saved scripts for SMS, email, and drip sequences — keep messaging consistent across your team.
+            The text of every message LeadSmart sends on your behalf. Edit any template, toggle it off,
+            or switch between review and autosend. Changes are per-agent — base templates aren&apos;t touched.
           </p>
         </div>
       </div>
-      <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center">
-        <p className="text-sm text-slate-600">Template library UI ships next — use presentations and marketing tools in the meantime.</p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <Link
-            href="/dashboard/presentations"
-            className="inline-flex rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            Presentations
-          </Link>
-          <Link
-            href="/dashboard/marketing"
-            className="inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-          >
-            Marketing
-          </Link>
-        </div>
-      </div>
+
+      <TemplatePickerClient />
     </div>
   );
 }
