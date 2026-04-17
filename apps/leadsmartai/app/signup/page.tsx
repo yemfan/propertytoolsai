@@ -17,6 +17,12 @@ function SignupForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  // TCPA consent — required before SMS can be sent to this number. Default
+  // off; we enforce the "unchecked by default" requirement of 47 CFR 64.1200
+  // and block form submission when phone is filled but this is unchecked.
+  // TODO(db): once user_profiles has `sms_consent_accepted_at`, persist the
+  // timestamp + IP here so we have a defensible consent audit trail.
+  const [smsConsent, setSmsConsent] = useState(false);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +44,14 @@ function SignupForm() {
     if (!email.trim()) return setError("Email is required.");
     if (phone.trim() && !isValidUsPhone(phone)) {
       return setError("Phone must be a valid US number (10 digits) if provided.");
+    }
+    // TCPA §227 + FCC rules: no SMS without prior express consent. Block the
+    // submission if the user filled in a phone but did not check the
+    // consent box. Leaving phone empty skips this check.
+    if (phone.trim() && !smsConsent) {
+      return setError(
+        "To receive SMS, please check the box confirming you consent to text messages. Or leave the phone field empty.",
+      );
     }
 
     if (hasSession) {
@@ -236,6 +250,31 @@ function SignupForm() {
               disabled={prefillLoading}
             />
           </div>
+          {phone.trim() ? (
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-[11px] leading-relaxed text-gray-700">
+              <input
+                type="checkbox"
+                checked={smsConsent}
+                onChange={(e) => setSmsConsent(e.target.checked)}
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-blue-600"
+              />
+              <span>
+                I agree to receive SMS messages from LeadSmart AI at the number above,
+                including transactional alerts and, where permitted, marketing messages.
+                Message frequency varies. Message &amp; data rates may apply. Text{" "}
+                <strong>STOP</strong> to unsubscribe or <strong>HELP</strong> for help.
+                See our{" "}
+                <Link href="/privacy" className="text-blue-700 underline" target="_blank">
+                  Privacy Policy
+                </Link>{" "}
+                and{" "}
+                <Link href="/terms" className="text-blue-700 underline" target="_blank">
+                  Terms
+                </Link>
+                . Consent is not a condition of purchase.
+              </span>
+            </label>
+          ) : null}
           {!hasSession ? (
             <div className="space-y-1">
               <label className="block text-xs font-medium text-gray-700">Password</label>
