@@ -97,6 +97,21 @@ function loadFromStorage(): ConsentState | null {
   return null;
 }
 
+/**
+ * Synchronous consent check for non-React callers (analytics loaders, the
+ * trackLandingEvent helper, etc.). Returns false on the server and when
+ * storage access fails — safer default.
+ *
+ * Example:
+ *   import { hasConsent } from "@/components/cookie-consent/CookieConsent";
+ *   if (hasConsent("analytics")) window.gtag?.("event", name, props);
+ */
+export function hasConsent(category: "analytics" | "marketing"): boolean {
+  const state = loadFromStorage();
+  if (!state) return false;
+  return state.categories[category] === true;
+}
+
 function persist(state: ConsentState) {
   if (typeof window === "undefined") return;
   try {
