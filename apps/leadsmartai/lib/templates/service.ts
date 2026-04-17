@@ -50,6 +50,18 @@ function merge(t: Template, ov: TemplateOverride | null): TemplateWithOverride {
   };
 }
 
+/**
+ * `templates` / `template_overrides` come from migration 20260479100000. If a
+ * deploy environment hasn't run it yet, return an empty array so the picker
+ * UI shows its "library not seeded" empty state instead of the red error
+ * boundary.
+ */
+function isMissingRelationError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { code?: string; message?: string };
+  return e.code === "42P01" || /does not exist|schema cache/i.test(e.message ?? "");
+}
+
 export async function listTemplatesForAgent(agentId: string): Promise<TemplateWithOverride[]> {
   const [{ data: tplRows, error: tplErr }, { data: ovRows }] = await Promise.all([
     supabaseAdmin
@@ -63,7 +75,15 @@ export async function listTemplatesForAgent(agentId: string): Promise<TemplateWi
       .eq("agent_id", agentId as never),
   ]);
 
-  if (tplErr) throw tplErr;
+  if (tplErr) {
+    if (isMissingRelationError(tplErr)) {
+      console.warn("[templates] templates table not reachable — rendering empty state", {
+        code: (tplErr as { code?: string }).code,
+      });
+      return [];
+    }
+    throw tplErr;
+  }
   const templates = (tplRows ?? []).map((r) => mapTemplate(r as unknown as TemplateRow));
   const overrides = new Map<string, TemplateOverride>();
   for (const row of ovRows ?? []) {

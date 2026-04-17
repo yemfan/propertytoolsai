@@ -170,12 +170,35 @@ export function relationshipLabel(t: SphereRelationshipType): string {
   }
 }
 
+/**
+ * `sphere_contacts` / `sphere_signals` / `sphere_contact_triggers` are seeded
+ * by migration 20260479200000_sphere_module.sql. If a deploy environment hasn't
+ * run that migration yet, the read queries below return a PostgREST error
+ * like 42P01 "relation does not exist" — which previously threw and triggered
+ * the dashboard error boundary. We now log and fall through to the empty-state
+ * UI instead, so unseeded environments get "No sphere contacts yet" rather
+ * than a red crash banner.
+ */
+function isMissingRelationError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { code?: string; message?: string };
+  return e.code === "42P01" || /does not exist|schema cache/i.test(e.message ?? "");
+}
+
 export async function listSphereContacts(agentId: string): Promise<SphereContactView[]> {
   const { data: rows, error } = await supabaseAdmin
     .from("sphere_contacts")
     .select("*")
     .eq("agent_id", agentId as never);
-  if (error) throw error;
+  if (error) {
+    if (isMissingRelationError(error)) {
+      console.warn("[sphere] sphere_contacts table not reachable — rendering empty state", {
+        code: (error as { code?: string }).code,
+      });
+      return [];
+    }
+    throw error;
+  }
   if (!rows?.length) return [];
 
   const contactIds = rows.map((r) => String((r as { id: string }).id));
@@ -205,12 +228,13 @@ export async function getSphereContact(
   agentId: string,
   contactId: string,
 ): Promise<SphereContactView | null> {
-  const { data: row } = await supabaseAdmin
+  const { data: row, error } = await supabaseAdmin
     .from("sphere_contacts")
     .select("*")
     .eq("agent_id", agentId as never)
     .eq("id", contactId)
     .maybeSingle();
+  if (error && isMissingRelationError(error)) return null;
   if (!row) return null;
   const { data: signalRows } = await supabaseAdmin
     .from("sphere_signals")
@@ -224,10 +248,11 @@ export async function listOpenSignals(agentId: string): Promise<
   Array<SphereSignal & { contact: SphereContact }>
 > {
   // Two-step: fetch agent's contacts + signals separately to avoid deep joins.
-  const { data: contactRows } = await supabaseAdmin
+  const { data: contactRows, error: contactErr } = await supabaseAdmin
     .from("sphere_contacts")
     .select("*")
     .eq("agent_id", agentId as never);
+  if (contactErr && isMissingRelationError(contactErr)) return [];
   if (!contactRows?.length) return [];
   const contactsById = new Map<string, SphereContact>();
   for (const row of contactRows) {
