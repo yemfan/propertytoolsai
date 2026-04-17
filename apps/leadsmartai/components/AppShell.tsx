@@ -61,6 +61,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
   const isPublicReport = pathname.startsWith("/report/");
   const isMarketingHome = pathname === "/";
+  const isEditorialLanding = pathname === "/landing-v3";
   const isAuthShell =
     pathname === "/agent-signup" ||
     pathname === "/login" ||
@@ -82,6 +83,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   if (isMarketingHome) {
     return <div className="min-h-screen bg-white">{children}</div>;
+  }
+
+  if (isEditorialLanding) {
+    // Editorial rebuild uses its own Fraunces/Inter-Tight aesthetic — do not
+    // wrap in the Inter/SaaS shell. Per handoff §01-marketing-site: "do not
+    // mix these aesthetics".
+    return <div className="min-h-screen">{children}</div>;
   }
 
   if (isAuthShell) {
