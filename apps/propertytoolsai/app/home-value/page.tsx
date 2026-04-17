@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import HomeValueEstimatePage from "@/components/home-value/HomeValueEstimatePage";
 import JsonLd from "@/components/JsonLd";
 
@@ -39,6 +40,21 @@ export default function HomeValuePage() {
           provider: { "@type": "Organization", name: "PropertyTools AI", url: "https://propertytoolsai.com" },
         }}
       />
+      {/* Trust / methodology link — per validation report UX-02. A persistent
+          "How we calculate this" affordance needs to surface on every estimate;
+          this banner is the first-touch version until the estimate component
+          itself gets a per-result link. */}
+      <div className="border-b border-slate-100 bg-slate-50 px-4 py-2 text-center text-sm text-slate-600">
+        <Link
+          href="/methodology"
+          className="font-medium text-[#0072ce] hover:text-[#005ca8] hover:underline"
+        >
+          How we calculate this estimate →
+        </Link>
+        <span className="ml-2 hidden text-slate-500 sm:inline">
+          Data sources, accuracy, and known limits.
+        </span>
+      </div>
       <HomeValueEstimatePage />
     </>
   );
