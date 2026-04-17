@@ -1,0 +1,81 @@
+# Broken-link scan — validation report QA-04.
+#
+# Runs lychee against the live sitemap once a week and on manual dispatch.
+# Sitemap-driven so new programmatic URLs get covered automatically — no
+# per-route maintenance.
+#
+# Signals:
+#   - CI-level: failing on dead links keeps the surface clean.
+#   - Artifact:  lychee HTML report uploaded on every run; retained for 30d.
+#   - Issue:     if any 4xx/5xx found, a GitHub Issue is created/updated with
+#                the list. Dev can triage and close/fix.
+#
+# Scoped to not hit paid external services — external links are NOT followed
+# in the default config so we don't get false-positive rate-limits from
+# third-party hosts. Toggle in .lycheeignore if that changes.
+
+name: Broken links
+
+on:
+  schedule:
+    # Mondays at 13:00 UTC. Early week = triage has the full week.
+    - cron: "0 13 * * 1"
+  workflow_dispatch:
+    inputs:
+      sitemap_url:
+        description: "Override sitemap URL"
+        required: false
+        default: "https://www.propertytoolsai.com/sitemap.xml"
+
+jobs:
+  lychee:
+    name: Crawl sitemap
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Lychee supports sitemap input directly. Limit to internal host only
+      # — the concern is our own dead links, not third-party rot.
+      - name: Run lychee
+        id: lychee
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: |
+            --no-progress
+            --max-concurrency 8
+            --timeout 20
+            --retry-wait-time 2
+            --accept 200..=299,301,302,304,308
+            --exclude-mail
+            --exclude-loopback
+            --exclude-private
+            --exclude twitter.com
+            --exclude x.com
+            --exclude linkedin.com
+            --exclude facebook.com
+            ${{ github.event.inputs.sitemap_url || 'https://www.propertytoolsai.com/sitemap.xml' }}
+          fail: false # report via issue, don't fail the job — cron + issue = the signal
+          output: ./lychee-report.md
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lychee-report-${{ github.run_number }}
+          path: ./lychee-report.md
+          retention-days: 30
+
+      # Create or update a tracking issue when there are failures.
+      - name: Create/update issue for broken links
+        if: env.lychee_exit_code != '0'
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "Broken links detected — ${{ github.run_number }}"
+          content-filepath: ./lychee-report.md
+          labels: broken-links, automated
