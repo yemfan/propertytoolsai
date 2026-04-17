@@ -95,7 +95,16 @@ const PRICE_OPTIONS: { id: PriceRangeId; label: string }[] = [
   { id: "1500-plus", label: "$1.5M+" },
 ];
 
-export default function OnboardingFunnel() {
+export default function OnboardingFunnel({
+  fallback,
+}: {
+  /**
+   * Content to render on the server (and during client-side hydration until
+   * localStorage is loaded). Without this, crawlers and slow connections see
+   * only a "Loading…" stub — see TOM report MJ-003.
+   */
+  fallback?: React.ReactNode;
+} = {}) {
   const [hydrated, setHydrated] = useState(false);
   const [step, setStep] = useState<OnboardingStep>(1);
   const [profile, setProfile] = useState<Partial<OnboardingProfile>>({});
@@ -263,6 +272,7 @@ export default function OnboardingFunnel() {
   }, [profile.fullName, profile.email]);
 
   if (!hydrated) {
+    if (fallback) return <>{fallback}</>;
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
         Loading…

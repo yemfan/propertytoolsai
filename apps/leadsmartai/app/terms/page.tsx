@@ -1,22 +1,474 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+/**
+ * [REQUIRES LEGAL REVIEW]
+ *
+ * Replaces the pre-launch placeholder flagged in TOM validation report CR-002.
+ * Scaffold covers standard SaaS terms plus the specifics of an AI lead-
+ * automation product: subscription billing via Stripe, 7- or 14-day trial,
+ * SMS/email send-on-behalf, AI output ownership, acceptable use. None of it
+ * is legal advice.
+ *
+ * Before accepting any paying customer, replace with counsel-reviewed copy
+ * or a generator-produced ToS (Termly, Iubenda, TermsFeed).
+ *
+ * Sections still marked "[REQUIRES LEGAL REVIEW]" are gaps to close —
+ * especially around liability caps, arbitration/dispute resolution, and
+ * governing law, where defaults vary materially by jurisdiction.
+ */
+
+const LAST_UPDATED = "April 17, 2026";
+
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "Terms of service for LeadSmart AI. Review the terms governing use of our lead management, CRM, and automation tools.",
-  keywords: ["terms", "terms of service", "agreement", "legal", "conditions"],
+  description:
+    "Terms governing use of the LeadSmart AI lead management, CRM, and automation service — subscription, acceptable use, SMS/email compliance, intellectual property, liability, and disputes.",
+  alternates: { canonical: "/terms" },
+  keywords: ["terms of service", "terms of use", "subscription terms", "acceptable use"],
 };
+
+const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
+  {
+    id: "agreement",
+    title: "1. Agreement to these terms",
+    body: (
+      <>
+        <p>
+          These Terms of Service (&ldquo;Terms&rdquo;) govern your access to and use of
+          leadsmart-ai.com and the LeadSmart AI Service (the &ldquo;Service&rdquo;)
+          provided by LeadSmart AI (&ldquo;LeadSmart,&rdquo; &ldquo;we,&rdquo;
+          &ldquo;us,&rdquo; or &ldquo;our&rdquo;). By creating an account, starting a
+          trial, or otherwise using the Service, you agree to these Terms and our{" "}
+          <Link href="/privacy" className="text-[#0072ce] hover:underline">
+            Privacy Policy
+          </Link>
+          .
+        </p>
+        <p>
+          If you are using the Service on behalf of an organization, you represent that
+          you have authority to bind that organization to these Terms.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "eligibility",
+    title: "2. Eligibility",
+    body: (
+      <>
+        <p>
+          You must be at least 18 years old and legally able to form a binding contract in
+          your jurisdiction. The Service is intended for use by licensed real estate
+          professionals and their teams. You are responsible for complying with all laws
+          applicable to your use of the Service, including real estate licensing,
+          fair-housing rules, and messaging regulations.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "account",
+    title: "3. Your account",
+    body: (
+      <>
+        <p>
+          You agree to provide accurate, complete, and current information during signup
+          and to keep it up to date. You are responsible for safeguarding your credentials
+          and for all activity under your account. Notify us immediately at{" "}
+          <a
+            href="mailto:support@leadsmart-ai.com"
+            className="text-[#0072ce] hover:underline"
+          >
+            support@leadsmart-ai.com
+          </a>{" "}
+          if you suspect unauthorized access.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "subscription",
+    title: "4. Subscriptions, trials, and billing",
+    body: (
+      <>
+        <ul>
+          <li>
+            <strong>Plans.</strong> Paid plans are offered on a monthly or annual
+            subscription basis as described on the pricing page. By selecting a paid plan,
+            you authorize us to charge the payment method on file through our payment
+            processor (Stripe) on each billing period until cancellation.
+          </li>
+          <li>
+            <strong>Free trials.</strong> Paid plans may include a free trial (currently
+            up to 14 days). Unless you cancel during the trial, the paid subscription
+            begins and billing starts at the end of the trial. Trials are limited to one
+            per customer; we may refuse trials we reasonably believe to be abusive.
+          </li>
+          <li>
+            <strong>Cancellation.</strong> You can cancel at any time from the billing
+            page. Cancellation takes effect at the end of the current billing period, and
+            you retain access until then.
+          </li>
+          <li>
+            <strong>Refunds.</strong> Except where required by law, subscription payments
+            are non-refundable once the billing period has started.
+          </li>
+          <li>
+            <strong>Price changes.</strong> We may change prices prospectively with at
+            least 30 days&apos; notice. The new price applies on the next billing period
+            after the notice period ends.
+          </li>
+          <li>
+            <strong>Taxes.</strong> Prices do not include taxes unless stated. You are
+            responsible for applicable taxes and duties.
+          </li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: "acceptable-use",
+    title: "5. Acceptable use",
+    body: (
+      <>
+        <p>You agree not to:</p>
+        <ul>
+          <li>
+            Use the Service to send unsolicited SMS or email (as defined by the TCPA,
+            CAN-SPAM Act, CASL, GDPR, or analogous law).
+          </li>
+          <li>
+            Violate any applicable law or regulation, including real estate licensing,
+            fair-housing, anti-discrimination, consumer protection, or data protection
+            law.
+          </li>
+          <li>
+            Upload unlawful, infringing, deceptive, harassing, or otherwise objectionable
+            content, including content that violates a third party&apos;s privacy or
+            intellectual-property rights.
+          </li>
+          <li>
+            Attempt to probe, scan, reverse-engineer, or circumvent the security or
+            integrity of the Service.
+          </li>
+          <li>
+            Use the Service to build or train a competing product, or to resell access
+            without our written consent.
+          </li>
+          <li>Impersonate any person or falsely imply sponsorship or affiliation.</li>
+        </ul>
+        <p>
+          We may suspend or terminate your access for violations of this section with or
+          without notice, depending on severity.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "sms-email-compliance",
+    title: "6. SMS and email compliance",
+    body: (
+      <>
+        <p>
+          The Service sends SMS and email on your behalf. By using these features, you:
+        </p>
+        <ul>
+          <li>
+            Represent and warrant that you have obtained the consents required by the
+            Telephone Consumer Protection Act (47 U.S.C. § 227), FCC rules, CAN-SPAM Act,
+            and analogous laws in your jurisdiction.
+          </li>
+          <li>
+            Agree that LeadSmart acts on your behalf as a messaging vendor and that you
+            remain the &ldquo;sender&rdquo; for CAN-SPAM and the caller/texter for TCPA
+            purposes, unless we expressly agree otherwise in writing.
+          </li>
+          <li>
+            Honor opt-outs immediately. We automatically suppress STOP / UNSUBSCRIBE /
+            HELP requests for numbers and addresses on your account, but you remain
+            responsible for wider compliance across channels.
+          </li>
+          <li>
+            Indemnify LeadSmart for claims arising from your failure to obtain consent or
+            from content you cause the Service to send.
+          </li>
+        </ul>
+        <p>
+          [REQUIRES LEGAL REVIEW] Confirm the allocation of sender / caller responsibility
+          between LeadSmart and the customer — varies depending on 10DLC brand setup.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "your-content",
+    title: "7. Your content",
+    body: (
+      <>
+        <p>
+          You retain all rights in the data, text, files, and other materials you submit
+          to the Service (&ldquo;Your Content&rdquo;). You grant LeadSmart a worldwide,
+          royalty-free license to host, process, display, and transmit Your Content solely
+          to provide the Service, comply with law, and improve the Service in aggregated,
+          de-identified form.
+        </p>
+        <p>
+          You represent that you have all rights necessary to submit Your Content and that
+          its use in the Service does not violate law or any third-party right.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "ai-output",
+    title: "8. AI-generated output",
+    body: (
+      <>
+        <p>
+          The Service uses third-party AI providers to generate messages, summaries, and
+          recommendations (&ldquo;AI Output&rdquo;). You own the AI Output generated for
+          your account, subject to the third-party provider&apos;s terms and any rights
+          retained by those providers in their underlying models.
+        </p>
+        <p>
+          AI Output is provided &ldquo;as is.&rdquo; It may contain errors, omissions, or
+          hallucinations. You are responsible for reviewing AI Output before relying on it
+          or sending it to a third party.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "our-ip",
+    title: "9. Our intellectual property",
+    body: (
+      <>
+        <p>
+          The Service, including all software, designs, text, graphics, and other
+          materials provided by LeadSmart (excluding Your Content and AI Output), is owned
+          by LeadSmart or our licensors and is protected by intellectual property laws.
+          Nothing in these Terms transfers those rights to you.
+        </p>
+        <p>
+          Feedback you provide about the Service is non-confidential and LeadSmart may use
+          it without restriction.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "third-party",
+    title: "10. Third-party services and integrations",
+    body: (
+      <>
+        <p>
+          The Service integrates with third-party services (Zillow, Follow Up Boss,
+          kvCORE, Twilio, SendGrid, Stripe, Google, Facebook, and others). Your use of
+          those services is governed by their own terms and privacy policies. LeadSmart is
+          not responsible for third-party services.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "disclaimers",
+    title: "11. Disclaimers",
+    body: (
+      <>
+        <p>
+          The Service is provided &ldquo;as is&rdquo; and &ldquo;as available,&rdquo;
+          without warranties of any kind, whether express, implied, or statutory. To the
+          maximum extent permitted by law, LeadSmart disclaims all warranties, including
+          merchantability, fitness for a particular purpose, non-infringement, and
+          accuracy of AI Output.
+        </p>
+        <p>
+          LeadSmart does not warrant that messages sent through the Service will be
+          delivered, that AI Output will be correct, or that the Service will be
+          uninterrupted or error-free.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "liability",
+    title: "12. Limitation of liability",
+    body: (
+      <>
+        <p>
+          To the maximum extent permitted by law, LeadSmart&apos;s aggregate liability for
+          any claim arising out of or related to these Terms or the Service will not
+          exceed the greater of (a) the fees paid by you to LeadSmart in the 12 months
+          preceding the claim, or (b) one hundred U.S. dollars ($100).
+        </p>
+        <p>
+          In no event will LeadSmart be liable for indirect, incidental, special,
+          consequential, or exemplary damages (including lost profits, lost leads, or
+          lost data) arising from your use of the Service.
+        </p>
+        <p>
+          [REQUIRES LEGAL REVIEW] Confirm liability cap, carve-outs for indemnity +
+          confidentiality + IP infringement, and any jurisdiction-specific limits.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "indemnification",
+    title: "13. Indemnification",
+    body: (
+      <>
+        <p>
+          You agree to defend, indemnify, and hold harmless LeadSmart and its affiliates
+          from and against any third-party claim arising out of (a) Your Content, (b) your
+          use of the Service in violation of these Terms or applicable law, (c) any SMS
+          or email sent through the Service on your behalf, or (d) your violation of a
+          third-party right.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "termination",
+    title: "14. Termination",
+    body: (
+      <>
+        <p>
+          You may terminate your account at any time from the billing page. LeadSmart may
+          suspend or terminate your access for violation of these Terms, non-payment, or
+          when required by law, with or without notice depending on severity. On
+          termination, your right to use the Service ends. Sections of these Terms that by
+          their nature should survive termination will do so, including sections 7, 9, 11,
+          12, 13, and 15–17.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "changes",
+    title: "15. Changes to these Terms",
+    body: (
+      <>
+        <p>
+          We may update these Terms from time to time. Material changes will be notified
+          via email or a prominent notice in the Service at least 30 days before they take
+          effect. If you do not accept the revised Terms, your sole remedy is to stop
+          using the Service and cancel your subscription.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "governing-law",
+    title: "16. Governing law and disputes",
+    body: (
+      <>
+        <p>
+          [REQUIRES LEGAL REVIEW] These Terms are governed by the laws of{" "}
+          <span className="italic">[State / jurisdiction — confirm with counsel]</span>,
+          without regard to conflict-of-laws principles. Any dispute will be resolved in
+          the state or federal courts located in{" "}
+          <span className="italic">[venue — confirm with counsel]</span>, except that
+          either party may seek injunctive relief in any court of competent jurisdiction.
+        </p>
+        <p>
+          [REQUIRES LEGAL REVIEW] Consider adding an arbitration clause + class-action
+          waiver, and confirm it is enforceable in the target jurisdictions.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "misc",
+    title: "17. Miscellaneous",
+    body: (
+      <>
+        <ul>
+          <li>
+            <strong>Entire agreement.</strong> These Terms and the Privacy Policy are the
+            entire agreement between you and LeadSmart regarding the Service.
+          </li>
+          <li>
+            <strong>Severability.</strong> If any provision is held unenforceable, the
+            rest will remain in effect.
+          </li>
+          <li>
+            <strong>Assignment.</strong> You may not assign these Terms without our
+            consent; we may assign them in connection with a merger, acquisition, or sale
+            of assets.
+          </li>
+          <li>
+            <strong>No waiver.</strong> Our failure to enforce a provision is not a
+            waiver.
+          </li>
+          <li>
+            <strong>Contact.</strong> Notices to LeadSmart should be sent to{" "}
+            <a
+              href="mailto:support@leadsmart-ai.com"
+              className="text-[#0072ce] hover:underline"
+            >
+              support@leadsmart-ai.com
+            </a>
+            .
+          </li>
+        </ul>
+      </>
+    ),
+  },
+];
 
 export default function TermsPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-16">
-      <h1 className="text-3xl font-bold text-slate-900 mb-4">Terms of Service</h1>
-      <p className="text-slate-600 mb-6">
-        Terms of use for leadsmart-ai.com. Use of our tools is subject to these terms.
-      </p>
-      <Link href="/" className="text-primary-600 hover:text-primary-700 font-medium">
-        ← Back to Home
-      </Link>
+    <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-12">
+      <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+        <strong>Notice:</strong> This page is the product&apos;s pre-launch scaffold. It
+        covers standard SaaS topics but is <strong>not legal advice</strong> and must be
+        replaced with counsel-reviewed or generator-produced copy before paid launch.
+      </div>
+
+      <h1 className="text-3xl font-bold text-slate-900 mb-2">Terms of Service</h1>
+      <p className="text-sm text-slate-500 mb-8">Last updated: {LAST_UPDATED}</p>
+
+      <nav
+        aria-label="Table of contents"
+        className="mb-10 rounded-lg border border-slate-200 bg-slate-50 p-4"
+      >
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-2">
+          Contents
+        </div>
+        <ol className="list-decimal list-inside space-y-1 text-sm text-slate-700">
+          {SECTIONS.map((s) => (
+            <li key={s.id}>
+              <a href={`#${s.id}`} className="text-[#0072ce] hover:underline">
+                {s.title.replace(/^\d+\.\s*/, "")}
+              </a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      <article className="space-y-8 text-slate-700">
+        {SECTIONS.map((s) => (
+          <section key={s.id} id={s.id} className="scroll-mt-20">
+            <h2 className="text-xl font-semibold text-slate-900 mb-3">{s.title}</h2>
+            <div className="space-y-3 leading-relaxed [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2 [&_ul]:mt-3">
+              {s.body}
+            </div>
+          </section>
+        ))}
+      </article>
+
+      <div className="mt-12 border-t border-slate-200 pt-6 text-sm text-slate-500">
+        See also our{" "}
+        <Link href="/privacy" className="text-[#0072ce] hover:underline">
+          Privacy Policy
+        </Link>
+        .{" "}
+        <Link href="/" className="ml-2 text-[#0072ce] hover:underline">
+          ← Back to Home
+        </Link>
+      </div>
     </div>
   );
 }

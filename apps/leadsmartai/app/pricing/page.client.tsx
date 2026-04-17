@@ -311,18 +311,30 @@ export default function ConsumerPricingClientPage() {
               </div>
               <div className="mt-5 flex flex-col gap-2">
                 {plan.checkoutKey ? (
-                  <button
-                    type="button"
-                    onClick={() => handlePlanClick(plan)}
-                    disabled={loadingPlan === plan.checkoutKey}
-                    className={`block rounded-xl py-2.5 text-center text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-60 ${
+                  // MJ-001: anchor instead of button so Pro/Elite CTAs have a real
+                  // href for no-JS users, crawlers, and right-click "open in new
+                  // tab". With JS, onClick preventDefault + startCheckout opens
+                  // Stripe directly. Without JS, the href navigates to
+                  // /pricing?checkout_plan=..., which the auto-checkout effect
+                  // (see useEffect at "checkout_plan" param) picks up once the
+                  // target page loads.
+                  <a
+                    href={`/pricing?checkout_plan=${plan.checkoutKey}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handlePlanClick(plan);
+                    }}
+                    aria-disabled={loadingPlan === plan.checkoutKey}
+                    className={`block rounded-xl py-2.5 text-center text-sm font-semibold transition-all duration-200 active:scale-[0.98] ${
+                      loadingPlan === plan.checkoutKey ? "pointer-events-none opacity-60" : ""
+                    } ${
                       plan.highlight
                         ? "bg-gradient-to-r from-[#0072ce] to-[#4F46E5] text-white shadow-md shadow-[#0072ce]/20 hover:shadow-lg hover:brightness-110"
                         : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
                     }`}
                   >
                     {loadingPlan === plan.checkoutKey ? "Opening checkout…" : plan.cta}
-                  </button>
+                  </a>
                 ) : (
                   <Link
                     href={plan.href!}
@@ -399,18 +411,24 @@ export default function ConsumerPricingClientPage() {
                   {PLANS.map((p) => (
                     <td key={p.key} className="px-4 py-5 text-center">
                       {p.checkoutKey ? (
-                        <button
-                          type="button"
-                          onClick={() => handlePlanClick(p)}
-                          disabled={loadingPlan === p.checkoutKey}
-                          className={`inline-block rounded-xl px-4 py-2 text-xs font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-60 ${
+                        // See MJ-001 note above — same anchor-with-onClick pattern.
+                        <a
+                          href={`/pricing?checkout_plan=${p.checkoutKey}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handlePlanClick(p);
+                          }}
+                          aria-disabled={loadingPlan === p.checkoutKey}
+                          className={`inline-block rounded-xl px-4 py-2 text-xs font-semibold transition-all duration-200 active:scale-[0.98] ${
+                            loadingPlan === p.checkoutKey ? "pointer-events-none opacity-60" : ""
+                          } ${
                             p.highlight
                               ? "bg-[#0072ce] text-white hover:bg-[#005ca8]"
                               : "border border-slate-200 text-slate-700 hover:bg-white"
                           }`}
                         >
                           {loadingPlan === p.checkoutKey ? "Opening…" : p.cta}
-                        </button>
+                        </a>
                       ) : (
                         <Link
                           href={p.href!}
