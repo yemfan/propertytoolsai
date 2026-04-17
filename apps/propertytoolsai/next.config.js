@@ -26,6 +26,10 @@ const nextConfig = {
         destination: "https://www.propertytoolsai.com/:path*",
         permanent: true, // 308 — preserve link equity
       },
+      // TOM MJ-004: /home-value-estimator is a stub duplicate of the real
+      // /home-value tool, flagged for SEO duplicate-content + user confusion.
+      // Permanent 308 so accumulated SEO equity transfers.
+      { source: "/home-value-estimator", destination: "/home-value", permanent: true },
       // Nav-friendly URLs → existing tool routes
       { source: "/cma-report", destination: "/smart-cma-builder", permanent: false },
       {

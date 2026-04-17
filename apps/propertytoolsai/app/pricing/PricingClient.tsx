@@ -620,34 +620,51 @@ export default function PricingClient() {
             <div className="mt-6 space-y-2">
               {p.paid && p.id === "consumer-premium" ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={startTrial}
-                    disabled={trialLoading || Boolean(planInfo?.trial_used)}
-                    className="w-full rounded-xl bg-gradient-to-r from-[#0072ce] to-[#005ca8] py-2.5 font-semibold text-white shadow-sm shadow-[#0072ce]/20 transition hover:shadow-md hover:brightness-[1.05] disabled:opacity-60"
+                  {/* TOM MJ-002: anchor instead of button so the primary paid-trial CTA
+                      has a real href for no-JS users, crawlers, and right-click. With
+                      JS, onClick preventDefault + startTrial opens Stripe directly.
+                      Without JS, the href lands on /pricing?trial_checkout=1 which the
+                      auto-checkout useEffect picks up once JS loads. */}
+                  <a
+                    href="/pricing?trial_checkout=1"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (trialLoading || planInfo?.trial_used) return;
+                      void startTrial();
+                    }}
+                    aria-disabled={trialLoading || Boolean(planInfo?.trial_used)}
+                    className={`block w-full rounded-xl bg-gradient-to-r from-[#0072ce] to-[#005ca8] py-2.5 text-center font-semibold text-white shadow-sm shadow-[#0072ce]/20 transition hover:shadow-md hover:brightness-[1.05] ${
+                      trialLoading || planInfo?.trial_used ? "pointer-events-none opacity-60" : ""
+                    }`}
                   >
                     {trialLoading
                       ? "Starting…"
                       : planInfo?.trial_used
                         ? "Subscribe — $19/mo"
                         : p.cta}
-                  </button>
+                  </a>
                   <p className="text-center text-xs text-slate-500">
                     {planInfo?.trial_used
                       ? "Cancel anytime. 7-day trial already used on this account."
                       : "No credit card for trial · $19/mo after · Cancel anytime"}
                   </p>
                   {planInfo?.trial_used ? null : (
-                    <button
-                      type="button"
-                      onClick={() => startCheckout(p.checkoutKey)}
-                      disabled={loadingPlan === p.checkoutKey}
-                      className="w-full rounded-xl border border-slate-200 bg-white py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                    <a
+                      href={`/pricing?checkout_plan=${p.checkoutKey}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (loadingPlan === p.checkoutKey) return;
+                        void startCheckout(p.checkoutKey);
+                      }}
+                      aria-disabled={loadingPlan === p.checkoutKey}
+                      className={`block w-full rounded-xl border border-slate-200 bg-white py-2 text-center text-xs font-medium text-slate-600 hover:bg-slate-50 ${
+                        loadingPlan === p.checkoutKey ? "pointer-events-none opacity-60" : ""
+                      }`}
                     >
                       {loadingPlan === p.checkoutKey
                         ? "Redirecting…"
                         : "Skip trial · subscribe now"}
-                    </button>
+                    </a>
                   )}
                 </>
               ) : !p.paid ? (
@@ -731,7 +748,12 @@ export default function PricingClient() {
           <Button
             type="button"
             size="default"
-            onClick={startTrial}
+            href="/pricing?trial_checkout=1"
+            onClick={(e) => {
+              e.preventDefault();
+              if (trialLoading || planInfo?.trial_used) return;
+              void startTrial();
+            }}
             disabled={trialLoading || Boolean(planInfo?.trial_used)}
           >
             {trialLoading
@@ -759,7 +781,12 @@ export default function PricingClient() {
           <Button
             type="button"
             size="lg"
-            onClick={startTrial}
+            href="/pricing?trial_checkout=1"
+            onClick={(e) => {
+              e.preventDefault();
+              if (trialLoading || planInfo?.trial_used) return;
+              void startTrial();
+            }}
             disabled={trialLoading || Boolean(planInfo?.trial_used)}
           >
             {trialLoading
@@ -772,7 +799,12 @@ export default function PricingClient() {
             type="button"
             variant="outline"
             size="lg"
-            onClick={() => startCheckout("premium")}
+            href="/pricing?checkout_plan=premium"
+            onClick={(e) => {
+              e.preventDefault();
+              if (loadingPlan === "premium") return;
+              void startCheckout("premium");
+            }}
             disabled={loadingPlan === "premium"}
           >
             ✨ Subscribe to Premium

@@ -53,7 +53,7 @@ export default function AboutPage() {
           </h1>
 
           <p className="mt-6 text-lg leading-relaxed text-slate-600 md:text-xl">
-            PropertyToolsAI helps you understand property value, financing, and investment potential — instantly.
+            PropertyTools AI helps you understand property value, financing, and investment potential — instantly.
           </p>
         </div>
       </section>
@@ -67,7 +67,7 @@ export default function AboutPage() {
           </p>
 
           <p className="mt-6 text-lg leading-relaxed text-slate-700">
-            PropertyToolsAI was built to simplify that process — by giving you fast, intelligent tools that turn complex data into
+            PropertyTools AI was built to simplify that process — by giving you fast, intelligent tools that turn complex data into
             clear insights.
           </p>
         </div>
@@ -116,7 +116,7 @@ export default function AboutPage() {
 
             <p>This leads to uncertainty, missed opportunities, and costly mistakes.</p>
 
-            <p className="font-medium text-slate-900">PropertyToolsAI replaces confusion with clarity.</p>
+            <p className="font-medium text-slate-900">PropertyTools AI replaces confusion with clarity.</p>
           </div>
         </div>
       </section>
@@ -143,7 +143,7 @@ export default function AboutPage() {
       {/* Difference */}
       <section className="px-6 py-20">
         <div className="mx-auto max-w-4xl text-center">
-          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Why PropertyToolsAI Is Different</h2>
+          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Why PropertyTools AI Is Different</h2>
 
           <div className="mt-10 space-y-6 text-lg text-slate-700">
             <p>
@@ -153,7 +153,7 @@ export default function AboutPage() {
             </p>
 
             <p>
-              Instead of overwhelming you with numbers, PropertyToolsAI helps you understand what those numbers actually mean — and
+              Instead of overwhelming you with numbers, PropertyTools AI helps you understand what those numbers actually mean — and
               what to do next.
             </p>
 
@@ -168,7 +168,7 @@ export default function AboutPage() {
           <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Part of a Smarter Real Estate Ecosystem</h2>
 
           <p className="mt-6 leading-relaxed text-slate-300">
-            PropertyToolsAI connects seamlessly with LeadSmart AI — enabling a smarter flow from user insights to real-world
+            PropertyTools AI connects seamlessly with LeadSmart AI — enabling a smarter flow from user insights to real-world
             transactions.
           </p>
 
@@ -182,7 +182,7 @@ export default function AboutPage() {
       <section className="px-6 py-24 text-center">
         <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Make Better Real Estate Decisions — Faster</h2>
 
-        <p className="mt-4 text-slate-600">Start using PropertyToolsAI and turn data into confidence.</p>
+        <p className="mt-4 text-slate-600">Start using PropertyTools AI and turn data into confidence.</p>
 
         <div className="mt-8 flex flex-wrap justify-center gap-4">
           <Button href="/home-value" size="lg">
