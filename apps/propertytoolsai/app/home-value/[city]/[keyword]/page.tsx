@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import LocalSeoLeadForm from "@/components/LocalSeoLeadForm";
 import TrafficTracker from "@/components/TrafficTracker";
+import { BreadcrumbJsonLd } from "@/components/seo/BreadcrumbJsonLd";
+import { getSiteUrl } from "@/lib/siteUrl";
 import {
   estimateKeywordRouteCount,
   formatCurrency,
@@ -51,8 +53,24 @@ export default async function HomeValueKeywordPage({
   const market = getMarketSnapshot(p.city);
   const nearby = getNearbyCities(p.city, 4);
 
+  const siteUrl = getSiteUrl().replace(/\/$/, "");
+  const pageUrl = `${siteUrl}/home-value/${city.slug}/${p.keyword}`;
+  const pageTitle = `${keyword} | ${city.city}, ${city.state} | PropertyTools AI`;
+  const pageDescription = `Get ${keyword} insights, local pricing, and seller strategy for ${city.city}, ${city.state}.`;
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
+      <BreadcrumbJsonLd
+        title={pageTitle}
+        description={pageDescription}
+        url={pageUrl}
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Home Value", href: "/home-value" },
+          { label: `${city.city}, ${city.state}`, href: `/home-value/${city.slug}` },
+          { label: keyword, href: `/home-value/${city.slug}/${p.keyword}` },
+        ]}
+      />
       <TrafficTracker pagePath={`/home-value/${city.slug}/${p.keyword}`} city={city.city} source="seo_home_value_keyword" />
       <div className="mb-4 flex items-center gap-2">
         <a href={`/home-value/${city.slug}`} className="text-blue-700 hover:underline">

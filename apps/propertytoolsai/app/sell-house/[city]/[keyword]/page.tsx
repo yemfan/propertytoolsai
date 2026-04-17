@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import LocalSeoLeadForm from "@/components/LocalSeoLeadForm";
 import TrafficTracker from "@/components/TrafficTracker";
+import { BreadcrumbJsonLd } from "@/components/seo/BreadcrumbJsonLd";
+import { getSiteUrl } from "@/lib/siteUrl";
 import {
   estimateKeywordRouteCount,
   getCityBySlug,
@@ -50,8 +52,24 @@ export default async function SellHouseKeywordPage({
   const market = getMarketSnapshot(p.city);
   const nearby = getNearbyCities(p.city, 4);
 
+  const siteUrl = getSiteUrl().replace(/\/$/, "");
+  const pageUrl = `${siteUrl}/sell-house/${city.slug}/${p.keyword}`;
+  const pageTitle = `${keyword} | ${city.city}, ${city.state} Seller Guide | PropertyTools AI`;
+  const pageDescription = `Localized selling strategy for ${keyword} in ${city.city}, ${city.state}.`;
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
+      <BreadcrumbJsonLd
+        title={pageTitle}
+        description={pageDescription}
+        url={pageUrl}
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Sell House", href: "/sell-house" },
+          { label: `${city.city}, ${city.state}`, href: `/sell-house/${city.slug}` },
+          { label: keyword, href: `/sell-house/${city.slug}/${p.keyword}` },
+        ]}
+      />
       <TrafficTracker pagePath={`/sell-house/${city.slug}/${p.keyword}`} city={city.city} source="seo_sell_house_keyword" />
       <div className="mb-4 flex items-center gap-2">
         <a href={`/sell-house/${city.slug}`} className="text-blue-700 hover:underline">
