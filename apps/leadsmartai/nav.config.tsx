@@ -88,6 +88,24 @@ const navConfig = {
           icon: navEmoji("💬"),
         },
         {
+          label: "Drafts",
+          href: "/dashboard/drafts",
+          match: ["/dashboard/drafts"],
+          icon: navEmoji("📝"),
+        },
+        {
+          label: "Sphere",
+          href: "/dashboard/sphere",
+          match: ["/dashboard/sphere"],
+          icon: navEmoji("🤝"),
+        },
+        {
+          label: "Templates",
+          href: "/dashboard/templates",
+          match: ["/dashboard/templates"],
+          icon: navEmoji("📋"),
+        },
+        {
           label: "Marketing Plans",
           href: "/dashboard/marketing/plans",
           match: ["/dashboard/marketing"],

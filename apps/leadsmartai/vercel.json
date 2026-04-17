@@ -63,6 +63,14 @@
     {
       "path": "/api/cron/marketing-plans",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/sphere-drafts-sender",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/sphere-scheduler",
+      "schedule": "0 9 * * *"
     }
   ]
 }
