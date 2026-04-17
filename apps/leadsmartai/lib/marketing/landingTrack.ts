@@ -1,7 +1,11 @@
 /**
  * Client-side marketing events — wire to gtag, PostHog, Segment, etc.
- * Safe no-ops when analytics are not loaded.
+ * Safe no-ops when analytics are not loaded or the user has not granted
+ * analytics-cookie consent (see CookieConsent provider). The first-party
+ * DOM event dispatch is unconditional — it stays inside the browser.
  */
+import { hasConsent } from "@/components/cookie-consent/CookieConsent";
+
 export type LandingEventName =
   | "landing_view"
   | "landing_role_change"
@@ -23,17 +27,23 @@ export function trackLandingEvent(
 
   const payload = { event, ...props, ts: Date.now() };
 
-  try {
-    const w = window as Window & {
-      gtag?: (...args: unknown[]) => void;
-      posthog?: { capture?: (e: string, p?: Record<string, unknown>) => void };
-    };
-    w.gtag?.("event", event, props);
-    w.posthog?.capture?.(event, props as Record<string, unknown>);
-  } catch {
-    /* ignore */
+  // Third-party trackers are gated on analytics consent (GDPR / ePrivacy).
+  // Without consent we skip the network call entirely — don't ship ad /
+  // analytics payloads until the user opts in.
+  if (hasConsent("analytics")) {
+    try {
+      const w = window as Window & {
+        gtag?: (...args: unknown[]) => void;
+        posthog?: { capture?: (e: string, p?: Record<string, unknown>) => void };
+      };
+      w.gtag?.("event", event, props);
+      w.posthog?.capture?.(event, props as Record<string, unknown>);
+    } catch {
+      /* ignore */
+    }
   }
 
+  // First-party DOM event — stays inside the browser, safe without consent.
   try {
     window.dispatchEvent(new CustomEvent("leadsmart:landing", { detail: payload }));
   } catch {
@@ -41,6 +51,11 @@ export function trackLandingEvent(
   }
 
   if (process.env.NODE_ENV === "development") {
-    console.debug("[landing]", event, props);
+    console.debug(
+      "[landing]",
+      event,
+      props,
+      hasConsent("analytics") ? "" : "(3p skipped — no consent)",
+    );
   }
 }

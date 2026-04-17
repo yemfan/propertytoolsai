@@ -1,15 +1,13 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
- * Probe for the presence of a set of database relations (tables or views) by
- * running a zero-row select against each. If the relation is missing,
- * PostgREST responds with code 42P01 — we translate that into a simple
- * boolean present/missing flag.
+ * Probe for the presence of DB relations (tables/views) and specific columns
+ * by running zero-row selects. PostgREST responds with code 42P01 for a
+ * missing relation and 42703 for a missing column — we translate those into
+ * boolean present/missing flags.
  *
- * This is the mechanism behind /api/health/migrations, which surfaces
- * "migrations applied?" state to operators so a dashboard crash like the
- * April 17 Sphere regression can be caught in one curl call instead of
- * getting reported by a user.
+ * Backs /api/health/migrations. Operators can curl that endpoint to see in
+ * one shot whether a deploy is ahead of its database.
  */
 
 export type RelationCheck = {
@@ -21,7 +19,16 @@ export type RelationCheck = {
   error: string | null;
 };
 
+export type ColumnCheck = {
+  table: string;
+  column: string;
+  migration?: string;
+  present: boolean;
+  error: string | null;
+};
+
 type RequiredRelation = Pick<RelationCheck, "name" | "kind" | "migration">;
+type RequiredColumn = Pick<ColumnCheck, "table" | "column" | "migration">;
 
 /**
  * Source of truth for "what migrations must be applied for the agent-portal
@@ -66,13 +73,53 @@ export const DASHBOARD_REQUIRED_RELATIONS: readonly RequiredRelation[] = [
   },
 ];
 
+/**
+ * Column-level checks for migrations that add fields to existing tables
+ * rather than creating new ones. Each entry probes that specific column
+ * exists; missing → migration needs to run.
+ */
+export const DASHBOARD_REQUIRED_COLUMNS: readonly RequiredColumn[] = [
+  // TCPA consent audit trail — from the SMS consent feature.
+  {
+    table: "user_profiles",
+    column: "sms_consent_accepted_at",
+    migration: "20260479500000_user_profiles_sms_consent.sql",
+  },
+  {
+    table: "user_profiles",
+    column: "sms_consent_ip",
+    migration: "20260479500000_user_profiles_sms_consent.sql",
+  },
+  {
+    table: "user_profiles",
+    column: "sms_consent_user_agent",
+    migration: "20260479500000_user_profiles_sms_consent.sql",
+  },
+  {
+    table: "user_profiles",
+    column: "sms_consent_version",
+    migration: "20260479500000_user_profiles_sms_consent.sql",
+  },
+];
+
 function isMissingRelationError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const e = err as { code?: string; message?: string };
   return e.code === "42P01" || /does not exist|schema cache/i.test(e.message ?? "");
 }
 
-async function checkOne(relation: RequiredRelation): Promise<RelationCheck> {
+function isMissingColumnError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { code?: string; message?: string };
+  // 42703: undefined_column. PostgREST also surfaces PGRST204 sometimes.
+  return (
+    e.code === "42703" ||
+    e.code === "PGRST204" ||
+    /column .* does not exist|could not find the .* column/i.test(e.message ?? "")
+  );
+}
+
+async function checkOneRelation(relation: RequiredRelation): Promise<RelationCheck> {
   try {
     const { error } = await supabaseAdmin
       .from(relation.name)
@@ -95,18 +142,53 @@ async function checkOne(relation: RequiredRelation): Promise<RelationCheck> {
   }
 }
 
+async function checkOneColumn(col: RequiredColumn): Promise<ColumnCheck> {
+  try {
+    const { error } = await supabaseAdmin
+      .from(col.table)
+      .select(col.column, { head: true })
+      .limit(1);
+    if (error) {
+      if (isMissingColumnError(error)) {
+        return { ...col, present: false, error: error.message };
+      }
+      if (isMissingRelationError(error)) {
+        // The whole table is missing — surface that as the column's error
+        // too so operators see both gaps at once.
+        return { ...col, present: false, error: `Parent table missing: ${error.message}` };
+      }
+      return {
+        ...col,
+        present: false,
+        error: `Unexpected: ${error.message ?? String(error)}`,
+      };
+    }
+    return { ...col, present: true, error: null };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ...col, present: false, error: msg };
+  }
+}
+
 export type SchemaHealthReport = {
   ok: boolean;
   checkedAt: string;
   relations: RelationCheck[];
-  missing: RelationCheck[];
-  /** Migration files that contain at least one missing relation. */
+  columns: ColumnCheck[];
+  missing: Array<RelationCheck | ColumnCheck>;
+  /** Migration files that contain at least one missing relation or column. */
   missingMigrations: string[];
 };
 
 export async function checkDashboardSchemaHealth(): Promise<SchemaHealthReport> {
-  const relations = await Promise.all(DASHBOARD_REQUIRED_RELATIONS.map(checkOne));
-  const missing = relations.filter((r) => !r.present);
+  const [relations, columns] = await Promise.all([
+    Promise.all(DASHBOARD_REQUIRED_RELATIONS.map(checkOneRelation)),
+    Promise.all(DASHBOARD_REQUIRED_COLUMNS.map(checkOneColumn)),
+  ]);
+
+  const missingRelations = relations.filter((r) => !r.present);
+  const missingColumns = columns.filter((c) => !c.present);
+  const missing: Array<RelationCheck | ColumnCheck> = [...missingRelations, ...missingColumns];
   const missingMigrations = Array.from(
     new Set(missing.map((r) => r.migration).filter((m): m is string => !!m)),
   );
@@ -114,6 +196,7 @@ export async function checkDashboardSchemaHealth(): Promise<SchemaHealthReport> 
     ok: missing.length === 0,
     checkedAt: new Date().toISOString(),
     relations,
+    columns,
     missing,
     missingMigrations,
   };
