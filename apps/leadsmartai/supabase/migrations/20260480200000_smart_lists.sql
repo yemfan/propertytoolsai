@@ -5,6 +5,12 @@
 -- can add, rename, reorder, and delete their own. System defaults can be
 -- hidden but not deleted.
 
+-- Idempotent preamble — drop prior state so the file can be safely re-run.
+drop trigger if exists trg_agents_seed_smart_lists on public.agents;
+drop function if exists public.seed_default_smart_lists();
+drop table if exists public.smart_lists cascade;
+drop function if exists public.touch_smart_lists_updated_at();
+
 create table public.smart_lists (
   id uuid primary key default gen_random_uuid(),
   agent_id bigint not null references public.agents(id) on delete cascade,

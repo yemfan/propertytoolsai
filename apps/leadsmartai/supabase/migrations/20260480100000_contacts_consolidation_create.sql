@@ -5,6 +5,31 @@
 -- sphere_contacts carried, plus TCPA consent fields (previously marked
 -- "probably needed before real build" in 20260479200000_sphere_module.sql).
 
+-- Idempotent preamble: if any target table or helper function already
+-- exists from a prior run of this file (or from the compat migration's
+-- views getting partially applied), tear them down so the CREATE
+-- statements below don't hit 42P07 "relation already exists".
+-- Compat views (leads, lead_events, lead_scores, sphere_contacts) are
+-- dropped first since they depend on the base tables.
+drop view if exists public.sphere_contacts cascade;
+drop view if exists public.lead_scores cascade;
+drop view if exists public.lead_events cascade;
+drop view if exists public.leads cascade;
+
+drop trigger if exists trg_contacts_sync_status on public.contacts;
+drop function if exists public.sync_contacts_status_fields();
+
+drop table if exists public.automation_logs cascade;
+drop table if exists public.crm_tasks cascade;
+drop table if exists public.contact_scores cascade;
+drop table if exists public.contact_events cascade;
+drop table if exists public.contact_triggers cascade;
+drop table if exists public.contact_signals cascade;
+drop table if exists public.contacts cascade;
+
+drop function if exists public.sync_contacts_name_fields();
+drop function if exists public.touch_contacts_updated_at();
+
 -- =============================================================================
 -- contacts: the unified table
 -- =============================================================================
