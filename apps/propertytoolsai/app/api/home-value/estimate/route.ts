@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUserFromRequest } from "@/lib/authFromRequest";
+import { PropertyIneligibleError } from "@/lib/homeValue/eligibility";
 import { forwardGeocodeAddress } from "@/lib/homeValue/forwardGeocodeAddress";
 import { normalizeHomeValueEstimateRequestBody } from "@/lib/homeValue/normalizeEstimateRequestBody";
 import { runHomeValueEstimatePipeline } from "@/lib/homeValue/runEstimate";
@@ -49,10 +50,24 @@ export async function POST(req: Request) {
 
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       return NextResponse.json(
-        { success: false, error: "Missing property coordinates" },
+        {
+          success: false,
+          status: "ineligible",
+          reason: "ADDRESS_NOT_FOUND",
+          message:
+            "We couldn't locate this address. Check the spelling, or try including the city, state, and ZIP.",
+        },
         { status: 400 }
       );
     }
+
+    /**
+     * The eligibility gate itself lives in the pipeline
+     * (runHomeValueEstimatePipeline throws PropertyIneligibleError as
+     * soon as enrichment completes, before any expensive fetches).
+     * We catch it in the outer try/catch below and map it to the
+     * ineligible response envelope.
+     */
 
     let comps: Awaited<ReturnType<typeof getComparables>>["comps"] = [];
     try {
@@ -134,9 +149,14 @@ export async function POST(req: Request) {
       (c) => typeof c.lat !== "number" || typeof c.lng !== "number" || !Number.isFinite(c.lat) || !Number.isFinite(c.lng)
     );
     if (compsToGeocode.length > 0) {
+      // Build geocode queries with city/state/zip context for better hit rate
+      const subjectCity = normalized.city;
+      const subjectState = normalized.state;
+      const subjectZip = normalized.zip;
       const geocodeResults = await Promise.allSettled(
         compsToGeocode.slice(0, 10).map(async (comp) => {
-          const geo = await forwardGeocodeAddress(comp.address);
+          const query = addressLineForGeocode(comp.address, subjectCity, subjectState, subjectZip);
+          const geo = query ? await forwardGeocodeAddress(query) : null;
           if (geo) {
             comp.lat = geo.lat;
             comp.lng = geo.lng;
@@ -144,7 +164,7 @@ export async function POST(req: Request) {
         })
       );
       const geocoded = geocodeResults.filter((r) => r.status === "fulfilled").length;
-      console.log(`[home-value-estimate] Geocoded ${geocoded}/${compsToGeocode.length} comps`);
+      console.log(`[home-value-estimate] Geocoded ${geocoded}/${compsToGeocode.length} comps (with city/state context)`);
     }
 
     return NextResponse.json({
@@ -173,11 +193,36 @@ export async function POST(req: Request) {
         summary: result.estimate.summary,
       },
       supportingData: {
-        medianPpsf: result.market.pricePerSqft ?? result.estimate.baselinePpsf,
+        // `market.pricePerSqft` is a ZIP-wide median from market_snapshots
+        // that mixes ALL property types (SFR + condos + townhomes + multi-
+        // family). In mixed markets like Monterey Park / SGV that number
+        // can be half the SFR median because condos drag it down. The
+        // estimate internally uses `estimate.baselinePpsf` — the weighted
+        // median of the N comps actually returned for THIS subject, which
+        // is both more subject-specific and consistent with the displayed
+        // estimated value. Prefer baselinePpsf; fall back to the generic
+        // ZIP median only when there are no comps (baselinePpsf = 0).
+        medianPpsf:
+          result.estimate.baselinePpsf && result.estimate.baselinePpsf > 0
+            ? result.estimate.baselinePpsf
+            : result.market.pricePerSqft,
         weightedPpsf: result.estimate.baselinePpsf,
         compCount: result.comps.pricedCount,
       },
-      adjustments: {},
+      adjustments: (() => {
+        // Convert engine multiplier adjustments to dollar-value adjustments for the UI.
+        // Each multiplier is relative to 1.0 (neutral), so the dollar impact is:
+        //   (multiplier - 1) × estimateValue
+        const ev = result.estimate.point;
+        const adj: Record<string, number> = {};
+        for (const line of result.estimate.adjustments) {
+          const dollarImpact = Math.round((line.multiplier - 1) * ev);
+          if (dollarImpact !== 0) {
+            adj[line.key + "Adjustment"] = dollarImpact;
+          }
+        }
+        return adj;
+      })(),
       comps: compsMapped,
       recommendations: {
         type: result.intentInference.applied,
@@ -195,6 +240,25 @@ export async function POST(req: Request) {
       },
     });
   } catch (e: unknown) {
+    /**
+     * Pipeline short-circuited because the address is not eligible
+     * for a valuation (non-residential, insufficient data, etc.).
+     * Map to the ineligible response envelope with a 200 status —
+     * it's not a server error, it's a deliberate outcome.
+     */
+    if (e instanceof PropertyIneligibleError) {
+      return NextResponse.json(
+        {
+          success: false,
+          status: "ineligible",
+          reason: e.reason,
+          message: e.message,
+          detail: e.detail,
+          detectedType: e.detectedType,
+        },
+        { status: 200 }
+      );
+    }
     const msg = e instanceof Error ? e.message : "Server error";
     if (msg === "address is required") {
       return NextResponse.json({ success: false, error: msg }, { status: 400 });
