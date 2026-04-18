@@ -21,7 +21,7 @@ export async function POST(
     }
 
     const { data: lead, error: leadErr } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id,agent_id")
       .eq("id", leadId as any)
       .maybeSingle();
@@ -37,7 +37,7 @@ export async function POST(
     const { data, error } = await supabaseServer
       .from("client_portal_messages")
       .insert({
-        lead_id: leadId as any,
+        contact_id: leadId as any,
         sender_role: "agent",
         sender_auth_user_id: ctx.userId,
         body: text,

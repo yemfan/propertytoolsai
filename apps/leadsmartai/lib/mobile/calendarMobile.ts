@@ -8,7 +8,7 @@ import type {
 
 async function assertLeadOwned(agentId: string, leadId: string): Promise<void> {
   const { data, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("id")
     .eq("id", leadId as never)
     .eq("agent_id", agentId as never)
@@ -22,7 +22,7 @@ async function assertLeadOwned(agentId: string, leadId: string): Promise<void> {
 async function touchLeadActivity(leadId: string): Promise<void> {
   const now = new Date().toISOString();
   const { error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .update({ last_activity_at: now } as never)
     .eq("id", leadId as never);
   if (error) throw new Error(error.message);
@@ -45,7 +45,7 @@ function normalizeProvider(p: string | undefined | null): MobileCalendarProvider
 function mapEventRow(row: Record<string, unknown>, leadName: string | null): MobileCalendarEventDto {
   return {
     id: String(row.id ?? ""),
-    lead_id: String(row.lead_id ?? ""),
+    contact_id: String(row.contact_id ?? ""),
     lead_name: leadName,
     title: String(row.title ?? ""),
     description: row.description != null ? String(row.description) : null,
@@ -64,7 +64,7 @@ function mapEventRow(row: Record<string, unknown>, leadName: string | null): Mob
 function mapBookingRow(row: Record<string, unknown>, leadName: string | null): MobileBookingLinkDto {
   return {
     id: String(row.id ?? ""),
-    lead_id: String(row.lead_id ?? ""),
+    contact_id: String(row.contact_id ?? ""),
     lead_name: leadName,
     booking_url: String(row.booking_url ?? ""),
     label: row.label != null ? String(row.label) : null,
@@ -89,7 +89,7 @@ export async function listMobileCalendarEvents(params: {
   let evQ = supabaseAdmin
     .from("lead_calendar_events")
     .select(
-      "id,lead_id,title,description,starts_at,ends_at,timezone,status,calendar_provider,external_event_id,external_calendar_id,created_at,updated_at"
+      "id,contact_id,title,description,starts_at,ends_at,timezone,status,calendar_provider,external_event_id,external_calendar_id,created_at,updated_at"
     )
     .eq("agent_id", agentId as never)
     .eq("status", "scheduled")
@@ -97,7 +97,7 @@ export async function listMobileCalendarEvents(params: {
     .lte("starts_at", to);
 
   if (params.leadId) {
-    evQ = evQ.eq("lead_id", params.leadId as never);
+    evQ = evQ.eq("contact_id", params.leadId as never);
   }
 
   const { data: evs, error } = await evQ.order("starts_at", { ascending: true }).limit(500);
@@ -105,11 +105,11 @@ export async function listMobileCalendarEvents(params: {
   if (error) throw new Error(error.message);
 
   const rows = evs ?? [];
-  const leadIds = [...new Set(rows.map((r) => String((r as { lead_id: unknown }).lead_id)))];
+  const leadIds = [...new Set(rows.map((r) => String((r as { contact_id: unknown }).contact_id)))];
   const nameById = new Map<string, string | null>();
   if (leadIds.length) {
     const { data: leads, error: le } = await supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .select("id,name")
       .eq("agent_id", agentId as never)
       .in("id", leadIds as never);
@@ -120,7 +120,7 @@ export async function listMobileCalendarEvents(params: {
     }
   }
 
-  return rows.map((r) => mapEventRow(r as Record<string, unknown>, nameById.get(String((r as { lead_id: unknown }).lead_id)) ?? null));
+  return rows.map((r) => mapEventRow(r as Record<string, unknown>, nameById.get(String((r as { contact_id: unknown }).contact_id)) ?? null));
 }
 
 export async function fetchNextAppointmentForLead(
@@ -131,10 +131,10 @@ export async function fetchNextAppointmentForLead(
   const { data, error } = await supabaseAdmin
     .from("lead_calendar_events")
     .select(
-      "id,lead_id,title,description,starts_at,ends_at,timezone,status,calendar_provider,external_event_id,external_calendar_id,created_at,updated_at"
+      "id,contact_id,title,description,starts_at,ends_at,timezone,status,calendar_provider,external_event_id,external_calendar_id,created_at,updated_at"
     )
     .eq("agent_id", agentId as never)
-    .eq("lead_id", leadId as never)
+    .eq("contact_id", leadId as never)
     .eq("status", "scheduled")
     .gte("starts_at", now)
     .order("starts_at", { ascending: true })
@@ -145,7 +145,7 @@ export async function fetchNextAppointmentForLead(
   if (!data) return null;
 
   const { data: lead } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("name")
     .eq("id", leadId as never)
     .eq("agent_id", agentId as never)
@@ -163,16 +163,16 @@ export async function listRecentBookingLinksForLead(params: {
   const lim = Math.min(Math.max(params.limit ?? 5, 1), 20);
   const { data: rows, error } = await supabaseAdmin
     .from("lead_booking_links")
-    .select("id,lead_id,booking_url,label,share_message,expires_at,created_at")
+    .select("id,contact_id,booking_url,label,share_message,expires_at,created_at")
     .eq("agent_id", params.agentId as never)
-    .eq("lead_id", params.leadId as never)
+    .eq("contact_id", params.leadId as never)
     .order("created_at", { ascending: false })
     .limit(lim);
 
   if (error) throw new Error(error.message);
 
   const { data: lead } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("name")
     .eq("id", params.leadId as never)
     .eq("agent_id", params.agentId as never)
@@ -199,7 +199,7 @@ export async function createMobileCalendarEvent(params: {
   await assertLeadOwned(params.agentId, params.leadId);
   const now = new Date().toISOString();
   const insert = {
-    lead_id: params.leadId,
+    contact_id: params.leadId,
     agent_id: params.agentId,
     title: params.title.trim(),
     description: params.description ?? null,
@@ -218,14 +218,14 @@ export async function createMobileCalendarEvent(params: {
     .from("lead_calendar_events")
     .insert(insert as never)
     .select(
-      "id,lead_id,title,description,starts_at,ends_at,timezone,status,calendar_provider,external_event_id,external_calendar_id,created_at,updated_at"
+      "id,contact_id,title,description,starts_at,ends_at,timezone,status,calendar_provider,external_event_id,external_calendar_id,created_at,updated_at"
     )
     .single();
 
   if (error) throw new Error(error.message);
 
   const { data: lead } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("name")
     .eq("id", params.leadId as never)
     .maybeSingle();
@@ -246,7 +246,7 @@ export async function patchMobileCalendarEvent(params: {
 }): Promise<MobileCalendarEventDto> {
   const { data: existing, error: e0 } = await supabaseAdmin
     .from("lead_calendar_events")
-    .select("id,lead_id")
+    .select("id,contact_id")
     .eq("id", params.eventId as never)
     .eq("agent_id", params.agentId as never)
     .maybeSingle();
@@ -254,7 +254,7 @@ export async function patchMobileCalendarEvent(params: {
   if (e0) throw new Error(e0.message);
   if (!existing) throw new Error("NOT_FOUND");
 
-  const leadId = String((existing as { lead_id: unknown }).lead_id);
+  const leadId = String((existing as { contact_id: unknown }).contact_id);
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (params.status != null) patch.status = params.status;
   if (params.title != null) patch.title = params.title.trim();
@@ -268,14 +268,14 @@ export async function patchMobileCalendarEvent(params: {
     .eq("id", params.eventId as never)
     .eq("agent_id", params.agentId as never)
     .select(
-      "id,lead_id,title,description,starts_at,ends_at,timezone,status,calendar_provider,external_event_id,external_calendar_id,created_at,updated_at"
+      "id,contact_id,title,description,starts_at,ends_at,timezone,status,calendar_provider,external_event_id,external_calendar_id,created_at,updated_at"
     )
     .single();
 
   if (error) throw new Error(error.message);
 
   const { data: lead } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("name")
     .eq("id", leadId as never)
     .maybeSingle();
@@ -306,7 +306,7 @@ export async function createMobileBookingLink(params: {
   const { data, error } = await supabaseAdmin
     .from("lead_booking_links")
     .insert({
-      lead_id: params.leadId,
+      contact_id: params.leadId,
       agent_id: params.agentId,
       booking_url: url,
       label: params.label?.trim() || null,
@@ -314,13 +314,13 @@ export async function createMobileBookingLink(params: {
       expires_at: params.expiresAt ?? null,
       metadata_json: meta,
     } as never)
-    .select("id,lead_id,booking_url,label,share_message,expires_at,created_at")
+    .select("id,contact_id,booking_url,label,share_message,expires_at,created_at")
     .single();
 
   if (error) throw new Error(error.message);
 
   const { data: lead } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("name")
     .eq("id", params.leadId as never)
     .maybeSingle();

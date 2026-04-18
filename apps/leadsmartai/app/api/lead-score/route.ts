@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     }
 
     const url = new URL(req.url);
-    const leadId = String(url.searchParams.get("lead_id") ?? "").trim();
+    const leadId = String(url.searchParams.get("contact_id") ?? "").trim();
     const force = String(url.searchParams.get("refresh") ?? "false").toLowerCase() === "true";
     if (!leadId) {
       return NextResponse.json({ ok: false, error: "lead_id is required" }, { status: 400 });

@@ -21,7 +21,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     };
 
     const { data: lead, error } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select(
         "id,name,email,phone,property_address,search_location,price_min,price_max,lead_status,rating,notes,pipeline_stage_id,source,engagement_score,last_activity_at,created_at"
       )

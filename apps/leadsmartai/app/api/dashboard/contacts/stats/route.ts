@@ -15,7 +15,7 @@ export async function GET() {
 
     // Fetch all leads for this agent (bounded)
     const { data: leads } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id, rating, last_contacted_at, created_at")
       .eq("agent_id", agentId)
       .limit(5000);

@@ -7,7 +7,7 @@ export async function updateLeadPipelineStage(params: {
   pipelineStageId: string | null;
 }): Promise<{ previousStageId: string | null }> {
   const { data: lead, error: leadErr } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .select("id,agent_id,pipeline_stage_id")
     .eq("id", params.leadId as any)
     .eq("agent_id", params.agentId as any)
@@ -35,7 +35,7 @@ export async function updateLeadPipelineStage(params: {
   }
 
   const { error: upErr } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .update({ pipeline_stage_id: params.pipelineStageId } as any)
     .eq("id", params.leadId as any)
     .eq("agent_id", params.agentId as any);
@@ -43,7 +43,7 @@ export async function updateLeadPipelineStage(params: {
   if (upErr) throw new Error(upErr.message);
 
   await recordLeadEvent({
-    lead_id: params.leadId,
+    contact_id: params.leadId,
     event_type: "pipeline_stage_change",
     metadata: {
       from_stage_id: prev,

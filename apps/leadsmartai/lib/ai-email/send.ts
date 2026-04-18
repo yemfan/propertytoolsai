@@ -39,7 +39,7 @@ export async function sendOutboundEmail(params: {
 
   try {
     await supabaseAdmin.from("message_logs").insert({
-      lead_id: params.leadId,
+      contact_id: params.leadId,
       type: "email",
       status: delivered ? "sent" : "queued",
       content: `${params.subject}\n\n${params.body}`,
@@ -50,7 +50,7 @@ export async function sendOutboundEmail(params: {
 
   try {
     await supabaseAdmin.rpc("log_lead_event", {
-      p_lead_id: params.leadId,
+      p_contact_id: params.leadId,
       p_event_type: "email_sent",
       p_metadata: {
         to: params.to,
@@ -68,7 +68,7 @@ export async function sendOutboundEmail(params: {
   // Update last_contacted_at on the lead.
   try {
     await supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .update({ last_contacted_at: new Date().toISOString() } as Record<string, unknown>)
       .eq("id", params.leadId);
   } catch {

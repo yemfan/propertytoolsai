@@ -23,7 +23,7 @@ export async function resolveEffectiveAgentId(
 ): Promise<string | null> {
   if (callAgentId) return callAgentId;
   const { data } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("agent_id")
     .eq("id", leadId as never)
     .maybeSingle();
@@ -36,9 +36,9 @@ export async function hasOpenVoiceFollowUpForCall(
   twilioCallSid: string
 ): Promise<boolean> {
   const { data, error } = await supabaseAdmin
-    .from("lead_tasks")
+    .from("crm_tasks")
     .select("id")
-    .eq("lead_id", leadId as never)
+    .eq("contact_id", leadId as never)
     .eq("status", "open")
     .eq("task_type", "voice_follow_up")
     .contains("metadata_json", { twilio_call_sid: twilioCallSid } as Record<string, unknown>)
@@ -160,9 +160,9 @@ export async function createVoiceHotFollowUpTask(
     .join("\n\n");
 
   const { data: inserted, error } = await supabaseAdmin
-    .from("lead_tasks")
+    .from("crm_tasks")
     .insert({
-      lead_id: params.leadId as never,
+      contact_id: params.leadId as never,
       assigned_agent_id: agentId as never,
       title: spec.title,
       description,
@@ -190,8 +190,8 @@ export async function createVoiceHotFollowUpTask(
     : undefined;
 
   try {
-    await supabaseAdmin.from("lead_events").insert({
-      lead_id: params.leadId as never,
+    await supabaseAdmin.from("contact_events").insert({
+      contact_id: params.leadId as never,
       agent_id: agentId as never,
       event_type: "voice_hot_escalation_task_created",
       metadata: {

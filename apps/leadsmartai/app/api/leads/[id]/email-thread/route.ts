@@ -18,7 +18,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     }
 
     const { data: leadRow, error: leadErr } = await supabase
-      .from("leads")
+      .from("contacts")
       .select("id")
       .eq("id", leadId)
       .eq("agent_id", agentId)
@@ -31,7 +31,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     const { data: rows, error: msgErr } = await supabase
       .from("email_messages")
       .select("id,subject,message,direction,created_at")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .order("created_at", { ascending: true })
       .limit(200);
     if (msgErr) throw msgErr;

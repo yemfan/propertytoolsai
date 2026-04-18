@@ -100,7 +100,7 @@ export async function POST(req: Request) {
       .update({
         status: "completed",
         summary: {
-          lead_id: leadId,
+          contact_id: leadId,
           action: result.action,
           ...(result.action === "skipped" ? { duplicate_score: result.score } : {}),
           finished_at: new Date().toISOString(),

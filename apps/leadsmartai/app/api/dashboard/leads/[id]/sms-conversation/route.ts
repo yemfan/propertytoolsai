@@ -19,7 +19,7 @@ export async function GET(
 
     // Verify lead belongs to agent.
     const { data: leadRow, error: leadErr } = await supabase
-      .from("leads")
+      .from("contacts")
       .select("id, rating, nurture_score, sms_ai_enabled, sms_agent_takeover, sms_followup_stage, sms_last_outbound_at, sms_last_inbound_at")
       .eq("id", leadId)
       .eq("agent_id", agentId)
@@ -30,14 +30,14 @@ export async function GET(
     const { data: convoRow, error: convoErr } = await supabase
       .from("sms_conversations")
       .select("id,stage,messages,last_ai_reply_at,created_at")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .maybeSingle();
     if (convoErr) throw convoErr;
 
     const { data: messageRows } = await supabase
       .from("sms_messages")
       .select("id,message,direction,created_at")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .order("created_at", { ascending: true })
       .limit(200);
 

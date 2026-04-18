@@ -1,4 +1,4 @@
-import type { LeadId } from "./lead";
+import type { ContactId, LeadId } from "./lead";
 import type { NotificationDeliveryTiming } from "./lead-attention-score";
 import type { NotificationPriority } from "./notification-priority";
 import type { DealPredictionLabel } from "./deal-prediction";
@@ -81,7 +81,7 @@ export type MobileTaskPriority = "low" | "medium" | "high" | "urgent";
 
 export type MobileLeadTaskDto = {
   id: string;
-  lead_id: LeadId;
+  contact_id: ContactId;
   lead_name: string | null;
   title: string;
   description: string | null;
@@ -109,7 +109,7 @@ export type MobileCalendarEventStatus = "scheduled" | "cancelled" | "completed";
 
 export type MobileCalendarEventDto = {
   id: string;
-  lead_id: LeadId;
+  contact_id: ContactId;
   lead_name: string | null;
   title: string;
   description: string | null;
@@ -131,7 +131,7 @@ export type MobileCalendarEventsListResponseDto = {
 
 export type MobileBookingLinkDto = {
   id: string;
-  lead_id: LeadId;
+  contact_id: ContactId;
   lead_name: string | null;
   booking_url: string;
   label: string | null;
@@ -141,7 +141,7 @@ export type MobileBookingLinkDto = {
 };
 
 export type MobileFollowUpReminderDto = {
-  lead_id: LeadId;
+  contact_id: ContactId;
   lead_name: string | null;
   next_contact_at: string;
   /** True when `next_contact_at` is before now. */
@@ -248,7 +248,7 @@ export type MobileAgentInboxNotificationDto = {
   data: {
     deep_link?: {
       screen: MobileNotificationDeepScreen;
-      lead_id?: LeadId;
+      contact_id?: ContactId;
       task_id?: string;
     };
   } | null;

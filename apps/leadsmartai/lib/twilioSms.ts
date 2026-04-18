@@ -53,7 +53,7 @@ export async function sendSMS(
       const { data: logRow, error: logErr } = await supabaseServer
         .from("message_logs")
         .insert({
-          lead_id: resolvedLeadId,
+          contact_id: resolvedLeadId,
           type: "sms",
           status: "sent",
           content: message,

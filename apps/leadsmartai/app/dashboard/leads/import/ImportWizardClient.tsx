@@ -30,7 +30,7 @@ export function ImportWizardClient() {
     Array<{
       row_index: number;
       normalized_payload: Record<string, string | null | undefined> | null;
-      duplicate_lead_id: string | null;
+      duplicate_contact_id: string | null;
       duplicate_confidence: number | null;
     }>
   >([]);
@@ -281,7 +281,7 @@ export function ImportWizardClient() {
                     <td className="px-2 py-1">{String(p.normalized_payload?.email ?? "")}</td>
                     <td className="px-2 py-1">{String(p.normalized_payload?.phone ?? "")}</td>
                     <td className="px-2 py-1">
-                      {p.duplicate_lead_id ? `Yes (${p.duplicate_confidence ?? ""})` : "—"}
+                      {p.duplicate_contact_id ? `Yes (${p.duplicate_confidence ?? ""})` : "—"}
                     </td>
                   </tr>
                 ))}

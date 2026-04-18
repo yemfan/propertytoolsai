@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     // Some environments may not yet have `phone_number` / `sms_opt_in`.
     // Prefer selecting the older stable columns.
     const { data: leadRow } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id,phone,contact_method,automation_disabled,rating,property_address,name")
       .eq("id", leadId)
       .maybeSingle();
@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     const { data: convoRow } = await supabaseServer
       .from("sms_conversations")
       .select("id,stage,last_ai_reply_at,messages")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -34,14 +34,14 @@ export async function GET(req: Request) {
     const { data: logs } = await supabaseServer
       .from("message_logs")
       .select("id,type,status,content,created_at")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .order("created_at", { ascending: false })
       .limit(10);
 
     const { data: alerts } = await supabaseServer
       .from("nurture_alerts")
       .select("id,type,message,created_at")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .order("created_at", { ascending: false })
       .limit(10);
 

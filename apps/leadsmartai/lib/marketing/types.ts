@@ -8,7 +8,7 @@ export type TemplateKey = "buyer_nurture" | "seller_nurture" | "new_listing" | "
 export type MarketingPlanRow = {
   id: string;
   agent_id: string;
-  lead_id: string | null;
+  contact_id: string | null;
   template_key: string;
   title: string;
   status: PlanStatus;

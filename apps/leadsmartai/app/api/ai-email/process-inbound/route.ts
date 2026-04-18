@@ -123,7 +123,7 @@ export async function POST(req: Request) {
       try {
         await supabaseAdmin.from("nurture_alerts").insert({
           agent_id: agentId,
-          lead_id: leadId,
+          contact_id: leadId,
           type: "hot",
           message: `AI email escalation (${reply.inferredIntent}): ${subject.slice(0, 80)}`,
         } as Record<string, unknown>);
@@ -159,7 +159,7 @@ export async function POST(req: Request) {
 
     try {
       await supabaseAdmin.rpc("log_lead_event", {
-        p_lead_id: leadId,
+        p_contact_id: leadId,
         p_event_type: "ai_email_reply",
         p_metadata: {
           inferredIntent: reply.inferredIntent,

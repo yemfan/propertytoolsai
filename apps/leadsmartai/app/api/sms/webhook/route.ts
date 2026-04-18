@@ -144,7 +144,7 @@ export async function POST(req: Request) {
     let leadRow: any = null;
     try {
       const { data: leadByPhoneNumber, error: leadErr1 } = await supabaseServer
-        .from("leads")
+        .from("contacts")
         .select(leadSmsSelect)
         .eq("phone_number", fromUsPhone)
         .order("created_at", { ascending: false })
@@ -158,7 +158,7 @@ export async function POST(req: Request) {
 
     if (!leadRow) {
       const { data: leadByPhone, error: leadErr2 } = await supabaseServer
-        .from("leads")
+        .from("contacts")
         .select(leadSmsSelect)
         .eq("phone", fromUsPhone)
         .order("created_at", { ascending: false })
@@ -171,7 +171,7 @@ export async function POST(req: Request) {
       // Additional fallback: match by digits-only if stored phone format differs.
       if (!leadRow) {
         const { data: leadByDigits, error: leadErr3 } = await supabaseServer
-          .from("leads")
+          .from("contacts")
           .select(leadSmsSelect)
           .ilike("phone", `%${fromDigits}%`)
           .order("created_at", { ascending: false })
@@ -190,7 +190,7 @@ export async function POST(req: Request) {
           intent: inferIntentHeuristic(body),
         });
         const { data: createdLead, error: createdErr } = await supabaseServer
-          .from("leads")
+          .from("contacts")
           .select(leadSmsSelect)
           .eq("phone_number", fromUsPhone)
           .order("created_at", { ascending: false })
@@ -227,7 +227,7 @@ export async function POST(req: Request) {
     // Always save inbound message.
     try {
       await supabaseServer.from("message_logs").insert({
-        lead_id: leadId,
+        contact_id: leadId,
         type: "sms",
         status: "received",
         content: body,
@@ -243,7 +243,7 @@ export async function POST(req: Request) {
     } catch {}
     try {
       await supabaseServer
-        .from("leads")
+        .from("contacts")
         .update({ sms_last_inbound_at: new Date().toISOString() } as any)
         .eq("id", leadId);
     } catch {}
@@ -264,7 +264,7 @@ export async function POST(req: Request) {
     const { data: existingReplied } = await supabaseServer
       .from("message_logs")
       .select("id")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .eq("type", "sms")
       .eq("status", "replied")
       .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
@@ -277,7 +277,7 @@ export async function POST(req: Request) {
     const { data: latestSentSms } = await supabaseServer
       .from("message_logs")
       .select("id")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .eq("type", "sms")
       .eq("status", "sent")
       .order("created_at", { ascending: false })
@@ -295,7 +295,7 @@ export async function POST(req: Request) {
     if (unsubscribe) {
       try {
         await supabaseServer
-          .from("leads")
+          .from("contacts")
           .update({
             sms_opt_in: false,
             automation_disabled: true,
@@ -306,7 +306,7 @@ export async function POST(req: Request) {
       } catch {}
       // Best-effort: also complete any active lead sequence.
       try {
-        await supabaseServer.from("lead_sequences").update({ status: "completed" }).eq("lead_id", leadId);
+        await supabaseServer.from("lead_sequences").update({ status: "completed" }).eq("contact_id", leadId);
       } catch {}
 
       const toE164 = normalizeUsPhoneToE164(fromUsPhone);
@@ -317,7 +317,7 @@ export async function POST(req: Request) {
       const { data: convoRow } = await supabaseServer
         .from("sms_conversations")
         .select("id,messages")
-        .eq("lead_id", leadId)
+        .eq("contact_id", leadId)
         .maybeSingle();
 
       if (convoRow?.id) {
@@ -332,7 +332,7 @@ export async function POST(req: Request) {
           .eq("id", convoRow.id);
       } else {
         await supabaseServer.from("sms_conversations").insert({
-          lead_id: leadId,
+          contact_id: leadId,
           messages: [
             { role: "user", content: body },
             { role: "assistant", content: unsubReply },
@@ -364,7 +364,7 @@ export async function POST(req: Request) {
     const { data: convo, error: convoErr } = await supabaseServer
       .from("sms_conversations")
       .select("id,messages,stage,last_ai_reply_at")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .maybeSingle();
 
     if (convoErr) throw convoErr;
@@ -388,7 +388,7 @@ export async function POST(req: Request) {
         .eq("id", convo.id);
     } else {
       await supabaseServer.from("sms_conversations").insert({
-        lead_id: leadId,
+        contact_id: leadId,
         messages: updatedMessages,
         stage,
         last_ai_reply_at: null,
@@ -399,27 +399,27 @@ export async function POST(req: Request) {
     if (!alreadyProcessedReply) {
       // Log engagement event in timeline.
       await supabaseServer.rpc("log_lead_event", {
-        p_lead_id: leadId,
+        p_contact_id: leadId,
         p_event_type: "reply",
         p_metadata: { sms_body: body },
       });
 
       // Score: reply = +10, update rating.
       const scoreRes = await supabaseServer.rpc("marketplace_apply_nurture_score", {
-        p_lead_id: leadId,
+        p_contact_id: leadId,
         p_delta: 10,
       } as any);
 
       // Stop automation for this lead.
       try {
-        await supabaseServer.from("lead_sequences").update({ status: "completed" }).eq("lead_id", leadId);
+        await supabaseServer.from("lead_sequences").update({ status: "completed" }).eq("contact_id", leadId);
       } catch {}
-      await supabaseServer.from("leads").update({ automation_disabled: true } as any).eq("id", leadId);
+      await supabaseServer.from("contacts").update({ automation_disabled: true } as any).eq("id", leadId);
 
       if (agentId) {
         await supabaseServer.from("nurture_alerts").insert({
           agent_id: agentId,
-          lead_id: leadId,
+          contact_id: leadId,
           type: "replied",
           message: "Lead replied via SMS — nurture sequence stopped.",
         } as any);
@@ -431,7 +431,7 @@ export async function POST(req: Request) {
       const { data: existingHot } = await supabaseServer
         .from("nurture_alerts")
         .select("id")
-        .eq("lead_id", leadId)
+        .eq("contact_id", leadId)
         .eq("agent_id", agentId)
         .eq("type", "hot")
         .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
@@ -442,7 +442,7 @@ export async function POST(req: Request) {
         try {
           await supabaseServer.from("nurture_alerts").insert({
             agent_id: agentId,
-            lead_id: leadId,
+            contact_id: leadId,
             type: "hot",
             message: `High intent SMS received: "${body.slice(0, 120)}"`,
           } as any);
@@ -489,7 +489,7 @@ export async function POST(req: Request) {
           const { data: existingAlert } = await supabaseServer
             .from("nurture_alerts")
             .select("id")
-            .eq("lead_id", leadId)
+            .eq("contact_id", leadId)
             .eq("agent_id", agentId)
             .eq("type", "hot")
             .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
@@ -500,7 +500,7 @@ export async function POST(req: Request) {
             try {
               await supabaseServer.from("nurture_alerts").insert({
                 agent_id: agentId,
-                lead_id: leadId,
+                contact_id: leadId,
                 type: "hot",
                 message: `AI SMS escalation (${assistant.inferredIntent}): ${body.slice(0, 100)}`,
               } as any);
@@ -510,7 +510,7 @@ export async function POST(req: Request) {
 
         try {
           await supabaseServer.rpc("log_lead_event", {
-            p_lead_id: leadId,
+            p_contact_id: leadId,
             p_event_type: "ai_sms_reply",
             p_metadata: {
               inferredIntent: assistant.inferredIntent,
@@ -555,7 +555,7 @@ export async function POST(req: Request) {
         await supabaseServer
           .from("sms_conversations")
           .update({ messages: nextMessages, stage, last_ai_reply_at: nowIso } as any)
-          .eq("lead_id", leadId);
+          .eq("contact_id", leadId);
       }
     }
 

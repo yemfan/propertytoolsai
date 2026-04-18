@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     const name = String(body.name ?? "").trim() || "SMS Lead Test";
 
     const { data, error } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .insert({
         agent_id: null,
         name,

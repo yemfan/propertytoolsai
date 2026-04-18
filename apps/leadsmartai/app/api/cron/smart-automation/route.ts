@@ -51,7 +51,7 @@ export async function GET(req: Request) {
     // Load candidate leads. We intentionally avoid selecting columns like `leads.email`
     // because some schemas store contact info in `contacts` via `contact_id`.
     const { data: leads, error: leadsErr } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select(
         "id,agent_id,property_address,rating,contact_frequency,contact_method,engagement_score,last_activity_at,automation_disabled,contact:contact_id(name,email,phone)"
       )
@@ -85,7 +85,7 @@ export async function GET(req: Request) {
       const { data: recentLog } = await supabaseServer
         .from("automation_logs")
         .select("id")
-        .eq("lead_id", leadId)
+        .eq("contact_id", leadId)
         .gte("created_at", hoursAgoIso(24))
         .limit(1)
         .maybeSingle();
@@ -99,9 +99,9 @@ export async function GET(req: Request) {
 
       // Fetch recent events to support triggers + AI context
       const { data: events } = await supabaseServer
-        .from("lead_events")
+        .from("contact_events")
         .select("event_type,created_at")
-        .eq("lead_id", leadId)
+        .eq("contact_id", leadId)
         .order("created_at", { ascending: false })
         .limit(10);
 
@@ -182,7 +182,7 @@ export async function GET(req: Request) {
         });
 
         await supabaseServer.from("automation_logs").insert({
-          lead_id: leadId,
+          contact_id: leadId,
           rule_id: matchedRule.id,
           message,
           status: "sent",
@@ -191,7 +191,7 @@ export async function GET(req: Request) {
 
         // Also log in communications for unified timeline.
         await supabaseServer.from("communications").insert({
-          lead_id: leadId,
+          contact_id: leadId,
           agent_id: lead.agent_id ?? null,
           type: "email",
           content: message,
@@ -202,7 +202,7 @@ export async function GET(req: Request) {
         // Update last_contacted_at on the lead.
         try {
           await supabaseServer
-            .from("leads")
+            .from("contacts")
             .update({ last_contacted_at: nowIso } as Record<string, unknown>)
             .eq("id", leadId);
         } catch { /* best-effort */ }
@@ -211,7 +211,7 @@ export async function GET(req: Request) {
       } catch (e) {
         failed++;
         await supabaseServer.from("automation_logs").insert({
-          lead_id: leadId,
+          contact_id: leadId,
           rule_id: matchedRule.id,
           message,
           status: "failed",

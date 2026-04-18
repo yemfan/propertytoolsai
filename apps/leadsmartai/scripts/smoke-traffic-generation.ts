@@ -33,7 +33,7 @@ async function main() {
   console.log("Checking traffic generation migration (20260325_traffic_generation_system)...\n");
 
   const { error: leadsErr } = await supabase
-    .from("leads")
+    .from("contacts")
     .select("id,traffic_source,lead_quality")
     .limit(1);
   if (leadsErr) {
@@ -45,7 +45,7 @@ async function main() {
 
   const { error: evErr } = await supabase
     .from("traffic_events")
-    .select("id,event_type,page_path,city,source,campaign,lead_id,metadata,created_at")
+    .select("id,event_type,page_path,city,source,campaign,contact_id,metadata,created_at")
     .limit(1);
   if (evErr) {
     console.error(`✗ traffic_events: ${evErr.message}`);

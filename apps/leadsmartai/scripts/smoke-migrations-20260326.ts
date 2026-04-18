@@ -19,13 +19,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: resolve(__dirname, "../.env.local") });
 
 const TABLES: { table: string; select: string }[] = [
-  { table: "leadsmart_runs", select: "id,lead_id,status,created_at" },
+  { table: "leadsmart_runs", select: "id,contact_id,status,created_at" },
   { table: "city_market_data", select: "id,city,state,median_price,trend" },
   { table: "lead_pricing_weights", select: "id,model_version,base_price" },
-  { table: "lead_pricing_predictions", select: "id,lead_id,price_credits,created_at" },
-  { table: "lead_events", select: "id,lead_id,event_type,created_at" },
-  { table: "lead_scores", select: "id,lead_id,score,intent,updated_at" },
-  { table: "sms_messages", select: "id,lead_id,direction,created_at" },
+  { table: "lead_pricing_predictions", select: "id,contact_id,price_credits,created_at" },
+  { table: "lead_events", select: "id,contact_id,event_type,created_at" },
+  { table: "lead_scores", select: "id,contact_id,score,intent,updated_at" },
+  { table: "sms_messages", select: "id,contact_id,direction,created_at" },
 ];
 
 async function main() {
@@ -54,7 +54,7 @@ async function main() {
   }
 
   const { error: leadsErr } = await supabase
-    .from("leads")
+    .from("contacts")
     .select(
       [
         "id",

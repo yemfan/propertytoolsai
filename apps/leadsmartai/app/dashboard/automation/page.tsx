@@ -27,7 +27,7 @@ export default async function AutomationPage() {
 
   const { data: logs } = await supabaseServer
     .from("automation_logs")
-    .select("id,lead_id,rule_id,message,status,created_at,rule:rule_id (name)")
+    .select("id,contact_id,rule_id,message,status,created_at,rule:rule_id (name)")
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -102,7 +102,7 @@ export default async function AutomationPage() {
                   <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
                     {l.created_at ? new Date(l.created_at).toLocaleString() : "—"}
                   </td>
-                  <td className="px-4 py-3">{String(l.lead_id)}</td>
+                  <td className="px-4 py-3">{String(l.contact_id)}</td>
                   <td className="px-4 py-3">{(l.rule as any)?.name ?? "—"}</td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-semibold">

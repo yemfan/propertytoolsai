@@ -48,7 +48,7 @@ export async function GET(req: Request) {
 
     const { data: sequences, error: seqErr } = await supabaseServer
       .from("lead_sequences")
-      .select("id,lead_id,current_step,next_send_at,status,created_at")
+      .select("id,contact_id,current_step,next_send_at,status,created_at")
       .eq("status", "active")
       .lte("next_send_at", nowIso)
       .limit(100);
@@ -60,21 +60,21 @@ export async function GET(req: Request) {
 
     for (const seq of (sequences ?? []) as any[]) {
       const sequenceId = String(seq.id);
-      const leadIdNum = Number(seq.lead_id);
+      const leadIdNum = Number(seq.contact_id);
       if (!Number.isFinite(leadIdNum)) continue;
 
       // Stop automation if we've already recorded a reply for this lead.
       const { data: repliedRows } = await supabaseServer
         .from("message_logs")
         .select("id")
-        .eq("lead_id", leadIdNum)
+        .eq("contact_id", leadIdNum)
         .eq("status", "replied")
         .limit(1);
 
       if ((repliedRows ?? []).length) {
         await supabaseServer.from("lead_sequences").update({ status: "completed" }).eq("id", sequenceId);
         await supabaseServer
-          .from("leads")
+          .from("contacts")
           .update({ automation_disabled: true } as any)
           .eq("id", leadIdNum);
         continue;
@@ -84,7 +84,7 @@ export async function GET(req: Request) {
       const { count } = await supabaseServer
         .from("message_logs")
         .select("id", { count: "exact", head: true } as any)
-        .eq("lead_id", leadIdNum)
+        .eq("contact_id", leadIdNum)
         .gte("created_at", new Date(now.getTime() - 60 * 60 * 1000).toISOString());
       const sentLastHour = Number(count ?? 0);
       if (sentLastHour >= sendingLimitPerHour) {
@@ -97,7 +97,7 @@ export async function GET(req: Request) {
       }
 
       const { data: lead, error: leadErr } = await supabaseServer
-        .from("leads")
+        .from("contacts")
         .select(
           "id,name,email,phone,phone_number,sms_opt_in,agent_id,property_address,lead_type,source,created_at,report_id"
         )
@@ -125,7 +125,7 @@ export async function GET(req: Request) {
           .update({ status: "completed" })
           .eq("id", sequenceId);
         await supabaseServer
-          .from("leads")
+          .from("contacts")
           .update({ automation_disabled: false } as any)
           .eq("id", leadIdNum);
         continue;
@@ -201,7 +201,7 @@ export async function GET(req: Request) {
           const { data: logRow, error: logErr } = await supabaseServer
             .from("message_logs")
             .insert({
-              lead_id: leadIdNum,
+              contact_id: leadIdNum,
               type: "email",
               status: "sent",
             })
@@ -260,7 +260,7 @@ export async function GET(req: Request) {
             const { count } = await supabaseServer
               .from("message_logs")
               .select("id", { count: "exact", head: true } as any)
-              .eq("lead_id", leadIdNum)
+              .eq("contact_id", leadIdNum)
               .eq("type", "sms")
               .in("status", ["sent", "received", "replied"])
               .gte("created_at", new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString());
@@ -276,7 +276,7 @@ export async function GET(req: Request) {
         // Update last_contacted_at on the lead.
         try {
           await supabaseServer
-            .from("leads")
+            .from("contacts")
             .update({ last_contacted_at: new Date().toISOString() } as Record<string, unknown>)
             .eq("id", leadIdNum);
         } catch { /* best-effort */ }
@@ -308,7 +308,7 @@ export async function GET(req: Request) {
             .eq("id", sequenceId);
 
           await supabaseServer
-            .from("leads")
+            .from("contacts")
             .update({ next_contact_at: nextAt.toISOString() } as any)
             .eq("id", leadIdNum);
         } else {
@@ -318,7 +318,7 @@ export async function GET(req: Request) {
             .eq("id", sequenceId);
 
           await supabaseServer
-            .from("leads")
+            .from("contacts")
             .update({ automation_disabled: false, next_contact_at: nowIso } as any)
             .eq("id", leadIdNum);
         }

@@ -19,7 +19,7 @@ export async function generatePlan(params: {
 
   // Fetch lead data for placeholder replacement.
   const { data: lead } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("name, email, phone, property_address")
     .eq("id", params.leadId)
     .maybeSingle();
@@ -36,7 +36,7 @@ export async function generatePlan(params: {
     .from("marketing_plans")
     .insert({
       agent_id: params.agentId as unknown as number,
-      lead_id: params.leadId as unknown as number,
+      contact_id: params.leadId as unknown as number,
       template_key: params.templateKey,
       title: fillPlaceholders(template.title),
       status: "draft",
@@ -98,14 +98,14 @@ export async function approvePlan(planId: string): Promise<void> {
   try {
     const { data: plan } = await supabaseAdmin
       .from("marketing_plans")
-      .select("agent_id, lead_id, title")
+      .select("agent_id, contact_id, title")
       .eq("id", planId)
       .maybeSingle();
 
     if (!plan) return;
 
     const agentId = String((plan as Record<string, unknown>).agent_id);
-    const leadId = (plan as Record<string, unknown>).lead_id ? String((plan as Record<string, unknown>).lead_id) : null;
+    const leadId = (plan as Record<string, unknown>).contact_id ? String((plan as Record<string, unknown>).contact_id) : null;
 
     const { data: steps } = await supabaseAdmin
       .from("marketing_plan_steps")

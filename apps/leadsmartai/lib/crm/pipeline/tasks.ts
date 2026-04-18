@@ -11,14 +11,14 @@ export async function listTasksForAgent(params: {
   let q = supabaseServer
     .from("crm_tasks")
     .select(
-      "id,agent_id,lead_id,pipeline_stage_id,title,description,status,priority,due_at,completed_at,source,ai_rationale,metadata_json,created_at,updated_at"
+      "id,agent_id,contact_id,pipeline_stage_id,title,description,status,priority,due_at,completed_at,source,ai_rationale,metadata_json,created_at,updated_at"
     )
     .eq("agent_id", params.agentId as any)
     .order("due_at", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false })
     .limit(lim);
 
-  if (params.leadId) q = q.eq("lead_id", params.leadId as any);
+  if (params.leadId) q = q.eq("contact_id", params.leadId as any);
   if (params.status === "open_only" || params.status === "open") {
     q = q.eq("status", "open");
   } else if (params.status) {
@@ -44,7 +44,7 @@ export async function createTask(params: {
   const now = new Date().toISOString();
   const row = {
     agent_id: params.agentId as any,
-    lead_id: params.leadId ?? null,
+    contact_id: params.leadId ?? null,
     pipeline_stage_id: params.pipelineStageId ?? null,
     title: params.title.trim(),
     description: params.description?.trim() || null,

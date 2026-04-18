@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     }
 
     const { data: leadRow } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id,agent_id")
       .eq("phone", formattedFrom)
       .order("created_at", { ascending: false })
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     const { data: existingReplied } = await supabaseServer
       .from("message_logs")
       .select("id")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .eq("status", "replied")
       .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
       .limit(1)
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     if (!existingReplied?.id) {
       // Record reply event + mark latest sms log as replied (best-effort).
       await supabaseServer.rpc("log_lead_event", {
-        p_lead_id: leadId,
+        p_contact_id: leadId,
         p_event_type: "reply",
         p_metadata: { body },
       });
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
       const { data: latestSmsLog } = await supabaseServer
         .from("message_logs")
         .select("id")
-        .eq("lead_id", leadId)
+        .eq("contact_id", leadId)
         .eq("type", "sms")
         .eq("status", "sent")
         .order("created_at", { ascending: false })
@@ -85,28 +85,28 @@ export async function POST(req: Request) {
         await supabaseServer.from("message_logs").update({ status: "replied" }).eq("id", latestSmsLog.id);
       } else {
         await supabaseServer.from("message_logs").insert({
-          lead_id: leadId,
+          contact_id: leadId,
           type: "sms",
           status: "replied",
         } as any);
       }
 
       const scoreRes = await supabaseServer.rpc("marketplace_apply_nurture_score", {
-        p_lead_id: leadId,
+        p_contact_id: leadId,
         p_delta: 10,
       } as any);
 
       const rating = (scoreRes as any)?.data?.rating as string | undefined;
 
       // Stop automation for this lead.
-      await supabaseServer.from("lead_sequences").update({ status: "completed" }).eq("lead_id", leadId);
-      await supabaseServer.from("leads").update({ automation_disabled: true } as any).eq("id", leadId);
+      await supabaseServer.from("lead_sequences").update({ status: "completed" }).eq("contact_id", leadId);
+      await supabaseServer.from("contacts").update({ automation_disabled: true } as any).eq("id", leadId);
 
       // Alerts
       if (agentId) {
         await supabaseServer.from("nurture_alerts").insert({
           agent_id: agentId,
-          lead_id: leadId,
+          contact_id: leadId,
           type: "replied",
           message: "Lead replied via SMS — nurture sequence stopped.",
         } as any);
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
         if (rating === "hot") {
           await supabaseServer.from("nurture_alerts").insert({
             agent_id: agentId,
-            lead_id: leadId,
+            contact_id: leadId,
             type: "hot",
             message: "Lead temperature turned HOT (reply).",
           } as any);

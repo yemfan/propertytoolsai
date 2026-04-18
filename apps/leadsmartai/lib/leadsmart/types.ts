@@ -2,7 +2,7 @@ export type LeadSmartIntent = "low" | "medium" | "high";
 export type LeadSmartTimeline = "0-3 months" | "3-6 months" | "6+ months";
 
 export type LeadSmartIntelligence = {
-  lead_id: string;
+  contact_id: string;
   lead_score: number;
   intent: LeadSmartIntent;
   timeline: LeadSmartTimeline;

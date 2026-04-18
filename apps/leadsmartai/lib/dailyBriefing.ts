@@ -42,7 +42,7 @@ export async function createDailyBriefingForAgent(agentId: string) {
   }
 
   const { data: leads, error: leadsErr } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .select("id,name,email,property_address,rating,engagement_score,last_activity_at")
     .eq("agent_id", agentId)
     .limit(500);
@@ -101,7 +101,7 @@ export async function createDailyBriefingForAgent(agentId: string) {
   // Derive actionable tasks from briefing + lead sets.
   const tasks: {
     agent_id: string;
-    lead_id: number | null;
+    contact_id: number | null;
     title: string;
     description: string;
     type: string;
@@ -114,7 +114,7 @@ export async function createDailyBriefingForAgent(agentId: string) {
     );
     tasks.push({
       agent_id: agentId,
-      lead_id: lead ? Number(lead.id) : null,
+      contact_id: lead ? Number(lead.id) : null,
       title: `Call hot lead: ${l.name}`,
       description: `High-intent lead at ${l.address || "no address"}. Engagement score ${l.score}.`,
       type: "call",
@@ -128,7 +128,7 @@ export async function createDailyBriefingForAgent(agentId: string) {
     );
     tasks.push({
       agent_id: agentId,
-      lead_id: lead ? Number(lead.id) : null,
+      contact_id: lead ? Number(lead.id) : null,
       title: `Follow up with inactive lead: ${l.name}`,
       description: `Lead has been inactive for ${l.daysInactive} days at ${l.address || "no address"}.`,
       type: "follow_up",

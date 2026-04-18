@@ -48,7 +48,7 @@ async function main() {
   }
 
   const { error: leadsErr } = await supabase
-    .from("leads")
+    .from("contacts")
     .select("id,lead_type,contact_info,marketplace_opportunity_id")
     .limit(1);
   if (leadsErr) {

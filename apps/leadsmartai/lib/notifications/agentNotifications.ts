@@ -100,7 +100,7 @@ export async function insertAgentInboxNotification(
   const dataPayload = {
     deep_link: {
       screen: params.deepLink.screen,
-      lead_id: params.deepLink.leadId,
+      contact_id: params.deepLink.leadId,
       task_id: params.deepLink.taskId,
     },
   };

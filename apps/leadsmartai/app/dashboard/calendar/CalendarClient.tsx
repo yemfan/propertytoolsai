@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-type CalendarEvent = { id: string; lead_id: string; lead_name: string | null; title: string; starts_at: string; };
-type TaskItem = { id: string; lead_id: string | null; lead_name: string | null; title: string; due_at: string | null; priority: string; status: string; };
-type FollowUp = { lead_id: string; lead_name: string | null; next_contact_at: string; overdue: boolean; };
+type CalendarEvent = { id: string; contact_id: string; lead_name: string | null; title: string; starts_at: string; };
+type TaskItem = { id: string; contact_id: string | null; lead_name: string | null; title: string; due_at: string | null; priority: string; status: string; };
+type FollowUp = { contact_id: string; lead_name: string | null; next_contact_at: string; overdue: boolean; };
 type DayEntry = { type: "event" | "task" | "followup"; id: string; title: string; leadName: string | null; time: string; priority?: string; status?: string; overdue?: boolean; };
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -71,7 +71,7 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
     }
     if (showFollowups) for (const f of followups) {
       const k = dateKey(new Date(f.next_contact_at));
-      add(k, { type: "followup", id: f.lead_id, title: `Follow up with ${f.lead_name ?? "lead"}`, leadName: f.lead_name, time: f.next_contact_at, overdue: f.overdue });
+      add(k, { type: "followup", id: f.contact_id, title: `Follow up with ${f.lead_name ?? "lead"}`, leadName: f.lead_name, time: f.next_contact_at, overdue: f.overdue });
     }
     return map;
   }, [events, tasks, followups, showEvents, showTasks, showFollowups]);

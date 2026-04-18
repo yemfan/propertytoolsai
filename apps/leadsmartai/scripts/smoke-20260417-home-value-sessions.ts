@@ -69,7 +69,7 @@ async function main() {
     }
     console.log("✓ market_snapshots: readable");
     const { error: leadsColErr } = await supabase
-      .from("leads")
+      .from("contacts")
       .select("id, session_id, estimated_value, confidence, status")
       .limit(1);
     if (leadsColErr) {
@@ -184,7 +184,7 @@ async function main() {
 
   // --- leads columns (migration extends existing table) ---
   const { error: leadsColErr } = await supabase
-    .from("leads")
+    .from("contacts")
     .select("id, session_id, estimated_value, confidence, status")
     .limit(1);
   if (leadsColErr) {

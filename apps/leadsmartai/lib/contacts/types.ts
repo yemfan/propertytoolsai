@@ -67,6 +67,8 @@ export type Contact = {
   initials: string;
   email: string | null;
   phone: string | null;
+  /** Formatted phone used by SMS paths; kept separate for legacy compatibility. */
+  phoneNumber: string | null;
 
   // Addresses
   /** Where the contact lives */
@@ -75,14 +77,26 @@ export type Contact = {
   propertyAddress: string | null;
   /** Property they closed on (past_client) */
   closingAddress: string | null;
+  city: string | null;
+  state: string | null;
 
   // Funnel metadata
   source: string | null;
   rating: ContactRating | null;
   notes: string | null;
+  /** Funnel sub-state: 'new' | 'contacted' | 'qualified' | 'won' | 'lost' etc. */
+  leadStatus: string | null;
+  /** 'buyer' | 'seller' | 'rental' | 'investor' etc. */
+  leadType: string | null;
+  /** Progressive-capture stage marker. */
+  stage: string | null;
+  /** Free-form intent tag from form / SMS inference. */
+  intent: string | null;
 
   // Engagement
   engagementScore: number;
+  /** Legacy alternate of engagementScore used by the scoring pipeline. */
+  nurtureScore: number | null;
   lastActivityAt: string | null;
   lastContactedAt: string | null;
   nextContactAt: string | null;
@@ -126,6 +140,14 @@ export type Contact = {
   tcpaConsentAt: string | null;
   tcpaConsentSource: TcpaConsentSource | null;
   tcpaConsentIp: string | null;
+  /** Legacy SMS opt-in flag — reconcile with tcpaConsentAt in a follow-up. */
+  smsOptIn: boolean;
+  // SMS state machine
+  smsAiEnabled: boolean;
+  smsAgentTakeover: boolean;
+  smsFollowupStage: string | null;
+  smsLastOutboundAt: string | null;
+  smsLastInboundAt: string | null;
 
   // Pipeline
   pipelineStageId: string | null;

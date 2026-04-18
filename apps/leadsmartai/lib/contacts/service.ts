@@ -44,19 +44,30 @@ function mapContactRow(row: Record<string, unknown>): Contact {
     initials,
     email,
     phone: (row.phone as string | null) ?? null,
+    phoneNumber: (row.phone_number as string | null) ?? null,
 
     address: (row.address as string | null) ?? null,
     propertyAddress: (row.property_address as string | null) ?? null,
     closingAddress: (row.closing_address as string | null) ?? null,
+    city: (row.city as string | null) ?? null,
+    state: (row.state as string | null) ?? null,
 
     source: (row.source as string | null) ?? null,
     rating: (row.rating as Contact["rating"]) ?? null,
     notes: (row.notes as string | null) ?? null,
+    leadStatus: (row.lead_status as string | null) ?? null,
+    leadType: (row.lead_type as string | null) ?? null,
+    stage: (row.stage as string | null) ?? null,
+    intent: (row.intent as string | null) ?? null,
 
     engagementScore:
       row.engagement_score === null || row.engagement_score === undefined
         ? 0
         : Number(row.engagement_score),
+    nurtureScore:
+      row.nurture_score === null || row.nurture_score === undefined
+        ? null
+        : Number(row.nurture_score),
     lastActivityAt: (row.last_activity_at as string | null) ?? null,
     lastContactedAt: (row.last_contacted_at as string | null) ?? null,
     nextContactAt: (row.next_contact_at as string | null) ?? null,
@@ -97,6 +108,12 @@ function mapContactRow(row: Record<string, unknown>): Contact {
     tcpaConsentAt: (row.tcpa_consent_at as string | null) ?? null,
     tcpaConsentSource: (row.tcpa_consent_source as Contact["tcpaConsentSource"]) ?? null,
     tcpaConsentIp: (row.tcpa_consent_ip as string | null) ?? null,
+    smsOptIn: !!row.sms_opt_in,
+    smsAiEnabled: row.sms_ai_enabled === undefined ? true : !!row.sms_ai_enabled,
+    smsAgentTakeover: !!row.sms_agent_takeover,
+    smsFollowupStage: (row.sms_followup_stage as string | null) ?? null,
+    smsLastOutboundAt: (row.sms_last_outbound_at as string | null) ?? null,
+    smsLastInboundAt: (row.sms_last_inbound_at as string | null) ?? null,
 
     pipelineStageId: (row.pipeline_stage_id as string | null) ?? null,
 

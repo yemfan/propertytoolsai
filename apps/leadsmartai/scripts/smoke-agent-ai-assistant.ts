@@ -45,7 +45,7 @@ async function main() {
 
   const { error: convErr } = await supabase
     .from("lead_conversations")
-    .select("id,lead_id,agent_id,messages,preferences,updated_at")
+    .select("id,contact_id,agent_id,messages,preferences,updated_at")
     .limit(1);
   if (convErr) {
     console.error(`✗ lead_conversations: ${convErr.message}`);
@@ -56,7 +56,7 @@ async function main() {
 
   const { error: jobErr } = await supabase
     .from("ai_followup_jobs")
-    .select("id,lead_id,agent_id,kind,run_at,status,created_at")
+    .select("id,contact_id,agent_id,kind,run_at,status,created_at")
     .limit(1);
   if (jobErr) {
     console.error(`✗ ai_followup_jobs: ${jobErr.message}`);

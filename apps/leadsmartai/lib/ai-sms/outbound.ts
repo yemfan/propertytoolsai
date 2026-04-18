@@ -66,7 +66,7 @@ export async function sendOutboundSms(params: {
   const status = String(message.status ?? "queued");
 
   const { error: smsErr } = await supabaseAdmin.from("sms_messages").insert({
-    lead_id: params.leadId,
+    contact_id: params.leadId,
     agent_id: params.agentId ?? null,
     message: params.body,
     direction: "outbound",
@@ -78,7 +78,7 @@ export async function sendOutboundSms(params: {
 
   try {
     await supabaseAdmin.from("message_logs").insert({
-      lead_id: params.leadId,
+      contact_id: params.leadId,
       type: "sms",
       status: "sent",
       content: params.body,
@@ -89,7 +89,7 @@ export async function sendOutboundSms(params: {
 
   try {
     await supabaseAdmin.rpc("log_lead_event", {
-      p_lead_id: params.leadId,
+      p_contact_id: params.leadId,
       p_event_type: "sms_sent",
       p_metadata: {
         to: toE164,
@@ -105,7 +105,7 @@ export async function sendOutboundSms(params: {
 
   try {
     await supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .update({ sms_last_outbound_at: new Date().toISOString(), last_contacted_at: new Date().toISOString() } as Record<string, unknown>)
       .eq("id", params.leadId);
   } catch {

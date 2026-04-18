@@ -14,10 +14,10 @@ export type ImportJobRow = {
   row_index: number;
   raw_payload: Record<string, string>;
   normalized_payload: ContactFieldsInput | null;
-  duplicate_lead_id: string | null;
+  duplicate_contact_id: string | null;
   duplicate_confidence: number | null;
   resolution: string;
-  lead_id: string | null;
+  contact_id: string | null;
   error_message: string | null;
 };
 
@@ -146,7 +146,7 @@ export async function previewImportJob(params: {
       .from("contact_import_rows")
       .update({
         normalized_payload,
-        duplicate_lead_id: dupId,
+        duplicate_contact_id: dupId,
         duplicate_confidence: dupScore,
       } as never)
       .eq("id", (r as { id: string }).id);
@@ -157,10 +157,10 @@ export async function previewImportJob(params: {
       row_index: Number((r as { row_index: number }).row_index),
       raw_payload: raw,
       normalized_payload,
-      duplicate_lead_id: dupId,
+      duplicate_contact_id: dupId,
       duplicate_confidence: dupScore,
       resolution: "pending",
-      lead_id: null,
+      contact_id: null,
       error_message: null,
     });
   }
@@ -258,7 +258,7 @@ export async function finalizeImportJob(params: {
           .from("contact_import_rows")
           .update({
             resolution: "skipped",
-            duplicate_lead_id: result.duplicateLeadId,
+            duplicate_contact_id: result.duplicateLeadId,
             duplicate_confidence: result.score,
           } as never)
           .eq("id", (r as { id: string }).id);
@@ -268,7 +268,7 @@ export async function finalizeImportJob(params: {
           .from("contact_import_rows")
           .update({
             resolution: "merged",
-            lead_id: result.leadId,
+            contact_id: result.leadId,
           } as never)
           .eq("id", (r as { id: string }).id);
         merged += 1;
@@ -277,7 +277,7 @@ export async function finalizeImportJob(params: {
           .from("contact_import_rows")
           .update({
             resolution: "inserted",
-            lead_id: result.leadId,
+            contact_id: result.leadId,
           } as never)
           .eq("id", (r as { id: string }).id);
         inserted += 1;

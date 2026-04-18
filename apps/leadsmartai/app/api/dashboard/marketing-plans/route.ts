@@ -25,7 +25,7 @@ export async function GET(req: Request) {
         .order("updated_at", { ascending: false })
         .limit(200),
       supabaseAdmin
-        .from("leads")
+        .from("contacts")
         .select("id, name, email")
         .eq("agent_id", agentId as unknown as number)
         .order("name", { ascending: true })
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
     // Enrich plans with lead names.
     const plans = (plansRes.data ?? []).map((p: any) => ({
       ...p,
-      lead_name: p.lead_id ? leadMap.get(String(p.lead_id)) ?? null : null,
+      lead_name: p.contact_id ? leadMap.get(String(p.contact_id)) ?? null : null,
     }));
 
     return NextResponse.json({

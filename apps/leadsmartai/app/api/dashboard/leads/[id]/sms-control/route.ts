@@ -29,7 +29,7 @@ export async function PATCH(
     }
 
     const { data, error } = await supabase
-      .from("leads")
+      .from("contacts")
       .update(payload)
       .eq("id", leadId)
       .eq("agent_id", agentId)

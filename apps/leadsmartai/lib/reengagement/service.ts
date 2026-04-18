@@ -133,7 +133,7 @@ export async function listMessagesForCampaign(campaignId: string): Promise<Reeng
 
 export async function listLeadsForAgent(agentId: string, limit = 500) {
   const { data, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select(leadSelect)
     .eq("agent_id", agentId as any)
     .is("merged_into_lead_id", null)
@@ -149,7 +149,7 @@ async function fetchLogs(leadId: string, campaignId: string) {
   const { data, error } = await supabaseAdmin
     .from("reengagement_logs")
     .select("step_number,status,created_at")
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .eq("campaign_id", campaignId)
     .order("created_at", { ascending: true });
   if (error) throw error;
@@ -214,7 +214,7 @@ async function insertLog(params: {
   metadata?: Record<string, unknown>;
 }) {
   const { error } = await supabaseAdmin.from("reengagement_logs").insert({
-    lead_id: params.leadId,
+    contact_id: params.leadId,
     campaign_id: params.campaignId,
     step_number: params.stepNumber,
     channel: params.channel,
@@ -228,7 +228,7 @@ async function insertLog(params: {
 async function logLeadEvent(leadId: string, metadata: Record<string, unknown>) {
   try {
     await supabaseAdmin.rpc("log_lead_event", {
-      p_lead_id: leadId,
+      p_contact_id: leadId,
       p_event_type: "reengagement_sent",
       p_metadata: { ...metadata, source: "reengagement_engine" },
     });

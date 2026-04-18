@@ -30,7 +30,7 @@ export async function applyAiPipelinePlan(params: {
   }
   if (!stageId) {
     const { data: leadRow } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("pipeline_stage_id")
       .eq("id", leadId as any)
       .eq("agent_id", agentId as any)
@@ -58,7 +58,7 @@ export async function applyAiPipelinePlan(params: {
 
   if (createdTaskIds.length) {
     await recordLeadEvent({
-      lead_id: leadId,
+      contact_id: leadId,
       event_type: "ai_pipeline_tasks_created",
       metadata: { count: createdTaskIds.length, task_ids: createdTaskIds },
     });

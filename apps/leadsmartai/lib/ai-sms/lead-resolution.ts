@@ -36,7 +36,7 @@ export async function findLeadByPhone(phoneDisplay: string): Promise<SmsLeadSnap
 
   try {
     const { data: byPn, error: e1 } = await supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .select(
         "id,name,email,phone,phone_number,lead_status,status,nurture_score,rating,property_address,city,state,intent,agent_id"
       )
@@ -52,7 +52,7 @@ export async function findLeadByPhone(phoneDisplay: string): Promise<SmsLeadSnap
 
   if (!data) {
     const { data: byPhone, error: e2 } = await supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .select(
         "id,name,email,phone,phone_number,lead_status,status,nurture_score,rating,property_address,city,state,intent,agent_id"
       )
@@ -67,7 +67,7 @@ export async function findLeadByPhone(phoneDisplay: string): Promise<SmsLeadSnap
   if (!data && fromDigits.length >= 10) {
     const tail = fromDigits.slice(-10);
     const { data: byDigitsPhone, error: e3a } = await supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .select(
         "id,name,email,phone,phone_number,lead_status,status,nurture_score,rating,property_address,city,state,intent,agent_id"
       )
@@ -79,7 +79,7 @@ export async function findLeadByPhone(phoneDisplay: string): Promise<SmsLeadSnap
     data = (byDigitsPhone as Record<string, unknown>) ?? null;
     if (!data) {
       const { data: byDigitsPn, error: e3b } = await supabaseAdmin
-        .from("leads")
+        .from("contacts")
         .select(
           "id,name,email,phone,phone_number,lead_status,status,nurture_score,rating,property_address,city,state,intent,agent_id"
         )
@@ -102,7 +102,7 @@ export async function createSmsLeadIfMissing(params: {
   intent?: string;
 }): Promise<SmsLeadSnapshot> {
   const { data, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .insert({
       agent_id: null,
       phone: params.phoneDisplay,
@@ -125,7 +125,7 @@ export async function getRecentSmsMessages(leadId: string, limit = 8) {
   const { data, error } = await supabaseAdmin
     .from("sms_messages")
     .select("direction, message, created_at")
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -146,7 +146,7 @@ export async function logSmsActivity(params: {
   metadata?: Record<string, unknown>;
 }) {
   await supabaseAdmin.rpc("log_lead_event", {
-    p_lead_id: params.leadId,
+    p_contact_id: params.leadId,
     p_event_type: params.eventType,
     p_metadata: params.metadata || {},
   });
@@ -171,5 +171,5 @@ export async function applySmsExtractedLeadFields(
     patch.intent = inferredIntent;
   }
   if (Object.keys(patch).length === 0) return;
-  await supabaseAdmin.from("leads").update(patch).eq("id", leadId);
+  await supabaseAdmin.from("contacts").update(patch).eq("id", leadId);
 }

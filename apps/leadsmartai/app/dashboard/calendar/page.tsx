@@ -14,7 +14,7 @@ export default async function CalendarPage() {
   const ctx = await getCurrentAgentContext();
 
   const { data: leads } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .select("id, name")
     .eq("agent_id", ctx.agentId)
     .limit(500);

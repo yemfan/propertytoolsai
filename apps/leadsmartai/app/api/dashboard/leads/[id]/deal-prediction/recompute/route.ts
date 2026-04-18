@@ -41,7 +41,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     }
 
     const { data: lead, error: leadErr } = await supabase
-      .from("leads")
+      .from("contacts")
       .select("id,agent_id")
       .eq("id", leadId)
       .maybeSingle();

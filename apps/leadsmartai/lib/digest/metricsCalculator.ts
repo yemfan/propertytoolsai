@@ -100,7 +100,7 @@ async function countCallsLogged(aid: number, start: string, end: string): Promis
 async function countTasksCompleted(aid: number, start: string, end: string): Promise<number> {
   // Check lead_tasks (newer) first, fall back to tasks (legacy).
   const { count: ltCount } = await supabaseAdmin
-    .from("lead_tasks")
+    .from("crm_tasks")
     .select("id", { count: "exact", head: true })
     .eq("assigned_agent_id", aid)
     .eq("status", "closed")
@@ -130,7 +130,7 @@ async function countAppointmentsBooked(aid: number, start: string, end: string):
 
 async function countHotLeadsGenerated(aid: number, start: string, end: string): Promise<number> {
   const { count } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("id", { count: "exact", head: true })
     .eq("agent_id", aid)
     .eq("rating", "hot")
@@ -142,7 +142,7 @@ async function countHotLeadsGenerated(aid: number, start: string, end: string): 
 async function calcAvgResponseTime(aid: number, start: string, end: string): Promise<number | null> {
   // Average minutes between lead.created_at and first outbound communication.
   const { data: leads } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("id, created_at")
     .eq("agent_id", aid)
     .gte("created_at", start)
@@ -158,7 +158,7 @@ async function calcAvgResponseTime(aid: number, start: string, end: string): Pro
     const { data: firstComm } = await supabaseAdmin
       .from("communications")
       .select("created_at")
-      .eq("lead_id", (lead as { id: number }).id)
+      .eq("contact_id", (lead as { id: number }).id)
       .eq("agent_id", aid)
       .eq("status", "sent")
       .order("created_at", { ascending: true })
@@ -192,7 +192,7 @@ async function countMissedCallsUnresolved(aid: number): Promise<number> {
 async function countOverdueTasks(aid: number): Promise<number> {
   const now = new Date().toISOString();
   const { count } = await supabaseAdmin
-    .from("lead_tasks")
+    .from("crm_tasks")
     .select("id", { count: "exact", head: true })
     .eq("assigned_agent_id", aid)
     .eq("status", "open")

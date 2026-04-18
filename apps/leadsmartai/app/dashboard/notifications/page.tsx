@@ -21,7 +21,7 @@ type LeadLite = {
 
 type NotificationRow = {
   id: string;
-  lead_id: string | null;
+  contact_id: string | null;
   property_id: string | null;
   type: string;
   message: string;
@@ -31,7 +31,7 @@ type NotificationRow = {
 type HotLeadRow = { id: string; name: string | null; last_activity_at: string | null };
 type MissedCallRow = {
   id: string;
-  lead_id: string | null;
+  contact_id: string | null;
   status: string | null;
   created_at: string;
   summary: string | null;
@@ -55,7 +55,7 @@ function isSameLocalCalendarDay(a: Date, b: Date): boolean {
 }
 
 type FollowUpReminderRow = {
-  lead_id: string;
+  contact_id: string;
   lead_name: string | null;
   next_contact_at: string;
   overdue: boolean;
@@ -106,7 +106,7 @@ export default async function NotificationsPage() {
     notificationsRes,
   ] = await Promise.all([
     supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id,name,last_activity_at")
       .eq("agent_id", agentId)
       .eq("rating", "hot")
@@ -114,7 +114,7 @@ export default async function NotificationsPage() {
       .limit(20),
     supabaseServer
       .from("lead_calls")
-      .select("id,lead_id,status,created_at,summary,from_phone, leads(name)")
+      .select("id,contact_id,status,created_at,summary,from_phone, leads(name)")
       .eq("agent_id", agentId)
       .in("status", ["no_answer", "failed"])
       .order("created_at", { ascending: false })
@@ -125,8 +125,8 @@ export default async function NotificationsPage() {
     }),
     supabaseServer
       .from("notifications")
-      .select("id,lead_id,property_id,type,message,sent_at")
-      .in("lead_id", leadIds.length ? leadIds : ["__none__"])
+      .select("id,contact_id,property_id,type,message,sent_at")
+      .in("contact_id", leadIds.length ? leadIds : ["__none__"])
       .order("sent_at", { ascending: false })
       .limit(50),
   ]);
@@ -231,8 +231,8 @@ export default async function NotificationsPage() {
                   const leadName = leadEmbedName(c.leads);
                   const displayName = leadName ?? c.from_phone ?? "Unknown caller";
                   const href =
-                    c.lead_id != null
-                      ? `/dashboard/leads?id=${encodeURIComponent(String(c.lead_id))}`
+                    c.contact_id != null
+                      ? `/dashboard/leads?id=${encodeURIComponent(String(c.contact_id))}`
                       : "/dashboard/calls";
                   const summary = String(c.summary ?? "").trim();
                   const detailLine = summary
@@ -344,9 +344,9 @@ export default async function NotificationsPage() {
                 </p>
                 <ul className="space-y-2">
                   {followUps.slice(0, 8).map((f, idx) => (
-                    <li key={f.lead_id}>
+                    <li key={f.contact_id}>
                       <Link
-                        href={`/dashboard/leads?id=${encodeURIComponent(f.lead_id)}`}
+                        href={`/dashboard/leads?id=${encodeURIComponent(f.contact_id)}`}
                         className={[
                           "block rounded-xl border px-3 py-3 text-sm transition",
                           idx === 0
@@ -421,9 +421,9 @@ export default async function NotificationsPage() {
                     <tr key={n.id} className="border-t border-slate-100 hover:bg-slate-50">
                       <td className="ui-table-cell px-4 py-3">
                         <div className="ui-card-title text-brand-text">
-                          {leadMap.get(n.lead_id ?? "")?.name ?? "—"}
+                          {leadMap.get(n.contact_id ?? "")?.name ?? "—"}
                         </div>
-                        <div className="ui-meta text-slate-500">{leadMap.get(n.lead_id ?? "")?.email ?? ""}</div>
+                        <div className="ui-meta text-slate-500">{leadMap.get(n.contact_id ?? "")?.email ?? ""}</div>
                       </td>
                       <td className="ui-table-cell px-4 py-3">
                         <span

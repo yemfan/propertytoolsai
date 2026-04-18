@@ -74,7 +74,7 @@ async function resolveZipDemandScore(zipCode: string | null, city: string | null
 
 export async function getLeadSignals(leadId: string): Promise<LeadSignals> {
   const { data: lead, error: leadErr } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .select("id,city,zip_code,estimated_home_value,property_address")
     .eq("id", leadId)
     .maybeSingle();
@@ -82,9 +82,9 @@ export async function getLeadSignals(leadId: string): Promise<LeadSignals> {
   if (!lead) throw new Error("Lead not found");
 
   const { data: events, error: evErr } = await supabaseServer
-    .from("lead_events")
+    .from("contact_events")
     .select("event_type,metadata,created_at")
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .order("created_at", { ascending: false })
     .limit(5000);
   if (evErr) throw evErr;
@@ -203,9 +203,9 @@ function computeFromSignals(signals: LeadSignals): ScoreResult {
 export async function scoreLead(leadId: string, force = false): Promise<ScoreResult> {
   if (!force) {
     const { data: cached } = await supabaseServer
-      .from("lead_scores")
+      .from("contact_scores")
       .select("score,intent,timeline,confidence,explanation,updated_at")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -230,8 +230,8 @@ export async function scoreLead(leadId: string, force = false): Promise<ScoreRes
   const signals = await getLeadSignals(leadId);
   const result = computeFromSignals(signals);
   const nowIso = new Date().toISOString();
-  await supabaseServer.from("lead_scores").insert({
-    lead_id: leadId as any,
+  await supabaseServer.from("contact_scores").insert({
+    contact_id: leadId as any,
     score: result.lead_score,
     intent: result.intent,
     timeline: result.timeline,
@@ -243,7 +243,7 @@ export async function scoreLead(leadId: string, force = false): Promise<ScoreRes
 }
 
 export async function rescoreAllLeadsDaily() {
-  const { data: leads, error } = await supabaseServer.from("leads").select("id").limit(10000);
+  const { data: leads, error } = await supabaseServer.from("contacts").select("id").limit(10000);
   if (error) throw error;
   let processed = 0;
   let failed = 0;
@@ -259,12 +259,12 @@ export async function rescoreAllLeadsDaily() {
 }
 
 export async function recordLeadEvent(input: {
-  lead_id: string | number;
+  contact_id: string | number;
   event_type: string;
   metadata?: Record<string, any>;
 }) {
-  await supabaseServer.from("lead_events").insert({
-    lead_id: input.lead_id as any,
+  await supabaseServer.from("contact_events").insert({
+    contact_id: input.contact_id as any,
     event_type: input.event_type,
     metadata: input.metadata ?? {},
   } as any);

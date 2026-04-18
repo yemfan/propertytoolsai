@@ -8,9 +8,9 @@ const DEDUPE_HOURS = 6;
 async function wasHotLeadAgentAlertRecent(leadId: string): Promise<boolean> {
   const since = new Date(Date.now() - DEDUPE_HOURS * 60 * 60 * 1000).toISOString();
   const { data } = await supabaseAdmin
-    .from("lead_events")
+    .from("contact_events")
     .select("id")
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .in("event_type", ["hot_lead_agent_sms_sent", "mobile_push_hot_lead"])
     .gte("created_at", since)
     .limit(1)
@@ -40,7 +40,7 @@ export type AssignedAgentContact = {
 
 export async function getAssignedAgentContact(leadId: string): Promise<AssignedAgentContact | null> {
   const { data: lead, error: leadError } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("id,agent_id,name,phone,phone_number,property_address")
     .eq("id", leadId)
     .maybeSingle();
@@ -100,8 +100,8 @@ export async function notifyAgentOfHotLead(params: NotifyAgentOfHotLeadParams) {
   const contact = await getAssignedAgentContact(params.leadId);
   if (!contact) {
     try {
-      await supabaseAdmin.from("lead_events").insert({
-        lead_id: params.leadId,
+      await supabaseAdmin.from("contact_events").insert({
+        contact_id: params.leadId,
         agent_id: null,
         event_type: "hot_lead_agent_notify_skipped",
         metadata: { reason: "no_assigned_agent", source },
@@ -147,8 +147,8 @@ export async function notifyAgentOfHotLead(params: NotifyAgentOfHotLeadParams) {
   const agentE164 = agentPhone ? normalizeToE164(agentPhone) : null;
   if (!agentE164) {
     try {
-      await supabaseAdmin.from("lead_events").insert({
-        lead_id: params.leadId,
+      await supabaseAdmin.from("contact_events").insert({
+        contact_id: params.leadId,
         agent_id: contact.agent.id,
         event_type: "hot_lead_agent_notify_skipped",
         metadata: { reason: "no_agent_phone", source },
@@ -182,8 +182,8 @@ export async function notifyAgentOfHotLead(params: NotifyAgentOfHotLeadParams) {
   });
 
   try {
-    await supabaseAdmin.from("lead_events").insert({
-      lead_id: params.leadId,
+    await supabaseAdmin.from("contact_events").insert({
+      contact_id: params.leadId,
       agent_id: contact.agent.id,
       event_type: "hot_lead_agent_sms_sent",
       metadata: {

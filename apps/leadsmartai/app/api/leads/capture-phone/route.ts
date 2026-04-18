@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const nextStage = highIntent ? "high_intent" : "phone_captured";
 
     const { data, error } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .update({ phone: formatted, phone_number: formatted, stage: nextStage } as any)
       .eq("id", leadId)
       .select("id,stage")

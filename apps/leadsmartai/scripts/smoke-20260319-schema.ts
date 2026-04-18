@@ -52,7 +52,7 @@ async function main() {
   console.log("✓ leadsmart_users: trial_used, estimator/cma usage");
 
   const { error: leads } = await supabase
-    .from("leads")
+    .from("contacts")
     .select("id,stage,source,email")
     .limit(1);
   if (leads) {

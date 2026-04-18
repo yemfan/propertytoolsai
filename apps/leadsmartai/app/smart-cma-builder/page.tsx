@@ -56,7 +56,7 @@ export default function SmartCmaBuilderPage() {
 function SmartCmaBuilderPageInner() {
   const searchParams = useSearchParams();
   const initialAddress = searchParams.get("address") ?? "";
-  const queryLeadId = searchParams.get("lead_id");
+  const queryLeadId = searchParams.get("contact_id");
   const autoSave =
     searchParams.get("save") === "1" || searchParams.get("save") === "true";
 
@@ -355,7 +355,7 @@ function SmartCmaBuilderPageInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address: address.trim(),
-          lead_id: attachedLeadId ?? null,
+          contact_id: attachedLeadId ?? null,
           forceRefresh: forceRefreshForReport,
         }),
       });

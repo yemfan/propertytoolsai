@@ -20,12 +20,12 @@ export default async function ReportsPage() {
   if (leadIds.length) {
     const res = await supabaseServer
       .from("reports")
-      .select("id,property_id,lead_id,created_at,report_data")
-      .in("lead_id", leadIds)
+      .select("id,property_id,contact_id,created_at,report_data")
+      .in("contact_id", leadIds)
       .order("created_at", { ascending: false })
       .limit(50);
     reports = (res.data ?? []).map((r: any) => {
-      const lead = r.lead_id ? leadMap.get(r.lead_id) : null;
+      const lead = r.contact_id ? leadMap.get(r.contact_id) : null;
       return {
         id: r.id,
         property_address: r.report_data?.property?.address ?? null,

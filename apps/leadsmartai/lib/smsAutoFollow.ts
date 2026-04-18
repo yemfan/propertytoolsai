@@ -74,7 +74,7 @@ export async function logSmsMessage(input: {
   direction: "inbound" | "outbound";
 }) {
   await supabaseServer.from("sms_messages").insert({
-    lead_id: input.leadId as any,
+    contact_id: input.leadId as any,
     agent_id: input.agentId ?? null,
     message: clampMessage(input.message, 500),
     direction: input.direction,
@@ -83,7 +83,7 @@ export async function logSmsMessage(input: {
 
 export async function sendInitialSmsAfterPurchase(leadId: string | number) {
   const { data: lead } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .select("id,agent_id,name,city,property_address,estimated_home_value,phone_number,phone,sms_opt_in,sms_ai_enabled,sms_agent_takeover")
     .eq("id", leadId)
     .maybeSingle();
@@ -138,7 +138,7 @@ export async function sendInitialSmsAfterPurchase(leadId: string | number) {
   });
   const nowIso = new Date().toISOString();
   await supabaseServer
-    .from("leads")
+    .from("contacts")
     .update({ sms_followup_stage: 1, sms_last_outbound_at: nowIso } as any)
     .eq("id", (lead as any).id);
 
@@ -151,7 +151,7 @@ export async function runSmsFollowupCron() {
   let legacyMode = false;
   try {
     const res = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id,agent_id,name,city,property_address,estimated_home_value,phone_number,phone,sms_opt_in,sms_ai_enabled,sms_agent_takeover,sms_followup_stage,sms_last_outbound_at,sms_last_inbound_at")
       .eq("sms_opt_in", true)
       .eq("sms_ai_enabled", true)
@@ -166,7 +166,7 @@ export async function runSmsFollowupCron() {
   if (error) {
     // Legacy schema fallback where phone_number may not exist.
     const res = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id,agent_id,name,city,property_address,estimated_home_value,phone,contact_method,sms_followup_stage,sms_last_outbound_at,sms_last_inbound_at")
       .limit(1000);
     leads = (res.data as any[]) ?? null;
@@ -239,7 +239,7 @@ export async function runSmsFollowupCron() {
       direction: "outbound",
     });
     await supabaseServer
-      .from("leads")
+      .from("contacts")
       .update({
         sms_followup_stage: stage + 1,
         sms_last_outbound_at: new Date().toISOString(),

@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     const { data: rows, error } = await supabaseAdmin
       .from("lead_calls")
       .select(
-        "id,lead_id,twilio_call_sid,from_phone,to_phone,direction,status,call_status,hot_lead,escalation_reason,summary,transcript,recording_url,created_at,updated_at,duration_seconds,first_utterance"
+        "id,contact_id,twilio_call_sid,from_phone,to_phone,direction,status,call_status,hot_lead,escalation_reason,summary,transcript,recording_url,created_at,updated_at,duration_seconds,first_utterance"
       )
       .eq("agent_id", agentId as never)
       .order("created_at", { ascending: false })
@@ -40,11 +40,11 @@ export async function GET(req: Request) {
     if (error) throw error;
 
     // Enrich with lead names
-    const leadIds = [...new Set((rows ?? []).map((r: any) => r.lead_id).filter(Boolean))];
+    const leadIds = [...new Set((rows ?? []).map((r: any) => r.contact_id).filter(Boolean))];
     let leadMap = new Map<string, string>();
     if (leadIds.length > 0) {
       const { data: leads } = await supabaseAdmin
-        .from("leads")
+        .from("contacts")
         .select("id,name,phone")
         .in("id", leadIds);
       if (leads) {
@@ -56,7 +56,7 @@ export async function GET(req: Request) {
 
     const calls = (rows ?? []).map((r: any) => ({
       ...r,
-      lead_name: r.lead_id ? leadMap.get(String(r.lead_id)) ?? null : null,
+      lead_name: r.contact_id ? leadMap.get(String(r.contact_id)) ?? null : null,
     }));
 
     return NextResponse.json({ calls });

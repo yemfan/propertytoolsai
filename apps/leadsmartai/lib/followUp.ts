@@ -24,12 +24,12 @@ export async function scheduleFollowUpsForLead(leadId: string, agentId: string) 
   await supabaseServer
     .from("ai_followup_jobs")
     .update({ status: "cancelled" } as any)
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .eq("status", "scheduled");
 
   const now = Date.now();
   const rows = (Object.keys(DELAYS) as FollowupKind[]).map((kind) => ({
-    lead_id: leadId as any,
+    contact_id: leadId as any,
     agent_id: agentId,
     kind,
     run_at: new Date(now + DELAYS[kind]).toISOString(),
@@ -44,7 +44,7 @@ async function hasInboundSince(leadId: string, sinceIso: string): Promise<boolea
   const { data, error } = await supabaseServer
     .from("sms_messages")
     .select("id")
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .eq("direction", "inbound")
     .gte("created_at", sinceIso)
     .limit(1);
@@ -83,7 +83,7 @@ export async function processDueFollowupJobs(limit = 25): Promise<{
   const nowIso = new Date().toISOString();
   const { data: jobs, error } = await supabaseServer
     .from("ai_followup_jobs")
-    .select("id,lead_id,agent_id,kind,created_at,status")
+    .select("id,contact_id,agent_id,kind,created_at,status")
     .eq("status", "scheduled")
     .lte("run_at", nowIso)
     .limit(limit);
@@ -97,7 +97,7 @@ export async function processDueFollowupJobs(limit = 25): Promise<{
   for (const job of (jobs as any[]) ?? []) {
     processed++;
     const jobId = String(job.id);
-    const leadId = String(job.lead_id);
+    const leadId = String(job.contact_id);
     const agentId = String(job.agent_id ?? "");
     const createdAt = String(job.created_at);
 
@@ -108,7 +108,7 @@ export async function processDueFollowupJobs(limit = 25): Promise<{
     }
 
     const { data: lead, error: leadErr } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select(
         "id,name,email,phone,property_address,search_location,price_min,price_max,intent,rating,source,lead_status,contact_method,automation_disabled,sms_ai_enabled"
       )
@@ -198,7 +198,7 @@ export async function processDueFollowupJobs(limit = 25): Promise<{
       // Update last_contacted_at on the lead.
       try {
         await supabaseServer
-          .from("leads")
+          .from("contacts")
           .update({ last_contacted_at: new Date().toISOString() } as Record<string, unknown>)
           .eq("id", leadId);
       } catch { /* best-effort */ }

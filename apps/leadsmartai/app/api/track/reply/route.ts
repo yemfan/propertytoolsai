@@ -5,11 +5,11 @@ import { recordLeadEvent, scoreLead } from "@/lib/leadScoring";
 export async function POST(req: Request) {
   try {
     const body = (await req.json().catch(() => ({}))) as {
-      lead_id?: string | number;
+      contact_id?: string | number;
       message_log_id?: string;
     };
 
-    const leadId = String(body.lead_id ?? "").trim();
+    const leadId = String(body.contact_id ?? "").trim();
     const messageLogId = String(body.message_log_id ?? "").trim();
 
     if (!leadId) {
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     const { data: existingReplied } = await supabaseServer
       .from("message_logs")
       .select("id")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .eq("status", "replied")
       .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
       .limit(1)
@@ -32,13 +32,13 @@ export async function POST(req: Request) {
 
     // 1) Record reply event in lead_events for the existing timeline.
     await supabaseServer.rpc("log_lead_event", {
-      p_lead_id: leadId,
+      p_contact_id: leadId,
       p_event_type: "reply",
       p_metadata: {},
     });
     try {
       await recordLeadEvent({
-        lead_id: leadId as any,
+        contact_id: leadId as any,
         event_type: "sms_reply",
         metadata: {},
       });
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
         .from("message_logs")
         .update({ status: "replied" })
         .eq("id", messageLogId)
-        .eq("lead_id", leadId)
+        .eq("contact_id", leadId)
         .neq("status", "replied")
         .select("id,status")
         .maybeSingle();
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       const { data: logRes } = await supabaseServer
         .from("message_logs")
         .update({ status: "replied" })
-        .eq("lead_id", leadId)
+        .eq("contact_id", leadId)
         .eq("type", "email")
         .in("status", ["sent", "opened", "clicked"])
         .order("created_at", { ascending: false } as any)
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
 
     // 3) Apply nurture scoring (+10) and derive new temperature rating.
     const scoreRes = await supabaseServer.rpc("marketplace_apply_nurture_score", {
-      p_lead_id: leadId,
+      p_contact_id: leadId,
       p_delta: 10,
     } as any);
 
@@ -87,16 +87,16 @@ export async function POST(req: Request) {
     await supabaseServer
       .from("lead_sequences")
       .update({ status: "completed" })
-      .eq("lead_id", leadId);
+      .eq("contact_id", leadId);
 
     await supabaseServer
-      .from("leads")
+      .from("contacts")
       .update({ automation_disabled: true } as any)
       .eq("id", leadId);
 
     // 5) Insert nurture alert(s).
     const { data: leadRow } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("agent_id")
       .eq("id", leadId)
       .maybeSingle();
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
     if (agentId) {
       await supabaseServer.from("nurture_alerts").insert({
         agent_id: agentId,
-        lead_id: leadId,
+        contact_id: leadId,
         type: "replied",
         message: "Lead replied — nurture sequence stopped.",
       } as any);
@@ -115,7 +115,7 @@ export async function POST(req: Request) {
         const { data: existingHot } = await supabaseServer
           .from("nurture_alerts")
           .select("id")
-          .eq("lead_id", leadId)
+          .eq("contact_id", leadId)
           .eq("agent_id", agentId)
           .eq("type", "hot")
           .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
@@ -125,7 +125,7 @@ export async function POST(req: Request) {
         if (!existingHot?.id) {
           await supabaseServer.from("nurture_alerts").insert({
             agent_id: agentId,
-            lead_id: leadId,
+            contact_id: leadId,
             type: "hot",
             message: "Lead temperature turned HOT (reply).",
           } as any);

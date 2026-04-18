@@ -36,7 +36,7 @@ export async function GET(req: Request) {
     }
 
     let q = supabase
-      .from("leads")
+      .from("contacts")
       .select(
         "id,agent_id,name,email,phone,property_address,source,lead_status,notes,engagement_score,last_activity_at,rating,contact_frequency,contact_method,last_contacted_at,next_contact_at,search_location,search_radius,price_min,price_max,beds,baths,created_at,pipeline_stage_id,prediction_score,prediction_label,prediction_factors,prediction_computed_at",
         { count: "exact" }
@@ -89,13 +89,13 @@ export async function GET(req: Request) {
     let scoreMap: Record<string, any> = {};
     if (leadIds.length) {
       const { data: scoreRows } = await supabase
-        .from("lead_scores")
-        .select("lead_id,score,intent,timeline,confidence,explanation,updated_at")
-        .in("lead_id", leadIds as any)
+        .from("contact_scores")
+        .select("contact_id,score,intent,timeline,confidence,explanation,updated_at")
+        .in("contact_id", leadIds as any)
         .order("updated_at", { ascending: false })
         .limit(5000);
       for (const row of scoreRows ?? []) {
-        const key = String((row as any).lead_id ?? "");
+        const key = String((row as any).contact_id ?? "");
         if (!key || scoreMap[key]) continue;
         scoreMap[key] = row;
       }

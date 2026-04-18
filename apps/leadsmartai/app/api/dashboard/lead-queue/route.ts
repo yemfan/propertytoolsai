@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     const to = from + pageSize - 1;
 
     const { data, error, count } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select(
         "id, name, email, phone, property_address, source, lead_status, rating, created_at",
         { count: "exact" }

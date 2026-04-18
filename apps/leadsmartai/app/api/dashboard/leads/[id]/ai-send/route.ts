@@ -30,7 +30,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     }
 
     const { data: lead, error } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id,name,email,phone,property_address,contact_method,agent_id")
       .eq("id", leadId)
       .eq("agent_id", agentId)
@@ -84,7 +84,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     ]);
 
     await supabaseServer.from("communications").insert({
-      lead_id: leadId,
+      contact_id: leadId,
       agent_id: agentId,
       type: channel === "sms" ? "sms" : "email",
       content: text,
@@ -94,7 +94,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     await supabaseServer.from("events").insert({
       user_id: null,
       event_type: "outreach_sent",
-      metadata: { lead_id: leadId, channel, source: "ai_assistant_dashboard" },
+      metadata: { contact_id: leadId, channel, source: "ai_assistant_dashboard" },
     } as any);
 
     if (body.scheduleFollowups !== false) {

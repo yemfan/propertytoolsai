@@ -14,7 +14,7 @@ export default async function ContactsPage() {
   const ctx = await getCurrentAgentContext();
 
   const { data } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .select("id, name, email, phone, property_address, source, rating, last_contacted_at, notes, created_at")
     .eq("agent_id", ctx.agentId)
     .order("created_at", { ascending: false })

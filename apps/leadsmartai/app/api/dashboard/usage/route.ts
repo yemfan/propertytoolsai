@@ -23,11 +23,11 @@ export async function GET() {
     // Current counts
     const [leadsRes, contactsRes] = await Promise.all([
       supabaseServer
-        .from("leads")
+        .from("contacts")
         .select("id", { count: "exact", head: true })
         .eq("agent_id", agentId as any),
       supabaseServer
-        .from("leads")
+        .from("contacts")
         .select("id", { count: "exact", head: true })
         .eq("agent_id", agentId as any),
     ]);

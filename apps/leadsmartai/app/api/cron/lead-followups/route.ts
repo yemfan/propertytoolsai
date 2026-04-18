@@ -18,7 +18,7 @@ export async function GET() {
     const nowIso = now.toISOString();
 
     const { data: leads, error } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select(
         "id,agent_id,name,email,phone,property_address,rating,contact_frequency,contact_method,next_contact_at,automation_disabled"
       )
@@ -71,7 +71,7 @@ export async function GET() {
           });
 
           await supabaseServer.from("communications").insert({
-            lead_id: leadId,
+            contact_id: leadId,
             agent_id: agentId,
             type: "email",
             content,
@@ -82,7 +82,7 @@ export async function GET() {
         } catch (e: any) {
           failed++;
           await supabaseServer.from("communications").insert({
-            lead_id: leadId,
+            contact_id: leadId,
             agent_id: agentId,
             type: "email",
             content,
@@ -95,7 +95,7 @@ export async function GET() {
       if (method === "sms" || method === "both") {
         // TODO: integrate Twilio (or similar). For now log as failed to avoid silent spam.
         await supabaseServer.from("communications").insert({
-          lead_id: leadId,
+          contact_id: leadId,
           agent_id: agentId,
           type: "sms",
           content,
@@ -105,7 +105,7 @@ export async function GET() {
 
       const nextAt = addNext(now, freq);
       await supabaseServer
-        .from("leads")
+        .from("contacts")
         .update({
           last_contacted_at: nowIso,
           next_contact_at: nextAt,

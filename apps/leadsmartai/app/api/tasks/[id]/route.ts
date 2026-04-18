@@ -66,7 +66,7 @@ export async function PUT(
       .update(patch)
       .eq("id", id)
       .eq("agent_id", agentId)
-      .select("id,lead_id,title,description,type,status,due_date,deferred_until,created_at,updated_at")
+      .select("id,contact_id,title,description,type,status,due_date,deferred_until,created_at,updated_at")
       .single();
     if (error) throw error;
 

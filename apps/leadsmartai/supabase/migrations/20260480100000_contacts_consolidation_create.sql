@@ -26,28 +26,56 @@ create table public.contacts (
     )),
 
   -- Identity
+  -- Legacy single-field name kept for backward compat with the 30+ routes
+  -- that write `name: "John Smith"` directly. A trigger keeps it in sync
+  -- with first_name/last_name below; a future cleanup removes the
+  -- duplication once all callers write the split form.
+  name text,
   first_name text,
   last_name text,
   email text,
   phone text,
+  -- Formatted phone variant used by SMS paths. Kept separate from `phone`
+  -- to match the legacy leads schema; a future cleanup can collapse them
+  -- once the SMS state machine stops reading both.
+  phone_number text,
 
   -- Addresses (three distinct semantic fields)
   address text,                -- where the contact lives
   property_address text,       -- subject property they're inquiring about (leads)
   closing_address text,        -- property they closed on (past_client)
+  city text,                   -- derived from address, used by SMS local-context prompts
+  state text,                  -- two-letter state code
 
   -- Funnel metadata
   source text,                 -- "Zillow", "Facebook Lead Ads", "referral", etc.
   rating text check (rating is null or rating in ('A','B','C','D','unrated')),
   notes text,
 
+  -- Sub-state within lifecycle_stage. lifecycle_stage is the coarse bucket
+  -- (lead/active_client/past_client/...) while lead_status tracks funnel
+  -- micro-states: 'new' → 'contacted' → 'qualified' → 'won'/'lost'.
+  -- No DB-level check here because the enum is still evolving; the TS layer
+  -- validates.
+  lead_status text,
+
   -- Engagement tracking
   engagement_score numeric default 0,
+  -- Legacy alternate of engagement_score, preserved for the scoring/
+  -- nurture pipeline. The two should reconcile in a follow-up.
+  nurture_score numeric,
+  -- Buyer/seller intent signal captured at form fill or SMS inference.
+  intent text,
   last_activity_at timestamptz,
   last_contacted_at timestamptz,
   next_contact_at timestamptz,
   contact_frequency text,      -- daily | weekly | monthly | quarterly
   contact_method text,         -- email | sms | call | any
+  -- Lead sub-type (e.g., 'buyer', 'seller', 'rental'). Separate from
+  -- relationship_type which captures post-close vs. prospect status.
+  lead_type text,
+  -- Progressive-capture form stage ('name' → 'email' → 'phone' → 'complete').
+  stage text,
 
   -- Search criteria (leads)
   search_location text,
@@ -103,6 +131,20 @@ create table public.contacts (
     )),
   tcpa_consent_ip text,
 
+  -- Legacy SMS consent flag. Kept alongside tcpa_consent_at because the
+  -- SMS state machine (/api/sms/webhook, cron/send-emails) reads this
+  -- directly. Treat it as "SMS opt-in confirmed" — setting
+  -- tcpa_consent_at should also flip this true in the service layer.
+  sms_opt_in boolean not null default false,
+
+  -- SMS state machine columns (preserved from legacy leads schema).
+  -- Future cleanup: collapse into a child `contact_sms_state` table.
+  sms_ai_enabled boolean not null default true,
+  sms_agent_takeover boolean not null default false,
+  sms_followup_stage text,
+  sms_last_outbound_at timestamptz,
+  sms_last_inbound_at timestamptz,
+
   -- Pipeline (rebuild against contacts if/when pipeline_stages table returns)
   pipeline_stage_id uuid,
 
@@ -142,6 +184,54 @@ $$;
 create trigger trg_contacts_updated_at
   before update on public.contacts
   for each row execute function public.touch_contacts_updated_at();
+
+
+-- Keep `name` <-> `first_name`/`last_name` in sync. Writes to legacy `name`
+-- populate first_name/last_name (whitespace-split). Writes to
+-- first_name/last_name populate name. This lets us consolidate callers
+-- incrementally without a flag-day cutover.
+create or replace function public.sync_contacts_name_fields()
+returns trigger language plpgsql as $$
+declare
+  idx int;
+begin
+  -- If the caller provided new first_name/last_name and not `name`,
+  -- rebuild name from the split fields.
+  if (
+    (tg_op = 'INSERT' and new.name is null and (new.first_name is not null or new.last_name is not null))
+    or
+    (tg_op = 'UPDATE' and (new.first_name is distinct from old.first_name or new.last_name is distinct from old.last_name)
+      and new.name is not distinct from old.name)
+  ) then
+    new.name := nullif(trim(coalesce(new.first_name, '') || ' ' || coalesce(new.last_name, '')), '');
+  end if;
+
+  -- If the caller provided new `name` and not first_name/last_name,
+  -- split on first whitespace.
+  if (
+    (tg_op = 'INSERT' and new.name is not null and new.first_name is null and new.last_name is null)
+    or
+    (tg_op = 'UPDATE' and new.name is distinct from old.name
+      and new.first_name is not distinct from old.first_name
+      and new.last_name is not distinct from old.last_name)
+  ) then
+    idx := position(' ' in trim(new.name));
+    if idx = 0 then
+      new.first_name := trim(new.name);
+      new.last_name := null;
+    else
+      new.first_name := substring(trim(new.name) from 1 for idx - 1);
+      new.last_name := nullif(trim(substring(trim(new.name) from idx + 1)), '');
+    end if;
+  end if;
+
+  return new;
+end
+$$;
+
+create trigger trg_contacts_sync_name
+  before insert or update on public.contacts
+  for each row execute function public.sync_contacts_name_fields();
 
 
 -- =============================================================================

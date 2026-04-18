@@ -98,7 +98,7 @@ export type LeadMarketplacePipelineResult = {
 
 export async function runLeadMarketplacePipeline(leadId: string): Promise<LeadMarketplacePipelineResult | null> {
   const { data: lead, error: leadErr } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .select(
       "id,intent,email,phone,property_value,estimated_home_value,timeframe,location,tool_used,property_address,traffic_source"
     )
@@ -111,9 +111,9 @@ export async function runLeadMarketplacePipeline(leadId: string): Promise<LeadMa
   }
 
   const { data: leadEvents, error: evErr } = await supabaseServer
-    .from("lead_events")
+    .from("contact_events")
     .select("metadata,event_type")
-    .eq("lead_id", leadId as any);
+    .eq("contact_id", leadId as any);
 
   if (evErr) {
     console.warn("runLeadMarketplacePipeline: lead_events read failed", evErr);
@@ -131,7 +131,7 @@ export async function runLeadMarketplacePipeline(leadId: string): Promise<LeadMa
   const price = quote.price;
 
   const { error: upErr } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .update({ score, price } as Record<string, unknown>)
     .eq("id", leadId);
 
@@ -141,7 +141,7 @@ export async function runLeadMarketplacePipeline(leadId: string): Promise<LeadMa
   }
 
   const metaBase = {
-    lead_id: String(leadId),
+    contact_id: String(leadId),
     score,
     price,
     scoring_model: LEAD_SCORING_MODEL_VERSION,

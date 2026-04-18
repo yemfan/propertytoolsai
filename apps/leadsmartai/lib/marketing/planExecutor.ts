@@ -27,7 +27,7 @@ export async function executeActivePlans(): Promise<ExecutionResult> {
   // Get all active plans.
   const { data: plans } = await supabaseAdmin
     .from("marketing_plans")
-    .select("id, agent_id, lead_id, started_at")
+    .select("id, agent_id, contact_id, started_at")
     .eq("status", "active");
 
   if (!plans?.length) return result;
@@ -37,7 +37,7 @@ export async function executeActivePlans(): Promise<ExecutionResult> {
   for (const plan of plans) {
     const planId = String((plan as Record<string, unknown>).id);
     const agentId = String((plan as Record<string, unknown>).agent_id);
-    const leadId = (plan as Record<string, unknown>).lead_id ? String((plan as Record<string, unknown>).lead_id) : null;
+    const leadId = (plan as Record<string, unknown>).contact_id ? String((plan as Record<string, unknown>).contact_id) : null;
     const startedAt = new Date(String((plan as Record<string, unknown>).started_at ?? now.toISOString()));
 
     result.plansProcessed++;
@@ -68,7 +68,7 @@ export async function executeActivePlans(): Promise<ExecutionResult> {
       let leadPhone: string | null = null;
       if (leadId) {
         const { data: lead } = await supabaseAdmin
-          .from("leads")
+          .from("contacts")
           .select("email, phone, phone_number")
           .eq("id", leadId)
           .maybeSingle();
@@ -94,7 +94,7 @@ export async function executeActivePlans(): Promise<ExecutionResult> {
         if (leadId && (step.action === "send_email" || step.action === "send_sms")) {
           try {
             await supabaseAdmin
-              .from("leads")
+              .from("contacts")
               .update({ last_contacted_at: new Date().toISOString() } as Record<string, unknown>)
               .eq("id", leadId);
           } catch { /* best-effort */ }
@@ -102,8 +102,8 @@ export async function executeActivePlans(): Promise<ExecutionResult> {
 
         // Log to lead_events for CRM visibility.
         if (leadId) {
-          await supabaseAdmin.from("lead_events").insert({
-            lead_id: leadId as unknown as number,
+          await supabaseAdmin.from("contact_events").insert({
+            contact_id: leadId as unknown as number,
             agent_id: agentId as unknown as number,
             event_type: "marketing_plan_step",
             metadata: { plan_id: planId, step_id: step.id, action: step.action, channel: step.channel },

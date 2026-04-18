@@ -61,7 +61,7 @@ async function fetchCore(input: EngineInput) {
 
   if (input.leadId) {
     const { data } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id,property_address,rating,nurture_score,lead_type,marketplace_opportunity_id")
       .eq("id", Number(input.leadId))
       .maybeSingle();
@@ -70,7 +70,7 @@ async function fetchCore(input: EngineInput) {
 
   if (!lead && opportunity?.id) {
     const { data } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id,property_address,rating,nurture_score,lead_type,marketplace_opportunity_id")
       .eq("marketplace_opportunity_id", opportunity.id)
       .limit(1)
@@ -102,7 +102,7 @@ async function engagementSignal(lead: any, address: string) {
   let score = Number(lead?.nurture_score ?? 0);
   if (!score && address) {
     const { data } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("nurture_score")
       .eq("property_address", address)
       .order("created_at", { ascending: false })
@@ -175,9 +175,9 @@ export async function computeLeadPricing(input: EngineInput) {
   // Marketplace integration: blend in the AI lead score snapshot when available.
   if (core.lead?.id) {
     const { data: aiScoreRow } = await supabaseServer
-      .from("lead_scores")
+      .from("contact_scores")
       .select("score")
-      .eq("lead_id", core.lead.id)
+      .eq("contact_id", core.lead.id)
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -207,7 +207,7 @@ export async function computeLeadPricing(input: EngineInput) {
 
   await supabaseServer.from("lead_pricing_predictions").insert({
     opportunity_id: core.opportunity?.id ?? null,
-    lead_id: core.lead?.id ?? null,
+    contact_id: core.lead?.id ?? null,
     property_address: core.address,
     city: city || null,
     state: state || null,

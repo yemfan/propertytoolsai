@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     if (!leadId) return NextResponse.json({ ok: false, error: "leadId required" }, { status: 400 });
 
     const { data: leadRow, error: leadErr } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id,phone,contact_method,sms_opt_in")
       .eq("id", leadId)
       .maybeSingle();
@@ -26,13 +26,13 @@ export async function POST(req: Request) {
     // Prefer `sms_opt_in` if column exists; otherwise fall back to `contact_method`.
     try {
       const { error: updErr } = await supabaseServer
-        .from("leads")
+        .from("contacts")
         .update({ sms_opt_in: true } as any)
         .eq("id", leadId);
       if (updErr) throw updErr;
     } catch {
       const { error: updErr2 } = await supabaseServer
-        .from("leads")
+        .from("contacts")
         .update({ contact_method: "sms" } as any)
         .eq("id", leadId);
       if (updErr2) throw updErr2;

@@ -33,7 +33,7 @@ async function main() {
   console.log("Checking Twilio SMS migration (20260322_twilio_sms_integration)...\n");
 
   const { error: leadsErr } = await supabase
-    .from("leads")
+    .from("contacts")
     .select("id,phone_number,sms_opt_in")
     .limit(1);
   if (leadsErr) {

@@ -8,11 +8,11 @@ const GIF_BASE64 =
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const leadId = url.searchParams.get("lead_id");
+    const leadId = url.searchParams.get("contact_id");
     const messageLogId = url.searchParams.get("message_log_id");
     if (leadId) {
       const rpcRes = await supabaseServer.rpc("log_lead_event", {
-        p_lead_id: leadId,
+        p_contact_id: leadId,
         p_event_type: "email_open",
         p_metadata: {},
       });
@@ -25,14 +25,14 @@ export async function GET(req: Request) {
           .from("message_logs")
           .update({ status: "opened" })
           .eq("id", messageLogId)
-          .eq("lead_id", leadId)
+          .eq("contact_id", leadId)
           .eq("status", "sent")
           .select("id,status")
           .maybeSingle();
 
         if ((logUpdated as any)?.id && !debounced) {
           const scoreRes = await supabaseServer.rpc("marketplace_apply_nurture_score", {
-            p_lead_id: leadId,
+            p_contact_id: leadId,
             p_delta: 1,
           } as any);
 
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
           if (scoreData?.rating === "hot") {
             // Avoid duplicate hot alerts within 24h.
             const { data: leadRow } = await supabaseServer
-              .from("leads")
+              .from("contacts")
               .select("agent_id")
               .eq("id", leadId)
               .maybeSingle();
@@ -50,7 +50,7 @@ export async function GET(req: Request) {
               const { data: existing } = await supabaseServer
                 .from("nurture_alerts")
                 .select("id")
-                .eq("lead_id", leadId)
+                .eq("contact_id", leadId)
                 .eq("agent_id", agentId)
                 .eq("type", "hot")
                 .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
@@ -59,7 +59,7 @@ export async function GET(req: Request) {
               if (!existing?.id) {
                 await supabaseServer.from("nurture_alerts").insert({
                   agent_id: agentId,
-                  lead_id: leadId,
+                  contact_id: leadId,
                   type: "hot",
                   message: "Lead temperature turned HOT (email opened).",
                 } as any);
@@ -72,7 +72,7 @@ export async function GET(req: Request) {
         const rpcData = (rpcRes as any)?.data ?? {};
         if (!debounced) {
           await supabaseServer.rpc("marketplace_apply_nurture_score", {
-            p_lead_id: leadId,
+            p_contact_id: leadId,
             p_delta: 1,
           } as any);
         }

@@ -4,6 +4,9 @@ import type { LeadIntent } from "../constants/lead-intent";
 /** Stable string id from API (numeric ids are still strings in JSON). */
 export type LeadId = string;
 
+/** Alias for LeadId. Preferred name post-consolidation (contacts table). */
+export type ContactId = string;
+
 /**
  * Normalized lead (camelCase) for app layers.
  * Dashboard JSON uses {@link LeadRowSnake}; CRM-heavy views may use {@link LeadCrm}.

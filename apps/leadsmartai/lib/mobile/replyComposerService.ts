@@ -25,7 +25,7 @@ function leadEmail(row: Record<string, unknown>): string | null {
 
 async function loadLeadForAgent(agentId: string, leadId: string): Promise<Record<string, unknown> | null> {
   const { data, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select(LEAD_REPLY_SELECT)
     .eq("id", leadId)
     .eq("agent_id", agentId as never)
@@ -75,7 +75,7 @@ async function fetchLatestOutboundSms(leadId: string): Promise<MobileSmsMessageD
   const { data, error } = await supabaseAdmin
     .from("sms_messages")
     .select("id,message,direction,created_at")
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .eq("direction", "outbound")
     .order("created_at", { ascending: false })
     .limit(1)
@@ -96,7 +96,7 @@ async function fetchLatestOutboundEmail(leadId: string): Promise<MobileEmailMess
   const { data, error } = await supabaseAdmin
     .from("email_messages")
     .select("id,subject,message,direction,created_at")
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .eq("direction", "outbound")
     .order("created_at", { ascending: false })
     .limit(1)

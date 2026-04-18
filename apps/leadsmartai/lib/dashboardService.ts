@@ -93,7 +93,7 @@ export async function getLeadUsageThisMonth(): Promise<{
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0));
 
   const { count, error } = await supabase
-    .from("leads")
+    .from("contacts")
     .select("id", { count: "exact", head: true })
     .eq("agent_id", agentId)
     .gte("created_at", start.toISOString());
@@ -115,7 +115,7 @@ export async function getLeads(params?: {
   const supabase = supabaseServerClient();
 
   let q = supabase
-    .from("leads")
+    .from("contacts")
     .select(
       "id,agent_id,name,email,phone,property_address,source,lead_status,notes,engagement_score,last_activity_at,nurture_score,rating,contact_frequency,contact_method,last_contacted_at,next_contact_at,search_location,search_radius,price_min,price_max,beds,baths,created_at,prediction_score,prediction_label,prediction_factors,prediction_computed_at"
     )
@@ -142,13 +142,13 @@ export async function getLeads(params?: {
   let scoreMap: Record<string, any> = {};
   if (leadIds.length) {
     const { data: scoreRows } = await supabase
-      .from("lead_scores")
-      .select("lead_id,score,intent,timeline,confidence,explanation,updated_at")
-      .in("lead_id", leadIds as any)
+      .from("contact_scores")
+      .select("contact_id,score,intent,timeline,confidence,explanation,updated_at")
+      .in("contact_id", leadIds as any)
       .order("updated_at", { ascending: false })
       .limit(5000);
     for (const row of scoreRows ?? []) {
-      const key = String((row as any).lead_id ?? "");
+      const key = String((row as any).contact_id ?? "");
       if (!key || scoreMap[key]) continue;
       scoreMap[key] = row;
     }
@@ -204,7 +204,7 @@ export async function updateLeadStatus(id: string, status: LeadStatus) {
   const supabase = supabaseServerClient();
 
   const { error } = await supabase
-    .from("leads")
+    .from("contacts")
     .update({ lead_status: status })
     .eq("id", id)
     .eq("agent_id", agentId);
@@ -217,7 +217,7 @@ export async function updateLeadNotes(id: string, notes: string) {
   const supabase = supabaseServerClient();
 
   const { error } = await supabase
-    .from("leads")
+    .from("contacts")
     .update({ notes })
     .eq("id", id)
     .eq("agent_id", agentId);
@@ -252,7 +252,7 @@ export async function updateLeadFollowUpSettings(
   }
 
   const { error } = await supabase
-    .from("leads")
+    .from("contacts")
     .update(updatePayload)
     .eq("id", id)
     .eq("agent_id", agentId);

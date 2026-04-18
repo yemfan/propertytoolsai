@@ -25,7 +25,7 @@ export async function GET(req: Request) {
 
   // Query leads count
   const { count: leadCount } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .select("id", { count: "exact", head: true });
 
   // Aggregate

@@ -27,7 +27,7 @@ export async function assertLeadQuota(agentId: string, planType: string): Promis
   }
   if (pt === "pro") {
     const { count, error } = await supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .select("id", { count: "exact", head: true })
       .eq("agent_id", agentId);
     if (error) throw error;
@@ -49,7 +49,7 @@ async function logIntakeActivity(params: {
 
   const aid = params.agentId?.trim();
   const row: Record<string, unknown> = {
-    lead_id: leadIdNum,
+    contact_id: leadIdNum,
     event_type: "contact_intake",
     metadata: {
       intake_channel: params.intakeChannel,
@@ -61,7 +61,7 @@ async function logIntakeActivity(params: {
     row.agent_id = aid;
   }
 
-  const { error } = await supabaseAdmin.from("lead_events").insert(row);
+  const { error } = await supabaseAdmin.from("contact_events").insert(row);
 
   if (error) console.error("[contact_intake] lead_events insert", error.message);
 }
@@ -92,7 +92,7 @@ export async function runContactIngestion(params: {
 
   if (dup && duplicateStrategy === "merge") {
     const { data: primaryRow, error: fetchErr } = await supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .select("*")
       .eq("id", dup.leadId)
       .maybeSingle();
@@ -104,7 +104,7 @@ export async function runContactIngestion(params: {
     const merged = mergeLeadRecords(primary, incoming);
 
     const { error: upErr } = await supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .update({
         ...merged,
         updated_at: new Date().toISOString(),
@@ -118,7 +118,7 @@ export async function runContactIngestion(params: {
     await normalizeLeadFields({ ...(primary as LeadLike), ...merged, id: dup.leadId });
 
     if (!skipEnrichment) {
-      const { data: fresh } = await supabaseAdmin.from("leads").select("*").eq("id", dup.leadId).maybeSingle();
+      const { data: fresh } = await supabaseAdmin.from("contacts").select("*").eq("id", dup.leadId).maybeSingle();
       if (fresh) {
         const enrichment = await enrichLeadRecord(fresh as LeadLike);
         const updatePayload: Record<string, unknown> = {
@@ -129,7 +129,7 @@ export async function runContactIngestion(params: {
         for (const [k, v] of Object.entries(enrichment.changes)) {
           if (v !== undefined) updatePayload[k] = v;
         }
-        await supabaseAdmin.from("leads").update(updatePayload).eq("id", dup.leadId);
+        await supabaseAdmin.from("contacts").update(updatePayload).eq("id", dup.leadId);
       }
     }
 
@@ -174,7 +174,7 @@ export async function runContactIngestion(params: {
   };
 
   const { data: inserted, error: insErr } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .insert(insertPayload)
     .select("id")
     .single();
@@ -188,7 +188,7 @@ export async function runContactIngestion(params: {
   await normalizeLeadFields(withId);
 
   if (!skipEnrichment) {
-    const { data: row } = await supabaseAdmin.from("leads").select("*").eq("id", leadId).maybeSingle();
+    const { data: row } = await supabaseAdmin.from("contacts").select("*").eq("id", leadId).maybeSingle();
     if (row) {
       const enrichment = await enrichLeadRecord(row as LeadLike);
       const updatePayload: Record<string, unknown> = {
@@ -199,10 +199,10 @@ export async function runContactIngestion(params: {
       for (const [k, v] of Object.entries(enrichment.changes)) {
         if (v !== undefined) updatePayload[k] = v;
       }
-      await supabaseAdmin.from("leads").update(updatePayload).eq("id", leadId);
+      await supabaseAdmin.from("contacts").update(updatePayload).eq("id", leadId);
 
       await supabaseAdmin.from("lead_enrichment_runs").insert({
-        lead_id: leadId,
+        contact_id: leadId,
         run_type: "enrichment",
         status: "completed",
         changes_json: enrichment.changes,

@@ -88,7 +88,7 @@ const leadSelect = [
 
 export async function fetchGreetingLeadById(leadId: string): Promise<GreetingLead | null> {
   const { data, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select(leadSelect)
     .eq("id", leadId)
     .maybeSingle();
@@ -135,7 +135,7 @@ export async function getGreetingSettings(agentId: string): Promise<GreetingAuto
 }
 
 export async function listEligibleGreetingLeads(agentId?: string) {
-  let q = supabaseAdmin.from("leads").select(leadSelect).not("agent_id", "is", null).limit(2000);
+  let q = supabaseAdmin.from("contacts").select(leadSelect).not("agent_id", "is", null).limit(2000);
   if (agentId) q = q.eq("agent_id", agentId as any);
 
   const { data, error } = await q;
@@ -150,7 +150,7 @@ async function alreadySentGreeting(leadId: string, event: GreetingEvent, today: 
     const { data } = await supabaseAdmin
       .from("greeting_message_history")
       .select("id")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .eq("event_type", "checkin")
       .eq("status", "sent")
       .gte("created_at", start.toISOString())
@@ -166,7 +166,7 @@ async function alreadySentGreeting(leadId: string, event: GreetingEvent, today: 
   let query = supabaseAdmin
     .from("greeting_message_history")
     .select("id")
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .eq("event_type", event.type)
     .eq("status", "sent")
     .gte("created_at", dayStart.toISOString())
@@ -300,7 +300,7 @@ export async function recordGreetingHistory(params: {
   sentAt?: string | null;
 }) {
   const { error } = await supabaseAdmin.from("greeting_message_history").insert({
-    lead_id: params.leadId,
+    contact_id: params.leadId,
     agent_id: params.agentId ?? null,
     event_type: params.eventType,
     holiday_key: params.holidayKey ?? null,
@@ -420,7 +420,7 @@ export async function runGreetingAutomation(agentId?: string, todayInput?: Date)
 
       try {
         await supabaseAdmin.rpc("log_lead_event", {
-          p_lead_id: lead.id,
+          p_contact_id: lead.id,
           p_event_type: "greeting_sent",
           p_metadata: {
             eventType: event.type,

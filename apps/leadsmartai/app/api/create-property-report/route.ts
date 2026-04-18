@@ -11,13 +11,13 @@ export async function POST(req: Request) {
     const body = (await req.json().catch(() => ({}))) as {
       address?: string;
       // Optional: attach report to an existing lead later.
-      lead_id?: string | null;
+      contact_id?: string | null;
       // Optional: allow refresh to force a new ingestion/snapshot.
       forceRefresh?: boolean;
     };
 
     const address = String(body.address ?? "").trim();
-    const lead_id = body.lead_id ?? null;
+    const lead_id = body.contact_id ?? null;
     const forceRefresh = Boolean(body.forceRefresh);
 
     if (!address) {
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       .from("reports")
       .insert({
         property_id: subject.id,
-        lead_id: null,
+        contact_id: null,
         report_data: reportData,
       })
       .select("id")
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
     if (lead_id) {
       try {
         const { error: leadUpdateErr } = await supabaseServer
-          .from("leads")
+          .from("contacts")
           .update({ report_id: reportId })
           .eq("id", lead_id);
 

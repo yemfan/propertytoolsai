@@ -14,21 +14,21 @@ function getOpenAI() {
 async function getAgentContext(agentId: string) {
   const [leadsRes, tasksRes, eventsRes] = await Promise.all([
     supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id, name, email, phone, property_address, rating, lead_status, engagement_score, last_contacted_at, pipeline_stage_id, created_at")
       .eq("agent_id", agentId as any)
       .order("created_at", { ascending: false })
       .limit(20),
     supabaseServer
       .from("crm_tasks")
-      .select("id, title, status, priority, due_at, lead_id")
+      .select("id, title, status, priority, due_at, contact_id")
       .eq("agent_id", agentId as any)
       .in("status", ["pending", "in_progress"])
       .order("due_at", { ascending: true })
       .limit(15),
     supabaseServer
       .from("lead_calendar_events")
-      .select("id, title, start_at, end_at, lead_id, status")
+      .select("id, title, start_at, end_at, contact_id, status")
       .eq("agent_id", agentId as any)
       .eq("status", "scheduled")
       .gte("start_at", new Date().toISOString())

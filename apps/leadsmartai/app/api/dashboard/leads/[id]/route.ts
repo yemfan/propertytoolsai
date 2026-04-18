@@ -69,7 +69,7 @@ export async function PATCH(
     if (typeof body.property_address === "string") directPatch.property_address = body.property_address;
     if (body.last_contacted_at) directPatch.last_contacted_at = body.last_contacted_at;
     if (Object.keys(directPatch).length > 0) {
-      await supabaseServer.from("leads").update(directPatch).eq("id", id);
+      await supabaseServer.from("contacts").update(directPatch).eq("id", id);
     }
 
     return NextResponse.json({ ok: true });
