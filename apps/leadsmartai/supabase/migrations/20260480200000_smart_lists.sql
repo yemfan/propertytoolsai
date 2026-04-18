@@ -7,7 +7,7 @@
 
 create table public.smart_lists (
   id uuid primary key default gen_random_uuid(),
-  agent_id uuid not null references public.agents(id) on delete cascade,
+  agent_id bigint not null references public.agents(id) on delete cascade,
 
   name text not null,
   description text,
