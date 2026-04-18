@@ -1,11 +1,11 @@
 import Link from "next/link";
-import type { SphereContactView } from "@/lib/sphere/types";
+import type { ContactView } from "@/lib/contacts/types";
 import type { TemplateWithOverride } from "@/lib/templates/types";
 import {
   currencyFormat,
   percentFormat,
   relationshipLabel,
-} from "@/lib/sphere/formatters";
+} from "@/lib/contacts/formatters";
 import AddSignalButton from "./AddSignalButton";
 import GenerateDraftButton from "./GenerateDraftButton";
 
@@ -18,7 +18,7 @@ export default function SphereContactProfile({
   contact,
   templates,
 }: {
-  contact: SphereContactView;
+  contact: ContactView;
   templates: TemplateWithOverride[];
 }) {
   const applicableTemplates = templates.filter(
@@ -82,7 +82,7 @@ export default function SphereContactProfile({
           value={
             contact.dormancyDays !== null ? `${contact.dormancyDays} days ago` : "Never"
           }
-          hint={contact.lastTouchDate ? new Date(contact.lastTouchDate).toLocaleDateString() : undefined}
+          hint={contact.lastContactedAt ? new Date(contact.lastContactedAt).toLocaleDateString() : undefined}
         />
         <StatCard
           label="Anniversary opt-in"
@@ -208,7 +208,7 @@ export default function SphereContactProfile({
   );
 }
 
-function EquityCard({ contact }: { contact: SphereContactView }) {
+function EquityCard({ contact }: { contact: ContactView }) {
   if (
     contact.avmCurrent === null ||
     contact.closingPrice === null ||
@@ -259,14 +259,15 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
   );
 }
 
-function isTemplateApplicable(t: TemplateWithOverride, c: SphereContactView): boolean {
+function isTemplateApplicable(t: TemplateWithOverride, c: ContactView): boolean {
   // Rough spec §2.8 agent-of-record check. Real scheduler must do a strict match
   // on the specific property — this is just a UI filter to avoid showing templates
   // that could never fire for this contact.
   if (t.id.startsWith("EQ") || t.id.startsWith("EM") || t.id.startsWith("HA")) {
     return (
-      c.relationshipType === "past_buyer_client" ||
-      c.relationshipType === "past_seller_client"
+      c.relationshipType === "past_buyer" ||
+      c.relationshipType === "past_seller" ||
+      c.relationshipType === "past_both"
     );
   }
   return true;

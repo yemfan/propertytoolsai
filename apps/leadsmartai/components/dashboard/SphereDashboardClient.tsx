@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import type { SphereContactView, SphereRelationshipType } from "@/lib/sphere/types";
-import { currencyFormat, percentFormat, relationshipLabel } from "@/lib/sphere/formatters";
+import type { ContactView, RelationshipType } from "@/lib/contacts/types";
+import { currencyFormat, percentFormat, relationshipLabel } from "@/lib/contacts/formatters";
 
 type Filter = "all" | "past_buyers" | "past_sellers" | "sphere" | "referral" | "dormant";
 
@@ -16,19 +16,19 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: "dormant", label: "Dormant 90d+" },
 ];
 
-function match(c: SphereContactView, f: Filter): boolean {
+function match(c: ContactView, f: Filter): boolean {
   if (f === "all") return true;
   if (f === "dormant") return c.reasonType === "dormant";
-  const rel: Record<Exclude<Filter, "all" | "dormant">, SphereRelationshipType> = {
-    past_buyers: "past_buyer_client",
-    past_sellers: "past_seller_client",
-    sphere: "sphere_non_client",
-    referral: "referral_source",
+  const rel: Record<Exclude<Filter, "all" | "dormant">, RelationshipType[]> = {
+    past_buyers: ["past_buyer", "past_both"],
+    past_sellers: ["past_seller", "past_both"],
+    sphere: ["sphere"],
+    referral: ["referral_source"],
   };
-  return c.relationshipType === rel[f];
+  return c.relationshipType !== null && rel[f].includes(c.relationshipType);
 }
 
-export default function SphereDashboardClient({ contacts }: { contacts: SphereContactView[] }) {
+export default function SphereDashboardClient({ contacts }: { contacts: ContactView[] }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(contacts[0]?.id ?? null);
 
@@ -114,7 +114,7 @@ export default function SphereDashboardClient({ contacts }: { contacts: SphereCo
   );
 }
 
-function ContactPreview({ contact }: { contact: SphereContactView }) {
+function ContactPreview({ contact }: { contact: ContactView }) {
   return (
     <div className="p-6">
       <div className="flex items-start gap-4">

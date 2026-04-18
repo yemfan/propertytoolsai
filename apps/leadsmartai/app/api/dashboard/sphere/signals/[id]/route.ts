@@ -4,7 +4,7 @@ import {
   acknowledgeSignal,
   dismissSignal,
   restoreSignal,
-} from "@/lib/sphere/service";
+} from "@/lib/contacts/service";
 
 export const runtime = "nodejs";
 

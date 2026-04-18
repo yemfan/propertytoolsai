@@ -38,17 +38,19 @@ function initialsFor(first: string, last: string | null): string {
 }
 
 /**
- * `message_drafts` / `templates` / `sphere_contacts` come from migrations
- * 20260479100000 / 20260479200000 / 20260479300000. If a deploy environment
- * hasn't run them yet, the queries below would throw "relation does not
- * exist" and crash the drafts dashboard. We detect that specific class of
- * error and return an empty state so the page renders the "no drafts
- * waiting" copy instead of a red error boundary.
+ * `message_drafts` / `templates` / `contacts` may not be reachable during
+ * a deploy transition (migration not yet applied, schema cache miss).
+ * Treat those errors as an empty state so the page renders "no drafts
+ * waiting" rather than tripping the dashboard error boundary.
  */
 function isMissingRelationError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const e = err as { code?: string; message?: string };
-  return e.code === "42P01" || /does not exist|schema cache/i.test(e.message ?? "");
+  return (
+    e.code === "42P01" ||
+    e.code === "42703" ||
+    /does not exist|schema cache/i.test(e.message ?? "")
+  );
 }
 
 export async function listDrafts(
@@ -58,7 +60,7 @@ export async function listDrafts(
   let q = supabaseAdmin
     .from("message_drafts")
     .select(
-      "*, sphere_contacts!inner(id, first_name, last_name, phone, email, avatar_color), templates(id, name, category)",
+      "*, contacts!inner(id, first_name, last_name, phone, email, avatar_color), templates(id, name, category)",
     )
     .eq("agent_id", agentId as never)
     .order("created_at", { ascending: false });
@@ -76,9 +78,9 @@ export async function listDrafts(
   }
   return (data ?? []).map((row) => {
     const r = row as Record<string, unknown> & {
-      sphere_contacts: {
+      contacts: {
         id: string;
-        first_name: string;
+        first_name: string | null;
         last_name: string | null;
         phone: string | null;
         email: string | null;
@@ -87,17 +89,18 @@ export async function listDrafts(
       templates: { id: string; name: string; category: string } | null;
     };
     const draft = mapRow(r as unknown as MessageDraftRow);
-    const first = r.sphere_contacts.first_name;
-    const last = r.sphere_contacts.last_name;
+    const first = r.contacts.first_name ?? "";
+    const last = r.contacts.last_name;
+    const fullName = [first, last].filter(Boolean).join(" ") || r.contacts.email || "(no name)";
     return {
       ...draft,
       contactFirstName: first,
       contactLastName: last,
-      contactFullName: last ? `${first} ${last}` : first,
-      contactInitials: initialsFor(first, last) || first.slice(0, 2).toUpperCase(),
-      contactAvatarColor: r.sphere_contacts.avatar_color,
-      contactPhone: r.sphere_contacts.phone,
-      contactEmail: r.sphere_contacts.email,
+      contactFullName: fullName,
+      contactInitials: initialsFor(first, last) || first.slice(0, 2).toUpperCase() || "??",
+      contactAvatarColor: r.contacts.avatar_color,
+      contactPhone: r.contacts.phone,
+      contactEmail: r.contacts.email,
       templateName: r.templates?.name ?? null,
       templateCategory: r.templates?.category ?? null,
     };
@@ -119,7 +122,7 @@ export async function getDraft(
 
 async function assertContactBelongsToAgent(agentId: string, contactId: string): Promise<void> {
   const { data } = await supabaseAdmin
-    .from("sphere_contacts")
+    .from("contacts")
     .select("id")
     .eq("id", contactId)
     .eq("agent_id", agentId as never)

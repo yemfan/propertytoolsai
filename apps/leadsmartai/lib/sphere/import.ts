@@ -1,6 +1,6 @@
 import Papa from "papaparse";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import type { SphereRelationshipType } from "./types";
+import type { RelationshipType } from "@/lib/contacts/types";
 
 export type ParsedSphereRow = {
   /** 1-based row number as it appeared in the CSV (for error mapping). */
@@ -13,7 +13,7 @@ export type ParsedSphereRow = {
   closingAddress: string | null;
   closingDate: string | null;
   closingPrice: number | null;
-  relationshipType: SphereRelationshipType;
+  relationshipType: RelationshipType;
   relationshipTag: string | null;
   preferredLanguage: "en" | "zh";
   /** Never trust the CSV — the spec §2.8 anniversary_opt_in must be confirmed
@@ -76,13 +76,15 @@ function pickField(
   return s.length ? s : null;
 }
 
-function parseRelationshipType(raw: string | null): SphereRelationshipType {
+function parseRelationshipType(raw: string | null): RelationshipType {
   const v = (raw ?? "").toLowerCase();
-  if (v.includes("buyer")) return "past_buyer_client";
-  if (v.includes("seller")) return "past_seller_client";
+  if (v.includes("buyer") && v.includes("seller")) return "past_both";
+  if (v.includes("buyer")) return "past_buyer";
+  if (v.includes("seller")) return "past_seller";
   if (v.includes("referr")) return "referral_source";
-  if (v.includes("sphere") || v === "" || v === "contact") return "sphere_non_client";
-  return "sphere_non_client";
+  if (v.includes("sphere") || v === "" || v === "contact") return "sphere";
+  if (v.includes("prospect")) return "prospect";
+  return "sphere";
 }
 
 function parseLanguage(raw: string | null): "en" | "zh" {
@@ -200,12 +202,33 @@ export type CommitRow = {
   closingAddress: string | null;
   closingDate: string | null;
   closingPrice: number | null;
-  relationshipType: SphereRelationshipType;
+  relationshipType: RelationshipType;
   relationshipTag: string | null;
   preferredLanguage: "en" | "zh";
   /** Must be confirmed by the user per-row in the UI (spec §2.8). */
   anniversaryOptIn: boolean;
 };
+
+/**
+ * Map a sphere CSV relationship_type to a lifecycle_stage. `past_buyer`,
+ * `past_seller`, `past_both` → `past_client`; `referral_source` → itself;
+ * `sphere` / `prospect` → `sphere`.
+ */
+function lifecycleStageFromRelationship(
+  rel: RelationshipType,
+): "past_client" | "referral_source" | "sphere" {
+  switch (rel) {
+    case "past_buyer":
+    case "past_seller":
+    case "past_both":
+      return "past_client";
+    case "referral_source":
+      return "referral_source";
+    case "sphere":
+    case "prospect":
+      return "sphere";
+  }
+}
 
 export async function commitSphereRows(
   agentId: string,
@@ -227,6 +250,7 @@ export async function commitSphereRows(
 
   const insertPayload = safe.map((r) => ({
     agent_id: agentId,
+    lifecycle_stage: lifecycleStageFromRelationship(r.relationshipType),
     first_name: r.firstName,
     last_name: r.lastName,
     email: r.email,
@@ -241,8 +265,11 @@ export async function commitSphereRows(
     anniversary_opt_in: r.anniversaryOptIn,
   }));
 
+  // Use upsert on (agent_id, lower(email)) so re-imports merge rather than
+  // duplicating. The DB-level unique index enforces dedup; onConflict here
+  // must match the index's expression.
   const { data, error } = await supabaseAdmin
-    .from("sphere_contacts")
+    .from("contacts")
     .insert(insertPayload as never)
     .select("id");
   if (error) {
