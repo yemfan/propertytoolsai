@@ -17,6 +17,39 @@ export const alt = "PropertyTools AI — Free AI Real Estate Tools";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+/**
+ * CSS-drawn checkmark. We can't use a ✓ glyph (U+2713) because
+ * @vercel/og tries to fetch a dynamic Google Fonts subset for any char
+ * outside its base font, and that fetch intermittently returns 400 —
+ * which caused every social-share image render to log a font error.
+ * A rotated L-shape built from two borders is always renderable and
+ * requires zero font resolution.
+ */
+function Check() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        width: "22px",
+        height: "22px",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          width: "14px",
+          height: "8px",
+          borderLeft: "3px solid #10b981",
+          borderBottom: "3px solid #10b981",
+          transform: "rotate(-45deg) translate(2px, -2px)",
+        }}
+      />
+    </div>
+  );
+}
+
 export default async function OpengraphImage() {
   return new ImageResponse(
     (
@@ -151,16 +184,16 @@ export default async function OpengraphImage() {
               Free AI-powered home value, mortgage, affordability, and comparison tools.
             </div>
             <div style={{ display: "flex", gap: "28px", fontSize: "20px", color: "#0f172a", fontWeight: 500 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ color: "#10b981", fontSize: "22px" }}>✓</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Check />
                 No sign-up
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ color: "#10b981", fontSize: "22px" }}>✓</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Check />
                 Instant results
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ color: "#10b981", fontSize: "22px" }}>✓</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Check />
                 Free forever
               </div>
             </div>
