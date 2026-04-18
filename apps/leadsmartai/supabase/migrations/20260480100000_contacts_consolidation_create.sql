@@ -11,7 +11,7 @@
 
 create table public.contacts (
   id uuid primary key default gen_random_uuid(),
-  agent_id uuid not null references public.agents(id) on delete cascade,
+  agent_id bigint not null references public.agents(id) on delete cascade,
 
   -- Lifecycle: drives the Smart Lists (Leads, Sphere, All) and determines
   -- which columns below are expected to be populated.
@@ -300,7 +300,7 @@ create index idx_contact_triggers_contact on public.contact_triggers(contact_id)
 create table public.contact_events (
   id uuid primary key default gen_random_uuid(),
   contact_id uuid not null references public.contacts(id) on delete cascade,
-  agent_id uuid not null references public.agents(id) on delete cascade,
+  agent_id bigint not null references public.agents(id) on delete cascade,
 
   event_type text not null,    -- 'email_sent' | 'sms_sent' | 'call_made' | 'note_added' | 'lead_captured' | ...
   payload jsonb not null default '{}'::jsonb,
@@ -321,7 +321,7 @@ create index idx_contact_events_type on public.contact_events(event_type, create
 create table public.contact_scores (
   id uuid primary key default gen_random_uuid(),
   contact_id uuid not null references public.contacts(id) on delete cascade,
-  agent_id uuid not null references public.agents(id) on delete cascade,
+  agent_id bigint not null references public.agents(id) on delete cascade,
 
   score numeric not null,
   label text,                  -- 'hot' | 'warm' | 'cold' | custom
@@ -341,7 +341,7 @@ create index idx_contact_scores_agent_label on public.contact_scores(agent_id, l
 
 create table public.crm_tasks (
   id uuid primary key default gen_random_uuid(),
-  agent_id uuid not null references public.agents(id) on delete cascade,
+  agent_id bigint not null references public.agents(id) on delete cascade,
   contact_id uuid references public.contacts(id) on delete cascade,  -- nullable: tasks can be standalone
 
   title text not null,
@@ -374,7 +374,7 @@ create index idx_crm_tasks_agent_due on public.crm_tasks(agent_id, due_at)
 
 create table public.automation_logs (
   id uuid primary key default gen_random_uuid(),
-  agent_id uuid not null references public.agents(id) on delete cascade,
+  agent_id bigint not null references public.agents(id) on delete cascade,
   contact_id uuid references public.contacts(id) on delete cascade,
   rule_id uuid references public.automation_rules(id) on delete cascade,
 
