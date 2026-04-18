@@ -17,8 +17,8 @@ function navEmoji(emoji: string) {
  *
  * Groups:
  *   Home        — daily overview
- *   CRM         — leads, tasks, calendar, contacts
- *   Communicate — inbox, calls, marketing plans
+ *   CRM         — contacts (unified leads+sphere via Smart Lists), tasks, calendar
+ *   Communicate — inbox, drafts, templates, marketing plans
  *   Tools       — property analysis, presentations, reports, open houses
  *   Insights    — performance, growth
  *   Account     — settings, billing, profile, support
@@ -43,9 +43,16 @@ const navConfig = {
       icon: navEmoji("👥"),
       items: [
         {
-          label: "Leads",
-          href: "/dashboard/leads",
-          match: ["/dashboard/leads"],
+          // Unified people hub — Smart Lists inside this page segment into
+          // Leads, Sphere, All. Old /dashboard/leads and /dashboard/sphere
+          // routes redirect here.
+          label: "Contacts",
+          href: "/dashboard/contacts",
+          match: [
+            "/dashboard/contacts",
+            "/dashboard/leads",
+            "/dashboard/sphere",
+          ],
           icon: navEmoji("👥"),
         },
         {
@@ -65,12 +72,6 @@ const navConfig = {
           href: "/dashboard/calendar",
           match: ["/dashboard/calendar"],
           icon: navEmoji("📅"),
-        },
-        {
-          label: "Contacts",
-          href: "/dashboard/contacts",
-          match: ["/dashboard/contacts"],
-          icon: navEmoji("📇"),
         },
       ],
     },
@@ -92,12 +93,6 @@ const navConfig = {
           href: "/dashboard/drafts",
           match: ["/dashboard/drafts"],
           icon: navEmoji("📝"),
-        },
-        {
-          label: "Sphere",
-          href: "/dashboard/sphere",
-          match: ["/dashboard/sphere"],
-          icon: navEmoji("🤝"),
         },
         {
           label: "Templates",
