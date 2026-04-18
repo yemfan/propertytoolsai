@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 type Task = {
   id: string;
-  lead_id: number | null;
+  contact_id: number | null;
   title: string;
   description: string | null;
   type: string;
@@ -107,7 +107,7 @@ export default function TasksFromBriefing() {
           <div className="flex items-center justify-between gap-2 mt-1">
             <span className="text-[10px] text-slate-500">
               Due {t.due_date}
-              {t.lead_id ? ` • Lead #${t.lead_id}` : ""}
+              {t.contact_id ? ` • Lead #${t.contact_id}` : ""}
             </span>
             <div className="flex gap-1 flex-wrap">
               <button

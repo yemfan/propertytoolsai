@@ -33,7 +33,7 @@ export async function GET(req: Request) {
 
     let q = supabaseServer
       .from("tasks")
-      .select("id,lead_id,title,description,type,status,due_date,deferred_until,created_at,updated_at")
+      .select("id,contact_id,title,description,type,status,due_date,deferred_until,created_at,updated_at")
       .eq("agent_id", agentId);
 
     if (status) q = q.eq("status", status);
@@ -83,13 +83,13 @@ export async function POST(req: Request) {
       .from("tasks")
       .insert({
         agent_id: agentId,
-        lead_id: lead_id ?? null,
+        contact_id: lead_id ?? null,
         title,
         description: description ?? null,
         type,
         due_date,
       })
-      .select("id,lead_id,title,description,type,status,due_date,deferred_until,created_at,updated_at")
+      .select("id,contact_id,title,description,type,status,due_date,deferred_until,created_at,updated_at")
       .single();
     if (error) throw error;
 

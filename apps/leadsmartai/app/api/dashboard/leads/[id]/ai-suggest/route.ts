@@ -13,7 +13,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     const { agentId } = await getCurrentAgentContext();
 
     const { data: lead, error } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select(
         "id,name,email,phone,property_address,search_location,price_min,price_max,intent,rating,source,lead_status"
       )

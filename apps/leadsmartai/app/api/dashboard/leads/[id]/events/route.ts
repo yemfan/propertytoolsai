@@ -15,9 +15,9 @@ export async function GET(
     }
 
     const { data, error } = await supabase
-      .from("lead_events")
+      .from("contact_events")
       .select("id,event_type,metadata,created_at")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .order("created_at", { ascending: false })
       .limit(20);
 

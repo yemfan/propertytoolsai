@@ -16,7 +16,7 @@ export async function GET() {
 
     // Open house leads (source = "Open House")
     const { data: ohLeads } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id, name, email, phone, property_address, rating, created_at")
       .eq("agent_id", agentId)
       .eq("source", "Open House")

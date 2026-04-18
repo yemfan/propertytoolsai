@@ -149,7 +149,7 @@ export async function getPlatformOverview({
       .from("tool_events")
       .select("session_id, tool_name, event_name, metadata, created_at")
       .limit(100_000),
-    supabaseAdmin.from("leads").select(LEADS_SELECT_PLATFORM_OVERVIEW).limit(100_000),
+    supabaseAdmin.from("contacts").select(LEADS_SELECT_PLATFORM_OVERVIEW).limit(100_000),
     supabaseAdmin.from(BILLING_SUBSCRIPTIONS_TABLE).select(BILLING_SUBSCRIPTIONS_SELECT).limit(50_000),
     supabaseAdmin.from("support_conversations").select("status, priority, subject, updated_at").limit(50_000),
   ]);

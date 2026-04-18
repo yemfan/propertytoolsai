@@ -14,7 +14,7 @@ export default function ReportEngagementTracker({
     fetch("/api/track/report-view", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lead_id: leadId, report_id: reportId }),
+      body: JSON.stringify({ contact_id: leadId, report_id: reportId }),
     }).catch(() => {});
   }, [leadId, reportId]);
 

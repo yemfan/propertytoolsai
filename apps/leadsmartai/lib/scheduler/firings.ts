@@ -66,7 +66,7 @@ export async function listFiringsForAgent(
     .from("trigger_firings")
     .select(
       "id, contact_id, template_id, period_key, draft_id, suppressed_reason, trigger_context, fired_at, " +
-        "sphere_contacts!inner(first_name, last_name, avatar_color), " +
+        "contacts!inner(first_name, last_name, avatar_color), " +
         "templates(name, category, channel), " +
         "message_drafts(status)",
     )
@@ -100,23 +100,23 @@ export async function listFiringsForAgent(
 
   const rows = (data ?? []).map((r) => {
     const raw = r as unknown as Record<string, unknown> & {
-      sphere_contacts: {
-        first_name: string;
+      contacts: {
+        first_name: string | null;
         last_name: string | null;
         avatar_color: string | null;
       };
       templates: { name: string; category: string; channel: string } | null;
       message_drafts: { status: string } | null;
     };
-    const first = raw.sphere_contacts.first_name;
-    const last = raw.sphere_contacts.last_name;
+    const first = raw.contacts.first_name ?? "";
+    const last = raw.contacts.last_name;
     return {
       id: String(raw.id),
       contactId: String(raw.contact_id),
       contactFirstName: first,
       contactLastName: last,
-      contactFullName: last ? `${first} ${last}` : first,
-      contactAvatarColor: raw.sphere_contacts.avatar_color,
+      contactFullName: [first, last].filter(Boolean).join(" ") || "(no name)",
+      contactAvatarColor: raw.contacts.avatar_color,
       contactInitials: initialsFor(first, last),
       templateId: String(raw.template_id),
       templateName: raw.templates?.name ?? null,

@@ -7,7 +7,7 @@ import type { LeadSmartIntelligence, LeadSmartRunRow } from "@/lib/leadsmart/typ
 
 async function persistRun(leadId: string, row: LeadSmartRunRow) {
   await supabaseServer.from("leadsmart_runs").insert({
-    lead_id: leadId as any,
+    contact_id: leadId as any,
     status: row.status,
     model: row.model ?? null,
     score: row.score ?? null,
@@ -35,7 +35,7 @@ export async function buildLeadSmartIntelligence(leadId: string): Promise<LeadSm
     });
     const latency = Date.now() - started;
     const out: LeadSmartIntelligence = {
-      lead_id: String(leadId),
+      contact_id: String(leadId),
       lead_score: score.lead_score,
       intent: score.intent,
       timeline: score.timeline,
@@ -70,7 +70,7 @@ export async function buildLeadSmartIntelligence(leadId: string): Promise<LeadSm
       error: String(e?.message ?? "Unknown error"),
     });
     leadsmartLog("error", "buildLeadSmartIntelligence failed", {
-      lead_id: leadId,
+      contact_id: leadId,
       error: String(e?.message ?? "Unknown error"),
     });
     throw e;
@@ -80,7 +80,7 @@ export async function buildLeadSmartIntelligence(leadId: string): Promise<LeadSm
 export async function refreshLeadSmartBatch() {
   const cfg = getLeadSmartConfig();
   const { data: leads, error } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .select("id")
     .order("created_at", { ascending: false })
     .limit(cfg.refreshBatchSize);

@@ -43,7 +43,7 @@ export async function getMobileDailyAgenda(
     listMobileTasksGrouped(agentId),
     listMobileCalendarEvents({ agentId, fromIso, toIso }),
     supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .select("id,name,next_contact_at")
       .eq("agent_id", agentId as never)
       .is("merged_into_lead_id", null)
@@ -65,7 +65,7 @@ export async function getMobileDailyAgenda(
       title: t.title,
       subtitle: t.lead_name ?? undefined,
       dueAt,
-      leadId: t.lead_id,
+      leadId: t.contact_id,
       priority: agendaPriority(t.priority),
       status: t.status,
     });
@@ -78,7 +78,7 @@ export async function getMobileDailyAgenda(
       title: ev.title,
       subtitle: ev.lead_name ?? undefined,
       dueAt: ev.starts_at,
-      leadId: ev.lead_id,
+      leadId: ev.contact_id,
       priority: "medium",
       status: ev.status,
     });

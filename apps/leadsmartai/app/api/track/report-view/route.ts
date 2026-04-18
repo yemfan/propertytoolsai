@@ -4,11 +4,11 @@ import { supabaseServer } from "@/lib/supabaseServer";
 export async function POST(req: Request) {
   try {
     const body = (await req.json().catch(() => ({}))) as {
-      lead_id?: string;
+      contact_id?: string;
       report_id?: string;
     };
 
-    if (!body.lead_id) {
+    if (!body.contact_id) {
       return NextResponse.json({ ok: false, error: "lead_id is required" }, { status: 400 });
     }
 
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     if (body.report_id) meta.report_id = body.report_id;
 
     const rpcRes = await supabaseServer.rpc("log_lead_event", {
-      p_lead_id: body.lead_id,
+      p_contact_id: body.contact_id,
       p_event_type: "report_view",
       p_metadata: meta,
     });
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     if (!debounced) {
       // +5 for nurture score (spec: view +5)
       const scoreRes = await supabaseServer.rpc("marketplace_apply_nurture_score", {
-        p_lead_id: body.lead_id,
+        p_contact_id: body.contact_id,
         p_delta: 5,
       } as any);
       const rating = (scoreRes?.data as any)?.rating as string | undefined;
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
       const { data: latestLog } = await supabaseServer
         .from("message_logs")
         .select("id")
-        .eq("lead_id", body.lead_id)
+        .eq("contact_id", body.contact_id)
         .eq("type", "email")
         .in("status", ["sent", "opened"])
         .order("created_at", { ascending: false } as any)
@@ -52,9 +52,9 @@ export async function POST(req: Request) {
       // Create HOT alert if we've crossed the threshold.
       if (rating === "hot") {
         const { data: leadRow } = await supabaseServer
-          .from("leads")
+          .from("contacts")
           .select("agent_id")
-          .eq("id", body.lead_id)
+          .eq("id", body.contact_id)
           .maybeSingle();
 
         const agentId = (leadRow as any)?.agent_id ?? null;
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
           const { data: existing } = await supabaseServer
             .from("nurture_alerts")
             .select("id")
-            .eq("lead_id", body.lead_id)
+            .eq("contact_id", body.contact_id)
             .eq("agent_id", agentId)
             .eq("type", "hot")
             .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
           if (!existing?.id) {
             await supabaseServer.from("nurture_alerts").insert({
               agent_id: agentId,
-              lead_id: body.lead_id,
+              contact_id: body.contact_id,
               type: "hot",
               message: "Lead temperature turned HOT (report viewed).",
             } as any);

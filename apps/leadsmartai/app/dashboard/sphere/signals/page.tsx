@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Sparkles } from "lucide-react";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
-import { listOpenSignals } from "@/lib/sphere/service";
+import { listOpenSignals } from "@/lib/contacts/service";
 import SphereSignalsList from "@/components/dashboard/SphereSignalsList";
 
 export const metadata: Metadata = {

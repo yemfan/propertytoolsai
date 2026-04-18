@@ -26,7 +26,7 @@ export async function GET(req: Request) {
   let q = supabaseServer
     .from("client_portal_messages")
     .select("id,sender_role,body,created_at,sender_auth_user_id")
-    .eq("lead_id", leadId as any)
+    .eq("contact_id", leadId as any)
     .order("created_at", { ascending: true })
     .limit(200);
 
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
   const { data, error } = await supabaseServer
     .from("client_portal_messages")
     .insert({
-      lead_id: leadId as any,
+      contact_id: leadId as any,
       sender_role: "client",
       sender_auth_user_id: user.id,
       body: text,

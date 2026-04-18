@@ -61,7 +61,7 @@ export async function POST(req: Request) {
 
     // 2) Save lead to CRM.
     const { data: leadInsert, error: leadErr } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .insert({
         agent_id: null,
         property_address: property.address,
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
     // Best-effort: attach property_id for easier CRM context later.
     try {
       const { error: updatePropErr } = await supabaseServer
-        .from("leads")
+        .from("contacts")
         .update({ property_id: property.id })
         .eq("id", leadId);
 
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
       .from("reports")
       .insert({
         property_id: property.id,
-        lead_id: leadId,
+        contact_id: leadId,
         report_data: reportData,
       })
       .select("id")
@@ -134,7 +134,7 @@ export async function POST(req: Request) {
     // 5) Store report_id back on the lead (best-effort).
     try {
       const { error: leadReportUpdateErr } = await supabaseServer
-        .from("leads")
+        .from("contacts")
         .update({ report_id: reportId })
         .eq("id", leadId);
 

@@ -16,12 +16,12 @@ export default async function TasksPage() {
   const [tasksRes, leadsRes] = await Promise.all([
     supabaseServer
       .from("crm_tasks")
-      .select("id, title, description, status, priority, due_at, completed_at, source, lead_id, created_at, updated_at")
+      .select("id, title, description, status, priority, due_at, completed_at, source, contact_id, created_at, updated_at")
       .eq("agent_id", ctx.agentId)
       .order("updated_at", { ascending: false })
       .limit(500),
     supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id, name")
       .eq("agent_id", ctx.agentId)
       .limit(500),

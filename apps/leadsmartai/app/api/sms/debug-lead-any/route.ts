@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     const limit = Number(url.searchParams.get("limit") ?? "1");
 
     const { data: leadRows, error } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id,phone,contact_method,automation_disabled,rating,property_address,name")
       .not("phone", "is", null)
       .order("created_at", { ascending: false })

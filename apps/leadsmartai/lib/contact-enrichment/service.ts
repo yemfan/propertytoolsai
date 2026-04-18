@@ -26,11 +26,11 @@ export async function normalizeLeadFields(lead: LeadLike) {
     updated_at: nowIso(),
   };
 
-  const { error } = await supabaseAdmin.from("leads").update(normalized).eq("id", id);
+  const { error } = await supabaseAdmin.from("contacts").update(normalized).eq("id", id);
   if (error) throw error;
 
   const { error: runErr } = await supabaseAdmin.from("lead_enrichment_runs").insert({
-    lead_id: id,
+    contact_id: id,
     run_type: "cleanup",
     status: "completed",
     changes_json: normalized,
@@ -42,7 +42,7 @@ export async function normalizeLeadFields(lead: LeadLike) {
 
 export async function scanForDuplicateLeads(limit = 2000) {
   let q = supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select(
       "id, agent_id, created_at, name, email, phone, phone_number, property_address, merged_into_lead_id"
     )
@@ -66,13 +66,13 @@ export async function scanForDuplicateLeads(limit = 2000) {
   if (candidates.length) {
     const { error: upErr } = await supabaseAdmin.from("lead_duplicate_candidates").upsert(
       candidates.map((c) => ({
-        primary_lead_id: c.primaryLeadId,
-        duplicate_lead_id: c.duplicateLeadId,
+        primary_contact_id: c.primaryLeadId,
+        duplicate_contact_id: c.duplicateLeadId,
         confidence_score: c.confidenceScore,
         reason_json: c.reasons,
         updated_at: nowIso(),
       })),
-      { onConflict: "primary_lead_id,duplicate_lead_id" }
+      { onConflict: "primary_lead_id,duplicate_contact_id" }
     );
     if (upErr) throw upErr;
   }
@@ -84,7 +84,7 @@ export async function mergeDuplicateLeadPair(primaryLeadId: string, duplicateLea
   if (primaryLeadId === duplicateLeadId) throw new Error("Cannot merge a lead into itself");
 
   const { data: rows, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("*")
     .in("id", [primaryLeadId, duplicateLeadId]);
 
@@ -107,14 +107,14 @@ export async function mergeDuplicateLeadPair(primaryLeadId: string, duplicateLea
   const merged = mergeLeadRecords(primary as LeadLike, duplicate as LeadLike);
 
   const { error: u1 } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .update({ ...merged, updated_at: nowIso() })
     .eq("id", primaryLeadId);
   if (u1) throw u1;
 
   const { error: u2 } = await supabaseAdmin
-    .from("leads")
-    .update({ merged_into_lead_id: primaryLeadId, updated_at: nowIso() })
+    .from("contacts")
+    .update({ merged_into_contact_id: primaryLeadId, updated_at: nowIso() })
     .eq("id", duplicateLeadId);
   if (u2) throw u2;
 
@@ -122,11 +122,11 @@ export async function mergeDuplicateLeadPair(primaryLeadId: string, duplicateLea
     .from("lead_duplicate_candidates")
     .update({ status: "merged", updated_at: nowIso() })
     .eq("primary_lead_id", primaryLeadId)
-    .eq("duplicate_lead_id", duplicateLeadId);
+    .eq("duplicate_contact_id", duplicateLeadId);
   if (u3) throw u3;
 
   const { error: runErr } = await supabaseAdmin.from("lead_enrichment_runs").insert({
-    lead_id: primaryLeadId,
+    contact_id: primaryLeadId,
     run_type: "merge",
     status: "completed",
     changes_json: { mergedFrom: duplicateLeadId, merged },
@@ -138,7 +138,7 @@ export async function mergeDuplicateLeadPair(primaryLeadId: string, duplicateLea
 
 export async function runLeadEnrichment(limit = 200) {
   const { data, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("*")
     .is("merged_into_lead_id", null)
     .order("updated_at", { ascending: false })
@@ -163,11 +163,11 @@ export async function runLeadEnrichment(limit = 200) {
       if (v !== undefined) updatePayload[k] = v;
     }
 
-    const { error: upErr } = await supabaseAdmin.from("leads").update(updatePayload).eq("id", leadId);
+    const { error: upErr } = await supabaseAdmin.from("contacts").update(updatePayload).eq("id", leadId);
     if (upErr) throw upErr;
 
     const { error: insErr } = await supabaseAdmin.from("lead_enrichment_runs").insert({
-      lead_id: leadId,
+      contact_id: leadId,
       run_type: "enrichment",
       status: "completed",
       changes_json: enrichment.changes,
@@ -182,7 +182,7 @@ export async function runLeadEnrichment(limit = 200) {
 
 export async function getContactHealthSummary(agentId?: string | null) {
   let q = supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select(
       "id, email, phone, phone_number, property_address, birthday, home_purchase_date, contact_completeness_score, merged_into_lead_id"
     )
@@ -219,7 +219,7 @@ export async function getContactHealthSummary(agentId?: string | null) {
 
 export async function runBulkNormalize(limit = 500) {
   const { data, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select(
       "id, email, phone, phone_number, property_address, city, state, zip_code, birthday, home_purchase_date, relationship_stage, merged_into_lead_id"
     )

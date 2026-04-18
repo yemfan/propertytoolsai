@@ -33,7 +33,7 @@ export async function listMobileLeads(params: {
   const to = from + size - 1;
 
   let q = supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select(LIST_SELECT, { count: "exact" })
     .eq("agent_id", agentId as unknown as number)
     .is("merged_into_lead_id", null)
@@ -58,14 +58,14 @@ export async function listMobileLeads(params: {
   let scoreMap: Record<string, Record<string, unknown>> = {};
   if (leadIds.length) {
     const { data: scoreRows } = await supabaseAdmin
-      .from("lead_scores")
-      .select("lead_id,score,intent,timeline,confidence,explanation,updated_at")
-      .in("lead_id", leadIds as unknown as string[])
+      .from("contact_scores")
+      .select("contact_id,score,intent,timeline,confidence,explanation,updated_at")
+      .in("contact_id", leadIds as unknown as string[])
       .order("updated_at", { ascending: false })
       .limit(3000);
 
     for (const row of scoreRows ?? []) {
-      const key = String((row as { lead_id: unknown }).lead_id ?? "");
+      const key = String((row as { contact_id: unknown }).contact_id ?? "");
       if (!key || scoreMap[key]) continue;
       scoreMap[key] = row as Record<string, unknown>;
     }
@@ -100,7 +100,7 @@ export async function hydrateMobileLeadRecord(
   leadId: string
 ): Promise<MobileLeadRecordDto | null> {
   const { data: lead, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select(LIST_SELECT)
     .eq("id", leadId)
     .eq("agent_id", agentId as unknown as number)
@@ -113,9 +113,9 @@ export async function hydrateMobileLeadRecord(
   if (row.merged_into_lead_id != null) return null;
 
   const { data: scoreRow } = await supabaseAdmin
-    .from("lead_scores")
-    .select("lead_id,score,intent,timeline,confidence,explanation,updated_at")
-    .eq("lead_id", leadId)
+    .from("contact_scores")
+    .select("contact_id,score,intent,timeline,confidence,explanation,updated_at")
+    .eq("contact_id", leadId)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

@@ -12,7 +12,7 @@ export async function GET() {
     if (!agent?.id) return NextResponse.json({ ok: false, error: "Agent not found" }, { status: 403 });
 
     const { data: leads } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select("id, lead_status, source, created_at")
       .eq("agent_id", String(agent.id))
       .limit(5000);

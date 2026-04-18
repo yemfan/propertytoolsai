@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getAgentMessageSettingsEffective } from "@/lib/agent-messaging/settings";
 import type { ReviewPolicy } from "@/lib/agent-messaging/types";
-import { listSphereContacts } from "@/lib/sphere/service";
+import { listContacts } from "@/lib/contacts/service";
 import { renderPreview } from "@/lib/templates/preview";
 import type { Template, TemplateRow } from "@/lib/templates/types";
 import { DETECTORS, type ProposedFiring } from "./detectors";
@@ -105,7 +105,13 @@ export async function runScheduler(opts: SchedulerOptions = {}): Promise<Schedul
   let contactsSeen = 0;
 
   for (const agentId of agentIds) {
-    const contacts = (await listSphereContacts(agentId)).slice(0, maxContacts);
+    // Scheduler only runs against post-close + referral contacts (sphere
+    // templates never fire for pre-qualification leads).
+    const contacts = (
+      await listContacts(agentId, {
+        lifecycle_stage: ["past_client", "sphere", "referral_source"],
+      })
+    ).slice(0, maxContacts);
     contactsSeen += contacts.length;
     if (!contacts.length) continue;
 
@@ -358,8 +364,9 @@ export async function runScheduler(opts: SchedulerOptions = {}): Promise<Schedul
 
 async function listAgentsWithContacts(): Promise<string[]> {
   const { data } = await supabaseAdmin
-    .from("sphere_contacts")
+    .from("contacts")
     .select("agent_id")
+    .in("lifecycle_stage", ["past_client", "sphere", "referral_source"] as never)
     .limit(10000);
   const s = new Set<string>();
   for (const r of data ?? []) {
@@ -429,7 +436,7 @@ async function isPerContactTriggerDisabled(
   templateId: string,
 ): Promise<boolean> {
   const { data } = await supabaseAdmin
-    .from("sphere_contact_triggers")
+    .from("contact_triggers")
     .select("enabled")
     .eq("contact_id", contactId)
     .eq("template_id", templateId)

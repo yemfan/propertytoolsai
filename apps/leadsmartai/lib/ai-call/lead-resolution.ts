@@ -70,14 +70,14 @@ export async function findOrCreateLeadForPhone(phoneDisplay: string): Promise<{
 export async function ensureLeadAgent(leadId: string, agentId: string | null) {
   if (!agentId) return;
   const { data: lead } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("agent_id")
     .eq("id", leadId as never)
     .maybeSingle();
   const cur = lead && (lead as { agent_id?: unknown }).agent_id;
   if (cur != null && cur !== "") return;
   await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .update({ agent_id: agentId as never } as never)
     .eq("id", leadId as never);
 }

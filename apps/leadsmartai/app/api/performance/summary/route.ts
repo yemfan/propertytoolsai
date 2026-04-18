@@ -62,18 +62,18 @@ export async function GET(req: Request) {
         .eq("agent_id", agentId)
         .eq("status", "pending"),
       supabaseServer
-        .from("leads")
+        .from("contacts")
         .select("id,rating,engagement_score,created_at,last_activity_at", { count: "exact" })
         .eq("agent_id", agentId)
         .limit(500),
       supabaseServer
-        .from("lead_events")
-        .select("lead_id,event_type,created_at")
+        .from("contact_events")
+        .select("contact_id,event_type,created_at")
         .gte("created_at", sevenDaysAgoIso)
         .limit(2000),
       supabaseServer
         .from("communications")
-        .select("lead_id,created_at")
+        .select("contact_id,created_at")
         .eq("agent_id", agentId)
         .gte("created_at", sevenDaysAgoIso)
         .limit(2000),
@@ -101,7 +101,7 @@ export async function GET(req: Request) {
     // Response speed: time from lead.created_at to first communication.
     const commByLead = new Map<number, Date>();
     for (const c of comms) {
-      const lid = Number(c.lead_id);
+      const lid = Number(c.contact_id);
       if (!lid) continue;
       const dt = new Date(String(c.created_at));
       const existing = commByLead.get(lid);

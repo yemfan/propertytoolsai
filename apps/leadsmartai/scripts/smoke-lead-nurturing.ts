@@ -53,7 +53,7 @@ async function main() {
     console.log(`✓ ${table}: OK (readable)`);
   }
 
-  const { error: leadsErr } = await supabase.from("leads").select("id,nurture_score").limit(1);
+  const { error: leadsErr } = await supabase.from("contacts").select("id,nurture_score").limit(1);
   if (leadsErr) {
     console.error(`✗ leads.nurture_score: ${leadsErr.message}`);
     process.exitCode = 1;
@@ -62,7 +62,7 @@ async function main() {
   console.log("✓ leads: nurture_score column OK (readable)");
 
   const { data: fnTest, error: rpcErr } = await supabase.rpc("marketplace_apply_nurture_score", {
-    p_lead_id: null,
+    p_contact_id: null,
     p_delta: 0,
   });
   if (rpcErr) {
@@ -71,7 +71,7 @@ async function main() {
     return;
   }
   const fn = fnTest as { ok?: boolean; message?: string } | null;
-  if (fn && fn.ok === false && String(fn.message || "").includes("lead_id")) {
+  if (fn && fn.ok === false && String(fn.message || "").includes("contact_id")) {
     console.log("✓ RPC marketplace_apply_nurture_score: exists (rejects null lead_id as expected)");
   } else {
     console.log("✓ RPC marketplace_apply_nurture_score: callable");

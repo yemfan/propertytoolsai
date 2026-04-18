@@ -47,7 +47,7 @@ export type VoiceAnalysisResult = {
 
 export type LeadCallRow = {
   id: string;
-  lead_id: string | null;
+  contact_id: string | null;
   twilio_call_sid: string;
   from_phone: string;
   to_phone: string;

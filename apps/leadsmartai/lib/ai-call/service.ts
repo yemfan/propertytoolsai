@@ -82,7 +82,7 @@ export async function createLeadCall(params: {
     direction: "inbound",
     from_phone: params.fromPhone,
     to_phone: params.toPhone,
-    lead_id: params.leadId,
+    contact_id: params.leadId,
     agent_id: params.agentId,
     status: params.status ?? "ringing",
     started_at: now,
@@ -105,16 +105,16 @@ export async function createLeadCall(params: {
 export async function getCallByTwilioSid(twilioCallSid: string) {
   const { data, error } = await supabaseAdmin
     .from("lead_calls")
-    .select("id,lead_id,agent_id")
+    .select("id,contact_id,agent_id")
     .eq("twilio_call_sid", twilioCallSid)
     .maybeSingle();
 
   if (error) throw error;
   if (!data) return null;
-  const r = data as { id: unknown; lead_id: unknown; agent_id: unknown };
+  const r = data as { id: unknown; contact_id: unknown; agent_id: unknown };
   return {
     id: String(r.id),
-    lead_id: r.lead_id != null ? String(r.lead_id) : null,
+    contact_id: r.contact_id != null ? String(r.contact_id) : null,
     agent_id: r.agent_id != null ? String(r.agent_id) : null,
   };
 }
@@ -149,14 +149,14 @@ export async function updateLeadCallStatus(params: {
   try {
     const { data: call } = await supabaseAdmin
       .from("lead_calls")
-      .select("lead_id")
+      .select("contact_id")
       .eq("twilio_call_sid", params.twilioCallSid)
       .maybeSingle();
-    if (call?.lead_id) {
+    if (call?.contact_id) {
       await supabaseAdmin
-        .from("leads")
+        .from("contacts")
         .update({ last_contacted_at: new Date().toISOString() } as Record<string, unknown>)
-        .eq("id", call.lead_id);
+        .eq("id", call.contact_id);
     }
   } catch {
     // best-effort
@@ -182,8 +182,8 @@ async function insertLeadActivityEvent(params: {
   metadata: Record<string, unknown>;
 }) {
   const agentId = await resolveEffectiveAgentId(params.leadId, params.agentId);
-  await supabaseAdmin.from("lead_events").insert({
-    lead_id: params.leadId as never,
+  await supabaseAdmin.from("contact_events").insert({
+    contact_id: params.leadId as never,
     agent_id: agentId as never,
     event_type: params.eventType,
     metadata: params.metadata,
@@ -199,7 +199,7 @@ async function appendLeadConversationVoiceSummary(params: {
   const { data: row } = await supabaseAdmin
     .from("lead_conversations")
     .select("id,messages")
-    .eq("lead_id", params.leadId as never)
+    .eq("contact_id", params.leadId as never)
     .maybeSingle();
 
   const prev = row && Array.isArray((row as { messages?: unknown }).messages)
@@ -214,13 +214,13 @@ async function appendLeadConversationVoiceSummary(params: {
   const next = [...prev, msg];
   await supabaseAdmin.from("lead_conversations").upsert(
     {
-      lead_id: params.leadId as never,
+      contact_id: params.leadId as never,
       agent_id: params.agentId as never,
       messages: next as never,
       preferences: {} as never,
       updated_at: new Date().toISOString(),
     } as never,
-    { onConflict: "lead_id" }
+    { onConflict: "contact_id" }
   );
 }
 
@@ -337,23 +337,23 @@ export async function processGatheredSpeech(params: {
     model: analysis.model ?? null,
   };
 
-  if (row.lead_id) {
+  if (row.contact_id) {
     await insertLeadActivityEvent({
-      leadId: row.lead_id,
+      leadId: row.contact_id,
       agentId: row.agent_id,
       eventType: "voice_call_speech",
       metadata: activityMetadata,
     });
     await appendLeadConversationVoiceSummary({
-      leadId: row.lead_id,
+      leadId: row.contact_id,
       agentId: row.agent_id,
       summary: analysis.summary,
     });
   }
 
-  if (row.lead_id && (hot || needsHuman)) {
+  if (row.contact_id && (hot || needsHuman)) {
     await escalateHotInboundVoiceCall({
-      leadId: row.lead_id,
+      leadId: row.contact_id,
       callAgentId: row.agent_id,
       twilioCallSid: params.twilioCallSid,
       hot,
@@ -365,11 +365,11 @@ export async function processGatheredSpeech(params: {
     });
   }
 
-  if (row.lead_id) {
+  if (row.contact_id) {
     await voiceHooks.onCallProcessed({
       callId: row.id,
       twilioCallSid: params.twilioCallSid,
-      leadId: row.lead_id,
+      leadId: row.contact_id,
       agentId: row.agent_id,
       intent,
       hotLead: hot,
@@ -382,7 +382,7 @@ export async function processGatheredSpeech(params: {
 
   return {
     ok: true as const,
-    leadId: row.lead_id,
+    leadId: row.contact_id,
     agentId: row.agent_id,
     voiceLanguage: langResolved.language,
   };

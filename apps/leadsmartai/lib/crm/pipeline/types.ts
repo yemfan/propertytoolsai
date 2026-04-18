@@ -15,7 +15,7 @@ export type PipelineStageRow = {
 export type CrmTaskRow = {
   id: string;
   agent_id: string;
-  lead_id: string | null;
+  contact_id: string | null;
   pipeline_stage_id: string | null;
   title: string;
   description: string | null;

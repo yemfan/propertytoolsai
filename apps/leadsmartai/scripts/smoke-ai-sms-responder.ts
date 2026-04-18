@@ -34,7 +34,7 @@ async function main() {
 
   const { error } = await supabase
     .from("sms_conversations")
-    .select("id,lead_id,messages,stage,last_ai_reply_at,created_at")
+    .select("id,contact_id,messages,stage,last_ai_reply_at,created_at")
     .limit(1);
 
   if (error) {

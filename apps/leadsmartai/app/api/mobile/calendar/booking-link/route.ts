@@ -5,7 +5,7 @@ import { requireMobileAgent } from "@/lib/mobile/auth";
 export const runtime = "nodejs";
 
 type PostBody = {
-  lead_id?: string;
+  contact_id?: string;
   booking_url?: string;
   label?: string | null;
   share_message?: string | null;
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
   try {
     const body = (await req.json().catch(() => ({}))) as PostBody;
-    const leadId = String(body.lead_id ?? "").trim();
+    const leadId = String(body.contact_id ?? "").trim();
     const bookingUrl = String(body.booking_url ?? "").trim();
     if (!leadId) {
       return NextResponse.json({ ok: false, success: false, error: "lead_id is required" }, { status: 400 });

@@ -20,7 +20,7 @@ export async function GET(req: Request) {
 }
 
 type PostBody = {
-  lead_id?: string;
+  contact_id?: string;
   title?: string;
   description?: string | null;
   due_at?: string | null;
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
 
   try {
     const body = (await req.json().catch(() => ({}))) as PostBody;
-    const leadId = String(body.lead_id ?? "").trim();
+    const leadId = String(body.contact_id ?? "").trim();
     const title = String(body.title ?? "").trim();
     if (!leadId) {
       return NextResponse.json({ ok: false, success: false, error: "lead_id is required" }, { status: 400 });

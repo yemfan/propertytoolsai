@@ -17,7 +17,7 @@ export async function GET(
 
     // Enforce access: lead must belong to the current agent.
     const { data: leadRow } = await supabase
-      .from("leads")
+      .from("contacts")
       .select("id")
       .eq("id", leadId)
       .eq("agent_id", agentId)
@@ -30,7 +30,7 @@ export async function GET(
     const { data, error } = await supabase
       .from("nurture_alerts")
       .select("id,type,message,created_at")
-      .eq("lead_id", leadId)
+      .eq("contact_id", leadId)
       .order("created_at", { ascending: false })
       .limit(10);
 

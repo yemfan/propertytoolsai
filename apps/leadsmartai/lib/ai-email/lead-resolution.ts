@@ -28,7 +28,7 @@ function normalizeEmail(email: string) {
 export async function findLeadByEmail(email: string): Promise<EmailLeadSnapshot | null> {
   const norm = normalizeEmail(email);
   const { data, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select(leadSelect)
     .ilike("email", norm)
     .order("created_at", { ascending: false })
@@ -48,7 +48,7 @@ export async function createEmailLeadIfMissing(params: {
 }): Promise<EmailLeadSnapshot> {
   const norm = normalizeEmail(params.email);
   const { data, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .insert({
       agent_id: null,
       email: norm,
@@ -68,7 +68,7 @@ export async function getRecentEmailMessages(leadId: string, limit = 8) {
   const { data, error } = await supabaseAdmin
     .from("email_messages")
     .select("direction, subject, message, created_at")
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -93,7 +93,7 @@ export async function logEmailMessage(params: {
   externalMessageId?: string | null;
 }) {
   const { error } = await supabaseAdmin.from("email_messages").insert({
-    lead_id: params.leadId,
+    contact_id: params.leadId,
     agent_id: params.agentId ?? null,
     subject: params.subject || "",
     message: params.body,
@@ -119,5 +119,5 @@ export async function applyEmailExtractedLeadFields(
   if (extracted.propertyAddress?.trim()) patch.property_address = extracted.propertyAddress.trim();
   if (inferredIntent && inferredIntent !== "unknown") patch.intent = inferredIntent;
   if (Object.keys(patch).length === 0) return;
-  await supabaseAdmin.from("leads").update(patch).eq("id", leadId);
+  await supabaseAdmin.from("contacts").update(patch).eq("id", leadId);
 }

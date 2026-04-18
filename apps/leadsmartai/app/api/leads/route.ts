@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     }
 
     const { data, error } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .insert({
         agent_id: agent ?? null,
         name: name || address,
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
       await scheduleEmailSequenceForLead(data.id as string);
       // Trigger initial scoring on lead creation.
       try {
-        await recordLeadEvent({ lead_id: data.id as any, event_type: "visit", metadata: { source: source || "landing" } });
+        await recordLeadEvent({ contact_id: data.id as any, event_type: "visit", metadata: { source: source || "landing" } });
         await runLeadMarketplacePipeline(String(data.id));
         await scoreLead(String(data.id), true);
       } catch {}
@@ -131,7 +131,7 @@ export async function GET() {
     const { agentId } = auth;
 
     const { data, error } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select(
         "id,name,email,phone,phone_number,sms_opt_in,property_address,source,lead_status,notes,rating,contact_frequency,contact_method,last_contacted_at,next_contact_at,created_at,search_location,search_radius,price_min,price_max,beds,baths"
       )
@@ -222,7 +222,7 @@ export async function PATCH(req: Request) {
     if (baths !== undefined) updatePayload.baths = baths;
 
     const { data, error } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .update(updatePayload)
       .eq("id", id)
       .eq("agent_id", agentId)

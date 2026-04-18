@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     }
 
     const { data, error } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .update({ name, stage: "name_captured" } as any)
       .eq("id", leadId)
       .select("id,stage")

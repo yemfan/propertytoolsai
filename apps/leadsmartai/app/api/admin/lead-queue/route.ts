@@ -15,7 +15,7 @@ export async function GET(req: Request) {
 
     const [leadsResult, agentsResult] = await Promise.all([
       supabaseAdmin
-        .from("leads")
+        .from("contacts")
         .select(
           "id, name, email, phone, property_address, source, lead_status, rating, created_at",
           { count: "exact" }

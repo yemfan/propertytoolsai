@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { SphereContact, SphereSignal } from "@/lib/sphere/types";
+import type { Contact, ContactSignal } from "@/lib/contacts/types";
 
-export type SignalWithContact = SphereSignal & { contact: SphereContact };
+export type SignalWithContact = ContactSignal & { contact: Contact };
 
 export default function SphereSignalsList({ signals: initial }: { signals: SignalWithContact[] }) {
   const [signals, setSignals] = useState(initial);

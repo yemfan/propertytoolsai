@@ -18,7 +18,7 @@ export default async function BrokerDashboardPage() {
   const [usage, ctx] = await Promise.all([getLeadUsageThisMonth(), getCurrentAgentContext()]);
 
   const { data: leads } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .select("id,rating")
     .eq("agent_id", ctx.agentId)
     .limit(500);

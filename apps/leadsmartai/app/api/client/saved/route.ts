@@ -13,7 +13,7 @@ export async function GET(req: Request) {
 
   const { data, error } = await supabaseServer
     .from("client_saved_homes")
-    .select("id,lead_id,address,ai_score,insights,created_at,updated_at")
+    .select("id,contact_id,address,ai_score,insights,created_at,updated_at")
     .eq("auth_user_id", user.id)
     .order("updated_at", { ascending: false })
     .limit(50);
@@ -62,12 +62,12 @@ export async function POST(req: Request) {
     .from("client_saved_homes")
     .insert({
       auth_user_id: user.id,
-      lead_id: leadIdFk as any,
+      contact_id: leadIdFk as any,
       address,
       ai_score: body.ai_score != null ? Math.round(Number(body.ai_score)) : null,
       insights: body.insights ?? {},
     } as any)
-    .select("id,lead_id,address,ai_score,insights,created_at,updated_at")
+    .select("id,contact_id,address,ai_score,insights,created_at,updated_at")
     .single();
 
   if (error) {

@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 
     // Atomic claim: only succeeds if agent_id is still null (first-come-first-served).
     const { data, error } = await supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .update({
         agent_id: agentId,
         claimed_at: new Date().toISOString(),

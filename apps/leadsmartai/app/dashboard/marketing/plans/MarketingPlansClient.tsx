@@ -22,7 +22,7 @@ type Plan = {
   title: string;
   status: string;
   template_key: string;
-  lead_id: string | null;
+  contact_id: string | null;
   lead_name: string | null;
   created_at: string;
   updated_at: string;
@@ -190,7 +190,7 @@ export default function MarketingPlansClient() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">{p.title}</h2>
-              <p className="text-xs text-gray-500">{p.lead_name ?? `Lead #${p.lead_id}`} &middot; {p.template_key}</p>
+              <p className="text-xs text-gray-500">{p.lead_name ?? `Lead #${p.contact_id}`} &middot; {p.template_key}</p>
               <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[p.status] ?? ""}`}>{p.status}</span>
             </div>
             <div className="flex gap-2">

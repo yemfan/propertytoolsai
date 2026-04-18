@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     //    NOTE: we keep this insert limited to columns that already exist to avoid
     //    breaking existing dashboard flows.
     const { data: lead, error: leadErr } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .insert({
         name,
         email,
@@ -131,7 +131,7 @@ export async function POST(req: Request) {
     // (We don't fail the request if the DB schema isn't fully deployed yet.)
     try {
       const { error: leadPropertyUpdateErr } = await supabaseServer
-        .from("leads")
+        .from("contacts")
         .update({ property_id: propertyId })
         .eq("id", leadId);
 
@@ -158,13 +158,13 @@ export async function POST(req: Request) {
     });
 
     // 4) Save report to `reports` table.
-    //    NOTE: `public.reports.lead_id` is uuid in older schemas; CRM `leads.id` is bigint.
+    //    NOTE: `public.reports.contact_id` is uuid in older schemas; CRM `leads.id` is bigint.
     //    Omit lead_id here and link via `leads.report_id` below.
     const { data: report, error: reportErr } = await supabaseServer
       .from("reports")
       .insert({
         property_id: propertyId,
-        lead_id: null,
+        contact_id: null,
         report_data: reportData,
       })
       .select("id")
@@ -183,7 +183,7 @@ export async function POST(req: Request) {
     // 5) Store report_id back on the lead (optional, best-effort).
     try {
       const { error: leadReportUpdateErr } = await supabaseServer
-        .from("leads")
+        .from("contacts")
         .update({ report_id: reportId })
         .eq("id", leadId);
 

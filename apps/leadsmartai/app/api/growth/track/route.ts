@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       source?: string | null;
       campaign?: string | null;
       referral_code?: string | null;
-      lead_id?: string | number | null;
+      contact_id?: string | number | null;
       lead_quality?: string | null;
       tool_slug?: string | null;
       metadata?: Record<string, unknown>;
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       city: body.city ?? null,
       source: body.source ?? "growth",
       campaign: body.campaign ?? null,
-      lead_id: body.lead_id ? Number(body.lead_id) : null,
+      contact_id: body.contact_id ? Number(body.contact_id) : null,
       metadata,
     } as any);
 

@@ -1,5 +1,15 @@
-import type { SphereContact } from "@/lib/sphere/types";
+import type { Contact, RelationshipType } from "@/lib/contacts/types";
 import type { Template } from "@/lib/templates/types";
+
+const PAST_CLIENT_RELATIONSHIPS: readonly RelationshipType[] = [
+  "past_buyer",
+  "past_seller",
+  "past_both",
+];
+
+function isPastClient(rt: RelationshipType | null): boolean {
+  return rt !== null && PAST_CLIENT_RELATIONSHIPS.includes(rt);
+}
 
 /**
  * Detectors decide whether a given (contact, template) pair should fire *now*.
@@ -16,7 +26,7 @@ export type ProposedFiring = {
 };
 
 type Detector = (args: {
-  contact: SphereContact;
+  contact: Contact;
   template: Template;
   now: Date;
 }) => ProposedFiring | null;
@@ -27,10 +37,7 @@ type Detector = (args: {
 export const anniversaryDetector: Detector = ({ contact, template, now }) => {
   if (!contact.closingDate) return null;
   if (!contact.anniversaryOptIn) return null; // spec §2.8 — must be explicitly opted in
-  if (
-    contact.relationshipType !== "past_buyer_client" &&
-    contact.relationshipType !== "past_seller_client"
-  ) {
+  if (!isPastClient(contact.relationshipType)) {
     return null;
   }
 
@@ -65,10 +72,7 @@ export const anniversaryDetector: Detector = ({ contact, template, now }) => {
 
 // ---------- Equity milestone (EM-01 +25%, EM-02 +50%) ----------
 export const equityMilestoneDetector: Detector = ({ contact, template, now: _now }) => {
-  if (
-    contact.relationshipType !== "past_buyer_client" &&
-    contact.relationshipType !== "past_seller_client"
-  ) {
+  if (!isPastClient(contact.relationshipType)) {
     return null;
   }
   if (contact.avmCurrent === null || contact.closingPrice === null || contact.closingPrice <= 0) {
@@ -98,10 +102,7 @@ export const equityMilestoneDetector: Detector = ({ contact, template, now: _now
 // Per spec: fires at the start of each calendar quarter. We fire any time
 // during the first 14 days of a new quarter — a daily cron catches it.
 export const quarterlyEquityDetector: Detector = ({ contact, template: _t, now }) => {
-  if (
-    contact.relationshipType !== "past_buyer_client" &&
-    contact.relationshipType !== "past_seller_client"
-  ) {
+  if (!isPastClient(contact.relationshipType)) {
     return null;
   }
   if (contact.avmCurrent === null || contact.closingPrice === null) return null;
@@ -129,9 +130,9 @@ export const quarterlyEquityDetector: Detector = ({ contact, template: _t, now }
 // 120-day dormancy threshold from spec prototype. Period key is "dormancy:YYYY-MM"
 // so if a contact reactivates and goes dormant again next year, we can re-fire.
 export const dormancyDetector: Detector = ({ contact, template: _t, now }) => {
-  if (!contact.lastTouchDate) return null;
+  if (!contact.lastContactedAt) return null;
   const days = Math.floor(
-    (now.getTime() - new Date(contact.lastTouchDate).getTime()) / (1000 * 60 * 60 * 24),
+    (now.getTime() - new Date(contact.lastContactedAt).getTime()) / (1000 * 60 * 60 * 24),
   );
   if (days < 120) return null;
   const periodMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -149,9 +150,9 @@ export const dormancyDetector: Detector = ({ contact, template: _t, now }) => {
 // Kept here for completeness — wire to a template when product adds one.
 export const referrerOverdueDetector: Detector = ({ contact, now }) => {
   if (contact.relationshipType !== "referral_source") return null;
-  if (!contact.lastTouchDate) return null;
+  if (!contact.lastContactedAt) return null;
   const days = Math.floor(
-    (now.getTime() - new Date(contact.lastTouchDate).getTime()) / (1000 * 60 * 60 * 24),
+    (now.getTime() - new Date(contact.lastContactedAt).getTime()) / (1000 * 60 * 60 * 24),
   );
   if (days < 60) return null;
   return {

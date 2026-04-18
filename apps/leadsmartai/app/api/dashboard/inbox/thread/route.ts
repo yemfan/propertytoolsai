@@ -19,7 +19,7 @@ export async function GET(req: Request) {
 
     // Fetch lead info
     const { data: lead } = await supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .select("id, name, email, phone, rating, property_address")
       .eq("id", leadId)
       .eq("agent_id", agent.id)
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
       const { data: sms } = await supabaseAdmin
         .from("sms_messages")
         .select("id, message, direction, created_at")
-        .eq("lead_id", leadId as unknown as number)
+        .eq("contact_id", leadId as unknown as number)
         .order("created_at", { ascending: true })
         .limit(100);
       messages.push(...(sms ?? []).map((m: any) => ({ ...m, channel: "sms" })));
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
       const { data: emails } = await supabaseAdmin
         .from("email_messages")
         .select("id, subject, message, direction, created_at")
-        .eq("lead_id", leadId as unknown as number)
+        .eq("contact_id", leadId as unknown as number)
         .order("created_at", { ascending: true })
         .limit(100);
       messages.push(...(emails ?? []).map((m: any) => ({ ...m, channel: "email" })));

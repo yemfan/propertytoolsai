@@ -21,7 +21,7 @@ function mapRow(
 ): MobileLeadTaskDto {
   return {
     id: String(row.id ?? ""),
-    lead_id: String(row.lead_id ?? ""),
+    contact_id: String(row.contact_id ?? ""),
     lead_name: leadName,
     title: String(row.title ?? ""),
     description: row.description != null ? String(row.description) : null,
@@ -60,7 +60,7 @@ export async function listMobileTasksGrouped(agentId: string): Promise<MobileTas
   const stages: MobilePipelineStageOptionDto[] = await listMobilePipelineStages(agentId);
 
   const { data: leads, error: leErr } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("id,name")
     .eq("agent_id", agentId as never)
     .is("merged_into_lead_id", null);
@@ -84,11 +84,11 @@ export async function listMobileTasksGrouped(agentId: string): Promise<MobileTas
   if (!leadIds.length) return empty;
 
   const { data: tasks, error: tErr } = await supabaseAdmin
-    .from("lead_tasks")
+    .from("crm_tasks")
     .select(
-      "id,lead_id,title,description,due_at,status,priority,task_type,created_by,created_at,updated_at,completed_at"
+      "id,contact_id,title,description,due_at,status,priority,task_type,created_by,created_at,updated_at,completed_at"
     )
-    .in("lead_id", leadIds as never)
+    .in("contact_id", leadIds as never)
     .eq("status", "open")
     .order("due_at", { ascending: true, nullsFirst: false });
 
@@ -100,7 +100,7 @@ export async function listMobileTasksGrouped(agentId: string): Promise<MobileTas
 
   for (const t of tasks ?? []) {
     const row = t as Record<string, unknown>;
-    const leadId = String(row.lead_id ?? "");
+    const leadId = String(row.contact_id ?? "");
     const dto = mapRow(row, nameById.get(leadId) ?? null);
     const b = bucketForDue(dto.due_at);
     if (b === "overdue") overdue.push(dto);
@@ -113,7 +113,7 @@ export async function listMobileTasksGrouped(agentId: string): Promise<MobileTas
 
 async function assertLeadOwned(agentId: string, leadId: string): Promise<void> {
   const { data, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("id")
     .eq("id", leadId as never)
     .eq("agent_id", agentId as never)
@@ -139,7 +139,7 @@ export async function createMobileLeadTask(params: {
   if (!title) throw new Error("title is required");
 
   const row = {
-    lead_id: params.leadId as never,
+    contact_id: params.leadId as never,
     assigned_agent_id: params.agentId as never,
     title,
     description: params.description?.trim() || null,
@@ -152,17 +152,17 @@ export async function createMobileLeadTask(params: {
   };
 
   const { data, error } = await supabaseAdmin
-    .from("lead_tasks")
+    .from("crm_tasks")
     .insert(row as never)
     .select(
-      "id,lead_id,title,description,due_at,status,priority,task_type,created_by,created_at,updated_at,completed_at"
+      "id,contact_id,title,description,due_at,status,priority,task_type,created_by,created_at,updated_at,completed_at"
     )
     .single();
 
   if (error) throw new Error(error.message);
 
   const { data: lead } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("name")
     .eq("id", params.leadId as never)
     .maybeSingle();
@@ -173,15 +173,15 @@ export async function createMobileLeadTask(params: {
 
 async function assertTaskForAgent(agentId: string, taskId: string): Promise<Record<string, unknown>> {
   const { data: task, error } = await supabaseAdmin
-    .from("lead_tasks")
-    .select("id,lead_id")
+    .from("crm_tasks")
+    .select("id,contact_id")
     .eq("id", taskId)
     .maybeSingle();
 
   if (error) throw new Error(error.message);
   if (!task) throw new Error("NOT_FOUND");
 
-  await assertLeadOwned(agentId, String((task as { lead_id: unknown }).lead_id));
+  await assertLeadOwned(agentId, String((task as { contact_id: unknown }).contact_id));
   return task as Record<string, unknown>;
 }
 
@@ -218,19 +218,19 @@ export async function patchMobileLeadTask(params: {
   }
 
   const { data, error } = await supabaseAdmin
-    .from("lead_tasks")
+    .from("crm_tasks")
     .update(patch as never)
     .eq("id", params.taskId)
     .select(
-      "id,lead_id,title,description,due_at,status,priority,task_type,created_by,created_at,updated_at,completed_at"
+      "id,contact_id,title,description,due_at,status,priority,task_type,created_by,created_at,updated_at,completed_at"
     )
     .single();
 
   if (error) throw new Error(error.message);
 
-  const leadId = String((data as { lead_id: unknown }).lead_id ?? "");
+  const leadId = String((data as { contact_id: unknown }).contact_id ?? "");
   const { data: lead } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("name")
     .eq("id", leadId as never)
     .maybeSingle();
@@ -246,11 +246,11 @@ export async function fetchNextOpenTaskForLead(
   await assertLeadOwned(agentId, leadId);
 
   const { data, error } = await supabaseAdmin
-    .from("lead_tasks")
+    .from("crm_tasks")
     .select(
-      "id,lead_id,title,description,due_at,status,priority,task_type,created_by,created_at,updated_at,completed_at"
+      "id,contact_id,title,description,due_at,status,priority,task_type,created_by,created_at,updated_at,completed_at"
     )
-    .eq("lead_id", leadId as never)
+    .eq("contact_id", leadId as never)
     .eq("status", "open")
     .order("due_at", { ascending: true, nullsFirst: false })
     .limit(1)
@@ -260,7 +260,7 @@ export async function fetchNextOpenTaskForLead(
   if (!data) return null;
 
   const { data: lead } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("name")
     .eq("id", leadId as never)
     .maybeSingle();

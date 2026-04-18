@@ -45,7 +45,7 @@ export async function GET(req: Request) {
   const { data, error } = await supabaseServer
     .from("client_portal_documents")
     .select("id,title,doc_type,url,created_at")
-    .eq("lead_id", leadId as any)
+    .eq("contact_id", leadId as any)
     .order("created_at", { ascending: false })
     .limit(40);
 

@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
     // Atomic assign: only succeeds if agent_id is still null.
     const { data, error } = await supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .update({
         agent_id: agentId,
         claimed_at: new Date().toISOString(),

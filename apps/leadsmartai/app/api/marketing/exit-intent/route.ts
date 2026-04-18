@@ -63,7 +63,7 @@ Time: ${new Date().toISOString()}`,
       city: null,
       source: "marketing",
       campaign: "exit_intent_buyer_leads",
-      lead_id: null,
+      contact_id: null,
       metadata: { email_hint: `${email.slice(0, 3)}***`, offer: "exit_popup_buyer_leads" },
     } as Record<string, unknown>);
     if (trafficErr) {

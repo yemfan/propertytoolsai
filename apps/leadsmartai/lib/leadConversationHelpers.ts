@@ -11,7 +11,7 @@ export async function getOrCreateConversation(leadId: string, agentId: string) {
   const { data: existing } = await supabaseServer
     .from("lead_conversations")
     .select("id,messages,preferences,updated_at")
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .maybeSingle();
 
   if (existing) return existing;
@@ -20,12 +20,12 @@ export async function getOrCreateConversation(leadId: string, agentId: string) {
     .from("lead_conversations")
     .upsert(
       {
-        lead_id: leadId as any,
+        contact_id: leadId as any,
         agent_id: agentId,
         messages: [],
         preferences: {},
       } as any,
-      { onConflict: "lead_id" }
+      { onConflict: "contact_id" }
     )
     .select("id,messages,preferences,updated_at")
     .single();
@@ -48,7 +48,7 @@ export async function appendMessages(
       messages: next as any,
       updated_at: new Date().toISOString(),
     } as any)
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .eq("agent_id", agentId);
   if (error) throw error;
   return next;
@@ -70,7 +70,7 @@ export async function updatePreferences(
       preferences: next as any,
       updated_at: new Date().toISOString(),
     } as any)
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .eq("agent_id", agentId);
   if (error) throw error;
   return next;

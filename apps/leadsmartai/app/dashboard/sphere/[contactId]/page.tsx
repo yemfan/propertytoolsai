@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
-import { getSphereContact } from "@/lib/sphere/service";
+import { getContact } from "@/lib/contacts/service";
 import { listTemplatesForAgent } from "@/lib/templates/service";
 import SphereContactProfile from "@/components/dashboard/SphereContactProfile";
 
@@ -18,7 +18,7 @@ export default async function SphereContactPage({
   const { contactId } = await params;
   const { agentId } = await getCurrentAgentContext();
   const [contact, templates] = await Promise.all([
-    getSphereContact(agentId, contactId),
+    getContact(agentId, contactId),
     listTemplatesForAgent(agentId),
   ]);
   if (!contact) notFound();

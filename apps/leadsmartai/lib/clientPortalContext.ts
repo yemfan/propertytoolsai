@@ -36,7 +36,7 @@ export async function findLeadsForPortalUser(
 
   // AI score fields live on `lead_scores`, not on `leads` (avoids 42703 if columns are missing).
   const { data, error } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .select(
       "id,agent_id,name,email,phone,property_address,lead_status,source,report_id,price_min,price_max,search_location,last_activity_at,next_contact_at,created_at"
     )
@@ -59,14 +59,14 @@ export async function findLeadsForPortalUser(
   const scoreMap: Record<string, Record<string, unknown>> = {};
   if (leadIds.length) {
     const { data: scoreRows, error: scoresErr } = await supabaseServer
-      .from("lead_scores")
-      .select("lead_id,score,intent,timeline,confidence,updated_at")
-      .in("lead_id", leadIds as string[])
+      .from("contact_scores")
+      .select("contact_id,score,intent,timeline,confidence,updated_at")
+      .in("contact_id", leadIds as string[])
       .order("updated_at", { ascending: false })
       .limit(5000);
     if (!scoresErr) {
       for (const row of scoreRows ?? []) {
-        const key = String((row as { lead_id?: string }).lead_id ?? "");
+        const key = String((row as { contact_id?: string }).contact_id ?? "");
         if (!key || scoreMap[key]) continue;
         scoreMap[key] = row as Record<string, unknown>;
       }

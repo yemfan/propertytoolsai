@@ -44,7 +44,7 @@ export async function GET(req: Request) {
         .gte("updated_at", sinceIso)
         .limit(1000),
       supabaseServer
-        .from("lead_events")
+        .from("contact_events")
         .select("event_type,created_at")
         .gte("created_at", sinceIso)
         .limit(2000),

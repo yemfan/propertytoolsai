@@ -14,7 +14,7 @@ export async function getMobileReminders(agentId: string): Promise<MobileReminde
     }),
     listMobileTasksGrouped(agentId),
     supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .select("id,name,next_contact_at")
       .eq("agent_id", agentId as never)
       .is("merged_into_lead_id", null)
@@ -29,7 +29,7 @@ export async function getMobileReminders(agentId: string): Promise<MobileReminde
     const r = row as { id: unknown; name: unknown; next_contact_at: unknown };
     const at = String(r.next_contact_at ?? "");
     return {
-      lead_id: String(r.id ?? ""),
+      contact_id: String(r.id ?? ""),
       lead_name: r.name != null ? String(r.name) : null,
       next_contact_at: at,
       overdue: new Date(at).getTime() < now,

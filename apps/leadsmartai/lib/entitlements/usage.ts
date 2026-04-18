@@ -44,7 +44,7 @@ export async function getAgentNumericId(supabase: SupabaseClient, userId: string
 
 export async function countLeadsForAgent(supabase: SupabaseClient, agentId: string): Promise<number> {
   const { count, error } = await supabase
-    .from("leads")
+    .from("contacts")
     .select("id", { count: "exact", head: true })
     .eq("agent_id", agentId);
   if (error) throw new Error(error.message);

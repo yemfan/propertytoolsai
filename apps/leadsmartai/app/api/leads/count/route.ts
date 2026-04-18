@@ -37,7 +37,7 @@ export async function GET() {
     const limit = planType === "pro" ? 500 : planType === "premium" ? null : 0;
 
     const { count, error } = await supabase
-      .from("leads")
+      .from("contacts")
       .select("id", { count: "exact", head: true })
       .eq("agent_id", agentId);
     if (error) throw error;

@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { SphereSignalType } from "@/lib/sphere/types";
+import type { ContactSignalType } from "@/lib/contacts/types";
 
-const TYPES: { value: SphereSignalType; label: string; defaultAction: string }[] = [
+const TYPES: { value: ContactSignalType; label: string; defaultAction: string }[] = [
   {
     value: "equity_milestone",
     label: "Equity milestone",
@@ -21,14 +21,14 @@ const TYPES: { value: SphereSignalType; label: string; defaultAction: string }[]
     defaultAction: "Call — likely selling, offer referral",
   },
   {
-    value: "comparable_sale",
-    label: "Comparable sale nearby",
+    value: "listing_activity",
+    label: "Listing activity nearby",
     defaultAction: "Send JS-01 comparable sale SMS",
   },
   {
-    value: "dormant",
-    label: "Dormancy",
-    defaultAction: "Send DR-01 dormant re-engage SMS",
+    value: "anniversary_due",
+    label: "Anniversary due",
+    defaultAction: "Send HA-01 home anniversary SMS",
   },
   { value: "life_event_other", label: "Other life event", defaultAction: "" },
 ];
@@ -46,7 +46,7 @@ export default function AddSignalButton({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [type, setType] = useState<SphereSignalType>("equity_milestone");
+  const [type, setType] = useState<ContactSignalType>("equity_milestone");
   const [signalLabel, setSignalLabel] = useState("");
   const [confidence, setConfidence] = useState<(typeof CONFIDENCE)[number]>("medium");
   const [suggestedAction, setSuggestedAction] = useState("");
@@ -61,7 +61,7 @@ export default function AddSignalButton({
     setError(null);
   }
 
-  function pickType(t: SphereSignalType) {
+  function pickType(t: ContactSignalType) {
     setType(t);
     const preset = TYPES.find((x) => x.value === t);
     if (preset && !suggestedAction) setSuggestedAction(preset.defaultAction);
@@ -142,7 +142,7 @@ export default function AddSignalButton({
             <span className="text-[11px] font-medium text-gray-500">Type</span>
             <select
               value={type}
-              onChange={(e) => pickType(e.target.value as SphereSignalType)}
+              onChange={(e) => pickType(e.target.value as ContactSignalType)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             >
               {TYPES.map((t) => (

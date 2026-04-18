@@ -53,7 +53,7 @@ async function upsertLeadSequence(leadIdNum: number, steps: typeof STEPS, leadTy
   const { data: existingSeq, error: seqErr } = await supabaseServer
     .from("lead_sequences")
     .select("id")
-    .eq("lead_id", leadIdNum)
+    .eq("contact_id", leadIdNum)
     .maybeSingle();
 
   if (seqErr && (seqErr as any).code !== "PGRST116") throw seqErr;
@@ -75,7 +75,7 @@ async function upsertLeadSequence(leadIdNum: number, steps: typeof STEPS, leadTy
     const { data: insSeq, error: insSeqErr } = await supabaseServer
       .from("lead_sequences")
       .insert({
-        lead_id: leadIdNum,
+        contact_id: leadIdNum,
         status: "active",
         current_step: 0,
         next_send_at: nextSendAt.toISOString(),
@@ -101,7 +101,7 @@ async function upsertLeadSequence(leadIdNum: number, steps: typeof STEPS, leadTy
   if (stepsErr) throw stepsErr;
 
   await supabaseServer
-    .from("leads")
+    .from("contacts")
     .update({
       automation_disabled: true,
       next_contact_at: nextSendAt.toISOString(),
@@ -116,7 +116,7 @@ export async function scheduleEmailSequenceForLead(leadId: string) {
   const now = new Date();
 
   const { data: lead, error: leadErr } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .select("id,lead_type,source,stage,created_at")
     .eq("id", leadIdNum)
     .maybeSingle();
@@ -139,7 +139,7 @@ export async function scheduleEmailSequenceForLeadSkipDay0(leadId: string) {
   const now = new Date();
 
   const { data: lead, error: leadErr } = await supabaseServer
-    .from("leads")
+    .from("contacts")
     .select("id,lead_type,source,stage,created_at")
     .eq("id", leadIdNum)
     .maybeSingle();

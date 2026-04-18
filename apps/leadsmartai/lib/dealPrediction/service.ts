@@ -41,7 +41,7 @@ async function countSince(
   const { count, error } = await supabaseAdmin
     .from(table)
     .select("id", { count: "exact", head: true })
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .eq("direction", direction)
     .gte("created_at", sinceIso);
   if (error) throw new Error(error.message);
@@ -50,9 +50,9 @@ async function countSince(
 
 async function countLeadEventsSince(leadId: string, sinceIso: string): Promise<number> {
   const { count, error } = await supabaseAdmin
-    .from("lead_events")
+    .from("contact_events")
     .select("id", { count: "exact", head: true })
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .gte("created_at", sinceIso);
   if (error) throw new Error(error.message);
   return count ?? 0;
@@ -60,9 +60,9 @@ async function countLeadEventsSince(leadId: string, sinceIso: string): Promise<n
 
 async function latestAiLeadScore(leadId: string): Promise<number | null> {
   const { data, error } = await supabaseAdmin
-    .from("lead_scores")
+    .from("contact_scores")
     .select("score")
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -73,7 +73,7 @@ async function latestAiLeadScore(leadId: string): Promise<number | null> {
 
 export async function buildDealPredictionInput(leadId: string): Promise<DealPredictionInput | null> {
   const { data: row, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select(LEAD_SELECT_FOR_PREDICTION)
     .eq("id", leadId)
     .maybeSingle();
@@ -118,7 +118,7 @@ export async function buildDealPredictionInput(leadId: string): Promise<DealPred
 
 export async function persistDealPrediction(leadId: string, result: DealPredictionResult): Promise<void> {
   const { error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .update({
       prediction_score: result.score,
       prediction_label: result.label,
@@ -145,7 +145,7 @@ export async function recomputeDealPredictionsForAgent(
 ): Promise<{ processed: number; errors: number }> {
   const cap = clampLimit(limit);
   const { data, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("id")
     .eq("agent_id", agentId as never)
     .is("merged_into_lead_id", null)
@@ -196,7 +196,7 @@ export async function listHighProbabilityLeads(params: {
   const limit = params.limit != null && Number.isFinite(params.limit) ? Math.min(Math.max(params.limit, 1), 200) : 50;
 
   let q = supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("id,name,prediction_score,prediction_label,prediction_computed_at,last_activity_at,source")
     .eq("agent_id", params.agentId as never)
     .is("merged_into_lead_id", null)

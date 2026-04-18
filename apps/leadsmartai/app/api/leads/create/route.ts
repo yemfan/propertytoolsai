@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     } as any;
 
     const { data, error } = await supabase
-      .from("leads")
+      .from("contacts")
       .insert(insert)
       .select("id")
       .single();

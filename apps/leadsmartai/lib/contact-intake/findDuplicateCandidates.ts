@@ -22,7 +22,7 @@ export async function findBestDuplicateMatchForAgent(
 
   async function collectRows(field: "normalized_email" | "normalized_phone" | "normalized_address", val: string) {
     const { data, error } = await supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .select(SELECT_LEADS)
       .eq("agent_id", agentId)
       .eq(field, val)

@@ -19,7 +19,7 @@ async function insertVoiceHotNurtureAlertIfNeeded(params: {
   const { data: existing } = await supabaseAdmin
     .from("nurture_alerts")
     .select("id")
-    .eq("lead_id", params.leadId as never)
+    .eq("contact_id", params.leadId as never)
     .eq("agent_id", params.agentId as never)
     .eq("type", "hot")
     .gte("created_at", since)
@@ -32,7 +32,7 @@ async function insertVoiceHotNurtureAlertIfNeeded(params: {
   try {
     await supabaseAdmin.from("nurture_alerts").insert({
       agent_id: params.agentId,
-      lead_id: params.leadId,
+      contact_id: params.leadId,
       type: "hot",
       message: msg,
     } as Record<string, unknown>);
@@ -49,8 +49,8 @@ async function logLeadEventBestEffort(params: {
 }): Promise<void> {
   const agentId = await resolveEffectiveAgentId(params.leadId, params.agentId);
   try {
-    await supabaseAdmin.from("lead_events").insert({
-      lead_id: params.leadId as never,
+    await supabaseAdmin.from("contact_events").insert({
+      contact_id: params.leadId as never,
       agent_id: agentId as never,
       event_type: params.eventType,
       metadata: params.metadata,
@@ -85,7 +85,7 @@ export async function escalateHotInboundVoiceCall(params: HotVoiceEscalationInpu
   const agentId = await resolveEffectiveAgentId(params.leadId, params.callAgentId);
 
   const { data: leadRow } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("name")
     .eq("id", params.leadId as never)
     .maybeSingle();

@@ -15,7 +15,7 @@ type PropertyCore = PropertyRow;
 
 type PropertyInput = {
   address: string;
-  lead_id?: string | number;
+  contact_id?: string | number;
   beds?: number;
   baths?: number;
   sqft?: number;
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
 
     const body = (await request.json().catch(() => ({}))) as PropertyInput;
     const address = body.address?.trim();
-    const leadId = String((body as any).lead_id ?? "").trim();
+    const leadId = String((body as any).contact_id ?? "").trim();
 
     if (!address) {
       return NextResponse.json(
@@ -192,7 +192,7 @@ export async function POST(request: Request) {
     if (leadId) {
       try {
         await recordLeadEvent({
-          lead_id: leadId as any,
+          contact_id: leadId as any,
           event_type: "cma_run",
           metadata: { address },
         });

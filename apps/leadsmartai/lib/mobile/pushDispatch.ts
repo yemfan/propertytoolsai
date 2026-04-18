@@ -30,9 +30,9 @@ async function getAuthUserIdForAgent(agentId: string): Promise<string | null> {
 async function wasRecentLeadEvent(leadId: string, eventType: string, sinceMs: number): Promise<boolean> {
   const since = new Date(Date.now() - sinceMs).toISOString();
   const { data } = await supabaseAdmin
-    .from("lead_events")
+    .from("contact_events")
     .select("id")
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .eq("event_type", eventType)
     .gte("created_at", since)
     .limit(1)
@@ -47,8 +47,8 @@ async function logLeadEventBestEffort(params: {
   metadata?: Record<string, unknown>;
 }) {
   try {
-    await supabaseAdmin.from("lead_events").insert({
-      lead_id: params.leadId,
+    await supabaseAdmin.from("contact_events").insert({
+      contact_id: params.leadId,
       agent_id: params.agentId ?? null,
       event_type: params.eventType,
       metadata: params.metadata ?? {},

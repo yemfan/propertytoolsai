@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 type CallRow = {
   id: string;
-  lead_id: string | null;
+  contact_id: string | null;
   lead_name: string | null;
   direction: string;
   from_phone: string;

@@ -1,25 +1,25 @@
 import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
-import { createSignal, listOpenSignals } from "@/lib/sphere/service";
-import type { SphereSignalType } from "@/lib/sphere/types";
+import { createSignal, listOpenSignals } from "@/lib/contacts/service";
+import type { ContactSignalType } from "@/lib/contacts/types";
 
 export const runtime = "nodejs";
 
-const SIGNAL_TYPES: readonly SphereSignalType[] = [
+const SIGNAL_TYPES: readonly ContactSignalType[] = [
   "equity_milestone",
   "refi_detected",
   "job_change",
-  "dormant",
+  "anniversary_due",
+  "listing_activity",
   "life_event_other",
-  "comparable_sale",
 ];
 
 const CONFIDENCE = ["low", "medium", "high"] as const;
 type Confidence = (typeof CONFIDENCE)[number];
 
-function parseType(v: unknown): SphereSignalType | null {
-  return typeof v === "string" && SIGNAL_TYPES.includes(v as SphereSignalType)
-    ? (v as SphereSignalType)
+function parseType(v: unknown): ContactSignalType | null {
+  return typeof v === "string" && SIGNAL_TYPES.includes(v as ContactSignalType)
+    ? (v as ContactSignalType)
     : null;
 }
 

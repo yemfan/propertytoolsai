@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
     // 2) Insert lead (email-only)
     const { data: leadInsert, error: leadErr } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .insert({
         agent_id: null,
         property_address: property.address,
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
 
     // Best-effort: attach property_id
     try {
-      await supabaseServer.from("leads").update({ property_id: property.id }).eq("id", leadId);
+      await supabaseServer.from("contacts").update({ property_id: property.id }).eq("id", leadId);
     } catch {}
 
     // 3) Generate report + store
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
       address: property.address,
     });
 
-    // Some schemas define reports.lead_id as UUID while leads.id is BIGINT.
+    // Some schemas define reports.contact_id as UUID while leads.id is BIGINT.
     // Try with lead_id first; if it fails with a type error, retry without lead_id.
     let reportInsert: any = null;
     let reportErr: any = null;
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
       .from("reports")
       .insert({
         property_id: property.id,
-        lead_id: leadId,
+        contact_id: leadId,
         report_data: reportData,
       } as any)
       .select("id")
@@ -121,7 +121,7 @@ export async function POST(req: Request) {
 
     // Best-effort: store report_id back on lead
     try {
-      await supabaseServer.from("leads").update({ report_id: reportId }).eq("id", leadId);
+      await supabaseServer.from("contacts").update({ report_id: reportId }).eq("id", leadId);
     } catch {}
 
     // 4) Email report link (generic greeting)

@@ -8,7 +8,7 @@ export async function GET() {
 
     // Core lead aggregates (scoped to this agent)
     const { data: leadAgg, error: leadAggErr } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select(
         "id, rating, engagement_score, last_activity_at"
       )
@@ -27,8 +27,8 @@ export async function GET() {
 
     // "Viewed reports today" → use lead_events for report_view in last 24h
     const { data: reportTodayData, error: reportTodayErr } = await supabaseServer
-      .from("lead_events")
-      .select("lead_id, event_type, created_at")
+      .from("contact_events")
+      .select("contact_id, event_type, created_at")
       .eq("event_type", "report_view")
       .gte("created_at", new Date(todayMs).toISOString());
 
@@ -36,21 +36,28 @@ export async function GET() {
 
     const leadsViewedReportsToday = new Set<number>();
     for (const ev of (reportTodayData as any[]) ?? []) {
-      if (ev.lead_id != null) leadsViewedReportsToday.add(Number(ev.lead_id));
+      if (ev.contact_id != null) leadsViewedReportsToday.add(Number(ev.contact_id));
     }
 
-    // Messages sent (communications + automation_logs)
-    const { count: commCount, error: commErr } = await supabaseServer
+    // Messages sent (automation_logs; legacy `communications` table was
+    // dropped in the contacts-consolidation migration — that feature was
+    // half-built per the audit. Silence 42P01 if a stale environment
+    // still has it or reverts; otherwise the automation_logs count is
+    // the canonical source of truth going forward).
+    const commRes = await supabaseServer
       .from("communications")
       .select("id", { count: "exact", head: true });
-    if (commErr) throw commErr;
+    const commCount =
+      commRes.error && /does not exist|42P01/i.test(commRes.error.message ?? "")
+        ? 0
+        : (commRes.count ?? 0);
 
     const { count: autoCount, error: autoErr } = await supabaseServer
       .from("automation_logs")
       .select("id", { count: "exact", head: true });
     if (autoErr) throw autoErr;
 
-    const messagesSent = (commCount ?? 0) + (autoCount ?? 0);
+    const messagesSent = commCount + (autoCount ?? 0);
 
     // Avg engagement score
     const scores = leads
@@ -69,8 +76,8 @@ export async function GET() {
 
     // Recent activity feed (lead_events)
     const { data: events, error: eventsErr } = await supabaseServer
-      .from("lead_events")
-      .select("id, lead_id, event_type, created_at")
+      .from("contact_events")
+      .select("id, contact_id, event_type, created_at")
       .order("created_at", { ascending: false })
       .limit(30);
 

@@ -1,7 +1,9 @@
-import { getCurrentAgentContext } from "@/lib/dashboardService";
-import { supabaseServer } from "@/lib/supabaseServer";
-import ContactsClient from "./ContactsClient";
 import type { Metadata } from "next";
+import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { listContacts } from "@/lib/contacts/service";
+import { listSmartLists } from "@/lib/contacts/smart-lists";
+import SmartListTabs from "@/components/dashboard/SmartListTabs";
+import ContactsClient from "./ContactsClient";
 
 export const metadata: Metadata = {
   title: "Contacts",
@@ -10,15 +12,64 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default async function ContactsPage() {
-  const ctx = await getCurrentAgentContext();
+type PageProps = {
+  searchParams: Promise<{ list?: string }>;
+};
 
-  const { data } = await supabaseServer
-    .from("leads")
-    .select("id, name, email, phone, property_address, source, rating, last_contacted_at, notes, created_at")
-    .eq("agent_id", ctx.agentId)
-    .order("created_at", { ascending: false })
-    .limit(500);
+/**
+ * Unified contacts hub. Smart Lists drive which subset of the contacts
+ * table is shown (Leads / Sphere / All / custom). Defaults are seeded
+ * per-agent by the schema migration's trigger, so every agent has the
+ * three base lists on first load.
+ *
+ * URL param `?list=<id>` selects which list is active; omitted means
+ * "use whichever default comes first by sort_order" (Leads in practice).
+ */
+export default async function ContactsPage({ searchParams }: PageProps) {
+  const { agentId } = await getCurrentAgentContext();
+  const { list: listParam } = await searchParams;
 
-  return <ContactsClient leads={(data ?? []) as any[]} />;
+  const [smartLists, activeListContacts] = await Promise.all([
+    listSmartLists(agentId),
+    // Pre-fetch in parallel with smartLists load, but we'll discard this
+    // and re-fetch if the list param doesn't match — cheaper than two
+    // round-trips in the common case where the first-visible list is
+    // intended.
+    Promise.resolve([] as never),
+  ]);
+
+  const visible = smartLists.filter((l) => !l.isHidden);
+  const activeList =
+    visible.find((l) => l.id === listParam) ?? visible[0] ?? null;
+
+  const contacts = activeList
+    ? await listContacts(agentId, activeList.filterConfig)
+    : await listContacts(agentId);
+  void activeListContacts; // placeholder; keeps the parallel fetch pattern explicit
+
+  // ContactsClient still expects the legacy LeadRow shape. Adapt the
+  // ContactView into that minimal shape; richer fields are available
+  // if/when ContactsClient is refactored to use ContactView directly.
+  const legacyRows = contacts.map((c) => ({
+    id: c.id,
+    name:
+      c.fullName && c.fullName !== "(no name)"
+        ? c.fullName
+        : (c.email ?? null),
+    email: c.email,
+    phone: c.phone ?? c.phoneNumber ?? null,
+    property_address: c.propertyAddress,
+    source: c.source,
+    rating: c.rating,
+    last_contacted_at: c.lastContactedAt,
+    notes: c.notes,
+    created_at: c.createdAt,
+  }));
+
+  return (
+    <div className="flex flex-col">
+      <SmartListTabs lists={smartLists} activeListId={activeList?.id ?? null} />
+      <ContactsClient leads={legacyRows} />
+    </div>
+  );
 }

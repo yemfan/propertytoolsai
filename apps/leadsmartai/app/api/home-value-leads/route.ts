@@ -83,7 +83,7 @@ Timestamp: ${new Date().toISOString()}`,
     }
 
     const { data: lead, error: leadError } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .insert({
         agent_id: null,
         property_address: address,
@@ -142,7 +142,7 @@ export async function GET() {
     const agentId = String(agentRow.id);
 
     const { data, error } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select(
         `id, agent_id, property_address, created_at, name, email, phone`
       )

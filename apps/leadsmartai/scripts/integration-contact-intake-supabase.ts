@@ -233,7 +233,7 @@ async function main() {
   console.log("✓ contact_import_rows");
 
   const { error: leadsErr } = await supabase
-    .from("leads")
+    .from("contacts")
     .select("id,intake_channel,import_job_id")
     .limit(1);
   if (leadsErr) {
@@ -270,7 +270,7 @@ async function main() {
   let jobId: string | null = null;
 
   const cleanup = async () => {
-    await supabase.from("leads").delete().eq("email", testEmail);
+    await supabase.from("contacts").delete().eq("email", testEmail);
     if (jobId) {
       const { error } = await supabase.from("contact_import_jobs").delete().eq("id", jobId);
       if (error) console.warn(`[cleanup] contact_import_jobs delete:`, error.message);
@@ -314,7 +314,7 @@ async function main() {
     }
 
     const { data: leadCheck, error: lcErr } = await supabase
-      .from("leads")
+      .from("contacts")
       .select("id,email,import_job_id")
       .eq("email", testEmail)
       .maybeSingle();

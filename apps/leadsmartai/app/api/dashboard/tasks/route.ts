@@ -55,7 +55,7 @@ export async function POST(req: Request) {
 
     if (body.leadId) {
       const { data: lead, error: le } = await supabaseServer
-        .from("leads")
+        .from("contacts")
         .select("id")
         .eq("id", body.leadId as any)
         .eq("agent_id", agentId as any)

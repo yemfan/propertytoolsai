@@ -50,7 +50,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
     // Trigger AI SMS auto-follow immediately after purchase (best-effort).
     try {
-      const leadId = String(result?.lead_id ?? "").trim();
+      const leadId = String(result?.contact_id ?? "").trim();
       if (leadId) {
         // Fire-and-forget to keep purchase response fast while still triggering within seconds.
         void sendInitialSmsAfterPurchase(leadId);

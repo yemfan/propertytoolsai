@@ -12,7 +12,7 @@ type TaskRow = {
   due_at: string | null;
   completed_at: string | null;
   source: string;
-  lead_id: string | null;
+  contact_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -91,7 +91,7 @@ export default function TasksClient({
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addFields, setAddFields] = useState({ title: "", description: "", priority: "normal", due_at: "", lead_id: "" });
+  const [addFields, setAddFields] = useState({ title: "", description: "", priority: "normal", due_at: "", contact_id: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<Partial<TaskRow>>({});
   const [actionLoading, setActionLoading] = useState(false);
@@ -121,12 +121,12 @@ export default function TasksClient({
           description: addFields.description || null,
           priority: addFields.priority,
           dueAt: addFields.due_at || null,
-          leadId: addFields.lead_id || null,
+          leadId: addFields.contact_id || null,
         }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.ok) throw new Error(body.error ?? "Failed");
-      setAddFields({ title: "", description: "", priority: "normal", due_at: "", lead_id: "" });
+      setAddFields({ title: "", description: "", priority: "normal", due_at: "", contact_id: "" });
       setShowAddForm(false);
       setActionMsg("Task added.");
       window.location.reload();
@@ -220,7 +220,7 @@ export default function TasksClient({
               <option value="urgent">Urgent</option>
             </select>
             <input type="datetime-local" value={addFields.due_at} onChange={(e) => setAddFields((f) => ({ ...f, due_at: e.target.value }))} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-            <select value={addFields.lead_id} onChange={(e) => setAddFields((f) => ({ ...f, lead_id: e.target.value }))} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+            <select value={addFields.contact_id} onChange={(e) => setAddFields((f) => ({ ...f, contact_id: e.target.value }))} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
               <option value="">No contact</option>
               {leads.map((l) => <option key={l.id} value={l.id}>{l.name ?? `Lead #${l.id}`}</option>)}
             </select>
@@ -267,7 +267,7 @@ export default function TasksClient({
                   return (
                     <tr key={t.id} className="bg-blue-50/30">
                       <td className="px-4 py-2"><input value={editFields.title ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, title: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
-                      <td className="px-4 py-2 text-xs text-gray-500">{t.lead_id ? leadMap.get(String(t.lead_id)) ?? t.lead_id : "\u2014"}</td>
+                      <td className="px-4 py-2 text-xs text-gray-500">{t.contact_id ? leadMap.get(String(t.contact_id)) ?? t.contact_id : "\u2014"}</td>
                       <td className="px-4 py-2"><input type="datetime-local" value={editFields.due_at ? new Date(editFields.due_at).toISOString().slice(0, 16) : ""} onChange={(e) => setEditFields((f) => ({ ...f, due_at: e.target.value ? new Date(e.target.value).toISOString() : null }))} className="rounded border border-gray-300 px-2 py-1 text-sm" /></td>
                       <td className="px-4 py-2">
                         <select value={editFields.priority ?? "normal"} onChange={(e) => setEditFields((f) => ({ ...f, priority: e.target.value }))} className="rounded border border-gray-300 px-2 py-1 text-sm">
@@ -293,7 +293,7 @@ export default function TasksClient({
                       <span className="font-medium text-gray-900">{t.title}</span>
                       {t.source !== "agent" && <span className="ml-1.5 text-[10px] text-gray-400 uppercase">{t.source}</span>}
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-gray-600">{t.lead_id ? leadMap.get(String(t.lead_id)) ?? `#${t.lead_id}` : "\u2014"}</td>
+                    <td className="px-4 py-2.5 text-xs text-gray-600">{t.contact_id ? leadMap.get(String(t.contact_id)) ?? `#${t.contact_id}` : "\u2014"}</td>
                     <td className="px-4 py-2.5 text-xs whitespace-nowrap">
                       {t.due_at ? (
                         <span className={t.status === "open" && t.due_at && new Date(t.due_at).getTime() < Date.now() ? "text-red-600 font-medium" : "text-gray-600"}>

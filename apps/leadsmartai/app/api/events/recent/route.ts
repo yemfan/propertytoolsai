@@ -14,8 +14,8 @@ export async function GET(req: Request) {
 
     // Unscoped feed. To filter by workspace, resolve `agents.id` (same PK as `lead_events.agent_id`) and `.eq("agent_id", id)`.
     const { data, error } = await supabaseServer
-      .from("lead_events")
-      .select("id,lead_id,event_type,metadata,created_at")
+      .from("contact_events")
+      .select("id,contact_id,event_type,metadata,created_at")
       .order("created_at", { ascending: false })
       .limit(limit);
 

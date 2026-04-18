@@ -27,7 +27,7 @@ async function leadInboxMetaMap(agentId: string, leadIds: string[]): Promise<Map
   if (!leadIds.length) return map;
   for (const part of chunk(leadIds, LEAD_ID_CHUNK)) {
     const { data, error } = await supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .select("id,name,rating")
       .eq("agent_id", agentId as unknown as number)
       .in("id", part as unknown as number[]);
@@ -50,13 +50,13 @@ async function hotNurtureLeadIds(leadIds: string[]): Promise<Set<string>> {
   for (const part of chunk(leadIds, LEAD_ID_CHUNK)) {
     const { data, error } = await supabaseAdmin
       .from("nurture_alerts")
-      .select("lead_id")
-      .in("lead_id", part as unknown as number[])
+      .select("contact_id")
+      .in("contact_id", part as unknown as number[])
       .eq("type", "hot")
       .gte("created_at", since);
     if (error) throw new Error(error.message);
     for (const row of data ?? []) {
-      acc.add(String((row as { lead_id: unknown }).lead_id));
+      acc.add(String((row as { contact_id: unknown }).contact_id));
     }
   }
   return acc;
@@ -64,7 +64,7 @@ async function hotNurtureLeadIds(leadIds: string[]): Promise<Set<string>> {
 
 type MsgRow = {
   id: string;
-  lead_id: unknown;
+  contact_id: unknown;
   message: string;
   subject?: string;
   direction: string;
@@ -76,8 +76,8 @@ async function fetchSmsForLeads(leadIds: string[]): Promise<MsgRow[]> {
   for (const part of chunk(leadIds, LEAD_ID_CHUNK)) {
     const { data, error } = await supabaseAdmin
       .from("sms_messages")
-      .select("id,lead_id,message,direction,created_at")
-      .in("lead_id", part as unknown as number[])
+      .select("id,contact_id,message,direction,created_at")
+      .in("contact_id", part as unknown as number[])
       .order("created_at", { ascending: false })
       .limit(MESSAGES_PER_LEAD_CHUNK);
     if (error) throw new Error(error.message);
@@ -91,8 +91,8 @@ async function fetchEmailForLeads(leadIds: string[]): Promise<MsgRow[]> {
   for (const part of chunk(leadIds, LEAD_ID_CHUNK)) {
     const { data, error } = await supabaseAdmin
       .from("email_messages")
-      .select("id,lead_id,subject,message,direction,created_at")
-      .in("lead_id", part as unknown as number[])
+      .select("id,contact_id,subject,message,direction,created_at")
+      .in("contact_id", part as unknown as number[])
       .order("created_at", { ascending: false })
       .limit(MESSAGES_PER_LEAD_CHUNK);
     if (error) throw new Error(error.message);
@@ -116,7 +116,7 @@ function isHotLeadForThread(
  */
 export async function getMobileInbox(agentId: string): Promise<MobileInboxThreadDto[]> {
   const { data: leadRows, error: leadErr } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("id")
     .eq("agent_id", agentId as unknown as number)
     .is("merged_into_lead_id", null)
@@ -142,7 +142,7 @@ export async function getMobileInbox(agentId: string): Promise<MobileInboxThread
 
   const seenSms = new Set<string>();
   for (const r of smsRows) {
-    const lid = String(r.lead_id);
+    const lid = String(r.contact_id);
     if (!leadIdSet.has(lid)) continue;
     const key = `${lid}:sms`;
     if (seenSms.has(key)) continue;
@@ -162,7 +162,7 @@ export async function getMobileInbox(agentId: string): Promise<MobileInboxThread
 
   const seenEmail = new Set<string>();
   for (const r of emailRows) {
-    const lid = String(r.lead_id);
+    const lid = String(r.contact_id);
     if (!leadIdSet.has(lid)) continue;
     const key = `${lid}:email`;
     if (seenEmail.has(key)) continue;

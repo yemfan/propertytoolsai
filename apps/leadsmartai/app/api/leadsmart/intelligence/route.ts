@@ -11,7 +11,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: false, error: "Not authenticated" }, { status: 401 });
     }
     const url = new URL(req.url);
-    const leadId = String(url.searchParams.get("lead_id") ?? "").trim();
+    const leadId = String(url.searchParams.get("contact_id") ?? "").trim();
     if (!leadId) {
       return NextResponse.json({ ok: false, error: "lead_id is required" }, { status: 400 });
     }

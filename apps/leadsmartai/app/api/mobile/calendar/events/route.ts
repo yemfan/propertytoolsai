@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const fromIso = url.searchParams.get("from") ?? undefined;
     const toIso = url.searchParams.get("to") ?? undefined;
-    const leadId = url.searchParams.get("lead_id")?.trim() || undefined;
+    const leadId = url.searchParams.get("contact_id")?.trim() || undefined;
     const events = await listMobileCalendarEvents({
       agentId: auth.ctx.agentId,
       fromIso: fromIso ?? undefined,
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
 }
 
 type PostBody = {
-  lead_id?: string;
+  contact_id?: string;
   title?: string;
   description?: string | null;
   starts_at?: string;
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
 
   try {
     const body = (await req.json().catch(() => ({}))) as PostBody;
-    const leadId = String(body.lead_id ?? "").trim();
+    const leadId = String(body.contact_id ?? "").trim();
     const title = String(body.title ?? "").trim();
     const startsAt = String(body.starts_at ?? "").trim();
     if (!leadId) {

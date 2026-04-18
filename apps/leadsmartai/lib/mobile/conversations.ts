@@ -15,7 +15,7 @@ export async function fetchRecentSmsForLead(leadId: string): Promise<MobileSmsMe
   const { data, error } = await supabaseAdmin
     .from("sms_messages")
     .select("id,message,direction,created_at")
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .order("created_at", { ascending: false })
     .limit(RECENT_SMS_LIMIT);
 
@@ -46,7 +46,7 @@ export async function fetchRecentEmailForLead(leadId: string): Promise<MobileEma
   const { data, error } = await supabaseAdmin
     .from("email_messages")
     .select("id,subject,message,direction,created_at")
-    .eq("lead_id", leadId)
+    .eq("contact_id", leadId)
     .order("created_at", { ascending: false })
     .limit(RECENT_EMAIL_LIMIT);
 

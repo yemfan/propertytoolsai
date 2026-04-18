@@ -149,7 +149,7 @@ export async function notifyLeadsForPropertyEvent(params: {
   let leads: LeadForNotifications[] = [];
   try {
     const { data } = await supabaseServer
-      .from("leads")
+      .from("contacts")
       .select(
         "id,name,email,search_location,search_radius,price_min,price_max,beds,baths"
       )
@@ -234,15 +234,15 @@ export async function notifyLeadsForPropertyEvent(params: {
   // Today's notifications for these leads (rate limiting + best-match replacement).
   let todayNotifs: Array<{
     id: string;
-    lead_id: string;
+    contact_id: string;
     property_id: string | null;
     type: string;
   }> = [];
   try {
     const { data } = await supabaseServer
       .from("notifications")
-      .select("id,lead_id,property_id,type")
-      .in("lead_id", matchedLeadIds)
+      .select("id,contact_id,property_id,type")
+      .in("contact_id", matchedLeadIds)
       .gte("sent_at", startIso)
       .lt("sent_at", endIso);
     todayNotifs = (data ?? []) as any;
@@ -256,7 +256,7 @@ export async function notifyLeadsForPropertyEvent(params: {
     { id: string; property_id: string | null; type: string }
   >();
   for (const n of todayNotifs) {
-    todayNotifByLeadId.set(n.lead_id, {
+    todayNotifByLeadId.set(n.contact_id, {
       id: n.id,
       property_id: n.property_id,
       type: n.type,
@@ -269,13 +269,13 @@ export async function notifyLeadsForPropertyEvent(params: {
   try {
     const { data } = await supabaseServer
       .from("notifications")
-      .select("lead_id")
-      .in("lead_id", matchedLeadIds)
+      .select("contact_id")
+      .in("contact_id", matchedLeadIds)
       .eq("property_id", params.propertyId)
       .eq("type", params.eventType);
 
     alreadyNotifiedLeadIds = new Set<string>(
-      (data ?? []).map((d: any) => String(d.lead_id))
+      (data ?? []).map((d: any) => String(d.contact_id))
     );
   } catch (e) {
     console.error("notifyLeadsForPropertyEvent: failed to load dedupe notifications", e);
@@ -367,7 +367,7 @@ export async function notifyLeadsForPropertyEvent(params: {
         });
 
         await supabaseServer.from("notifications").insert({
-          lead_id: lead.id,
+          contact_id: lead.id,
           property_id: params.propertyId,
           type: params.eventType,
           message: email.text,

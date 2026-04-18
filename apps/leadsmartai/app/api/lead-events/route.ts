@@ -11,11 +11,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Not authenticated" }, { status: 401 });
     }
     const body = (await req.json().catch(() => ({}))) as {
-      lead_id?: string | number;
+      contact_id?: string | number;
       event_type?: string;
       metadata?: Record<string, any>;
     };
-    const leadId = String(body.lead_id ?? "").trim();
+    const leadId = String(body.contact_id ?? "").trim();
     const eventType = String(body.event_type ?? "").trim().toLowerCase();
     if (!leadId || !eventType) {
       return NextResponse.json(
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     await recordLeadEvent({
-      lead_id: leadId as any,
+      contact_id: leadId as any,
       event_type: eventType,
       metadata: body.metadata ?? {},
     });

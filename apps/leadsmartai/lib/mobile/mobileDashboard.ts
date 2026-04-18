@@ -45,7 +45,7 @@ async function leadNamesForIds(agentId: string, ids: string[]): Promise<Map<stri
   const uniq = [...new Set(ids)].filter(Boolean);
   if (!uniq.length) return map;
   const { data, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("id,name")
     .eq("agent_id", agentId as never)
     .in("id", uniq as never);
@@ -65,7 +65,7 @@ async function leadAttentionRowsForIds(
   const uniq = [...new Set(ids)].filter(Boolean);
   if (!uniq.length) return map;
   const { data, error } = await supabaseAdmin
-    .from("leads")
+    .from("contacts")
     .select("id,rating,prediction_score,prediction_label")
     .eq("agent_id", agentId as never)
     .in("id", uniq as never);
@@ -110,7 +110,7 @@ export async function getMobileDashboard(agentId: string): Promise<MobileDashboa
     getMobileInbox(agentId),
     listMobileTasksGrouped(agentId),
     supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .select("id", { count: "exact", head: true })
       .eq("agent_id", agentId as never)
       .is("merged_into_lead_id", null)
@@ -122,12 +122,12 @@ export async function getMobileDashboard(agentId: string): Promise<MobileDashboa
     }),
     supabaseAdmin
       .from("nurture_alerts")
-      .select("lead_id,message,created_at")
+      .select("contact_id,message,created_at")
       .eq("agent_id", agentId as never)
       .order("created_at", { ascending: false })
       .limit(50),
     supabaseAdmin
-      .from("leads")
+      .from("contacts")
       .select("id,name,last_activity_at")
       .eq("agent_id", agentId as never)
       .is("merged_into_lead_id", null)
@@ -153,7 +153,7 @@ export async function getMobileDashboard(agentId: string): Promise<MobileDashboa
   for (const t of grouped.overdue.slice(0, 6)) {
     priorityAlerts.push({
       type: "overdue_task",
-      leadId: t.lead_id,
+      leadId: t.contact_id,
       title: t.title,
       subtitle: t.lead_name ? `${t.lead_name}` : undefined,
       createdAt: t.due_at ?? undefined,
@@ -165,11 +165,11 @@ export async function getMobileDashboard(agentId: string): Promise<MobileDashboa
     isEscalationMessage(String((row as { message?: unknown }).message ?? ""))
   );
   const escSlice = escRaw.slice(0, 6);
-  const escLeadIds = escSlice.map((r) => String((r as { lead_id: unknown }).lead_id));
+  const escLeadIds = escSlice.map((r) => String((r as { contact_id: unknown }).contact_id));
   const escNames = await leadNamesForIds(agentId, escLeadIds);
   for (const row of escSlice) {
-    const r = row as { lead_id: unknown; message: unknown; created_at: unknown };
-    const lid = String(r.lead_id ?? "");
+    const r = row as { contact_id: unknown; message: unknown; created_at: unknown };
+    const lid = String(r.contact_id ?? "");
     const nm = escNames.get(lid);
     const msg = String(r.message ?? "").slice(0, 120);
     priorityAlerts.push({

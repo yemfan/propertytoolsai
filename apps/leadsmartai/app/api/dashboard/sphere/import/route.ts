@@ -4,7 +4,7 @@ import {
   commitSphereRows,
   parseSphereCsv,
   type CommitRow,
-} from "@/lib/sphere/import";
+} from "@/lib/contacts/import";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
