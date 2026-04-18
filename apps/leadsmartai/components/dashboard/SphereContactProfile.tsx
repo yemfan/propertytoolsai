@@ -5,7 +5,7 @@ import {
   currencyFormat,
   percentFormat,
   relationshipLabel,
-} from "@/lib/sphere/service";
+} from "@/lib/sphere/formatters";
 import AddSignalButton from "./AddSignalButton";
 import GenerateDraftButton from "./GenerateDraftButton";
 

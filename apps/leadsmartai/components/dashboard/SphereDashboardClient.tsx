@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { SphereContactView, SphereRelationshipType } from "@/lib/sphere/types";
-import { currencyFormat, percentFormat, relationshipLabel } from "@/lib/sphere/service";
+import { currencyFormat, percentFormat, relationshipLabel } from "@/lib/sphere/formatters";
 
 type Filter = "all" | "past_buyers" | "past_sellers" | "sphere" | "referral" | "dormant";
 

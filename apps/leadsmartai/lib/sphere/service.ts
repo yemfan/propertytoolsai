@@ -6,6 +6,11 @@ import type {
   SphereSignal,
   SphereSignalType,
 } from "./types";
+// Pure formatters live in their own module so client components can import
+// them without pulling in supabaseAdmin (service-role client, server-only).
+// Import internally and re-export for existing server-side callers.
+import { currencyFormat, percentFormat, relationshipLabel } from "./formatters";
+export { currencyFormat, percentFormat, relationshipLabel };
 
 const AVATAR_PALETTE = [
   "#8F4A2E",
@@ -155,19 +160,6 @@ function daysYearAgoDiff(closingIso: string, today: Date): number {
   const d = new Date(closingIso);
   const anniversary = new Date(today.getFullYear(), d.getMonth(), d.getDate());
   return Math.round((anniversary.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-export function relationshipLabel(t: SphereRelationshipType): string {
-  switch (t) {
-    case "past_buyer_client":
-      return "Past buyer · client";
-    case "past_seller_client":
-      return "Past seller · client";
-    case "sphere_non_client":
-      return "Sphere";
-    case "referral_source":
-      return "Referrer";
-  }
 }
 
 /**
@@ -363,14 +355,3 @@ export async function createSignal(
   return mapSignalRow(data as unknown as Record<string, unknown>);
 }
 
-export function currencyFormat(n: number | null): string {
-  if (n === null) return "—";
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (Math.abs(n) >= 1_000) return `$${Math.round(n / 1_000)}K`;
-  return `$${n.toFixed(0)}`;
-}
-
-export function percentFormat(n: number | null): string {
-  if (n === null) return "—";
-  return `${Math.round(n * 100)}%`;
-}
