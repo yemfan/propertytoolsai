@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Upload, Users } from "lucide-react";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { listSphereContacts } from "@/lib/sphere/service";
+import type { SphereContactView } from "@/lib/sphere/types";
 import SphereDashboardClient from "@/components/dashboard/SphereDashboardClient";
 
 export const metadata: Metadata = {
@@ -12,8 +13,21 @@ export const metadata: Metadata = {
 };
 
 export default async function SpherePage() {
-  const { agentId } = await getCurrentAgentContext();
-  const contacts = await listSphereContacts(agentId);
+  // Belt-and-suspenders: listSphereContacts already swallows missing-relation
+  // errors (42P01) from the hotfix, but any other load failure — a missing
+  // column from a partial migration, a transient Supabase outage, a schema
+  // cache miss — would rethrow into the dashboard error boundary and produce
+  // the red "Dashboard couldn't load" banner. Catch everything here so users
+  // always get the empty state instead of a crash page.
+  let contacts: SphereContactView[] = [];
+  try {
+    const { agentId } = await getCurrentAgentContext();
+    contacts = await listSphereContacts(agentId);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const code = (err as { code?: string } | null)?.code;
+    console.error("[sphere] load failed", { code, msg });
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">

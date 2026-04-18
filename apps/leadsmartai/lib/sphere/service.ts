@@ -182,7 +182,15 @@ export function relationshipLabel(t: SphereRelationshipType): string {
 function isMissingRelationError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const e = err as { code?: string; message?: string };
-  return e.code === "42P01" || /does not exist|schema cache/i.test(e.message ?? "");
+  // 42P01 = undefined_table, 42703 = undefined_column. Both happen when a
+  // migration is partially applied (table exists but a column is missing, or
+  // vice versa). PostgREST's "schema cache" message appears when its cached
+  // introspection hasn't picked up a newly-applied migration yet.
+  return (
+    e.code === "42P01" ||
+    e.code === "42703" ||
+    /does not exist|schema cache/i.test(e.message ?? "")
+  );
 }
 
 export async function listSphereContacts(agentId: string): Promise<SphereContactView[]> {
@@ -202,11 +210,16 @@ export async function listSphereContacts(agentId: string): Promise<SphereContact
   if (!rows?.length) return [];
 
   const contactIds = rows.map((r) => String((r as { id: string }).id));
-  const { data: signalRows } = await supabaseAdmin
+  const { data: signalRows, error: signalErr } = await supabaseAdmin
     .from("sphere_signals")
     .select("*")
     .in("contact_id", contactIds as never)
     .is("dismissed_at", null);
+  if (signalErr && !isMissingRelationError(signalErr)) {
+    // Rethrow only unexpected errors; missing-relation/column falls through
+    // so the contacts list still renders without signal chips.
+    throw signalErr;
+  }
   const signalsByContact = new Map<string, SphereSignal[]>();
   for (const sr of signalRows ?? []) {
     const s = mapSignalRow(sr as Record<string, unknown>);
