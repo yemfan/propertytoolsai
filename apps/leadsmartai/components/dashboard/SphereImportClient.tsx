@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import type { ParsedSphereRow, CommitRow } from "@/lib/sphere/import";
+import type { ParsedSphereRow, CommitRow } from "@/lib/contacts/import";
 
 type ParseResponse = {
   ok: boolean;
