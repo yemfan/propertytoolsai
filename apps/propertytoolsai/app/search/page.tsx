@@ -3,7 +3,9 @@
 import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { HomesInBudgetResults } from "@/components/search/HomesInBudgetResults";
+import { SaveThisSearchButton } from "@/components/search/SaveThisSearchButton";
 import type { ListingResult } from "@/lib/listings/adapters/types";
+import type { SavedSearchCriteria } from "@/lib/contacts/types";
 
 type SearchCriteria = {
   maxPrice: number;
@@ -66,14 +68,23 @@ function SearchPageInner() {
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="mx-auto max-w-7xl space-y-6">
         <section className="rounded-3xl border bg-white p-8 shadow-sm md:p-10">
-          <h1 className="text-4xl font-semibold tracking-tight text-gray-900">Homes in Your Budget</h1>
-          <p className="mt-3 text-sm text-gray-600 md:text-base">
-            {criteria?.maxPrice
-              ? `Showing homes up to $${Number(criteria.maxPrice).toLocaleString()}`
-              : "Showing homes"}
-            {criteria?.zip ? ` near ${criteria.zip}` : criteria?.city ? ` near ${criteria.city}` : ""}
-            .
-          </p>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h1 className="text-4xl font-semibold tracking-tight text-gray-900">Homes in Your Budget</h1>
+              <p className="mt-3 text-sm text-gray-600 md:text-base">
+                {criteria?.maxPrice
+                  ? `Showing homes up to $${Number(criteria.maxPrice).toLocaleString()}`
+                  : "Showing homes"}
+                {criteria?.zip ? ` near ${criteria.zip}` : criteria?.city ? ` near ${criteria.city}` : ""}
+                .
+              </p>
+            </div>
+            {criteria && (
+              <SaveThisSearchButton
+                criteria={criteriaToSavedSearchCriteria(criteria)}
+              />
+            )}
+          </div>
         </section>
 
         {loading ? (
@@ -90,6 +101,35 @@ function SearchPageInner() {
       </div>
     </div>
   );
+}
+
+/**
+ * Translate the page's URL-param SearchCriteria into the shape the
+ * saved-searches service expects. Drops zero/empty fields so the
+ * criteria JSON doesn't pollute the DB with "priceMin: 0" when the
+ * user didn't actually set a minimum.
+ */
+function criteriaToSavedSearchCriteria(c: SearchCriteria): SavedSearchCriteria {
+  const out: SavedSearchCriteria = {};
+  if (c.city) out.city = c.city;
+  if (c.state) out.state = c.state;
+  if (c.zip) out.zip = c.zip;
+  if (c.propertyType && c.propertyType !== "any") {
+    const pt = c.propertyType.toLowerCase().replace(/[-\s]/g, "_");
+    if (
+      pt === "single_family" ||
+      pt === "condo" ||
+      pt === "townhouse" ||
+      pt === "multi_family"
+    ) {
+      out.propertyType = pt;
+    }
+  }
+  if (c.minPrice && Number(c.minPrice) > 0) out.priceMin = Number(c.minPrice);
+  if (c.maxPrice && Number(c.maxPrice) > 0) out.priceMax = Number(c.maxPrice);
+  if (c.beds && Number(c.beds) > 0) out.bedsMin = Number(c.beds);
+  if (c.baths && Number(c.baths) > 0) out.bathsMin = Number(c.baths);
+  return out;
 }
 
 export default function SearchPage() {

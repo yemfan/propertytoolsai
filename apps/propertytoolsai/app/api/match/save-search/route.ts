@@ -1,44 +1,30 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
-import { parseMatchPreferences } from "@/lib/match/findMatches";
 
 export const runtime = "nodejs";
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const { leadId, preferences } = body as { leadId?: string; preferences?: unknown };
+/**
+ * Retired. Replaced by the unified /api/consumer/saved-searches route
+ * which writes to the new public.contact_saved_searches table (one
+ * source of truth across leadsmartai agents + propertytoolsai
+ * consumers). The legacy public.lead_saved_searches table was dropped
+ * in migration 20260480600000.
+ *
+ * Any stale clients calling this path get a 410 Gone with the new
+ * endpoint in the response so the failure mode is debuggable rather
+ * than silently wrong.
+ */
 
-    if (!leadId || !preferences) {
-      return NextResponse.json({ success: false, error: "leadId and preferences required" }, { status: 400 });
-    }
+const RETIRED_RESPONSE = {
+  success: false,
+  error:
+    "This endpoint is retired. Use POST /api/consumer/saved-searches with { name, criteria, alertFrequency? }.",
+  replacement: "/api/consumer/saved-searches",
+};
 
-    const prefs = parseMatchPreferences(preferences);
-    if (!prefs) {
-      return NextResponse.json({ success: false, error: "Invalid preferences" }, { status: 400 });
-    }
+export async function POST() {
+  return NextResponse.json(RETIRED_RESPONSE, { status: 410 });
+}
 
-    const { data: lead, error: leadErr } = await supabaseAdmin
-      .from("leads")
-      .select("id")
-      .eq("id", leadId)
-      .maybeSingle();
-
-    if (leadErr || !lead) {
-      return NextResponse.json({ success: false, error: "Lead not found" }, { status: 404 });
-    }
-
-    const { error } = await supabaseAdmin.from("lead_saved_searches").insert({
-      lead_id: leadId,
-      preferences: prefs,
-      frequency: "daily",
-    });
-
-    if (error) throw error;
-
-    return NextResponse.json({ success: true });
-  } catch (e) {
-    console.error("POST /api/match/save-search", e);
-    return NextResponse.json({ success: false, error: "Failed to save search" }, { status: 500 });
-  }
+export async function GET() {
+  return NextResponse.json(RETIRED_RESPONSE, { status: 410 });
 }

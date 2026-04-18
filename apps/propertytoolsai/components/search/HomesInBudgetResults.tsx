@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import type { ListingResult } from "@/lib/listings/adapters/types";
 import { ListingLeadActions } from "./ListingLeadActions";
+import { trackEvent } from "@/lib/trackEvent";
 
 export type SearchHome = ListingResult;
 
@@ -67,6 +68,21 @@ export function HomesInBudgetResults({ homes }: { homes: ListingResult[] }) {
                 <div className="mt-5 flex flex-wrap items-start gap-3">
                   <Link
                     href={`/listing/${encodeURIComponent(home.id)}`}
+                    onClick={() => {
+                      // Fires a property_view event on click-through so the
+                      // scoring cron counts this listing as "viewed" for
+                      // the logged-in consumer. Anonymous clicks accept-
+                      // and-drop on the server; no UX impact.
+                      trackEvent("property_view", {
+                        property_id: home.id,
+                        address: home.address,
+                        city: home.city,
+                        state: home.state,
+                        zip: home.zip,
+                        price: home.price,
+                        source: "search_results",
+                      });
+                    }}
                     className="rounded-2xl bg-gray-900 px-5 py-3 text-sm font-medium text-white"
                   >
                     View Details
