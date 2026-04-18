@@ -493,7 +493,7 @@ export default function PropertyToolsHomePage() {
           <Reveal className="text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#0072ce]">Features</p>
             <h2 className="mt-3 text-3xl font-extrabold text-slate-900 md:text-4xl">Real Estate Tools That Actually Help</h2>
-            <p className="mt-3 text-base text-slate-600">Twelve AI-powered calculators and analyzers. No sign-up, no paywall on the basics.</p>
+            <p className="mt-3 text-base text-slate-600">AI-powered calculators and analyzers — mortgage, affordability, rent-vs-buy, cap rate, and more. No sign-up, no paywall on the basics.</p>
           </Reveal>
 
           {/* Bento grid: featured card spans 2 cols */}
