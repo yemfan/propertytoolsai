@@ -39,18 +39,25 @@ export async function GET() {
       if (ev.contact_id != null) leadsViewedReportsToday.add(Number(ev.contact_id));
     }
 
-    // Messages sent (communications + automation_logs)
-    const { count: commCount, error: commErr } = await supabaseServer
+    // Messages sent (automation_logs; legacy `communications` table was
+    // dropped in the contacts-consolidation migration — that feature was
+    // half-built per the audit. Silence 42P01 if a stale environment
+    // still has it or reverts; otherwise the automation_logs count is
+    // the canonical source of truth going forward).
+    const commRes = await supabaseServer
       .from("communications")
       .select("id", { count: "exact", head: true });
-    if (commErr) throw commErr;
+    const commCount =
+      commRes.error && /does not exist|42P01/i.test(commRes.error.message ?? "")
+        ? 0
+        : (commRes.count ?? 0);
 
     const { count: autoCount, error: autoErr } = await supabaseServer
       .from("automation_logs")
       .select("id", { count: "exact", head: true });
     if (autoErr) throw autoErr;
 
-    const messagesSent = (commCount ?? 0) + (autoCount ?? 0);
+    const messagesSent = commCount + (autoCount ?? 0);
 
     // Avg engagement score
     const scores = leads
