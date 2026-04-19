@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import type { ListingResult } from "@/lib/listings/adapters/types";
 import { ListingLeadActions } from "./ListingLeadActions";
+import { FavoriteButton } from "./FavoriteButton";
 import { trackEvent } from "@/lib/trackEvent";
 
 export type SearchHome = ListingResult;
@@ -87,6 +88,19 @@ export function HomesInBudgetResults({ homes }: { homes: ListingResult[] }) {
                   >
                     View Details
                   </Link>
+                  <FavoriteButton
+                    propertyId={home.id}
+                    address={home.address}
+                    city={home.city ?? undefined}
+                    state={home.state ?? undefined}
+                    zip={home.zip ?? undefined}
+                    price={home.price}
+                    beds={home.beds ?? undefined}
+                    baths={home.baths ?? undefined}
+                    sqft={home.sqft ?? undefined}
+                    propertyType={home.propertyType ?? undefined}
+                    photoUrl={home.photoUrl ?? undefined}
+                  />
                   <ListingLeadActions
                     compact
                     listing={{

@@ -9,6 +9,7 @@ import {
 import AddSignalButton from "./AddSignalButton";
 import GenerateDraftButton from "./GenerateDraftButton";
 import SavedSearchesPanel from "./SavedSearchesPanel";
+import FavoritesPanel from "./FavoritesPanel";
 
 /**
  * Read-only contact profile. Per-contact trigger toggles (sphere_contact_triggers)
@@ -199,6 +200,8 @@ export default function SphereContactProfile({
       </section>
 
       <SavedSearchesPanel contactId={contact.id} />
+
+      <FavoritesPanel contactId={contact.id} />
 
       <section className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-5">
         <h2 className="text-sm font-semibold text-gray-700">Timeline</h2>

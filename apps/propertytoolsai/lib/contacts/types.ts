@@ -52,6 +52,7 @@ export type SavedSearch = {
 export const BEHAVIOR_EVENT_TYPES = [
   "property_view",
   "property_favorite",
+  "favorite_removed",
   "property_share",
   "search_performed",
   "saved_search_created",
