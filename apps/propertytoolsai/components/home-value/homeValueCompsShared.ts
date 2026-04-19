@@ -81,6 +81,17 @@ export function normalizeAdjustments(adjustments?: Record<string, number>) {
     renovationAdjustment: "Renovation",
     marketRecencyAdjustment: "Market recency",
     totalAdjustment: "Total adjustment",
+    // Engine multiplier-derived keys
+    typeAdjustment: "Property type",
+    bedbathAdjustment: "Beds & baths",
+    ageAdjustment: "Property age",
+    lotAdjustment: "Lot size",
+    renoAdjustment: "Renovation",
+    trendAdjustment: "Market trend",
+    walkScoreAdjustment: "Walk Score",
+    floodZoneAdjustment: "Flood zone",
+    seasonalAdjustment: "Seasonal market",
+    schoolRatingAdjustment: "School district",
   };
 
   return Object.entries(adjustments)

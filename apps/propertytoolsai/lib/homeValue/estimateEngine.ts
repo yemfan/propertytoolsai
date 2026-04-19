@@ -8,6 +8,10 @@ import type {
   PropertyCondition,
   RenovationLevel,
 } from "./types";
+import { walkScoreMultiplier } from "./walkScore";
+import { floodZoneMultiplier } from "./floodZone";
+import { seasonalMultiplier } from "./seasonalAdjustment";
+import { schoolRatingMultiplier, type SchoolRatingResult } from "./schoolRatings";
 
 const DEFAULT_SQFT = 1650;
 const DEFAULT_BEDS = 3;
@@ -25,6 +29,14 @@ export type EstimateEngineInput = {
   renovation: RenovationLevel;
   marketTrend: "up" | "down" | "stable";
   sqftAdded?: number;
+  /** Walk Score (0–100) — higher walkability adds premium */
+  walkScore?: number | null;
+  /** FEMA flood zone result — high risk applies discount */
+  floodZone?: { zone: string | null; highRisk: boolean; moderateRisk: boolean } | null;
+  /** Seasonal month override (1-12) — defaults to current month */
+  seasonalMonth?: number;
+  /** Nearby school ratings — higher quality schools add premium */
+  schoolRating?: SchoolRatingResult | null;
 };
 
 function clamp(n: number, min: number, max: number) {
@@ -51,17 +63,17 @@ function bedBathMultiplier(beds: number, baths: number): { m: number; label: str
 
 function ageMultiplier(yearBuilt: number | null): { m: number; label: string } {
   if (yearBuilt == null || !Number.isFinite(yearBuilt)) {
-    return { m: 0.98, label: "Age unknown (conservative)" };
+    return { m: 1, label: "Age unknown (neutral)" };
   }
   const y = new Date().getFullYear();
   const age = clamp(y - yearBuilt, 0, 120);
-  // Newer = slight premium up to 15 yrs, then gradual discount
+  // Newer = slight premium, older = gentle discount (avoid stacking too aggressively)
   let m = 1;
-  if (age <= 5) m = 1.03;
+  if (age <= 5) m = 1.02;
   else if (age <= 15) m = 1.01;
   else if (age <= 30) m = 1;
-  else if (age <= 50) m = 0.98;
-  else m = 0.96;
+  else if (age <= 50) m = 0.99;
+  else m = 0.98;
   return { m, label: `Age (${yearBuilt}, ~${age} yrs)` };
 }
 
@@ -75,7 +87,7 @@ function lotMultiplier(sqft: number, lotSqft: number | null): { m: number; label
   if (ratio >= 8) m = 1.04;
   else if (ratio >= 5) m = 1.025;
   else if (ratio >= 3) m = 1.01;
-  else if (ratio < 1.5) m = 0.985;
+  else if (ratio < 1.5) m = 0.99;
   return { m, label: "Lot / footprint ratio" };
 }
 
@@ -83,11 +95,11 @@ function lotMultiplier(sqft: number, lotSqft: number | null): { m: number; label
  * House condition multipliers on the adjusted baseline (between fair 0.97 and good 1.0).
  */
 export const HOUSE_CONDITION_MULTIPLIER: Record<PropertyCondition, number> = {
-  poor: 0.94,
-  fair: 0.97,
-  average: 0.985,
+  poor: 0.95,
+  fair: 0.98,
+  average: 1.0,
   good: 1.0,
-  excellent: 1.05,
+  excellent: 1.04,
 };
 
 function conditionMultiplier(c: PropertyCondition): { m: number; label: string } {
@@ -140,6 +152,14 @@ export function computeHomeValueEstimate(
   push("reno", t6.label, t6.m);
   const t7 = trendMultiplier(input.marketTrend);
   push("trend", t7.label, t7.m);
+  const t8 = walkScoreMultiplier(input.walkScore ?? null);
+  push("walkScore", t8.label, t8.m);
+  const t9 = floodZoneMultiplier(input.floodZone ?? { zone: null, highRisk: false, moderateRisk: false });
+  push("floodZone", t9.label, t9.m);
+  const t10 = seasonalMultiplier(input.seasonalMonth);
+  push("seasonal", t10.label, t10.m);
+  const t11 = schoolRatingMultiplier(input.schoolRating ?? { avgRating: null, schoolCount: 0, source: "none" });
+  push("schoolRating", t11.label, t11.m);
 
   const combined = lines.reduce((acc, x) => acc * x.multiplier, 1);
   const baseline = input.baselinePpsf * effectiveSqft;

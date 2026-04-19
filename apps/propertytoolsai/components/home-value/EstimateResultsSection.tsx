@@ -9,6 +9,7 @@ import {
   CompsMapPanel,
   EstimateExplainabilityPanel,
 } from "@/components/home-value/CompsMapPanel";
+import { ValueHistoryChart } from "@/components/home-value/ValueHistoryChart";
 import { ListingStyleEstimateSection } from "@/components/home-value/ListingStyleEstimateSection";
 import type {
   EstimateDetails,
@@ -126,6 +127,7 @@ export function EstimateResultsSection({
       {/* Comps map + explainability — always visible */}
       <CompsMapPanel subject={subject} comps={estimateResult.comps} />
       <EstimateExplainabilityPanel subject={subject} />
+      <ValueHistoryChart address={p.fullAddress} currentValue={e.value} />
 
       <RefinementForm
         details={details}
