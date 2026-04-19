@@ -8,6 +8,10 @@ import {
 } from "@/lib/contacts/formatters";
 import AddSignalButton from "./AddSignalButton";
 import GenerateDraftButton from "./GenerateDraftButton";
+import SavedSearchesPanel from "./SavedSearchesPanel";
+import FavoritesPanel from "./FavoritesPanel";
+import SendRecommendationsButton from "./SendRecommendationsButton";
+import AISuggestedPropertiesPanel from "./AISuggestedPropertiesPanel";
 
 /**
  * Read-only contact profile. Per-contact trigger toggles (sphere_contact_triggers)
@@ -30,12 +34,20 @@ export default function SphereContactProfile({
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
-      <Link
-        href="/dashboard/sphere"
-        className="inline-flex text-sm font-medium text-gray-500 hover:text-gray-800"
-      >
-        ← Back to Sphere
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          href="/dashboard/sphere"
+          className="inline-flex text-sm font-medium text-gray-500 hover:text-gray-800"
+        >
+          ← Back to Sphere
+        </Link>
+        {contact.email && !contact.doNotContactEmail ? (
+          <SendRecommendationsButton
+            contactId={contact.id}
+            contactFirstName={contact.firstName}
+          />
+        ) : null}
+      </div>
 
       <header className="rounded-xl border border-gray-200 bg-white p-5">
         <div className="flex items-start gap-4">
@@ -196,6 +208,15 @@ export default function SphereContactProfile({
           )}
         </ul>
       </section>
+
+      <SavedSearchesPanel contactId={contact.id} />
+
+      <FavoritesPanel contactId={contact.id} />
+
+      <AISuggestedPropertiesPanel
+        contactId={contact.id}
+        contactFirstName={contact.firstName}
+      />
 
       <section className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-5">
         <h2 className="text-sm font-semibold text-gray-700">Timeline</h2>

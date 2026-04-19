@@ -258,6 +258,54 @@ export type SmartList = {
 };
 
 // =============================================================================
+// Saved searches
+// =============================================================================
+
+export type AlertFrequency = "instant" | "daily" | "weekly" | "never";
+
+export type PropertyTypeFilter =
+  | "single_family"
+  | "condo"
+  | "townhouse"
+  | "multi_family"
+  | "any";
+
+/**
+ * Criteria shape stored in `contact_saved_searches.criteria` (jsonb).
+ * Matcher (Phase C) translates this into a Rentcast listings query.
+ * All fields optional — omitted means "any".
+ */
+export type SavedSearchCriteria = {
+  city?: string;
+  state?: string;
+  zip?: string;
+  propertyType?: PropertyTypeFilter;
+  priceMin?: number;
+  priceMax?: number;
+  bedsMin?: number;
+  bathsMin?: number;
+  sqftMin?: number;
+  /** Geographic center for "watch this area" searches. */
+  anchorAddress?: string;
+  radiusMiles?: number;
+};
+
+export type SavedSearch = {
+  id: string;
+  contactId: string;
+  agentId: string | number | null;
+  name: string;
+  criteria: SavedSearchCriteria;
+  alertFrequency: AlertFrequency;
+  lastAlertedAt: string | null;
+  /** Ids of listings the matcher has already alerted on, for dedup. */
+  lastMatchedListingIds: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// =============================================================================
 // CSV import
 // =============================================================================
 
