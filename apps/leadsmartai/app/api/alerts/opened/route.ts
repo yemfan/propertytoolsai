@@ -23,23 +23,56 @@ const PIXEL = Buffer.from(
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const savedSearchId = url.searchParams.get("s");
+  const recommendationId = url.searchParams.get("r");
 
-  if (savedSearchId) {
+  if (savedSearchId || recommendationId) {
     void (async () => {
       try {
-        const { data: search } = await supabaseAdmin
-          .from("contact_saved_searches")
-          .select("contact_id,agent_id")
-          .eq("id", savedSearchId)
-          .maybeSingle();
-        const row = search as { contact_id?: string; agent_id?: unknown } | null;
-        if (row?.contact_id) {
+        let contactId: string | undefined;
+        let agentId: unknown = null;
+
+        if (savedSearchId) {
+          const { data } = await supabaseAdmin
+            .from("contact_saved_searches")
+            .select("contact_id,agent_id")
+            .eq("id", savedSearchId)
+            .maybeSingle();
+          const row = data as { contact_id?: string; agent_id?: unknown } | null;
+          contactId = row?.contact_id;
+          agentId = row?.agent_id ?? null;
+        } else if (recommendationId) {
+          const { data } = await supabaseAdmin
+            .from("agent_property_recommendations")
+            .select("contact_id,agent_id,opened_at")
+            .eq("id", recommendationId)
+            .maybeSingle();
+          const row = data as {
+            contact_id?: string;
+            agent_id?: unknown;
+            opened_at?: string | null;
+          } | null;
+          contactId = row?.contact_id;
+          agentId = row?.agent_id ?? null;
+
+          // Stamp opened_at on first open.
+          if (row?.contact_id && !row.opened_at) {
+            await supabaseAdmin
+              .from("agent_property_recommendations")
+              .update({ opened_at: new Date().toISOString() } as never)
+              .eq("id", recommendationId);
+          }
+        }
+
+        if (contactId) {
           await supabaseAdmin.from("contact_events").insert({
-            contact_id: row.contact_id,
-            agent_id: (row.agent_id ?? null) as never,
+            contact_id: contactId,
+            agent_id: agentId as never,
             event_type: "listing_alert_opened",
             source: "email",
-            payload: { saved_search_id: savedSearchId } as never,
+            payload: {
+              saved_search_id: savedSearchId,
+              recommendation_id: recommendationId,
+            } as never,
           } as never);
         }
       } catch (e) {

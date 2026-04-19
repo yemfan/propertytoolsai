@@ -33,29 +33,71 @@ function sanitizeRedirect(to: string | null): string {
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
+  // `s` = saved_search_id (listing alert digest), `r` = recommendation_id
+  // (agent-curated send). One query param is present depending on which
+  // email fired the click.
   const savedSearchId = url.searchParams.get("s");
+  const recommendationId = url.searchParams.get("r");
   const listingId = url.searchParams.get("l");
   const to = sanitizeRedirect(url.searchParams.get("to"));
   const target = new URL(to, PUBLIC_BASE_URL).toString();
 
-  if (savedSearchId) {
-    // Fire-and-forget — never block the redirect.
+  if (savedSearchId || recommendationId) {
     void (async () => {
       try {
-        const { data: search } = await supabaseAdmin
-          .from("contact_saved_searches")
-          .select("contact_id,agent_id")
-          .eq("id", savedSearchId)
-          .maybeSingle();
-        const row = search as { contact_id?: string; agent_id?: unknown } | null;
-        if (row?.contact_id) {
+        let contactId: string | undefined;
+        let agentId: unknown = null;
+
+        if (savedSearchId) {
+          const { data } = await supabaseAdmin
+            .from("contact_saved_searches")
+            .select("contact_id,agent_id")
+            .eq("id", savedSearchId)
+            .maybeSingle();
+          const row = data as { contact_id?: string; agent_id?: unknown } | null;
+          contactId = row?.contact_id;
+          agentId = row?.agent_id ?? null;
+        } else if (recommendationId) {
+          const { data } = await supabaseAdmin
+            .from("agent_property_recommendations")
+            .select("contact_id,agent_id,first_clicked_at,click_count")
+            .eq("id", recommendationId)
+            .maybeSingle();
+          const row = data as {
+            contact_id?: string;
+            agent_id?: unknown;
+            first_clicked_at?: string | null;
+            click_count?: number;
+          } | null;
+          contactId = row?.contact_id;
+          agentId = row?.agent_id ?? null;
+
+          // Bookkeeping: increment click_count; stamp first_clicked_at
+          // only if this is the first click. Read-modify-write with a
+          // brief race window — acceptable for a metric, not financial.
+          if (row?.contact_id) {
+            const update: Record<string, unknown> = {
+              click_count: (row.click_count ?? 0) + 1,
+            };
+            if (!row.first_clicked_at) {
+              update.first_clicked_at = new Date().toISOString();
+            }
+            await supabaseAdmin
+              .from("agent_property_recommendations")
+              .update(update as never)
+              .eq("id", recommendationId);
+          }
+        }
+
+        if (contactId) {
           await supabaseAdmin.from("contact_events").insert({
-            contact_id: row.contact_id,
-            agent_id: (row.agent_id ?? null) as never,
+            contact_id: contactId,
+            agent_id: agentId as never,
             event_type: "listing_alert_clicked",
             source: "email",
             payload: {
               saved_search_id: savedSearchId,
+              recommendation_id: recommendationId,
               listing_id: listingId,
             } as never,
           } as never);
