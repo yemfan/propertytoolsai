@@ -1,6 +1,12 @@
 import "server-only";
 
 import { sendEmail } from "@/lib/email";
+import { loadAgentSignatureProfile } from "@/lib/signatures/loadProfile";
+import {
+  appendHtmlSignature,
+  appendTextSignature,
+  composeSignature,
+} from "@/lib/signatures/compose";
 import type { RentcastListing } from "./rentcastSearch";
 
 /**
@@ -8,6 +14,10 @@ import type { RentcastListing } from "./rentcastSearch";
  * Renders plain-text + minimal HTML. Every CTA link passes through the
  * tracking redirect (/api/alerts/click) so the scoring cron picks up
  * the listing_alert_clicked event on engagement.
+ *
+ * The saved search is owned by an agent; the digest now carries that
+ * agent's signature block so the alert email feels personal rather
+ * than like a generic system notification.
  */
 
 export type SendDigestOpts = {
@@ -17,6 +27,8 @@ export type SendDigestOpts = {
   savedSearchName: string;
   listings: RentcastListing[];
   publicBaseUrl: string;
+  /** Owning agent — enables personalized signature on the digest email. */
+  agentId?: string | number | null;
 };
 
 function money(n: number | null): string {
@@ -134,10 +146,24 @@ export async function sendListingAlertDigest(opts: SendDigestOpts): Promise<{ id
 </body></html>
 `.trim();
 
+  // Append the agent's signature to both text + HTML bodies when the
+  // saved search has a known owner. Silent no-op if agentId is missing
+  // (unassigned search) or the profile can't be loaded.
+  let finalText = text;
+  let finalHtml = html;
+  if (opts.agentId != null) {
+    const sigProfile = await loadAgentSignatureProfile(opts.agentId);
+    if (sigProfile) {
+      const sig = composeSignature(sigProfile);
+      finalText = appendTextSignature(text, sig);
+      finalHtml = appendHtmlSignature(html, sig);
+    }
+  }
+
   return sendEmail({
     to,
     subject: `${countLabel} for "${savedSearchName}"`,
-    text,
-    html,
+    text: finalText,
+    html: finalHtml,
   });
 }

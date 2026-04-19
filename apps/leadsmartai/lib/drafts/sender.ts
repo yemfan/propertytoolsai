@@ -1,5 +1,11 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { loadAgentSignatureProfile } from "@/lib/signatures/loadProfile";
+import {
+  appendHtmlSignature,
+  appendTextSignature,
+  composeSignature,
+} from "@/lib/signatures/compose";
 import { sendSMS } from "@/lib/twilioSms";
 import { getAgentMessageSettingsEffective } from "@/lib/agent-messaging/settings";
 import type { AgentMessageSettingsEffective } from "@/lib/agent-messaging/types";
@@ -152,12 +158,30 @@ async function processOne(
   // Actual send.
   try {
     if (row.channel === "sms") {
+      // SMS doesn't carry signatures — the character cap + SMS norms
+      // mean the agent's identity is implicit in the sender number.
       await sendSMS(contact.phone!, row.body);
     } else {
+      // Append the agent's signature to every outbound email. Custom
+      // signatureHtml on the agent row wins; otherwise we compose a
+      // default from their profile + branding. Drafts flagged
+      // `suppress_signature=true` (future per-send override) skip.
+      const sigProfile = await loadAgentSignatureProfile(row.agent_id);
+      const sig = sigProfile ? composeSignature(sigProfile) : null;
+      const skipSig =
+        (row as { suppress_signature?: boolean }).suppress_signature === true;
+      const text = sig
+        ? appendTextSignature(row.body, sig, { skip: skipSig })
+        : row.body;
+      // Drafts today send as text-only. Omit the html field to keep
+      // current delivery semantics; the text signature is enough until
+      // the draft composer grows an HTML mode.
+      // Kept as a separate const so a future HTML-mode toggle drops in cleanly.
+      void appendHtmlSignature;
       await sendEmail({
         to: contact.email!,
         subject: row.subject ?? "(no subject)",
-        text: row.body,
+        text,
       });
     }
     await markSent(draftId);

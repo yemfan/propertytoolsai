@@ -2,6 +2,12 @@ import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { loadAgentSignatureProfile } from "@/lib/signatures/loadProfile";
+import {
+  appendHtmlSignature,
+  appendTextSignature,
+  composeSignature,
+} from "@/lib/signatures/compose";
 import type {
   AgentPropertyRecommendation,
   RecommendationListing,
@@ -66,6 +72,8 @@ export type CreateAndSendInput = {
   subject: string;
   note: string;
   listings: RecommendationListing[];
+  /** Per-send override — set true to skip appending the agent's signature. */
+  suppressSignature?: boolean;
 };
 
 /**
@@ -114,8 +122,21 @@ export async function createAndSendRecommendation(
     recommendationId: rec.id,
   });
 
+  // Append agent signature (or skip per the suppressSignature override).
+  let finalText = text;
+  let finalHtml = html;
+  const skip = input.suppressSignature === true;
+  if (!skip) {
+    const sigProfile = await loadAgentSignatureProfile(agentId);
+    if (sigProfile) {
+      const sig = composeSignature(sigProfile);
+      finalText = appendTextSignature(text, sig);
+      finalHtml = appendHtmlSignature(html, sig);
+    }
+  }
+
   try {
-    await sendEmail({ to: contact.email, subject, text, html });
+    await sendEmail({ to: contact.email, subject, text: finalText, html: finalHtml });
   } catch (e) {
     console.error("[recommendations] send failed", e);
     throw e;
