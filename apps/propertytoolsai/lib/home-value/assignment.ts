@@ -14,16 +14,36 @@ export async function autoAssignLeadToAgent(input: AssignLeadInput) {
   try {
     const { data: agents, error } = await supabaseAdmin
       .from("agents")
-      .select("id, auth_user_id, service_areas, accepts_new_leads")
+      .select(
+        "id, auth_user_id, service_areas, service_areas_v2, accepts_new_leads",
+      )
       .eq("accepts_new_leads", true);
 
     if (error || !agents?.length) return null;
 
-    // Try to find an agent whose service_areas overlap with lead zip/city
+    // Try to find an agent whose service_areas overlap with lead zip/city.
+    // Prefer the structured service_areas_v2 column when populated —
+    // city-exact match first, then county-wide coverage by state.
     const normalizedZip = input.zip?.trim();
     const normalizedCity = input.city?.trim().toLowerCase();
 
     let selected = agents.find((a) => {
+      const v2 = Array.isArray((a as any).service_areas_v2)
+        ? ((a as any).service_areas_v2 as Array<{
+            state?: unknown;
+            county?: unknown;
+            city?: unknown;
+          }>)
+        : [];
+      for (const e of v2) {
+        const city = typeof e.city === "string" ? e.city.toLowerCase() : null;
+        if (normalizedCity && city && city === normalizedCity) return true;
+        // city === null means "all cities in county" — matches any city
+        // within that state (best signal we have without zip→county data).
+        // We don't enforce state here because the lead intake may not
+        // have parsed it; favoring inclusion over precision for assignment.
+        if (e.city === null) return true;
+      }
       const areas: string[] = Array.isArray(a.service_areas) ? a.service_areas : [];
       return areas.some(
         (area) =>

@@ -12,10 +12,29 @@ export type LeadLocationSignals = {
   state: string | null;
 };
 
+/**
+ * Structured service-area entry (agents.service_areas_v2). Mirrors the
+ * shape in apps/leadsmartai/lib/geo/serviceArea.ts — duplicated here
+ * because the two apps don't share a package yet.
+ *
+ * city === null means "all cities in this county".
+ */
+export type StructuredServiceArea = {
+  state: string;
+  county: string;
+  city: string | null;
+};
+
 export type MatchableAgent = {
   id: string;
-  /** Lowercase city names and/or 5-digit zips */
+  /** Legacy format — lowercase city names and/or 5-digit zips. */
   serviceAreas: string[];
+  /**
+   * Structured v2 service areas. When present + non-empty, the matcher
+   * prefers these over the legacy `serviceAreas` string array. Legacy
+   * agents with only v1 data still match via the old path.
+   */
+  serviceAreasV2?: StructuredServiceArea[];
   acceptsNewLeads: boolean;
   /**
    * Optional 0–1 score for capacity (e.g. fewer active leads = higher).
@@ -101,6 +120,39 @@ function areaMatches(needle: string, area: string): boolean {
 }
 
 /**
+ * Score the structured v2 service areas against the lead. Returns the
+ * best match score across all entries, or 0 if nothing matched.
+ */
+function scoreStructuredAreas(
+  lead: LeadLocationSignals,
+  areas: readonly StructuredServiceArea[],
+): number {
+  if (areas.length === 0) return 0;
+  const leadCity = lead.city?.toLowerCase().trim() ?? "";
+  let best = 0;
+  for (const a of areas) {
+    const stateMatches =
+      !!lead.state && a.state.toUpperCase() === lead.state.toUpperCase();
+    if (!stateMatches) continue;
+    if (a.city && leadCity && a.city.toLowerCase().trim() === leadCity) {
+      // Explicit city match — strongest signal.
+      best = Math.max(best, 100);
+      continue;
+    }
+    if (a.city === null) {
+      // Agent covers all cities in this county. We don't currently know
+      // the lead's county (future: join via a zip → county table), so
+      // match by state as a weaker county-wide signal. City-level
+      // matches above will still outrank when they exist.
+      best = Math.max(best, 70);
+      continue;
+    }
+    best = Math.max(best, 25);
+  }
+  return best;
+}
+
+/**
  * Score agents by fit to the lead's location. Agents with empty `serviceAreas`
  * remain eligible with a baseline score (national / unscoped brokers).
  */
@@ -114,12 +166,19 @@ export function scoreAgentForLead(
     ? Math.min(1, Math.max(0, agent.availabilityScore as number))
     : 0.5;
 
-  const areas = agent.serviceAreas.map((x) => x.trim()).filter(Boolean);
-  let geo = 0;
+  // v2 structured match wins when the agent has opted into the new
+  // picker. We still evaluate the legacy v1 path and take the max so
+  // dual-write agents never score lower than they would have under v1.
+  const v2 = agent.serviceAreasV2 ?? [];
+  const v2Score = v2.length > 0 ? scoreStructuredAreas(lead, v2) : 0;
 
-  if (areas.length === 0) {
-    geo = 35;
-  } else {
+  const areas = agent.serviceAreas.map((x) => x.trim()).filter(Boolean);
+  let v1Score = 0;
+
+  if (areas.length === 0 && v2.length === 0) {
+    // National / unscoped agent baseline.
+    v1Score = 35;
+  } else if (areas.length > 0) {
     let best = 0;
     for (const area of areas) {
       const a = area.toLowerCase();
@@ -133,9 +192,10 @@ export function scoreAgentForLead(
         best = Math.max(best, 25);
       }
     }
-    geo = best;
+    v1Score = best;
   }
 
+  const geo = Math.max(v1Score, v2Score);
   return geo + avail * 20;
 }
 

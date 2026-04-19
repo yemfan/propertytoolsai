@@ -2,24 +2,39 @@ import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { sendAgentWelcomeEmail } from "@/lib/email/welcomeAgent";
+import {
+  parseServiceAreas,
+  serviceAreasToLegacyStrings,
+} from "@/lib/geo/serviceArea";
 
 export async function GET() {
   try {
     const { agentId } = await getCurrentAgentContext();
     const { data, error } = await supabaseServer
       .from("agents")
-      .select("onboarding_completed, service_areas, brand_name, logo_url")
+      .select(
+        "onboarding_completed, service_areas, service_areas_v2, brand_name, logo_url",
+      )
       .eq("id", agentId as any)
       .single();
 
     if (error) throw error;
 
+    const row = data as {
+      onboarding_completed?: boolean;
+      service_areas?: string[] | null;
+      service_areas_v2?: unknown;
+      brand_name?: string | null;
+      logo_url?: string | null;
+    } | null;
+
     return NextResponse.json({
       ok: true,
-      onboardingCompleted: Boolean((data as any)?.onboarding_completed),
-      serviceAreas: (data as any)?.service_areas ?? [],
-      brandName: (data as any)?.brand_name ?? null,
-      logoUrl: (data as any)?.logo_url ?? null,
+      onboardingCompleted: Boolean(row?.onboarding_completed),
+      serviceAreas: row?.service_areas ?? [],
+      serviceAreasV2: parseServiceAreas(row?.service_areas_v2),
+      brandName: row?.brand_name ?? null,
+      logoUrl: row?.logo_url ?? null,
     });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message }, { status: 500 });
@@ -35,6 +50,17 @@ export async function POST(req: Request) {
 
     if (body.onboarding_completed === true) {
       patch.onboarding_completed = true;
+    }
+    // Dual-write: accept either/both. If v2 is provided, we also derive
+    // the legacy flattened strings so any call site still on the old
+    // column keeps receiving values. A client that posts only v1 (e.g.
+    // a pre-migration mobile build) still writes through unchanged.
+    if (Array.isArray(body.service_areas_v2)) {
+      const parsed = parseServiceAreas(body.service_areas_v2);
+      patch.service_areas_v2 = parsed;
+      if (!Array.isArray(body.service_areas)) {
+        patch.service_areas = serviceAreasToLegacyStrings(parsed);
+      }
     }
     if (Array.isArray(body.service_areas)) {
       patch.service_areas = body.service_areas;
