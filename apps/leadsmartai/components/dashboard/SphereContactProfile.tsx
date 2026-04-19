@@ -11,6 +11,7 @@ import GenerateDraftButton from "./GenerateDraftButton";
 import SavedSearchesPanel from "./SavedSearchesPanel";
 import FavoritesPanel from "./FavoritesPanel";
 import SendRecommendationsButton from "./SendRecommendationsButton";
+import AISuggestedPropertiesPanel from "./AISuggestedPropertiesPanel";
 
 /**
  * Read-only contact profile. Per-contact trigger toggles (sphere_contact_triggers)
@@ -211,6 +212,11 @@ export default function SphereContactProfile({
       <SavedSearchesPanel contactId={contact.id} />
 
       <FavoritesPanel contactId={contact.id} />
+
+      <AISuggestedPropertiesPanel
+        contactId={contact.id}
+        contactFirstName={contact.firstName}
+      />
 
       <section className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-5">
         <h2 className="text-sm font-semibold text-gray-700">Timeline</h2>
