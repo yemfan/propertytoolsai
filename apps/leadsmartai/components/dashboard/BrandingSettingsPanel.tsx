@@ -8,6 +8,15 @@ type Branding = {
   brandName: string;
   signatureHtml: string;
   logoUrl: string;
+  /**
+   * Agent photo for email signatures.
+   *
+   * The upload UI for this field was retired — agents now upload their
+   * headshot once on the Profile page (user_profiles.avatar_url) and
+   * signatures read that. This field stays in the DTO so signatures
+   * rendered for agents who uploaded pre-retirement keep working until
+   * a backfill copies those URLs into avatar_url.
+   */
   agentPhotoUrl: string;
 };
 
@@ -35,7 +44,6 @@ export default function BrandingSettingsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewState>({ kind: "idle" });
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const isDirty =
     branding.brandName !== saved.brandName ||
@@ -135,26 +143,8 @@ export default function BrandingSettingsPanel() {
     setPreview({ kind: "idle" });
   }
 
-  async function uploadPhoto(file: File) {
-    const publicUrl = await uploadImage(file, "photo");
-    if (!publicUrl) return;
-    setBranding((b) => ({ ...b, agentPhotoUrl: publicUrl }));
-    await fetch("/api/dashboard/branding", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agentPhotoUrl: publicUrl }),
-    });
-    setSaved((s) => ({ ...s, agentPhotoUrl: publicUrl }));
-    setMessage("Photo uploaded.");
-    setPreview({ kind: "idle" });
-  }
-
   function removeLogo() {
     setBranding((b) => ({ ...b, logoUrl: "" }));
-  }
-
-  function removePhoto() {
-    setBranding((b) => ({ ...b, agentPhotoUrl: "" }));
   }
 
   /**
@@ -215,70 +205,14 @@ export default function BrandingSettingsPanel() {
         </p>
       </div>
 
-      {/* Agent photo + Logo — two image slots, shown side-by-side */}
-      <div className="grid gap-5 sm:grid-cols-2">
-        {/* Agent photo */}
-        <div className="space-y-2">
-          <label className="block text-[11px] font-medium text-gray-500">
-            Agent photo <span className="text-gray-400 font-normal">(optional)</span>
-          </label>
-          {branding.agentPhotoUrl ? (
-            <div className="flex items-center gap-3">
-              <img
-                src={branding.agentPhotoUrl}
-                alt="Agent"
-                className="h-16 w-16 rounded-full border border-gray-200 object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = "";
-                }}
-              />
-              <div className="flex flex-col gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => photoInputRef.current?.click()}
-                  disabled={uploading}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  {uploading ? "Uploading..." : "Change"}
-                </button>
-                <button
-                  type="button"
-                  onClick={removePhoto}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => photoInputRef.current?.click()}
-              disabled={uploading}
-              className="flex items-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50/50 px-4 py-3 text-sm text-gray-500 hover:border-blue-400 hover:bg-blue-50/30 disabled:opacity-50"
-            >
-              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-              </svg>
-              {uploading ? "Uploading..." : "Upload photo"}
-            </button>
-          )}
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            className="sr-only"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void uploadPhoto(f);
-              e.target.value = "";
-            }}
-          />
-          <p className="text-[11px] text-gray-500">
-            Circular headshot shown next to your name in email signatures. 2MB max.
-          </p>
-        </div>
-
+      {/* Agent photo upload retired — the circular headshot in email
+          signatures now comes from user_profiles.avatar_url, which the
+          agent sets once via "Change photo" at the top of this Profile
+          page. Having two upload spots caused agents to expect they
+          needed to upload the same image twice, and caused signatures
+          to show a stale image if the profile photo was updated but
+          the branding photo wasn't. Only the brokerage logo remains. */}
+      <div className="grid gap-5">
         {/* Brokerage logo */}
         <div className="space-y-2">
           <label className="block text-[11px] font-medium text-gray-500">
