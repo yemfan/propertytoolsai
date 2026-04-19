@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import HomeValueEstimatePage from "@/components/home-value/HomeValueEstimatePage";
 import JsonLd from "@/components/JsonLd";
 
@@ -55,7 +56,15 @@ export default function HomeValuePage() {
           Data sources, accuracy, and known limits.
         </span>
       </div>
-      <HomeValueEstimatePage />
+      {/* Suspense boundary required by Next 15+/16 because the child
+          component calls useSearchParams() to seed the address input
+          from `?address=` (see HomeValueEstimatePage). Without it the
+          build bails on CSR prerendering. Fallback is null because the
+          parent already renders the methodology banner synchronously,
+          so there's no layout shift while the client hydrates. */}
+      <Suspense fallback={null}>
+        <HomeValueEstimatePage />
+      </Suspense>
     </>
   );
 }
