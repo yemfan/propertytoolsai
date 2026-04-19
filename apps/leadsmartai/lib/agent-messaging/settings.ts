@@ -149,9 +149,11 @@ export async function upsertAgentMessageSettings(
 ): Promise<AgentMessageSettings> {
   const current = await getAgentMessageSettings(agentId);
 
-  // Spec §2.4: backend gate. If the agent is in the first 30 days, reject
-  // autosend writes — the effective view would ignore them anyway, but we
-  // refuse the write so it's visible to the user.
+  // The 30-day mandatory draft-only window (formerly spec §2.4) was
+  // retired — agents can select any review policy from day one. The UI
+  // still surfaces "Review each one" as a *recommendation* for the
+  // first 30 days, but it's no longer enforced here or in the SQL
+  // view (see migration 20260482100000 for the view update).
   const next: AgentMessageSettings = {
     reviewPolicy: input.reviewPolicy ?? current.reviewPolicy,
     reviewPolicyByCategory: input.reviewPolicyByCategory ?? current.reviewPolicyByCategory,
@@ -163,21 +165,6 @@ export async function upsertAgentMessageSettings(
     maxPerContactPerDay: input.maxPerContactPerDay ?? current.maxPerContactPerDay,
     pauseOnReplyDays: input.pauseOnReplyDays ?? current.pauseOnReplyDays,
   };
-
-  const onboardingGateActive = await isOnboardingGateActive(agentId);
-  if (onboardingGateActive) {
-    if (next.reviewPolicy === "autosend") {
-      throw new Error("Autosend is locked until day 31 of your account (spec §2.4).");
-    }
-    if (next.reviewPolicy === "per_category") {
-      // Force per-category values to review during the gate, but allow the
-      // policy selection itself so the UI doesn't snap back.
-      next.reviewPolicyByCategory = {
-        sphere: "review",
-        lead_response: "review",
-      };
-    }
-  }
 
   const { error } = await supabaseAdmin.from("agent_message_settings").upsert(
     {
