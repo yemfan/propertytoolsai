@@ -350,7 +350,9 @@ export function AgentSignupForm({
         </fieldset>
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-700">Name</label>
+          <label className="block text-xs font-medium text-gray-700">
+            Name<span className="text-red-600"> *</span>
+          </label>
           <input
             type="text"
             value={fullName}
@@ -362,13 +364,15 @@ export function AgentSignupForm({
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-700">Phone</label>
+          <label className="block text-xs font-medium text-gray-700">
+            Phone<span className="text-red-600"> *</span>
+          </label>
           <input
             type="tel"
             inputMode="tel"
             value={phone}
             onChange={(e) => setPhone(formatUsPhoneInput(e.target.value))}
-            placeholder="(Required) Agent alerts + follow-ups"
+            placeholder="For lead alerts and follow-ups"
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
             disabled={prefillLoading}
@@ -376,7 +380,7 @@ export function AgentSignupForm({
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-700">License number (optional)</label>
+          <label className="block text-xs font-medium text-gray-700">License number</label>
           <input
             type="text"
             value={licenseNumber}
@@ -387,7 +391,7 @@ export function AgentSignupForm({
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-700">Brokerage (optional)</label>
+          <label className="block text-xs font-medium text-gray-700">Brokerage</label>
           <input
             type="text"
             value={brokerage}
@@ -398,7 +402,9 @@ export function AgentSignupForm({
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-gray-700">Email</label>
+          <label className="block text-xs font-medium text-gray-700">
+            Email<span className="text-red-600"> *</span>
+          </label>
           <input
             type="email"
             value={email}
@@ -413,7 +419,9 @@ export function AgentSignupForm({
 
         {!signedInAgentFlow ? (
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-700">Password</label>
+            <label className="block text-xs font-medium text-gray-700">
+              Password<span className="text-red-600"> *</span>
+            </label>
             <input
               type="password"
               value={password}

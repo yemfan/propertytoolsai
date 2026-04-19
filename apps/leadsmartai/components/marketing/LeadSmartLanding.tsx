@@ -798,19 +798,19 @@ export default function LeadSmartLanding() {
             </RevealSection>
 
             <div className="mx-auto mt-10 grid max-w-5xl gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Free */}
+              {/* Starter (internal plan_type: "free") */}
               <RevealSection delay={0}>
                 <Card className="h-full dark:border-slate-700 dark:bg-slate-900">
                   <CardContent className="p-5 text-left">
-                    <h3 className="font-heading text-base font-semibold dark:text-white">Free</h3>
+                    <h3 className="font-heading text-base font-semibold dark:text-white">Starter</h3>
                     <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">$0 <span className="text-xs font-normal text-gray-500 dark:text-slate-400">forever</span></p>
-                    <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Test the platform and see leads flow in.</p>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Limited functions and usages.</p>
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 dark:text-slate-300">
                       {["25 leads/month", "Email follow-up only", "Pipeline dashboard", "Basic lead scoring", "1 drip sequence"].map((f) => (
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="primary" />{f}</li>
                       ))}
                     </ul>
-                    <Button className="mt-5 w-full text-xs" variant="outline" href="/signup" aria-label="Get started free — Free plan at $0 per month">Get started free</Button>
+                    <Button className="mt-5 w-full text-xs" variant="outline" href="/signup" aria-label="Get started — Starter plan at $0 per month">Get started</Button>
                   </CardContent>
                 </Card>
               </RevealSection>
@@ -923,7 +923,7 @@ export default function LeadSmartLanding() {
                 },
                 {
                   q: "What happens after the free trial?",
-                  a: "You choose a plan — or you don't. There's no auto-charge after the trial ends. If you upgrade to Pro, your leads, sequences, and pipeline history carry over seamlessly. If you stay on the Free plan, you keep up to 25 leads/month with core features.",
+                  a: "You choose a plan — or you don't. There's no auto-charge after the trial ends. If you upgrade to Pro, your leads, sequences, and pipeline history carry over seamlessly. If you stay on the Starter plan, you keep up to 25 leads/month with core features.",
                 },
                 {
                   q: "Will leads know they're talking to AI?",

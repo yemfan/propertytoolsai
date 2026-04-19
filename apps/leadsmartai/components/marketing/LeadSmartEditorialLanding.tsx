@@ -615,12 +615,14 @@ function TestimonialsSection() {
 function PricingSection() {
   const tiers = [
     {
-      name: "Free",
+      // Internal plan key stays "free" (DB plan_type, Stripe price keys,
+      // ~60 other call sites). User-facing name only → "Starter".
+      name: "Starter",
       price: "$0",
-      interval: "per month",
-      desc: "Test the platform and see leads flow in.",
+      interval: "forever",
+      desc: "Limited functions and usages.",
       features: ["25 leads / month", "Email follow-up only", "Pipeline dashboard", "Basic lead scoring", "1 drip sequence"],
-      cta: "Get started free",
+      cta: "Get started",
       ctaHref: "/signup",
       variant: "secondary" as const,
       badge: null,

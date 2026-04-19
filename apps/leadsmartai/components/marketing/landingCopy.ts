@@ -280,7 +280,7 @@ const agentCopy: LandingCopy = {
   pricing: {
     title: "Start Free. Pay When You Grow.",
     subtitle: "Simple & low friction.",
-    freePlanName: "Free Plan",
+    freePlanName: "Starter Plan",
     premiumPlanName: "Premium",
     freeFeatures: ["Basic tools", "Limited leads", "Core features"],
     premiumFeatures: ["Unlimited leads", "Full AI automation", "Priority lead routing"],
@@ -457,7 +457,7 @@ const brokerCopy: LandingCopy = {
   pricing: {
     title: "Start Free. Pay When You Grow.",
     subtitle: "Simple & low friction.",
-    freePlanName: "Free Plan",
+    freePlanName: "Starter Plan",
     premiumPlanName: "Premium",
     freeFeatures: ["Basic tools", "Limited leads", "Core features"],
     premiumFeatures: ["Unlimited leads", "Full AI automation", "Priority lead routing"],

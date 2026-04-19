@@ -28,12 +28,15 @@ const PLANS: Array<{
   trialNote?: string;
 }> = [
   {
+    // `key` stays "free" as the internal plan identifier (matches plan_type
+    // in the agents table, Stripe price keys, and ~60 other call sites).
+    // User-facing name only → "Starter" per product rename.
     key: "free",
-    name: "Free",
+    name: "Starter",
     price: "$0",
     period: "forever",
-    tagline: "Test the platform. See leads flow in.",
-    cta: "Get started free",
+    tagline: "Limited functions and usages.",
+    cta: "Get started",
     href: "/signup",
   },
   {

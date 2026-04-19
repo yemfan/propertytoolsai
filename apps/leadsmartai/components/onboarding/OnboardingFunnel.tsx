@@ -708,8 +708,9 @@ export default function OnboardingFunnel({
   if (step === 7) {
     const plans = [
       {
-        name: "Free", price: "$0", period: "forever", cta: "Start free", href: "/signup", primary: false,
-        tagline: "Test the platform. See leads flow in.",
+        // Display name is "Starter" per product rename; DB plan_type stays "free".
+        name: "Starter", price: "$0", period: "forever", cta: "Get started", href: "/signup", primary: false,
+        tagline: "Limited functions and usages.",
         features: ["25 leads/mo", "Basic lead pipeline", "Email-only auto-response", "1 drip sequence", "Up to 50 contacts", "2 CMA reports/day", "Email support"],
         limits: ["No SMS", "No AI conversations", "No lead scoring", "No CRM integrations"],
       },
