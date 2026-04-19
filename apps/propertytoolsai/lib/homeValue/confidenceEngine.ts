@@ -161,6 +161,12 @@ export type ConfidenceInput = {
   daysOnMarket: number | null;
   /** Hours since city/market snapshot (optional — improves data freshness). */
   marketDataAgeHours?: number | null;
+  /**
+   * Count of available micro-market signals (walk score, flood zone,
+   * school rating). Each available signal adds confidence because the
+   * estimate is informed by more data dimensions. Range: 0–3.
+   */
+  microMarketSignalCount?: number;
 };
 
 /** Weighted contribution of each pillar to the final 0–100 score (impact ≈ pillar × weight). */
@@ -196,7 +202,12 @@ export function computeConfidence(
   input: ConfidenceInput
 ): { confidence: ConfidenceOutput; rangeBandPct: number } {
   const addressQuality = scoreAddressQualityFromSignals(input.addressQuality);
-  const detailCompleteness = scoreDetailCompletenessFromProperty(input.property);
+  let detailCompleteness = scoreDetailCompletenessFromProperty(input.property);
+  // Boost detail completeness when micro-market signals are available.
+  // Each signal (walk score, flood zone, school rating) adds +3 points
+  // because the estimate draws on more data dimensions.
+  const microBonus = clamp((input.microMarketSignalCount ?? 0) * 3, 0, 9);
+  detailCompleteness = clamp(detailCompleteness + microBonus, 0, 100);
   const compCoverage = scoreCompCoverageFromCounts(input.pricedCompCount);
   const dataFreshness = scoreDataFreshnessFromAgeHours(input.marketDataAgeHours ?? null);
 

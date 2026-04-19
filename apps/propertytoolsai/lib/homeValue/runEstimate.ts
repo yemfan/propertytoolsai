@@ -36,6 +36,8 @@ import { computeWeightedCompPpsf, warehouseCompsToWeightInput } from "@/lib/home
 import { fetchSchoolRatings } from "@/lib/homeValue/schoolRatings";
 import { getZipMarketPpsf } from "@/lib/homeValue/zipMarketData";
 import { predictWithMlModel } from "@/lib/homeValue/mlInference";
+import { getCachedMicroMarket, setCachedMicroMarket } from "@/lib/homeValue/microMarketCache";
+import { backfillCompDetails } from "@/lib/homeValue/compBackfill";
 
 export type RunEstimateContext = {
   userId: string | null;
@@ -236,21 +238,55 @@ export async function runHomeValueEstimatePipeline(
   const baths = merged.baths && merged.baths > 0 ? merged.baths : DEFAULT_BATHS;
   const propertyType = merged.propertyType || "single family";
 
-  // --- Fetch micro-market signals in parallel ---
+  // --- Backfill comp details from Rentcast when missing ---
+  // This enriches comps that lack sqft/beds/baths so they can contribute
+  // to the weighted PPSF and similarity scoring.
+  if (warehouseComps.length > 0) {
+    try {
+      const backfill = await backfillCompDetails(warehouseComps as Parameters<typeof backfillCompDetails>[0]);
+      if (backfill.enrichedCount > 0) {
+        console.log(
+          `[estimate] Backfilled ${backfill.enrichedCount}/${backfill.candidateCount} comps ` +
+          `with missing details from Rentcast`
+        );
+      }
+    } catch {
+      // Non-fatal — comp backfill is best-effort
+    }
+  }
+
+  // --- Fetch micro-market signals (with cache) ---
   const hasCoords = merged.lat != null && merged.lng != null;
+  const cached = hasCoords ? getCachedMicroMarket(merged.lat!, merged.lng!) : null;
+
   const [walkScoreResult, floodZoneResult, censusFallbackPpsf, schoolRatingResult, zipMarketData] = await Promise.all([
-    hasCoords
-      ? fetchWalkScore(merged.lat!, merged.lng!, addressRaw).catch(() => ({ walkScore: null, transitScore: null, bikeScore: null }))
-      : Promise.resolve({ walkScore: null, transitScore: null, bikeScore: null }),
-    hasCoords
-      ? fetchFloodZone(merged.lat!, merged.lng!).catch(() => ({ zone: null, highRisk: false, moderateRisk: false }))
-      : Promise.resolve({ zone: null, highRisk: false, moderateRisk: false }),
+    cached?.walkScore
+      ? Promise.resolve(cached.walkScore)
+      : hasCoords
+        ? fetchWalkScore(merged.lat!, merged.lng!, addressRaw).catch(() => ({ walkScore: null, transitScore: null, bikeScore: null }))
+        : Promise.resolve({ walkScore: null, transitScore: null, bikeScore: null }),
+    cached?.floodZone
+      ? Promise.resolve(cached.floodZone)
+      : hasCoords
+        ? fetchFloodZone(merged.lat!, merged.lng!).catch(() => ({ zone: null, highRisk: false, moderateRisk: false }))
+        : Promise.resolve({ zone: null, highRisk: false, moderateRisk: false }),
     getCensusFallbackPpsf(merged.zip).catch(() => 245),
-    hasCoords
-      ? fetchSchoolRatings(merged.lat!, merged.lng!).catch(() => ({ avgRating: null, schoolCount: 0, source: "none" as const }))
-      : Promise.resolve({ avgRating: null, schoolCount: 0, source: "none" as const }),
+    cached?.schoolRating
+      ? Promise.resolve(cached.schoolRating)
+      : hasCoords
+        ? fetchSchoolRatings(merged.lat!, merged.lng!).catch(() => ({ avgRating: null, schoolCount: 0, source: "none" as const }))
+        : Promise.resolve({ avgRating: null, schoolCount: 0, source: "none" as const }),
     getZipMarketPpsf(merged.zip).catch(() => null),
   ]);
+
+  // Store in cache for next time
+  if (hasCoords && !cached) {
+    setCachedMicroMarket(merged.lat!, merged.lng!, {
+      walkScore: walkScoreResult,
+      floodZone: floodZoneResult,
+      schoolRating: schoolRatingResult,
+    });
+  }
 
   if (walkScoreResult.walkScore != null) {
     console.log(`[estimate] Walk Score: ${walkScoreResult.walkScore}`);
@@ -343,12 +379,19 @@ export async function runHomeValueEstimatePipeline(
         ? "partial"
         : "unknown";
 
+  // Count how many micro-market signals are available
+  const microMarketSignalCount =
+    (walkScoreResult.walkScore != null ? 1 : 0) +
+    (floodZoneResult.zone != null ? 1 : 0) +
+    (schoolRatingResult.avgRating != null ? 1 : 0);
+
   const { confidence, rangeBandPct } = computeConfidence({
     property: merged,
     pricedCompCount,
     addressQuality,
     marketTrend: marketBlock.trend,
     daysOnMarket,
+    microMarketSignalCount,
     marketDataAgeHours,
   });
 

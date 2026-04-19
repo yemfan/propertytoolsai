@@ -103,7 +103,41 @@ export async function GET(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, session, comps });
+    // Re-compute adjustment breakdown from stored session data.
+    // The estimate engine multipliers are deterministic given property details,
+    // so we can reconstruct them without re-running the full pipeline.
+    let adjustments: Record<string, number> = {};
+    if (row.estimate_value != null) {
+      try {
+        const { computeHomeValueEstimate } = await import("@/lib/homeValue/estimateEngine");
+        const est = computeHomeValueEstimate(
+          {
+            baselinePpsf: 1, // dummy — we only need the multiplier keys
+            sqft: row.sqft ?? 1650,
+            beds: row.beds ?? 3,
+            baths: row.baths ?? 2,
+            propertyType: row.property_type ?? "single family",
+            yearBuilt: row.year_built ?? null,
+            lotSqft: row.lot_size ?? null,
+            condition: (row.condition ?? "average") as "poor" | "fair" | "average" | "good" | "excellent",
+            renovation: row.renovated_recently ? "cosmetic" : "none",
+            marketTrend: "stable",
+          },
+          0.08
+        );
+        const ev = Number(row.estimate_value);
+        for (const line of est.adjustments) {
+          const dollarImpact = Math.round((line.multiplier - 1) * ev);
+          if (dollarImpact !== 0) {
+            adjustments[line.key + "Adjustment"] = dollarImpact;
+          }
+        }
+      } catch {
+        // Non-fatal — adjustments panel will show empty
+      }
+    }
+
+    return NextResponse.json({ ok: true, session, comps, adjustments });
   } catch (e: any) {
     console.error("GET /api/home-value/session", e);
     return NextResponse.json({ ok: false, error: e?.message ?? "Server error" }, { status: 500 });
