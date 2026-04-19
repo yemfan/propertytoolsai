@@ -145,6 +145,21 @@ export type SessionResponse = {
   comps?: EstimateComp[];
 };
 
+/** Reason why a property is ineligible for a valuation. */
+export type IneligibleReason =
+  | "ADDRESS_NOT_FOUND"
+  | "NON_RESIDENTIAL"
+  | "INSUFFICIENT_DATA"
+  | "AMBIGUOUS_TYPE";
+
+/** Info bundle returned by the API when an address is ineligible. */
+export type IneligibleInfo = {
+  reason: IneligibleReason;
+  message: string;
+  detail?: string;
+  detectedType?: string;
+};
+
 export type LeadForm = {
   name: string;
   email: string;

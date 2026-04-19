@@ -173,4 +173,9 @@ export type HomeValueEstimateResponse = {
   sessionId: string;
   /** Rentcast comparable sales — fallback when local warehouse comps are unavailable. */
   rentcastComps: RentcastComparable[];
+  /** Internal debug/provenance flags used by the API route (e.g. eligibility gate). */
+  _debug?: {
+    hasWarehouseRow?: boolean;
+    hasRentcastSubject?: boolean;
+  };
 };
