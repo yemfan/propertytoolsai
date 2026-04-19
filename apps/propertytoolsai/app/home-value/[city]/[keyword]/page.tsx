@@ -37,7 +37,14 @@ export async function generateMetadata({
   return {
     title: `${keyword} | ${city.city}, ${city.state} | PropertyTools AI`,
     description: `Get ${keyword} insights, local pricing, and seller strategy for ${city.city}, ${city.state}.`,
-    alternates: { canonical: `/home-value/${p.city}/${p.keyword}` },
+    // Canonicalize to the parent city page so ranking signals consolidate
+    // on the substantive per-city hub, not the keyword-variant long tail.
+    alternates: { canonical: `/home-value/${p.city}` },
+    // Validation report SEO-03: the keyword variants are templated from the
+    // same underlying per-city dataset, so they read as scaled content. We
+    // keep them crawlable for internal-link discovery (follow) but out of
+    // the index to avoid triggering scaled-content-abuse classifiers.
+    robots: { index: false, follow: true },
   };
 }
 

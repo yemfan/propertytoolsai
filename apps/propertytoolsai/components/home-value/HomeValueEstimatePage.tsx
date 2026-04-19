@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useHomeValueEstimate } from "@/lib/home-value/useHomeValueEstimate";
 import { AddressAutocompleteInput } from "@/components/home-value/AddressAutocompleteInput";
 import { AddressConfirmCard } from "@/components/home-value/AddressConfirmCard";
@@ -31,6 +33,20 @@ export default function HomeValuePage() {
     restoreFromHistory,
     busyRefine,
   } = useHomeValueEstimate();
+
+  // Seed the input from `?address=` on first mount so the homepage hero
+  // search routes here pre-filled (validation report UX-01). Ref guard
+  // prevents a navigation-triggered re-seed from clobbering user edits.
+  const searchParams = useSearchParams();
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current) return;
+    const seed = searchParams.get("address");
+    if (seed && seed.trim().length > 0) {
+      seededRef.current = true;
+      setAddressInput(seed.trim());
+    }
+  }, [searchParams, setAddressInput]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">

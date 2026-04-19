@@ -36,7 +36,11 @@ export async function generateMetadata({
   return {
     title: `${keyword} | ${city.city}, ${city.state} Seller Guide | PropertyTools AI`,
     description: `Localized selling strategy for ${keyword} in ${city.city}, ${city.state}.`,
-    alternates: { canonical: `/sell-house/${p.city}/${p.keyword}` },
+    // Consolidate to parent city hub; keyword variants are noindex-crawlable.
+    // Validation report SEO-03 — thin keyword variations trigger scaled-
+    // content-abuse classifiers when stamped identically across 400+ routes.
+    alternates: { canonical: `/sell-house/${p.city}` },
+    robots: { index: false, follow: true },
   };
 }
 

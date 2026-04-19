@@ -37,7 +37,11 @@ export async function generateMetadata({
   return {
     title: `${keyword} | ${city.city}, ${city.state} | PropertyTools AI`,
     description: `Track ${keyword} with local pricing and trend data for ${city.city}, ${city.state}.`,
-    alternates: { canonical: `/market-report/${p.city}/${p.keyword}` },
+    // Consolidate to parent city hub; keyword variants are noindex-crawlable.
+    // Validation report SEO-03 — thin keyword variations trigger scaled-
+    // content-abuse classifiers when stamped identically across 400+ routes.
+    alternates: { canonical: `/market-report/${p.city}` },
+    robots: { index: false, follow: true },
   };
 }
 
