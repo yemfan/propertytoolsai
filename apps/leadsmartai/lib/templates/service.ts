@@ -8,6 +8,14 @@ import type {
   TemplateStatus,
   TemplateWithOverride,
 } from "./types";
+// Pure helpers live in their own module so client components can
+// import them without pulling in supabaseAdmin. Re-exported here for
+// existing server-side callers.
+export {
+  smsLengthForBody,
+  channelPreviewMaxChars,
+  validateStatus,
+} from "./formatters";
 
 function mapTemplate(row: TemplateRow): Template {
   return {
@@ -163,16 +171,3 @@ export async function upsertTemplateOverride(
   return { templateId, ...next, edited };
 }
 
-export function validateStatus(v: unknown): TemplateStatus | undefined {
-  return v === "autosend" || v === "review" || v === "off" ? v : undefined;
-}
-
-export function smsLengthForBody(body: string): number {
-  // SMS is measured by codepoints; reasonably close for previews. GSM-7 vs UCS-2
-  // transitions (emoji, accented chars) are ignored — good enough for a counter.
-  return Array.from(body).length;
-}
-
-export function channelPreviewMaxChars(channel: TemplateChannel): number | null {
-  return channel === "sms" ? 160 : null;
-}

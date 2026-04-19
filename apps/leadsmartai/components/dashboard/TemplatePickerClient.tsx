@@ -8,7 +8,7 @@ import type {
   TemplateWithOverride,
 } from "@/lib/templates/types";
 import { renderPreview } from "@/lib/templates/preview";
-import { channelPreviewMaxChars, smsLengthForBody } from "@/lib/templates/service";
+import { channelPreviewMaxChars, smsLengthForBody } from "@/lib/templates/formatters";
 
 type CategoryFilter = "all" | TemplateCategory;
 type ChannelFilter = "all" | TemplateChannel;
