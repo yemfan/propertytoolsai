@@ -9,3 +9,6 @@ sqlalchemy
 # lightgbm
 # xgboost
 
+# Optional ONNX export (enables Node.js inference without Python):
+# skl2onnx
+# onnxruntime

@@ -14,6 +14,7 @@ import {
   DEFAULT_SQFT,
 } from "@/lib/homeValue/estimateEngine";
 import { mergeNormalizedProperty } from "@/lib/homeValue/normalizeProperty";
+import { checkPropertyEligibility, PropertyIneligibleError } from "@/lib/homeValue/eligibility";
 import { buildHomeValueRecommendations } from "@/lib/homeValue/recommendations";
 import type {
   HomeValueEstimateRequest,
@@ -28,6 +29,15 @@ import {
 } from "@/lib/homeValue/funnelPersistence";
 import { resolveLikelyIntent } from "@/lib/homeValue/intentInference";
 import { loadValuationBundleFromRentcast } from "@/lib/valuation/adapters/rentcast";
+import { fetchWalkScore } from "@/lib/homeValue/walkScore";
+import { fetchFloodZone } from "@/lib/homeValue/floodZone";
+import { getCensusFallbackPpsf } from "@/lib/homeValue/censusFallbackPpsf";
+import { computeWeightedCompPpsf, warehouseCompsToWeightInput } from "@/lib/homeValue/weightedCompPpsf";
+import { fetchSchoolRatings } from "@/lib/homeValue/schoolRatings";
+import { getZipMarketPpsf } from "@/lib/homeValue/zipMarketData";
+import { predictWithMlModel } from "@/lib/homeValue/mlInference";
+import { getCachedMicroMarket, setCachedMicroMarket } from "@/lib/homeValue/microMarketCache";
+import { backfillCompDetails } from "@/lib/homeValue/compBackfill";
 
 export type RunEstimateContext = {
   userId: string | null;
@@ -129,14 +139,25 @@ export async function runHomeValueEstimatePipeline(
   let pricedCompCount = 0;
   let totalComp = 0;
   let compPpsfAvg: number | null = null;
+  let warehouseComps: Awaited<ReturnType<typeof getComparables>>["comps"] = [];
   try {
     const { comps } = await getComparables(addressRaw, 12);
-    totalComp = comps?.length ?? 0;
-    const priced = (comps ?? [])
+    warehouseComps = comps ?? [];
+    totalComp = warehouseComps.length;
+
+    // Filter out comps older than 12 months for PPSF calculation.
+    // Stale comps in appreciating markets drag the estimate down.
+    const twelveMonthsAgo = Date.now() - 365 * 24 * 60 * 60 * 1000;
+    const priced = warehouseComps
       .map((c) => {
         const sold = c.sold_price != null ? Number(c.sold_price) : null;
         const sqft = c.comp_property?.sqft != null ? Number(c.comp_property.sqft) : null;
         if (sold == null || sqft == null || !isFinite(sold) || !isFinite(sqft) || sqft <= 0) return null;
+        // Exclude comps with sold dates older than 12 months
+        if (c.sold_date) {
+          const soldTime = new Date(c.sold_date).getTime();
+          if (Number.isFinite(soldTime) && soldTime < twelveMonthsAgo) return null;
+        }
         return sold / sqft;
       })
       .filter(Boolean) as number[];
@@ -183,19 +204,127 @@ export async function runHomeValueEstimatePipeline(
     if (body.propertyType == null && rd.propertyType) merged.propertyType = rd.propertyType;
   }
 
+  /**
+   * Eligibility gate — runs AFTER warehouse + Rentcast enrichment but
+   * BEFORE the expensive parallel fetches (walk score, flood zone,
+   * census fallback, school ratings, ZIP market PPSF) and the
+   * weighted-comp / confidence / persistence steps. Short-circuits
+   * with PropertyIneligibleError when we can't responsibly produce a
+   * dollar estimate — non-residential type, no data sources of any
+   * kind, or placeholder-only core facts. Caught by the API route
+   * and mapped to the HomeValueIneligibleResponse envelope.
+   */
+  {
+    const userProvidedCoreFacts =
+      (body.sqft != null && body.sqft > 0) ||
+      (body.beds != null && body.beds > 0) ||
+      (body.baths != null && body.baths > 0);
+    const eligibility = checkPropertyEligibility(merged, {
+      hasWarehouseRow: Boolean(row),
+      hasRentcastSubject: Boolean(rentcastBundle?.subjectDetails),
+      userProvidedCoreFacts,
+    });
+    if (eligibility.eligible === false) {
+      const { reason, message, detail, detectedType } = eligibility;
+      console.log(
+        `[estimate] INELIGIBLE address="${addressRaw}" reason=${reason} detail=${detail ?? ""}`
+      );
+      throw new PropertyIneligibleError(reason, message, { detail, detectedType });
+    }
+  }
+
   const sqft = merged.sqft && merged.sqft > 0 ? merged.sqft : DEFAULT_SQFT;
   const beds = merged.beds && merged.beds > 0 ? merged.beds : DEFAULT_BEDS;
   const baths = merged.baths && merged.baths > 0 ? merged.baths : DEFAULT_BATHS;
   const propertyType = merged.propertyType || "single family";
 
-  let baselinePpsf = 245;
+  // --- Backfill comp details from Rentcast when missing ---
+  // This enriches comps that lack sqft/beds/baths so they can contribute
+  // to the weighted PPSF and similarity scoring.
+  if (warehouseComps.length > 0) {
+    try {
+      const backfill = await backfillCompDetails(warehouseComps as Parameters<typeof backfillCompDetails>[0]);
+      if (backfill.enrichedCount > 0) {
+        console.log(
+          `[estimate] Backfilled ${backfill.enrichedCount}/${backfill.candidateCount} comps ` +
+          `with missing details from Rentcast`
+        );
+      }
+    } catch {
+      // Non-fatal — comp backfill is best-effort
+    }
+  }
+
+  // --- Fetch micro-market signals (with cache) ---
+  const hasCoords = merged.lat != null && merged.lng != null;
+  const cached = hasCoords ? getCachedMicroMarket(merged.lat!, merged.lng!) : null;
+
+  const [walkScoreResult, floodZoneResult, censusFallbackPpsf, schoolRatingResult, zipMarketData] = await Promise.all([
+    cached?.walkScore
+      ? Promise.resolve(cached.walkScore)
+      : hasCoords
+        ? fetchWalkScore(merged.lat!, merged.lng!, addressRaw).catch(() => ({ walkScore: null, transitScore: null, bikeScore: null }))
+        : Promise.resolve({ walkScore: null, transitScore: null, bikeScore: null }),
+    cached?.floodZone
+      ? Promise.resolve(cached.floodZone)
+      : hasCoords
+        ? fetchFloodZone(merged.lat!, merged.lng!).catch(() => ({ zone: null, highRisk: false, moderateRisk: false }))
+        : Promise.resolve({ zone: null, highRisk: false, moderateRisk: false }),
+    getCensusFallbackPpsf(merged.zip).catch(() => 245),
+    cached?.schoolRating
+      ? Promise.resolve(cached.schoolRating)
+      : hasCoords
+        ? fetchSchoolRatings(merged.lat!, merged.lng!).catch(() => ({ avgRating: null, schoolCount: 0, source: "none" as const }))
+        : Promise.resolve({ avgRating: null, schoolCount: 0, source: "none" as const }),
+    getZipMarketPpsf(merged.zip).catch(() => null),
+  ]);
+
+  // Store in cache for next time
+  if (hasCoords && !cached) {
+    setCachedMicroMarket(merged.lat!, merged.lng!, {
+      walkScore: walkScoreResult,
+      floodZone: floodZoneResult,
+      schoolRating: schoolRatingResult,
+    });
+  }
+
+  if (walkScoreResult.walkScore != null) {
+    console.log(`[estimate] Walk Score: ${walkScoreResult.walkScore}`);
+  }
+  if (floodZoneResult.zone) {
+    console.log(`[estimate] Flood zone: ${floodZoneResult.zone} (high risk: ${floodZoneResult.highRisk})`);
+  }
+  if (schoolRatingResult.avgRating != null) {
+    console.log(`[estimate] School rating: ${schoolRatingResult.avgRating}/10 (${schoolRatingResult.schoolCount} schools)`);
+  }
+
+  // --- Weighted comp PPSF (replaces simple average when possible) ---
+  const weightedResult = computeWeightedCompPpsf(
+    warehouseCompsToWeightInput(warehouseComps),
+    { beds: merged.beds, baths: merged.baths, sqft: merged.sqft, yearBuilt: merged.yearBuilt }
+  );
+  if (weightedResult && weightedResult.weightedPpsf > 0) {
+    console.log(
+      `[estimate] Weighted comp PPSF: $${weightedResult.weightedPpsf}/sqft ` +
+      `(simple avg: $${compPpsfAvg?.toFixed(0) ?? "n/a"}/sqft, ${weightedResult.compCount} comps)`
+    );
+    compPpsfAvg = weightedResult.weightedPpsf;
+  }
+
+  // Baseline PPSF priority: comp PPSF > ZIP-level > city-wide > census fallback
+  // ZIP-level is more granular than city-wide, important in mixed-market cities.
+  let baselinePpsf = censusFallbackPpsf;
+  if (zipMarketData && zipMarketData.medianPpsf > 0) {
+    baselinePpsf = zipMarketData.medianPpsf;
+    console.log(`[estimate] ZIP-level PPSF: $${zipMarketData.medianPpsf}/sqft (snapshot ${zipMarketData.snapshotDate})`);
+  }
   let marketBlock = {
     city: merged.city || "Unknown",
     state: merged.state || "",
     trend: "stable" as "up" | "down" | "stable",
-    medianPrice: null as number | null,
-    pricePerSqft: null as number | null,
-    source: "fallback" as string,
+    medianPrice: zipMarketData?.medianPrice ?? null as number | null,
+    pricePerSqft: zipMarketData?.medianPpsf ?? null as number | null,
+    source: zipMarketData ? "zip_market_snapshot" : "fallback" as string,
   };
   let daysOnMarket: number | null = null;
   let marketDataAgeHours: number | null | undefined = undefined;
@@ -250,12 +379,19 @@ export async function runHomeValueEstimatePipeline(
         ? "partial"
         : "unknown";
 
+  // Count how many micro-market signals are available
+  const microMarketSignalCount =
+    (walkScoreResult.walkScore != null ? 1 : 0) +
+    (floodZoneResult.zone != null ? 1 : 0) +
+    (schoolRatingResult.avgRating != null ? 1 : 0);
+
   const { confidence, rangeBandPct } = computeConfidence({
     property: merged,
     pricedCompCount,
     addressQuality,
     marketTrend: marketBlock.trend,
     daysOnMarket,
+    microMarketSignalCount,
     marketDataAgeHours,
   });
 
@@ -272,6 +408,9 @@ export async function runHomeValueEstimatePipeline(
       renovation,
       marketTrend: marketBlock.trend,
       sqftAdded: body.sqftAdded,
+      walkScore: walkScoreResult.walkScore,
+      floodZone: floodZoneResult,
+      schoolRating: schoolRatingResult,
     },
     rangeBandPct
   );
@@ -284,8 +423,8 @@ export async function runHomeValueEstimatePipeline(
    *
    * Strategy:
    * - 0 local comps → use Rentcast AVM directly
-   * - 1-3 comps → blend 80% AVM + 20% comp-based
-   * - 4+ comps → blend 65% AVM + 35% comp-based
+   * - 1-3 comps → blend 85% AVM + 15% comp-based
+   * - 4+ comps → blend 75% AVM + 25% comp-based
    *
    * The Rentcast AVM is an ML model trained on nationwide MLS data
    * and closely tracks Zillow/Redfin estimates. Our comp-based PPSF
@@ -294,7 +433,7 @@ export async function runHomeValueEstimatePipeline(
    */
   if (rentcastAvm && rentcastAvm > 0) {
     const avmWeight =
-      pricedCompCount === 0 ? 1.0 : pricedCompCount <= 3 ? 0.8 : 0.65;
+      pricedCompCount === 0 ? 1.0 : pricedCompCount <= 3 ? 0.85 : 0.75;
     const compWeight = 1 - avmWeight;
 
     const blended = Math.round(avmWeight * rentcastAvm + compWeight * estimate.point);
@@ -330,6 +469,81 @@ export async function runHomeValueEstimatePipeline(
       pricedCompCount === 0
         ? "rentcast_avm"
         : `${marketBlock.source}+rentcast_avm_blend`;
+  }
+
+  /**
+   * ML Model blending (third signal) — when a trained model is available,
+   * use its prediction to nudge the estimate. The ML model learns from
+   * accumulated estimate/actual-sale pairs and can capture patterns
+   * (neighborhood premiums, condition adjustments) that the heuristic
+   * engine misses.
+   *
+   * Strategy:
+   * - ML prediction gets 15% weight when available
+   * - When ML agrees with current estimate (within 10%), it confirms
+   *   the estimate and we tighten the range band slightly
+   * - When ML strongly disagrees (>20%), we widen the range band
+   */
+  try {
+    const mlResult = await predictWithMlModel({
+      beds: merged.beds,
+      baths: merged.baths,
+      sqft: merged.sqft,
+      lot_size: merged.lotSqft,
+      year_built: merged.yearBuilt,
+      city: merged.city,
+      state: merged.state,
+      zip: merged.zip,
+      property_type: merged.propertyType,
+      condition,
+      api_estimate: rentcastAvm ?? null,
+      comps_estimate: compPpsfAvg != null ? compPpsfAvg * sqft : null,
+      final_estimate: estimate.point,
+      low_estimate: estimate.low,
+      high_estimate: estimate.high,
+      confidence_score: confidence.score,
+      comparable_count: pricedCompCount,
+      weighted_ppsf: compPpsfAvg,
+    });
+
+    if (mlResult.available && mlResult.prediction != null && mlResult.prediction > 0) {
+      const mlWeight = 0.15;
+      const currentWeight = 1 - mlWeight;
+      const mlBlended = Math.round(currentWeight * estimate.point + mlWeight * mlResult.prediction);
+
+      const divergencePct = Math.abs(mlResult.prediction - estimate.point) / estimate.point;
+
+      console.log(
+        `[estimate] ML model: $${mlResult.prediction.toLocaleString()} ` +
+        `(divergence: ${(divergencePct * 100).toFixed(1)}%, blended: $${mlBlended.toLocaleString()})`
+      );
+
+      // Adjust range band based on ML agreement
+      let adjustedBandPct = rangeBandPct;
+      if (divergencePct <= 0.10) {
+        // ML agrees — tighten range by 10%
+        adjustedBandPct = Math.max(0.03, rangeBandPct * 0.9);
+      } else if (divergencePct > 0.20) {
+        // ML strongly disagrees — widen range by 15%
+        adjustedBandPct = Math.min(0.15, rangeBandPct * 1.15);
+      }
+
+      estimate = {
+        ...estimate,
+        point: mlBlended,
+        low: Math.round(mlBlended * (1 - adjustedBandPct)),
+        high: Math.round(mlBlended * (1 + adjustedBandPct)),
+        summary: estimate.summary.replace(
+          /\$[\d,]+/,
+          `$${mlBlended.toLocaleString()}`
+        ),
+      };
+      marketBlock.source += "+ml_model";
+    } else if (mlResult.error) {
+      console.log(`[estimate] ML model skipped: ${mlResult.error}`);
+    }
+  } catch (mlErr) {
+    console.log(`[estimate] ML model failed (non-fatal):`, mlErr);
   }
 
   const priceSpreadRatio =
@@ -420,5 +634,9 @@ export async function runHomeValueEstimatePipeline(
     rentcastComps: rentcastBundle?.comps ?? [],
     recommendations,
     intentInference,
+    _debug: {
+      hasWarehouseRow: Boolean(row),
+      hasRentcastSubject: Boolean(rentcastBundle?.subjectDetails),
+    },
   };
 }

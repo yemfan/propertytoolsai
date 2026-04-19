@@ -206,12 +206,38 @@ def main() -> None:
         "numeric_features": numeric_features,
         "categorical_features": categorical_features,
         "backend": backend,
-        "version": "v1",
+        "version": "v2",
         "note": "tax_anchor_estimate may be null in early rollout; trainer drops entirely-null columns.",
     }
 
     schema_path.write_text(json.dumps(schema, indent=2))
     metrics_path.write_text(json.dumps(metrics, indent=2))
+
+    # --- ONNX export (optional, best-effort) ---
+    onnx_path = out_dir / "valuation_model.onnx"
+    onnx_exported = False
+    try:
+        from skl2onnx import convert_sklearn  # type: ignore
+        from skl2onnx.common.data_types import FloatTensorType  # type: ignore
+
+        # The preprocessor outputs a 2D float array; we need its output width.
+        preprocessor_fitted = pipeline.named_steps["preprocessor"]
+        X_sample = preprocessor_fitted.transform(X_train[:1])
+        n_features = X_sample.shape[1]
+
+        initial_type = [("X", FloatTensorType([None, n_features]))]
+
+        # Convert only the regressor (preprocessor runs in Node.js as feature assembly)
+        onnx_model = convert_sklearn(
+            pipeline.named_steps["model"],
+            initial_types=initial_type,
+            target_opset=15,
+        )
+        onnx_path.write_bytes(onnx_model.SerializeToString())
+        onnx_exported = True
+        print(f"ONNX model exported to {onnx_path.resolve()}")
+    except Exception as onnx_err:
+        print(f"ONNX export skipped (install skl2onnx for ONNX support): {onnx_err}")
 
     print(
         json.dumps(
@@ -219,6 +245,8 @@ def main() -> None:
                 "model_path": str(model_path.resolve()),
                 "schema_path": str(schema_path.resolve()),
                 "metrics_path": str(metrics_path.resolve()),
+                "onnx_path": str(onnx_path.resolve()) if onnx_exported else None,
+                "onnx_exported": onnx_exported,
                 "metrics": metrics,
                 "rows_used": len(featured),
             },
