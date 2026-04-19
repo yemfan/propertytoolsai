@@ -30,12 +30,12 @@ export default async function ConsumerPricingPage() {
             offers: [
               {
                 "@type": "Offer",
-                name: "Free Plan",
+                name: "Starter Plan",
                 price: "0",
                 priceCurrency: "USD",
                 priceValidUntil: "2026-12-31",
                 description:
-                  "Test the platform. See leads flow in. 25 leads per month.",
+                  "Limited functions and usages. 25 leads per month.",
                 url: "https://leadsmart-ai.com/signup",
               },
               {

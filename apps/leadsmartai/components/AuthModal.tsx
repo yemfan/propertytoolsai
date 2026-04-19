@@ -10,18 +10,10 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { isRealEstateProfessionalRole } from "@/lib/paidSubscriptionEligibility";
 import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
 import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
-import {
-  isSignupRoleAssigned,
-  SIGNUP_ROLE_OPTIONS,
-  signupRoleToDbRole,
-} from "@/lib/auth/signupRoleOptions";
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 import { getOAuthRedirectOrigin } from "@/lib/siteUrl";
-import { formatUsPhoneInput, formatUsPhoneStored, isValidUsPhone } from "@/lib/usPhone";
 
 type Mode = "login" | "signup";
-/** After signup as Real Estate Agent — show Start free CTA before closing. */
-type SignupStep = "form" | "agentStartFree";
 
 export default function AuthModal({
   open,
@@ -39,30 +31,16 @@ export default function AuthModal({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [signupRole, setSignupRole] = useState("");
-  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSending, setResetSending] = useState(false);
   const [resetNotice, setResetNotice] = useState<string | null>(null);
-  const [signupStep, setSignupStep] = useState<SignupStep>("form");
 
-  /**
-   * Reset post-signup agent step whenever the modal closes — otherwise `signupStep` stays
-   * `agentStartFree` and the next open paints the agent dialog before `open===true` effects run
-   * (looks like “Start free” popup on first click / first visit in-session).
-   */
   useEffect(() => {
-    if (!open) {
-      setSignupStep("form");
-      return;
-    }
+    if (!open) return;
     setMode(initialMode ?? "login");
     setError(null);
     setResetNotice(null);
-    setSignupRole("");
-    setPhone("");
-    setSignupStep("form");
 
     let cancelled = false;
     (async () => {
@@ -75,20 +53,14 @@ export default function AuthModal({
         const u = session.user;
         const { data: prof } = await supabase
           .from("user_profiles")
-          .select("full_name, phone, leadsmart_users(role)")
+          .select("full_name")
           .eq("user_id", u.id)
           .maybeSingle();
-        const row = prof as {
-          full_name?: string | null;
-          phone?: string | null;
-          leadsmart_users?: { role?: string | null } | null;
-        } | null;
+        const row = prof as { full_name?: string | null } | null;
         const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
         const metaName = fullNameFromUserMetadata(meta) ?? "";
-        const metaPhone = typeof meta.phone === "string" ? meta.phone.trim() : "";
         setEmail(u.email?.trim() ?? "");
         setFullName(row?.full_name?.trim() || metaName || "");
-        setPhone(formatUsPhoneInput(row?.phone?.trim() || metaPhone || ""));
       } catch (e) {
         console.error("[AuthModal] session prefill", e);
       }
@@ -152,62 +124,6 @@ export default function AuthModal({
     }
   }
 
-  function finishAndCloseAgentStartFree() {
-    setSignupStep("form");
-    onClose();
-    router.refresh?.();
-  }
-
-  /** After signup as agent — “Start free” upsell before entering the app. */
-  if (signupStep === "agentStartFree") {
-    const dashboardHref = resolveRoleHomePath("agent", false);
-    return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <button
-          type="button"
-          className="absolute inset-0 z-0 cursor-pointer border-0 bg-slate-900/40 p-0 backdrop-blur-sm"
-          aria-label="Close"
-          onClick={() => finishAndCloseAgentStartFree()}
-        />
-        <div
-          className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="agent-start-free-title"
-        >
-          <div className="border-b border-slate-200 bg-gradient-to-br from-blue-600 to-indigo-700 p-5 text-white">
-            <div id="agent-start-free-title" className="text-lg font-bold">
-              You&apos;re in — welcome, agent
-            </div>
-            <p className="mt-2 text-sm text-blue-100">
-              Your workspace is ready. Choose a plan to unlock CRM, AI tools, and your full pipeline.
-            </p>
-          </div>
-          <div className="space-y-3 p-5">
-            <a
-              href="/start-free/agent"
-              className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-              onClick={() => finishAndCloseAgentStartFree()}
-            >
-              Choose a plan
-            </a>
-            <button
-              type="button"
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-              onClick={() => {
-                finishAndCloseAgentStartFree();
-                router.push(dashboardHref);
-              }}
-            >
-              Go to dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -255,23 +171,12 @@ export default function AuthModal({
         return;
       }
 
-      if (isSignupRoleAssigned(signupRole)) {
-        const p = phone.trim();
-        if (!p) {
-          setError("Phone number is required when a role is selected.");
-          return;
-        }
-        if (!isValidUsPhone(p)) {
-          setError("Enter a valid US phone number (10 digits).");
-          return;
-        }
-      } else if (phone.trim() && !isValidUsPhone(phone)) {
-        setError("Phone must be a valid US number (10 digits) if provided.");
-        return;
-      }
-
-      const dbRole = signupRoleToDbRole(signupRole);
-      const phoneForProfile = phone.trim() ? formatUsPhoneStored(phone) : null;
+      // Signups from this modal are always consumers — agents sign up via
+      // the dedicated /agent-signup flow which captures license / brokerage
+      // / phone. The Role dropdown was removed to keep consumer conversion
+      // high (fewer fields).
+      const dbRole = "user";
+      const phoneForProfile: string | null = null;
 
       const { data, error: signUpErr } = await supabase.auth.signUp({
         email: email.trim(),
@@ -279,7 +184,6 @@ export default function AuthModal({
         options: {
           data: {
             full_name: fullName.trim(),
-            phone: phoneForProfile ?? undefined,
           },
         },
       });
@@ -329,14 +233,11 @@ export default function AuthModal({
 
       onAuthenticated?.();
 
-      // New agents: show “Start free” dialog before closing (email-confirm signups skip — no userId yet).
-      if (userId && dbRole === "agent") {
-        setSignupStep("agentStartFree");
-        router.refresh?.();
-        return;
-      }
-
-      if (userId && dbRole === "user") {
+      // Signups from this modal are always consumers (role="user") — the
+      // old "agentStartFree" branch lived here when the Role dropdown
+      // could flip this modal into an agent-signup flow. Agents now go
+      // through /agent-signup which has its own post-signup UX.
+      if (userId) {
         onClose();
         const {
           data: { session: s },
@@ -440,7 +341,7 @@ export default function AuthModal({
             {mode === "signup" ? (
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-slate-700">
-                  Name
+                  Name<span className="text-red-600"> *</span>
                 </label>
                 <input
                   value={fullName}
@@ -448,13 +349,14 @@ export default function AuthModal({
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Your name"
                   autoComplete="name"
+                  required
                 />
               </div>
             ) : null}
 
             <div className="space-y-1">
               <label className="block text-xs font-medium text-slate-700">
-                Email
+                Email{mode === "signup" ? <span className="text-red-600"> *</span> : null}
               </label>
               <input
                 type="email"
@@ -466,50 +368,15 @@ export default function AuthModal({
               />
             </div>
 
-            {mode === "signup" ? (
-              <>
-                <div className="space-y-1">
-                  <label className="block text-xs font-medium text-slate-700">
-                    Role
-                  </label>
-                  <select
-                    value={signupRole}
-                    onChange={(e) => setSignupRole(e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    aria-label="Role"
-                  >
-                    {SIGNUP_ROLE_OPTIONS.map((opt) => (
-                      <option key={opt.value || "none"} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-xs font-medium text-slate-700">
-                    Phone number
-                    {isSignupRoleAssigned(signupRole) ? (
-                      <span className="text-red-600"> *</span>
-                    ) : (
-                      <span className="font-normal text-slate-500"> (optional)</span>
-                    )}
-                  </label>
-                  <input
-                    type="tel"
-                    inputMode="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(formatUsPhoneInput(e.target.value))}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    autoComplete="tel"
-                    placeholder="(555) 555-5555"
-                    required={isSignupRoleAssigned(signupRole)}
-                  />
-                </div>
-              </>
-            ) : null}
+            {/* Role + Phone dropped from the signup modal — agents capture
+                those (and license / brokerage) via AgentSignupForm on the
+                dedicated /agent-signup path. Consumer signup stays minimal
+                (name / email / password) to protect conversion. */}
 
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-slate-700">Password</label>
+              <label className="block text-xs font-medium text-slate-700">
+                Password{mode === "signup" ? <span className="text-red-600"> *</span> : null}
+              </label>
               <input
                 type="password"
                 value={password}

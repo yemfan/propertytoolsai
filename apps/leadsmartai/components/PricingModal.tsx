@@ -19,10 +19,11 @@ const plans: {
   highlighted?: boolean;
 }[] = [
   {
+    // `key` stays "free" — internal plan_type identifier used across ~60 sites.
     key: "free",
-    title: "Free",
+    title: "Starter",
     price: "$0/mo",
-    subtitle: "Best for testing the workflow",
+    subtitle: "Limited functions and usages",
     features: [
       "CMA Reports: 2/day",
       "Lead Management: Limited",
@@ -31,7 +32,7 @@ const plans: {
       "Reports Download: Limited",
       "Team Access: No",
     ],
-    cta: "Get Started Free",
+    cta: "Get Started",
   },
   {
     key: "pro",

@@ -325,8 +325,7 @@ function ProfileMenu({
           )}
         </span>
         <span className="hidden min-w-0 flex-1 sm:block">
-          <span className="block truncate text-sm font-semibold text-slate-900">{name}</span>
-          <span className="block truncate text-xs text-slate-500">{email || "Signed in"}</span>
+          <span className="block truncate text-sm font-semibold text-slate-900">{name || email || "Account"}</span>
         </span>
         <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
       </button>

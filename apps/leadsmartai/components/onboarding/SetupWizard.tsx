@@ -1,6 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { ServiceAreasPicker } from "@/components/onboarding/ServiceAreasPicker";
+import {
+  serviceAreasToLegacyStrings,
+  type AgentServiceArea,
+} from "@/lib/geo/serviceArea";
 
 const STEPS = ["Service Areas", "Branding", "AI Assistant", "Notifications"] as const;
 
@@ -10,9 +15,8 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState<StepIndex>(0);
   const [saving, setSaving] = useState(false);
 
-  // Step 1: Service areas
-  const [areaInput, setAreaInput] = useState("");
-  const [areas, setAreas] = useState<string[]>([]);
+  // Step 1: Service areas — structured picks via state/county/city cascade.
+  const [areas, setAreas] = useState<AgentServiceArea[]>([]);
 
   // Step 2: Branding
   const [brandName, setBrandName] = useState("");
@@ -26,23 +30,17 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
   const [pushReminder, setPushReminder] = useState(true);
   const [pushMissedCall, setPushMissedCall] = useState(true);
 
-  const addArea = useCallback(() => {
-    const v = areaInput.trim();
-    if (v && !areas.includes(v)) {
-      setAreas((prev) => [...prev, v]);
-    }
-    setAreaInput("");
-  }, [areaInput, areas]);
-
-  const removeArea = (idx: number) => setAreas((prev) => prev.filter((_, i) => i !== idx));
-
   async function saveAndNext() {
     setSaving(true);
     try {
       const payload: Record<string, unknown> = {};
 
       if (step === 0) {
-        payload.service_areas = areas;
+        // Dual-write: structured v2 for the new matcher path + flattened
+        // legacy strings so anything still reading service_areas keeps
+        // working until fully migrated.
+        payload.service_areas_v2 = areas;
+        payload.service_areas = serviceAreasToLegacyStrings(areas);
       } else if (step === 1) {
         if (brandName.trim()) payload.brand_name = brandName.trim();
       } else if (step === 2) {
@@ -113,7 +111,7 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
             {STEPS[step]}
           </h2>
           <p className="text-sm text-gray-500 mb-6">
-            {step === 0 && "Add the zip codes or cities you serve so we can match you with local leads."}
+            {step === 0 && "Pick the state, county, and city you serve so we can match you with local leads. Check \u201Call cities\u201D if you cover the whole county."}
             {step === 1 && "Set your brand name so emails and reports carry your identity."}
             {step === 2 && "Configure how your AI assistant communicates with leads."}
             {step === 3 && "Choose which mobile push notifications you want to receive."}
@@ -121,39 +119,7 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
 
           {/* Step 1: Service Areas */}
           {step === 0 && (
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <input
-                  value={areaInput}
-                  onChange={(e) => setAreaInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addArea())}
-                  placeholder="Enter zip code or city name"
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
-                />
-                <button
-                  onClick={addArea}
-                  className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-                >
-                  Add
-                </button>
-              </div>
-              {areas.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {areas.map((a, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-medium text-blue-700"
-                    >
-                      {a}
-                      <button onClick={() => removeArea(i)} className="text-blue-400 hover:text-blue-600 ml-1">&times;</button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              {areas.length === 0 && (
-                <p className="text-xs text-gray-400">Example: 90210, Los Angeles, 77001</p>
-              )}
-            </div>
+            <ServiceAreasPicker value={areas} onChange={setAreas} disabled={saving} />
           )}
 
           {/* Step 2: Branding */}
