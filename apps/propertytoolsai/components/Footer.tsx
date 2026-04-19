@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+const LEADSMART_URL = process.env.NEXT_PUBLIC_LEADSMART_URL ?? "https://www.leadsmart-ai.com";
+
 const productLinks = [
   { label: "Mortgage Calculator", href: "/mortgage-calculator" },
   { label: "Home Value Estimator", href: "/home-value-estimator" },
@@ -37,7 +39,7 @@ export default function Footer() {
     <footer className="mt-16 border-t border-slate-200/80 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
       <div className="mx-auto max-w-6xl px-6 py-12 lg:py-16">
         {/* Main grid */}
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-5">
           {/* Product */}
           <div>
             <h3 className="text-sm font-semibold tracking-wide text-slate-900 dark:text-white">
@@ -111,6 +113,48 @@ export default function Footer() {
                   </Link>
                 </li>
               ))}
+            </ul>
+          </div>
+
+          {/* For Agents — LeadSmart cross-promo. Demoted here from a hero-
+              sized mid-page section per validation report UX-05 (the consumer
+              homepage shouldn't route consumers to the agent product as a
+              primary CTA). External link to a separate domain. */}
+          <div>
+            <h3 className="text-sm font-semibold tracking-wide text-slate-900 dark:text-white">
+              For Agents
+            </h3>
+            <ul className="mt-4 space-y-2.5">
+              <li>
+                <a
+                  href={LEADSMART_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-slate-600 transition-colors hover:text-[#0072ce] dark:text-slate-400 dark:hover:text-[#4da3e8]"
+                >
+                  LeadSmart AI
+                </a>
+              </li>
+              <li>
+                <a
+                  href={`${LEADSMART_URL}/pricing`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-slate-600 transition-colors hover:text-[#0072ce] dark:text-slate-400 dark:hover:text-[#4da3e8]"
+                >
+                  Pricing for agents
+                </a>
+              </li>
+              <li>
+                <a
+                  href={`${LEADSMART_URL}/signup`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-slate-600 transition-colors hover:text-[#0072ce] dark:text-slate-400 dark:hover:text-[#4da3e8]"
+                >
+                  Sign up as an agent
+                </a>
+              </li>
             </ul>
           </div>
         </div>

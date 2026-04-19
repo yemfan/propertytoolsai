@@ -3,7 +3,7 @@ import { listClusterGuideEntriesForSitemap } from "@/lib/clusterGenerator/db";
 import { listSerpHubEntriesForSitemap } from "@/lib/serpDominator/db";
 import { getProgrammaticSeoUrlPaths } from "@/lib/programmaticSeo";
 import { getSeoSitemapEntries } from "@/lib/seo-generator/sitemap";
-import { getKeywordPagesForCity, TRAFFIC_CITIES } from "@/lib/trafficSeo";
+import { TRAFFIC_CITIES } from "@/lib/trafficSeo";
 
 /**
  * `lastModified` and `changeFrequency` are intentionally omitted for routes
@@ -84,11 +84,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     `/sell-house/${c.slug}`,
     `/market-report/${c.slug}`,
   ]);
-  const keywordRoutes = TRAFFIC_CITIES.flatMap((c) => [
-    ...getKeywordPagesForCity("home-value", c.slug).map((k) => `/home-value/${c.slug}/${k.keywordSlug}`),
-    ...getKeywordPagesForCity("sell-house", c.slug).map((k) => `/sell-house/${c.slug}/${k.keywordSlug}`),
-    ...getKeywordPagesForCity("market-report", c.slug).map((k) => `/market-report/${c.slug}/${k.keywordSlug}`),
-  ]);
+  // Keyword-variant routes (home-value/[city]/[keyword], etc.) are now
+  // noindex-crawlable — they canonicalize to their parent /{tool}/{city}
+  // hub. They're intentionally excluded from the sitemap because
+  // submitting noindex URLs is contradictory and Google downweights
+  // sitemaps that mix indexable + noindex URLs. Validation report SEO-03.
 
   let programmaticCitySeo: MetadataRoute.Sitemap = [];
   try {
@@ -101,7 +101,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const pathEntries: MetadataRoute.Sitemap = [
     ...staticRoutes,
     ...seoRoutes,
-    ...keywordRoutes,
     ...programmaticToolLocationRoutes,
   ].map((path) => ({
     url: `${base}${path}`,

@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-
-const LEADSMART_URL = process.env.NEXT_PUBLIC_LEADSMART_URL ?? "https://www.leadsmart-ai.com";
 
 /* ── Scroll-triggered fade-in hook ── */
 function useScrollReveal() {
@@ -46,6 +45,62 @@ function Reveal({
     >
       {children}
     </Tag>
+  );
+}
+
+/**
+ * Hero address search — per validation report UX-01. The homepage historically
+ * led with a button-only CTA on a real-estate-domain URL, which failed the
+ * intent test for "homes for sale [city]" traffic. This input routes directly
+ * into /home-value pre-filled so the tool completes the intent the URL
+ * promises. The empty-submit path falls back to /home-value so users who
+ * don't know their ZIP still get to the tool.
+ */
+function HeroAddressSearch() {
+  const router = useRouter();
+  const [addr, setAddr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const trimmed = addr.trim();
+    setBusy(true);
+    const target = trimmed
+      ? `/home-value?address=${encodeURIComponent(trimmed)}`
+      : `/home-value`;
+    router.push(target);
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex w-full max-w-xl flex-col items-stretch gap-2 sm:flex-row"
+      role="search"
+      aria-label="Check home value by address"
+    >
+      <label htmlFor="hero-address" className="sr-only">
+        Enter address or ZIP to check home value
+      </label>
+      <input
+        id="hero-address"
+        name="address"
+        type="text"
+        inputMode="text"
+        autoComplete="street-address"
+        placeholder="Enter an address or ZIP code"
+        value={addr}
+        onChange={(e) => setAddr(e.target.value)}
+        className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-base text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-[#0072ce] focus:outline-none focus:ring-4 focus:ring-[#0072ce]/20"
+      />
+      <button
+        type="submit"
+        disabled={busy}
+        className="group relative inline-flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-r from-[#0072ce] to-[#4F46E5] px-7 py-4 text-base font-semibold text-white shadow-xl shadow-[#0072ce]/25 transition-all duration-300 hover:shadow-2xl hover:shadow-[#0072ce]/30 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#0072ce]/40 active:scale-[0.97] disabled:cursor-wait disabled:opacity-80"
+      >
+        <span className="relative z-10">{busy ? "Loading…" : "Check value — free"}</span>
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#005ca8] to-[#3730a3] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      </button>
+    </form>
   );
 }
 
@@ -443,13 +498,7 @@ export default function PropertyToolsHomePage() {
             AI calculators that give you <strong className="text-slate-900">real numbers</strong> — not ballpark guesses. Trusted by buyers, sellers, and investors making smarter decisions.
           </p>
           <div className="mt-10 flex flex-col items-center gap-4">
-            <Link
-              href="/home-value"
-              className="group relative rounded-2xl bg-gradient-to-r from-[#0072ce] to-[#4F46E5] px-8 py-4 text-base font-semibold text-white shadow-xl shadow-[#0072ce]/25 transition-all duration-300 hover:shadow-2xl hover:shadow-[#0072ce]/30 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#0072ce]/40 active:scale-[0.97]"
-            >
-              <span className="relative z-10">Check Your Home Value Free</span>
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#005ca8] to-[#3730a3] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-            </Link>
+            <HeroAddressSearch />
             <Link
               href="#tools"
               className="group inline-flex items-center gap-1 text-sm font-medium text-slate-600 underline-offset-4 transition-colors hover:text-[#0072ce] hover:underline focus-visible:outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-[#0072ce]/40"
@@ -631,66 +680,10 @@ export default function PropertyToolsHomePage() {
         </div>
       </section>
 
-      {/* ═══ CROSS-PROMO — LeadSmart AI ═══ */}
-      <section className="relative overflow-hidden bg-slate-50 px-4 py-16 md:px-6 md:py-20">
-        <div className="pointer-events-none absolute right-0 top-0 h-[300px] w-[300px] rounded-full opacity-[0.06] blur-[80px]" style={{ background: "#ff8c42" }} aria-hidden />
-        <div className="mx-auto grid max-w-5xl items-center gap-12 md:grid-cols-2">
-          <Reveal>
-            <div className="inline-flex rounded-full border border-orange-200/80 bg-orange-50 px-4 py-1.5 text-xs font-semibold text-orange-700">
-              For Real Estate Agents
-            </div>
-            <h2 className="mt-4 text-3xl font-extrabold leading-tight text-slate-900 md:text-4xl">
-              Turn Traffic into<br />Signed Clients
-            </h2>
-            <p className="mt-5 text-base leading-relaxed text-slate-600">
-              PropertyTools drives traffic. <strong className="text-slate-900">LeadSmart AI</strong> converts it into closed deals — instant AI follow-up, lead scoring, and automated nurture sequences.
-            </p>
-            <ul className="mt-6 space-y-3 text-sm text-slate-700">
-              {["AI responds to new leads in under 60 seconds", "Scores and prioritizes your hottest buyers", "Drip sequences that nurture until they're ready"].map((f) => (
-                <li key={f} className="flex items-center gap-3">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0072ce]/10">
-                    <svg className="h-3.5 w-3.5 text-[#0072ce]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  </div>
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <a href={LEADSMART_URL} target="_blank" rel="noopener noreferrer" className="group mt-8 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-7 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-slate-800 hover:shadow-lg active:scale-[0.97]">
-              See LeadSmart AI
-              <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-            </a>
-          </Reveal>
-          <Reveal delay={150}>
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xl shadow-slate-900/[0.06]">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                <div className="h-3 w-3 rounded-full bg-red-400" /><div className="h-3 w-3 rounded-full bg-amber-400" /><div className="h-3 w-3 rounded-full bg-emerald-400" />
-                <span className="ml-2 text-[10px] font-medium text-slate-400">LeadSmart AI Dashboard</span>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                {[
-                  { n: "94%", l: "Reply rate", color: "text-[#0072ce]" },
-                  { n: "< 60s", l: "First response", color: "text-emerald-600" },
-                  { n: "3x", l: "More tours booked", color: "text-[#4F46E5]" },
-                  { n: "$0", l: "Manual follow-up", color: "text-[#ff8c42]" },
-                ].map(({ n, l, color }) => (
-                  <div key={l} className="rounded-xl bg-slate-50 p-3.5 text-center transition-all duration-200 hover:bg-slate-100">
-                    <p className={`text-xl font-extrabold ${color}`}>{n}</p>
-                    <p className="mt-0.5 text-[10px] font-medium text-slate-500">{l}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4">
-                <div className="flex items-center justify-between text-[10px] font-medium text-slate-400">
-                  <span>Pipeline health</span><span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />Live</span>
-                </div>
-                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full w-[72%] rounded-full bg-gradient-to-r from-[#0072ce] to-[#4F46E5]" />
-                </div>
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
+      {/* LeadSmart cross-promo was previously a hero-sized section here.
+          Demoted to footer per validation report UX-05 — consumer homepage
+          shouldn't route consumers to the agent product as a primary CTA.
+          See components/Footer.tsx "For Agents" column. */}
 
       {/* ═══ SEO EXPLORE — city × tool grid ═══ */}
       <section className="border-y border-slate-200/70 bg-slate-50/60 px-4 py-16 md:px-6 md:py-20">
