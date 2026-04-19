@@ -34,6 +34,7 @@ export async function POST(
       subject?: unknown;
       note?: unknown;
       listings?: unknown;
+      suppressSignature?: unknown;
     };
 
     if (!Array.isArray(body.listings) || body.listings.length === 0) {
@@ -77,6 +78,7 @@ export async function POST(
       subject: typeof body.subject === "string" ? body.subject : "",
       note: typeof body.note === "string" ? body.note : "",
       listings,
+      suppressSignature: body.suppressSignature === true,
     });
     return NextResponse.json({ ok: true, recommendation: rec });
   } catch (e) {

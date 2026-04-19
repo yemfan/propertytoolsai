@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Send, Trash2, X } from "lucide-react";
+import { Eye, Send, Trash2, X } from "lucide-react";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 type ListingInput = {
   propertyId: string;
@@ -51,6 +52,15 @@ export default function SendRecommendationsButton({ contactId, contactFirstName 
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ ok?: true } | { error: string } | null>(null);
+  /** Per-send override — when true, the email sends without the agent's signature. */
+  const [suppressSignature, setSuppressSignature] = useState(false);
+  /** Cached signature preview HTML, fetched once the first time the user clicks Preview. */
+  const [signaturePreview, setSignaturePreview] = useState<
+    | { kind: "idle" }
+    | { kind: "loading" }
+    | { kind: "ready"; html: string }
+    | { kind: "error"; msg: string }
+  >({ kind: "idle" });
 
   useEffect(() => {
     if (!open) return;
@@ -94,6 +104,27 @@ export default function SendRecommendationsButton({ contactId, contactFirstName 
     });
   }
 
+  async function loadSignaturePreview() {
+    setSignaturePreview({ kind: "loading" });
+    try {
+      const res = await fetch("/api/dashboard/branding/preview");
+      const data = (await res.json()) as {
+        ok?: boolean;
+        signature?: { html: string };
+        error?: string;
+      };
+      if (!res.ok || !data.ok || !data.signature) {
+        throw new Error(data.error || "Preview failed");
+      }
+      setSignaturePreview({ kind: "ready", html: data.signature.html });
+    } catch (e) {
+      setSignaturePreview({
+        kind: "error",
+        msg: e instanceof Error ? e.message : "Preview failed",
+      });
+    }
+  }
+
   async function send() {
     if (picked.length === 0) return;
     setSending(true);
@@ -104,7 +135,7 @@ export default function SendRecommendationsButton({ contactId, contactFirstName 
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subject, note, listings: picked }),
+          body: JSON.stringify({ subject, note, listings: picked, suppressSignature }),
         },
       );
       const data = (await res.json()) as { ok?: boolean; error?: string };
@@ -266,6 +297,46 @@ export default function SendRecommendationsButton({ contactId, contactFirstName 
                   </ul>
                 </div>
               )}
+
+              {/* Signature control — per-send toggle + preview */}
+              <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="flex items-center gap-2 text-xs text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={!suppressSignature}
+                      onChange={(e) => setSuppressSignature(!e.target.checked)}
+                      className="h-3.5 w-3.5 accent-gray-900"
+                    />
+                    Include my email signature
+                  </label>
+                  <button
+                    type="button"
+                    onClick={loadSignaturePreview}
+                    disabled={
+                      suppressSignature || signaturePreview.kind === "loading"
+                    }
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  >
+                    <Eye className="h-3 w-3" aria-hidden />
+                    {signaturePreview.kind === "loading" ? "Loading…" : "Preview signature"}
+                  </button>
+                </div>
+                {!suppressSignature && signaturePreview.kind === "ready" && (
+                  <div
+                    className="mt-2 rounded border border-gray-200 bg-white p-3 text-xs text-gray-700"
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(signaturePreview.html) }}
+                  />
+                )}
+                {signaturePreview.kind === "error" && (
+                  <div className="mt-2 rounded border border-red-200 bg-red-50 p-1.5 text-[11px] text-red-700">
+                    {signaturePreview.msg}
+                  </div>
+                )}
+                <p className="mt-1.5 text-[10px] text-gray-500">
+                  Configure it under Account → Profile → Branding.
+                </p>
+              </div>
 
               {result && "error" in result && (
                 <div className="rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">

@@ -11,7 +11,7 @@ export async function GET() {
     const [agentRes, profileRes] = await Promise.all([
       supabase
         .from("agents")
-        .select("id, brand_name, signature_html, logo_url, brokerage, phone")
+        .select("id, brand_name, signature_html, logo_url, agent_photo_url, brokerage, phone")
         .eq("auth_user_id", userData.user.id)
         .maybeSingle(),
       supabaseAdmin
@@ -32,6 +32,7 @@ export async function GET() {
         brandName: (agent as Record<string, unknown>).brand_name ?? "",
         signatureHtml: (agent as Record<string, unknown>).signature_html ?? "",
         logoUrl: (agent as Record<string, unknown>).logo_url ?? "",
+        agentPhotoUrl: (agent as Record<string, unknown>).agent_photo_url ?? "",
       },
       profile: {
         fullName: profile?.full_name ?? "",
@@ -63,12 +64,14 @@ export async function PATCH(req: Request) {
       brandName?: string;
       signatureHtml?: string;
       logoUrl?: string;
+      agentPhotoUrl?: string;
     };
 
     const update: Record<string, unknown> = {};
     if (body.brandName !== undefined) update.brand_name = String(body.brandName).slice(0, 200);
     if (body.signatureHtml !== undefined) update.signature_html = String(body.signatureHtml).slice(0, 2000);
     if (body.logoUrl !== undefined) update.logo_url = String(body.logoUrl).slice(0, 500);
+    if (body.agentPhotoUrl !== undefined) update.agent_photo_url = String(body.agentPhotoUrl).slice(0, 500);
 
     if (!Object.keys(update).length) {
       return NextResponse.json({ ok: false, error: "No fields to update" }, { status: 400 });

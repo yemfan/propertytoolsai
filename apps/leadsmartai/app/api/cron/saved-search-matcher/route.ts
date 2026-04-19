@@ -165,6 +165,7 @@ export async function GET(req: Request) {
           savedSearchName: search.name,
           listings: newListings.slice(0, 5), // cap to 5 per email to keep it scannable
           publicBaseUrl: PUBLIC_BASE_URL,
+          agentId: search.agent_id,
         });
         emailsSent += 1;
       } catch (e) {
