@@ -4,7 +4,7 @@ const RELATED = [
   { href: "/mortgage-calculator", label: "Mortgage calculator" },
   { href: "/affordability-calculator", label: "Affordability calculator" },
   { href: "/ai-property-comparison", label: "AI property comparison" },
-  { href: "/rent-vs-buy-calculator", label: "Rent vs buy calculator" },
+  { href: "/rent-vs-buy", label: "Rent vs buy calculator" },
   { href: "/refinance-calculator", label: "Refinance calculator" },
 ] as const;
 

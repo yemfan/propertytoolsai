@@ -384,7 +384,7 @@ export default function RentVsBuyDecisionGuidePage() {
         </p>
         <div className="flex flex-wrap gap-3 mb-4">
           <Link
-            href="/rent-vs-buy-calculator"
+            href="/rent-vs-buy"
             className="inline-flex items-center px-4 py-2 rounded-md text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700"
           >
             Calculate Rent vs Buy

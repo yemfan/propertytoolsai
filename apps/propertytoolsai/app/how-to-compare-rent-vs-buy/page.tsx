@@ -50,7 +50,7 @@ export default function HowToCompareRentVsBuyPage() {
         <p>
           The{" "}
           <Link
-            href="/rent-vs-buy-calculator"
+            href="/rent-vs-buy"
             className="text-blue-600 hover:text-blue-700 font-semibold"
           >
             Rent vs Buy Calculator
@@ -118,7 +118,7 @@ export default function HowToCompareRentVsBuyPage() {
         </p>
         <div className="flex flex-wrap gap-3">
           <Link
-            href="/rent-vs-buy-calculator"
+            href="/rent-vs-buy"
             className="inline-flex items-center px-4 py-2 rounded-md text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700"
           >
             Open Rent vs Buy Calculator

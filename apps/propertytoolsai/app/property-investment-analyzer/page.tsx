@@ -295,7 +295,7 @@ export default function PropertyInvestmentAnalyzer() {
             <Link href="/roi-calculator" className="text-blue-600 underline">
               ROI Calculator
             </Link>
-            <Link href="/rent-vs-buy-calculator" className="text-blue-600 underline">
+            <Link href="/rent-vs-buy" className="text-blue-600 underline">
               Rent vs Buy Calculator
             </Link>
           </div>

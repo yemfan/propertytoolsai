@@ -278,7 +278,7 @@ export default function AffordabilityCalculator() {
             <Link href="/down-payment-calculator" className="text-blue-600 underline">
               Down Payment Calculator
             </Link>
-            <Link href="/rent-vs-buy-calculator" className="text-blue-600 underline">
+            <Link href="/rent-vs-buy" className="text-blue-600 underline">
               Rent vs Buy Calculator
             </Link>
             <Link href="/cash-flow-calculator" className="text-blue-600 underline">

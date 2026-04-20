@@ -1,10 +1,11 @@
 import Link from "next/link";
+import PropertyToolsLogo from "@/components/brand/PropertyToolsLogo";
 
 const LEADSMART_URL = process.env.NEXT_PUBLIC_LEADSMART_URL ?? "https://www.leadsmart-ai.com";
 
 const productLinks = [
   { label: "Mortgage Calculator", href: "/mortgage-calculator" },
-  { label: "Home Value Estimator", href: "/home-value-estimator" },
+  { label: "Home Value Estimator", href: "/home-value" },
   { label: "Cap Rate Calculator", href: "/cap-rate-calculator" },
   { label: "Affordability Calculator", href: "/affordability-calculator" },
   { label: "AI Deal Analyzer", href: "/ai-real-estate-deal-analyzer" },
@@ -23,7 +24,7 @@ const resourceLinks = [
   { label: "Down Payment Calculator", href: "/down-payment-calculator" },
   { label: "Cash Flow Calculator", href: "/cash-flow-calculator" },
   { label: "ROI Calculator", href: "/roi-calculator" },
-  { label: "Rent vs Buy", href: "/rent-vs-buy-calculator" },
+  { label: "Rent vs Buy", href: "/rent-vs-buy" },
   { label: "Closing Cost Estimator", href: "/closing-cost-estimator" },
 ];
 
@@ -161,19 +162,16 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-200/80 pt-8 sm:flex-row dark:border-slate-800">
-          {/* Brand */}
+          {/* Brand — single horizontal lockup (TOM BF-021: the previous
+              "PT" monogram stacked with the wordmark read as two logos).
+              Tagline moved next to the lockup as a single visual unit. */}
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0072ce] text-xs font-bold text-white">
-              PT
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                PropertyTools AI
-              </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                Smarter real estate decisions, powered by AI.
-              </span>
-            </div>
+            <Link href="/" aria-label="PropertyTools AI home" className="inline-flex">
+              <PropertyToolsLogo compact />
+            </Link>
+            <span className="hidden text-xs text-slate-500 sm:inline dark:text-slate-400">
+              Smarter real estate decisions, powered by AI.
+            </span>
           </div>
 
           <p className="text-sm text-slate-600 dark:text-slate-400">

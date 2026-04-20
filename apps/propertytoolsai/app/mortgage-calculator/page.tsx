@@ -327,7 +327,7 @@ export default function MortgageCalculator() {
               It helps you set realistic expectations and focus on homes that fit your budget. To
               compare owning versus renting, you can also use our{" "}
               <Link
-                href="/rent-vs-buy-calculator"
+                href="/rent-vs-buy"
                 className="text-blue-600 hover:underline"
               >
                 Rent vs Buy Calculator
@@ -361,7 +361,7 @@ export default function MortgageCalculator() {
               Refinance Calculator
             </Link>
             <Link
-              href="/rent-vs-buy-calculator"
+              href="/rent-vs-buy"
               className="block rounded-lg border border-gray-200 bg-white px-3 py-2 text-center text-sm font-medium text-blue-600 hover:border-blue-400 hover:bg-blue-50"
             >
               Rent vs Buy Calculator

@@ -31,7 +31,7 @@ const tools = [
   {
     title: "Rent vs Buy",
     description: "Model the long-term impact of ownership vs renting.",
-    href: "/rent-vs-buy-calculator",
+    href: "/rent-vs-buy",
   },
 ];
 
