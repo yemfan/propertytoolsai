@@ -11,7 +11,7 @@ import { test, expect, type Page } from "@playwright/test";
  * Calculators in scope (all client-side, pure math, no API):
  *   1. /mortgage-calculator
  *   2. /affordability-calculator
- *   3. /rent-vs-buy-calculator
+ *   3. /rent-vs-buy
  *   4. /cap-rate-calculator
  *   5. /roi-calculator
  *
@@ -109,19 +109,19 @@ test.describe("Affordability calculator", () => {
 });
 
 // ============================================================
-// Rent vs buy — /rent-vs-buy-calculator
+// Rent vs buy — /rent-vs-buy
 // ============================================================
 
 test.describe("Rent vs Buy calculator", () => {
   test("loads and renders a recommendation", async ({ page }) => {
-    await page.goto("/rent-vs-buy-calculator");
+    await page.goto("/rent-vs-buy");
     await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
     // Should mention one of the two options in the result surface.
     await expect(page.locator("body")).toContainText(/(rent|buy|own)/i);
   });
 
   test("pushing home price very high flips toward renting", async ({ page }) => {
-    await page.goto("/rent-vs-buy-calculator");
+    await page.goto("/rent-vs-buy");
     await fillByLabel(page, "Home price ($)", 2000000);
     // Any recommendation text containing "rent" or a negative savings value
     // is acceptable — we're not asserting an exact copy string.

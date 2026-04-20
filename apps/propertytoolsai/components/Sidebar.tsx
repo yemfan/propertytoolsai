@@ -48,7 +48,7 @@ export default function Sidebar() {
         </Link>
 
         <Link
-          href="/rent-vs-buy-calculator"
+          href="/rent-vs-buy"
           className="block px-3 py-2 rounded-lg hover:bg-gray-100"
         >
           Rent vs Buy Calculator
@@ -104,7 +104,7 @@ export default function Sidebar() {
         </Link>
 
         <Link
-          href="/home-value-estimator"
+          href="/home-value"
           className="block px-3 py-2 rounded-lg hover:bg-gray-100"
         >
           Home Value Estimator

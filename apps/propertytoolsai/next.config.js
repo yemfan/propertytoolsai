@@ -39,7 +39,11 @@ const nextConfig = {
       },
       { source: "/rent-estimator", destination: "/rental-property-analyzer", permanent: false },
       { source: "/roi-cash-flow", destination: "/cash-flow-calculator", permanent: false },
-      { source: "/rent-vs-buy", destination: "/rent-vs-buy-calculator", permanent: false },
+      // TOM BF-022: canonicalize on the shorter /rent-vs-buy path. The app
+      // dir was renamed from rent-vs-buy-calculator → rent-vs-buy so the
+      // canonical now returns 200; the longer path 308-redirects to it.
+      // Permanent so accumulated SEO equity transfers.
+      { source: "/rent-vs-buy-calculator", destination: "/rent-vs-buy", permanent: true },
       {
         source: "/ai-recommended-properties",
         destination: "/serp-hub",

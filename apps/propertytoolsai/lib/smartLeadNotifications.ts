@@ -284,10 +284,10 @@ export async function notifyLeadsForPropertyEvent(params: {
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL || "";
   const link = origin
-    ? `${origin}/home-value-estimator?address=${encodeURIComponent(
+    ? `${origin}/home-value?address=${encodeURIComponent(
         params.propertyAddress
       )}`
-    : `/home-value-estimator?address=${encodeURIComponent(params.propertyAddress)}`;
+    : `/home-value?address=${encodeURIComponent(params.propertyAddress)}`;
 
   // Load existing property coordinates + prices so we can decide which notification is the "best match".
   const existingPropertyIds = Array.from(

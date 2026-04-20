@@ -17,10 +17,10 @@ export const PROGRAMMATIC_SEO_TOOLS: ProgrammaticSeoTool[] = [
     name: "Mortgage Calculator",
     category: "Financing",
     tagline: "Monthly payment estimates with taxes and insurance context.",
-    relatedSlugs: ["affordability-calculator", "refinance-calculator", "rent-vs-buy-calculator", "down-payment-calculator"],
+    relatedSlugs: ["affordability-calculator", "refinance-calculator", "rent-vs-buy", "down-payment-calculator"],
   },
   {
-    slug: "rent-vs-buy-calculator",
+    slug: "rent-vs-buy",
     name: "Rent vs Buy Calculator",
     category: "Financing",
     tagline: "Compare renting versus buying with total-cost framing.",
@@ -59,14 +59,14 @@ export const PROGRAMMATIC_SEO_TOOLS: ProgrammaticSeoTool[] = [
     name: "Closing Cost Estimator",
     category: "Financing",
     tagline: "Ballpark closing costs for buyers and sellers.",
-    relatedSlugs: ["mortgage-calculator", "down-payment-calculator", "rent-vs-buy-calculator"],
+    relatedSlugs: ["mortgage-calculator", "down-payment-calculator", "rent-vs-buy"],
   },
   {
     slug: "affordability-calculator",
     name: "Affordability Calculator",
     category: "Financing",
     tagline: "How much house you may afford based on income and debts.",
-    relatedSlugs: ["mortgage-calculator", "down-payment-calculator", "rent-vs-buy-calculator"],
+    relatedSlugs: ["mortgage-calculator", "down-payment-calculator", "rent-vs-buy"],
   },
   {
     slug: "adjustable-rate-calculator",
@@ -129,7 +129,7 @@ export const PROGRAMMATIC_SEO_TOOLS: ProgrammaticSeoTool[] = [
     name: "AI Property Comparison",
     category: "AI Tools",
     tagline: "Side-by-side property comparison with AI summary.",
-    relatedSlugs: ["ai-cma-analyzer", "smart-cma-builder", "rent-vs-buy-calculator"],
+    relatedSlugs: ["ai-cma-analyzer", "smart-cma-builder", "rent-vs-buy"],
   },
 ];
 

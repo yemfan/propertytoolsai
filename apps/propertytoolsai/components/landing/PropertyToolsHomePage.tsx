@@ -306,7 +306,7 @@ const tools: ToolCard[] = [
   {
     title: "Rent vs Buy Calculator",
     description: "Compare total cost of renting vs buying over 5, 10, or 20 years. See which builds more wealth.",
-    href: "/rent-vs-buy-calculator",
+    href: "/rent-vs-buy",
     accent: "rose",
   },
 ];
@@ -457,9 +457,11 @@ const EXPLORE_CITIES = [
 ] as const;
 
 const EXPLORE_TOOLS = [
-  { label: "Home Value", seoSlug: "home-value-estimator" },
+  // Canonical slugs per TOM BF-022 — match the actual app directory names so
+  // programmatic SEO pages land on 200s instead of hitting a redirect hop.
+  { label: "Home Value", seoSlug: "home-value" },
   { label: "Mortgage", seoSlug: "mortgage-calculator" },
-  { label: "Rent vs Buy", seoSlug: "rent-vs-buy-calculator" },
+  { label: "Rent vs Buy", seoSlug: "rent-vs-buy" },
 ] as const;
 
 export default function PropertyToolsHomePage() {
@@ -653,6 +655,10 @@ export default function PropertyToolsHomePage() {
                   <h3 className="font-heading text-lg font-bold">{plan.name}</h3>
                   <div className="mt-2 flex items-baseline gap-1">
                     <span className="text-4xl font-extrabold text-slate-900">{plan.price}</span>
+                    {/* TOM BF-020: explicit text-node space so "$0 forever"
+                        stays legible when copy-pasted (gap-1 alone gives
+                        visual spacing but zero character content). */}
+                    {" "}
                     <span className="text-sm text-slate-500">{plan.period}</span>
                   </div>
                   <p className="mt-2 text-sm text-slate-500">{plan.description}</p>

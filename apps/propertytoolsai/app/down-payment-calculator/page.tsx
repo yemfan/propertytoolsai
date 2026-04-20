@@ -225,7 +225,7 @@ export default function DownPaymentCalculator() {
             These programs may involve mortgage insurance or slightly higher rates, which this
             calculator helps you factor into your monthly payment. You can compare those payments
             against renting using our{" "}
-            <Link href="/rent-vs-buy-calculator" className="text-blue-600 underline">
+            <Link href="/rent-vs-buy" className="text-blue-600 underline">
               Rent vs Buy Calculator
             </Link>
             .
@@ -278,7 +278,7 @@ export default function DownPaymentCalculator() {
             <Link href="/closing-cost-estimator" className="text-blue-600 underline">
               Closing Cost Estimator
             </Link>
-            <Link href="/rent-vs-buy-calculator" className="text-blue-600 underline">
+            <Link href="/rent-vs-buy" className="text-blue-600 underline">
               Rent vs Buy Calculator
             </Link>
           </div>

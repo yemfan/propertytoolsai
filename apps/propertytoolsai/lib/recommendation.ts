@@ -14,7 +14,7 @@ const ACTIONS: Omit<RecommendedAction, "priority" | "reason">[] = [
   { id: "mortgage", title: "Mortgage Calculator", href: "/mortgage-calculator" },
   { id: "home_value", title: "Home Value Estimator", href: "/home-value" },
   { id: "cap_rate", title: "Cap Rate Calculator", href: "/cap-rate-calculator" },
-  { id: "rent_vs_buy", title: "Rent vs Buy", href: "/rent-vs-buy-calculator" },
+  { id: "rent_vs_buy", title: "Rent vs Buy", href: "/rent-vs-buy" },
   { id: "deal", title: "AI Deal Analyzer", href: "/ai-real-estate-deal-analyzer" },
   { id: "expert", title: "Talk pricing with an expert", href: "/contact" },
 ];
@@ -90,7 +90,7 @@ export function getNextBestActions(profile: UserProfile): RecommendedAction[] {
     base(
       "rent_vs_buy",
       "Rent vs Buy",
-      "/rent-vs-buy-calculator",
+      "/rent-vs-buy",
       78,
       "Clarify buy vs. rent for your timeline."
     );

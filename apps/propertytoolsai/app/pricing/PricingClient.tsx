@@ -530,56 +530,61 @@ export default function PricingClient() {
         ))}
       </section>
 
-      {/* Dynamic usage / upgrade hooks */}
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card className="p-4">
-          <div className="text-sm font-semibold text-slate-900">Lead usage</div>
-          <div className="mt-2 text-xs text-slate-700">
-            {leadUsage
-              ? leadUsage.limit == null
-                ? `Leads: ${leadUsage.count} / Unlimited`
-                : `Leads: ${leadUsage.count} / ${leadUsage.limit}`
-              : "Leads: —"}
-          </div>
-          {leadUsage && leadUsage.limit != null ? (
-            <>
-              <div className="mt-2 h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  className={`h-full ${leadsPct >= 100 ? "bg-red-500" : leadsPct >= 90 ? "bg-amber-500" : "bg-emerald-500"}`}
-                  style={{ width: `${leadsPct}%` }}
-                />
-              </div>
-              {leadsPct >= 90 && leadsPct < 100 ? (
-                <div className="mt-2 text-xs font-semibold text-amber-700">
-                  You’re close to your lead limit
+      {/* Dynamic usage / upgrade hooks — only meaningful once authenticated
+          (TOM BF-023). When logged out the card labels dangle with "—"
+          values that confuse anonymous visitors. Leave the full auth gate
+          here rather than inside each Card so the whole grid collapses. */}
+      {loggedIn ? (
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Card className="p-4">
+            <div className="text-sm font-semibold text-slate-900">Lead usage</div>
+            <div className="mt-2 text-xs text-slate-700">
+              {leadUsage
+                ? leadUsage.limit == null
+                  ? `${leadUsage.count} / Unlimited`
+                  : `${leadUsage.count} / ${leadUsage.limit}`
+                : "—"}
+            </div>
+            {leadUsage && leadUsage.limit != null ? (
+              <>
+                <div className="mt-2 h-2 rounded-full bg-slate-100 overflow-hidden">
+                  <div
+                    className={`h-full ${leadsPct >= 100 ? "bg-red-500" : leadsPct >= 90 ? "bg-amber-500" : "bg-emerald-500"}`}
+                    style={{ width: `${leadsPct}%` }}
+                  />
                 </div>
-              ) : null}
-              {leadsPct >= 100 ? (
-                <div className="mt-2 text-xs text-red-700 font-semibold">
-                  You’ve reached your CMA or Lead limit. Upgrade to Premium for unlimited access.
-                </div>
-              ) : null}
-            </>
-          ) : null}
-        </Card>
+                {leadsPct >= 90 && leadsPct < 100 ? (
+                  <div className="mt-2 text-xs font-semibold text-amber-700">
+                    You’re close to your lead limit
+                  </div>
+                ) : null}
+                {leadsPct >= 100 ? (
+                  <div className="mt-2 text-xs text-red-700 font-semibold">
+                    You’ve reached your CMA or Lead limit. Upgrade to Premium for unlimited access.
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+          </Card>
 
-        <Card className="p-4">
-          <div className="text-sm font-semibold text-slate-900">CMA usage</div>
-          <div className="mt-2 text-xs text-slate-700">
-            {cmaUsage ? `You have used ${cmaUsage.used}/${cmaUsage.limit} CMA reports today` : "CMA usage: —"}
-          </div>
-          {cmaUsage?.warning && !cmaUsage.reached ? (
-            <div className="mt-2 text-xs text-amber-700 font-semibold">
-              ⚠️ You’re almost out of free CMA reports
+          <Card className="p-4">
+            <div className="text-sm font-semibold text-slate-900">CMA usage</div>
+            <div className="mt-2 text-xs text-slate-700">
+              {cmaUsage ? `You have used ${cmaUsage.used}/${cmaUsage.limit} CMA reports today` : "—"}
             </div>
-          ) : null}
-          {cmaUsage?.reached ? (
-            <div className="mt-2 text-xs text-red-700 font-semibold">
-              You’ve reached your CMA or Lead limit. Upgrade to Premium for unlimited access.
-            </div>
-          ) : null}
-        </Card>
-      </section>
+            {cmaUsage?.warning && !cmaUsage.reached ? (
+              <div className="mt-2 text-xs text-amber-700 font-semibold">
+                ⚠️ You’re almost out of free CMA reports
+              </div>
+            ) : null}
+            {cmaUsage?.reached ? (
+              <div className="mt-2 text-xs text-red-700 font-semibold">
+                You’ve reached your CMA or Lead limit. Upgrade to Premium for unlimited access.
+              </div>
+            ) : null}
+          </Card>
+        </section>
+      ) : null}
 
       {/* Pricing table */}
       <section id="plans" className="grid grid-cols-1 gap-6 md:grid-cols-2">
