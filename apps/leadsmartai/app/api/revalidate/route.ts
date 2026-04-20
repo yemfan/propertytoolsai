@@ -23,7 +23,11 @@
 
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { parseRevalidateBody, secretsMatch } from "@/lib/revalidate/validatePaths";
+import {
+  parseRevalidateBody,
+  RevalidateValidationError,
+  secretsMatch,
+} from "@/lib/revalidate/validatePaths";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -54,15 +58,20 @@ export async function POST(req: Request) {
     );
   }
 
-  const parsed = parseRevalidateBody(body);
-  if (!parsed.ok) {
-    return NextResponse.json({ ok: false, error: parsed.error }, { status: parsed.status });
+  let paths: string[];
+  try {
+    paths = parseRevalidateBody(body);
+  } catch (err) {
+    if (err instanceof RevalidateValidationError) {
+      return NextResponse.json({ ok: false, error: err.message }, { status: err.status });
+    }
+    throw err;
   }
 
   const revalidated: string[] = [];
   const failed: { path: string; error: string }[] = [];
 
-  for (const path of parsed.paths) {
+  for (const path of paths) {
     try {
       revalidatePath(path);
       revalidated.push(path);
