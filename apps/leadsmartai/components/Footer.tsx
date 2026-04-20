@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CookieSettingsLink } from "@/components/cookie-consent/CookieConsent";
+import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
 
 const productLinks = [
   { label: "Lead Management", href: "/dashboard" },
@@ -121,15 +122,11 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-200/80 pt-8 sm:flex-row dark:border-slate-800">
-          {/* Brand */}
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0072ce] text-xs font-bold text-white">
-              LS
-            </div>
-            <span className="text-sm font-semibold text-slate-900 dark:text-white">
-              LeadSmart AI
-            </span>
-          </div>
+          {/* Brand — single horizontal lockup (TOM MN-002: the previous
+              monogram-box + separate wordmark read as two logos). */}
+          <Link href="/" aria-label="LeadSmart AI home" className="inline-flex">
+            <LeadSmartLogo compact priority={false} className="max-h-9" />
+          </Link>
 
           <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500">
             <CookieSettingsLink className="hover:text-[#0072ce] hover:underline dark:hover:text-[#4da3e8]" />
