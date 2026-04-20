@@ -6,29 +6,26 @@ import JsonLd from "@/components/JsonLd";
 /**
  * /methodology — valuation-method disclosure, per validation report UX-02.
  *
- * The report flagged that PropertyToolsAI's home value estimate ships with no
- * public attribution to data sources or accuracy characteristics. That's a
- * trust exposure: Zestimate publishes ~1.83% on-market MAE and Redfin
- * Estimate ~1.95% MAE with methodology pages linked from every listing.
+ * Content principle: every claim on this page must match what the
+ * estimate pipeline actually does (see lib/homeValue/runEstimate.ts and
+ * lib/homeValue/confidenceEngine.ts). If the code doesn't do a thing,
+ * the page doesn't claim it. Per-market MAE numbers are left for later
+ * rather than fabricated; the "On the roadmap" section tells users why.
  *
- * [NEEDS DATA-SCIENCE INPUT] Several specifics on this page are written as
- * "under development" placeholders — flagged in comments. Before this page
- * ships to production in its final form, DS owner must provide:
- *   - Exact data sources + provider names (public records vendor, MLS feed
- *     if any, deed recorders)
- *   - Median Absolute Error by market + property type (at minimum top-20
- *     MSAs × [single-family, condo, townhome])
- *   - Confidence-interval methodology (quantile regression? bootstrap?)
- *   - Update cadence (AVM refresh frequency, comp freshness cutoff)
- *   - Model type (gradient-boost? neural? hybrid?) at whatever level of
- *     detail product is comfortable disclosing
+ * Things the code actually does today that this page describes:
+ *   - Rentcast AVM + weighted-comp PPSF + optional trained ML (lib/homeValue/runEstimate.ts)
+ *   - 4-pillar confidence score → formula-derived band (lib/homeValue/confidenceEngine.ts)
+ *   - Estimate-vs-sale accuracy tracking (api/admin/valuation/accuracy)
  *
- * Shipping even the placeholder version is better than silence because:
- *  1. It's a surface for any future accuracy challenge to point at
- *  2. It documents the known limitations (new construction, rural, unique
- *     architecture) honestly up front
- *  3. The FAQPage JSON-LD unlocks rich results for "how accurate is
- *     propertytoolsai" / "home value estimate accuracy" queries
+ * Things we don't yet do and this page doesn't claim:
+ *   - Automated rolling 90-day calibration refresh (infrastructure exists,
+ *     not cron'd)
+ *   - Per-market MAE publication (sample not yet statistically stable)
+ *   - Independent third-party validation benchmark
+ *
+ * If the DS pipeline changes (e.g. primary model flips from Rentcast AVM
+ * to a fully-trained ensemble), this page must be updated — the content
+ * is not generic marketing copy, it's a factual disclosure.
  */
 
 export const metadata: Metadata = {
@@ -57,7 +54,7 @@ const FAQ = [
   },
   {
     q: "How accurate is a PropertyTools AI home value estimate?",
-    a: "Accuracy varies meaningfully by market, property type, and data freshness. Typical-case error is competitive with public AVMs (Zestimate and Redfin Estimate both publish on-market MAE in the 1.8–2.0% range), but edge cases — new construction, rural markets, unique architecture, recent renovation — can produce larger errors. Market-specific error numbers are in development and will publish here once a rolling-90-day sample is statistically stable.",
+    a: "Accuracy varies meaningfully by market, property type, and data freshness. The primary signal behind our estimate is a licensed professional AVM used by mortgage lenders and title insurers — accuracy is in the same ballpark as public AVMs like Zestimate and Redfin Estimate (both around 1.8–2.0% on-market MAE). Edge cases — new construction, rural markets, unique architecture, recent renovations not yet in public records — can produce larger errors. We'll publish our own per-market MAE here when the sample size makes the numbers stable, rather than posting a plausible-looking figure now.",
   },
   {
     q: "How often is the estimate updated?",
@@ -69,7 +66,7 @@ const FAQ = [
   },
   {
     q: "What if my estimate is wrong?",
-    a: "Report it. We track flagged estimates, feed corrections back into our calibration pipeline, and surface known-bad estimates with a warning flag. See the \u201CReport a bad estimate\u201D section below.",
+    a: "Report it. Every estimate ships with a confidence indicator and a range; the range is intentionally wider when our input quality is lower. When a report comes in, it feeds into the calibration data we track post-sale, which tunes market-specific adjustment factors over time.",
   },
   {
     q: "Do you train AI models on user-submitted data?",
@@ -117,8 +114,8 @@ export default function MethodologyPage() {
           </p>
           <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs text-amber-900">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
-            Methodology documentation is in active development — see &ldquo;What&apos;s still being
-            validated&rdquo; below.
+            Accuracy metrics will be published once the sample is statistically stable — see
+            &ldquo;On the roadmap&rdquo; below.
           </div>
         </div>
       </section>
@@ -177,10 +174,9 @@ export default function MethodologyPage() {
             />
           </div>
           <p className="mt-6 text-sm text-slate-500">
-            {/* [NEEDS DATA-SCIENCE INPUT] Replace the vendor-agnostic descriptions with
-                specific provider names once legal + product approve disclosure. */}
-            Specific data providers are listed in our vendor-disclosure document (available on
-            request).
+            Named vendor disclosures (AVM provider, walk-score source, flood-zone source, school
+            ratings source) are available on request — we route those through a formal disclosure
+            document so the list stays accurate as we switch providers.
           </p>
         </div>
       </section>
@@ -188,24 +184,48 @@ export default function MethodologyPage() {
       {/* Model approach */}
       <section className="px-6 py-20">
         <div className="mx-auto max-w-3xl">
-          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">How the model works</h2>
+          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">How the estimate is produced</h2>
           <div className="mt-8 space-y-5 text-lg leading-relaxed text-slate-700">
             <p>
-              The estimate is produced by a calibrated ensemble: a gradient-boosted model trained on
-              historical sales informs the central estimate, and a comparable-sales adjustment
-              refines it using the five to twenty most-similar recent sales within the same market.
+              Each estimate is a blend of up to three signals, weighted by how trustworthy each one
+              is for the specific address:
+            </p>
+            <ol className="ml-6 list-decimal space-y-3">
+              <li>
+                A licensed professional AVM (Automated Valuation Model) that produces a central
+                point estimate from public records, tax assessments, and recent sales nationwide.
+                This is the dominant signal — typically 85–100% of the blended weight — when comp
+                coverage is good.
+              </li>
+              <li>
+                A comparable-sales calculation: we pull the most similar recent sales within the
+                same market, normalize to price-per-square-foot, and weight them by recency,
+                proximity, and how closely the comp matches the subject property on beds, baths,
+                lot, and age. This layer is where the estimate gets adjusted for the things the
+                national AVM misses — local condition, recent renovations, micro-market pricing.
+              </li>
+              <li>
+                When available, a trained machine-learning model fitted on our own history of
+                estimate/actual-sale pairs. This is a secondary signal, capped at roughly 15% of
+                the blend, and only contributes when we have enough coverage in the target market
+                for the model to be calibrated.
+              </li>
+            </ol>
+            <p>
+              The confidence range you see next to the estimate is not a guess — it&apos;s computed
+              from a four-pillar confidence score: <strong>address quality</strong> (did we resolve
+              a specific parcel or a rough centroid?), <strong>detail completeness</strong>{" "}
+              (did you provide beds / baths / sqft, or did we fall back on tax records?),{" "}
+              <strong>comparable coverage</strong> (how many usable comps within 0.5 miles in the
+              last 12 months?), and <strong>market stability</strong> (is the local market moving
+              fast or slowly?). Each pillar contributes 0–25 points. High-confidence properties get
+              tight bands (±4.5%); low-confidence ones get wider bands (up to ±12%).
             </p>
             <p>
-              The confidence range you see is not a guess — it&apos;s a quantile estimate. The upper
-              and lower bounds are the points at which 80% of historical predictions on similar
-              properties fell inside the band. Properties with thin comp coverage or recent major
-              renovations produce wider bands; properties in dense, active markets produce
-              narrower ones.
-            </p>
-            <p>
-              We re-calibrate against observed outcomes on a rolling 90-day window. When a property
-              sells, we measure our pre-sale estimate against the recorded sale price and feed that
-              error back into market-specific adjustment factors.
+              Post-sale, we track the gap between our estimate and the recorded sale price and
+              feed that error back into market-specific adjustment factors. The calibration
+              infrastructure is in place; automated rolling refreshes are on the roadmap rather
+              than the release train today.
             </p>
           </div>
         </div>
@@ -217,9 +237,10 @@ export default function MethodologyPage() {
           <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Accuracy &amp; limits</h2>
           <p className="mt-4 max-w-3xl text-slate-300">
             Public AVMs benchmark their accuracy with Median Absolute Error — the middle of the
-            error distribution on recent sales. We&apos;re in the process of publishing our own
-            per-market MAE on a rolling basis. In the meantime, here&apos;s what we know about where
-            our estimate is most and least reliable.
+            error distribution on recent sales. We&apos;ll publish our own per-market MAE when the
+            sample is large enough for the numbers to be stable, rather than putting an unstable
+            figure on the page. What we can tell you today is where the estimate is structurally
+            most and least reliable.
           </p>
 
           <div className="mt-10 grid gap-6 md:grid-cols-2">
@@ -247,13 +268,22 @@ export default function MethodologyPage() {
 
           <div className="mt-8 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-6">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-200">
-              What&apos;s still being validated
+              On the roadmap
             </h3>
-            {/* [NEEDS DATA-SCIENCE INPUT] These placeholders stay until we have the numbers. */}
+            <p className="mt-3 text-sm text-amber-100/90">
+              We&apos;re deliberate about what we publish here. Accuracy numbers are only useful
+              when they&apos;re honest, recent, and cut by the dimensions that matter — which means
+              waiting until we have enough sale-to-estimate pairs for the statistics to stabilize
+              rather than putting a plausible-looking number on the page.
+            </p>
             <ul className="mt-3 space-y-2 text-sm text-amber-100/90">
-              <Li>Per-market MAE tables (top-20 MSAs × property type) — publishing Q3 2026</Li>
-              <Li>Quarterly accuracy dashboard — publishing Q3 2026</Li>
-              <Li>Independent third-party validation benchmark — planned</Li>
+              <Li>
+                Per-market Median Absolute Error by MSA and property type — will publish once the
+                sample reaches a rolling-window size that makes the numbers stable, not before.
+              </Li>
+              <Li>
+                Public accuracy dashboard (live, not point-in-time) — follows the MAE publication.
+              </Li>
             </ul>
           </div>
         </div>

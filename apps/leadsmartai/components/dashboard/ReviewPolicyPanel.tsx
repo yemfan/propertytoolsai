@@ -105,23 +105,18 @@ export default function ReviewPolicyPanel() {
     );
   }
 
-  const autosendLocked = onboardingGate;
-
+  // The 30-day hard lock on autosend was retired — the UI now nudges
+  // toward "Review each one" during the first 30 days via a recommendation
+  // badge instead of disabling the faster options outright. Agents who
+  // know what they're doing can self-select autosend from day one.
   return (
     <div className="space-y-4">
-      {onboardingGate && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          <strong className="font-semibold">You&apos;re in your first 30 days.</strong>{" "}
-          Every triggered message creates a draft for approval. Autosend becomes available on day 31.
-          This is a product rule — not a setting.
-        </div>
-      )}
-
       <div className="space-y-2">
         <ChoiceItem
           label="Review each one"
           sublabel="Safer. Every triggered message becomes a draft in your approval queue. Nothing sends silently."
-          note="Recommended if you're new to LeadSmart or coming back after a break."
+          note="Recommended for your first 30 days, or if you're coming back after a break."
+          recommended={onboardingGate}
           active={state.reviewPolicy === "review"}
           onSelect={() => setState((s) => ({ ...s, reviewPolicy: "review" }))}
         />
@@ -130,14 +125,12 @@ export default function ReviewPolicyPanel() {
           sublabel="Faster. Messages go out the moment triggers fire. You'll see them in the history log."
           note="Best once you trust how the templates read in your voice."
           active={state.reviewPolicy === "autosend"}
-          disabled={autosendLocked}
           onSelect={() => setState((s) => ({ ...s, reviewPolicy: "autosend" }))}
         />
         <ChoiceItem
           label="Let me pick per category"
           sublabel="Different rules for different types — review sphere outreach, autosend tour confirmations."
           active={state.reviewPolicy === "per_category"}
-          disabled={autosendLocked}
           onSelect={() => setState((s) => ({ ...s, reviewPolicy: "per_category" }))}
         />
       </div>
@@ -183,7 +176,7 @@ export default function ReviewPolicyPanel() {
           What this means right now
         </div>
         <div className="mt-1 text-sm text-gray-700">
-          <EffectiveSummary state={state} gate={onboardingGate} />
+          <EffectiveSummary state={state} />
         </div>
       </div>
 
@@ -203,12 +196,7 @@ export default function ReviewPolicyPanel() {
   );
 }
 
-function EffectiveSummary({ state, gate }: { state: State; gate: boolean }) {
-  if (gate) {
-    return (
-      <>Until day 31, every triggered message is a draft for your approval. Your saved policy will take effect then.</>
-    );
-  }
+function EffectiveSummary({ state }: { state: State }) {
   if (state.reviewPolicy === "review") {
     return <>Every message from every trigger becomes a draft. You&apos;ll get a notification, tap approve, and it sends.</>;
   }
@@ -229,27 +217,27 @@ function ChoiceItem({
   sublabel,
   note,
   active,
-  disabled,
+  recommended,
   onSelect,
 }: {
   label: string;
   sublabel: string;
   note?: string;
   active: boolean;
-  disabled?: boolean;
+  /** Soft nudge — surfaces a "Recommended" chip, no selection enforcement. */
+  recommended?: boolean;
   onSelect: () => void;
 }) {
   return (
     <button
       type="button"
-      onClick={disabled ? undefined : onSelect}
-      disabled={disabled}
+      onClick={onSelect}
       aria-pressed={active}
-      className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
+      className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors cursor-pointer ${
         active
           ? "border-brand-accent bg-brand-accent/5"
           : "border-gray-200 hover:border-gray-300"
-      } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+      }`}
     >
       <span
         className={`mt-1 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
@@ -259,14 +247,16 @@ function ChoiceItem({
         {active && <span className="h-2 w-2 rounded-full bg-brand-accent" />}
       </span>
       <span className="flex-1">
-        <span className="block text-sm font-semibold text-gray-900">{label}</span>
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-gray-900">{label}</span>
+          {recommended && (
+            <span className="inline-flex items-center rounded-full border border-brand-accent/40 bg-brand-accent/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-accent">
+              Recommended
+            </span>
+          )}
+        </span>
         <span className="mt-0.5 block text-xs text-gray-600">{sublabel}</span>
         {note && <span className="mt-1 block text-[11px] text-gray-500 italic">{note}</span>}
-        {disabled && (
-          <span className="mt-1 block text-[11px] font-medium text-amber-700">
-            Locked until day 31 of your account.
-          </span>
-        )}
       </span>
     </button>
   );

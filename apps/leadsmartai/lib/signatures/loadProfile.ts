@@ -37,22 +37,34 @@ export async function loadAgentSignatureProfile(
     phone: string | null;
   };
 
-  // Pull name/email/phone from user_profiles if present — agents row
-  // usually has phone but rarely the full name.
+  // Pull name/email/phone + avatar from user_profiles. The profile
+  // page's "Change photo" button is now the single source of truth for
+  // the agent headshot (used here + in the TopBar avatar). The old
+  // duplicate upload in the Branding panel was retired; we fall back
+  // to agents.agent_photo_url so agents who uploaded before the
+  // unification keep their signature photo until a backfill copies
+  // those URLs into avatar_url.
   let fullName: string | null = null;
   let email: string | null = null;
   let phone: string | null = row.phone;
+  let profileAvatarUrl: string | null = null;
   if (row.auth_user_id) {
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
-      .select("full_name, email, phone")
+      .select("full_name, email, phone, avatar_url")
       .eq("user_id", row.auth_user_id)
       .maybeSingle();
     if (profile) {
-      const p = profile as { full_name?: string; email?: string; phone?: string };
+      const p = profile as {
+        full_name?: string;
+        email?: string;
+        phone?: string;
+        avatar_url?: string;
+      };
       fullName = p.full_name ?? null;
       email = p.email ?? null;
       phone = phone ?? p.phone ?? null;
+      profileAvatarUrl = p.avatar_url ?? null;
     }
   }
 
@@ -79,7 +91,9 @@ export async function loadAgentSignatureProfile(
     brandName: row.brand_name,
     brokerage: row.brokerage,
     signatureHtml: row.signature_html,
-    agentPhotoUrl: row.agent_photo_url,
+    // Prefer user_profiles.avatar_url (current source of truth); fall
+    // back to legacy agents.agent_photo_url for grandfathered rows.
+    agentPhotoUrl: profileAvatarUrl ?? row.agent_photo_url,
     logoUrl: row.logo_url,
   };
 }

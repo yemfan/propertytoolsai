@@ -5,13 +5,21 @@
 # live production site and uploads full HTML reports as build artifacts.
 #
 # Triggers:
-#   - On schedule (weekdays at 13:00 UTC / 09:00 ET) — establishes trend
-#     data over time.
+#   - On schedule (weekdays at 13:00 UTC / 09:00 ET) — catches regressions
+#     within a day of shipping.
 #   - On manual dispatch — so a dev can run it after a risky ship.
 #
-# Thresholds are `warn` (not `error`) initially so we capture the baseline
-# without blocking anything. Once we know the production numbers, flip
-# to `error` and connect to required status checks. See NEXT STEPS below.
+# Thresholds are `error` (not `warn`) — the baseline capture period is
+# over and LHCI assertion failures now fail the job. Current gates in
+# .lighthouserc.json:
+#   - performance >= 0.85, accessibility >= 0.9, best-practices >= 0.9,
+#     seo >= 0.95
+#   - LCP < 2.5s (validation report PERF-01)
+#   - CLS < 0.1
+#   - TBT < 200ms  (proxy for INP < 200ms — LHCI doesn't measure INP
+#     directly, TBT is the closest lab equivalent)
+#   - interactive stays at warn — legacy TTI metric, noisy; we track it
+#     but don't gate on it.
 
 name: Lighthouse CI
 
@@ -48,21 +56,21 @@ jobs:
           uploadArtifacts: true
           temporaryPublicStorage: true
 
-# NEXT STEPS (tracked in validation plan P1-5):
+# NEXT STEPS:
 #
-#   1. Once a 2-week baseline is captured, tighten assertions in
-#      .lighthouserc.json from `warn` to `error` so regressions fail CI.
-#      Target gates per the validation report:
-#        - LCP < 2.5s
-#        - CLS < 0.1
-#        - INP < 200ms
-#        - TBT < 200ms
-#
-#   2. Wire to Vercel preview deployments so each PR gets Lighthouse
-#      signal BEFORE merging, not only post-ship. Requires:
+#   1. Wire to Vercel preview deployments so each PR gets Lighthouse
+#      signal BEFORE merging, not only on the scheduled run. Requires:
 #        - Vercel deployment-ready webhook, OR
 #        - Waiting on the GitHub deployment status from Vercel.
+#      Hook the `deployment_status` event and run this workflow against
+#      the preview URL — that's the path most Next/Vercel setups use.
 #
-#   3. Add axe-core (accessibility) to the same workflow. The validation
-#      report explicitly flagged a11y as deferred — add it before any
-#      paid-acquisition push given the 50+ demographic.
+#   2. Add axe-core (accessibility) to a parallel workflow against the
+#      same URL set. LHCI's accessibility category score is a lightweight
+#      a11y check; axe-core catches violations LHCI misses and emits them
+#      as structured rule IDs for targeted fixes.
+#
+#   3. If real-user INP starts missing the 200ms goal, consider moving
+#      TBT from 200ms → tighter (150ms) as a leading indicator. CrUX
+#      field data via PageSpeed Insights API is the authoritative source
+#      once the site has enough traffic to qualify.

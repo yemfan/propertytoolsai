@@ -41,14 +41,28 @@ function displayLabelFromEmail(email: string | null | undefined): string {
     .join(" ");
 }
 
-function initialsFromEmail(email: string | null | undefined): string {
-  const label = displayLabelFromEmail(email);
-  return label
-    .split(/\s+/)
-    .map((p) => p[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "?";
+/**
+ * Prefer the agent's `user_profiles.full_name` for the profile button —
+ * email-derived labels like "fan.yes@gmail.com" → "Fan Yes" silently
+ * diverge from whatever the agent typed on their Profile page (e.g.
+ * "Michael Yestest"). Fall back to the email label when full_name is
+ * missing, and finally to "Account".
+ */
+function displayName(fullName: string | null | undefined, email: string | null | undefined): string {
+  const trimmed = fullName?.trim();
+  if (trimmed) return trimmed;
+  return displayLabelFromEmail(email);
+}
+
+function initialsFromDisplay(display: string): string {
+  return (
+    display
+      .split(/\s+/)
+      .map((p) => p[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?"
+  );
 }
 
 const QUICK_ACTION_LINKS = [
@@ -166,6 +180,7 @@ function QuickActionsDropdown() {
 
 function ProfileMenu({
   email,
+  fullName,
   avatarUrl,
   onLogout,
   showCommercialPricing,
@@ -174,6 +189,8 @@ function ProfileMenu({
   appRole,
 }: {
   email: string | null | undefined;
+  /** user_profiles.full_name — preferred over email-derived labels. */
+  fullName?: string | null;
   avatarUrl?: string | null;
   onLogout: () => void;
   showCommercialPricing: boolean;
@@ -234,8 +251,8 @@ function ProfileMenu({
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const name = displayLabelFromEmail(email);
-  const initials = initialsFromEmail(email);
+  const name = displayName(fullName, email);
+  const initials = initialsFromDisplay(name);
 
   const menuPanel = (
     <div
@@ -354,6 +371,7 @@ export default function TopBar({
     isAgentOrBrokerProfileRole(appRole) && !isAdminOrSupportRole(appRole);
   const router = useRouter();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [fullName, setFullName] = useState<string | null>(null);
 
   async function onLogout() {
     await signOutWithFullReload("/login");
@@ -374,6 +392,8 @@ export default function TopBar({
         if (cancelled) return;
         const av = json?.avatar_url;
         setAvatarUrl(typeof av === "string" && av.trim() ? av.trim() : null);
+        const fn = json?.full_name;
+        setFullName(typeof fn === "string" && fn.trim() ? fn.trim() : null);
       } catch {
         // ignore
       }
@@ -479,6 +499,7 @@ export default function TopBar({
 
           <ProfileMenu
             email={email}
+            fullName={fullName}
             avatarUrl={avatarUrl}
             onLogout={onLogout}
             showCommercialPricing={!hideCommercialPricing}
