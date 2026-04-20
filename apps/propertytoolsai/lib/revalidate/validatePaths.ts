@@ -4,6 +4,12 @@
  * Pure logic — no Next.js or runtime deps — so the route handler stays thin
  * and the input rules can be exercised by vitest without spinning up Next.
  *
+ * Validation failures throw `RevalidateValidationError` carrying the HTTP
+ * status the caller should return, which keeps the route handler's happy
+ * path free of discriminated-union narrowing (Next 16 / turbopack TS check
+ * wasn't narrowing a union with `ok: true | false` reliably, so we use an
+ * explicit thrown error instead).
+ *
  * Security model: callers must send the shared secret in the
  * `x-revalidate-secret` header. The server compares with timing-safe equality
  * so mismatched secrets don't leak length via response time.
@@ -21,9 +27,16 @@ import { timingSafeEqual } from "node:crypto";
 export const MAX_PATH_LEN = 500;
 export const MAX_PATHS_PER_REQUEST = 50;
 
-export type ValidatedPaths =
-  | { ok: true; paths: string[] }
-  | { ok: false; status: 400 | 401 | 413; error: string };
+export type ValidationStatus = 400 | 401 | 413;
+
+export class RevalidateValidationError extends Error {
+  readonly status: ValidationStatus;
+  constructor(status: ValidationStatus, message: string) {
+    super(message);
+    this.name = "RevalidateValidationError";
+    this.status = status;
+  }
+}
 
 /** Timing-safe string equality. Returns false for any length mismatch or non-string input. */
 export function secretsMatch(provided: unknown, expected: string | undefined): boolean {
@@ -44,9 +57,13 @@ function isValidPath(p: unknown): p is string {
   );
 }
 
-export function parseRevalidateBody(body: unknown): ValidatedPaths {
+/**
+ * Parse + validate a POST body for /api/revalidate. Returns the de-duped
+ * list of paths; throws `RevalidateValidationError` on invalid input.
+ */
+export function parseRevalidateBody(body: unknown): string[] {
   if (!body || typeof body !== "object") {
-    return { ok: false, status: 400, error: "Body must be a JSON object." };
+    throw new RevalidateValidationError(400, "Body must be a JSON object.");
   }
 
   const record = body as Record<string, unknown>;
@@ -57,34 +74,30 @@ export function parseRevalidateBody(body: unknown): ValidatedPaths {
   } else if (typeof record.path === "string") {
     raw = [record.path];
   } else {
-    return {
-      ok: false,
-      status: 400,
-      error: 'Expected { "paths": string[] } or { "path": string }.',
-    };
+    throw new RevalidateValidationError(
+      400,
+      'Expected { "paths": string[] } or { "path": string }.',
+    );
   }
 
   if (raw.length === 0) {
-    return { ok: false, status: 400, error: "Provide at least one path." };
+    throw new RevalidateValidationError(400, "Provide at least one path.");
   }
 
   if (raw.length > MAX_PATHS_PER_REQUEST) {
-    return {
-      ok: false,
-      status: 413,
-      error: `Too many paths (max ${MAX_PATHS_PER_REQUEST}).`,
-    };
+    throw new RevalidateValidationError(
+      413,
+      `Too many paths (max ${MAX_PATHS_PER_REQUEST}).`,
+    );
   }
 
   const bad = raw.find((p) => !isValidPath(p));
   if (bad !== undefined) {
-    return {
-      ok: false,
-      status: 400,
-      error: `Invalid path: ${JSON.stringify(bad).slice(0, 80)}`,
-    };
+    throw new RevalidateValidationError(
+      400,
+      `Invalid path: ${JSON.stringify(bad).slice(0, 80)}`,
+    );
   }
 
-  const deduped = Array.from(new Set(raw as string[]));
-  return { ok: true, paths: deduped };
+  return Array.from(new Set(raw as string[]));
 }

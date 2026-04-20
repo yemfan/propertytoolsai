@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { MAX_PATHS_PER_REQUEST, parseRevalidateBody, secretsMatch } from "../validatePaths";
+import {
+  MAX_PATHS_PER_REQUEST,
+  parseRevalidateBody,
+  RevalidateValidationError,
+  secretsMatch,
+} from "../validatePaths";
 
 describe("secretsMatch", () => {
   it("matches identical secrets", () => {
@@ -28,56 +33,66 @@ describe("secretsMatch", () => {
 
 describe("parseRevalidateBody", () => {
   it("accepts the plural paths shape", () => {
-    const r = parseRevalidateBody({ paths: ["/terms", "/pricing"] });
-    expect(r).toEqual({ ok: true, paths: ["/terms", "/pricing"] });
+    expect(parseRevalidateBody({ paths: ["/terms", "/pricing"] })).toEqual([
+      "/terms",
+      "/pricing",
+    ]);
   });
 
   it("accepts the singular path shape", () => {
-    const r = parseRevalidateBody({ path: "/terms" });
-    expect(r).toEqual({ ok: true, paths: ["/terms"] });
+    expect(parseRevalidateBody({ path: "/terms" })).toEqual(["/terms"]);
   });
 
   it("de-duplicates repeated paths", () => {
-    const r = parseRevalidateBody({ paths: ["/terms", "/terms", "/pricing"] });
-    expect(r.ok && r.paths).toEqual(["/terms", "/pricing"]);
+    expect(parseRevalidateBody({ paths: ["/terms", "/terms", "/pricing"] })).toEqual([
+      "/terms",
+      "/pricing",
+    ]);
   });
 
-  it("rejects non-object body", () => {
-    expect(parseRevalidateBody(null)).toMatchObject({ ok: false, status: 400 });
-    expect(parseRevalidateBody("hi")).toMatchObject({ ok: false, status: 400 });
+  function expectValidationError(fn: () => unknown, status: 400 | 401 | 413) {
+    try {
+      fn();
+      throw new Error("expected RevalidateValidationError, none thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(RevalidateValidationError);
+      expect((err as RevalidateValidationError).status).toBe(status);
+    }
+  }
+
+  it("rejects non-object body with 400", () => {
+    expectValidationError(() => parseRevalidateBody(null), 400);
+    expectValidationError(() => parseRevalidateBody("hi"), 400);
   });
 
-  it("rejects when neither path nor paths is present", () => {
-    expect(parseRevalidateBody({})).toMatchObject({ ok: false, status: 400 });
+  it("rejects when neither path nor paths is present (400)", () => {
+    expectValidationError(() => parseRevalidateBody({}), 400);
   });
 
-  it("rejects empty paths array", () => {
-    expect(parseRevalidateBody({ paths: [] })).toMatchObject({ ok: false, status: 400 });
+  it("rejects empty paths array (400)", () => {
+    expectValidationError(() => parseRevalidateBody({ paths: [] }), 400);
   });
 
-  it("rejects path without leading slash", () => {
-    expect(parseRevalidateBody({ paths: ["terms"] })).toMatchObject({ ok: false, status: 400 });
+  it("rejects path without leading slash (400)", () => {
+    expectValidationError(() => parseRevalidateBody({ paths: ["terms"] }), 400);
   });
 
-  it("rejects paths containing ..", () => {
-    expect(parseRevalidateBody({ paths: ["/../etc/passwd"] })).toMatchObject({
-      ok: false,
-      status: 400,
-    });
+  it("rejects paths containing .. (400)", () => {
+    expectValidationError(() => parseRevalidateBody({ paths: ["/../etc/passwd"] }), 400);
   });
 
-  it("rejects path longer than 500 chars", () => {
+  it("rejects path longer than 500 chars (400)", () => {
     const long = "/" + "x".repeat(500);
-    expect(parseRevalidateBody({ paths: [long] })).toMatchObject({ ok: false, status: 400 });
+    expectValidationError(() => parseRevalidateBody({ paths: [long] }), 400);
   });
 
-  it("rejects non-string path entries", () => {
-    expect(parseRevalidateBody({ paths: [123] })).toMatchObject({ ok: false, status: 400 });
-    expect(parseRevalidateBody({ paths: [null] })).toMatchObject({ ok: false, status: 400 });
+  it("rejects non-string path entries (400)", () => {
+    expectValidationError(() => parseRevalidateBody({ paths: [123] }), 400);
+    expectValidationError(() => parseRevalidateBody({ paths: [null] }), 400);
   });
 
   it("413s on > MAX_PATHS_PER_REQUEST entries", () => {
     const many = Array.from({ length: MAX_PATHS_PER_REQUEST + 1 }, (_, i) => `/p${i}`);
-    expect(parseRevalidateBody({ paths: many })).toMatchObject({ ok: false, status: 413 });
+    expectValidationError(() => parseRevalidateBody({ paths: many }), 413);
   });
 });
