@@ -18,7 +18,7 @@
     "leads": "潜在客户",
     "contacts": "联系人",
     "inbox": "收件箱",
-    "automation": "自动化",
+    "automation": "自动流程",
     "reports": "报表",
     "settings": "设置",
     "signOut": "退出登录"
@@ -38,11 +38,11 @@
   },
   "settings": {
     "uiLanguage": "界面语言",
-    "defaultOutboundLanguage": "默认对外语言",
+    "defaultOutboundLanguage": "默认联系语言",
     "uiLanguageHelp": "仪表盘将以此语言显示。",
     "defaultOutboundLanguageHelp": "AI 默认使用此语言与您的潜在客户沟通。每个联系人都可以单独覆盖此设置。"
   },
   "consent": {
-    "smsOptInLabel": "我同意接收短信"
+    "smsOptInLabel": "同意接收短信"
   }
 }
