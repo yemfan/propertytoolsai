@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { shouldOfferTranslationToEnglish } from "@/lib/locales/detectScript";
+import { TranslationToggle } from "./TranslationToggle";
 
 type Row = {
   id?: string;
@@ -50,17 +52,34 @@ export function EmailConversationPanel({ leadId }: { leadId: string }) {
         ) : messages.length === 0 ? (
           <div className="text-sm text-slate-500">No email messages logged yet.</div>
         ) : (
-          messages.map((m) => (
-            <div
-              key={m.id ?? `${m.direction}-${m.created_at}`}
-              className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
-            >
-              <div className="text-xs text-slate-500">
-                {String(m.direction ?? "").toUpperCase()} • {m.subject || "(no subject)"}
+          messages.map((m) => {
+            const text = m.message ?? "";
+            const subject = m.subject ?? "";
+            const isOutbound = String(m.direction ?? "").toLowerCase() === "outbound";
+            // Inbound-only translation toggle; see SmsConversationPanel for
+            // rationale.
+            const bodyOffer = !isOutbound && shouldOfferTranslationToEnglish(text);
+            const subjectOffer = !isOutbound && shouldOfferTranslationToEnglish(subject);
+            return (
+              <div
+                key={m.id ?? `${m.direction}-${m.created_at}`}
+                className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
+              >
+                <div className="text-xs text-slate-500">
+                  {String(m.direction ?? "").toUpperCase()} • {subject || "(no subject)"}
+                </div>
+                {subjectOffer ? (
+                  <div className="mt-0.5">
+                    <TranslationToggle text={subject} targetLocale="en" targetLabel="English" />
+                  </div>
+                ) : null}
+                <div className="mt-2 whitespace-pre-wrap text-sm text-slate-900">{text}</div>
+                {bodyOffer ? (
+                  <TranslationToggle text={text} targetLocale="en" targetLabel="English" />
+                ) : null}
               </div>
-              <div className="mt-2 whitespace-pre-wrap text-sm text-slate-900">{m.message}</div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </section>

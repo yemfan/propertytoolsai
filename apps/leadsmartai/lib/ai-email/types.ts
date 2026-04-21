@@ -21,6 +21,12 @@ export type EmailLeadSnapshot = {
   state?: string | null;
   intent?: string | null;
   assignedAgentId?: string | null;
+  /**
+   * BCP-47 base id (e.g. "zh", "en") sourced from
+   * `contacts.preferred_language`. Null means fall through to the agent's
+   * default (see `resolveLeadOutboundLocale`).
+   */
+  preferredLanguage?: string | null;
 };
 
 export type EmailReplyContext = {

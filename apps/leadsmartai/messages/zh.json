@@ -1,0 +1,48 @@
+{
+  "$schema": "./README.md — mirrors en.json. Every key in en.json MUST exist here; missing keys fall back to en at runtime once next-intl is wired in the PR that flips zh.ui.enabled.",
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "loading": "加载中…",
+    "yes": "是",
+    "no": "否",
+    "back": "返回",
+    "next": "下一步",
+    "close": "关闭",
+    "retry": "重试"
+  },
+  "nav": {
+    "dashboard": "仪表盘",
+    "leads": "潜在客户",
+    "contacts": "联系人",
+    "inbox": "收件箱",
+    "automation": "自动化",
+    "reports": "报表",
+    "settings": "设置",
+    "signOut": "退出登录"
+  },
+  "leads": {
+    "title": "潜在客户",
+    "empty": "还没有潜在客户。",
+    "newLead": "新建潜在客户",
+    "preferredLanguage": "首选语言",
+    "preferredLanguageHelp": "AI 将使用此语言与该联系人沟通。留空则使用您的默认语言。"
+  },
+  "inbox": {
+    "translateTo": "翻译为{target}",
+    "translating": "翻译中…",
+    "hideTranslation": "隐藏翻译",
+    "translationFailed": "翻译失败。"
+  },
+  "settings": {
+    "uiLanguage": "界面语言",
+    "defaultOutboundLanguage": "默认对外语言",
+    "uiLanguageHelp": "仪表盘将以此语言显示。",
+    "defaultOutboundLanguageHelp": "AI 默认使用此语言与您的潜在客户沟通。每个联系人都可以单独覆盖此设置。"
+  },
+  "consent": {
+    "smsOptInLabel": "我同意接收短信"
+  }
+}

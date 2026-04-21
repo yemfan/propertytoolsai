@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { buildSmsSystemInstructions } from "@/lib/agent-ai/promptBuilder";
 import { getAgentAiSettings } from "@/lib/agent-ai/settings";
+import { resolveLeadOutboundLocale } from "@/lib/locales/resolveLocale";
 import { buildSmsUserPrompt, SMS_ASSISTANT_SYSTEM_PROMPT } from "./prompts";
 import { inferIntentHeuristic } from "./intent";
 import { needsHumanEscalation, shouldStopMessaging } from "./safety";
@@ -142,7 +143,20 @@ export async function generateSmsAssistantReply(ctx: SmsReplyContext): Promise<S
   }
 
   const agentAi = await getAgentAiSettings(ctx.lead?.assignedAgentId ?? undefined);
-  const instructions = buildSmsSystemInstructions(SMS_ASSISTANT_SYSTEM_PROMPT, agentAi);
+  // Resolve the lead's outbound locale through the registry-backed resolver.
+  // Contact-level preference dominates; agent's existing default_language
+  // (from agent_ai_settings, surfaced as agentAi.defaultLanguage with
+  // values 'en' | 'zh' | 'auto') is the fallback. 'auto' and unknown
+  // values coerce back to 'en' inside the resolver.
+  const outboundLocale = resolveLeadOutboundLocale({
+    leadPreferredLanguage: ctx.lead?.preferredLanguage ?? null,
+    agentDefaultOutboundLanguage: agentAi.defaultLanguage,
+  });
+  const instructions = buildSmsSystemInstructions(
+    SMS_ASSISTANT_SYSTEM_PROMPT,
+    agentAi,
+    outboundLocale,
+  );
 
   const prompt = buildSmsUserPrompt({
     inboundBody: ctx.inboundBody,
