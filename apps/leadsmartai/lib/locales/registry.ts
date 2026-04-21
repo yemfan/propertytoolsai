@@ -95,7 +95,11 @@ const ZH: LocaleEntry = {
     enabled: false,
   },
   outboundToneDirective:
-    "Respond in Simplified Chinese (简体中文). Default to the formal register using 您. Only switch to 你 if the lead has used 你 first. Match mainland-Chinese conventions (not Taiwanese). Keep tone warm, respectful, concise — real-estate-professional, not overly salesy. Do not use 'investment guarantee' / '稳赚不赔' / '包赚' language. Avoid hard-sell pressure phrases; they violate both brand tone and Tencent content policy for when we add WeChat. Write numbers as Arabic digits (500,000) not Chinese numerals (五十万) unless mirroring the lead. For dollar amounts, use USD (e.g., 500,000 美元) to avoid RMB confusion.",
+    "Respond in Simplified Chinese (简体中文). Default to the formal register using 您. Only switch to 你 if the lead has used 你 first. Match mainland-Chinese conventions (not Taiwanese). Keep tone warm, respectful, concise — real-estate-professional, not overly salesy. " +
+    "Never use investment-guarantee or no-risk language — banned phrases include 稳赚不赔, 包赚, 保本, 零风险 / 无风险 / 绝无风险, 高回报保证, 包租. " +
+    "Never use hard-sell / FOMO phrasing: 一步到位, 机不可失, 错过不再有, 最后机会, 限时优惠 / 仅今天 — unless tied to a real deadline the agent has confirmed. " +
+    "Both categories violate brand tone and Tencent content policy (matters when we add WeChat). " +
+    "Write numbers as Arabic digits (500,000) not Chinese numerals (五十万) unless mirroring the lead. For dollar amounts, use USD (e.g., 500,000 美元) to avoid RMB confusion.",
   smsConsentCopy: {
     version: "zh-1",
     text: "勾选此框即表示您同意 LeadSmart AI 及邀请您的房产经纪人通过短信（包括自动发送的短信）与您联系。同意并非购买任何服务的前提条件。可能会产生短信和数据费用。回复 STOP（或 ALTO）取消订阅，回复 HELP 获得帮助。请查阅我们的《隐私政策》和《服务条款》（以英文为准）。",
