@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { buildEmailSystemInstructions } from "@/lib/agent-ai/promptBuilder";
 import { getAgentAiSettings } from "@/lib/agent-ai/settings";
+import { resolveLeadOutboundLocale } from "@/lib/locales/resolveLocale";
 import { buildEmailUserPrompt, EMAIL_ASSISTANT_SYSTEM_PROMPT } from "./prompts";
 import { inferEmailIntentHeuristic } from "./intent";
 import { emailNeedsHumanEscalation, isEmailOptOut } from "./safety";
@@ -153,7 +154,17 @@ export async function generateEmailAssistantReply(ctx: EmailReplyContext): Promi
   }
 
   const agentAi = await getAgentAiSettings(ctx.lead?.assignedAgentId ?? undefined);
-  const instructions = buildEmailSystemInstructions(EMAIL_ASSISTANT_SYSTEM_PROMPT, agentAi);
+  // Resolve lead's outbound locale; contact-level pref dominates, agent
+  // default_language is the fallback. See apps/leadsmartai/lib/locales/resolveLocale.ts.
+  const outboundLocale = resolveLeadOutboundLocale({
+    leadPreferredLanguage: ctx.lead?.preferredLanguage ?? null,
+    agentDefaultOutboundLanguage: agentAi.defaultLanguage,
+  });
+  const instructions = buildEmailSystemInstructions(
+    EMAIL_ASSISTANT_SYSTEM_PROMPT,
+    agentAi,
+    outboundLocale,
+  );
 
   const prompt = buildEmailUserPrompt({
     leadSummary: buildLeadSummary(ctx),

@@ -1,5 +1,6 @@
 import { VOICE_TRANSCRIPT_RESPONSES_INSTRUCTIONS } from "@/lib/ai-call/prompts";
 import type { VoiceSessionLanguage } from "@/lib/ai-call/voice-language";
+import { getLocale, type LocaleId } from "@/lib/locales/registry";
 import { getPersonalityLayers } from "./profiles";
 import type { AgentAiSettings } from "./types";
 
@@ -33,6 +34,22 @@ export function buildLanguagePreferenceBlock(settings: AgentAiSettings): string 
   return `\nLanguage preference (style only):\n${lines.map((l) => `- ${l}`).join("\n")}`;
 }
 
+/**
+ * Per-lead outbound locale directive, resolved via
+ * `resolveLeadOutboundLocale()` upstream and sourced from the locale
+ * registry's `outboundToneDirective`. When passed, this DOMINATES the
+ * agent's generic `buildLanguagePreferenceBlock` because it reflects a
+ * specific decision about this specific lead.
+ *
+ * No-op when locale is EN — the base prompt is already in English and
+ * adding "reply in English" just pads the context window.
+ */
+export function buildOutboundLocaleDirective(locale: LocaleId): string {
+  if (locale === "en") return "";
+  const entry = getLocale(locale);
+  return `\nOutbound language (HARD REQUIREMENT — this lead's preferred language):\n${entry.outboundToneDirective}`;
+}
+
 export function appendAgentStyleNotes(base: string, settings: AgentAiSettings): string {
   const notes = trimStyleNotes(settings.styleNotes);
   if (!notes) return base;
@@ -41,21 +58,42 @@ export function appendAgentStyleNotes(base: string, settings: AgentAiSettings): 
 
 /**
  * Full system `instructions` for SMS assistant Responses API calls.
+ *
+ * When `outboundLocale` is passed (resolved from contact's preferred language
+ * falling through to agent's `default_outbound_language`), the registry's
+ * per-locale tone directive replaces the generic agent language-preference
+ * block — the lead-specific decision is more authoritative.
  */
-export function buildSmsSystemInstructions(baseSystemPrompt: string, settings: AgentAiSettings): string {
+export function buildSmsSystemInstructions(
+  baseSystemPrompt: string,
+  settings: AgentAiSettings,
+  outboundLocale?: LocaleId,
+): string {
   const layers = getPersonalityLayers(settings.personality);
   const withPersonality = `${baseSystemPrompt.trim()}\n\n${layers.sms}`;
-  const withLang = `${withPersonality}${buildLanguagePreferenceBlock(settings)}`;
+  const langBlock = outboundLocale
+    ? buildOutboundLocaleDirective(outboundLocale)
+    : buildLanguagePreferenceBlock(settings);
+  const withLang = `${withPersonality}${langBlock}`;
   return appendAgentStyleNotes(withLang, settings);
 }
 
 /**
  * Full system `instructions` for email assistant Responses API calls.
+ *
+ * See `buildSmsSystemInstructions` for the `outboundLocale` semantics.
  */
-export function buildEmailSystemInstructions(baseSystemPrompt: string, settings: AgentAiSettings): string {
+export function buildEmailSystemInstructions(
+  baseSystemPrompt: string,
+  settings: AgentAiSettings,
+  outboundLocale?: LocaleId,
+): string {
   const layers = getPersonalityLayers(settings.personality);
   const withPersonality = `${baseSystemPrompt.trim()}\n\n${layers.email}`;
-  const withLang = `${withPersonality}${buildLanguagePreferenceBlock(settings)}`;
+  const langBlock = outboundLocale
+    ? buildOutboundLocaleDirective(outboundLocale)
+    : buildLanguagePreferenceBlock(settings);
+  const withLang = `${withPersonality}${langBlock}`;
   return appendAgentStyleNotes(withLang, settings);
 }
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { shouldOfferTranslationToEnglish } from "@/lib/locales/detectScript";
+import { TranslationToggle } from "./TranslationToggle";
 
 type SmsRow = {
   id?: string;
@@ -49,18 +51,33 @@ export function SmsConversationPanel({ leadId }: { leadId: string }) {
         ) : messages.length === 0 ? (
           <div className="text-sm text-slate-500">No SMS messages yet.</div>
         ) : (
-          messages.map((m) => (
-            <div
-              key={m.id ?? `${m.direction}-${m.created_at}`}
-              className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
-                m.direction === "outbound"
-                  ? "ml-auto bg-slate-900 text-white"
-                  : "bg-slate-100 text-slate-900"
-              }`}
-            >
-              {m.message}
-            </div>
-          ))
+          messages.map((m) => {
+            const text = m.message ?? "";
+            const isOutbound = m.direction === "outbound";
+            // Only offer translation on inbound messages — outbound is
+            // authored by the agent (or the agent's AI) and showing a
+            // "translate to English" link under the agent's own outbound
+            // text is pointless even when it's in Chinese.
+            const offerTranslation = !isOutbound && shouldOfferTranslationToEnglish(text);
+            return (
+              <div key={m.id ?? `${m.direction}-${m.created_at}`}>
+                <div
+                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
+                    isOutbound
+                      ? "ml-auto bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-900"
+                  }`}
+                >
+                  {text}
+                </div>
+                {offerTranslation ? (
+                  <div className="max-w-[85%] px-1">
+                    <TranslationToggle text={text} targetLocale="en" />
+                  </div>
+                ) : null}
+              </div>
+            );
+          })
         )}
       </div>
     </section>

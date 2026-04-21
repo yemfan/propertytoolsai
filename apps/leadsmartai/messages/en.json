@@ -1,0 +1,48 @@
+{
+  "$schema": "./README.md — keys are dotted by surface area; never let two catalogs diverge in key set.",
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading…",
+    "yes": "Yes",
+    "no": "No",
+    "back": "Back",
+    "next": "Next",
+    "close": "Close",
+    "retry": "Retry"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "leads": "Leads",
+    "contacts": "Contacts",
+    "inbox": "Inbox",
+    "automation": "Automation",
+    "reports": "Reports",
+    "settings": "Settings",
+    "signOut": "Sign out"
+  },
+  "leads": {
+    "title": "Leads",
+    "empty": "No leads yet.",
+    "newLead": "New lead",
+    "preferredLanguage": "Preferred language",
+    "preferredLanguageHelp": "The AI will message this contact in this language. Leave blank to use your default."
+  },
+  "inbox": {
+    "translateTo": "Translate to {target}",
+    "translating": "Translating…",
+    "hideTranslation": "Hide translation",
+    "translationFailed": "Translation failed."
+  },
+  "settings": {
+    "uiLanguage": "Dashboard language",
+    "defaultOutboundLanguage": "Default outbound language",
+    "uiLanguageHelp": "How the dashboard renders for you.",
+    "defaultOutboundLanguageHelp": "The language the AI uses by default when messaging your leads. Each contact can override this."
+  },
+  "consent": {
+    "smsOptInLabel": "I agree to receive SMS messages"
+  }
+}

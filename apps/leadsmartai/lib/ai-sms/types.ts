@@ -20,6 +20,13 @@ export type SmsLeadSnapshot = {
   state?: string | null;
   intent?: string | null;
   assignedAgentId?: string | null;
+  /**
+   * BCP-47 base id (e.g. "zh", "en") sourced from
+   * `contacts.preferred_language`. Null when the contact has no override
+   * and the agent's `default_outbound_language` should win.
+   * Validated through `lib/locales/registry.coerceLocale` at the resolver.
+   */
+  preferredLanguage?: string | null;
 };
 
 export type SmsReplyContext = {
