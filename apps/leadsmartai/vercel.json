@@ -71,6 +71,10 @@
     {
       "path": "/api/cron/sphere-scheduler",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/transactions-overdue-nudges",
+      "schedule": "0 15 * * *"
     }
   ]
 }
