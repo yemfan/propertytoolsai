@@ -1,0 +1,983 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "generated_at": "2026-04-16T17:52:12.400Z",
+    "spec_reference": "leadsmart-ai_hero-and-sphere-spec.docx §2.5, extended",
+    "notes": "Templates marked source='spec' are from §2.5 verbatim. Templates marked source='invented' extend the spec and need product review before shipping. Lead-response and lifecycle categories are entirely invented — spec did not cover them."
+  },
+  "voice_guides": {
+    "sphere": [
+      "Write as the agent, not as the product. 'I' not 'we'. No brand voice.",
+      "Short sentences. Fragments are fine. Real people text in fragments.",
+      "One ask per message, or no ask at all.",
+      "Name the specific thing — address, date, number. Not generic language.",
+      "Avoid 'Just checking in', 'Hope you're well', 'Circling back'.",
+      "Close with agent's first name only.",
+      "Never promise what the data can't deliver. AVMs are estimates."
+    ],
+    "lead_response": [
+      "First reply in under 60 seconds. Speed is the message.",
+      "Specificity proves humanity. Reference the actual property, not 'your inquiry'.",
+      "One question per message. Two at most, only if both are zero-friction.",
+      "Default to SMS. Email for second touch or if SMS is unavailable.",
+      "Never lead with 'I can help you find your dream home'.",
+      "Name the brokerage on first touch — builds trust.",
+      "Sign-off is agent's first name. Full signature only after reply."
+    ],
+    "lifecycle": [
+      "Editorial voice, not corporate. Same tone as the website.",
+      "Lead with the specific number, not the congratulations.",
+      "Founder signs churn emails. Product signs everything else.",
+      "Never use urgency as a conversion tool.",
+      "Hold emails until the numbers support them. LC-TE with zero leads is a different email.",
+      "Reply-to is a real inbox. A person must actually answer."
+    ]
+  },
+  "templates": [
+    {
+      "id": "HA-01",
+      "category": "sphere",
+      "name": "Home anniversary",
+      "channel": "sms",
+      "trigger": {
+        "type": "date_anniversary",
+        "field": "closing_date",
+        "time_local": "09:00",
+        "frequency": "yearly",
+        "requires": [
+          "anniversary_opt_in=true",
+          "relationship_type in [past_buyer_client, past_seller_client]"
+        ]
+      },
+      "body": "Hey {{first_name}} — hard to believe it's been {{years}} year{{s}} since we closed on {{street_name}}. Hope you're still loving the place. Current estimated value is {{avm_display}} (up {{delta_display}} from when you bought). If you ever want me to run a deeper look, just say the word. — {{agent_first_name}}",
+      "placeholders": [
+        "first_name",
+        "years",
+        "s",
+        "street_name",
+        "avm_display",
+        "delta_display",
+        "agent_first_name"
+      ],
+      "notes": "No autosend in first 30 days of agent onboarding.",
+      "source": "spec"
+    },
+    {
+      "id": "HA-01E",
+      "category": "sphere",
+      "name": "Home anniversary · email variant",
+      "channel": "email",
+      "trigger": {
+        "type": "date_anniversary",
+        "field": "closing_date",
+        "paired_with": "HA-01",
+        "condition": "contact has email_on_file=true"
+      },
+      "subject": "{{years}} year{{s}} in your {{street_name}} home",
+      "body": [
+        "Hi {{first_name}},",
+        "Can't believe it's been {{years}} year{{s}}. I still remember the night we went back and forth with the seller on the inspection — you handled it better than most agents I know.",
+        "Your home at {{street_name}} is currently estimated at {{avm_display}}. That's {{delta_display}} above what you paid — not that you're going anywhere, but it's good to know.",
+        "If you ever want me to pull the comps or look at what a refi might do for you, I'm a text away. Otherwise — enjoy the place.",
+        "— {{agent_first_name}}"
+      ],
+      "placeholders": [
+        "first_name",
+        "years",
+        "s",
+        "street_name",
+        "avm_display",
+        "delta_display",
+        "agent_first_name"
+      ],
+      "notes": "Expansion of spec §2.5 HA-01b. Pair with HA-01 SMS for full-contact clients.",
+      "source": "spec_expanded"
+    },
+    {
+      "id": "EQ-01",
+      "category": "sphere",
+      "name": "Quarterly equity update",
+      "channel": "email",
+      "trigger": {
+        "type": "calendar_quarter_start",
+        "requires": [
+          "relationship_type in [past_buyer_client, past_seller_client]",
+          "agent_of_record_match=true"
+        ]
+      },
+      "subject": "{{quarter}} update on your {{neighborhood}} home",
+      "body": [
+        "{{first_name}},",
+        "Quick quarterly snapshot on your place at {{street_name}}.",
+        "Purchased {{closing_date_short}} for {{closing_price_display}}. Currently estimated at {{avm_display}} — {{delta_pct}}% above purchase, roughly {{delta_display}} in equity.",
+        "Two things worth noting in {{neighborhood}} this quarter: median price is {{median_price}}, and days on market {{dom_change_phrase}} versus last quarter.",
+        "If you ever want me to break down what this means for your plans — refi, rental, selling — just hit reply. No pitch, promise.",
+        "— {{agent_first_name}}"
+      ],
+      "placeholders": [
+        "first_name",
+        "street_name",
+        "closing_date_short",
+        "closing_price_display",
+        "avm_display",
+        "delta_pct",
+        "delta_display",
+        "quarter",
+        "neighborhood",
+        "median_price",
+        "dom_change_phrase",
+        "agent_first_name"
+      ],
+      "notes": "`dom_change_phrase` should render as 'shortened from 18 to 12 days' or 'lengthened from 12 to 18 days'.",
+      "source": "spec"
+    },
+    {
+      "id": "EM-01",
+      "category": "sphere",
+      "name": "Equity milestone · crossed +25%",
+      "channel": "sms",
+      "trigger": {
+        "type": "threshold_crossed",
+        "field": "equity_pct",
+        "threshold": 0.25,
+        "direction": "upward",
+        "frequency": "once_per_milestone"
+      },
+      "body": "Quick heads-up, {{first_name}} — your place on {{street_name}} just crossed 25% equity growth since you bought. Estimated value is now around {{avm_display}}. Not suggesting you do anything with it — just wanted you to know. — {{agent_first_name}}",
+      "placeholders": [
+        "first_name",
+        "street_name",
+        "avm_display",
+        "agent_first_name"
+      ],
+      "notes": "The 'not suggesting you do anything' line is load-bearing. Keeps it from feeling like a pitch.",
+      "source": "spec"
+    },
+    {
+      "id": "EM-02",
+      "category": "sphere",
+      "name": "Equity milestone · crossed +50%",
+      "channel": "sms",
+      "trigger": {
+        "type": "threshold_crossed",
+        "field": "equity_pct",
+        "threshold": 0.5,
+        "direction": "upward",
+        "frequency": "once_per_milestone"
+      },
+      "body": "{{first_name}}, milestone moment: your {{street_name}} place just crossed 50% equity gained since you bought it in {{closing_year}}. That puts it around {{avm_display}}. Congrats — you picked well. If you ever want to talk through what that opens up, I'm here. — {{agent_first_name}}",
+      "placeholders": [
+        "first_name",
+        "street_name",
+        "closing_year",
+        "avm_display",
+        "agent_first_name"
+      ],
+      "notes": "Warmer than EM-01 because 50% is a real milestone worth acknowledging.",
+      "source": "invented"
+    },
+    {
+      "id": "DR-01",
+      "category": "sphere",
+      "name": "Dormant re-engage",
+      "channel": "sms",
+      "trigger": {
+        "type": "dormancy",
+        "field": "last_touch_date",
+        "threshold_days": 120,
+        "frequency": "once",
+        "suppress_if": "any_signal_fired_within_30_days"
+      },
+      "body": "Hey {{first_name}}, realized it's been a minute. How are things? Anyone in your circle thinking about a move this spring? No pressure — just keeping a list. — {{agent_first_name}}",
+      "placeholders": [
+        "first_name",
+        "agent_first_name",
+        "season"
+      ],
+      "notes": "Rotate 'spring' to 'summer/fall/winter' by month. {{season}} placeholder is dynamically populated.",
+      "source": "spec"
+    },
+    {
+      "id": "RA-01",
+      "category": "sphere",
+      "name": "Referral thank-you",
+      "channel": "sms",
+      "trigger": {
+        "type": "event",
+        "event": "new_lead_cites_this_contact_as_referrer",
+        "latency_max_hours": 2
+      },
+      "body": "{{first_name}} — {{referral_name}} just reached out because of you. That means more than you know. I'll take great care of them. Thank you. — {{agent_first_name}}",
+      "placeholders": [
+        "first_name",
+        "referral_name",
+        "agent_first_name"
+      ],
+      "notes": "Send within 2 hours of referral intake. Timing is the whole point.",
+      "source": "spec"
+    },
+    {
+      "id": "JS-01",
+      "category": "sphere",
+      "name": "Just sold in your neighborhood",
+      "channel": "sms",
+      "trigger": {
+        "type": "event",
+        "event": "comparable_sale_within_half_mile",
+        "requires": [
+          "same_zip",
+          "sq_ft_within_15pct"
+        ],
+        "frequency_cap": "1_per_90_days_per_contact"
+      },
+      "body": "{{first_name}} — {{address_short}} just sold for {{sold_price}}. Two houses from you. Thought you'd want to know what that does for your neighborhood comps. — {{agent_first_name}}",
+      "placeholders": [
+        "first_name",
+        "address_short",
+        "sold_price",
+        "agent_first_name"
+      ],
+      "notes": "Requires MLS feed. Frequency cap is important — neighbors get annoyed by over-sending.",
+      "source": "invented"
+    },
+    {
+      "id": "LR-Z01",
+      "category": "lead_response",
+      "name": "Zillow buyer inquiry · first touch",
+      "channel": "sms",
+      "trigger": {
+        "type": "event",
+        "event": "new_lead_arrived",
+        "source": "zillow_buyer",
+        "latency_max_seconds": 60
+      },
+      "body": "Hi {{first_name}}, this is {{agent_first_name}} with {{brokerage}} — saw you asked about {{property_address}}. Are you hoping to tour this weekend or just gathering info for now?",
+      "placeholders": [
+        "first_name",
+        "agent_first_name",
+        "brokerage",
+        "property_address"
+      ],
+      "notes": "From spec §1.5 verbatim. The weekend/info binary is the whole trick.",
+      "source": "spec"
+    },
+    {
+      "id": "LR-Z02",
+      "category": "lead_response",
+      "name": "Zillow buyer inquiry · first touch · email",
+      "channel": "email",
+      "trigger": {
+        "type": "event",
+        "event": "new_lead_arrived",
+        "source": "zillow_buyer",
+        "paired_with": "LR-Z01",
+        "delay_after_sms_seconds": 120
+      },
+      "subject": "About {{property_short_address}}",
+      "body": [
+        "Hi {{first_name}},",
+        "Saw your note come through about {{property_address}} — nice place. Three bed, {{bathrooms}} bath, {{square_footage}} sq ft if I remember the listing right.",
+        "Quick question so I can be useful: are you looking to tour this weekend, or still in the research phase? Either way I can send you two or three similar listings in {{neighborhood}} that might be a better fit — I know a few that haven't hit Zillow yet.",
+        "Text me back at {{agent_phone}} if that's easier than email. Talk soon.",
+        "— {{agent_first_name}}"
+      ],
+      "placeholders": [
+        "first_name",
+        "property_address",
+        "property_short_address",
+        "bathrooms",
+        "square_footage",
+        "neighborhood",
+        "agent_phone",
+        "agent_first_name"
+      ],
+      "notes": "Only use 'haven't hit Zillow yet' line if agent has real pocket listings.",
+      "source": "invented"
+    },
+    {
+      "id": "LR-Z03",
+      "category": "lead_response",
+      "name": "Zillow seller inquiry · first touch",
+      "channel": "sms",
+      "trigger": {
+        "type": "event",
+        "event": "new_lead_arrived",
+        "source": "zillow_seller",
+        "latency_max_seconds": 60
+      },
+      "body": "Hi {{first_name}}, this is {{agent_first_name}} with {{brokerage}}. Saw you looked up a value for {{address}}. Happy to send over a real CMA — more accurate than the Zestimate. Are you thinking of selling soon or just checking the number?",
+      "placeholders": [
+        "first_name",
+        "agent_first_name",
+        "brokerage",
+        "address"
+      ],
+      "notes": "CMA vs Zestimate is the differentiator. Sellers already know they're not the same thing.",
+      "source": "invented"
+    },
+    {
+      "id": "LR-OH01",
+      "category": "lead_response",
+      "name": "Open-house sign-in · follow-up",
+      "channel": "sms",
+      "trigger": {
+        "type": "event",
+        "event": "open_house_sign_in",
+        "delay_hours": 3,
+        "condition": "after_open_house_end"
+      },
+      "body": "Hey {{first_name}} — {{agent_first_name}} here, we met at the {{property_address}} open house this afternoon. Wanted to say thanks for stopping by. What'd you think? Was it in the running, or more of a drive-by?",
+      "placeholders": [
+        "first_name",
+        "agent_first_name",
+        "property_address"
+      ],
+      "notes": "'In the running or drive-by' gives permission to disqualify without rudeness.",
+      "source": "invented"
+    },
+    {
+      "id": "LR-NR01",
+      "category": "lead_response",
+      "name": "No-reply follow-up · day 2",
+      "channel": "sms",
+      "trigger": {
+        "type": "inactivity",
+        "reference": "first_touch_sent",
+        "threshold_hours": {
+          "min": 36,
+          "max": 48
+        },
+        "frequency": "once",
+        "requires": "agent_has_new_listings_in_neighborhood=true"
+      },
+      "body": "Hey {{first_name}} — quick one. A few new listings hit today in {{neighborhood}} under {{price_max}}. Want me to send the shortlist? (It's a pretty short list.)",
+      "placeholders": [
+        "first_name",
+        "neighborhood",
+        "price_max"
+      ],
+      "notes": "Suppress if no real listings to share. Do not send a generic 'just following up'.",
+      "source": "invented"
+    },
+    {
+      "id": "LR-NR02",
+      "category": "lead_response",
+      "name": "No-reply follow-up · day 7 · opt-out",
+      "channel": "sms",
+      "trigger": {
+        "type": "inactivity",
+        "reference": "first_touch_sent",
+        "threshold_days": 7,
+        "frequency": "once",
+        "next_state": "slow_drip"
+      },
+      "body": "Last one from me, {{first_name}} — if {{neighborhood}} isn't right or the timing's off, totally fine. I'll stop texting. But if you want me to keep an eye out for anything specific, text me what you'd actually want and I'll watch for it.",
+      "placeholders": [
+        "first_name",
+        "neighborhood"
+      ],
+      "notes": "The 'I'll stop texting' opt-out often triggers a reply. Withdrawal of attention prompts engagement.",
+      "source": "invented"
+    },
+    {
+      "id": "LR-TOUR",
+      "category": "lead_response",
+      "name": "Tour confirmation",
+      "channel": "sms",
+      "trigger": {
+        "type": "event",
+        "event": "tour_scheduled",
+        "latency_max_seconds": 30
+      },
+      "body": "Locked in, {{first_name}}: {{tour_day}} at {{tour_time}}, {{property_address}}. I'll meet you out front — I drive a {{agent_car}} if that helps. Park anywhere on the street. Text if anything changes. — {{agent_first_name}}",
+      "placeholders": [
+        "first_name",
+        "tour_day",
+        "tour_time",
+        "property_address",
+        "agent_car",
+        "agent_first_name"
+      ],
+      "notes": "{{agent_car}} set during agent onboarding. Removes parking-lot awkwardness at tour start.",
+      "source": "invented"
+    },
+    {
+      "id": "LC-W01",
+      "category": "lifecycle",
+      "name": "Welcome · signup + 2 min",
+      "channel": "email",
+      "trigger": {
+        "type": "event",
+        "event": "trial_signup",
+        "delay_minutes": 2
+      },
+      "subject": "You're in. Here's what happens next.",
+      "body": [
+        "{{first_name}},",
+        "Welcome. Your trial is live — 14 days, no credit card, cancel anytime.",
+        "Three things that'll take you ten minutes total:",
+        "1 — Connect a lead source. Zillow, Follow Up Boss, your IDX, Facebook Lead Ads. Whatever you have. {{connect_url}}",
+        "2 — Record a 30-second voice sample. This is how we teach the AI to sound like you, not like a bot. {{voice_url}}",
+        "3 — Send yourself a test lead. Paste a name and phone into the test lead form — LeadSmart will reply to you as if you were a real Zillow inquiry. See what it sounds like before a real lead sees it.",
+        "That's it. Real leads start getting real replies the moment a source is connected.",
+        "If you're stuck, reply to this email. A real person answers — usually within the hour.",
+        "— The LeadSmart team"
+      ],
+      "placeholders": [
+        "first_name",
+        "connect_url",
+        "voice_url"
+      ],
+      "notes": "No exclamation points. No 'welcome aboard'. 'Real person answers' must be true.",
+      "source": "invented"
+    },
+    {
+      "id": "LC-FS",
+      "category": "lifecycle",
+      "name": "First success · first lead replied",
+      "channel": "email",
+      "trigger": {
+        "type": "event",
+        "event": "first_lead_reply_ever",
+        "latency_max_minutes": 5
+      },
+      "subject": "Your first lead just replied.",
+      "body": [
+        "{{first_name}},",
+        "At {{reply_time}} today, {{lead_name}} replied to the message LeadSmart sent on your behalf. That reply is waiting in your inbox.",
+        "Worth noting: {{lead_name}} came in from {{source}} at {{arrival_time}}. First reply went out at {{first_reply_time}} — {{reply_latency}} seconds later.",
+        "That's the whole product in one transaction. The next 500 leads work the same way.",
+        "— The LeadSmart team"
+      ],
+      "placeholders": [
+        "first_name",
+        "reply_time",
+        "lead_name",
+        "source",
+        "arrival_time",
+        "first_reply_time",
+        "reply_latency"
+      ],
+      "notes": "Most important email in the lifecycle. The 'aha' moment. Keep it short, no CTA.",
+      "source": "invented"
+    },
+    {
+      "id": "LC-TE",
+      "category": "lifecycle",
+      "name": "Trial ending · day 12",
+      "channel": "email",
+      "trigger": {
+        "type": "date_before_trial_end",
+        "hours_before": 48,
+        "requires": "leads_replied_count >= 1"
+      },
+      "subject": "48 hours left on your trial.",
+      "body": [
+        "{{first_name}},",
+        "Your trial ends {{trial_end_date}}. Two days from now.",
+        "In the 12 days so far: {{leads_received}} leads came in, {{leads_replied}} replied, {{tours_booked}} tours got booked. Median first-reply time: {{median_latency}} seconds.",
+        "No auto-charge when the trial ends. If you do nothing, you drop to the free tier (25 leads a month, email only) and keep everything you've built so far.",
+        "If you want to keep the SMS side of things — which is roughly where the speed comes from — Pro is $49 a month, cancel anytime. {{upgrade_url}}",
+        "Either way, thanks for the trial.",
+        "— The LeadSmart team"
+      ],
+      "placeholders": [
+        "first_name",
+        "trial_end_date",
+        "leads_received",
+        "leads_replied",
+        "tours_booked",
+        "median_latency",
+        "upgrade_url"
+      ],
+      "notes": "No urgency theater. Honest admission about the free-tier fallback.",
+      "source": "invented"
+    },
+    {
+      "id": "LC-CR",
+      "category": "lifecycle",
+      "name": "Churn recovery · cancel + 30 days",
+      "channel": "email",
+      "trigger": {
+        "type": "date_after_cancellation",
+        "days_after": 30,
+        "frequency": "once",
+        "signed_by": "founder"
+      },
+      "subject": "Quick one — was it us?",
+      "body": [
+        "{{first_name}},",
+        "You cancelled LeadSmart a month ago. Hope things are going well.",
+        "I'm not writing to ask you back. I'm writing to ask what we did wrong — honestly, no marketing angle.",
+        "Was it the price? The integrations? Did the AI sound off in your voice? Something broke? Did you hire someone?",
+        "If you have thirty seconds, reply with a sentence. I read these myself.",
+        "— {{founder_first_name}}, founder"
+      ],
+      "placeholders": [
+        "first_name",
+        "founder_first_name"
+      ],
+      "notes": "Only email signed by a named person. Must actually be from the founder. Must actually be read.",
+      "source": "invented"
+    },
+    {
+      "id": "LC-RA",
+      "category": "lifecycle",
+      "name": "Reactivation · cancel + 90 days",
+      "channel": "email",
+      "trigger": {
+        "type": "date_after_cancellation",
+        "days_after": 90,
+        "frequency": "once",
+        "suppress_if": "replied_to=LC-CR"
+      },
+      "subject": "What changed in the last 90 days.",
+      "body": [
+        "{{first_name}},",
+        "Three months since you left. A few things are different:",
+        "— Native integration with Follow Up Boss (no more Zapier for FUB users).",
+        "— Median first-reply time is down to {{current_median_latency}} seconds (was {{old_median_latency}} when you had the trial).",
+        "— Home-anniversary and past-client messaging is live. That's the piece a lot of agents left looking for.",
+        "If any of that lands, the door's open — same account, same settings. {{reactivate_url}}",
+        "If not, no worries. Best of luck out there.",
+        "— The LeadSmart team"
+      ],
+      "placeholders": [
+        "first_name",
+        "current_median_latency",
+        "old_median_latency",
+        "reactivate_url"
+      ],
+      "notes": "Only mention features that actually exist. Never bluff.",
+      "source": "invented"
+    },
+    {
+      "id": "LR-TINT",
+      "category": "lead_response",
+      "channel": "sms",
+      "name": "Listing interest · tour qualifier",
+      "trigger": {
+        "type": "event",
+        "event": "listing_page_request_info",
+        "requires": [
+          "consent_sms=true"
+        ]
+      },
+      "body": "Saw you pulled up {{property_address}}, {{first_name}}. Weekend walkthrough, mid-week, or neither? If neither, I can send two or three in {{area}} that might fit better — tell me what you liked about this one and I'll filter for it.",
+      "placeholders": [
+        "first_name",
+        "property_address",
+        "area"
+      ],
+      "notes": "Binary (weekend/mid-week) + optional pivot. Mirrors LR-Z01's structure but for a request-info click rather than a Zillow inbound.",
+      "source": "invented"
+    },
+    {
+      "id": "LR-TR",
+      "category": "lead_response",
+      "channel": "email",
+      "name": "Tour recap · 2h post-tour",
+      "trigger": {
+        "type": "time_offset",
+        "after_event": "tour_end",
+        "offset_minutes": 120
+      },
+      "subject": "{{property_short_address}} — thoughts?",
+      "body": "{{first_name}},\n\nThanks for the tour today. When you've had a minute, tell me what stuck and what didn't — specific reactions are more useful to me than a pro/con list.\n\nIf it's a maybe, I can pull {{neighborhood}} comps from the last 90 days and draft an offer range with contingencies. No commitment — just the numbers so you can decide.\n\nIf it's a pass, fair enough. I'll re-filter based on what you reacted to today and send two or three closer to what you're actually after.\n\n— {{agent_first_name}}",
+      "placeholders": [
+        "first_name",
+        "property_short_address",
+        "neighborhood",
+        "agent_first_name"
+      ],
+      "notes": "'Specific reactions are more useful than a pro/con list' invites a real conversation rather than a polite summary.",
+      "source": "invented"
+    },
+    {
+      "id": "LR-OS",
+      "category": "lead_response",
+      "channel": "sms",
+      "name": "Offer submitted",
+      "trigger": {
+        "type": "event",
+        "event": "offer_submitted"
+      },
+      "body": "Offer's in with the listing agent, {{first_name}}. Response deadline is {{response_deadline}}. I'll text the second we hear back — nothing for you to do in the meantime. — {{agent_first_name}}",
+      "placeholders": [
+        "first_name",
+        "response_deadline",
+        "agent_first_name"
+      ],
+      "notes": "'Nothing for you to do in the meantime' is load-bearing — waiting on offer response is the single most anxious period in a deal.",
+      "source": "invented"
+    },
+    {
+      "id": "LR-OA",
+      "category": "lead_response",
+      "channel": "sms",
+      "name": "Offer accepted",
+      "trigger": {
+        "type": "event",
+        "event": "offer_accepted"
+      },
+      "body": "They accepted, {{first_name}}. {{property_short_address}} heads into escrow. Step-by-step in your inbox tonight. Nice work holding your number. — {{agent_first_name}}",
+      "placeholders": [
+        "first_name",
+        "property_short_address",
+        "agent_first_name"
+      ],
+      "notes": "'Holding your number' acknowledges negotiating discipline without hyperbole. Short intentionally — celebration + bridge to the detail email.",
+      "source": "invented"
+    },
+    {
+      "id": "LR-CC",
+      "category": "lead_response",
+      "channel": "email",
+      "name": "Closing confirmed",
+      "trigger": {
+        "type": "event",
+        "event": "closing_date_set"
+      },
+      "subject": "Closing set — {{property_short_address}}, {{closing_date_short}}",
+      "body": "{{first_name}},\n\nWe're closing {{property_short_address}} on {{closing_date_short}} at {{closing_time}}.\n\nBring to the signing table:\n— government-issued photo ID (passport or driver's license)\n— wire-transfer confirmation receipt\n— final title insurance documents (I'll forward these 48 hours ahead)\n\nIf you want me there with you — say the word. Otherwise, keep your phone on and I'll let you know the second keys are ready.\n\n— {{agent_first_name}}",
+      "placeholders": [
+        "first_name",
+        "property_short_address",
+        "closing_date_short",
+        "closing_time",
+        "agent_first_name"
+      ],
+      "notes": "Checklist format avoids the emotional pressure of closing day. Offering to be there in person is the most valuable thing a good agent does at this stage.",
+      "source": "invented"
+    },
+    {
+      "id": "BD-01",
+      "category": "sphere",
+      "channel": "sms",
+      "name": "Birthday",
+      "trigger": {
+        "type": "date_anniversary",
+        "field": "date_of_birth",
+        "time_local": "09:00",
+        "frequency": "yearly",
+        "requires": [
+          "date_of_birth != null"
+        ]
+      },
+      "body": "Happy birthday, {{first_name}}. Hope today's a good one. — {{agent_first_name}}",
+      "placeholders": [
+        "first_name",
+        "agent_first_name"
+      ],
+      "notes": "Deliberately short. Anything longer reads as a birthday wish dressed up like a sales touch.",
+      "source": "invented"
+    },
+    {
+      "id": "RA-01E",
+      "category": "sphere",
+      "channel": "email",
+      "name": "Referral thank-you · email variant",
+      "trigger": {
+        "type": "event",
+        "event": "referral_inbound",
+        "paired_with": "RA-01"
+      },
+      "subject": "Thanks for sending {{referral_name}}.",
+      "body": "{{first_name}},\n\n{{referral_name}} reached out because of you. That means more than you probably realize.\n\nI'll take care of them the way I took care of you. When the deal closes — if they're okay with me telling you — you'll hear from me.\n\nThank you.\n\n— {{agent_first_name}}",
+      "placeholders": [
+        "first_name",
+        "referral_name",
+        "agent_first_name"
+      ],
+      "notes": "Email variant of RA-01 for agents whose referring clients prefer email. 'If they're okay with me telling you' respects referral-confidentiality norms without being legalistic.",
+      "source": "invented"
+    }
+  ],
+  "placeholders": [
+    {
+      "name": "first_name",
+      "description": "Contact first name",
+      "required_by": "all"
+    },
+    {
+      "name": "agent_first_name",
+      "description": "Agent sending the message",
+      "required_by": "sphere, lead_response"
+    },
+    {
+      "name": "agent_phone",
+      "description": "Agent public number",
+      "required_by": "LR-Z02"
+    },
+    {
+      "name": "agent_car",
+      "description": "Agent's vehicle for tour meetups, set during onboarding",
+      "required_by": "LR-TOUR"
+    },
+    {
+      "name": "brokerage",
+      "description": "Agent's brokerage name",
+      "required_by": "lead_response first-touch"
+    },
+    {
+      "name": "founder_first_name",
+      "description": "Founder's first name for signed emails",
+      "required_by": "LC-CR"
+    },
+    {
+      "name": "street_name",
+      "description": "Street name only, no house number (personal feel)",
+      "required_by": "sphere"
+    },
+    {
+      "name": "property_address",
+      "description": "Full address",
+      "required_by": "lead_response"
+    },
+    {
+      "name": "property_short_address",
+      "description": "First line only, for email subjects",
+      "required_by": "LR-Z02"
+    },
+    {
+      "name": "address",
+      "description": "Contact's address for seller inquiries",
+      "required_by": "LR-Z03"
+    },
+    {
+      "name": "address_short",
+      "description": "Comparable sale address",
+      "required_by": "JS-01"
+    },
+    {
+      "name": "neighborhood",
+      "description": "Neighborhood name",
+      "required_by": "EQ-01, LR-NR01"
+    },
+    {
+      "name": "closing_date",
+      "description": "ISO date",
+      "required_by": "derived"
+    },
+    {
+      "name": "closing_date_short",
+      "description": "e.g. 'June 2023'",
+      "required_by": "EQ-01"
+    },
+    {
+      "name": "closing_year",
+      "description": "4-digit year",
+      "required_by": "EM-02"
+    },
+    {
+      "name": "closing_price_display",
+      "description": "Formatted, e.g. '$845,000'",
+      "required_by": "EQ-01"
+    },
+    {
+      "name": "avm_display",
+      "description": "Formatted, rounded, e.g. 'around $912k'",
+      "required_by": "sphere equity templates"
+    },
+    {
+      "name": "delta_display",
+      "description": "Formatted equity gain, e.g. '$67,000'",
+      "required_by": "HA-01, HA-01E, EQ-01"
+    },
+    {
+      "name": "delta_pct",
+      "description": "Equity % gain, integer",
+      "required_by": "EQ-01"
+    },
+    {
+      "name": "years",
+      "description": "Years since closing, integer",
+      "required_by": "HA-01, HA-01E"
+    },
+    {
+      "name": "s",
+      "description": "'' if years===1, 's' otherwise",
+      "required_by": "HA-01, HA-01E"
+    },
+    {
+      "name": "quarter",
+      "description": "e.g. 'Q1 2026'",
+      "required_by": "EQ-01"
+    },
+    {
+      "name": "median_price",
+      "description": "Neighborhood median sale price",
+      "required_by": "EQ-01"
+    },
+    {
+      "name": "dom_change_phrase",
+      "description": "e.g. 'shortened from 18 to 12 days'",
+      "required_by": "EQ-01"
+    },
+    {
+      "name": "referral_name",
+      "description": "Name of the referred lead",
+      "required_by": "RA-01"
+    },
+    {
+      "name": "sold_price",
+      "description": "Formatted sale price for comp",
+      "required_by": "JS-01"
+    },
+    {
+      "name": "season",
+      "description": "'spring', 'summer', 'fall', 'winter' by month",
+      "required_by": "DR-01"
+    },
+    {
+      "name": "bathrooms",
+      "description": "Numeric, 1 decimal",
+      "required_by": "LR-Z02"
+    },
+    {
+      "name": "square_footage",
+      "description": "Formatted with commas",
+      "required_by": "LR-Z02"
+    },
+    {
+      "name": "price_max",
+      "description": "Upper price bound for shortlist",
+      "required_by": "LR-NR01"
+    },
+    {
+      "name": "tour_day",
+      "description": "e.g. 'Saturday'",
+      "required_by": "LR-TOUR"
+    },
+    {
+      "name": "tour_time",
+      "description": "e.g. '1:00pm'",
+      "required_by": "LR-TOUR"
+    },
+    {
+      "name": "connect_url",
+      "description": "Integration connect flow",
+      "required_by": "LC-W01"
+    },
+    {
+      "name": "voice_url",
+      "description": "Voice sample recorder",
+      "required_by": "LC-W01"
+    },
+    {
+      "name": "upgrade_url",
+      "description": "Plan upgrade flow",
+      "required_by": "LC-TE"
+    },
+    {
+      "name": "reactivate_url",
+      "description": "Reactivation flow",
+      "required_by": "LC-RA"
+    },
+    {
+      "name": "lead_name",
+      "description": "First + last name of the lead",
+      "required_by": "LC-FS"
+    },
+    {
+      "name": "source",
+      "description": "Lead source, e.g. 'Zillow'",
+      "required_by": "LC-FS"
+    },
+    {
+      "name": "arrival_time",
+      "description": "When lead arrived, e.g. '2:45pm'",
+      "required_by": "LC-FS"
+    },
+    {
+      "name": "first_reply_time",
+      "description": "When AI replied, e.g. '2:45:22pm'",
+      "required_by": "LC-FS"
+    },
+    {
+      "name": "reply_time",
+      "description": "When lead replied back",
+      "required_by": "LC-FS"
+    },
+    {
+      "name": "reply_latency",
+      "description": "Seconds between arrival and first reply",
+      "required_by": "LC-FS"
+    },
+    {
+      "name": "trial_end_date",
+      "description": "e.g. 'Friday April 26'",
+      "required_by": "LC-TE"
+    },
+    {
+      "name": "leads_received",
+      "description": "Count during trial",
+      "required_by": "LC-TE"
+    },
+    {
+      "name": "leads_replied",
+      "description": "Count during trial",
+      "required_by": "LC-TE"
+    },
+    {
+      "name": "tours_booked",
+      "description": "Count during trial",
+      "required_by": "LC-TE"
+    },
+    {
+      "name": "median_latency",
+      "description": "Median seconds for this agent",
+      "required_by": "LC-TE"
+    },
+    {
+      "name": "current_median_latency",
+      "description": "Product-wide current median",
+      "required_by": "LC-RA"
+    },
+    {
+      "name": "old_median_latency",
+      "description": "Product-wide median when agent trialed",
+      "required_by": "LC-RA"
+    }
+  ],
+  "compliance": [
+    {
+      "rule": "STOP/HELP append on first SMS",
+      "applies_to": "all_sms_templates",
+      "detail": "Append 'Reply STOP to opt out.' on first-ever SMS from agent to this contact. Suppress on subsequent messages in same thread.",
+      "source": "10DLC / TCPA baseline"
+    },
+    {
+      "rule": "Agent-of-record check for equity content",
+      "applies_to": [
+        "EQ-01",
+        "EM-01",
+        "EM-02"
+      ],
+      "detail": "Only fire for relationship_type in [past_buyer_client, past_seller_client] AND agent represented the contact on that specific property.",
+      "source": "spec §2.8"
+    },
+    {
+      "rule": "AVM disclosure for regulated states",
+      "applies_to": [
+        "EQ-01",
+        "EM-01_email",
+        "EM-02_email"
+      ],
+      "detail": "If agent's registered state has AVM-disclosure rule (California AB 2863 and equivalents), auto-append required disclosure language to email variants. SMS variants should not fire in regulated states — use email only.",
+      "source": "spec §2.8"
+    },
+    {
+      "rule": "30-day approval requirement",
+      "applies_to": "all_templates",
+      "detail": "First 30 days of agent onboarding: no template autosends. Every trigger creates a draft for agent approval. After 30 days, agent may flip individual templates to autosend.",
+      "source": "spec §2.4"
+    },
+    {
+      "rule": "Legal review required before production",
+      "applies_to": "all_templates",
+      "detail": "These compliance notes reflect the spec but are not a substitute for legal review. Do not ship production messaging without lawyer signoff.",
+      "source": "editorial note from author"
+    }
+  ]
+}
