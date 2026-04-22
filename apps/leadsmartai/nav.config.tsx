@@ -68,6 +68,14 @@ const navConfig = {
           icon: navEmoji("✅"),
         },
         {
+          // Per-deal coordinator: deadlines, checklist, counterparties
+          // for buyer-rep closings. See apps/leadsmartai/lib/transactions.
+          label: "Transactions",
+          href: "/dashboard/transactions",
+          match: ["/dashboard/transactions"],
+          icon: navEmoji("🔑"),
+        },
+        {
           label: "Calendar",
           href: "/dashboard/calendar",
           match: ["/dashboard/calendar"],
