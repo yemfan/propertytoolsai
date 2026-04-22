@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import ContactPicker, { type ContactPickerValue } from "@/components/crm/ContactPicker";
+import { ContractUploader, type ContractUploadResult } from "./ContractUploader";
 
 /**
  * New-transaction form. Buyer-side or listing-side, both supported.
@@ -80,6 +81,19 @@ function NewTransactionForm() {
     }
   }
 
+  function applyExtraction(ext: ContractUploadResult) {
+    // Buyer/seller name from the extraction is informational only — the
+    // agent still has to pick the existing contact in their CRM. We don't
+    // auto-match by name; too much risk of picking the wrong John Smith.
+    if (ext.propertyAddress) setPropertyAddress(ext.propertyAddress);
+    if (ext.city) setCity(ext.city);
+    if (ext.state) setStateValue(ext.state);
+    if (ext.zip) setZip(ext.zip);
+    if (ext.purchasePrice != null) setPurchasePrice(String(ext.purchasePrice));
+    if (ext.mutualAcceptanceDate) setMutualAcceptanceDate(ext.mutualAcceptanceDate);
+    if (ext.closingDate) setClosingDate(ext.closingDate);
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div>
@@ -97,6 +111,8 @@ function NewTransactionForm() {
       </div>
 
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <ContractUploader onExtracted={applyExtraction} disabled={submitting} />
+
         <div>
           <label className="block text-xs font-medium text-slate-700">Deal type</label>
           <div className="mt-1 flex gap-2">

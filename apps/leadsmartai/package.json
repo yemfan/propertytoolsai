@@ -40,6 +40,7 @@
     "db:apply-sql:remote": "node ./scripts/apply-supabase-sql-remote.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.73.0",
     "@googlemaps/js-api-loader": "^2.0.2",
     "@leadsmart/api-client": "workspace:*",
     "@leadsmart/shared": "workspace:*",
