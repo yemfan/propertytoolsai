@@ -63,6 +63,10 @@ export type TransactionRow = {
   referral_fee_pct: number | null;
   agent_net_commission: number | null;
 
+  /** Weekly seller-update email opt-in. Only meaningful on listing_rep / dual. */
+  seller_update_enabled: boolean;
+  seller_update_last_sent_at: string | null;
+
   notes: string | null;
 
   created_at: string;
