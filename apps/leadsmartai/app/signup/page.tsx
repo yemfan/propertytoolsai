@@ -3,10 +3,16 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { SmsConsentNotice, composeConsentVersion } from "@/components/consent/SmsConsentNotice";
 import { useSignupProfilePrefill, type SignupPrefillConsumer } from "@/lib/hooks/useSignupProfilePrefill";
 import { safeInternalRedirect } from "@/lib/loginUrl";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { formatUsPhoneInput, formatUsPhoneStored, isValidUsPhone } from "@/lib/usPhone";
+
+// BCP-47 base ids shown on the SMS opt-in disclosure. Keep in sync with
+// the POSTs to /api/consent/sms — the `sms_consent_version` string must
+// describe the exact set of disclosures the user saw.
+const CONSENT_LANGUAGES = ["en", "zh"] as const;
 
 function SignupForm() {
   const router = useRouter();
@@ -104,7 +110,11 @@ function SignupForm() {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ version: "v1" }),
+            // `composeConsentVersion` joins per-locale version strings
+          // from the registry (e.g. "en-1+zh-1"). Stamping the exact
+          // composite string lets auditors identify which disclosure
+          // set a given user saw.
+          body: JSON.stringify({ version: composeConsentVersion(CONSENT_LANGUAGES) }),
           }).catch(() => {});
         }
 
@@ -203,7 +213,11 @@ function SignupForm() {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ version: "v1" }),
+          // `composeConsentVersion` joins per-locale version strings
+          // from the registry (e.g. "en-1+zh-1"). Stamping the exact
+          // composite string lets auditors identify which disclosure
+          // set a given user saw.
+          body: JSON.stringify({ version: composeConsentVersion(CONSENT_LANGUAGES) }),
         }).catch(() => {});
       }
 
@@ -274,28 +288,19 @@ function SignupForm() {
             />
           </div>
           {phone.trim() ? (
-            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-[11px] leading-relaxed text-gray-700">
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
               <input
                 type="checkbox"
                 checked={smsConsent}
                 onChange={(e) => setSmsConsent(e.target.checked)}
                 className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-blue-600"
               />
-              <span>
-                I agree to receive SMS messages from LeadSmart AI at the number above,
-                including transactional alerts and, where permitted, marketing messages.
-                Message frequency varies. Message &amp; data rates may apply. Text{" "}
-                <strong>STOP</strong> to unsubscribe or <strong>HELP</strong> for help.
-                See our{" "}
-                <Link href="/privacy" className="text-blue-700 underline" target="_blank">
-                  Privacy Policy
-                </Link>{" "}
-                and{" "}
-                <Link href="/terms" className="text-blue-700 underline" target="_blank">
-                  Terms
-                </Link>
-                . Consent is not a condition of purchase.
-              </span>
+              {/* Bilingual TCPA disclosure — FCC wants consent copy in
+                  the recipient's language, and we don't know that at
+                  form render. Both languages stacked keeps us covered
+                  for the mainland-Chinese-origin segment that LeadSmart
+                  targets without splitting the flow. */}
+              <SmsConsentNotice languages={CONSENT_LANGUAGES} />
             </label>
           ) : null}
           {!hasSession ? (

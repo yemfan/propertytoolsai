@@ -11,6 +11,7 @@ import { inferEmailIntentHeuristic } from "@/lib/ai-email/intent";
 import { generateEmailAssistantReply } from "@/lib/ai-email/service";
 import { sendOutboundEmail } from "@/lib/ai-email/send";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { autoDetectContactLanguage } from "@/lib/locales/autoDetectContactLanguage";
 import {
   dispatchMobileInboundEmailPush,
   dispatchMobileNeedsHumanPush,
@@ -68,6 +69,24 @@ export async function POST(req: Request) {
       direction: "inbound",
       subject,
       body: text,
+    });
+
+    // Auto-detect language on first CJK-containing email. Same semantics
+    // as the SMS webhook — NULL-only write, never overwrites an explicit
+    // preference, never blocks the pipeline on failure.
+    void autoDetectContactLanguage({
+      supabase: supabaseAdmin as never,
+      contactId: leadId,
+      // Subject often carries the strongest signal (short, punchy, no
+      // quoted English chrome from mail clients), but body is still
+      // a better sample on average — include both.
+      inboundText: `${subject}\n${text}`,
+    }).then((r) => {
+      if (r.kind === "error") {
+        console.error("[ai-email/process-inbound] autoDetectContactLanguage:", r.error);
+      }
+    }).catch((e) => {
+      console.error("[ai-email/process-inbound] autoDetectContactLanguage (unexpected):", e);
     });
 
     if (lead.assignedAgentId) {
