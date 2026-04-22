@@ -1,0 +1,373 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import type {
+  OpenHouseRow,
+  OpenHouseStatus,
+  OpenHouseVisitorRow,
+  VisitorTimeline,
+} from "@/lib/open-houses/types";
+
+const STATUS_LABEL: Record<OpenHouseStatus, string> = {
+  scheduled: "Scheduled",
+  in_progress: "Live now",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+const TIMELINE_LABEL: Record<VisitorTimeline, string> = {
+  now: "Actively looking",
+  "3_6_months": "3-6 months",
+  "6_12_months": "6-12 months",
+  later: "Just exploring",
+  just_looking: "Just curious",
+};
+
+const TIMELINE_TONE: Record<VisitorTimeline, string> = {
+  now: "bg-red-100 text-red-700",
+  "3_6_months": "bg-amber-100 text-amber-800",
+  "6_12_months": "bg-blue-100 text-blue-700",
+  later: "bg-slate-100 text-slate-600",
+  just_looking: "bg-slate-100 text-slate-500",
+};
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatMoney(n: number | null): string {
+  if (n == null) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+export function OpenHouseDetailClient({
+  openHouse: initialOH,
+  visitors: initialVisitors,
+}: {
+  openHouse: OpenHouseRow;
+  visitors: OpenHouseVisitorRow[];
+}) {
+  const router = useRouter();
+  const [oh, setOH] = useState(initialOH);
+  const [visitors] = useState(initialVisitors);
+  const [savingStatus, setSavingStatus] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [msg, setMsg] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
+
+  const publicUrl = useMemo(() => {
+    // Prefer the agent's own origin so the QR code encodes the right
+    // host. In the browser `window.location.origin` is always correct.
+    if (typeof window !== "undefined") return `${window.location.origin}/oh/${oh.signin_slug}`;
+    return `/oh/${oh.signin_slug}`;
+  }, [oh.signin_slug]);
+
+  // External QR code generator — zero dependency cost, works on any
+  // modern printer at 250x250. If we want to avoid the external hop
+  // later, swap for the `qrcode` npm package.
+  const qrImageUrl = useMemo(
+    () =>
+      `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&data=${encodeURIComponent(publicUrl)}`,
+    [publicUrl],
+  );
+
+  async function saveStatus(next: OpenHouseStatus) {
+    setSavingStatus(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/dashboard/open-houses/${oh.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        openHouse?: OpenHouseRow;
+        error?: string;
+      };
+      if (!res.ok || !body.ok || !body.openHouse) {
+        setMsg({ tone: "err", text: body.error ?? "Failed to save." });
+        return;
+      }
+      setOH(body.openHouse);
+      setMsg({ tone: "ok", text: "Saved." });
+    } catch (e) {
+      setMsg({ tone: "err", text: e instanceof Error ? e.message : "Network error." });
+    } finally {
+      setSavingStatus(false);
+    }
+  }
+
+  async function onDelete() {
+    if (!confirm("Delete this open house and all its visitors? Cannot be undone.")) return;
+    const res = await fetch(`/api/dashboard/open-houses/${oh.id}`, { method: "DELETE" });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !body.ok) {
+      setMsg({ tone: "err", text: body.error ?? "Failed to delete." });
+      return;
+    }
+    router.push("/dashboard/open-houses");
+  }
+
+  async function copyUrl() {
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setMsg({ tone: "err", text: "Couldn't copy — long-press the URL field to copy manually." });
+    }
+  }
+
+  const locationLine = [oh.city, oh.state, oh.zip].filter(Boolean).join(", ");
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-5">
+      <div>
+        <div className="text-xs text-slate-500">
+          <Link href="/dashboard/open-houses" className="hover:underline">
+            Open Houses
+          </Link>
+          {" / "}
+          <span>{oh.property_address}</span>
+        </div>
+        <h1 className="mt-1 text-2xl font-semibold text-slate-900">{oh.property_address}</h1>
+        <div className="mt-1 text-sm text-slate-600">
+          {formatDate(oh.start_at)} · {formatTime(oh.start_at)} – {formatTime(oh.end_at)}
+          {locationLine ? ` · ${locationLine}` : ""}
+          {oh.list_price ? ` · ${formatMoney(oh.list_price)}` : ""}
+        </div>
+      </div>
+
+      {msg ? (
+        <div
+          className={`rounded-lg border px-3 py-2 text-sm ${
+            msg.tone === "ok"
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {msg.text}
+        </div>
+      ) : null}
+
+      <div className="grid gap-5 md:grid-cols-3">
+        {/* LEFT: QR + sign-in URL (the hero for event-day setup) */}
+        <div className="space-y-4 md:col-span-1">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-center">
+            <h2 className="text-sm font-semibold text-slate-900">Visitor sign-in</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Print this or open on an iPad at the door.
+            </p>
+            {/* Using plain img — Next/Image optimizes server-side and the
+                external qrserver URL would need a remote-pattern config. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={qrImageUrl}
+              alt="Sign-in QR code"
+              width={280}
+              height={280}
+              className="mx-auto mt-3 rounded-lg border border-slate-200"
+            />
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-2 text-center font-mono text-[11px] text-slate-700 break-all">
+              {publicUrl}
+            </div>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => void copyUrl()}
+                className="flex-1 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+              >
+                {copied ? "Copied ✓" : "Copy link"}
+              </button>
+              <a
+                href={publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Open
+              </a>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-slate-900">Status</h3>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(["scheduled", "completed", "cancelled"] as OpenHouseStatus[]).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => void saveStatus(s)}
+                  disabled={savingStatus || oh.status === s}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+                    oh.status === s
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  } disabled:opacity-60`}
+                >
+                  {STATUS_LABEL[s]}
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-slate-500">
+              Cancelled events return 404 on the public URL — good for retiring old QR codes.
+            </p>
+          </div>
+
+          {oh.host_notes ? (
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-900">Host notes</h3>
+              <p className="mt-2 whitespace-pre-line text-sm text-slate-700">{oh.host_notes}</p>
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => void onDelete()}
+            className="w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm text-red-700 hover:bg-red-50"
+          >
+            🗑 Delete open house
+          </button>
+        </div>
+
+        {/* RIGHT: visitors */}
+        <div className="space-y-4 md:col-span-2">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-900">
+                Visitors ({visitors.length})
+              </h2>
+              <span className="text-[11px] text-slate-500">
+                {visitors.filter((v) => v.marketing_consent).length} opted-in for follow-up
+              </span>
+            </div>
+
+            {visitors.length === 0 ? (
+              <p className="mt-3 text-sm text-slate-500">
+                No sign-ins yet. Once someone taps the QR or visits the link, they&apos;ll
+                appear here.
+              </p>
+            ) : (
+              <div className="mt-3 overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="text-xs text-slate-600">
+                    <tr>
+                      <th className="px-2 py-1.5 text-left font-medium">Name + contact</th>
+                      <th className="px-2 py-1.5 text-left font-medium">Timeline</th>
+                      <th className="px-2 py-1.5 text-left font-medium">Agented?</th>
+                      <th className="px-2 py-1.5 text-center font-medium">Consent</th>
+                      <th className="px-2 py-1.5 text-left font-medium">Signed in</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {visitors.map((v) => (
+                      <tr key={v.id} className="align-top">
+                        <td className="px-2 py-2">
+                          {v.contact_id ? (
+                            <Link
+                              href={`/dashboard/contacts?list=leads&highlight=${encodeURIComponent(v.contact_id)}`}
+                              className="font-medium text-slate-900 hover:underline"
+                            >
+                              {v.name ?? "(no name)"}
+                            </Link>
+                          ) : (
+                            <span className="font-medium text-slate-900">
+                              {v.name ?? "(no name)"}
+                            </span>
+                          )}
+                          <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-slate-500">
+                            {v.email ? <span>{v.email}</span> : null}
+                            {v.phone ? <span>{v.phone}</span> : null}
+                          </div>
+                        </td>
+                        <td className="px-2 py-2">
+                          {v.timeline ? (
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${TIMELINE_TONE[v.timeline]}`}
+                            >
+                              {TIMELINE_LABEL[v.timeline]}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-2 py-2 text-[12px] text-slate-600">
+                          {v.is_buyer_agented ? (
+                            <span>
+                              Yes
+                              {v.buyer_agent_name ? (
+                                <span className="text-[10px] text-slate-500"> · {v.buyer_agent_name}</span>
+                              ) : null}
+                            </span>
+                          ) : (
+                            <span className="text-green-700">No</span>
+                          )}
+                        </td>
+                        <td className="px-2 py-2 text-center">
+                          {v.marketing_consent ? (
+                            <span title="Will receive thank-you + check-in">✅</span>
+                          ) : (
+                            <span className="text-slate-300" title="Not opted in">—</span>
+                          )}
+                        </td>
+                        <td className="px-2 py-2 whitespace-nowrap text-[11px] text-slate-500">
+                          {new Date(v.created_at).toLocaleString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-slate-900">Follow-up automation</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Visitors who opted in get a thank-you email within 24h and a check-in SMS on day
+              3. Agented visitors are captured for your records but never receive outreach
+              (ethics).
+            </p>
+            <ul className="mt-3 space-y-1 text-[12px] text-slate-600">
+              <li>
+                📧{" "}
+                {visitors.filter((v) => v.thank_you_sent_at).length}/
+                {visitors.filter((v) => v.marketing_consent && !v.is_buyer_agented).length} thank-you
+                emails sent
+              </li>
+              <li>
+                📱{" "}
+                {visitors.filter((v) => v.check_in_sent_at).length}/
+                {visitors.filter((v) => v.marketing_consent && !v.is_buyer_agented).length} day-3
+                check-ins sent
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

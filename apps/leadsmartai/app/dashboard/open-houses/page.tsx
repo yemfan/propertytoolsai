@@ -1,29 +1,18 @@
-import { supabaseServer } from "@/lib/supabaseServer";
-import { getCurrentAgentContext } from "@/lib/dashboardService";
-import OpenHousesClient from "./OpenHousesClient";
 import type { Metadata } from "next";
+import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { listOpenHousesForAgent } from "@/lib/open-houses/service";
+import { OpenHousesListClient } from "./OpenHousesListClient";
 
 export const metadata: Metadata = {
   title: "Open Houses",
-  description: "Manage open house events and captured leads.",
-  keywords: ["open houses", "events", "lead capture"],
+  description:
+    "Schedule open houses, capture visitors via QR sign-in, and run follow-up automation.",
+  keywords: ["open houses", "events", "lead capture", "sign-in"],
   robots: { index: false },
 };
 
 export default async function OpenHousesPage() {
-  const { agentId, userId } = await getCurrentAgentContext();
-  const signupAgentKey = agentId || userId;
-
-  const { data: propertiesData } = await supabaseServer
-    .from("properties_warehouse")
-    .select("id,address,city,state,zip_code")
-    .order("updated_at", { ascending: false })
-    .limit(50);
-
-  return (
-    <OpenHousesClient
-      agentId={signupAgentKey}
-      properties={(propertiesData ?? []) as any[]}
-    />
-  );
+  const { agentId } = await getCurrentAgentContext();
+  const openHouses = await listOpenHousesForAgent(String(agentId));
+  return <OpenHousesListClient initialOpenHouses={openHouses} />;
 }
