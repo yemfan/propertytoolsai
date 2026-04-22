@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
-import { extractContract } from "@/lib/transactions/extractContract";
+import { extractContract, extractListingAgreement } from "@/lib/transactions/extractContract";
 import { isAnthropicConfigured } from "@/lib/anthropic";
 
 export const runtime = "nodejs";
@@ -71,9 +71,14 @@ export async function POST(req: Request) {
     }
 
     const bytes = new Uint8Array(await file.arrayBuffer());
-    const extraction = await extractContract(bytes);
+    // `kind=listing` → RLA extractor, anything else → RPA (default).
+    const kind = (form.get("kind") as string | null) === "listing" ? "listing" : "purchase";
+    const extraction =
+      kind === "listing"
+        ? await extractListingAgreement(bytes)
+        : await extractContract(bytes);
 
-    return NextResponse.json({ ok: true, extraction });
+    return NextResponse.json({ ok: true, kind, extraction });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Server error";
     console.error("POST /api/dashboard/transactions/extract-contract:", err);

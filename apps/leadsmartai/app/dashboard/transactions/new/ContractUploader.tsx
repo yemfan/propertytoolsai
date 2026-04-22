@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 
-export type ContractUploadResult = {
+export type RpaUploadResult = {
   propertyAddress: string | null;
   city: string | null;
   state: string | null;
@@ -21,10 +21,37 @@ export type ContractUploadResult = {
   warnings: string[];
 };
 
-type Props = {
-  onExtracted: (result: ContractUploadResult) => void;
-  disabled?: boolean;
+export type RlaUploadResult = {
+  propertyAddress: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  listPrice: number | null;
+  listingStartDate: string | null;
+  listingExpirationDate: string | null;
+  sellerNames: string[];
+  commissionBuyerSidePct: number | null;
+  commissionTotalPct: number | null;
+  confidence: number;
+  warnings: string[];
 };
+
+/** Back-compat alias — external imports may reference the legacy name. */
+export type ContractUploadResult = RpaUploadResult;
+
+type UploadKind = "purchase" | "listing";
+
+type Props =
+  | {
+      kind?: "purchase";
+      onExtracted: (result: RpaUploadResult) => void;
+      disabled?: boolean;
+    }
+  | {
+      kind: "listing";
+      onExtracted: (result: RlaUploadResult) => void;
+      disabled?: boolean;
+    };
 
 /**
  * Drag-and-drop / click-to-upload zone that POSTs a PDF to the extract
@@ -34,7 +61,8 @@ type Props = {
  * everything else is "picked a file, see a spinner, see fields fill in".
  * We don't show the raw JSON; the form becomes the source of truth.
  */
-export function ContractUploader({ onExtracted, disabled }: Props) {
+export function ContractUploader(props: Props) {
+  const kind: UploadKind = props.kind ?? "purchase";
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,20 +79,26 @@ export function ContractUploader({ onExtracted, disabled }: Props) {
     try {
       const form = new FormData();
       form.append("file", file);
+      form.append("kind", kind);
       const res = await fetch("/api/dashboard/transactions/extract-contract", {
         method: "POST",
         body: form,
       });
       const body = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
-        extraction?: ContractUploadResult;
+        extraction?: RpaUploadResult | RlaUploadResult;
         error?: string;
       };
       if (!res.ok || !body.ok || !body.extraction) {
         setError(body.error ?? "Extraction failed.");
         return;
       }
-      onExtracted(body.extraction);
+      // The discriminated union makes the cast explicit per branch.
+      if (kind === "listing") {
+        (props.onExtracted as (r: RlaUploadResult) => void)(body.extraction as RlaUploadResult);
+      } else {
+        (props.onExtracted as (r: RpaUploadResult) => void)(body.extraction as RpaUploadResult);
+      }
       setJustExtracted({
         filename: file.name,
         confidence: body.extraction.confidence,
@@ -77,10 +111,13 @@ export function ContractUploader({ onExtracted, disabled }: Props) {
     }
   }
 
+  const { disabled } = props;
+
   return (
     <div className="space-y-2">
       <label className="block text-xs font-medium text-slate-700">
-        Ratified contract PDF <span className="font-normal text-slate-400">(optional)</span>
+        {kind === "listing" ? "Signed RLA PDF" : "Ratified contract PDF"}{" "}
+        <span className="font-normal text-slate-400">(optional)</span>
       </label>
       <div
         onDragOver={(e) => {
@@ -124,7 +161,11 @@ export function ContractUploader({ onExtracted, disabled }: Props) {
             </div>
           ) : (
             <div className="text-slate-700">
-              <div className="font-medium">Drop a CAR RPA here, or click to pick</div>
+              <div className="font-medium">
+                {kind === "listing"
+                  ? "Drop a CAR RLA here, or click to pick"
+                  : "Drop a CAR RPA here, or click to pick"}
+              </div>
               <div className="text-[11px] text-slate-500">
                 We read the PDF with Claude and pre-fill the form. Nothing is stored — the PDF
                 is dropped as soon as the fields come back.

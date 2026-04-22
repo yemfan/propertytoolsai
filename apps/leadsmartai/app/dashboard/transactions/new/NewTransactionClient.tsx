@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import ContactPicker, { type ContactPickerValue } from "@/components/crm/ContactPicker";
-import { ContractUploader, type ContractUploadResult } from "./ContractUploader";
+import { ContractUploader, type RlaUploadResult, type RpaUploadResult } from "./ContractUploader";
 
 /**
  * New-transaction form. Buyer-side or listing-side, both supported.
@@ -16,7 +16,7 @@ import { ContractUploader, type ContractUploadResult } from "./ContractUploader"
  * Accepts `?contactId=<uuid>` as a deep-link prefill — ContactPicker
  * resolves the display name once on mount.
  */
-type TxType = "buyer_rep" | "listing_rep";
+type TxType = "buyer_rep" | "listing_rep" | "dual";
 
 function NewTransactionForm() {
   const router = useRouter();
@@ -81,7 +81,7 @@ function NewTransactionForm() {
     }
   }
 
-  function applyExtraction(ext: ContractUploadResult) {
+  function applyRpaExtraction(ext: RpaUploadResult) {
     // Buyer/seller name from the extraction is informational only — the
     // agent still has to pick the existing contact in their CRM. We don't
     // auto-match by name; too much risk of picking the wrong John Smith.
@@ -92,6 +92,15 @@ function NewTransactionForm() {
     if (ext.purchasePrice != null) setPurchasePrice(String(ext.purchasePrice));
     if (ext.mutualAcceptanceDate) setMutualAcceptanceDate(ext.mutualAcceptanceDate);
     if (ext.closingDate) setClosingDate(ext.closingDate);
+  }
+
+  function applyRlaExtraction(ext: RlaUploadResult) {
+    if (ext.propertyAddress) setPropertyAddress(ext.propertyAddress);
+    if (ext.city) setCity(ext.city);
+    if (ext.state) setStateValue(ext.state);
+    if (ext.zip) setZip(ext.zip);
+    if (ext.listPrice != null) setPurchasePrice(String(ext.listPrice));
+    if (ext.listingStartDate) setListingStartDate(ext.listingStartDate);
   }
 
   return (
@@ -111,12 +120,20 @@ function NewTransactionForm() {
       </div>
 
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <ContractUploader onExtracted={applyExtraction} disabled={submitting} />
+        {isListing ? (
+          <ContractUploader
+            kind="listing"
+            onExtracted={applyRlaExtraction}
+            disabled={submitting}
+          />
+        ) : (
+          <ContractUploader onExtracted={applyRpaExtraction} disabled={submitting} />
+        )}
 
         <div>
           <label className="block text-xs font-medium text-slate-700">Deal type</label>
           <div className="mt-1 flex gap-2">
-            {(["buyer_rep", "listing_rep"] as const).map((t) => (
+            {(["buyer_rep", "listing_rep", "dual"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -127,7 +144,7 @@ function NewTransactionForm() {
                     : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                {t === "buyer_rep" ? "Buyer side" : "Listing side"}
+                {t === "buyer_rep" ? "Buyer side" : t === "listing_rep" ? "Listing side" : "Dual agent"}
               </button>
             ))}
           </div>

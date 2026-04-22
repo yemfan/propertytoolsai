@@ -36,6 +36,7 @@ export type RunOverdueNudgesResult = {
   skippedNothingToSend: number;
   skippedAlreadySent: number;
   skippedNoEmail: number;
+  skippedPreference: number;
   failed: number;
 };
 
@@ -59,8 +60,14 @@ export async function runOverdueNudges(opts: {
     skippedNothingToSend: 0,
     skippedAlreadySent: 0,
     skippedNoEmail: 0,
+    skippedPreference: 0,
     failed: 0,
   };
+
+  // Weekly subscribers only receive on Mondays. todayIso is YYYY-MM-DD;
+  // parse as UTC and check the weekday. Monday = 1 per ISO convention.
+  const weekday = new Date(`${todayIso}T00:00:00Z`).getUTCDay();
+  const isMonday = weekday === 1;
 
   // Only iterate agents who actually have an active transaction. Avoids
   // scanning the agents table when the coordinator feature hasn't been
@@ -85,6 +92,29 @@ export async function runOverdueNudges(opts: {
   for (const agentId of capped) {
     result.processedAgents += 1;
     try {
+      // Respect per-agent digest preference before we write a log row.
+      // Row might not exist (agent hasn't hit Settings yet) — treat that
+      // as "daily enabled" per column default.
+      const { data: prefRow } = await supabaseAdmin
+        .from("agent_notification_preferences")
+        .select("transaction_digest_enabled, transaction_digest_frequency")
+        .eq("agent_id", agentId)
+        .maybeSingle();
+      const pref = (prefRow as {
+        transaction_digest_enabled: boolean | null;
+        transaction_digest_frequency: string | null;
+      } | null) ?? null;
+      const enabled = pref?.transaction_digest_enabled ?? true;
+      const frequency = pref?.transaction_digest_frequency ?? "daily";
+      if (!enabled || frequency === "off") {
+        result.skippedPreference += 1;
+        continue;
+      }
+      if (frequency === "weekly" && !isMonday) {
+        result.skippedPreference += 1;
+        continue;
+      }
+
       // Dedupe: INSERT first, detect conflict.
       const { data: logInsertData, error: logInsertErr } = await supabaseAdmin
         .from("transaction_nudge_log")
