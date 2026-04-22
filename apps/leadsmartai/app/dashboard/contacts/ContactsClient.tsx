@@ -23,6 +23,10 @@ type LeadRow = {
    * outbound language for AI-generated SMS/email to this contact.
    */
   preferred_language: string | null;
+  /** Total showings logged for this contact (all statuses). */
+  showing_total?: number;
+  /** Count of showings where buyer's overall_reaction = "love". */
+  showing_loved?: number;
 };
 
 type ChartItem = { name: string; value: number; color: string };
@@ -417,6 +421,21 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                             {listOutboundEnabled().find((l) => l.id === c.preferred_language)?.nativeLabel ?? c.preferred_language}
                           </span>
                         ) : null}
+                        {/* Showing count badge — only when they've seen 1+
+                            properties. Separate pill from rating so the signal
+                            reads distinct at a glance ("loved" = ♥ stars). */}
+                        {c.showing_total && c.showing_total > 0 ? (
+                          <Link
+                            href={`/dashboard/showings?contactId=${encodeURIComponent(c.id)}`}
+                            className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700 hover:bg-slate-200"
+                            title={`${c.showing_total} showing${c.showing_total === 1 ? "" : "s"}${c.showing_loved ? `, ${c.showing_loved} loved` : ""}`}
+                          >
+                            {c.showing_total}
+                            {c.showing_loved && c.showing_loved > 0 ? (
+                              <span className="ml-1 text-red-500">♥{c.showing_loved}</span>
+                            ) : null}
+                          </Link>
+                        ) : null}
                       </div>
                     </td>
                     <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{timeAgo(c.last_contacted_at)}</td>
@@ -430,6 +449,12 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                           id. Property address is filled in-form; we don't
                           pre-fill from `property_address` because that's the
                           buyer's home, not the subject property. */}
+                      <Link
+                        href={`/dashboard/showings/new?contactId=${encodeURIComponent(c.id)}`}
+                        className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 mr-2"
+                      >
+                        Showing
+                      </Link>
                       <Link
                         href={`/dashboard/transactions/new?contactId=${encodeURIComponent(c.id)}`}
                         className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"

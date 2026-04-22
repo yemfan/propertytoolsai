@@ -68,6 +68,14 @@ const navConfig = {
           icon: navEmoji("✅"),
         },
         {
+          // Buyer-side property-visit tracker: schedule + feedback capture.
+          // See apps/leadsmartai/lib/showings.
+          label: "Showings",
+          href: "/dashboard/showings",
+          match: ["/dashboard/showings"],
+          icon: navEmoji("🏠"),
+        },
+        {
           // Per-deal coordinator: deadlines, checklist, counterparties
           // for buyer-rep closings. See apps/leadsmartai/lib/transactions.
           label: "Transactions",
