@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 
 const tabs = [
   { href: "/client/dashboard", label: "Home", icon: "⌂" },
+  { href: "/client/activity", label: "Activity", icon: "📈" },
   { href: "/client/explore", label: "Homes", icon: "♡" },
   { href: "/client/tracker", label: "Deal", icon: "▤" },
   { href: "/client/documents", label: "Docs", icon: "📄" },
   { href: "/client/chat", label: "Chat", icon: "💬" },
-  { href: "/client/assistant", label: "AI", icon: "✨" },
 ] as const;
 
 export default function ClientMobileNav() {
