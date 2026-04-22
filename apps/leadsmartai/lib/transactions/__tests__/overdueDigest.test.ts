@@ -15,6 +15,7 @@ function tx(overrides: Partial<TransactionRow & { contact_name: string | null }>
     purchase_price: null,
     status: "active",
     terminated_reason: null,
+    listing_start_date: null,
     mutual_acceptance_date: "2026-04-01",
     inspection_deadline: null,
     inspection_completed_at: null,

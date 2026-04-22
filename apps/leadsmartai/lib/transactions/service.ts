@@ -42,6 +42,7 @@ export type CreateTransactionInput = {
   state?: string | null;
   zip?: string | null;
   purchasePrice?: number | null;
+  listingStartDate?: string | null;
   mutualAcceptanceDate?: string | null;
   closingDate?: string | null;
   notes?: string | null;
@@ -61,6 +62,7 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
     state: input.state ?? null,
     zip: input.zip ?? null,
     purchase_price: input.purchasePrice ?? null,
+    listing_start_date: input.listingStartDate ?? null,
     mutual_acceptance_date: input.mutualAcceptanceDate ?? null,
     closing_date: input.closingDate ?? null,
     notes: input.notes ?? null,
@@ -83,23 +85,30 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
     throw new Error(error?.message ?? "Failed to create transaction");
   }
 
-  // Seed the buyer-rep task list. Each seed task gets a due_date
-  // relative to mutual_acceptance_date if the anchor is set; otherwise
-  // due_date is null and the agent fills it when the anchor lands.
-  const anchor = row.mutual_acceptance_date;
-  const seedRows = seedTasksFor(transactionType).map((t, idx) => ({
-    transaction_id: (inserted as TransactionRow).id,
-    stage: t.stage,
-    title: t.title,
-    description: t.description ?? null,
-    due_date:
-      anchor && t.offsetFromMutualAcceptanceDays != null
-        ? addDaysIso(anchor, t.offsetFromMutualAcceptanceDays)
-        : null,
-    order_index: idx,
-    seed_key: t.seedKey,
-    source: "seed" as const,
-  }));
+  // Seed the task list. Each seed task picks an anchor date from the
+  // transaction row — either mutual_acceptance_date or listing_start_date
+  // — and computes due_date as anchor + offsetDays. If the chosen anchor
+  // is null, due_date stays null and the agent fills it when the anchor
+  // date lands.
+  const mutualAcceptance = row.mutual_acceptance_date;
+  const listingStart = row.listing_start_date;
+  const seedRows = seedTasksFor(transactionType).map((t, idx) => {
+    const anchorDate =
+      t.anchor === "listing_start" ? listingStart : mutualAcceptance;
+    return {
+      transaction_id: (inserted as TransactionRow).id,
+      stage: t.stage,
+      title: t.title,
+      description: t.description ?? null,
+      due_date:
+        anchorDate && t.offsetDays != null
+          ? addDaysIso(anchorDate, t.offsetDays)
+          : null,
+      order_index: idx,
+      seed_key: t.seedKey,
+      source: "seed" as const,
+    };
+  });
 
   if (seedRows.length > 0) {
     const { error: taskError } = await supabaseAdmin.from("transaction_tasks").insert(seedRows);
@@ -236,6 +245,7 @@ export type UpdateTransactionInput = Partial<{
   purchase_price: number | null;
   status: TransactionRow["status"];
   terminated_reason: string | null;
+  listing_start_date: string | null;
   mutual_acceptance_date: string | null;
   inspection_deadline: string | null;
   inspection_completed_at: string | null;
