@@ -177,7 +177,7 @@ const navConfig = {
           icon: navEmoji("📈"),
         },
         {
-          label: "Growth",
+          label: "Growth & Opportunities",
           href: "/dashboard/growth",
           match: ["/dashboard/growth"],
           icon: navEmoji("🚀"),

@@ -1,173 +1,434 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import type { GrowthOpportunity, OpportunityCategory, OpportunityPriority } from "@/lib/growth/opportunityTypes";
 
-type Metrics = {
-  traffic: { page_views: number; conversions: number; conversion_rate: number; tool_usage: number };
-  referrals: { codes: number; signups: number; shares: number; conversions: number };
-  viral: { invites_per_sharer: number; referral_share: number; viral_k: number };
+/**
+ * Growth & Opportunities.
+ *
+ * Top: AI-generated growth opportunities — 3-5 concrete actions the
+ * agent should take this week. Cached server-side for 1h; regenerate
+ * button bypasses cache.
+ *
+ * Below: supporting growth metrics + referral code tracking. Kept
+ * minimal — the old full-dashboard version had several mismatched
+ * fields that crashed render (API returns camelCase, UI read snake).
+ */
+
+type OpportunitiesResponse = {
+  ok: boolean;
+  opportunities: GrowthOpportunity[];
+  generatedAtIso: string;
+  fromCache: boolean;
+  aiConfigured: boolean;
+  error?: string;
 };
 
-type ReferralCode = { code: string; label: string; signups: number; conversions: number; shares: number };
+type MetricsResponse = {
+  ok: boolean;
+  traffic: { pageViews: number; conversions: number; conversionRate: number; toolUsage: number };
+  referrals: {
+    codes: number;
+    eventsSignups: number;
+    eventsShares: number;
+    eventsConversions: number;
+  };
+  viral: {
+    invitesPerSharer: number;
+    referralShare: number;
+    viralCoefficientEstimate: number;
+  };
+};
+
+type ReferralCodeRow = {
+  code: string;
+  label: string | null;
+  signups_count: number;
+  conversions_count: number;
+  shares_count: number;
+  created_at: string;
+};
+
+const CATEGORY_LABEL: Record<OpportunityCategory, string> = {
+  stale_sphere: "Stale sphere",
+  cold_hot_lead: "Cold hot lead",
+  would_offer_idle: "Would-offer idle",
+  stalled_offer: "Stalled offer",
+  pipeline_gap: "Pipeline gap",
+  source_concentration: "Source concentration",
+  close_rate: "Close rate",
+  anniversary_reach_out: "Anniversary",
+  other: "Other",
+};
+
+const PRIORITY_BADGE: Record<OpportunityPriority, string> = {
+  high: "bg-red-100 text-red-800 border-red-200",
+  medium: "bg-amber-100 text-amber-800 border-amber-200",
+  low: "bg-slate-100 text-slate-700 border-slate-200",
+};
+
+const PRIORITY_EMOJI: Record<OpportunityPriority, string> = {
+  high: "🔥",
+  medium: "⚡",
+  low: "💡",
+};
 
 export default function GrowthPage() {
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
-  const [codes, setCodes] = useState<ReferralCode[]>([]);
-  const [newLabel, setNewLabel] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [opps, setOpps] = useState<OpportunitiesResponse | null>(null);
+  const [oppLoading, setOppLoading] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+  const [oppError, setOppError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    const [mRes, cRes] = await Promise.all([
-      fetch("/api/dashboard/growth/metrics?days=30").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/dashboard/growth/referral-code").then((r) => r.json()).catch(() => ({})),
-    ]);
-    if (mRes.ok !== false) setMetrics(mRes);
-    if (cRes.codes) setCodes(cRes.codes);
+  const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
+  const [codes, setCodes] = useState<ReferralCodeRow[]>([]);
+  const [newLabel, setNewLabel] = useState("");
+  const [creatingCode, setCreatingCode] = useState(false);
+
+  const loadOpportunities = useCallback(async (force = false) => {
+    setOppError(null);
+    if (force) setRegenerating(true);
+    else setOppLoading(true);
+    try {
+      const res = await fetch("/api/dashboard/growth/opportunities", {
+        method: force ? "POST" : "GET",
+      });
+      const body = (await res.json().catch(() => ({}))) as OpportunitiesResponse;
+      if (!res.ok || !body.ok) {
+        setOppError(body.error ?? "Failed to load opportunities.");
+        return;
+      }
+      setOpps(body);
+    } catch (e) {
+      setOppError(e instanceof Error ? e.message : "Network error.");
+    } finally {
+      setOppLoading(false);
+      setRegenerating(false);
+    }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const loadMetrics = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard/growth/metrics?days=30");
+      const body = (await res.json().catch(() => ({}))) as MetricsResponse & {
+        ok?: boolean;
+      };
+      if (body.ok !== false) setMetrics(body);
+    } catch {
+      /* non-fatal */
+    }
+  }, []);
+
+  const loadCodes = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard/growth/referral-code");
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        codes?: ReferralCodeRow[];
+      };
+      if (body.codes) setCodes(body.codes);
+    } catch {
+      /* non-fatal */
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadOpportunities();
+    void loadMetrics();
+    void loadCodes();
+  }, [loadOpportunities, loadMetrics, loadCodes]);
 
   async function createCode() {
     if (!newLabel.trim()) return;
-    setCreating(true);
+    setCreatingCode(true);
     try {
       await fetch("/api/dashboard/growth/referral-code", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: newLabel }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: newLabel.trim() }),
       });
-      setNewLabel(""); load();
-    } catch { /* */ }
-    finally { setCreating(false); }
+      setNewLabel("");
+      void loadCodes();
+    } finally {
+      setCreatingCode(false);
+    }
   }
 
-  const t = metrics?.traffic;
-  const r = metrics?.referrals;
-  const v = metrics?.viral;
-
-  const trafficPie = t ? [
-    { name: "Conversions", value: t.conversions, color: "#22c55e" },
-    { name: "Views only", value: Math.max(0, t.page_views - t.conversions), color: "#e5e7eb" },
-  ] : [];
-
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900">Growth</h1>
-        <p className="text-sm text-gray-500">Traffic, referrals, and viral metrics (30 days).</p>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Growth &amp; Opportunities</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Claude reads your pipeline + CRM and surfaces the highest-leverage actions to take this
+            week. Updated hourly; regenerate anytime.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void loadOpportunities(true)}
+          disabled={regenerating || oppLoading}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+        >
+          {regenerating ? "Analyzing…" : "↻ Refresh opportunities"}
+        </button>
       </div>
 
-      {/* KPI Cards */}
-      {t && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-xs text-gray-500">Page Views</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">{t.page_views}</p>
-          </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-xs text-gray-500">Conversions</p>
-            <p className="mt-1 text-2xl font-bold text-green-600">{t.conversions}</p>
-            <p className="text-xs text-gray-400">{t.conversion_rate}% rate</p>
-          </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-xs text-gray-500">Tool Usage</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">{t.tool_usage}</p>
-          </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <p className="text-xs text-gray-500">Referral Signups</p>
-            <p className="mt-1 text-2xl font-bold text-blue-600">{r?.signups ?? 0}</p>
-          </div>
-        </div>
-      )}
+      <OpportunitiesSection
+        loading={oppLoading && !opps}
+        error={oppError}
+        data={opps}
+        regenerating={regenerating}
+      />
 
-      {/* Charts */}
-      <div className="grid gap-3 md:grid-cols-2">
-        {trafficPie.length > 0 && (
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <h3 className="text-xs font-semibold text-gray-500 mb-2">Conversion Rate</h3>
-            <div className="flex items-center gap-3">
-              <div className="h-[110px] w-[110px] shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={trafficPie} dataKey="value" cx="50%" cy="50%" outerRadius={45} innerRadius={25} strokeWidth={1}>
-                      {trafficPie.map((d, i) => <Cell key={i} fill={d.color} />)}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-1 text-xs">
-                {trafficPie.map((d) => (
-                  <div key={d.name} className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                    <span className="text-gray-600">{d.name}</span>
-                    <span className="font-semibold text-gray-900">{d.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+      <section className="space-y-3 border-t border-slate-200 pt-6">
+        <h2 className="text-sm font-semibold text-slate-900">Traffic &amp; referrals (30 days)</h2>
 
-        {v && (
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <h3 className="text-xs font-semibold text-gray-500 mb-3">Viral Metrics</h3>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{v.invites_per_sharer.toFixed(1)}</p>
-                <p className="text-[10px] text-gray-500">Invites / Sharer</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{v.referral_share.toFixed(1)}%</p>
-                <p className="text-[10px] text-gray-500">Referral Share</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{v.viral_k.toFixed(2)}</p>
-                <p className="text-[10px] text-gray-500">Viral K</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Referral Codes */}
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-3">
-        <h2 className="text-sm font-semibold text-gray-900">Referral Codes</h2>
-        <div className="flex gap-2">
-          <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="Code label..." className="flex-1 max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-          <button onClick={() => void createCode()} disabled={creating || !newLabel.trim()} className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50">
-            {creating ? "..." : "Create Code"}
-          </button>
-        </div>
-        {codes.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 text-gray-600">
-                <tr>
-                  <th className="text-left px-4 py-2 font-medium">Code</th>
-                  <th className="text-left px-4 py-2 font-medium">Label</th>
-                  <th className="text-right px-4 py-2 font-medium">Signups</th>
-                  <th className="text-right px-4 py-2 font-medium">Conversions</th>
-                  <th className="text-right px-4 py-2 font-medium">Shares</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {codes.map((c) => (
-                  <tr key={c.code} className="hover:bg-gray-50/50">
-                    <td className="px-4 py-2 font-mono text-xs text-gray-900">{c.code}</td>
-                    <td className="px-4 py-2 text-gray-600">{c.label}</td>
-                    <td className="px-4 py-2 text-right font-semibold">{c.signups}</td>
-                    <td className="px-4 py-2 text-right font-semibold">{c.conversions}</td>
-                    <td className="px-4 py-2 text-right font-semibold">{c.shares}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {metrics ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stat label="Page views" value={String(metrics.traffic.pageViews)} />
+            <Stat
+              label="Conversions"
+              value={String(metrics.traffic.conversions)}
+              hint={`${metrics.traffic.conversionRate}% rate`}
+              tone="green"
+            />
+            <Stat label="Tool usage" value={String(metrics.traffic.toolUsage)} />
+            <Stat
+              label="Referral signups"
+              value={String(metrics.referrals.eventsSignups)}
+              tone="blue"
+            />
           </div>
         ) : (
-          <p className="text-sm text-gray-400">No referral codes yet.</p>
+          <div className="text-xs text-slate-400">Loading metrics…</div>
         )}
+
+        {metrics?.viral ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 className="text-xs font-semibold text-slate-600">Viral reach</h3>
+            <div className="mt-2 grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p className="text-xl font-bold text-slate-900">
+                  {metrics.viral.invitesPerSharer.toFixed(1)}
+                </p>
+                <p className="text-[10px] text-slate-500">Invites / sharer</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold text-slate-900">
+                  {metrics.viral.referralShare.toFixed(1)}%
+                </p>
+                <p className="text-[10px] text-slate-500">Referral share of signups</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold text-slate-900">
+                  {metrics.viral.viralCoefficientEstimate.toFixed(2)}
+                </p>
+                <p className="text-[10px] text-slate-500">Viral K estimate</p>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-slate-900">Referral codes</h2>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap gap-2">
+            <input
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              placeholder="Code label (e.g. instagram)"
+              className="min-w-[200px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => void createCode()}
+              disabled={creatingCode || !newLabel.trim()}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              {creatingCode ? "Creating…" : "Create code"}
+            </button>
+          </div>
+          {codes.length > 0 ? (
+            <div className="mt-3 overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50 text-xs text-slate-600">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium">Code</th>
+                    <th className="px-3 py-2 text-left font-medium">Label</th>
+                    <th className="px-3 py-2 text-right font-medium">Signups</th>
+                    <th className="px-3 py-2 text-right font-medium">Conversions</th>
+                    <th className="px-3 py-2 text-right font-medium">Shares</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {codes.map((c) => (
+                    <tr key={c.code} className="hover:bg-slate-50">
+                      <td className="px-3 py-2 font-mono text-xs text-slate-900">{c.code}</td>
+                      <td className="px-3 py-2 text-slate-600">{c.label ?? "—"}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{c.signups_count}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{c.conversions_count}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{c.shares_count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-slate-400">No referral codes yet.</p>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function OpportunitiesSection({
+  loading,
+  error,
+  data,
+  regenerating,
+}: {
+  loading: boolean;
+  error: string | null;
+  data: OpportunitiesResponse | null;
+  regenerating: boolean;
+}) {
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
+        Loading opportunities…
       </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        {error}
+      </div>
+    );
+  }
+  if (!data) return null;
+
+  if (!data.aiConfigured) {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <div className="font-medium">AI opportunities aren&apos;t enabled on this environment.</div>
+        <div className="mt-1 text-[12px] text-amber-700">
+          Set <code className="rounded bg-amber-100 px-1 py-0.5">ANTHROPIC_API_KEY</code> in your
+          environment and redeploy.
+        </div>
+      </div>
+    );
+  }
+
+  if (data.opportunities.length === 0) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+        <div className="text-lg">✨</div>
+        <div className="mt-1 text-sm font-medium text-slate-900">Nothing urgent right now.</div>
+        <p className="mt-1 text-xs text-slate-500">
+          Your pipeline looks healthy. Come back after a few more showings or closings for fresh
+          suggestions.
+        </p>
+      </div>
+    );
+  }
+
+  const generatedLabel = new Date(data.generatedAtIso).toLocaleString();
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {data.opportunities.map((o) => (
+          <OpportunityCard key={o.id} opp={o} regenerating={regenerating} />
+        ))}
+      </div>
+      <div className="text-[11px] text-slate-400">
+        Generated {generatedLabel}
+        {data.fromCache ? " (cached)" : ""}.
+      </div>
+    </div>
+  );
+}
+
+function OpportunityCard({
+  opp,
+  regenerating,
+}: {
+  opp: GrowthOpportunity;
+  regenerating: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-xl border bg-white p-4 shadow-sm ${regenerating ? "opacity-70" : ""}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${PRIORITY_BADGE[opp.priority]}`}
+            >
+              <span>{PRIORITY_EMOJI[opp.priority]}</span>
+              <span className="uppercase tracking-wide">{opp.priority}</span>
+            </span>
+            <span className="text-[10px] text-slate-500">{CATEGORY_LABEL[opp.category]}</span>
+          </div>
+          <h3 className="mt-2 text-sm font-semibold text-slate-900">{opp.title}</h3>
+        </div>
+      </div>
+
+      <p className="mt-2 text-[13px] leading-5 text-slate-700">{opp.insight}</p>
+      <p className="mt-2 text-[13px] leading-5 text-slate-900">
+        <span className="font-medium">Action:</span> {opp.action}
+      </p>
+
+      {opp.context.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {opp.context.map((c, i) => (
+            <span
+              key={i}
+              className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700"
+            >
+              {c}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {opp.actionUrl ? (
+        <div className="mt-3">
+          <Link
+            href={opp.actionUrl}
+            className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+          >
+            {opp.actionLabel ?? "Take action"} →
+          </Link>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "green" | "blue";
+}) {
+  const color =
+    tone === "green" ? "text-green-700" : tone === "blue" ? "text-blue-700" : "text-slate-900";
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="text-[11px] font-medium text-slate-500">{label}</div>
+      <div className={`mt-0.5 text-xl font-semibold ${color}`}>{value}</div>
+      {hint ? <div className="text-[10px] text-slate-400">{hint}</div> : null}
     </div>
   );
 }

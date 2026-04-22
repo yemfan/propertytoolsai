@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Growth & SEO",
-  description: "Track traffic, manage landing pages, and grow your online presence.",
-  keywords: ["growth", "SEO", "traffic", "landing pages"],
+  title: "Growth & Opportunities",
+  description:
+    "AI-generated growth opportunities plus traffic + referral metrics. Claude reads your pipeline and surfaces the highest-leverage actions to take this week.",
+  keywords: ["growth", "opportunities", "AI", "referrals", "traffic"],
   robots: { index: false },
 };
 
