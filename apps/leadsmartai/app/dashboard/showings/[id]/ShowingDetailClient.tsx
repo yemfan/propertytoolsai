@@ -270,6 +270,20 @@ export function ShowingDetailClient({
         <div className="space-y-4">
           <Card title="Quick actions">
             <div className="space-y-2">
+              {/* "Write offer" surfaces prominently when the buyer said
+                  they'd like to offer. Back-links the offer to this
+                  showing so the history chain stays intact. */}
+              {feedback?.would_offer && status === "attended" ? (
+                <Link
+                  href={`/dashboard/offers/new?contactId=${encodeURIComponent(showing.contact_id)}&showingId=${encodeURIComponent(showing.id)}`}
+                  className="block rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
+                >
+                  📝 Write offer
+                  <div className="text-[11px] font-normal text-amber-700">
+                    Buyer flagged this one as would-offer.
+                  </div>
+                </Link>
+              ) : null}
               <a
                 href={mailtoLink({
                   to: showing.listing_agent_email ?? "",

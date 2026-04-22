@@ -27,6 +27,10 @@ type LeadRow = {
   showing_total?: number;
   /** Count of showings where buyer's overall_reaction = "love". */
   showing_loved?: number;
+  /** Offers currently in draft / submitted / countered state. */
+  offer_active?: number;
+  /** Offers that reached `accepted` status (total, not just this month). */
+  offer_won?: number;
 };
 
 type ChartItem = { name: string; value: number; color: string };
@@ -436,6 +440,22 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                             ) : null}
                           </Link>
                         ) : null}
+                        {/* Offer badge — active count with a ✓N for wins. Only
+                            rendered when there's at least one offer logged. */}
+                        {(c.offer_active ?? 0) > 0 || (c.offer_won ?? 0) > 0 ? (
+                          <Link
+                            href={`/dashboard/offers?contactId=${encodeURIComponent(c.id)}`}
+                            className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800 hover:bg-amber-100"
+                            title={`${c.offer_active ?? 0} active, ${c.offer_won ?? 0} accepted`}
+                          >
+                            {(c.offer_active ?? 0) > 0 ? `${c.offer_active}` : ""}
+                            {(c.offer_won ?? 0) > 0 ? (
+                              <span className={(c.offer_active ?? 0) > 0 ? "ml-1" : ""}>
+                                ✓{c.offer_won}
+                              </span>
+                            ) : null}
+                          </Link>
+                        ) : null}
                       </div>
                     </td>
                     <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{timeAgo(c.last_contacted_at)}</td>
@@ -454,6 +474,12 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                         className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 mr-2"
                       >
                         Showing
+                      </Link>
+                      <Link
+                        href={`/dashboard/offers/new?contactId=${encodeURIComponent(c.id)}`}
+                        className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 mr-2"
+                      >
+                        Offer
                       </Link>
                       <Link
                         href={`/dashboard/transactions/new?contactId=${encodeURIComponent(c.id)}`}

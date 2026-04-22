@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { listContacts } from "@/lib/contacts/service";
 import { listSmartLists } from "@/lib/contacts/smart-lists";
+import { getContactOfferStats } from "@/lib/offers/service";
 import { getContactShowingStats } from "@/lib/showings/service";
 import SmartListTabs from "@/components/dashboard/SmartListTabs";
 import ContactsClient from "./ContactsClient";
@@ -48,18 +49,19 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     : await listContacts(agentId);
   void activeListContacts; // placeholder; keeps the parallel fetch pattern explicit
 
-  // Showing stats per contact — single bulk query, returns empty Map if
-  // the feature hasn't been used yet.
-  const showingStats = await getContactShowingStats(
-    String(agentId),
-    contacts.map((c) => c.id),
-  );
+  // Showing + offer stats per contact — single bulk query each, parallel.
+  const contactIds = contacts.map((c) => c.id);
+  const [showingStats, offerStats] = await Promise.all([
+    getContactShowingStats(String(agentId), contactIds),
+    getContactOfferStats(String(agentId), contactIds),
+  ]);
 
   // ContactsClient still expects the legacy LeadRow shape. Adapt the
   // ContactView into that minimal shape; richer fields are available
   // if/when ContactsClient is refactored to use ContactView directly.
   const legacyRows = contacts.map((c) => {
     const stats = showingStats.get(c.id);
+    const oStats = offerStats.get(c.id);
     return {
       id: c.id,
       name:
@@ -81,6 +83,8 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       preferred_language: c.preferredLanguage && c.preferredLanguage !== "en" ? c.preferredLanguage : null,
       showing_total: stats?.total ?? 0,
       showing_loved: stats?.loved ?? 0,
+      offer_active: oStats?.active ?? 0,
+      offer_won: oStats?.won ?? 0,
     };
   });
 
