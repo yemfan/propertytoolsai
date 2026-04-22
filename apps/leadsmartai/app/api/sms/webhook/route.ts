@@ -18,6 +18,7 @@ import {
   dispatchMobileInboundSmsPush,
   dispatchMobileNeedsHumanPush,
 } from "@/lib/mobile/pushNotificationsService";
+import { autoDetectContactLanguage } from "@/lib/locales/autoDetectContactLanguage";
 import type { SmsAssistantReply } from "@/lib/ai-sms/types";
 
 function digitsOnly(input: string) {
@@ -247,6 +248,22 @@ export async function POST(req: Request) {
         .update({ sms_last_inbound_at: new Date().toISOString() } as any)
         .eq("id", leadId);
     } catch {}
+
+    // Auto-detect inbound language on first CJK message. No-ops when
+    // `preferred_language` is already set (explicit choice wins) or when
+    // the inbound text is English (keeps NULL so "no override" stays
+    // visible on the Contacts page). Failures never block the pipeline.
+    void autoDetectContactLanguage({
+      supabase: supabaseServer as never,
+      contactId: leadId,
+      inboundText: body,
+    }).then((r) => {
+      if (r.kind === "error") {
+        console.error("[sms/webhook] autoDetectContactLanguage:", r.error);
+      }
+    }).catch((e) => {
+      console.error("[sms/webhook] autoDetectContactLanguage (unexpected):", e);
+    });
 
     const unsubscribe = isUnsubscribeMessage(body);
     const highIntent = isHighIntentMessage(body);

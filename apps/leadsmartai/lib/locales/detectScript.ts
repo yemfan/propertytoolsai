@@ -36,3 +36,29 @@ export function shouldOfferTranslationToEnglish(text: string): boolean {
   if (!text) return false;
   return containsCjk(text);
 }
+
+/**
+ * Classify an inbound message body to a supported outbound locale id.
+ * Used by the SMS + email inbound webhooks to auto-set
+ * `contacts.preferred_language` on first receipt when the contact has
+ * no explicit preference yet.
+ *
+ * The decision rule is deliberately simple and conservative:
+ *   - If the text contains any CJK Han character → 'zh'
+ *   - Otherwise → 'en'
+ *
+ * This is fine for the current two-language world (en + zh). When a
+ * third non-Latin-script language is added (ja, ko, ar) we'll need a
+ * multi-way classifier — LLM one-shot via the existing AI call is the
+ * natural next step, and the return type stays the same so callers
+ * don't need to change.
+ *
+ * Returns a string rather than `LocaleId` so a caller can compare
+ * against arbitrary `preferred_language` values without importing the
+ * registry type, but the output is guaranteed to be one of the
+ * outbound-enabled locale ids.
+ */
+export function classifyInboundLanguage(text: string): "en" | "zh" {
+  if (text && containsCjk(text)) return "zh";
+  return "en";
+}
