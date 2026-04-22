@@ -1,6 +1,7 @@
 import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { persistCommissionDefaults } from "./applyCommissionDefaults";
 import { addDaysIso, applyDeadlineDefaults } from "./deadlineDefaults";
 import { applyOnCloseBackfill } from "./onCloseBackfill";
 import { seedTasksFor } from "./seedTasks";
@@ -273,7 +274,9 @@ export async function updateTransaction(
   // for the on-close backfill. Single extra read per update; fine.
   const { data: before } = await supabaseAdmin
     .from("transactions")
-    .select("status, mutual_acceptance_date, inspection_deadline, appraisal_deadline, loan_contingency_deadline, closing_date")
+    .select(
+      "status, purchase_price, mutual_acceptance_date, inspection_deadline, appraisal_deadline, loan_contingency_deadline, closing_date",
+    )
     .eq("id", id)
     .eq("agent_id", agentId)
     .maybeSingle();
@@ -301,7 +304,20 @@ export async function updateTransaction(
   // clients that navigate to Contacts right after closing shouldn't see
   // stale data.
   if (updated && before) {
-    await applyOnCloseBackfill({ status: (before as { status: TransactionRow["status"] }).status }, updated);
+    const beforeStatus = (before as { status: TransactionRow["status"] }).status;
+    await applyOnCloseBackfill({ status: beforeStatus }, updated);
+
+    // Compute commission on the active → closed transition. Only runs
+    // when the deal just closed; doesn't touch pre-existing commission
+    // fields (the helper fills in nulls only). Re-run when price
+    // changes too so the GCI / net numbers stay fresh.
+    const justClosed = beforeStatus !== "closed" && updated.status === "closed";
+    const priceChanged =
+      "purchase_price" in input &&
+      input.purchase_price !== (before as { purchase_price: number | null }).purchase_price;
+    if (justClosed || priceChanged) {
+      await persistCommissionDefaults(updated);
+    }
   }
 
   return updated;

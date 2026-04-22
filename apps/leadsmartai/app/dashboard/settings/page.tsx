@@ -4,6 +4,7 @@ import AgentAiSettingsPanel from "@/components/dashboard/AgentAiSettingsPanel";
 import AgentVoiceSettingsPanel from "@/components/dashboard/AgentVoiceSettingsPanel";
 import ChannelsCard from "@/components/dashboard/ChannelsCard";
 import ComplianceCard from "@/components/dashboard/ComplianceCard";
+import { CommissionDefaultsPanel } from "@/components/dashboard/CommissionDefaultsPanel";
 import { TransactionNotificationsPanel } from "@/components/dashboard/TransactionNotificationsPanel";
 import HomeValueSmartLinkCopyShare from "@/components/dashboard/HomeValueSmartLinkCopyShare";
 import ReviewPolicyPanel from "@/components/dashboard/ReviewPolicyPanel";
@@ -92,6 +93,12 @@ export default async function SettingsPage() {
               description="Delivery preferences for deal-level nudges: daily email digest of overdue tasks, plus a closing-window wire-fraud SMS escalation."
             >
               <TransactionNotificationsPanel />
+            </Card>
+            <Card
+              title="Commission defaults"
+              description="Applied to new transactions + revenue analytics on /dashboard/performance. Per-deal overrides stay intact."
+            >
+              <CommissionDefaultsPanel />
             </Card>
             <ComplianceCard />
           </>

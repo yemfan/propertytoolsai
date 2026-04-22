@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
+import { RevenuePanel } from "@/components/dashboard/RevenuePanel";
 
 type Summary = {
   tasksCompleted: number;
@@ -96,11 +97,22 @@ export default function PerformanceClient() {
   }));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Performance</h1>
-        <p className="text-sm text-gray-500">7-day snapshot of your productivity and lead engagement.</p>
+        <p className="text-sm text-gray-500">Revenue, pipeline, and day-to-day engagement — one view.</p>
       </div>
+
+      {/* Revenue & commission — the "how am I doing" section agents actually
+          open this page to see. Kept at the top; the existing engagement
+          metrics (tasks, response time, hot leads) are below. */}
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-gray-900">Revenue &amp; commission</h2>
+        <RevenuePanel />
+      </section>
+
+      <section className="space-y-4 border-t border-slate-200 pt-5">
+        <h2 className="text-sm font-semibold text-gray-900">Engagement</h2>
 
       {/* Alerts */}
       {s?.alerts?.length ? (
@@ -189,6 +201,7 @@ export default function PerformanceClient() {
           </div>
         </div>
       </div>
+      </section>
     </div>
   );
 }
