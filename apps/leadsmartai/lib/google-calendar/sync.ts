@@ -62,50 +62,45 @@ async function getValidToken(agentId: string): Promise<string | null> {
 }
 
 /**
- * Create or update an event in Google Calendar.
+ * Low-level primitive: create or update a Google Calendar event via the
+ * v3 API. No DB I/O — the caller passes in the prior Google event id (if
+ * any) and persists the returned new id wherever it belongs. This is the
+ * shared core for all our Google Calendar integrations.
+ *
+ * Returns { googleEventId: null } when:
+ *   * The agent hasn't connected Google Calendar yet.
+ *   * The token is expired + un-refreshable.
+ *   * Google's API returned a non-2xx (logged + swallowed — calendar
+ *     failures should never block the primary create/update).
  */
-export async function syncEventToGoogle(params: {
+export async function upsertGoogleEvent(params: {
   agentId: string;
-  eventId: string;
+  existingGoogleEventId: string | null;
   title: string;
   description?: string;
   startAt: string; // ISO
   endAt: string; // ISO
+  location?: string;
   timezone?: string;
 }): Promise<{ googleEventId: string | null }> {
   const accessToken = await getValidToken(params.agentId);
   if (!accessToken) return { googleEventId: null };
 
-  // Check if event already has a Google event ID
-  const { data: existing } = await supabaseServer
-    .from("lead_calendar_events")
-    .select("external_event_id")
-    .eq("id", params.eventId)
-    .maybeSingle();
-
-  const googleEventId = (existing as any)?.external_event_id;
   const tz = params.timezone || "America/Los_Angeles";
-
   const eventBody = {
     summary: params.title,
     description: params.description || "",
+    location: params.location || undefined,
     start: { dateTime: params.startAt, timeZone: tz },
     end: { dateTime: params.endAt, timeZone: tz },
     reminders: { useDefault: true },
   };
 
-  let method: string;
-  let url: string;
-
-  if (googleEventId) {
-    // Update existing
-    method = "PUT";
-    url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${googleEventId}`;
-  } else {
-    // Create new
-    method = "POST";
-    url = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
-  }
+  const existing = params.existingGoogleEventId;
+  const method = existing ? "PUT" : "POST";
+  const url = existing
+    ? `https://www.googleapis.com/calendar/v3/calendars/primary/events/${existing}`
+    : "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 
   const res = await fetch(url, {
     method,
@@ -118,25 +113,58 @@ export async function syncEventToGoogle(params: {
 
   if (!res.ok) {
     console.error("Google Calendar sync error:", res.status, await res.text().catch(() => ""));
-    return { googleEventId: googleEventId || null };
+    return { googleEventId: existing };
   }
 
   const result = await res.json();
-  const newGoogleEventId = result.id || googleEventId;
+  return { googleEventId: result.id || existing };
+}
 
-  // Save the Google event ID back to our DB
-  if (newGoogleEventId && newGoogleEventId !== googleEventId) {
+/**
+ * Create or update a Google Calendar event for a lead_calendar_events
+ * row. This is the original lead-system consumer — unchanged behavior.
+ * Showings use `upsertGoogleEvent` directly with their own persistence.
+ */
+export async function syncEventToGoogle(params: {
+  agentId: string;
+  eventId: string;
+  title: string;
+  description?: string;
+  startAt: string; // ISO
+  endAt: string; // ISO
+  timezone?: string;
+}): Promise<{ googleEventId: string | null }> {
+  // Look up any prior Google event id for this lead event row.
+  const { data: existing } = await supabaseServer
+    .from("lead_calendar_events")
+    .select("external_event_id")
+    .eq("id", params.eventId)
+    .maybeSingle();
+  const existingGoogleEventId = (existing as any)?.external_event_id ?? null;
+
+  const { googleEventId } = await upsertGoogleEvent({
+    agentId: params.agentId,
+    existingGoogleEventId,
+    title: params.title,
+    description: params.description,
+    startAt: params.startAt,
+    endAt: params.endAt,
+    timezone: params.timezone,
+  });
+
+  // Persist the Google event ID back to our DB when it changed.
+  if (googleEventId && googleEventId !== existingGoogleEventId) {
     await supabaseServer
       .from("lead_calendar_events")
       .update({
-        external_event_id: newGoogleEventId,
+        external_event_id: googleEventId,
         calendar_provider: "google",
         external_calendar_id: "primary",
       } as any)
       .eq("id", params.eventId);
   }
 
-  return { googleEventId: newGoogleEventId };
+  return { googleEventId };
 }
 
 /**

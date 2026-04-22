@@ -33,6 +33,10 @@ export type ShowingRow = {
   cancellation_reason: string | null;
   notes: string | null;
 
+  /** Google Calendar event id. Null = never synced, agent hasn't connected
+      Google Calendar, or sync failed (failures are swallowed — see service). */
+  google_event_id: string | null;
+
   created_at: string;
   updated_at: string;
 };

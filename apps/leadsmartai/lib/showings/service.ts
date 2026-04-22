@@ -1,6 +1,11 @@
 import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import {
+  deleteShowingFromGoogle,
+  needsResync,
+  syncShowingToGoogle,
+} from "./googleSync";
 import type {
   ContactShowingStats,
   OverallReaction,
@@ -66,7 +71,22 @@ export async function createShowing(input: CreateShowingInput): Promise<ShowingR
     .select("*")
     .single();
   if (error || !data) throw new Error(error?.message ?? "Failed to create showing");
-  return data as ShowingRow;
+  const row = data as ShowingRow;
+
+  // Fire-and-forget Google Calendar sync. If the agent hasn't connected
+  // Google, upsertGoogleEvent returns null and we leave google_event_id
+  // null — the showing is still valid, it just isn't on their calendar.
+  const contactName = await fetchContactDisplayName(input.contactId);
+  const { googleEventId } = await syncShowingToGoogle(row, contactName);
+  if (googleEventId && googleEventId !== row.google_event_id) {
+    await supabaseAdmin
+      .from("showings")
+      .update({ google_event_id: googleEventId })
+      .eq("id", row.id);
+    row.google_event_id = googleEventId;
+  }
+
+  return row;
 }
 
 // ── READ ──────────────────────────────────────────────────────────────
@@ -211,6 +231,17 @@ export async function updateShowing(
   id: string,
   input: UpdateShowingInput,
 ): Promise<ShowingRow | null> {
+  // Snapshot pre-update state so we can detect whether the Google event
+  // needs re-syncing (time/address change) and whether status moved to
+  // cancelled (delete the event).
+  const { data: before } = await supabaseAdmin
+    .from("showings")
+    .select("*")
+    .eq("id", id)
+    .eq("agent_id", agentId)
+    .maybeSingle();
+  if (!before) return null;
+
   const patch = { ...input, updated_at: new Date().toISOString() };
   const { data, error } = await supabaseAdmin
     .from("showings")
@@ -220,17 +251,85 @@ export async function updateShowing(
     .select("*")
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return (data as ShowingRow | null) ?? null;
+  const after = (data as ShowingRow | null) ?? null;
+  if (!after) return null;
+
+  // If the status just flipped to cancelled, drop the Google event.
+  // Other status transitions (scheduled → attended) keep the event;
+  // the agent may want it on their calendar as a historical record.
+  const beforeStatus = (before as ShowingRow).status;
+  const statusChanged = input.status !== undefined && input.status !== beforeStatus;
+  if (statusChanged && input.status === "cancelled" && after.google_event_id) {
+    await deleteShowingFromGoogle(agentId, after.google_event_id);
+    await supabaseAdmin
+      .from("showings")
+      .update({ google_event_id: null })
+      .eq("id", id);
+    after.google_event_id = null;
+    return after;
+  }
+
+  // If time/address changed and we still have an event, push the update.
+  if (needsResync(before as ShowingRow, input) && after.status !== "cancelled") {
+    const contactName = await fetchContactDisplayName(after.contact_id);
+    const { googleEventId } = await syncShowingToGoogle(after, contactName);
+    if (googleEventId && googleEventId !== after.google_event_id) {
+      await supabaseAdmin
+        .from("showings")
+        .update({ google_event_id: googleEventId })
+        .eq("id", id);
+      after.google_event_id = googleEventId;
+    }
+  }
+
+  return after;
 }
 
 export async function deleteShowing(agentId: string, id: string): Promise<boolean> {
+  // Read the Google event id BEFORE the row is gone so we can clean up
+  // the remote calendar event.
+  const { data: before } = await supabaseAdmin
+    .from("showings")
+    .select("google_event_id")
+    .eq("id", id)
+    .eq("agent_id", agentId)
+    .maybeSingle();
+  const googleEventId =
+    (before as { google_event_id: string | null } | null)?.google_event_id ?? null;
+
   const { error, count } = await supabaseAdmin
     .from("showings")
     .delete({ count: "exact" })
     .eq("id", id)
     .eq("agent_id", agentId);
   if (error) throw new Error(error.message);
-  return (count ?? 0) > 0;
+  const deleted = (count ?? 0) > 0;
+
+  if (deleted && googleEventId) {
+    await deleteShowingFromGoogle(agentId, googleEventId);
+  }
+  return deleted;
+}
+
+/**
+ * Lightweight contact-name lookup for calendar-event titles. Not part of
+ * the public API — just a helper so the sync call sites stay readable.
+ */
+async function fetchContactDisplayName(contactId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from("contacts")
+    .select("first_name, last_name, email, name")
+    .eq("id", contactId)
+    .maybeSingle();
+  const c = data as {
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+    name: string | null;
+  } | null;
+  if (!c) return null;
+  const joined = `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim();
+  return joined || c.name || c.email || null;
 }
 
 // ── Feedback ──────────────────────────────────────────────────────────
