@@ -177,6 +177,26 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
         </div>
       ) : null}
 
+      {/* Listing-side deals have an "Offers on this listing" surface. For
+          buyer-rep deals the offer came from the buyer-side Offers feature
+          so this link doesn't apply. */}
+      {txn.transaction_type === "listing_rep" || txn.transaction_type === "dual" ? (
+        <Link
+          href={`/dashboard/transactions/${txn.id}/offers`}
+          className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+        >
+          <div>
+            <div className="text-sm font-semibold text-slate-900">
+              📬 Offers on this listing
+            </div>
+            <div className="mt-0.5 text-xs text-slate-500">
+              Compare incoming offers side-by-side with net-to-seller math.
+            </div>
+          </div>
+          <span className="text-slate-400">→</span>
+        </Link>
+      ) : null}
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* ── Left column — tasks by stage ── */}
         <div className="space-y-4">

@@ -1,0 +1,689 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import {
+  DEFAULT_NET_TO_SELLER_ASSUMPTIONS,
+  computeNetToSeller,
+  rankOffers,
+} from "@/lib/listing-offers/netToSeller";
+import type { ListingOfferCompareItem, ListingOfferStatus } from "@/lib/listing-offers/types";
+
+type TransactionSummary = {
+  id: string;
+  property_address: string;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  purchase_price: number | null;
+  transaction_type: "buyer_rep" | "listing_rep" | "dual";
+};
+
+const STATUS_LABEL: Record<ListingOfferStatus, string> = {
+  submitted: "Submitted",
+  countered: "Countered",
+  accepted: "Accepted",
+  rejected: "Rejected",
+  withdrawn: "Withdrawn",
+  expired: "Expired",
+};
+
+const STATUS_BADGE: Record<ListingOfferStatus, string> = {
+  submitted: "bg-blue-100 text-blue-800",
+  countered: "bg-amber-100 text-amber-800",
+  accepted: "bg-green-100 text-green-800",
+  rejected: "bg-red-100 text-red-800",
+  withdrawn: "bg-slate-100 text-slate-600",
+  expired: "bg-slate-100 text-slate-600",
+};
+
+function formatMoney(n: number | null | undefined): string {
+  if (n == null) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+export function ListingOffersCompareClient({
+  transaction,
+  initialOffers,
+}: {
+  transaction: TransactionSummary;
+  initialOffers: ListingOfferCompareItem[];
+}) {
+  const [offers, setOffers] = useState(initialOffers);
+  const [showAdd, setShowAdd] = useState(false);
+  const [msg, setMsg] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
+
+  // Net-to-seller assumptions — agent can tune them for this listing.
+  const [commissionPct, setCommissionPct] = useState(
+    String(DEFAULT_NET_TO_SELLER_ASSUMPTIONS.commissionPct),
+  );
+  const [titleEscrowPct, setTitleEscrowPct] = useState(
+    String(DEFAULT_NET_TO_SELLER_ASSUMPTIONS.titleEscrowPct),
+  );
+  const [transferTaxPct, setTransferTaxPct] = useState(
+    String(DEFAULT_NET_TO_SELLER_ASSUMPTIONS.transferTaxPct),
+  );
+  const [otherCostsFlat, setOtherCostsFlat] = useState("0");
+
+  const assumptionsValid = useMemo(() => {
+    return [commissionPct, titleEscrowPct, transferTaxPct, otherCostsFlat].every((v) => {
+      const n = Number(v);
+      return Number.isFinite(n) && n >= 0;
+    });
+  }, [commissionPct, titleEscrowPct, transferTaxPct, otherCostsFlat]);
+
+  const enriched = useMemo(() => {
+    const assumptions = {
+      commissionPct: Number(commissionPct) || 0,
+      titleEscrowPct: Number(titleEscrowPct) || 0,
+      transferTaxPct: Number(transferTaxPct) || 0,
+      otherCostsFlat: Number(otherCostsFlat) || 0,
+    };
+    return offers.map((o) => {
+      const price = o.current_price ?? o.offer_price;
+      const breakdown = computeNetToSeller({
+        price,
+        ...assumptions,
+        sellerConcessions: o.seller_concessions ?? 0,
+      });
+      return { ...o, price, net: breakdown.net, breakdown };
+    });
+  }, [offers, commissionPct, titleEscrowPct, transferTaxPct, otherCostsFlat]);
+
+  const ranked = useMemo(
+    () =>
+      rankOffers(
+        enriched.map((o) => ({
+          ...o,
+          contingencyCount: o.contingency_count,
+          isCash: o.is_cash,
+        })),
+      ),
+    [enriched],
+  );
+
+  const strongestNetId = ranked[0]?.id ?? null;
+  const highestStickerId = [...enriched]
+    .sort((a, b) => b.price - a.price)[0]?.id ?? null;
+
+  async function reloadOffers() {
+    try {
+      const res = await fetch(
+        `/api/dashboard/transactions/${transaction.id}/listing-offers`,
+      );
+      const body = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        offers?: ListingOfferCompareItem[];
+      } | null;
+      if (body?.ok && Array.isArray(body.offers)) setOffers(body.offers);
+    } catch {
+      /* non-fatal */
+    }
+  }
+
+  async function updateStatus(offerId: string, status: ListingOfferStatus) {
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/dashboard/listing-offers/${offerId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !body.ok) {
+        setMsg({ tone: "err", text: body.error ?? "Failed to update." });
+        return;
+      }
+      await reloadOffers();
+      setMsg({ tone: "ok", text: "Updated." });
+    } catch (e) {
+      setMsg({ tone: "err", text: e instanceof Error ? e.message : "Network error." });
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-5">
+      <div>
+        <div className="text-xs text-slate-500">
+          <Link href="/dashboard/transactions" className="hover:underline">
+            Transactions
+          </Link>
+          {" / "}
+          <Link
+            href={`/dashboard/transactions/${transaction.id}`}
+            className="hover:underline"
+          >
+            {transaction.property_address}
+          </Link>
+          {" / Offers"}
+        </div>
+        <h1 className="mt-1 text-2xl font-semibold text-slate-900">Offers on listing</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          {transaction.property_address}
+          {transaction.city || transaction.state
+            ? `, ${[transaction.city, transaction.state].filter(Boolean).join(", ")}`
+            : ""}
+          {transaction.purchase_price
+            ? ` · list price ${formatMoney(transaction.purchase_price)}`
+            : ""}
+        </p>
+      </div>
+
+      {msg ? (
+        <div
+          className={`rounded-lg border px-3 py-2 text-sm ${
+            msg.tone === "ok"
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {msg.text}
+        </div>
+      ) : null}
+
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-900">Net-to-seller assumptions</h2>
+        <p className="mt-0.5 text-xs text-slate-500">
+          Adjust for this listing. Seller concessions come from each offer individually.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <AssumptionInput
+            label="Commission %"
+            value={commissionPct}
+            onChange={setCommissionPct}
+            suffix="%"
+          />
+          <AssumptionInput
+            label="Title + escrow %"
+            value={titleEscrowPct}
+            onChange={setTitleEscrowPct}
+            suffix="%"
+          />
+          <AssumptionInput
+            label="Transfer tax %"
+            value={transferTaxPct}
+            onChange={setTransferTaxPct}
+            suffix="%"
+          />
+          <AssumptionInput
+            label="Other flat costs"
+            value={otherCostsFlat}
+            onChange={setOtherCostsFlat}
+            suffix="$"
+          />
+        </div>
+        {!assumptionsValid ? (
+          <p className="mt-2 text-xs text-red-600">
+            All values must be non-negative numbers.
+          </p>
+        ) : null}
+      </div>
+
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-900">
+          {offers.length} {offers.length === 1 ? "offer" : "offers"}
+          {strongestNetId ? " · strongest net highlighted in green" : ""}
+        </h2>
+        <button
+          type="button"
+          onClick={() => setShowAdd((v) => !v)}
+          className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+        >
+          {showAdd ? "Cancel" : "+ Record offer"}
+        </button>
+      </div>
+
+      {showAdd ? (
+        <NewListingOfferForm
+          transactionId={transaction.id}
+          onCreated={() => {
+            setShowAdd(false);
+            void reloadOffers();
+          }}
+          onCancel={() => setShowAdd(false)}
+        />
+      ) : null}
+
+      {offers.length === 0 && !showAdd ? (
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
+          No offers recorded yet. Click <strong>+ Record offer</strong> when the first one lands.
+        </div>
+      ) : null}
+
+      {offers.length > 0 ? (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-xs text-slate-600">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">Buyer + agent</th>
+                  <th className="px-3 py-2 text-right font-medium">Price</th>
+                  <th className="px-3 py-2 text-right font-medium">Net to seller</th>
+                  <th className="px-3 py-2 text-left font-medium">Financing</th>
+                  <th className="px-3 py-2 text-center font-medium">Contingencies</th>
+                  <th className="px-3 py-2 text-right font-medium">Concessions</th>
+                  <th className="px-3 py-2 text-left font-medium">Close</th>
+                  <th className="px-3 py-2 text-left font-medium">Status</th>
+                  <th className="px-3 py-2 text-center font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {enriched.map((o) => {
+                  const isStrongestNet = o.id === strongestNetId && offers.length > 1;
+                  const isHighestSticker =
+                    o.id === highestStickerId && o.id !== strongestNetId && offers.length > 1;
+                  return (
+                    <tr
+                      key={o.id}
+                      className={
+                        isStrongestNet
+                          ? "bg-green-50 hover:bg-green-100"
+                          : "hover:bg-slate-50"
+                      }
+                    >
+                      <td className="px-3 py-2">
+                        <Link
+                          href={`/dashboard/listing-offers/${o.id}`}
+                          className="font-medium text-slate-900 hover:underline"
+                        >
+                          {o.buyer_name ?? "(unknown)"}
+                        </Link>
+                        {o.buyer_agent_name ? (
+                          <div className="text-[11px] text-slate-500">
+                            via {o.buyer_agent_name}
+                            {o.buyer_brokerage ? ` · ${o.buyer_brokerage}` : ""}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        <div
+                          className={`font-medium ${
+                            isHighestSticker ? "text-blue-700" : "text-slate-900"
+                          }`}
+                        >
+                          {formatMoney(o.price)}
+                        </div>
+                        {o.current_price != null && o.current_price !== o.offer_price ? (
+                          <div className="text-[11px] text-slate-400 line-through">
+                            {formatMoney(o.offer_price)}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        <div
+                          className={`font-semibold ${
+                            isStrongestNet ? "text-green-700" : "text-slate-900"
+                          }`}
+                        >
+                          {formatMoney(o.net)}
+                        </div>
+                        {isStrongestNet ? (
+                          <div className="text-[10px] font-medium uppercase tracking-wide text-green-700">
+                            Strongest net
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 text-slate-600">
+                        {o.financing_type ? (
+                          <span className="capitalize">{o.financing_type}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                        {o.is_cash ? (
+                          <div className="text-[10px] font-medium uppercase tracking-wide text-green-700">
+                            Cash
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 text-center tabular-nums">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                            o.contingency_count === 0
+                              ? "bg-green-100 text-green-800"
+                              : o.contingency_count <= 2
+                                ? "bg-slate-100 text-slate-700"
+                                : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {o.contingency_count}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-slate-600">
+                        {o.seller_concessions ? (
+                          <span className="text-red-600">
+                            {formatMoney(o.seller_concessions)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-[11px] text-slate-500">
+                        {o.closing_date_proposed ?? "—"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_BADGE[o.status]}`}
+                        >
+                          {STATUS_LABEL[o.status]}
+                        </span>
+                        {o.counter_count > 0 ? (
+                          <div className="text-[10px] text-slate-500">
+                            {o.counter_count} counter{o.counter_count === 1 ? "" : "s"}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        {o.status === "submitted" || o.status === "countered" ? (
+                          <button
+                            type="button"
+                            onClick={() => void updateStatus(o.id, "accepted")}
+                            className="rounded-lg bg-green-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-green-700"
+                          >
+                            Accept
+                          </button>
+                        ) : (
+                          <Link
+                            href={`/dashboard/listing-offers/${o.id}`}
+                            className="text-[11px] text-blue-600 hover:underline"
+                          >
+                            View
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      {offers.length > 1 ? (
+        <p className="text-[11px] text-slate-500">
+          Strongest net ≠ highest price. The green row is the offer that would put the most cash
+          in the seller&apos;s pocket after commission, title/escrow, transfer tax, and any
+          concessions this offer asks for. Click any buyer name to see full offer + counters.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function AssumptionInput({
+  label,
+  value,
+  onChange,
+  suffix,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  suffix: string;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-slate-700">{label}</label>
+      <div className="mt-1 flex items-center gap-1">
+        <input
+          type="number"
+          step="0.01"
+          min={0}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm"
+        />
+        <span className="text-xs text-slate-500">{suffix}</span>
+      </div>
+    </div>
+  );
+}
+
+function NewListingOfferForm({
+  transactionId,
+  onCreated,
+  onCancel,
+}: {
+  transactionId: string;
+  onCreated: () => void;
+  onCancel: () => void;
+}) {
+  const [buyerName, setBuyerName] = useState("");
+  const [buyerAgentName, setBuyerAgentName] = useState("");
+  const [buyerAgentEmail, setBuyerAgentEmail] = useState("");
+  const [offerPrice, setOfferPrice] = useState("");
+  const [earnestMoney, setEarnestMoney] = useState("");
+  const [downPayment, setDownPayment] = useState("");
+  const [financingType, setFinancingType] = useState<"" | "cash" | "conventional" | "fha" | "va" | "jumbo" | "other">("");
+  const [closingDateProposed, setClosingDateProposed] = useState("");
+  const [sellerConcessions, setSellerConcessions] = useState("");
+  const [inspectionContingency, setInspectionContingency] = useState(true);
+  const [appraisalContingency, setAppraisalContingency] = useState(true);
+  const [loanContingency, setLoanContingency] = useState(true);
+  const [saleOfHomeContingency, setSaleOfHomeContingency] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit() {
+    setErr(null);
+    if (!offerPrice.trim()) {
+      setErr("Offer price is required.");
+      return;
+    }
+    const priceNum = Number(offerPrice);
+    if (!Number.isFinite(priceNum) || priceNum <= 0) {
+      setErr("Offer price must be a positive number.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch(
+        `/api/dashboard/transactions/${transactionId}/listing-offers`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            buyerName: buyerName.trim() || null,
+            buyerAgentName: buyerAgentName.trim() || null,
+            buyerAgentEmail: buyerAgentEmail.trim() || null,
+            offerPrice: priceNum,
+            earnestMoney: earnestMoney ? Number(earnestMoney) : null,
+            downPayment: downPayment ? Number(downPayment) : null,
+            financingType: financingType || null,
+            closingDateProposed: closingDateProposed || null,
+            sellerConcessions: sellerConcessions ? Number(sellerConcessions) : null,
+            inspectionContingency,
+            appraisalContingency,
+            loanContingency,
+            saleOfHomeContingency,
+            notes: notes.trim() || null,
+          }),
+        },
+      );
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !body.ok) {
+        setErr(body.error ?? "Failed to create offer.");
+        return;
+      }
+      onCreated();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Network error.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h3 className="text-sm font-semibold text-slate-900">Record incoming offer</h3>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <Field label="Buyer name" value={buyerName} onChange={setBuyerName} placeholder="Jane Buyer" />
+        <Field
+          label="Buyer's agent"
+          value={buyerAgentName}
+          onChange={setBuyerAgentName}
+          placeholder="Pat Buyer-Rep"
+        />
+        <Field
+          label="Agent email"
+          value={buyerAgentEmail}
+          onChange={setBuyerAgentEmail}
+          type="email"
+          placeholder="pat@brokerage.com"
+        />
+        <Field
+          label="Offer price *"
+          value={offerPrice}
+          onChange={setOfferPrice}
+          type="number"
+          placeholder="1250000"
+        />
+        <Field
+          label="Earnest money"
+          value={earnestMoney}
+          onChange={setEarnestMoney}
+          type="number"
+          placeholder="30000"
+        />
+        <Field
+          label="Down payment"
+          value={downPayment}
+          onChange={setDownPayment}
+          type="number"
+          placeholder="250000"
+        />
+        <div>
+          <label className="block text-xs font-medium text-slate-700">Financing</label>
+          <select
+            value={financingType}
+            onChange={(e) =>
+              setFinancingType(
+                e.target.value as "" | "cash" | "conventional" | "fha" | "va" | "jumbo" | "other",
+              )
+            }
+            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+          >
+            <option value="">—</option>
+            <option value="cash">Cash</option>
+            <option value="conventional">Conventional</option>
+            <option value="fha">FHA</option>
+            <option value="va">VA</option>
+            <option value="jumbo">Jumbo</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <Field
+          label="Proposed close"
+          value={closingDateProposed}
+          onChange={setClosingDateProposed}
+          type="date"
+        />
+        <Field
+          label="Seller concessions"
+          value={sellerConcessions}
+          onChange={setSellerConcessions}
+          type="number"
+          placeholder="0"
+        />
+      </div>
+
+      <div className="space-y-1 rounded-lg bg-slate-50 p-3">
+        <div className="text-xs font-medium text-slate-700">Contingencies</div>
+        <div className="flex flex-wrap gap-4 text-sm">
+          <Check label="Inspection" checked={inspectionContingency} onChange={setInspectionContingency} />
+          <Check label="Appraisal" checked={appraisalContingency} onChange={setAppraisalContingency} />
+          <Check label="Loan" checked={loanContingency} onChange={setLoanContingency} />
+          <Check
+            label="Sale of home"
+            checked={saleOfHomeContingency}
+            onChange={setSaleOfHomeContingency}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-slate-700">Notes</label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        />
+      </div>
+
+      {err ? <p className="text-sm text-red-600">{err}</p> : null}
+
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => void submit()}
+          disabled={submitting || !offerPrice.trim()}
+          className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+        >
+          {submitting ? "Saving…" : "Record offer"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  type,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  placeholder?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-slate-700">{label}</label>
+      <input
+        type={type ?? "text"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+      />
+    </div>
+  );
+}
+
+function Check({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="inline-flex cursor-pointer items-center gap-2">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4"
+      />
+      <span>{label}</span>
+    </label>
+  );
+}
