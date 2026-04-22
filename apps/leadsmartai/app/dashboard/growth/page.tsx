@@ -93,12 +93,22 @@ export default function GrowthPage() {
       const res = await fetch("/api/dashboard/growth/opportunities", {
         method: force ? "POST" : "GET",
       });
-      const body = (await res.json().catch(() => ({}))) as OpportunitiesResponse;
-      if (!res.ok || !body.ok) {
-        setOppError(body.error ?? "Failed to load opportunities.");
+      const body = (await res.json().catch(() => null)) as
+        | (OpportunitiesResponse & { error?: string })
+        | null;
+      if (!res.ok || !body || !body.ok) {
+        setOppError(body?.error ?? "Failed to load opportunities.");
         return;
       }
-      setOpps(body);
+      // Coerce the shape defensively — upstream response changes
+      // shouldn't crash the page. Missing fields get safe defaults.
+      setOpps({
+        ok: true,
+        opportunities: Array.isArray(body.opportunities) ? body.opportunities : [],
+        generatedAtIso: body.generatedAtIso ?? new Date().toISOString(),
+        fromCache: Boolean(body.fromCache),
+        aiConfigured: body.aiConfigured !== false,
+      });
     } catch (e) {
       setOppError(e instanceof Error ? e.message : "Network error.");
     } finally {
@@ -110,23 +120,35 @@ export default function GrowthPage() {
   const loadMetrics = useCallback(async () => {
     try {
       const res = await fetch("/api/dashboard/growth/metrics?days=30");
-      const body = (await res.json().catch(() => ({}))) as MetricsResponse & {
-        ok?: boolean;
-      };
-      if (body.ok !== false) setMetrics(body);
+      if (!res.ok) return;
+      const body = (await res.json().catch(() => null)) as MetricsResponse | null;
+      // Only accept well-formed responses — the backend can return
+      // { ok: false, error } or an empty object on failure, and the old
+      // version of this page crashed because it blindly deref'd
+      // .traffic.* etc.
+      if (
+        body &&
+        body.ok === true &&
+        body.traffic &&
+        body.referrals &&
+        body.viral
+      ) {
+        setMetrics(body);
+      }
     } catch {
-      /* non-fatal */
+      /* non-fatal — metrics are optional */
     }
   }, []);
 
   const loadCodes = useCallback(async () => {
     try {
       const res = await fetch("/api/dashboard/growth/referral-code");
-      const body = (await res.json().catch(() => ({}))) as {
+      if (!res.ok) return;
+      const body = (await res.json().catch(() => null)) as {
         ok?: boolean;
         codes?: ReferralCodeRow[];
-      };
-      if (body.codes) setCodes(body.codes);
+      } | null;
+      if (body && Array.isArray(body.codes)) setCodes(body.codes);
     } catch {
       /* non-fatal */
     }
@@ -184,24 +206,24 @@ export default function GrowthPage() {
       <section className="space-y-3 border-t border-slate-200 pt-6">
         <h2 className="text-sm font-semibold text-slate-900">Traffic &amp; referrals (30 days)</h2>
 
-        {metrics ? (
+        {metrics?.traffic ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat label="Page views" value={String(metrics.traffic.pageViews)} />
+            <Stat label="Page views" value={String(metrics.traffic.pageViews ?? 0)} />
             <Stat
               label="Conversions"
-              value={String(metrics.traffic.conversions)}
-              hint={`${metrics.traffic.conversionRate}% rate`}
+              value={String(metrics.traffic.conversions ?? 0)}
+              hint={`${metrics.traffic.conversionRate ?? 0}% rate`}
               tone="green"
             />
-            <Stat label="Tool usage" value={String(metrics.traffic.toolUsage)} />
+            <Stat label="Tool usage" value={String(metrics.traffic.toolUsage ?? 0)} />
             <Stat
               label="Referral signups"
-              value={String(metrics.referrals.eventsSignups)}
+              value={String(metrics.referrals?.eventsSignups ?? 0)}
               tone="blue"
             />
           </div>
         ) : (
-          <div className="text-xs text-slate-400">Loading metrics…</div>
+          <div className="text-xs text-slate-400">Metrics unavailable.</div>
         )}
 
         {metrics?.viral ? (
@@ -210,19 +232,19 @@ export default function GrowthPage() {
             <div className="mt-2 grid grid-cols-3 gap-3 text-center">
               <div>
                 <p className="text-xl font-bold text-slate-900">
-                  {metrics.viral.invitesPerSharer.toFixed(1)}
+                  {(metrics.viral.invitesPerSharer ?? 0).toFixed(1)}
                 </p>
                 <p className="text-[10px] text-slate-500">Invites / sharer</p>
               </div>
               <div>
                 <p className="text-xl font-bold text-slate-900">
-                  {metrics.viral.referralShare.toFixed(1)}%
+                  {(metrics.viral.referralShare ?? 0).toFixed(1)}%
                 </p>
                 <p className="text-[10px] text-slate-500">Referral share of signups</p>
               </div>
               <div>
                 <p className="text-xl font-bold text-slate-900">
-                  {metrics.viral.viralCoefficientEstimate.toFixed(2)}
+                  {(metrics.viral.viralCoefficientEstimate ?? 0).toFixed(2)}
                 </p>
                 <p className="text-[10px] text-slate-500">Viral K estimate</p>
               </div>
@@ -384,7 +406,7 @@ function OpportunityCard({
         <span className="font-medium">Action:</span> {opp.action}
       </p>
 
-      {opp.context.length > 0 ? (
+      {Array.isArray(opp.context) && opp.context.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {opp.context.map((c, i) => (
             <span
