@@ -258,6 +258,7 @@ export type UpdateTransactionInput = Partial<{
   closing_date: string | null;
   closing_date_actual: string | null;
   notes: string | null;
+  seller_update_enabled: boolean;
 }>;
 
 export async function updateTransaction(

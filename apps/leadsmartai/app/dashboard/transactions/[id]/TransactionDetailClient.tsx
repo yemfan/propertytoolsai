@@ -177,24 +177,48 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
         </div>
       ) : null}
 
-      {/* Listing-side deals have an "Offers on this listing" surface. For
-          buyer-rep deals the offer came from the buyer-side Offers feature
-          so this link doesn't apply. */}
+      {/* Listing-side surfaces: offers compare, weekly seller update
+          toggle, and a link back to the listing presentation builder.
+          Buyer-rep deals don't render these. */}
       {txn.transaction_type === "listing_rep" || txn.transaction_type === "dual" ? (
-        <Link
-          href={`/dashboard/transactions/${txn.id}/offers`}
-          className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
-        >
-          <div>
-            <div className="text-sm font-semibold text-slate-900">
-              📬 Offers on this listing
+        <div className="grid gap-3 md:grid-cols-3">
+          <Link
+            href={`/dashboard/transactions/${txn.id}/offers`}
+            className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+          >
+            <div>
+              <div className="text-sm font-semibold text-slate-900">
+                📬 Offers on listing
+              </div>
+              <div className="mt-0.5 text-xs text-slate-500">
+                Compare offers + net-to-seller.
+              </div>
             </div>
-            <div className="mt-0.5 text-xs text-slate-500">
-              Compare incoming offers side-by-side with net-to-seller math.
+            <span className="text-slate-400">→</span>
+          </Link>
+          <SellerUpdateToggle
+            transaction={txn}
+            onChange={(enabled) =>
+              setTxn((prev) => ({ ...prev, seller_update_enabled: enabled } as TransactionRow))
+            }
+          />
+          {/* Listing presentation builder lives at /dashboard/seller-presentation
+              — quick jumpback for editing the pitch deck. */}
+          <Link
+            href="/dashboard/seller-presentation"
+            className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+          >
+            <div>
+              <div className="text-sm font-semibold text-slate-900">
+                🎯 Listing presentation
+              </div>
+              <div className="mt-0.5 text-xs text-slate-500">
+                Open the CMA + pitch builder.
+              </div>
             </div>
-          </div>
-          <span className="text-slate-400">→</span>
-        </Link>
+            <span className="text-slate-400">→</span>
+          </Link>
+        </div>
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -653,5 +677,75 @@ function CounterpartiesBlock({
         </ul>
       )}
     </section>
+  );
+}
+
+/**
+ * Per-listing toggle for the weekly seller-update email. Clicks PATCH
+ * the transaction, bubbles the new value back up via onChange.
+ */
+function SellerUpdateToggle({
+  transaction,
+  onChange,
+}: {
+  transaction: TransactionRow;
+  onChange: (enabled: boolean) => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const enabled = transaction.seller_update_enabled;
+  const lastSent = transaction.seller_update_last_sent_at;
+
+  async function toggle() {
+    setSaving(true);
+    try {
+      const next = !enabled;
+      const res = await fetch(`/api/dashboard/transactions/${transaction.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ seller_update_enabled: next }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        transaction?: TransactionRow;
+      };
+      if (res.ok && body.ok && body.transaction) {
+        onChange(body.transaction.seller_update_enabled);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <div className="min-w-0">
+        <div className="text-sm font-semibold text-slate-900">
+          📧 Weekly seller update
+        </div>
+        <div className="mt-0.5 text-xs text-slate-500">
+          {enabled
+            ? lastSent
+              ? `On — last sent ${new Date(lastSent).toLocaleDateString()}`
+              : "On — first send goes out Monday"
+            : "Off — sellers get no weekly email"}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => void toggle()}
+        role="switch"
+        aria-checked={enabled}
+        disabled={saving}
+        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+          enabled ? "bg-slate-900" : "bg-slate-300"
+        }`}
+      >
+        <span
+          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+            enabled ? "translate-x-5" : "translate-x-0.5"
+          }`}
+        />
+      </button>
+    </div>
   );
 }
