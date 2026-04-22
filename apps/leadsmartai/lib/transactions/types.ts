@@ -52,6 +52,17 @@ export type TransactionRow = {
   closing_date: string | null;
   closing_date_actual: string | null;
 
+  /**
+   * Commission fields. Written by applyCommissionDefaults at create + on
+   * active → closed + on purchase_price change. Manual overrides from the
+   * agent are preserved (the helper fills in nulls only).
+   */
+  commission_pct: number | null;
+  gross_commission: number | null;
+  brokerage_split_pct: number | null;
+  referral_fee_pct: number | null;
+  agent_net_commission: number | null;
+
   notes: string | null;
 
   created_at: string;
