@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import { CsvImportModal } from "@/components/crm/CsvImportModal";
+import { listOutboundEnabled, type LocaleId } from "@/lib/locales/registry";
 
 type LeadRow = {
   id: string;
@@ -17,6 +18,11 @@ type LeadRow = {
   last_contacted_at: string | null;
   notes: string | null;
   created_at: string;
+  /**
+   * BCP-47 base id (e.g. "zh") or null. Overrides the agent's default
+   * outbound language for AI-generated SMS/email to this contact.
+   */
+  preferred_language: string | null;
 };
 
 type ChartItem = { name: string; value: number; color: string };
@@ -171,7 +177,15 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
 
   function startEdit(lead: LeadRow) {
     setEditingId(lead.id);
-    setEditFields({ name: lead.name, email: lead.email, phone: lead.phone, property_address: lead.property_address, notes: lead.notes, rating: lead.rating });
+    setEditFields({
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone,
+      property_address: lead.property_address,
+      notes: lead.notes,
+      rating: lead.rating,
+      preferred_language: lead.preferred_language,
+    });
   }
 
   function toggleSort(key: SortKey) {
@@ -342,12 +356,30 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                       <td className="px-4 py-2"><input value={editFields.phone ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, phone: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
                       <td className="px-4 py-2"><input value={editFields.property_address ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, property_address: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
                       <td className="px-4 py-2">
-                        <select value={editFields.rating ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, rating: e.target.value || null }))} className="rounded border border-gray-300 px-2 py-1 text-sm">
-                          <option value="">—</option>
-                          <option value="hot">Hot</option>
-                          <option value="warm">Warm</option>
-                          <option value="cold">Cold</option>
-                        </select>
+                        <div className="flex items-center gap-2">
+                          <select value={editFields.rating ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, rating: e.target.value || null }))} className="rounded border border-gray-300 px-2 py-1 text-sm">
+                            <option value="">—</option>
+                            <option value="hot">Hot</option>
+                            <option value="warm">Warm</option>
+                            <option value="cold">Cold</option>
+                          </select>
+                          {/* Per-contact preferred language override (BCP-47 base id).
+                              Empty = "use agent's default_outbound_language". See
+                              lib/locales/resolveLocale.ts for the fallback chain. */}
+                          <select
+                            value={editFields.preferred_language ?? ""}
+                            onChange={(e) => setEditFields((f) => ({ ...f, preferred_language: (e.target.value || null) as LocaleId | null }))}
+                            className="rounded border border-gray-300 px-2 py-1 text-sm"
+                            title="Preferred language for AI outbound (SMS / email)"
+                          >
+                            <option value="">Lang: default</option>
+                            {listOutboundEnabled().map((l) => (
+                              <option key={l.id} value={l.id}>
+                                {l.nativeLabel}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </td>
                       <td className="px-4 py-2 text-xs text-gray-500">{timeAgo(c.last_contacted_at)}</td>
                       <td className="px-4 py-2"><input value={editFields.notes ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, notes: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" placeholder="Notes" /></td>
@@ -365,13 +397,27 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                     <td className="px-4 py-2.5 text-gray-600">{c.phone ?? "\u2014"}</td>
                     <td className="px-4 py-2.5 text-gray-600 min-w-[200px] max-w-[320px]"><span className="block truncate" title={c.property_address ?? ""}>{c.property_address ?? "\u2014"}</span></td>
                     <td className="px-4 py-2.5">
-                      {c.rating ? (
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${RATING_COLORS[c.rating.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}>
-                          {c.rating}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">{"\u2014"}</span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {c.rating ? (
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${RATING_COLORS[c.rating.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}>
+                            {c.rating}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">{"\u2014"}</span>
+                        )}
+                        {/* Language override badge — only rendered when the
+                            contact has a non-null preferred_language. Shown as
+                            nativeLabel (e.g. 中文) so the signal is readable at
+                            a glance in a dense table row. */}
+                        {c.preferred_language ? (
+                          <span
+                            className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700"
+                            title={`AI outbound in: ${c.preferred_language}`}
+                          >
+                            {listOutboundEnabled().find((l) => l.id === c.preferred_language)?.nativeLabel ?? c.preferred_language}
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{timeAgo(c.last_contacted_at)}</td>
                     <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] truncate">{c.notes ?? "\u2014"}</td>

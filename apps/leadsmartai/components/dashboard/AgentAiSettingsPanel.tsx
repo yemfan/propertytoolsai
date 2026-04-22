@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { AgentAiSettings } from "@/lib/agent-ai/types";
+import { listOutboundEnabled } from "@/lib/locales/registry";
 import { PersonalityPreview } from "./PersonalityPreview";
 
 const empty: AgentAiSettings = {
@@ -117,7 +118,7 @@ export default function AgentAiSettingsPanel() {
       </div>
 
       <div className="space-y-1">
-        <label className="block text-[11px] font-medium text-gray-500">Default language (when unclear)</label>
+        <label className="block text-[11px] font-medium text-gray-500">Default outbound language</label>
         <select
           className="w-full max-w-xs border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
           value={settings.defaultLanguage}
@@ -128,10 +129,20 @@ export default function AgentAiSettingsPanel() {
             }))
           }
         >
-          <option value="en">English</option>
-          <option value="zh">Chinese (Simplified)</option>
+          {/* Registry-driven: adding a new locale (es, ja…) to
+              lib/locales/registry.ts with outbound.enabled=true surfaces
+              it here automatically. No manual maintenance of this list. */}
+          {listOutboundEnabled().map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.label}
+              {l.nativeLabel !== l.label ? ` (${l.nativeLabel})` : ""}
+            </option>
+          ))}
           <option value="auto">Auto (match lead)</option>
         </select>
+        <p className="text-[11px] text-gray-500">
+          The AI uses this when a contact has no preferred language set. Override per-contact on the Contacts page.
+        </p>
       </div>
 
       <label className="flex items-center gap-2 text-sm cursor-pointer">
