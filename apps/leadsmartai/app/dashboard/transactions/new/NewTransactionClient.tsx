@@ -6,28 +6,37 @@ import { Suspense, useState } from "react";
 import ContactPicker, { type ContactPickerValue } from "@/components/crm/ContactPicker";
 
 /**
- * MVP new-transaction form.
+ * New-transaction form. Buyer-side or listing-side, both supported.
  *
- * Accepts `?contactId=<uuid>` as a deep-link prefill — ContactPicker resolves
- * the display name once on mount. Follow-up: copy-from-offer wizard that
- * extracts fields from a ratified-contract PDF.
+ * On listing-rep deals, `listing_start_date` is the anchor for pre-list +
+ * marketing tasks; `mutual_acceptance_date` becomes the anchor for
+ * post-offer tasks once the seller accepts.
+ *
+ * Accepts `?contactId=<uuid>` as a deep-link prefill — ContactPicker
+ * resolves the display name once on mount.
  */
+type TxType = "buyer_rep" | "listing_rep";
+
 function NewTransactionForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledContactId = searchParams.get("contactId") ?? "";
 
+  const [transactionType, setTransactionType] = useState<TxType>("buyer_rep");
   const [contact, setContact] = useState<ContactPickerValue | null>(null);
   const [propertyAddress, setPropertyAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setStateValue] = useState("CA");
   const [zip, setZip] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
+  const [listingStartDate, setListingStartDate] = useState("");
   const [mutualAcceptanceDate, setMutualAcceptanceDate] = useState("");
   const [closingDate, setClosingDate] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isListing = transactionType === "listing_rep";
 
   async function submit() {
     setError(null);
@@ -42,11 +51,13 @@ function NewTransactionForm() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           contactId: contact.id,
+          transactionType,
           propertyAddress: propertyAddress.trim(),
           city: city.trim() || null,
           state: state.trim() || null,
           zip: zip.trim() || null,
           purchasePrice: purchasePrice ? Number(purchasePrice) : null,
+          listingStartDate: listingStartDate || null,
           mutualAcceptanceDate: mutualAcceptanceDate || null,
           closingDate: closingDate || null,
           notes: notes.trim() || null,
@@ -80,19 +91,45 @@ function NewTransactionForm() {
         </div>
         <h1 className="mt-1 text-2xl font-semibold text-slate-900">New transaction</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Seeds the California buyer-rep checklist + auto-fills deadlines if you
-          know the mutual-acceptance date. You can add anything missing later.
+          Seeds a California {isListing ? "listing-rep" : "buyer-rep"} checklist and auto-fills
+          deadlines from the anchor date. You can adjust anything later.
         </p>
       </div>
 
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div>
-          <label className="block text-xs font-medium text-slate-700">Contact *</label>
+          <label className="block text-xs font-medium text-slate-700">Deal type</label>
+          <div className="mt-1 flex gap-2">
+            {(["buyer_rep", "listing_rep"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTransactionType(t)}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
+                  transactionType === t
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {t === "buyer_rep" ? "Buyer side" : "Listing side"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            {isListing ? "Seller *" : "Buyer *"}
+          </label>
           <ContactPicker
             value={contact}
             onChange={setContact}
             initialContactId={prefilledContactId || null}
-            helperText="Start typing the buyer's name, email, or phone. Recent contacts show if left blank."
+            helperText={
+              isListing
+                ? "Start typing the seller's name, email, or phone."
+                : "Start typing the buyer's name, email, or phone. Recent contacts show if left blank."
+            }
             className="mt-1"
           />
         </div>
@@ -138,7 +175,9 @@ function NewTransactionForm() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-700">Purchase price</label>
+            <label className="block text-xs font-medium text-slate-700">
+              {isListing ? "List price" : "Purchase price"}
+            </label>
             <input
               type="number"
               value={purchasePrice}
@@ -148,6 +187,21 @@ function NewTransactionForm() {
             />
           </div>
         </div>
+
+        {isListing && (
+          <div>
+            <label className="block text-xs font-medium text-slate-700">Listing start date</label>
+            <input
+              type="date"
+              value={listingStartDate}
+              onChange={(e) => setListingStartDate(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            />
+            <p className="mt-1 text-[11px] text-slate-500">
+              RLA signed / MLS go-live. Anchors pre-list + marketing deadlines.
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -161,7 +215,9 @@ function NewTransactionForm() {
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             />
             <p className="mt-1 text-[11px] text-slate-500">
-              Anchors all contingency deadlines.
+              {isListing
+                ? "Set when you accept an offer. Anchors closing deadlines."
+                : "Anchors all contingency deadlines."}
             </p>
           </div>
           <div>

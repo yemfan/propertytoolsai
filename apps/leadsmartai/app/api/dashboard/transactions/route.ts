@@ -56,6 +56,7 @@ export async function POST(req: Request) {
       state: body.state ?? null,
       zip: body.zip ?? null,
       purchasePrice: body.purchasePrice ?? null,
+      listingStartDate: body.listingStartDate ?? null,
       mutualAcceptanceDate: body.mutualAcceptanceDate ?? null,
       closingDate: body.closingDate ?? null,
       notes: body.notes ?? null,

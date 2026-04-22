@@ -40,6 +40,8 @@ export type TransactionRow = {
   status: TransactionStatus;
   terminated_reason: string | null;
 
+  /** Optional second anchor for listing-rep tasks (RLA signed / listing active). */
+  listing_start_date: string | null;
   mutual_acceptance_date: string | null;
   inspection_deadline: string | null;
   inspection_completed_at: string | null;
