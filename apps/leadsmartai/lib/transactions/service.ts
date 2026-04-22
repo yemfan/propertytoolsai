@@ -2,6 +2,7 @@ import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { addDaysIso, applyDeadlineDefaults } from "./deadlineDefaults";
+import { applyOnCloseBackfill } from "./onCloseBackfill";
 import { seedTasksFor } from "./seedTasks";
 import type {
   CounterpartyRole,
@@ -258,22 +259,21 @@ export async function updateTransaction(
     updated_at: new Date().toISOString(),
   };
 
+  // Snapshot pre-update status so we can detect the active→closed edge
+  // for the on-close backfill. Single extra read per update; fine.
+  const { data: before } = await supabaseAdmin
+    .from("transactions")
+    .select("status, mutual_acceptance_date, inspection_deadline, appraisal_deadline, loan_contingency_deadline, closing_date")
+    .eq("id", id)
+    .eq("agent_id", agentId)
+    .maybeSingle();
+
   // If the agent just set (or cleared + set) `mutual_acceptance_date`,
   // backfill any NULL deadline columns with California defaults.
-  if ("mutual_acceptance_date" in input && input.mutual_acceptance_date) {
-    const { data: current } = await supabaseAdmin
-      .from("transactions")
-      .select(
-        "mutual_acceptance_date, inspection_deadline, appraisal_deadline, loan_contingency_deadline, closing_date",
-      )
-      .eq("id", id)
-      .eq("agent_id", agentId)
-      .maybeSingle();
-    if (current) {
-      const merged = { ...current, ...input };
-      const defaults = applyDeadlineDefaults(merged as never);
-      Object.assign(patch, defaults);
-    }
+  if ("mutual_acceptance_date" in input && input.mutual_acceptance_date && before) {
+    const merged = { ...before, ...input };
+    const defaults = applyDeadlineDefaults(merged as never);
+    Object.assign(patch, defaults);
   }
 
   const { data, error } = await supabaseAdmin
@@ -284,7 +284,17 @@ export async function updateTransaction(
     .select("*")
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return (data as TransactionRow | null) ?? null;
+  const updated = (data as TransactionRow | null) ?? null;
+
+  // Fire the on-close backfill after the primary write commits. Awaited so
+  // that the API response reflects the contact state actually on disk —
+  // clients that navigate to Contacts right after closing shouldn't see
+  // stale data.
+  if (updated && before) {
+    await applyOnCloseBackfill({ status: (before as { status: TransactionRow["status"] }).status }, updated);
+  }
+
+  return updated;
 }
 
 // ─────────────────────────────────────────────────────────────────────
