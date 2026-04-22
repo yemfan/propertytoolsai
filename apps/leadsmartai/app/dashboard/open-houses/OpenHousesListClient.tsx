@@ -1,0 +1,241 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import type { OpenHouseListItem, OpenHouseStatus } from "@/lib/open-houses/types";
+
+const STATUS_LABEL: Record<OpenHouseStatus, string> = {
+  scheduled: "Upcoming",
+  in_progress: "Live now",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+const STATUS_BADGE: Record<OpenHouseStatus, string> = {
+  scheduled: "bg-blue-100 text-blue-800",
+  in_progress: "bg-green-100 text-green-800 animate-pulse",
+  completed: "bg-slate-100 text-slate-700",
+  cancelled: "bg-red-100 text-red-700",
+};
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatTimeRange(startIso: string, endIso: string): string {
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  const opts: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
+  return `${start.toLocaleTimeString(undefined, opts)} – ${end.toLocaleTimeString(undefined, opts)}`;
+}
+
+/**
+ * Derive the effective status — "in_progress" is a virtual state
+ * computed from start_at <= now < end_at. Stored status stays
+ * "scheduled" until the agent either manually completes it or the
+ * follow-up cron does so automatically.
+ */
+function effectiveStatus(oh: OpenHouseListItem): OpenHouseStatus {
+  if (oh.status === "cancelled" || oh.status === "completed") return oh.status;
+  const now = Date.now();
+  const start = new Date(oh.start_at).getTime();
+  const end = new Date(oh.end_at).getTime();
+  if (start <= now && now < end) return "in_progress";
+  return oh.status;
+}
+
+export function OpenHousesListClient({
+  initialOpenHouses,
+}: {
+  initialOpenHouses: OpenHouseListItem[];
+}) {
+  const [filter, setFilter] = useState<"upcoming" | "past" | "all">("upcoming");
+
+  const filtered = useMemo(() => {
+    const now = Date.now();
+    return initialOpenHouses
+      .filter((oh) => {
+        if (filter === "upcoming") {
+          return new Date(oh.end_at).getTime() >= now && oh.status !== "cancelled";
+        }
+        if (filter === "past") {
+          return new Date(oh.end_at).getTime() < now || oh.status === "completed";
+        }
+        return true;
+      })
+      .map((oh) => ({ ...oh, displayStatus: effectiveStatus(oh) }));
+  }, [initialOpenHouses, filter]);
+
+  const stats = useMemo(() => {
+    let upcoming = 0;
+    let totalVisitors = 0;
+    let totalHot = 0;
+    let totalConsent = 0;
+    const now = Date.now();
+    for (const oh of initialOpenHouses) {
+      if (new Date(oh.end_at).getTime() >= now && oh.status !== "cancelled") upcoming += 1;
+      totalVisitors += oh.visitor_total;
+      totalHot += oh.visitor_hot;
+      totalConsent += oh.visitor_with_consent;
+    }
+    return {
+      total: initialOpenHouses.length,
+      upcoming,
+      totalVisitors,
+      totalHot,
+      totalConsent,
+    };
+  }, [initialOpenHouses]);
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Open Houses</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Schedule events, share a QR-code sign-in at the door, and auto-follow-up with
+            visitors. No paper sheets.
+          </p>
+        </div>
+        <Link
+          href="/dashboard/open-houses/new"
+          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+        >
+          + Schedule open house
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Upcoming" value={String(stats.upcoming)} tone="blue" />
+        <Stat label="Total visitors" value={String(stats.totalVisitors)} />
+        <Stat label="Hot leads" value={String(stats.totalHot)} tone="red" />
+        <Stat label="Opted-in for follow-up" value={String(stats.totalConsent)} tone="green" />
+      </div>
+
+      <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
+        {(["upcoming", "past", "all"] as const).map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setFilter(f)}
+            className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+              filter === f ? "bg-white text-slate-900 shadow" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            {f === "upcoming" ? "Upcoming" : f === "past" ? "Past" : "All"}
+          </button>
+        ))}
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-50 text-xs text-slate-600">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium">When</th>
+                <th className="px-3 py-2 text-left font-medium">Property</th>
+                <th className="px-3 py-2 text-right font-medium">Visitors</th>
+                <th className="px-3 py-2 text-right font-medium">Hot</th>
+                <th className="px-3 py-2 text-right font-medium">Opted-in</th>
+                <th className="px-3 py-2 text-left font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map((oh) => (
+                <tr key={oh.id} className="hover:bg-slate-50">
+                  <td className="whitespace-nowrap px-3 py-2">
+                    <Link href={`/dashboard/open-houses/${oh.id}`} className="block">
+                      <div className="font-medium text-slate-900">{formatDate(oh.start_at)}</div>
+                      <div className="text-[11px] text-slate-500">
+                        {formatTimeRange(oh.start_at, oh.end_at)}
+                      </div>
+                    </Link>
+                  </td>
+                  <td className="px-3 py-2">
+                    <Link
+                      href={`/dashboard/open-houses/${oh.id}`}
+                      className="font-medium text-slate-900 hover:underline"
+                    >
+                      {oh.property_address}
+                    </Link>
+                    {oh.city || oh.state ? (
+                      <div className="text-[11px] text-slate-500">
+                        {[oh.city, oh.state].filter(Boolean).join(", ")}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums text-slate-700">
+                    {oh.visitor_total}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {oh.visitor_hot > 0 ? (
+                      <span className="font-semibold text-red-600">{oh.visitor_hot}</span>
+                    ) : (
+                      <span className="text-slate-400">0</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums text-slate-700">
+                    {oh.visitor_with_consent}
+                  </td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_BADGE[oh.displayStatus]}`}
+                    >
+                      {STATUS_LABEL[oh.displayStatus]}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-3 py-10 text-center text-sm text-slate-500">
+                    {initialOpenHouses.length === 0 ? (
+                      <>
+                        <div className="font-medium">No open houses yet.</div>
+                        <div className="mt-1 text-[12px]">
+                          Click <strong>+ Schedule open house</strong> to create your first event.
+                        </div>
+                      </>
+                    ) : (
+                      "No open houses match this filter."
+                    )}
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "blue" | "green" | "red";
+}) {
+  const color =
+    tone === "blue"
+      ? "text-blue-700"
+      : tone === "green"
+        ? "text-green-700"
+        : tone === "red"
+          ? "text-red-600"
+          : "text-slate-900";
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="text-[11px] font-medium text-slate-500">{label}</div>
+      <div className={`text-xl font-semibold ${color}`}>{value}</div>
+    </div>
+  );
+}
