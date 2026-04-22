@@ -78,13 +78,90 @@ Contingency day counts: paragraph 3 = loan contingency, paragraph 14 = inspectio
  * not base64 — we convert here so the API stays clean.
  */
 export async function extractContract(pdfBytes: Uint8Array): Promise<ContractExtraction> {
+  return callExtractor({
+    pdfBytes,
+    systemPrompt: SYSTEM_PROMPT,
+    userInstruction: `Extract the deal facts from this California RPA. ${EXTRACTION_SCHEMA_DESCRIPTION}`,
+    parse: parseExtractionResponse,
+  });
+}
+
+// ── Listing Agreement (RLA) extractor ─────────────────────────────────
+
+export type ListingAgreementExtraction = {
+  propertyAddress: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  listPrice: number | null;
+  /** Date RLA was fully executed — signature of the latest signer. */
+  listingStartDate: string | null;
+  /** Date the listing expires per the RLA. */
+  listingExpirationDate: string | null;
+  sellerNames: string[];
+  /** Commission percentage offered to the buyer's agent, e.g. 2.5. Null if not found. */
+  commissionBuyerSidePct: number | null;
+  /** Total listing commission pct, e.g. 5.0. Null if not found. */
+  commissionTotalPct: number | null;
+  confidence: number;
+  warnings: string[];
+};
+
+const RLA_SCHEMA_DESCRIPTION = `
+Return JSON with this exact shape. Every field can be null if the document doesn't contain it or if it's illegible:
+
+{
+  "propertyAddress": string | null,
+  "city": string | null,
+  "state": string | null,
+  "zip": string | null,
+  "listPrice": number | null,                   // integer dollars, no commas or $
+  "listingStartDate": "YYYY-MM-DD" | null,      // date RLA fully executed
+  "listingExpirationDate": "YYYY-MM-DD" | null, // listing period end date
+  "sellerNames": string[],                       // full names, empty array if none found
+  "commissionBuyerSidePct": number | null,       // e.g. 2.5 — percentage offered to the buyer's agent
+  "commissionTotalPct": number | null,           // e.g. 5.0 — total commission the seller pays
+  "confidence": number,                          // 0-1
+  "warnings": string[]
+}
+
+Return ONLY this JSON. No prose, no markdown, no code fences.
+`;
+
+const RLA_SYSTEM_PROMPT = `You are a licensed California real-estate contract extraction assistant. You read CAR (California Association of Realtors) Residential Listing Agreement (RLA) documents and extract structured deal facts for a listing-agent's transaction coordinator.
+
+Be conservative: if a field isn't clearly present, return null. Do not guess or hallucinate. If the document isn't a CAR RLA (e.g., it's an amendment, a purchase agreement, or a foreign listing contract), return low confidence and a warning.
+
+Commission: if the RLA shows "5% total, 2.5% to buyer's broker," record total=5.0 and buyerSide=2.5. If only total is shown, record total and leave buyerSide null — don't guess the split.
+
+Listing start date = the date the last party signed the RLA (fully executed). Listing expiration = the stated end date of the listing period (often "listing period through YYYY-MM-DD").`;
+
+export async function extractListingAgreement(
+  pdfBytes: Uint8Array,
+): Promise<ListingAgreementExtraction> {
+  return callExtractor({
+    pdfBytes,
+    systemPrompt: RLA_SYSTEM_PROMPT,
+    userInstruction: `Extract the listing facts from this California RLA. ${RLA_SCHEMA_DESCRIPTION}`,
+    parse: parseRlaExtractionResponse,
+  });
+}
+
+// ── Shared plumbing ───────────────────────────────────────────────────
+
+async function callExtractor<T>(opts: {
+  pdfBytes: Uint8Array;
+  systemPrompt: string;
+  userInstruction: string;
+  parse: (raw: string) => T;
+}): Promise<T> {
   const client = getAnthropicClient();
-  const base64 = Buffer.from(pdfBytes).toString("base64");
+  const base64 = Buffer.from(opts.pdfBytes).toString("base64");
 
   const response = await client.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 2048,
-    system: SYSTEM_PROMPT,
+    system: opts.systemPrompt,
     messages: [
       {
         role: "user",
@@ -97,10 +174,7 @@ export async function extractContract(pdfBytes: Uint8Array): Promise<ContractExt
               data: base64,
             },
           },
-          {
-            type: "text",
-            text: `Extract the deal facts from this California RPA. ${EXTRACTION_SCHEMA_DESCRIPTION}`,
-          },
+          { type: "text", text: opts.userInstruction },
         ],
       },
     ],
@@ -110,8 +184,7 @@ export async function extractContract(pdfBytes: Uint8Array): Promise<ContractExt
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("Extractor returned no text content");
   }
-
-  return parseExtractionResponse(textBlock.text);
+  return opts.parse(textBlock.text);
 }
 
 /**
@@ -201,4 +274,36 @@ function clampConfidence(v: unknown): number {
   const n = asNullableNumber(v);
   if (n === null) return 0;
   return Math.max(0, Math.min(1, n));
+}
+
+/**
+ * RLA-specific response parser. Same tolerance rules as the RPA parser
+ * but different field shape.
+ */
+export function parseRlaExtractionResponse(raw: string): ListingAgreementExtraction {
+  const jsonText = stripFences(raw).trim();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch {
+    throw new Error(`RLA extractor did not return valid JSON: ${raw.slice(0, 200)}`);
+  }
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new Error("RLA extractor response was not an object");
+  }
+  const p = parsed as Record<string, unknown>;
+  return {
+    propertyAddress: asNullableString(p.propertyAddress),
+    city: asNullableString(p.city),
+    state: asNullableString(p.state),
+    zip: asNullableString(p.zip),
+    listPrice: asNullableNumber(p.listPrice),
+    listingStartDate: asIsoDate(p.listingStartDate),
+    listingExpirationDate: asIsoDate(p.listingExpirationDate),
+    sellerNames: asStringArray(p.sellerNames),
+    commissionBuyerSidePct: asNullableNumber(p.commissionBuyerSidePct),
+    commissionTotalPct: asNullableNumber(p.commissionTotalPct),
+    confidence: clampConfidence(p.confidence),
+    warnings: asStringArray(p.warnings),
+  };
 }

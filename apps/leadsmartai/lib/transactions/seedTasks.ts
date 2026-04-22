@@ -557,12 +557,172 @@ const LISTING_REP_SEED_TASKS: SeedTask[] = [
   },
 ];
 
+const DUAL_AGENCY_SEED_TASKS: SeedTask[] = [
+  // Dual agency in California requires disclosed dual-rep consent from
+  // both sides. These tasks aren't a buyer ∪ listing merge — they're
+  // the additional / different work unique to representing both parties
+  // in the same deal. Agents can still add the specific buyer-side or
+  // listing-side tasks they need.
+
+  {
+    seedKey: "dual_disclose_agency",
+    stage: "contract",
+    title: "Deliver & sign Disclosure Regarding Real Estate Agency Relationships",
+    description:
+      "California Civil Code §2079.13-2079.24. Both buyer AND seller must receive + sign the disclosure acknowledging dual representation BEFORE writing an offer. Without it, the agency relationship is legally defective.",
+    anchor: "mutual_acceptance",
+    offsetDays: null,
+  },
+  {
+    seedKey: "dual_confirm_dual_rep_consent",
+    stage: "contract",
+    title: "Confirm written dual-agency consent on RPA",
+    description:
+      "CAR RPA paragraph 21 (Agency) must show dual representation + both parties' initials. No initial = no dual agency = risk of commission claw-back + discipline.",
+    anchor: "mutual_acceptance",
+    offsetDays: 0,
+  },
+  {
+    seedKey: "dual_neutral_negotiation_stance",
+    stage: "contract",
+    title: "Document your neutral-negotiation plan",
+    description:
+      "Write down (in your deal notes, not to a party) which negotiation topics you will NOT advise either side on. Dual agents owe fiduciary duties to both; advocacy for one is a breach of duty to the other.",
+    anchor: "mutual_acceptance",
+    offsetDays: 1,
+  },
+  {
+    seedKey: "dual_open_escrow",
+    stage: "contract",
+    title: "Open escrow + distribute ratified contract both sides",
+    description:
+      "Send the same contract package to both buyer AND seller simultaneously. No 'first to know' advantage — timing in dual agency is as scrutinized as content.",
+    anchor: "mutual_acceptance",
+    offsetDays: 1,
+  },
+  {
+    seedKey: "dual_deliver_disclosures",
+    stage: "contract",
+    title: "Deliver seller disclosures to buyer",
+    description:
+      "TDS, SPQ, NHD, HOA docs. In dual agency you're the delivery mechanism too. Stamp the delivery date — it starts the buyer's objection clock.",
+    anchor: "mutual_acceptance",
+    offsetDays: 7,
+  },
+  {
+    seedKey: "dual_verify_emd",
+    stage: "contract",
+    title: "Verify EMD received + confirm to seller",
+    description:
+      "Buyer-side task for most agents, but in dual you confirm to BOTH that funds landed on time — seller wants verification; buyer wants receipt.",
+    anchor: "mutual_acceptance",
+    offsetDays: 3,
+  },
+
+  // ── Inspection stage ──
+  {
+    seedKey: "dual_inspection_coordinate",
+    stage: "inspection",
+    title: "Coordinate inspection scheduling (both parties informed)",
+    description:
+      "Notify seller of inspection window. Provide buyer access. You are not the inspector's advocate either direction — schedule and step back.",
+    anchor: "mutual_acceptance",
+    offsetDays: 7,
+  },
+  {
+    seedKey: "dual_handle_repair_request",
+    stage: "inspection",
+    title: "Facilitate Request for Repairs exchange",
+    description:
+      "Deliver buyer's RR to seller. Deliver seller's response back. DO NOT counsel either side on 'reasonable' asks — that's the work they each need an advocate for, which you legally can't be.",
+    anchor: "mutual_acceptance",
+    offsetDays: 14,
+  },
+  {
+    seedKey: "dual_confirm_both_contingency_removals",
+    stage: "inspection",
+    title: "Confirm both sides' contingency-removal paperwork",
+    description:
+      "Buyer delivers CR (Contingency Removal). Seller receipts it. Until CR is signed + delivered, deal can still cancel. Track the chain on both sides.",
+    anchor: "mutual_acceptance",
+    offsetDays: 17,
+  },
+
+  // ── Appraisal + loan ──
+  {
+    seedKey: "dual_coordinate_appraisal",
+    stage: "appraisal",
+    title: "Coordinate appraiser access",
+    description:
+      "Access from seller, timing from lender. Dual agent manages both calendars. If appraisal comes in low, DO NOT advise either side — escalate: 'each party should speak with their own counsel.'",
+    anchor: "mutual_acceptance",
+    offsetDays: 14,
+  },
+  {
+    seedKey: "dual_confirm_loan_ctc",
+    stage: "loan",
+    title: "Confirm clear-to-close + track contingency removal",
+    description:
+      "Lender's CTC letter triggers buyer's loan contingency removal. Deliver to seller. This is the single biggest point where dual deals fall apart — a slow CTC means both sides stress; keep both informed.",
+    anchor: "mutual_acceptance",
+    offsetDays: 21,
+  },
+
+  // ── Closing ──
+  {
+    seedKey: "dual_verify_wire_instructions",
+    stage: "closing",
+    title: "⚠️ Verbally verify wire instructions with title (BOTH sides)",
+    description:
+      "CRITICAL: buyer's wire AND seller's proceeds routing. Call the title company on a KNOWN phone number for each. Wire fraud in dual deals hits either party — verify both.",
+    anchor: "mutual_acceptance",
+    offsetDays: 26,
+  },
+  {
+    seedKey: "dual_review_cd_both",
+    stage: "closing",
+    title: "Review Closing Disclosure with buyer + Settlement Statement with seller",
+    description:
+      "TRID requires buyer sees CD 3 business days before signing. Seller sees separate settlement statement. Walk through line items with each, without comparing.",
+    anchor: "mutual_acceptance",
+    offsetDays: 25,
+  },
+  {
+    seedKey: "dual_schedule_walkthrough",
+    stage: "closing",
+    title: "Schedule final walkthrough",
+    description:
+      "24-48h before close. Buyer inspects; seller delivers property in agreed condition. If new damage surfaces, YOU are not the mediator — each side may need their own counsel.",
+    anchor: "mutual_acceptance",
+    offsetDays: 28,
+  },
+  {
+    seedKey: "dual_coordinate_signings",
+    stage: "closing",
+    title: "Coordinate both parties' signing appointments at title",
+    description:
+      "Separate appointments (or split sessions same day). Both parties need government ID. Buyer wire or cashier's check; seller proceeds instructions already on file.",
+    anchor: "mutual_acceptance",
+    offsetDays: 29,
+  },
+  {
+    seedKey: "dual_confirm_funding_recording_keys",
+    stage: "closing",
+    title: "Confirm funding → recording → keys released",
+    description:
+      "Lender funds title, title records deed, seller's proceeds wire, keys handed over. Notify both parties at each milestone — in dual agency the communication burden doubles.",
+    anchor: "mutual_acceptance",
+    offsetDays: 30,
+  },
+];
+
 export function seedTasksFor(type: TransactionType): SeedTask[] {
   if (type === "buyer_rep") return BUYER_REP_SEED_TASKS;
   if (type === "listing_rep") return LISTING_REP_SEED_TASKS;
-  // Dual agency: no seed template yet. Agent adds tasks manually.
+  if (type === "dual") return DUAL_AGENCY_SEED_TASKS;
   return [];
 }
 
 export const BUYER_REP_TASK_COUNT = BUYER_REP_SEED_TASKS.length;
 export const LISTING_REP_TASK_COUNT = LISTING_REP_SEED_TASKS.length;
+export const DUAL_AGENCY_TASK_COUNT = DUAL_AGENCY_SEED_TASKS.length;
