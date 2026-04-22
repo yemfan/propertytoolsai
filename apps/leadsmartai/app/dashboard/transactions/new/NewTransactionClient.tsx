@@ -3,22 +3,21 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import ContactPicker, { type ContactPickerValue } from "@/components/crm/ContactPicker";
 
 /**
  * MVP new-transaction form.
  *
- * Scope cut: no contact autocomplete yet. The agent either pastes a
- * contact UUID or arrives here with `?contactId=...` pre-populated
- * (e.g. from a future "Open transaction" action on the contacts
- * page). Follow-up PR: contact-picker + optional copy-from-offer
- * wizard that extracts fields from a ratified-contract PDF.
+ * Accepts `?contactId=<uuid>` as a deep-link prefill — ContactPicker resolves
+ * the display name once on mount. Follow-up: copy-from-offer wizard that
+ * extracts fields from a ratified-contract PDF.
  */
 function NewTransactionForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledContactId = searchParams.get("contactId") ?? "";
 
-  const [contactId, setContactId] = useState(prefilledContactId);
+  const [contact, setContact] = useState<ContactPickerValue | null>(null);
   const [propertyAddress, setPropertyAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setStateValue] = useState("CA");
@@ -32,7 +31,7 @@ function NewTransactionForm() {
 
   async function submit() {
     setError(null);
-    if (!contactId.trim() || !propertyAddress.trim()) {
+    if (!contact?.id || !propertyAddress.trim()) {
       setError("Contact and property address are required.");
       return;
     }
@@ -42,7 +41,7 @@ function NewTransactionForm() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          contactId: contactId.trim(),
+          contactId: contact.id,
           propertyAddress: propertyAddress.trim(),
           city: city.trim() || null,
           state: state.trim() || null,
@@ -88,17 +87,14 @@ function NewTransactionForm() {
 
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div>
-          <label className="block text-xs font-medium text-slate-700">Contact ID *</label>
-          <input
-            value={contactId}
-            onChange={(e) => setContactId(e.target.value)}
-            placeholder="UUID from the Contacts page"
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          <label className="block text-xs font-medium text-slate-700">Contact *</label>
+          <ContactPicker
+            value={contact}
+            onChange={setContact}
+            initialContactId={prefilledContactId || null}
+            helperText="Start typing the buyer's name, email, or phone. Recent contacts show if left blank."
+            className="mt-1"
           />
-          <p className="mt-1 text-[11px] text-slate-500">
-            Copy the contact&apos;s UUID from the Contacts list for now. A proper
-            picker lands in the next iteration.
-          </p>
         </div>
 
         <div>
@@ -204,7 +200,7 @@ function NewTransactionForm() {
           <button
             type="button"
             onClick={() => void submit()}
-            disabled={submitting || !contactId.trim() || !propertyAddress.trim()}
+            disabled={submitting || !contact?.id || !propertyAddress.trim()}
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
           >
             {submitting ? "Creating…" : "Create transaction"}

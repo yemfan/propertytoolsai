@@ -423,7 +423,19 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                     <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] truncate">{c.notes ?? "\u2014"}</td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <button onClick={() => startEdit(c)} className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 mr-2">Edit</button>
-                      <button onClick={() => void markContacted(c.id)} disabled={actionLoading} className="rounded-lg bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50">Contacted</button>
+                      <button onClick={() => void markContacted(c.id)} disabled={actionLoading} className="rounded-lg bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50 mr-2">Contacted</button>
+                      {/* One-click start of a buyer-rep transaction for this
+                          contact. NewTransactionClient resolves the display
+                          name via ContactPicker on mount — we just pass the
+                          id. Property address is filled in-form; we don't
+                          pre-fill from `property_address` because that's the
+                          buyer's home, not the subject property. */}
+                      <Link
+                        href={`/dashboard/transactions/new?contactId=${encodeURIComponent(c.id)}`}
+                        className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        Start deal
+                      </Link>
                     </td>
                   </tr>
                 );
