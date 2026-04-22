@@ -325,9 +325,41 @@ function OpportunitiesSection({
     );
   }
   if (error) {
+    // Surface the common Anthropic failure modes with clearer guidance.
+    // Any message containing "credit balance" means the agent's plan
+    // needs more credits — point them directly at billing rather than
+    // showing a raw JSON error.
+    const looksLikeCreditsIssue = /credit balance|low (on|) credits|purchase credits/i.test(error);
+    const looksLikeRateLimit = /rate limit|overloaded/i.test(error);
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-        {error}
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <div className="font-semibold">
+          {looksLikeCreditsIssue
+            ? "AI opportunities paused — Anthropic credits low"
+            : looksLikeRateLimit
+              ? "AI opportunities paused — Anthropic rate limit"
+              : "Couldn't generate opportunities"}
+        </div>
+        <p className="mt-1 text-[13px] text-amber-800">
+          {looksLikeCreditsIssue ? (
+            <>
+              Add credits at{" "}
+              <a
+                href="https://console.anthropic.com/settings/billing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium underline"
+              >
+                console.anthropic.com/settings/billing
+              </a>
+              . Existing metrics below still work.
+            </>
+          ) : looksLikeRateLimit ? (
+            "Try the refresh button again in a minute."
+          ) : (
+            error
+          )}
+        </p>
       </div>
     );
   }
