@@ -77,23 +77,43 @@ type CachePayload = {
 };
 
 async function readCache(agentId: string): Promise<CachePayload | null> {
-  const { data } = await supabaseAdmin
-    .from("growth_opportunities_cache")
-    .select("payload, generated_at, expires_at")
-    .eq("agent_id", agentId)
-    .maybeSingle();
-  if (!data) return null;
-  const row = data as {
-    payload: CachePayload;
-    generated_at: string;
-    expires_at: string;
-  };
-  // Paranoid check — don't trust the expires_at clock; if expired, treat as miss.
-  if (new Date(row.expires_at).getTime() <= Date.now()) return null;
-  return {
-    opportunities: Array.isArray(row.payload?.opportunities) ? row.payload.opportunities : [],
-    generatedAtIso: row.payload?.generatedAtIso ?? row.generated_at,
-  };
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("growth_opportunities_cache")
+      .select("payload, generated_at, expires_at")
+      .eq("agent_id", agentId)
+      .maybeSingle();
+    // Missing-table + permissions + RLS errors all surface here. Treat
+    // any failure as a cache miss — never let a cache issue break the
+    // primary flow. The caller will regenerate + try writing again.
+    if (error) {
+      console.warn(
+        "[growth.readCache] skipping cache:",
+        (error as { message?: string }).message ?? error,
+      );
+      return null;
+    }
+    if (!data) return null;
+    const row = data as {
+      payload: CachePayload;
+      generated_at: string;
+      expires_at: string;
+    };
+    // Paranoid check — don't trust the expires_at clock; if expired, treat as miss.
+    if (new Date(row.expires_at).getTime() <= Date.now()) return null;
+    return {
+      opportunities: Array.isArray(row.payload?.opportunities)
+        ? row.payload.opportunities
+        : [],
+      generatedAtIso: row.payload?.generatedAtIso ?? row.generated_at,
+    };
+  } catch (err) {
+    console.warn(
+      "[growth.readCache] threw:",
+      err instanceof Error ? err.message : err,
+    );
+    return null;
+  }
 }
 
 async function writeCache(
