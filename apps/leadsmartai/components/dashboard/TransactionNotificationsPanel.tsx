@@ -6,6 +6,7 @@ type Preferences = {
   transactionDigestEnabled: boolean;
   transactionDigestFrequency: "daily" | "weekly" | "off";
   wireFraudSmsEnabled: boolean;
+  growthDigestEnabled: boolean;
 };
 
 /**
@@ -120,6 +121,21 @@ export function TransactionNotificationsPanel() {
         <Toggle
           checked={prefs.wireFraudSmsEnabled}
           onChange={(v) => void save({ wireFraudSmsEnabled: v })}
+          disabled={saving}
+        />
+      </div>
+
+      <div className="flex items-start justify-between gap-4 border-t border-slate-100 pt-4">
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-slate-900">Weekly growth digest</div>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Monday-morning email with the top 3 AI-generated growth opportunities for your week.
+            Only sends when you have 2+ opportunities, so dormant weeks stay quiet.
+          </p>
+        </div>
+        <Toggle
+          checked={prefs.growthDigestEnabled}
+          onChange={(v) => void save({ growthDigestEnabled: v })}
           disabled={saving}
         />
       </div>

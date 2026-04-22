@@ -22,7 +22,7 @@ export async function GET() {
     const { data } = await supabaseAdmin
       .from("agent_notification_preferences")
       .select(
-        "transaction_digest_enabled, transaction_digest_frequency, wire_fraud_sms_enabled",
+        "transaction_digest_enabled, transaction_digest_frequency, wire_fraud_sms_enabled, growth_digest_enabled",
       )
       .eq("agent_id", agentId)
       .maybeSingle();
@@ -31,6 +31,7 @@ export async function GET() {
       transaction_digest_enabled: boolean | null;
       transaction_digest_frequency: string | null;
       wire_fraud_sms_enabled: boolean | null;
+      growth_digest_enabled: boolean | null;
     } | null;
 
     return NextResponse.json({
@@ -39,6 +40,7 @@ export async function GET() {
         transactionDigestEnabled: row?.transaction_digest_enabled ?? true,
         transactionDigestFrequency: row?.transaction_digest_frequency ?? "daily",
         wireFraudSmsEnabled: row?.wire_fraud_sms_enabled ?? true,
+        growthDigestEnabled: row?.growth_digest_enabled ?? true,
       },
     });
   } catch (err) {
@@ -56,6 +58,7 @@ export async function PATCH(req: Request) {
       transactionDigestEnabled: boolean;
       transactionDigestFrequency: string;
       wireFraudSmsEnabled: boolean;
+      growthDigestEnabled: boolean;
     }>;
 
     const patch: Record<string, unknown> = {};
@@ -73,6 +76,9 @@ export async function PATCH(req: Request) {
     }
     if (typeof body.wireFraudSmsEnabled === "boolean") {
       patch.wire_fraud_sms_enabled = body.wireFraudSmsEnabled;
+    }
+    if (typeof body.growthDigestEnabled === "boolean") {
+      patch.growth_digest_enabled = body.growthDigestEnabled;
     }
 
     if (Object.keys(patch).length === 0) {
