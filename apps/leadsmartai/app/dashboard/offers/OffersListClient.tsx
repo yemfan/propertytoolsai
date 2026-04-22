@@ -1,0 +1,263 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import type { OfferListItem, OfferStatus } from "@/lib/offers/types";
+
+type Filter = "all" | "active" | "won" | "lost";
+
+const STATUS_LABEL: Record<OfferStatus, string> = {
+  draft: "Draft",
+  submitted: "Submitted",
+  countered: "Countered",
+  accepted: "Accepted",
+  rejected: "Rejected",
+  withdrawn: "Withdrawn",
+  expired: "Expired",
+};
+
+const STATUS_BADGE: Record<OfferStatus, string> = {
+  draft: "bg-gray-100 text-gray-700",
+  submitted: "bg-blue-100 text-blue-800",
+  countered: "bg-amber-100 text-amber-800",
+  accepted: "bg-green-100 text-green-800",
+  rejected: "bg-red-100 text-red-800",
+  withdrawn: "bg-slate-100 text-slate-600",
+  expired: "bg-slate-100 text-slate-600",
+};
+
+function formatMoney(n: number | null | undefined): string {
+  if (n == null) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export function OffersListClient({
+  initialOffers,
+  initialContactFilter,
+}: {
+  initialOffers: OfferListItem[];
+  initialContactFilter: string | null;
+}) {
+  const [filter, setFilter] = useState<Filter>("all");
+  const [search, setSearch] = useState("");
+
+  const contactFilterName = useMemo(() => {
+    if (!initialContactFilter) return null;
+    const match = initialOffers.find((o) => o.contact_id === initialContactFilter);
+    return match?.contact_name ?? "selected buyer";
+  }, [initialContactFilter, initialOffers]);
+
+  const filtered = useMemo(() => {
+    return initialOffers.filter((o) => {
+      if (filter === "active" && !["draft", "submitted", "countered"].includes(o.status)) return false;
+      if (filter === "won" && o.status !== "accepted") return false;
+      if (filter === "lost" && !["rejected", "withdrawn", "expired"].includes(o.status)) return false;
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (
+        o.property_address.toLowerCase().includes(q) ||
+        (o.city ?? "").toLowerCase().includes(q) ||
+        (o.contact_name ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [initialOffers, filter, search]);
+
+  const stats = useMemo(() => {
+    let active = 0;
+    let won = 0;
+    let lost = 0;
+    let pipelineValue = 0;
+    let wonValue = 0;
+    for (const o of initialOffers) {
+      if (["draft", "submitted", "countered"].includes(o.status)) {
+        active += 1;
+        pipelineValue += o.current_price ?? o.offer_price;
+      }
+      if (o.status === "accepted") {
+        won += 1;
+        wonValue += o.current_price ?? o.offer_price;
+      }
+      if (["rejected", "withdrawn", "expired"].includes(o.status)) lost += 1;
+    }
+    const closedTotal = won + lost;
+    const winRate = closedTotal > 0 ? Math.round((won / closedTotal) * 100) : null;
+    return { total: initialOffers.length, active, won, lost, pipelineValue, wonValue, winRate };
+  }, [initialOffers]);
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Offers</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {contactFilterName ? (
+              <>
+                Offers for <strong>{contactFilterName}</strong>.{" "}
+                <Link href="/dashboard/offers" className="text-blue-600 hover:underline">
+                  Clear filter
+                </Link>
+              </>
+            ) : (
+              "Buyer-side offer tracker — drafts, submissions, counters, outcomes."
+            )}
+          </p>
+        </div>
+        <Link
+          href={
+            initialContactFilter
+              ? `/dashboard/offers/new?contactId=${encodeURIComponent(initialContactFilter)}`
+              : "/dashboard/offers/new"
+          }
+          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+        >
+          + New offer
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <Stat label="Active" value={String(stats.active)} tone="blue" />
+        <Stat label="Won" value={String(stats.won)} tone="green" />
+        <Stat label="Lost" value={String(stats.lost)} tone="gray" />
+        <Stat label="Pipeline" value={formatMoney(stats.pipelineValue)} tone="blue" />
+        <Stat
+          label="Win rate"
+          value={stats.winRate == null ? "—" : `${stats.winRate}%`}
+          tone={stats.winRate != null && stats.winRate >= 50 ? "green" : "gray"}
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search address or buyer…"
+          className="min-w-[240px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
+        />
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as Filter)}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+        >
+          <option value="all">All offers</option>
+          <option value="active">Active</option>
+          <option value="won">Won</option>
+          <option value="lost">Lost</option>
+        </select>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-50 text-xs text-slate-600">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium">Property</th>
+                <th className="px-3 py-2 text-left font-medium">Buyer</th>
+                <th className="px-3 py-2 text-right font-medium">Offer</th>
+                <th className="px-3 py-2 text-right font-medium">Current</th>
+                <th className="px-3 py-2 text-center font-medium">Counters</th>
+                <th className="px-3 py-2 text-left font-medium">Status</th>
+                <th className="px-3 py-2 text-left font-medium">Submitted</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map((o) => (
+                <tr key={o.id} className="align-top hover:bg-slate-50">
+                  <td className="px-3 py-2">
+                    <Link
+                      href={`/dashboard/offers/${o.id}`}
+                      className="font-medium text-slate-900 hover:underline"
+                    >
+                      {o.property_address}
+                    </Link>
+                    {o.city || o.state ? (
+                      <div className="text-[11px] text-slate-500">
+                        {[o.city, o.state].filter(Boolean).join(", ")}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-2 text-slate-700">{o.contact_name ?? "—"}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-slate-700">
+                    {formatMoney(o.offer_price)}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {o.current_price != null && o.current_price !== o.offer_price ? (
+                      <span className="font-semibold text-slate-900">{formatMoney(o.current_price)}</span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-center tabular-nums text-slate-600">
+                    {o.counter_count > 0 ? o.counter_count : <span className="text-slate-400">—</span>}
+                  </td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_BADGE[o.status]}`}
+                    >
+                      {STATUS_LABEL[o.status]}
+                    </span>
+                    {o.transaction_id ? (
+                      <Link
+                        href={`/dashboard/transactions/${o.transaction_id}`}
+                        className="ml-2 text-[11px] text-blue-600 hover:underline"
+                      >
+                        → deal
+                      </Link>
+                    ) : null}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-[11px] text-slate-500">
+                    {o.submitted_at ? formatDate(o.submitted_at) : <span className="text-slate-400">—</span>}
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-3 py-10 text-center text-sm text-slate-500">
+                    {initialOffers.length === 0 ? (
+                      <>
+                        <div className="font-medium">No offers yet.</div>
+                        <div className="mt-1 text-[12px]">
+                          Click <strong>+ New offer</strong> to log the first one.
+                        </div>
+                      </>
+                    ) : (
+                      "No offers match your filters."
+                    )}
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, tone }: { label: string; value: string; tone?: "blue" | "green" | "gray" }) {
+  const color =
+    tone === "blue"
+      ? "text-blue-700"
+      : tone === "green"
+        ? "text-green-700"
+        : tone === "gray"
+          ? "text-slate-600"
+          : "text-slate-900";
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="text-[11px] font-medium text-slate-500">{label}</div>
+      <div className={`text-lg font-semibold ${color}`}>{value}</div>
+    </div>
+  );
+}

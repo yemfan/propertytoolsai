@@ -76,6 +76,14 @@ const navConfig = {
           icon: navEmoji("🏠"),
         },
         {
+          // Buyer-side offer tracker: drafts, counters, acceptance → transaction.
+          // See apps/leadsmartai/lib/offers.
+          label: "Offers",
+          href: "/dashboard/offers",
+          match: ["/dashboard/offers"],
+          icon: navEmoji("📝"),
+        },
+        {
           // Per-deal coordinator: deadlines, checklist, counterparties
           // for buyer-rep closings. See apps/leadsmartai/lib/transactions.
           label: "Transactions",
