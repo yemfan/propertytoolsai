@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { listContacts } from "@/lib/contacts/service";
 import { listSmartLists } from "@/lib/contacts/smart-lists";
+import { getContactShowingStats } from "@/lib/showings/service";
 import SmartListTabs from "@/components/dashboard/SmartListTabs";
 import ContactsClient from "./ContactsClient";
 
@@ -47,29 +48,41 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     : await listContacts(agentId);
   void activeListContacts; // placeholder; keeps the parallel fetch pattern explicit
 
+  // Showing stats per contact — single bulk query, returns empty Map if
+  // the feature hasn't been used yet.
+  const showingStats = await getContactShowingStats(
+    String(agentId),
+    contacts.map((c) => c.id),
+  );
+
   // ContactsClient still expects the legacy LeadRow shape. Adapt the
   // ContactView into that minimal shape; richer fields are available
   // if/when ContactsClient is refactored to use ContactView directly.
-  const legacyRows = contacts.map((c) => ({
-    id: c.id,
-    name:
-      c.fullName && c.fullName !== "(no name)"
-        ? c.fullName
-        : (c.email ?? null),
-    email: c.email,
-    phone: c.phone ?? c.phoneNumber ?? null,
-    property_address: c.propertyAddress,
-    source: c.source,
-    rating: c.rating,
-    last_contacted_at: c.lastContactedAt,
-    notes: c.notes,
-    created_at: c.createdAt,
-    // ContactView coerces null → "en" at the service layer; collapse that
-    // back to null for the legacy row so the UI can distinguish "no explicit
-    // override" from "explicitly picked English". The badge renderer in
-    // ContactsClient only surfaces a chip for non-English overrides.
-    preferred_language: c.preferredLanguage && c.preferredLanguage !== "en" ? c.preferredLanguage : null,
-  }));
+  const legacyRows = contacts.map((c) => {
+    const stats = showingStats.get(c.id);
+    return {
+      id: c.id,
+      name:
+        c.fullName && c.fullName !== "(no name)"
+          ? c.fullName
+          : (c.email ?? null),
+      email: c.email,
+      phone: c.phone ?? c.phoneNumber ?? null,
+      property_address: c.propertyAddress,
+      source: c.source,
+      rating: c.rating,
+      last_contacted_at: c.lastContactedAt,
+      notes: c.notes,
+      created_at: c.createdAt,
+      // ContactView coerces null → "en" at the service layer; collapse that
+      // back to null for the legacy row so the UI can distinguish "no explicit
+      // override" from "explicitly picked English". The badge renderer in
+      // ContactsClient only surfaces a chip for non-English overrides.
+      preferred_language: c.preferredLanguage && c.preferredLanguage !== "en" ? c.preferredLanguage : null,
+      showing_total: stats?.total ?? 0,
+      showing_loved: stats?.loved ?? 0,
+    };
+  });
 
   return (
     <div className="flex flex-col">
