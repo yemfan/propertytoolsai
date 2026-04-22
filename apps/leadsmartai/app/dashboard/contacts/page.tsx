@@ -64,6 +64,11 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     last_contacted_at: c.lastContactedAt,
     notes: c.notes,
     created_at: c.createdAt,
+    // ContactView coerces null → "en" at the service layer; collapse that
+    // back to null for the legacy row so the UI can distinguish "no explicit
+    // override" from "explicitly picked English". The badge renderer in
+    // ContactsClient only surfaces a chip for non-English overrides.
+    preferred_language: c.preferredLanguage && c.preferredLanguage !== "en" ? c.preferredLanguage : null,
   }));
 
   return (

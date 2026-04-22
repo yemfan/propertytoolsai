@@ -12,6 +12,7 @@ import {
   getCurrentAgentContext,
 } from "@/lib/dashboardService";
 import { updateLeadPipelineStage } from "@/lib/crm/pipeline/leadStage";
+import { isSupportedLocale } from "@/lib/locales/registry";
 import { supabaseServer } from "@/lib/supabaseServer";
 
 export async function PATCH(
@@ -36,6 +37,12 @@ export async function PATCH(
       email?: string;
       phone?: string;
       property_address?: string;
+      /**
+       * BCP-47 base id (e.g. "zh"), empty string to clear, or undefined to
+       * leave unchanged. Validated against the locale registry so unknown
+       * ids are 400'd rather than silently coerced.
+       */
+      preferred_language?: string | null;
     };
 
     if (body.lead_status) {
@@ -61,13 +68,27 @@ export async function PATCH(
       });
     }
 
-    // Direct field updates (name, email, phone, address, last_contacted_at).
+    // Direct field updates (name, email, phone, address, last_contacted_at,
+    // preferred_language).
     const directPatch: Record<string, unknown> = {};
     if (typeof body.name === "string") directPatch.name = body.name;
     if (typeof body.email === "string") directPatch.email = body.email;
     if (typeof body.phone === "string") directPatch.phone = body.phone;
     if (typeof body.property_address === "string") directPatch.property_address = body.property_address;
     if (body.last_contacted_at) directPatch.last_contacted_at = body.last_contacted_at;
+    if ("preferred_language" in body) {
+      // "" / null / undefined → clear. Anything else must be a known locale.
+      if (body.preferred_language == null || body.preferred_language === "") {
+        directPatch.preferred_language = null;
+      } else if (isSupportedLocale(body.preferred_language)) {
+        directPatch.preferred_language = body.preferred_language;
+      } else {
+        return NextResponse.json(
+          { error: `Unknown preferred_language: ${body.preferred_language}` },
+          { status: 400 },
+        );
+      }
+    }
     if (Object.keys(directPatch).length > 0) {
       await supabaseServer.from("contacts").update(directPatch).eq("id", id);
     }
