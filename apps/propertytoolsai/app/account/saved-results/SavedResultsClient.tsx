@@ -24,7 +24,8 @@ const TOOL_LABELS: Record<string, string> = {
   down_payment_calculator: "Down payment",
   refinance_calculator: "Refinance",
   closing_cost_estimator: "Closing costs",
-  property_investment_analyzer: "Investment analyzer",
+  property_investment_analyzer: "Investment analyzer (retired)",
+  cap_rate_roi_calculator: "Cap rate + ROI (retired)",
   rent_vs_buy: "Rent vs buy",
   adjustable_rate_calculator: "ARM",
   ai_deal_analyzer: "AI deal analyzer",
@@ -41,7 +42,10 @@ const TOOL_HREF: Record<string, string> = {
   down_payment_calculator: "/down-payment-calculator",
   refinance_calculator: "/refinance-calculator",
   closing_cost_estimator: "/closing-cost-estimator",
-  property_investment_analyzer: "/property-investment-analyzer",
+  // Retired tool (consolidated into cash-flow-calculator). Keeping the
+  // label + href so historic saved rows still link somewhere useful.
+  property_investment_analyzer: "/cash-flow-calculator",
+  cap_rate_roi_calculator: "/cap-rate-calculator",
   rent_vs_buy: "/rent-vs-buy",
   adjustable_rate_calculator: "/adjustable-rate-calculator",
   ai_deal_analyzer: "/ai-real-estate-deal-analyzer",

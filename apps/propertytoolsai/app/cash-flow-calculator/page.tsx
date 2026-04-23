@@ -9,6 +9,11 @@ import JsonLd from "../../components/JsonLd";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
 import { SaveResultsButton } from "@/components/SaveResultsButton";
 
+/**
+ * Cash flow calculator — primary. Optionally accepts a purchase
+ * price, which unlocks cap rate as a second output. This subsumes
+ * the retired /property-investment-analyzer page (now 301'd here).
+ */
 export default function CashFlowCalculator() {
   useEffect(() => {
     void trackCashFlowUsed();
@@ -24,22 +29,34 @@ export default function CashFlowCalculator() {
   const [otherExpenses, setOtherExpenses] = useState<number>(100);
   const [vacancyMonths, setVacancyMonths] = useState<number>(0);
 
+  // Optional — when set, also shows cap rate. NOI = effective income
+  // − operating expenses (excludes mortgage, which is debt service,
+  // not an operating expense).
+  const [purchasePrice, setPurchasePrice] = useState<number>(0);
+
   const results = useMemo(() => {
     const income = monthlyRent * (12 - vacancyMonths);
-    const expenses =
-      monthlyMortgage * 12 +
+    const annualMortgage = monthlyMortgage * 12;
+    const annualOperatingExpenses =
       propertyTax * 12 +
       insurance * 12 +
       hoa * 12 +
       maintenance * 12 +
       otherExpenses * 12;
+    const expenses = annualMortgage + annualOperatingExpenses;
     const annualCashFlow = income - expenses;
     const monthlyCashFlow = annualCashFlow / 12;
+
+    const noi = income - annualOperatingExpenses;
+    const capRate = purchasePrice > 0 ? (noi / purchasePrice) * 100 : null;
+
     return {
       annualIncome: income,
       annualExpenses: expenses,
       annualCashFlow,
       monthlyCashFlow,
+      noi,
+      capRate,
     };
   }, [
     monthlyRent,
@@ -50,6 +67,7 @@ export default function CashFlowCalculator() {
     maintenance,
     otherExpenses,
     vacancyMonths,
+    purchasePrice,
   ]);
 
   return (
@@ -96,6 +114,22 @@ export default function CashFlowCalculator() {
               <InputField label="Other ($/mo)" value={otherExpenses} onChange={setOtherExpenses} min={0} />
               <InputField label="Vacancy (months/yr)" value={vacancyMonths} onChange={setVacancyMonths} min={0} max={12} />
             </div>
+            <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <label className="block text-sm font-medium text-slate-800">
+                Purchase price ($) — optional
+              </label>
+              <p className="mt-0.5 text-[11px] text-slate-500">
+                If set, we also show cap rate (NOI ÷ purchase price). Leave at 0 to hide.
+              </p>
+              <div className="mt-2">
+                <InputField
+                  label=""
+                  value={purchasePrice}
+                  onChange={setPurchasePrice}
+                  min={0}
+                />
+              </div>
+            </div>
             <div className="pt-2">
               <button
                 type="button"
@@ -111,7 +145,18 @@ export default function CashFlowCalculator() {
             <ResultCard
               title="Cash flow"
               value={`$${results.monthlyCashFlow.toFixed(2)}/mo`}
-              details={`Annual income: $${results.annualIncome.toLocaleString(undefined, { maximumFractionDigits: 0 })}\nAnnual expenses: $${results.annualExpenses.toLocaleString(undefined, { maximumFractionDigits: 0 })}\nAnnual cash flow: $${results.annualCashFlow.toLocaleString(undefined, { maximumFractionDigits: 0 })}\nMonthly cash flow: $${results.monthlyCashFlow.toFixed(2)}`}
+              details={[
+                `Annual income: $${results.annualIncome.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                `Annual expenses: $${results.annualExpenses.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                `Annual cash flow: $${results.annualCashFlow.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                `Monthly cash flow: $${results.monthlyCashFlow.toFixed(2)}`,
+                ...(results.capRate != null
+                  ? [
+                      `NOI: $${results.noi.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                      `Cap rate: ${results.capRate.toFixed(2)}%`,
+                    ]
+                  : []),
+              ].join("\n")}
             />
           </div>
         </div>
@@ -120,7 +165,17 @@ export default function CashFlowCalculator() {
       <div className="mt-6">
         <SaveResultsButton
           tool="cash_flow_calculator"
-          inputs={{ monthlyRent, monthlyMortgage, propertyTax, insurance, hoa, maintenance, otherExpenses, vacancyMonths }}
+          inputs={{
+            monthlyRent,
+            monthlyMortgage,
+            propertyTax,
+            insurance,
+            hoa,
+            maintenance,
+            otherExpenses,
+            vacancyMonths,
+            ...(purchasePrice > 0 ? { purchasePrice } : {}),
+          }}
           results={results}
         />
       </div>
@@ -173,8 +228,8 @@ export default function CashFlowCalculator() {
             lose each month and year after you subtract realistic expenses from rental income.
             It helps you see whether a deal produces positive or negative cash flow before you move
             forward. You can pair these results with returns from our{" "}
-            <Link href="/investment-analyzer" className="text-blue-600 underline">
-              Property Investment Analyzer
+            <Link href="/rental-property-analyzer" className="text-blue-600 underline">
+              Rental Property Analyzer
             </Link>{" "}
             to evaluate overall performance.
           </p>
@@ -207,8 +262,8 @@ export default function CashFlowCalculator() {
             each year, which can significantly lower annual cash flow.
             In this tool you can model vacancy in months per year so you can stress-test deals in
             softer markets. For longer-term projections, you can also model returns in our{" "}
-            <Link href="/investment-analyzer" className="text-blue-600 underline">
-              Property Investment Analyzer
+            <Link href="/rental-property-analyzer" className="text-blue-600 underline">
+              Rental Property Analyzer
             </Link>
             .
           </p>
@@ -263,8 +318,8 @@ export default function CashFlowCalculator() {
             <Link href="/roi-calculator" className="text-blue-600 underline">
               ROI Calculator
             </Link>
-            <Link href="/investment-analyzer" className="text-blue-600 underline">
-              Investment Analyzer
+            <Link href="/rental-property-analyzer" className="text-blue-600 underline">
+              Rental Property Analyzer
             </Link>
             <Link href="/mortgage-calculator" className="text-blue-600 underline">
               Mortgage Calculator

@@ -9,6 +9,20 @@ import JsonLd from "../../components/JsonLd";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
 import { SaveResultsButton } from "@/components/SaveResultsButton";
 
+/**
+ * Cap rate calculator — primary. An optional "Include financing"
+ * toggle reveals down-payment / rate / term inputs and adds CoC ROI
+ * output. This subsumes the retired /cap-rate-roi-calculator page,
+ * which is now 301'd here.
+ */
+
+function pmt(principal: number, annualRate: number, years: number): number {
+  if (principal <= 0 || years <= 0 || annualRate <= 0) return 0;
+  const r = annualRate / 100 / 12;
+  const n = years * 12;
+  return (principal * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+}
+
 export default function CapRateCalculator() {
   const [purchasePrice, setPurchasePrice] = useState<number>(400000);
   const [annualRent, setAnnualRent] = useState<number>(28800);
@@ -18,6 +32,12 @@ export default function CapRateCalculator() {
   const [maintenance, setMaintenance] = useState<number>(2400);
   const [otherExpenses, setOtherExpenses] = useState<number>(1200);
 
+  // Optional financing section
+  const [includeFinancing, setIncludeFinancing] = useState<boolean>(false);
+  const [downPayment, setDownPayment] = useState<number>(80000);
+  const [interestRate, setInterestRate] = useState<number>(6.5);
+  const [loanTerm, setLoanTerm] = useState<number>(30);
+
   useEffect(() => {
     void trackCapRateUsed({ phase: "page_view", purchasePrice });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -25,15 +45,32 @@ export default function CapRateCalculator() {
 
   const results = useMemo(() => {
     const effectiveIncome = annualRent * (1 - vacancyRate / 100);
-    const totalExpenses =
-      propertyTax + insurance + maintenance + otherExpenses;
-    const noi = effectiveIncome - totalExpenses;
+    const operatingExpenses = propertyTax + insurance + maintenance + otherExpenses;
+    const noi = effectiveIncome - operatingExpenses;
     const capRate = purchasePrice > 0 ? (noi / purchasePrice) * 100 : 0;
+
+    // CoC ROI — requires financing inputs. Uses the first-year simple
+    // method: (NOI − annual debt service) / cash invested.
+    let annualDebtService = 0;
+    let cashInvested = 0;
+    let cashOnCashRoi: number | null = null;
+    if (includeFinancing) {
+      const loanAmount = Math.max(0, purchasePrice - downPayment);
+      const monthlyPayment = pmt(loanAmount, interestRate, loanTerm);
+      annualDebtService = monthlyPayment * 12;
+      cashInvested = downPayment;
+      cashOnCashRoi =
+        cashInvested > 0 ? ((noi - annualDebtService) / cashInvested) * 100 : 0;
+    }
+
     return {
       noi,
       capRate,
       effectiveIncome,
-      totalExpenses,
+      operatingExpenses,
+      annualDebtService,
+      cashInvested,
+      cashOnCashRoi,
     };
   }, [
     purchasePrice,
@@ -43,6 +80,10 @@ export default function CapRateCalculator() {
     insurance,
     maintenance,
     otherExpenses,
+    includeFinancing,
+    downPayment,
+    interestRate,
+    loanTerm,
   ]);
 
   return (
@@ -57,7 +98,7 @@ export default function CapRateCalculator() {
           browserRequirements: "Requires JavaScript",
           url: "https://propertytoolsai.com/cap-rate-calculator",
           description:
-            "Calculate cap rate for real estate investments from net operating income and purchase price.",
+            "Calculate cap rate and optional cash-on-cash ROI for rental property investments.",
         }}
       />
       <Link
@@ -72,7 +113,7 @@ export default function CapRateCalculator() {
 
       <h1 className="text-3xl font-bold text-blue-600 mb-2">Cap Rate Calculator</h1>
       <p className="text-gray-600 mb-8">
-        Calculate capitalization rate from NOI and purchase price.
+        Calculate cap rate from NOI and purchase price. Toggle on financing to also see cash-on-cash ROI.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -88,22 +129,50 @@ export default function CapRateCalculator() {
               <InputField label="Maintenance ($/yr)" value={maintenance} onChange={setMaintenance} min={0} />
               <InputField label="Other expenses ($/yr)" value={otherExpenses} onChange={setOtherExpenses} min={0} />
             </div>
-            <div className="pt-2">
-              <button
-                type="button"
-                className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
-                Calculate
-              </button>
+
+            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={includeFinancing}
+                  onChange={(e) => setIncludeFinancing(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300"
+                />
+                <span className="text-sm font-medium text-slate-800">
+                  Include financing (show cash-on-cash ROI)
+                </span>
+              </label>
+              <p className="mt-1 text-[11px] text-slate-500">
+                Adds down-payment / rate / term inputs. Cap rate is leverage-agnostic; CoC ROI shows your actual first-year return on cash invested.
+              </p>
+              {includeFinancing ? (
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <InputField label="Down payment ($)" value={downPayment} onChange={setDownPayment} min={0} />
+                  <InputField label="Interest rate (%)" value={interestRate} onChange={setInterestRate} min={0} max={20} step={0.1} />
+                  <InputField label="Loan term (yrs)" value={loanTerm} onChange={setLoanTerm} min={5} max={40} />
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
         <div className="lg:col-span-1">
           <div className="lg:sticky lg:top-24">
             <ResultCard
-              title="Cap rate"
+              title={includeFinancing ? "Cap rate & CoC ROI" : "Cap rate"}
               value={`${results.capRate.toFixed(2)}%`}
-              details={`NOI: $${results.noi.toLocaleString(undefined, { maximumFractionDigits: 0 })}\nEffective income: $${results.effectiveIncome.toLocaleString(undefined, { maximumFractionDigits: 0 })}\nTotal expenses: $${results.totalExpenses.toLocaleString(undefined, { maximumFractionDigits: 0 })}\nCap rate: ${results.capRate.toFixed(2)}%`}
+              details={[
+                `NOI: $${results.noi.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                `Effective income: $${results.effectiveIncome.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                `Operating expenses: $${results.operatingExpenses.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                `Cap rate: ${results.capRate.toFixed(2)}%`,
+                ...(includeFinancing && results.cashOnCashRoi != null
+                  ? [
+                      `Annual debt service: $${results.annualDebtService.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                      `Cash invested: $${results.cashInvested.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                      `Cash-on-cash ROI (year 1): ${results.cashOnCashRoi.toFixed(2)}%`,
+                    ]
+                  : []),
+              ].join("\n")}
             />
           </div>
         </div>
@@ -113,7 +182,18 @@ export default function CapRateCalculator() {
         <div className="mt-6">
           <SaveResultsButton
             tool="cap_rate_calculator"
-            inputs={{ purchasePrice, annualRent, vacancyRate, propertyTax, insurance, maintenance, otherExpenses }}
+            inputs={{
+              purchasePrice,
+              annualRent,
+              vacancyRate,
+              propertyTax,
+              insurance,
+              maintenance,
+              otherExpenses,
+              ...(includeFinancing
+                ? { downPayment, interestRate, loanTerm, includeFinancing }
+                : {}),
+            }}
             results={results}
           />
         </div>
@@ -200,12 +280,7 @@ export default function CapRateCalculator() {
             A higher cap rate is not always better, because it often reflects higher risk, weaker
             locations, or more intensive management.
             Lower cap rates are typical in strong, supply-constrained markets where investors are
-            willing to accept lower yields for more stability. You can compare cap rates across
-            deals and then analyze overall returns with our{" "}
-            <Link href="/investment-analyzer" className="text-blue-600 underline">
-              Property Investment Analyzer
-            </Link>
-            .
+            willing to accept lower yields for more stability.
           </p>
         </article>
 
@@ -216,16 +291,12 @@ export default function CapRateCalculator() {
           <p className="text-gray-600">
             Traditional cap rate calculations ignore financing and are based only on NOI and
             purchase price, but your real return also depends on your loan terms and cash invested.
-            To see the full picture, combine cap rate from this tool with cash-on-cash and ROI
-            metrics from our{" "}
+            Turn on &quot;Include financing&quot; above to see cash-on-cash ROI alongside cap rate, or
+            use our{" "}
             <Link href="/roi-calculator" className="text-blue-600 underline">
               ROI Calculator
             </Link>{" "}
-            and{" "}
-            <Link href="/investment-analyzer" className="text-blue-600 underline">
-              Property Investment Analyzer
-            </Link>
-            .
+            for multi-year projections with appreciation.
           </p>
         </article>
 
@@ -255,8 +326,8 @@ export default function CapRateCalculator() {
             <Link href="/roi-calculator" className="text-blue-600 underline">
               ROI Calculator
             </Link>
-            <Link href="/investment-analyzer" className="text-blue-600 underline">
-              Investment Analyzer
+            <Link href="/rental-property-analyzer" className="text-blue-600 underline">
+              Rental Property Analyzer
             </Link>
             <Link href="/mortgage-calculator" className="text-blue-600 underline">
               Mortgage Calculator

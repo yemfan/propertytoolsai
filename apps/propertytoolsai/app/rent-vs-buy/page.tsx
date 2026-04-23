@@ -276,8 +276,8 @@ export default function RentVsBuyCalculator() {
             renting, where payments never create an asset.
             In flat or declining markets, renting may be safer in the short term. You can adjust
             appreciation assumptions in this tool and compare long-term returns in our{" "}
-            <Link href="/investment-analyzer" className="text-blue-600 underline">
-              Investment Analyzer
+            <Link href="/rental-property-analyzer" className="text-blue-600 underline">
+              Rental Property Analyzer
             </Link>
             .
           </p>

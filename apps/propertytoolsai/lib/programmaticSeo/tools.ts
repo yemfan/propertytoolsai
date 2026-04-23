@@ -10,7 +10,7 @@ export const PROGRAMMATIC_SEO_TOOLS: ProgrammaticSeoTool[] = [
     name: "Cap Rate Calculator",
     category: "Investing",
     tagline: "Estimate capitalization rate for rental and investment properties.",
-    relatedSlugs: ["cash-flow-calculator", "roi-calculator", "rental-property-analyzer", "property-investment-analyzer"],
+    relatedSlugs: ["cash-flow-calculator", "roi-calculator", "rental-property-analyzer"],
   },
   {
     slug: "mortgage-calculator",
@@ -38,7 +38,7 @@ export const PROGRAMMATIC_SEO_TOOLS: ProgrammaticSeoTool[] = [
     name: "ROI Calculator",
     category: "Investing",
     tagline: "Return on investment scenarios for flips and rentals.",
-    relatedSlugs: ["cap-rate-calculator", "cash-flow-calculator", "property-investment-analyzer"],
+    relatedSlugs: ["cap-rate-calculator", "cash-flow-calculator", "rental-property-analyzer"],
   },
   {
     slug: "down-payment-calculator",
@@ -87,14 +87,7 @@ export const PROGRAMMATIC_SEO_TOOLS: ProgrammaticSeoTool[] = [
     name: "Rental Property Analyzer",
     category: "Investing",
     tagline: "Deep dive on rental income, expenses, and long-term performance.",
-    relatedSlugs: ["cap-rate-calculator", "cash-flow-calculator", "property-investment-analyzer"],
-  },
-  {
-    slug: "property-investment-analyzer",
-    name: "Property Investment Analyzer",
-    category: "Investing",
-    tagline: "Scenario modeling for buy-and-hold and value-add deals.",
-    relatedSlugs: ["rental-property-analyzer", "cap-rate-calculator", "roi-calculator"],
+    relatedSlugs: ["cap-rate-calculator", "cash-flow-calculator", "roi-calculator"],
   },
   {
     slug: "hoa-fee-tracker",
@@ -115,7 +108,7 @@ export const PROGRAMMATIC_SEO_TOOLS: ProgrammaticSeoTool[] = [
     name: "AI Real Estate Deal Analyzer",
     category: "AI Tools",
     tagline: "AI-assisted read on deal strength and risk flags.",
-    relatedSlugs: ["property-investment-analyzer", "rental-property-analyzer", "ai-cma-analyzer"],
+    relatedSlugs: ["rental-property-analyzer", "cap-rate-calculator", "ai-cma-analyzer"],
   },
   {
     slug: "ai-cma-analyzer",

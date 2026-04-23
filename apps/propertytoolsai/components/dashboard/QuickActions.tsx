@@ -6,7 +6,7 @@ import Card from "@/components/ui/Card";
 const actions = [
   { href: "/home-value", label: "Check Home Value" },
   { href: "/mortgage-calculator", label: "Calculate Mortgage" },
-  { href: "/property-investment-analyzer", label: "Analyze Investment" },
+  { href: "/rental-property-analyzer", label: "Analyze Investment" },
   { href: "/market-report/los-angeles-ca", label: "Explore Market" },
 ];
 
