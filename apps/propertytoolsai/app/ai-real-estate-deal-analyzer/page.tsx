@@ -4,6 +4,7 @@ import AddressAutocomplete from "@/components/AddressAutocomplete";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 type Inputs = {
   address: string;
@@ -240,6 +241,15 @@ function AiRealEstateDealAnalyzerPageInner() {
             results={results}
           />
         </div>
+      </div>
+
+      <div className="mt-6">
+        <SaveResultsButton
+          tool="ai_deal_analyzer"
+          inputs={inputs}
+          results={results as unknown as Record<string, unknown>}
+          propertyAddress={inputs.address || null}
+        />
       </div>
 
       <div className="mt-8">

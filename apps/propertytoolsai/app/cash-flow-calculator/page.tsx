@@ -7,6 +7,7 @@ import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 export default function CashFlowCalculator() {
   useEffect(() => {
@@ -116,7 +117,14 @@ export default function CashFlowCalculator() {
         </div>
       </div>
 
-      
+      <div className="mt-6">
+        <SaveResultsButton
+          tool="cash_flow_calculator"
+          inputs={{ monthlyRent, monthlyMortgage, propertyTax, insurance, hoa, maintenance, otherExpenses, vacancyMonths }}
+          results={results}
+        />
+      </div>
+
       <div className="mt-8">
         <ToolLeadGate
           tool="cash_flow_calculator"

@@ -6,6 +6,7 @@ import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 export default function PropertyInvestmentAnalyzer() {
   const [purchasePrice, setPurchasePrice] = useState<number>(350000);
@@ -125,7 +126,14 @@ export default function PropertyInvestmentAnalyzer() {
         </div>
       </div>
 
-      
+      <div className="mt-6">
+        <SaveResultsButton
+          tool="property_investment_analyzer"
+          inputs={{ purchasePrice, monthlyRent, monthlyExpenses, monthlyMortgage }}
+          results={results}
+        />
+      </div>
+
       <div className="mt-8">
         <ToolLeadGate
           tool="property_investment_analyzer"

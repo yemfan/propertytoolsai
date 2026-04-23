@@ -7,6 +7,7 @@ import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0) return 0;
@@ -139,7 +140,14 @@ export default function DownPaymentCalculator() {
         </div>
       </div>
 
-      
+      <div className="mt-6">
+        <SaveResultsButton
+          tool="down_payment_calculator"
+          inputs={{ homePrice, downPaymentPercent, savingsAvailable, loanTerm, interestRate, propertyTax, homeInsurance, hoaFees }}
+          results={{ downPaymentAmount, remainingLoanAmount, monthlyPayment }}
+        />
+      </div>
+
       <div className="mt-8">
         <ToolLeadGate
           tool="down_payment_calculator"

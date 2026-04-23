@@ -7,6 +7,7 @@ import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0) return 0;
@@ -161,7 +162,14 @@ export default function RentVsBuyCalculator() {
         </div>
       </div>
 
-      
+      <div className="mt-6">
+        <SaveResultsButton
+          tool="rent_vs_buy"
+          inputs={{ monthlyRent, homePrice, downPayment, mortgageRate, propertyTaxRate, expectedAppreciation, yearsToStay }}
+          results={{ totalCostRenting, totalCostBuying, recommendation }}
+        />
+      </div>
+
       <div className="mt-8">
         <ToolLeadGate
           tool="rent_vs_buy"

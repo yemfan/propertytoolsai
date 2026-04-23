@@ -7,6 +7,7 @@ import { useAddressPrefill } from "@/hooks/useAddressPrefill";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 type PropertyData = {
   address: string;
@@ -808,6 +809,15 @@ function RentalPropertyAnalyzerPageInner() {
         >
           Download Full Rental Property Report (PDF)
         </button>
+      </div>
+
+      <div className="mt-6">
+        <SaveResultsButton
+          tool="rental_property_analyzer"
+          inputs={propertyData as unknown as Record<string, unknown>}
+          results={metrics as unknown as Record<string, unknown>}
+          propertyAddress={propertyData.address || null}
+        />
       </div>
 
       <div className="mt-8">

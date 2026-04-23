@@ -6,6 +6,7 @@ import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 export default function ClosingCostEstimator() {
   const [homePrice, setHomePrice] = useState<number>(400000);
@@ -104,7 +105,14 @@ export default function ClosingCostEstimator() {
         </div>
       </div>
 
-      
+      <div className="mt-6">
+        <SaveResultsButton
+          tool="closing_cost_estimator"
+          inputs={{ homePrice, loanAmount, originationPercent, titleInsurance, appraisalFee, inspectionFee, otherFees }}
+          results={results}
+        />
+      </div>
+
       <div className="mt-8">
         <ToolLeadGate
           tool="closing_cost_estimator"

@@ -6,6 +6,7 @@ import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 function principalFromPmt(monthlyPmt: number, annualRate: number, years: number): number {
   if (monthlyPmt <= 0 || years <= 0) return 0;
@@ -142,6 +143,16 @@ export default function AffordabilityCalculator() {
           </div>
         </div>
       </div>
+
+      {maxHomePrice > 0 ? (
+        <div className="mt-6">
+          <SaveResultsButton
+            tool="affordability_calculator"
+            inputs={{ annualIncome, monthlyDebts, downPayment, interestRate, loanTerm }}
+            results={{ maxHomePrice, estimatedMonthlyPayment }}
+          />
+        </div>
+      ) : null}
 
       <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">
         <h2 className="text-xl font-semibold text-gray-900">

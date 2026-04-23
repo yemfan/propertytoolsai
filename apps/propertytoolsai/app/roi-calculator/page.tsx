@@ -6,6 +6,7 @@ import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0) return 0;
@@ -129,7 +130,14 @@ export default function ROICalculator() {
         </div>
       </div>
 
-      
+      <div className="mt-6">
+        <SaveResultsButton
+          tool="roi_calculator"
+          inputs={{ purchasePrice, downPayment, interestRate, loanTerm, annualRent, annualExpenses, appreciationPercent, yearsHeld }}
+          results={results}
+        />
+      </div>
+
       <div className="mt-8">
         <ToolLeadGate
           tool="roi_calculator"

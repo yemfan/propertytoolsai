@@ -4,6 +4,7 @@ import AddressAutocomplete from "@/components/AddressAutocomplete";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 type PropertyInputs = {
   address: string;
@@ -496,6 +497,17 @@ function AiCmaAnalyzerPageInner() {
           </section>
         </div>
       </div>
+
+      {priceStats ? (
+        <div className="mt-6">
+          <SaveResultsButton
+            tool="ai_cma_analyzer"
+            inputs={inputs}
+            results={priceStats as unknown as Record<string, unknown>}
+            propertyAddress={inputs.address || null}
+          />
+        </div>
+      ) : null}
 
       <div className="mt-8">
         <ToolLeadGate
