@@ -3,7 +3,7 @@
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import RequireAuthGate from "../../components/RequireAuthGate";
+import { ToolLeadGate } from "@/components/ToolLeadGate";
 
 type PropertyInputs = {
   address: string;
@@ -68,11 +68,7 @@ const SAMPLE_COMPS: Comparable[] = [
 ];
 
 export default function AiCmaAnalyzerPage() {
-  return (
-    <RequireAuthGate>
-      <AiCmaAnalyzerPageInner />
-    </RequireAuthGate>
-  );
+  return <AiCmaAnalyzerPageInner />;
 }
 
 function AiCmaAnalyzerPageInner() {
@@ -499,6 +495,24 @@ function AiCmaAnalyzerPageInner() {
             <p>{aiSummary}</p>
           </section>
         </div>
+      </div>
+
+      <div className="mt-8">
+        <ToolLeadGate
+          tool="ai_cma_analyzer"
+          source="ai_cma_analyzer"
+          intent="sell"
+          propertyAddress={inputs.address || undefined}
+          show={!!priceStats}
+          title="Get Your Branded CMA Report"
+          description="Unlock a downloadable PDF with your logo, expanded comparable-sales details, and a month-over-month market trend analysis."
+          benefits={[
+            "Branded PDF CMA report (agent logo + contact info)",
+            "Expanded comparable sales with adjustments",
+            "Month-over-month market trend chart",
+            "Shareable client-ready link",
+          ]}
+        />
       </div>
     </div>
   );
