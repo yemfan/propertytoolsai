@@ -239,6 +239,17 @@ export function OpenHouseDetailClient({
                 Open
               </a>
             </div>
+            <a
+              href={`/oh/${oh.signin_slug}/kiosk`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 block rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-center text-sm font-medium text-emerald-800 hover:bg-emerald-100"
+            >
+              📱 Open iPad kiosk
+            </a>
+            <p className="mt-1 text-[11px] text-slate-500">
+              Full-screen sign-in for the iPad at the door. Add to Home Screen to install as a PWA.
+            </p>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
