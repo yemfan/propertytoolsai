@@ -16,6 +16,16 @@ function defaultDateIso(): string {
   return `${y}-${m}-${dd}`;
 }
 
+const WEEKDAYS = [
+  { n: 0, label: "Sun" },
+  { n: 1, label: "Mon" },
+  { n: 2, label: "Tue" },
+  { n: 3, label: "Wed" },
+  { n: 4, label: "Thu" },
+  { n: 5, label: "Fri" },
+  { n: 6, label: "Sat" },
+];
+
 export function NewOpenHouseClient() {
   const router = useRouter();
 
@@ -33,6 +43,11 @@ export function NewOpenHouseClient() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Recurrence controls
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [weekdays, setWeekdays] = useState<number[]>([6]); // Sat by default
+  const [weeks, setWeeks] = useState(4);
+
   const { startAtIso, endAtIso } = useMemo(() => {
     if (!date || !startTime || !endTime) return { startAtIso: null, endAtIso: null };
     const start = new Date(`${date}T${startTime}:00`);
@@ -43,50 +58,103 @@ export function NewOpenHouseClient() {
     return { startAtIso: start.toISOString(), endAtIso: end.toISOString() };
   }, [date, startTime, endTime]);
 
+  const projectedCount = useMemo(() => {
+    if (!isRecurring) return 1;
+    return Math.min(26, Math.max(0, weekdays.length * weeks));
+  }, [isRecurring, weekdays, weeks]);
+
   async function submit() {
     setError(null);
-    if (!propertyAddress.trim() || !startAtIso || !endAtIso) {
+    if (!propertyAddress.trim() || !date || !startTime || !endTime) {
       setError("Property address, date, and time window are required.");
       return;
     }
-    if (new Date(endAtIso).getTime() <= new Date(startAtIso).getTime()) {
-      setError("End time must be after start time.");
-      return;
+    if (isRecurring) {
+      if (!weekdays.length) {
+        setError("Pick at least one weekday for the recurrence.");
+        return;
+      }
+      if (weeks <= 0) {
+        setError("Number of weeks must be at least 1.");
+        return;
+      }
+    } else {
+      if (!startAtIso || !endAtIso) {
+        setError("Invalid date/time.");
+        return;
+      }
+      if (new Date(endAtIso).getTime() <= new Date(startAtIso).getTime()) {
+        setError("End time must be after start time.");
+        return;
+      }
     }
     setSubmitting(true);
     try {
+      const base = {
+        propertyAddress: propertyAddress.trim(),
+        city: city.trim() || null,
+        state: state.trim() || null,
+        zip: zip.trim() || null,
+        mlsNumber: mlsNumber.trim() || null,
+        mlsUrl: mlsUrl.trim() || null,
+        listPrice: listPrice ? Number(listPrice) : null,
+        hostNotes: hostNotes.trim() || null,
+      };
+      const body = isRecurring
+        ? {
+            ...base,
+            recurrence: {
+              kind: "weekly" as const,
+              anchorDate: date,
+              weekdays,
+              weeks,
+              startTime,
+              endTime,
+            },
+          }
+        : {
+            ...base,
+            startAt: startAtIso,
+            endAt: endAtIso,
+          };
       const res = await fetch("/api/dashboard/open-houses", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          propertyAddress: propertyAddress.trim(),
-          city: city.trim() || null,
-          state: state.trim() || null,
-          zip: zip.trim() || null,
-          mlsNumber: mlsNumber.trim() || null,
-          mlsUrl: mlsUrl.trim() || null,
-          listPrice: listPrice ? Number(listPrice) : null,
-          startAt: startAtIso,
-          endAt: endAtIso,
-          hostNotes: hostNotes.trim() || null,
-        }),
+        body: JSON.stringify(body),
       });
-      const body = (await res.json().catch(() => ({}))) as {
+      const payload = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         openHouse?: { id: string };
+        openHouses?: Array<{ id: string }>;
+        recurring?: boolean;
+        count?: number;
         error?: string;
       };
-      if (!res.ok || !body.ok || !body.openHouse) {
-        setError(body.error ?? "Failed to schedule.");
+      if (!res.ok || !payload.ok) {
+        setError(payload.error ?? "Failed to schedule.");
         return;
       }
-      router.push(`/dashboard/open-houses/${body.openHouse.id}`);
+      // Recurring: jump to the list so all N show up with the series badge.
+      // Single: jump to the detail page.
+      if (payload.recurring && payload.openHouses?.length) {
+        router.push("/dashboard/open-houses");
+      } else if (payload.openHouse) {
+        router.push(`/dashboard/open-houses/${payload.openHouse.id}`);
+      } else {
+        router.push("/dashboard/open-houses");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error.");
     } finally {
       setSubmitting(false);
     }
   }
+
+  const toggleWeekday = (n: number) => {
+    setWeekdays((prev) =>
+      prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n].sort(),
+    );
+  };
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -178,35 +246,133 @@ export function NewOpenHouseClient() {
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-slate-700">Date *</label>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div className="flex items-center gap-2">
             <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              id="recurring-toggle"
+              type="checkbox"
+              checked={isRecurring}
+              onChange={(e) => setIsRecurring(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300"
             />
+            <label htmlFor="recurring-toggle" className="text-sm font-medium text-slate-800">
+              Recurring series
+            </label>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-700">Start *</label>
-            <input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-700">End *</label>
-            <input
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            />
-          </div>
+          <p className="mt-1 text-[11px] text-slate-500">
+            Create N open houses at once — one row per occurrence, each with its own sign-in URL.
+          </p>
         </div>
+
+        {!isRecurring ? (
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-700">Date *</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-700">Start *</label>
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-700">End *</label>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-700">
+                  First occurrence date *
+                </label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                />
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Anchor — pattern walks forward from here.
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700">
+                  Number of weeks *
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={13}
+                  value={weeks}
+                  onChange={(e) => setWeeks(Math.max(1, Math.min(13, Number(e.target.value) || 1)))}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-700">Weekdays *</label>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {WEEKDAYS.map((w) => {
+                  const selected = weekdays.includes(w.n);
+                  return (
+                    <button
+                      key={w.n}
+                      type="button"
+                      onClick={() => toggleWeekday(w.n)}
+                      className={`rounded-md border px-3 py-1.5 text-xs font-medium ${
+                        selected
+                          ? "border-slate-900 bg-slate-900 text-white"
+                          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      {w.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-700">Start *</label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700">End *</label>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <div className="rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-800">
+              Will create <strong>{projectedCount}</strong> open house
+              {projectedCount === 1 ? "" : "s"} (capped at 26).
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="block text-xs font-medium text-slate-700">Host notes</label>
@@ -217,6 +383,9 @@ export function NewOpenHouseClient() {
             placeholder="Parking out back, skip the garage, keep the cat inside, etc."
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
           />
+          <p className="mt-1 text-[11px] text-slate-500">
+            Host notes + property details are copied to every occurrence in the series.
+          </p>
         </div>
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
@@ -231,10 +400,14 @@ export function NewOpenHouseClient() {
           <button
             type="button"
             onClick={() => void submit()}
-            disabled={submitting || !propertyAddress.trim() || !startAtIso || !endAtIso}
+            disabled={submitting || !propertyAddress.trim() || projectedCount === 0}
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
           >
-            {submitting ? "Creating…" : "Create open house"}
+            {submitting
+              ? "Creating…"
+              : isRecurring
+                ? `Create ${projectedCount} open house${projectedCount === 1 ? "" : "s"}`
+                : "Create open house"}
           </button>
         </div>
       </div>

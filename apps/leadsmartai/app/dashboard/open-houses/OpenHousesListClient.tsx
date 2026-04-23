@@ -157,12 +157,22 @@ export function OpenHousesListClient({
                     </Link>
                   </td>
                   <td className="px-3 py-2">
-                    <Link
-                      href={`/dashboard/open-houses/${oh.id}`}
-                      className="font-medium text-slate-900 hover:underline"
-                    >
-                      {oh.property_address}
-                    </Link>
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        href={`/dashboard/open-houses/${oh.id}`}
+                        className="font-medium text-slate-900 hover:underline"
+                      >
+                        {oh.property_address}
+                      </Link>
+                      {oh.recurrence_group_id ? (
+                        <span
+                          title="Part of a recurring series"
+                          className="rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-800"
+                        >
+                          ↻ Series
+                        </span>
+                      ) : null}
+                    </div>
                     {oh.city || oh.state ? (
                       <div className="text-[11px] text-slate-500">
                         {[oh.city, oh.state].filter(Boolean).join(", ")}

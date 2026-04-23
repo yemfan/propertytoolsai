@@ -1,7 +1,9 @@
 import "server-only";
+import { randomUUID } from "crypto";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { generateOpenHouseSlug } from "./slug";
+import type { Occurrence } from "./expandOccurrences";
 import type {
   OpenHouseListItem,
   OpenHouseRow,
@@ -61,6 +63,87 @@ export async function createOpenHouse(input: CreateOpenHouseInput): Promise<Open
     if (!error && data) return data as OpenHouseRow;
     const code = (error as { code?: string } | null)?.code;
     // 23505 = unique constraint violation. Retry with a new slug.
+    if (code !== "23505") {
+      throw new Error(error?.message ?? "Failed to create open house");
+    }
+  }
+  throw new Error("Could not generate a unique sign-in slug after 3 attempts");
+}
+
+// ── CREATE (recurring) ────────────────────────────────────────────────
+
+export type CreateRecurringInput = Omit<CreateOpenHouseInput, "startAt" | "endAt"> & {
+  occurrences: Occurrence[];
+};
+
+/**
+ * Creates one row per occurrence, all sharing the same
+ * `recurrence_group_id`. Each gets its own slug (and its own public
+ * URL + visitor list). We retry slug collisions up to 3x per row.
+ *
+ * If any insert fails after N successful inserts, we best-effort
+ * delete the group so we don't leave half a series lying around.
+ */
+export async function createRecurringOpenHouses(
+  input: CreateRecurringInput,
+): Promise<OpenHouseRow[]> {
+  if (!input.occurrences.length) {
+    throw new Error("No occurrences to create");
+  }
+  const groupId = randomUUID();
+  const created: OpenHouseRow[] = [];
+  try {
+    for (const occ of input.occurrences) {
+      const row = await insertOne({
+        input,
+        occurrence: occ,
+        groupId,
+      });
+      created.push(row);
+    }
+    return created;
+  } catch (err) {
+    // Rollback best-effort — we don't want orphaned half-series.
+    if (created.length) {
+      await supabaseAdmin
+        .from("open_houses")
+        .delete()
+        .eq("recurrence_group_id", groupId);
+    }
+    throw err;
+  }
+}
+
+async function insertOne(args: {
+  input: CreateRecurringInput;
+  occurrence: Occurrence;
+  groupId: string;
+}): Promise<OpenHouseRow> {
+  const { input, occurrence, groupId } = args;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const slug = generateOpenHouseSlug();
+    const { data, error } = await supabaseAdmin
+      .from("open_houses")
+      .insert({
+        agent_id: input.agentId,
+        transaction_id: input.transactionId ?? null,
+        property_address: input.propertyAddress,
+        city: input.city ?? null,
+        state: input.state ?? null,
+        zip: input.zip ?? null,
+        mls_number: input.mlsNumber ?? null,
+        mls_url: input.mlsUrl ?? null,
+        list_price: input.listPrice ?? null,
+        start_at: occurrence.startAt,
+        end_at: occurrence.endAt,
+        signin_slug: slug,
+        host_notes: input.hostNotes ?? null,
+        recurrence_group_id: groupId,
+      })
+      .select("*")
+      .single();
+    if (!error && data) return data as OpenHouseRow;
+    const code = (error as { code?: string } | null)?.code;
     if (code !== "23505") {
       throw new Error(error?.message ?? "Failed to create open house");
     }
@@ -172,6 +255,40 @@ export async function updateOpenHouse(
     .maybeSingle();
   if (error) throw new Error(error.message);
   return (data as OpenHouseRow | null) ?? null;
+}
+
+/**
+ * Marks the given occurrence + all future ones in the same series as
+ * cancelled. Past occurrences (start_at < this one's start_at) are
+ * left alone — they happened, cancelling them would lose attendance
+ * data. Scoped by agent_id so one agent can't cancel another's series.
+ *
+ * Returns the number of rows updated.
+ */
+export async function cancelRecurrenceSeries(
+  agentId: string,
+  occurrenceId: string,
+): Promise<{ cancelled: number; groupId: string | null }> {
+  const { data: anchor } = await supabaseAdmin
+    .from("open_houses")
+    .select("recurrence_group_id, start_at")
+    .eq("id", occurrenceId)
+    .eq("agent_id", agentId)
+    .maybeSingle();
+  const row = anchor as { recurrence_group_id: string | null; start_at: string } | null;
+  if (!row || !row.recurrence_group_id) {
+    return { cancelled: 0, groupId: null };
+  }
+  const { data, error } = await supabaseAdmin
+    .from("open_houses")
+    .update({ status: "cancelled", updated_at: new Date().toISOString() })
+    .eq("agent_id", agentId)
+    .eq("recurrence_group_id", row.recurrence_group_id)
+    .gte("start_at", row.start_at)
+    .neq("status", "completed")
+    .select("id");
+  if (error) throw new Error(error.message);
+  return { cancelled: (data ?? []).length, groupId: row.recurrence_group_id };
 }
 
 export async function deleteOpenHouse(agentId: string, id: string): Promise<boolean> {

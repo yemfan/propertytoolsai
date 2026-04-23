@@ -2,9 +2,14 @@ import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import {
   createOpenHouse,
+  createRecurringOpenHouses,
   listOpenHousesForAgent,
   type CreateOpenHouseInput,
 } from "@/lib/open-houses/service";
+import {
+  expandOccurrences,
+  type RecurrenceInput,
+} from "@/lib/open-houses/expandOccurrences";
 
 export const runtime = "nodejs";
 
@@ -32,21 +37,63 @@ export async function GET() {
   }
 }
 
+type RecurringBody = Omit<CreateOpenHouseInput, "startAt" | "endAt"> & {
+  recurrence: RecurrenceInput;
+};
+
 export async function POST(req: Request) {
   try {
     const { agentId } = await getCurrentAgentContext();
-    const body = (await req.json().catch(() => ({}))) as Partial<CreateOpenHouseInput>;
+    const body = (await req.json().catch(() => ({}))) as
+      | Partial<CreateOpenHouseInput>
+      | Partial<RecurringBody>;
 
-    if (!body.propertyAddress || !body.startAt || !body.endAt) {
+    if (!body.propertyAddress) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: "propertyAddress, startAt, and endAt are required.",
-        },
+        { ok: false, error: "propertyAddress is required." },
         { status: 400 },
       );
     }
-    if (new Date(body.endAt).getTime() <= new Date(body.startAt).getTime()) {
+
+    // Recurring path — expand, then batch-create.
+    if ("recurrence" in body && body.recurrence) {
+      const occurrences = expandOccurrences(body.recurrence);
+      if (!occurrences.length) {
+        return NextResponse.json(
+          { ok: false, error: "Recurrence produced no valid occurrences." },
+          { status: 400 },
+        );
+      }
+      const created = await createRecurringOpenHouses({
+        agentId: String(agentId),
+        propertyAddress: String(body.propertyAddress),
+        transactionId: body.transactionId ?? null,
+        city: body.city ?? null,
+        state: body.state ?? null,
+        zip: body.zip ?? null,
+        mlsNumber: body.mlsNumber ?? null,
+        mlsUrl: body.mlsUrl ?? null,
+        listPrice: body.listPrice ?? null,
+        hostNotes: body.hostNotes ?? null,
+        occurrences,
+      });
+      return NextResponse.json({
+        ok: true,
+        openHouses: created,
+        recurring: true,
+        count: created.length,
+      });
+    }
+
+    // One-off path (existing behavior)
+    const { startAt, endAt } = body as Partial<CreateOpenHouseInput>;
+    if (!startAt || !endAt) {
+      return NextResponse.json(
+        { ok: false, error: "startAt and endAt are required." },
+        { status: 400 },
+      );
+    }
+    if (new Date(endAt).getTime() <= new Date(startAt).getTime()) {
       return NextResponse.json(
         { ok: false, error: "endAt must be after startAt." },
         { status: 400 },
@@ -56,8 +103,8 @@ export async function POST(req: Request) {
     const created = await createOpenHouse({
       agentId: String(agentId),
       propertyAddress: String(body.propertyAddress),
-      startAt: String(body.startAt),
-      endAt: String(body.endAt),
+      startAt: String(startAt),
+      endAt: String(endAt),
       transactionId: body.transactionId ?? null,
       city: body.city ?? null,
       state: body.state ?? null,
