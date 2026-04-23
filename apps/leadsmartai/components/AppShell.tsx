@@ -62,6 +62,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const isPublicReport = pathname.startsWith("/report/");
   const isMarketingHome = pathname === "/";
   const isEditorialLanding = pathname === "/landing-v3";
+  const isPublicOpenHouse = pathname.startsWith("/oh/");
   const isAuthShell =
     pathname === "/agent-signup" ||
     pathname === "/login" ||
@@ -89,6 +90,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
     // Editorial rebuild uses its own Fraunces/Inter-Tight aesthetic — do not
     // wrap in the Inter/SaaS shell. Per handoff §01-marketing-site: "do not
     // mix these aesthetics".
+    return <div className="min-h-screen">{children}</div>;
+  }
+
+  if (isPublicOpenHouse) {
+    // Public sign-in + iPad kiosk — runs bare so it can be installed as a
+    // PWA and doesn't flash marketing chrome at visitors.
     return <div className="min-h-screen">{children}</div>;
   }
 
