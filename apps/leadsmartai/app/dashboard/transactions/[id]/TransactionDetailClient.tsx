@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { DealReviewPanel } from "@/components/dashboard/DealReviewPanel";
 import { ListingFeedbackPanel } from "@/components/dashboard/ListingFeedbackPanel";
+import { PlaybooksPanel } from "@/components/dashboard/PlaybooksPanel";
 import type {
   CounterpartyRole,
   TransactionCounterpartyRow,
@@ -228,6 +229,15 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
       {txn.transaction_type === "listing_rep" || txn.transaction_type === "dual" ? (
         <ListingFeedbackPanel transactionId={txn.id} />
       ) : null}
+
+      {/* Playbooks — agent-applied curated checklists anchored to this
+          transaction. Anchor date defaults to mutual acceptance when
+          set, else today. */}
+      <PlaybooksPanel
+        anchorKind="transaction"
+        anchorId={txn.id}
+        defaultAnchorDate={txn.mutual_acceptance_date ?? undefined}
+      />
 
       {/* AI deal review — only makes sense once the deal is closed.
           Panel handles its own loading / cache / regenerate flow. */}

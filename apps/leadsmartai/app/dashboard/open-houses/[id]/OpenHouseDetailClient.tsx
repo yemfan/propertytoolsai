@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { PlaybooksPanel } from "@/components/dashboard/PlaybooksPanel";
 import type {
   OpenHouseRow,
   OpenHouseStatus,
@@ -429,6 +430,14 @@ export function OpenHouseDetailClient({
           </div>
         </div>
       </div>
+
+      {/* Playbooks — agent-applied checklists anchored to this open
+          house. Default anchor = the event's start date. */}
+      <PlaybooksPanel
+        anchorKind="open_house"
+        anchorId={oh.id}
+        defaultAnchorDate={oh.start_at.slice(0, 10)}
+      />
     </div>
   );
 }
