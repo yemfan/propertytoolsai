@@ -6,7 +6,8 @@ import ResultCard from "@/components/ResultCard";
 import { useAddressPrefill } from "@/hooks/useAddressPrefill";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import RequireAuthGate from "../../components/RequireAuthGate";
+import { ToolLeadGate } from "@/components/ToolLeadGate";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 type PropertyData = {
   address: string;
@@ -105,11 +106,7 @@ const MOCK_NEARBY_RENTALS = [
 ];
 
 export default function RentalPropertyAnalyzerPage() {
-  return (
-    <RequireAuthGate>
-      <RentalPropertyAnalyzerPageInner />
-    </RequireAuthGate>
-  );
+  return <RentalPropertyAnalyzerPageInner />;
 }
 
 function RentalPropertyAnalyzerPageInner() {
@@ -812,6 +809,33 @@ function RentalPropertyAnalyzerPageInner() {
         >
           Download Full Rental Property Report (PDF)
         </button>
+      </div>
+
+      <div className="mt-6">
+        <SaveResultsButton
+          tool="rental_property_analyzer"
+          inputs={propertyData as unknown as Record<string, unknown>}
+          results={metrics as unknown as Record<string, unknown>}
+          propertyAddress={propertyData.address || null}
+        />
+      </div>
+
+      <div className="mt-8">
+        <ToolLeadGate
+          tool="rental_property_analyzer"
+          source="rental_property_analyzer"
+          intent="invest"
+          propertyAddress={propertyData.address || undefined}
+          show={metrics.capRate > 0 || metrics.monthlyCashFlow !== 0}
+          title="Get Your Full Rental Property Report"
+          description="Unlock the branded PDF, rent-comps breakdown, and a personalized investor walkthrough of this deal."
+          benefits={[
+            "Branded PDF report for lenders and partners",
+            "Detailed rent comps + vacancy comparison",
+            "Long-term projection (5 / 10 / 30 year)",
+            "Connect with an investment-focused agent",
+          ]}
+        />
       </div>
     </div>
   );

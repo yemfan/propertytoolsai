@@ -6,6 +6,7 @@ import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0 || annualRate <= 0) return 0;
@@ -135,7 +136,14 @@ export default function RefinanceCalculator() {
         </div>
       </div>
 
-      
+      <div className="mt-6">
+        <SaveResultsButton
+          tool="refinance_calculator"
+          inputs={{ currentBalance, currentRate, newRate, remainingTermYears, closingCosts }}
+          results={{ paymentBefore, paymentAfter, monthlySavings, breakEvenMonths }}
+        />
+      </div>
+
       <div className="mt-8">
         <ToolLeadGate
           tool="refinance_calculator"

@@ -3,7 +3,8 @@
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import RequireAuthGate from "../../components/RequireAuthGate";
+import { ToolLeadGate } from "@/components/ToolLeadGate";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 type Inputs = {
   address: string;
@@ -240,6 +241,33 @@ function AiRealEstateDealAnalyzerPageInner() {
             results={results}
           />
         </div>
+      </div>
+
+      <div className="mt-6">
+        <SaveResultsButton
+          tool="ai_deal_analyzer"
+          inputs={inputs}
+          results={results as unknown as Record<string, unknown>}
+          propertyAddress={inputs.address || null}
+        />
+      </div>
+
+      <div className="mt-8">
+        <ToolLeadGate
+          tool="ai_deal_analyzer"
+          source="ai_real_estate_deal_analyzer"
+          intent="invest"
+          propertyAddress={inputs.address || undefined}
+          show={results.capRate > 0 || results.monthlyCashFlow !== 0}
+          title="Get Your Full Deal Analysis Report"
+          description="Unlock the complete investment analysis with AI-powered market context, sensitivity scenarios, and a shareable PDF."
+          benefits={[
+            "AI-powered deal score with market comps",
+            "Sensitivity analysis: how rates, rent, and vacancy change your return",
+            "Downloadable PDF report for lenders and partners",
+            "Connect with a local investment specialist",
+          ]}
+        />
       </div>
     </div>
   );
@@ -677,9 +705,5 @@ function MetricCard({
 }
 
 export default function AiRealEstateDealAnalyzerPage() {
-  return (
-    <RequireAuthGate>
-      <AiRealEstateDealAnalyzerPageInner />
-    </RequireAuthGate>
-  );
+  return <AiRealEstateDealAnalyzerPageInner />;
 }

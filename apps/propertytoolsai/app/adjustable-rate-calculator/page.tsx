@@ -6,6 +6,7 @@ import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0) return 0;
@@ -164,6 +165,16 @@ export default function AdjustableRateCalculator() {
           </div>
         </div>
       </div>
+
+      {initialMonthlyPayment > 0 ? (
+        <div className="mt-6">
+          <SaveResultsButton
+            tool="adjustable_rate_calculator"
+            inputs={{ homePrice, downPayment, loanTerm, initialRate, adjustmentInterval, maxRate, propertyTax, homeInsurance, hoaFees }}
+            results={{ initialMonthlyPayment, adjustedMonthlyPayment, totalInterest }}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

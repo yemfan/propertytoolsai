@@ -6,6 +6,7 @@ import Link from "next/link";
 import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0) return 0;
@@ -217,6 +218,16 @@ export default function CapRateRoiCalculator() {
           </div>
         </div>
       </div>
+
+      {results.capRate !== 0 ? (
+        <div className="mt-6">
+          <SaveResultsButton
+            tool="cap_rate_roi_calculator"
+            inputs={{ purchasePrice, downPayment, annualRent, vacancyRate, propertyTax, insurance, maintenance, otherExpenses, interestRate, loanTerm }}
+            results={results}
+          />
+        </div>
+      ) : null}
 
       <section className="mt-12 max-w-3xl space-y-3 text-sm text-gray-700">
         <h2 className="text-xl font-semibold text-gray-900">

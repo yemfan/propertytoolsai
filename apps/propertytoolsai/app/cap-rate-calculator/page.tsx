@@ -7,6 +7,7 @@ import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 export default function CapRateCalculator() {
   const [purchasePrice, setPurchasePrice] = useState<number>(400000);
@@ -108,7 +109,16 @@ export default function CapRateCalculator() {
         </div>
       </div>
 
-      
+      {results.capRate !== 0 ? (
+        <div className="mt-6">
+          <SaveResultsButton
+            tool="cap_rate_calculator"
+            inputs={{ purchasePrice, annualRent, vacancyRate, propertyTax, insurance, maintenance, otherExpenses }}
+            results={results}
+          />
+        </div>
+      ) : null}
+
       <div className="mt-8">
         <ToolLeadGate
           tool="cap_rate_calculator"

@@ -7,6 +7,7 @@ import InputField from "../../components/InputField";
 import ResultCard from "../../components/ResultCard";
 import JsonLd from "../../components/JsonLd";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
+import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 function pmt(principal: number, annualRate: number, years: number): number {
   if (principal <= 0 || years <= 0 || annualRate <= 0) return 0;
@@ -124,6 +125,16 @@ export default function MortgageCalculator() {
           </div>
         </div>
       </div>
+
+      {monthlyPayment > 0 ? (
+        <div className="mt-6">
+          <SaveResultsButton
+            tool="mortgage_calculator"
+            inputs={{ homePrice, downPayment, loanTerm, interestRate }}
+            results={{ principal, monthlyPayment, totalInterest, totalPayment }}
+          />
+        </div>
+      ) : null}
 
       <div className="mt-8">
         <ToolLeadGate
