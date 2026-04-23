@@ -44,9 +44,15 @@ export type ExtendTokenVerifyError =
   | "expired"
   | "payload_invalid";
 
+// The `?: never` markers on the off-branch fields are a workaround
+// for the repo's `strict: false` tsconfig: under non-strict mode, TS
+// won't narrow `if (!r.ok)` on a pure discriminated union, so any
+// caller using `!r.ok` then `r.error` would fail to compile. Adding
+// the marker lets `r.error` be typed `ExtendTokenVerifyError |
+// undefined` on the whole union — no narrowing needed.
 export type VerifyResult =
-  | { ok: true; payload: OfferExtendTokenPayload }
-  | { ok: false; error: ExtendTokenVerifyError };
+  | { ok: true; payload: OfferExtendTokenPayload; error?: never }
+  | { ok: false; error: ExtendTokenVerifyError; payload?: never };
 
 export function isOfferExtendEnabled(): boolean {
   return Boolean(resolveSecret());

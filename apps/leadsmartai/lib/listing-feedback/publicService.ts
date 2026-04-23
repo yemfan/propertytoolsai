@@ -103,7 +103,14 @@ export type PublicSubmitInput = {
   notes: string | null;
 };
 
-export type PublicSubmitResult = { ok: true } | { ok: false; reason: string };
+// `reason?: never` on the success branch lets callers access
+// `result.reason` after `!result.ok` without needing an explicit
+// `result.ok === false` narrow — the repo's `strict: false` tsconfig
+// otherwise blocks that narrow. See lib/offer-expirations/extendToken.ts
+// for the original incident.
+export type PublicSubmitResult =
+  | { ok: true; reason?: never }
+  | { ok: false; reason: string };
 
 export async function submitPublicFeedback(
   input: PublicSubmitInput,
