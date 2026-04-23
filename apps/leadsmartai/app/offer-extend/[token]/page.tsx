@@ -50,7 +50,7 @@ async function processExtend(token: string): Promise<ExtendOutcome> {
   }
 
   const verified = verifyOfferExtendToken(token);
-  if (!verified.ok) {
+  if (verified.ok === false) {
     const reasonMap: Record<string, string> = {
       bad_signature: "This link looks tampered — we can't trust it.",
       malformed: "This link is malformed.",
