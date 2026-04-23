@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { DealReviewPanel } from "@/components/dashboard/DealReviewPanel";
 import type {
   CounterpartyRole,
   TransactionCounterpartyRow,
@@ -219,6 +220,12 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
             <span className="text-slate-400">→</span>
           </Link>
         </div>
+      ) : null}
+
+      {/* AI deal review — only makes sense once the deal is closed.
+          Panel handles its own loading / cache / regenerate flow. */}
+      {txn.status === "closed" ? (
+        <DealReviewPanel transactionId={txn.id} />
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
