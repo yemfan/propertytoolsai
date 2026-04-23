@@ -14,6 +14,11 @@ export type AlertInput = {
   hoursUntilExpiration: number;
   appBaseUrl: string;
   offerUrl: string; // deep-link to the offer detail page
+  /** Optional one-click extend URL (/offer-extend/<signed-token>). When
+      present, an Extend button is rendered alongside Open offer. */
+  extendUrl?: string | null;
+  /** Hours this extend link will add. Shown on the button label. */
+  extendHours?: number;
 };
 
 export function renderAlertEmail(input: AlertInput): {
@@ -57,10 +62,24 @@ export function renderAlertEmail(input: AlertInput): {
         ${renderDetailRow("Expires", formatDateTime(input.expiresAtIso))}
       </dl>
       <div style="margin-top:16px;">
-        <a href="${escapeHtml(fullUrl)}" style="display:inline-block;padding:10px 18px;background:#0f172a;color:#fff;font-size:14px;font-weight:600;border-radius:8px;text-decoration:none;">
+        <a href="${escapeHtml(fullUrl)}" style="display:inline-block;padding:10px 18px;background:#0f172a;color:#fff;font-size:14px;font-weight:600;border-radius:8px;text-decoration:none;margin-right:8px;">
           Open offer →
         </a>
+        ${
+          input.extendUrl
+            ? `<a href="${escapeHtml(input.extendUrl)}" style="display:inline-block;padding:10px 18px;background:#10b981;color:#fff;font-size:14px;font-weight:600;border-radius:8px;text-decoration:none;">
+              ⏰ Extend ${input.extendHours ?? 24}h
+            </a>`
+            : ""
+        }
       </div>
+      ${
+        input.extendUrl
+          ? `<p style="margin-top:12px;color:#64748b;font-size:11px;line-height:1.5;">
+              Extend pushes the offer's expiration to ${(input.extendHours ?? 24)}h from now, no login needed. The link expires 72h after this email was sent and can only be used once.
+            </p>`
+          : ""
+      }
     </div>
 
     <p style="margin-top:20px;color:#94a3b8;font-size:11px;">

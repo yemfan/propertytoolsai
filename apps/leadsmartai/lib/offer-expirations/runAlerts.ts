@@ -3,7 +3,10 @@ import "server-only";
 import { sendEmail } from "@/lib/email";
 import { sendSMS } from "@/lib/twilioSms";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { signOfferExtendToken } from "./extendToken";
 import { renderAlertEmail, renderAlertSms, type AlertInput } from "./renderAlert";
+
+const DEFAULT_EXTEND_HOURS = 24;
 
 /**
  * Finds offers near expiration and fires a warning (24h out) or final
@@ -206,6 +209,22 @@ async function processKind(ctx: {
           ? `/dashboard/offers/${offer.id}`
           : `/dashboard/listing-offers/${offer.id}`;
 
+      // Sign a one-click extend token if the feature is enabled. The
+      // token pins prev_expires_at so any later state change (extend,
+      // accept, reject) invalidates it — anti-replay without a
+      // "consumed tokens" table.
+      const extendToken = signOfferExtendToken({
+        kind,
+        offerId: offer.id,
+        agentId: String(offer.agent_id),
+        prevExpiresAt: offer.offer_expires_at!,
+        extendHours: DEFAULT_EXTEND_HOURS,
+        issuedAt: nowIso,
+      });
+      const extendUrl = extendToken
+        ? `${appBaseUrl}/offer-extend/${extendToken}`
+        : null;
+
       const alertInput: AlertInput = {
         offerKind: kind,
         alertLevel,
@@ -216,6 +235,8 @@ async function processKind(ctx: {
         hoursUntilExpiration: hoursUntil,
         appBaseUrl,
         offerUrl,
+        extendUrl,
+        extendHours: DEFAULT_EXTEND_HOURS,
       };
 
       // Email always.
