@@ -30,6 +30,19 @@ const nextConfig = {
       // /home-value tool, flagged for SEO duplicate-content + user confusion.
       // Permanent 308 so accumulated SEO equity transfers.
       { source: "/home-value-estimator", destination: "/home-value", permanent: true },
+      // ──────────────────────────────────────────────────────────────────
+      // Calculator consolidation (2026-04). Both retired pages were
+      // near-duplicates. /cap-rate-calculator now has an optional
+      // "Include financing" toggle that subsumes the old
+      // /cap-rate-roi-calculator. /cash-flow-calculator gained an
+      // optional purchase-price input that subsumes the old
+      // /property-investment-analyzer. 308 preserves SEO equity.
+      // /investment-analyzer was a pre-existing misspelled FAQ link —
+      // catch it here too.
+      // ──────────────────────────────────────────────────────────────────
+      { source: "/cap-rate-roi-calculator", destination: "/cap-rate-calculator", permanent: true },
+      { source: "/property-investment-analyzer", destination: "/cash-flow-calculator", permanent: true },
+      { source: "/investment-analyzer", destination: "/cash-flow-calculator", permanent: true },
       // Nav-friendly URLs → existing tool routes
       { source: "/cma-report", destination: "/smart-cma-builder", permanent: false },
       {

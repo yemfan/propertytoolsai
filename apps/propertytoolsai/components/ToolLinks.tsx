@@ -6,7 +6,7 @@ const allTools = [
   { name: "Affordability Calculator", href: "/affordability-calculator" },
   { name: "Rent vs Buy Calculator", href: "/rent-vs-buy" },
   { name: "Closing Cost Estimator", href: "/closing-cost-estimator" },
-  { name: "Property Investment Analyzer", href: "/property-investment-analyzer" },
+  { name: "Rental Property Analyzer", href: "/rental-property-analyzer" },
   { name: "Down Payment Calculator", href: "/down-payment-calculator" },
   { name: "HOA Fee Tracker", href: "/hoa-fee-tracker" },
   { name: "Cash Flow Calculator", href: "/cash-flow-calculator" },

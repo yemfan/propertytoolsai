@@ -42,7 +42,7 @@ const TOOL_DISPLAY_LABEL: Record<string, string> = {
   mortgage_calculator: "Mortgage",
   affordability_calculator: "Affordability",
   cap_rate_calculator: "Cap rate",
-  cap_rate_roi_calculator: "Cap rate + ROI",
+  cap_rate_roi_calculator: "Cap rate + ROI (retired)",
   cash_flow_calculator: "Cash flow",
   down_payment_calculator: "Down payment",
   adjustable_rate_calculator: "ARM",
@@ -52,7 +52,7 @@ const TOOL_DISPLAY_LABEL: Record<string, string> = {
   ai_deal_analyzer: "AI deal analyzer",
   rental_property_analyzer: "Rental property",
   home_value_estimator: "Home value estimate",
-  property_investment_analyzer: "Investment analyzer",
+  property_investment_analyzer: "Investment analyzer (retired)",
   roi_calculator: "ROI",
   closing_cost_estimator: "Closing costs",
 };

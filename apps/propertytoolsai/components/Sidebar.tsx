@@ -62,13 +62,6 @@ export default function Sidebar() {
         </Link>
 
         <Link
-          href="/property-investment-analyzer"
-          className="block px-3 py-2 rounded-lg hover:bg-gray-100"
-        >
-          Property Investment Analyzer
-        </Link>
-
-        <Link
           href="/rental-property-analyzer"
           className="block px-3 py-2 rounded-lg hover:bg-gray-100"
         >

@@ -26,7 +26,7 @@ const tools = [
   {
     title: "Investment Analysis",
     description: "Evaluate cash flow, ROI, and risk profile in one place.",
-    href: "/property-investment-analyzer",
+    href: "/cash-flow-calculator",
   },
   {
     title: "Rent vs Buy",
