@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { DealReviewPanel } from "@/components/dashboard/DealReviewPanel";
+import { ListingFeedbackPanel } from "@/components/dashboard/ListingFeedbackPanel";
 import type {
   CounterpartyRole,
   TransactionCounterpartyRow,
@@ -220,6 +221,12 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
             <span className="text-slate-400">→</span>
           </Link>
         </div>
+      ) : null}
+
+      {/* Cross-agent showing feedback — listing-side only. Agent sends a
+          public form to buyer-agents who toured; responses aggregate here. */}
+      {txn.transaction_type === "listing_rep" || txn.transaction_type === "dual" ? (
+        <ListingFeedbackPanel transactionId={txn.id} />
       ) : null}
 
       {/* AI deal review — only makes sense once the deal is closed.
