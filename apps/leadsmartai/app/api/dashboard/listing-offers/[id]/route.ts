@@ -27,10 +27,18 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   try {
     const { agentId } = await getCurrentAgentContext();
     const { id } = await ctx.params;
-    const body = (await req.json().catch(() => ({}))) as UpdateListingOfferInput;
-    const updated = await updateListingOffer(String(agentId), id, body);
-    if (!updated) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
-    return NextResponse.json({ ok: true, offer: updated });
+    const body = (await req.json().catch(() => ({}))) as UpdateListingOfferInput & {
+      rejectSiblingsOnAccept?: boolean;
+    };
+    const { rejectSiblingsOnAccept, ...patch } = body;
+    const { offer, siblingsRejected } = await updateListingOffer(
+      String(agentId),
+      id,
+      patch,
+      { rejectSiblingsOnAccept: Boolean(rejectSiblingsOnAccept) },
+    );
+    if (!offer) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+    return NextResponse.json({ ok: true, offer, siblingsRejected });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Server error";
     console.error("PATCH listing-offers/[id]:", err);

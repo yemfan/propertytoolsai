@@ -261,6 +261,12 @@ export function ListingOfferDetailClient({
               >
                 ← Back to compare view
               </Link>
+              <a
+                href={`/api/dashboard/listing-offers/${offer.id}/net-to-seller-pdf`}
+                className="block rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                📄 Download net-to-seller PDF
+              </a>
               <button
                 type="button"
                 onClick={() => void onDelete()}

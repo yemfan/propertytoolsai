@@ -125,24 +125,66 @@ export function ListingOffersCompareClient({
     }
   }
 
-  async function updateStatus(offerId: string, status: ListingOfferStatus) {
+  async function updateStatus(
+    offerId: string,
+    status: ListingOfferStatus,
+    extra?: { rejectSiblingsOnAccept?: boolean },
+  ) {
     setMsg(null);
     try {
       const res = await fetch(`/api/dashboard/listing-offers/${offerId}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...extra }),
       });
-      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        siblingsRejected?: number;
+      };
       if (!res.ok || !body.ok) {
         setMsg({ tone: "err", text: body.error ?? "Failed to update." });
         return;
       }
       await reloadOffers();
-      setMsg({ tone: "ok", text: "Updated." });
+      const rejected = body.siblingsRejected ?? 0;
+      setMsg({
+        tone: "ok",
+        text:
+          rejected > 0
+            ? `Accepted. ${rejected} sibling offer${rejected === 1 ? "" : "s"} auto-rejected.`
+            : "Updated.",
+      });
     } catch (e) {
       setMsg({ tone: "err", text: e instanceof Error ? e.message : "Network error." });
     }
+  }
+
+  /**
+   * Accept-with-confirmation flow: when there are still-live sibling
+   * offers, ask the agent whether to auto-reject them. Keeping
+   * siblings is a legitimate choice (backup offers in case the
+   * primary falls through during contingencies), so default to the
+   * agent's explicit choice rather than reject-all.
+   */
+  async function acceptWithConfirmation(offerId: string) {
+    const liveSiblings = offers.filter(
+      (o) => o.id !== offerId && ["submitted", "countered"].includes(o.status),
+    );
+    if (liveSiblings.length === 0) {
+      await updateStatus(offerId, "accepted");
+      return;
+    }
+    const msg = [
+      `${liveSiblings.length} other offer${liveSiblings.length === 1 ? "" : "s"} still live.`,
+      "",
+      "Click OK to ALSO mark them as rejected now.",
+      "Click Cancel to keep them as backup (status stays 'submitted' / 'countered').",
+    ].join("\n");
+    const rejectSiblings = confirm(msg);
+    await updateStatus(offerId, "accepted", {
+      rejectSiblingsOnAccept: rejectSiblings,
+    });
   }
 
   return (
@@ -380,7 +422,7 @@ export function ListingOffersCompareClient({
                         {o.status === "submitted" || o.status === "countered" ? (
                           <button
                             type="button"
-                            onClick={() => void updateStatus(o.id, "accepted")}
+                            onClick={() => void acceptWithConfirmation(o.id)}
                             className="rounded-lg bg-green-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-green-700"
                           >
                             Accept

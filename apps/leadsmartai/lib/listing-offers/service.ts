@@ -205,14 +205,19 @@ export async function updateListingOffer(
   agentId: string,
   listingOfferId: string,
   input: UpdateListingOfferInput,
-): Promise<ListingOfferRow | null> {
+  opts?: { rejectSiblingsOnAccept?: boolean },
+): Promise<{ offer: ListingOfferRow | null; siblingsRejected: number }> {
   const { data: before } = await supabaseAdmin
     .from("listing_offers")
-    .select("status")
+    .select("status, transaction_id")
     .eq("id", listingOfferId)
     .eq("agent_id", agentId)
     .maybeSingle();
-  if (!before) return null;
+  if (!before) return { offer: null, siblingsRejected: 0 };
+  const beforeRow = before as {
+    status: ListingOfferStatus;
+    transaction_id: string;
+  };
 
   const patch: UpdateListingOfferInput & {
     updated_at: string;
@@ -220,9 +225,9 @@ export async function updateListingOffer(
     closed_at?: string;
   } = { ...input, updated_at: new Date().toISOString() };
 
-  const beforeStatus = (before as { status: ListingOfferStatus }).status;
+  const beforeStatus = beforeRow.status;
+  const nowIso = new Date().toISOString();
   if (input.status && input.status !== beforeStatus) {
-    const nowIso = new Date().toISOString();
     if (input.status === "accepted") patch.accepted_at = nowIso;
     if (["rejected", "withdrawn", "expired"].includes(input.status)) patch.closed_at = nowIso;
   }
@@ -235,7 +240,32 @@ export async function updateListingOffer(
     .select("*")
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return (data as ListingOfferRow | null) ?? null;
+  const offer = (data as ListingOfferRow | null) ?? null;
+
+  // Optional sibling auto-reject: when the agent accepts THIS offer,
+  // mark all other still-live offers on the same listing as rejected
+  // so the compare view reflects the real state of the deal. Kept as
+  // an opt-in flag (default off) — listing agents sometimes keep
+  // sibling offers alive as backups until contingencies clear.
+  let siblingsRejected = 0;
+  if (
+    opts?.rejectSiblingsOnAccept &&
+    offer &&
+    input.status === "accepted" &&
+    beforeStatus !== "accepted"
+  ) {
+    const { data: updatedSiblings } = await supabaseAdmin
+      .from("listing_offers")
+      .update({ status: "rejected", closed_at: nowIso, updated_at: nowIso })
+      .eq("transaction_id", beforeRow.transaction_id)
+      .eq("agent_id", agentId)
+      .neq("id", listingOfferId)
+      .in("status", ["submitted", "countered"])
+      .select("id");
+    siblingsRejected = (updatedSiblings as Array<{ id: string }> | null)?.length ?? 0;
+  }
+
+  return { offer, siblingsRejected };
 }
 
 export async function deleteListingOffer(
