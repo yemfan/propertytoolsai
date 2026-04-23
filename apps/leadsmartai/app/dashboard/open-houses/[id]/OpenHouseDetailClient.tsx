@@ -126,6 +126,39 @@ export function OpenHouseDetailClient({
     router.push("/dashboard/open-houses");
   }
 
+  async function onCancelSeries() {
+    if (
+      !confirm(
+        "Cancel this open house AND every future one in the same series? " +
+          "Past occurrences are left alone.",
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await fetch(
+        `/api/dashboard/open-houses/${oh.id}/cancel-series`,
+        { method: "POST" },
+      );
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        cancelled?: number;
+        error?: string;
+      };
+      if (!res.ok || !body.ok) {
+        setMsg({ tone: "err", text: body.error ?? "Failed to cancel series." });
+        return;
+      }
+      setMsg({
+        tone: "ok",
+        text: `Cancelled ${body.cancelled ?? 0} occurrence(s).`,
+      });
+      setOH((prev) => ({ ...prev, status: "cancelled" }));
+    } catch (e) {
+      setMsg({ tone: "err", text: e instanceof Error ? e.message : "Network error." });
+    }
+  }
+
   async function copyUrl() {
     try {
       await navigator.clipboard.writeText(publicUrl);
@@ -236,6 +269,23 @@ export function OpenHouseDetailClient({
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <h3 className="text-sm font-semibold text-slate-900">Host notes</h3>
               <p className="mt-2 whitespace-pre-line text-sm text-slate-700">{oh.host_notes}</p>
+            </div>
+          ) : null}
+
+          {oh.recurrence_group_id ? (
+            <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-4">
+              <h3 className="text-sm font-semibold text-purple-900">↻ Recurring series</h3>
+              <p className="mt-1 text-[11px] text-purple-700">
+                This open house is one occurrence in a series. Cancelling the series marks this
+                one + every future one as cancelled; past ones keep their data.
+              </p>
+              <button
+                type="button"
+                onClick={() => void onCancelSeries()}
+                className="mt-2 w-full rounded-lg border border-purple-300 bg-white px-3 py-2 text-xs font-medium text-purple-800 hover:bg-purple-100"
+              >
+                Cancel this + all future in series
+              </button>
             </div>
           ) : null}
 

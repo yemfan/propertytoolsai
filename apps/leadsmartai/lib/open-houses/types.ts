@@ -34,6 +34,8 @@ export type OpenHouseRow = {
   host_notes: string | null;
   status: OpenHouseStatus;
 
+  recurrence_group_id: string | null;
+
   created_at: string;
   updated_at: string;
 };
