@@ -162,6 +162,12 @@ const navConfig = {
           match: ["/dashboard/open-houses", "/dashboard/open-house"],
           icon: navEmoji("🏠"),
         },
+        {
+          label: "Playbooks",
+          href: "/dashboard/playbooks",
+          match: ["/dashboard/playbooks"],
+          icon: navEmoji("📋"),
+        },
       ],
     },
 
