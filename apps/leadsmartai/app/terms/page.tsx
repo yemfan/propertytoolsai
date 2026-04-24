@@ -353,9 +353,32 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
           consequential, or exemplary damages (including lost profits, lost leads, or
           lost data) arising from your use of the Service.
         </p>
+        <p className="font-semibold text-slate-900">Carve-outs</p>
+        <p>The cap and exclusions in this section do not apply to:</p>
+        <ul>
+          <li>
+            Customer&rsquo;s failure to pay fees owed under section 4
+            (Subscriptions, trials, and billing);
+          </li>
+          <li>
+            Customer&rsquo;s indemnification obligations under section 13
+            (Indemnification);
+          </li>
+          <li>
+            either party&rsquo;s gross negligence, willful misconduct, or
+            fraud; or
+          </li>
+          <li>
+            any liability that cannot be limited or excluded under applicable
+            law (including, in some jurisdictions, liability for death,
+            personal injury, or fraudulent misrepresentation).
+          </li>
+        </ul>
         <p>
-          [REQUIRES LEGAL REVIEW] Confirm liability cap, carve-outs for indemnity +
-          confidentiality + IP infringement, and any jurisdiction-specific limits.
+          This section will be enforced to the maximum extent permitted by
+          applicable law. If a court of competent jurisdiction finds any
+          portion of this section unenforceable, the remainder will continue
+          to apply with full effect.
         </p>
       </>
     ),
