@@ -7,6 +7,7 @@ import {
   canCreateCma,
   canDownloadFullReport,
   canInviteTeam,
+  canUseAiAction,
 } from "@/lib/entitlements/accessResult";
 
 const checkLimitSchema = z.object({
@@ -16,6 +17,7 @@ const checkLimitSchema = z.object({
     "add_contact",
     "download_full_report",
     "invite_team",
+    "ai_action",
   ]),
 });
 
@@ -57,6 +59,9 @@ export async function POST(req: Request) {
         break;
       case "invite_team":
         result = await canInviteTeam(user.id);
+        break;
+      case "ai_action":
+        result = await canUseAiAction(user.id);
         break;
       default:
         return NextResponse.json(

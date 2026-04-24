@@ -7,6 +7,7 @@ import {
   canCreateCma,
   canDownloadFullReport,
   canInviteTeam,
+  canUseAiAction,
 } from "./limits";
 
 export async function checkAgentLimit(
@@ -25,6 +26,8 @@ export async function checkAgentLimit(
       return canDownloadFullReport(supabase, userId);
     case "team_invite":
       return canInviteTeam(supabase, userId);
+    case "ai_action":
+      return canUseAiAction(supabase, userId);
     default:
       return {
         allowed: false,

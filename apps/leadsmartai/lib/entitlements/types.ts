@@ -32,6 +32,8 @@ export type AgentEntitlement = {
   alerts_level: AlertsLevel | null;
   reports_download_level: ReportsDownloadLevel | null;
   team_access: boolean;
+  /** Per-month AI-action cap. NULL = unlimited. */
+  ai_actions_per_month: number | null;
   starts_at: string | null;
   ends_at: string | null;
   /** Optional in DB; not in canonical Agent shape but persisted */
@@ -52,6 +54,7 @@ export type AgentUsageDaily = {
   leads_used: number;
   contacts_used: number;
   report_downloads_used: number;
+  ai_actions_used: number;
   created_at: string;
   updated_at: string;
 };
@@ -89,4 +92,5 @@ export type LimitMetric =
   | "lead"
   | "contact"
   | "report_download"
-  | "team_invite";
+  | "team_invite"
+  | "ai_action";

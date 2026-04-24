@@ -7,6 +7,7 @@ import {
   canCreateCma,
   canDownloadFullReport,
   canInviteTeam,
+  canUseAiAction,
 } from "@/lib/entitlements/accessResult";
 import { incrementUsage } from "@/lib/entitlements/usage";
 
@@ -17,6 +18,7 @@ const consumeUsageSchema = z.object({
     "add_contact",
     "download_full_report",
     "invite_team",
+    "ai_action",
     /** @deprecated Use `download_full_report` */
     "download_report",
   ]),
@@ -104,6 +106,18 @@ export async function POST(req: Request) {
           );
         }
         // No `team_invites_used` column on `entitlement_usage_daily` — entitlement gate only.
+        break;
+      }
+
+      case "ai_action": {
+        const check = await canUseAiAction(user.id);
+        if (!check.allowed) {
+          return NextResponse.json(
+            { success: false, ok: false, error: "Limit reached", result: check },
+            { status: 403 }
+          );
+        }
+        await incrementUsage(user.id, "ai_actions_used");
         break;
       }
 

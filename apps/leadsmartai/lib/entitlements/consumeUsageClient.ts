@@ -7,7 +7,8 @@ export type AgentConsumeApiAction =
   | "add_lead"
   | "add_contact"
   | "download_full_report"
-  | "invite_team";
+  | "invite_team"
+  | "ai_action";
 
 /**
  * Client: record usage after a successful gated action (server re-checks limits before incrementing).

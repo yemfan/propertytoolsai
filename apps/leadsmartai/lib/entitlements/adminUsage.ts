@@ -6,7 +6,8 @@ export type UsageCounterField =
   | "cma_reports_used"
   | "leads_used"
   | "contacts_used"
-  | "report_downloads_used";
+  | "report_downloads_used"
+  | "ai_actions_used";
 
 /** UTC calendar date `YYYY-MM-DD` (matches `usage.ts` / DB `usage_date`). */
 function utcTodayDateString(): string {

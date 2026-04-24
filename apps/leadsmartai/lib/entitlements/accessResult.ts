@@ -150,6 +150,60 @@ export async function canDownloadFullReport(userId: string): Promise<AccessResul
   };
 }
 
+export async function canUseAiAction(userId: string): Promise<AccessResult> {
+  const supabase = supabaseServerClient();
+  const entitlement = await getAgentEntitlement(supabase, userId);
+  if (!entitlement) {
+    return {
+      allowed: false,
+      reason: "no_agent_entitlement",
+      plan: null,
+      currentUsage: null,
+      limit: null,
+    };
+  }
+
+  const limit = entitlement.ai_actions_per_month;
+  // NULL = unlimited (Elite, or legacy rows not yet backfilled).
+  if (limit == null) {
+    return {
+      allowed: true,
+      reason: null,
+      plan: entitlement.plan,
+      currentUsage: null,
+      limit: null,
+    };
+  }
+
+  // Sum the current-month usage from the rollup view.
+  const monthStart = new Date().toISOString().slice(0, 7) + "-01";
+  const { data } = await supabase
+    .from("entitlement_ai_usage_monthly")
+    .select("ai_actions_used")
+    .eq("user_id", userId)
+    .eq("month_start", monthStart)
+    .maybeSingle();
+  const current = (data as { ai_actions_used: number } | null)?.ai_actions_used ?? 0;
+
+  if (current >= limit) {
+    return {
+      allowed: false,
+      reason: "ai_usage_limit_reached",
+      plan: entitlement.plan,
+      currentUsage: current,
+      limit,
+    };
+  }
+
+  return {
+    allowed: true,
+    reason: null,
+    plan: entitlement.plan,
+    currentUsage: current,
+    limit,
+  };
+}
+
 export async function canInviteTeam(userId: string): Promise<AccessResult> {
   const supabase = supabaseServerClient();
   const entitlement = await getAgentEntitlement(supabase, userId);

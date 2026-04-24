@@ -41,6 +41,7 @@ export async function POST(req: Request) {
       alerts_level: "basic",
       reports_download_level: "limited",
       team_access: false,
+      ai_actions_per_month: 10,
       source: "free_start",
       starts_at: now,
       updated_at: now,

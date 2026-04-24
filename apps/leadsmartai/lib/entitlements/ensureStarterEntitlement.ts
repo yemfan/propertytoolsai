@@ -65,6 +65,9 @@ export async function ensureStarterEntitlement(
       alerts_level: "basic",
       reports_download_level: "limited",
       team_access: false,
+      // Starter gets a small monthly AI allowance so users can taste
+      // the AI features before upgrading — see planCatalog.
+      ai_actions_per_month: 10,
       source: "auto_starter_on_inactive",
       starts_at: now,
       updated_at: now,
