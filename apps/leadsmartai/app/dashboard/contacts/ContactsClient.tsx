@@ -6,6 +6,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import { CsvImportModal } from "@/components/crm/CsvImportModal";
 import { SendPostcardModal } from "@/components/postcards/SendPostcardModal";
+import { BulkSendPostcardModal } from "@/components/postcards/BulkSendPostcardModal";
 import { LimitWarningBanner } from "@/components/entitlements/LimitWarningBanner";
 import { listOutboundEnabled, type LocaleId } from "@/lib/locales/registry";
 
@@ -127,6 +128,9 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
     email: string | null;
     phone: string | null;
   } | null>(null);
+  /** Contact ids checkbox-selected for bulk actions (postcards, etc). */
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkPostcardOpen, setBulkPostcardOpen] = useState(false);
 
   const loadStats = useCallback(async () => {
     try {
@@ -335,12 +339,61 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
         </select>
       </div>
 
+      {/* Bulk action bar — appears only when any row is selected.
+          For now the only bulk action is "Send postcard"; more can
+          hang off this bar later (tag, export, etc). */}
+      {selectedIds.size > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm">
+          <div className="text-indigo-900">
+            <span className="font-semibold">{selectedIds.size}</span>{" "}
+            selected
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              className="rounded-md px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={() => setBulkPostcardOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
+            >
+              💌 Send postcard to {selectedIds.size}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {/* Table */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 text-gray-600">
               <tr>
+                {/* Select-all for bulk actions (postcards, etc).
+                    Toggles all currently filtered contacts. */}
+                <th className="w-8 px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={
+                      filtered.length > 0 &&
+                      filtered.every((c) => selectedIds.has(c.id))
+                    }
+                    onChange={(e) => {
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        if (e.target.checked) filtered.forEach((c) => next.add(c.id));
+                        else filtered.forEach((c) => next.delete(c.id));
+                        return next;
+                      });
+                    }}
+                    className="h-4 w-4 rounded border-slate-300"
+                    aria-label="Select all filtered contacts"
+                  />
+                </th>
                 {([
                   { key: "name" as SortKey, label: "Name" },
                   { key: "email" as SortKey, label: "Email" },
@@ -370,6 +423,8 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                 if (isEditing) {
                   return (
                     <tr key={c.id} className="bg-blue-50/30">
+                      {/* Checkbox cell — hidden for the editing row */}
+                      <td className="w-8 px-3 py-2" />
                       <td className="px-4 py-2"><input value={editFields.name ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, name: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
                       <td className="px-4 py-2"><input value={editFields.email ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, email: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
                       <td className="px-4 py-2"><input value={editFields.phone ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, phone: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
@@ -411,6 +466,22 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                 }
                 return (
                   <tr key={c.id} className="hover:bg-gray-50/50">
+                    <td className="w-8 px-3 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(c.id)}
+                        onChange={(e) => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(c.id);
+                            else next.delete(c.id);
+                            return next;
+                          });
+                        }}
+                        className="h-4 w-4 rounded border-slate-300"
+                        aria-label={`Select ${c.name ?? "contact"}`}
+                      />
+                    </td>
                     <td className="px-4 py-2.5 font-medium text-gray-900">{c.name ?? "\u2014"}</td>
                     <td className="px-4 py-2.5 text-gray-600 max-w-[180px] truncate">{c.email ?? "\u2014"}</td>
                     <td className="px-4 py-2.5 text-gray-600">{c.phone ?? "\u2014"}</td>
@@ -523,7 +594,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
               })}
               {!filtered.length && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
                     {search ? "No contacts match your search." : "No contacts yet."}
                   </td>
                 </tr>
@@ -546,6 +617,25 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
           target={postcardTarget}
           onSent={() => {
             setActionMsg("Postcard sent ✓");
+          }}
+        />
+      ) : null}
+
+      {bulkPostcardOpen ? (
+        <BulkSendPostcardModal
+          open={bulkPostcardOpen}
+          onClose={() => setBulkPostcardOpen(false)}
+          recipients={leads
+            .filter((c) => selectedIds.has(c.id))
+            .map((c) => ({
+              contactId: c.id,
+              name: c.name ?? c.email ?? "friend",
+              email: c.email,
+              phone: c.phone,
+            }))}
+          onSent={() => {
+            setActionMsg(`Sent ${selectedIds.size} postcards ✓`);
+            setSelectedIds(new Set());
           }}
         />
       ) : null}
