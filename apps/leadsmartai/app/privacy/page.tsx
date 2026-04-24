@@ -36,7 +36,8 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
     body: (
       <>
         <p>
-          LeadSmart AI (&ldquo;LeadSmart,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or
+          MAXY Investment Inc., a Texas corporation, doing business as LeadSmart AI
+          (&ldquo;LeadSmart,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or
           &ldquo;our&rdquo;) operates the website leadsmart-ai.com and provides AI-assisted
           lead management, CRM, SMS follow-up, email automation, and related services (the
           &ldquo;Service&rdquo;). This Privacy Policy explains what information we collect,
