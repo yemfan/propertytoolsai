@@ -188,6 +188,32 @@ async function mobilePatch<T extends MobileJsonError>(
   return { ok: true, data };
 }
 
+async function mobilePut<T extends MobileJsonError>(
+  path: string,
+  body: Record<string, unknown>
+): Promise<MobileApiFailure | { ok: true; data: T }> {
+  const cfg = requireConfig();
+  if (!isMobileConfig(cfg)) return cfg;
+
+  const { base, token } = cfg;
+  const res = await apiFetchJson<T>(`${base}${path}`, body, {
+    method: "PUT",
+    headers: authHeaders(token),
+    credentials: "omit",
+  });
+
+  if (!res.ok) {
+    return parseMobileFailure(res.status, res.body, res.error);
+  }
+
+  const data = res.data;
+  if (!data || data.ok === false || data.success === false) {
+    return parseMobileFailure(res.status, data, "Request failed");
+  }
+
+  return { ok: true, data };
+}
+
 type InboxJson = MobileJsonError & {
   threads?: MobileInboxThreadDto[];
   generatedAt?: string;
@@ -996,4 +1022,130 @@ export async function sendMobilePostcard(
     publicUrl: res.data.publicUrl ?? "",
     deliveries: res.data.deliveries ?? {},
   };
+}
+
+// ── Showings ──────────────────────────────────────────────────────
+//
+// Mobile mirrors of /api/mobile/showings/*. The shared packages don't
+// have showings DTOs yet, so we declare the wire shape inline here —
+// mirrors lib/showings/types.ts on the dashboard. When the shared
+// package gets a `MobileShowingDto`, replace these with imports.
+
+export type MobileShowingStatus = "scheduled" | "attended" | "cancelled" | "no_show";
+export type MobileShowingReaction = "love" | "like" | "maybe" | "pass";
+
+export type MobileShowingListItem = {
+  id: string;
+  agent_id: string;
+  contact_id: string;
+  property_address: string;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  mls_number: string | null;
+  scheduled_at: string;
+  status: MobileShowingStatus;
+  access_notes: string | null;
+  notes: string | null;
+  contact_name: string | null;
+  feedback_rating: number | null;
+  feedback_reaction: MobileShowingReaction | null;
+  feedback_would_offer: boolean | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MobileShowingFeedback = {
+  id: string;
+  showing_id: string;
+  rating: number | null;
+  overall_reaction: MobileShowingReaction | null;
+  would_offer: boolean | null;
+  price_concerns: boolean | null;
+  location_concerns: boolean | null;
+  condition_concerns: boolean | null;
+  pros: string | null;
+  cons: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MobileShowingDetail = {
+  showing: MobileShowingListItem;
+  feedback: MobileShowingFeedback | null;
+  contactName: string | null;
+};
+
+export async function fetchMobileShowings(opts?: {
+  contactId?: string;
+}): Promise<({ ok: true } & { showings: MobileShowingListItem[] }) | MobileApiFailure> {
+  const path = opts?.contactId
+    ? `${MOBILE_API_PATHS.showings}?contactId=${encodeURIComponent(opts.contactId)}`
+    : MOBILE_API_PATHS.showings;
+  const res = await mobileGet<{ showings?: MobileShowingListItem[] }>(path);
+  if (res.ok === false) return res;
+  return { ok: true, showings: res.data.showings ?? [] };
+}
+
+export async function fetchMobileShowingDetail(
+  id: string,
+): Promise<({ ok: true } & MobileShowingDetail) | MobileApiFailure> {
+  const res = await mobileGet<{
+    showing?: MobileShowingListItem;
+    feedback?: MobileShowingFeedback | null;
+    contactName?: string | null;
+  }>(MOBILE_API_PATHS.showing(id));
+  if (res.ok === false) return res;
+  if (!res.data.showing) {
+    return { ok: false, status: 404, message: "Showing not found" };
+  }
+  return {
+    ok: true,
+    showing: res.data.showing,
+    feedback: res.data.feedback ?? null,
+    contactName: res.data.contactName ?? null,
+  };
+}
+
+export async function updateMobileShowingStatus(
+  id: string,
+  status: MobileShowingStatus,
+): Promise<({ ok: true } & { showing: MobileShowingListItem }) | MobileApiFailure> {
+  const res = await mobilePatch<{ showing?: MobileShowingListItem }>(
+    MOBILE_API_PATHS.showing(id),
+    { status },
+  );
+  if (res.ok === false) return res;
+  if (!res.data.showing) {
+    return { ok: false, status: 500, message: "Update returned no row" };
+  }
+  return { ok: true, showing: res.data.showing };
+}
+
+export type MobileShowingFeedbackInput = Partial<{
+  rating: number;
+  overall_reaction: MobileShowingReaction;
+  would_offer: boolean;
+  price_concerns: boolean;
+  location_concerns: boolean;
+  condition_concerns: boolean;
+  pros: string;
+  cons: string;
+  notes: string;
+}>;
+
+export async function upsertMobileShowingFeedback(
+  showingId: string,
+  input: MobileShowingFeedbackInput,
+): Promise<({ ok: true } & { feedback: MobileShowingFeedback }) | MobileApiFailure> {
+  const res = await mobilePut<{ feedback?: MobileShowingFeedback }>(
+    MOBILE_API_PATHS.showingFeedback(showingId),
+    input as Record<string, unknown>,
+  );
+  if (res.ok === false) return res;
+  if (!res.data.feedback) {
+    return { ok: false, status: 500, message: "Feedback save returned no row" };
+  }
+  return { ok: true, feedback: res.data.feedback };
 }
