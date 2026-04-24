@@ -64,17 +64,9 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Expose the request pathname as `x-pathname` so server components /
-  // layouts can read it via `headers()`. Used by the dashboard layout
-  // to carve `/dashboard/billing` out of the subscription gate — a
-  // user with an inactive sub still needs to reach their billing page
-  // to reactivate. Without this, they're trapped on /start-free/agent.
-  const requestHeaders = new Headers(req.headers);
-  requestHeaders.set("x-pathname", pathname);
-
   let res = NextResponse.next({
     request: {
-      headers: requestHeaders,
+      headers: req.headers,
     },
   });
 

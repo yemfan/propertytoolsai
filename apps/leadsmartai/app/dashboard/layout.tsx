@@ -1,6 +1,6 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ERROR_DASHBOARD_NO_AGENT_ROW } from "@leadsmart/shared";
+import { ensureStarterEntitlement } from "@/lib/entitlements/ensureStarterEntitlement";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { isRedirectError } from "@/lib/isRedirectError";
 import DashboardShell from "@/components/dashboard/DashboardShell";
@@ -76,19 +76,31 @@ export default async function DashboardLayout({
     }
     if (!staff && status && !["active", "trialing"].includes(status)) {
       // Inactive-sub flow:
-      //   - /dashboard/billing is always allowed so users can reactivate.
-      //   - Everything else inside /dashboard/* redirects to billing,
-      //     which keeps them in the authenticated agent shell with the
-      //     familiar sidebar and lets them reactivate in one click.
-      //     Previously we sent them to /start-free/agent, but that's a
-      //     pre-signup marketing page with an unfamiliar nav — confusing
-      //     when the user is already signed in.
-      // `x-pathname` is injected by the proxy (apps/leadsmartai/proxy.ts).
-      const pathname = (await headers()).get("x-pathname") ?? "";
-      const billingAllowed = pathname.startsWith("/dashboard/billing");
-      if (!billingAllowed) {
-        redirect("/dashboard/billing?reactivate=1");
+      //   1. Auto-assign the Starter (free) entitlement. No paying
+      //      user ever expects to lose access entirely — they
+      //      should just fall to the free tier and keep using the
+      //      app. ensureStarterEntitlement is idempotent + only
+      //      acts when the user has no currently-active plan.
+      //   2. Redirect to /auth/complete-profile so the user can
+      //      confirm / pick their role before seeing the dashboard.
+      //      That page already no-ops for users who already have a
+      //      role set, so it's safe as a universal landing.
+      //
+      // After this redirect the user's subscription_status has been
+      // updated to "active" (free tier), so they won't bounce again
+      // on the next dashboard load.
+      try {
+        await ensureStarterEntitlement(ctx.userId);
+      } catch (err) {
+        // Don't block the user if the assignment fails — the
+        // redirect to complete-profile still makes sense and the
+        // retry will happen naturally on next load.
+        console.warn(
+          "[dashboard layout] ensureStarterEntitlement failed:",
+          err instanceof Error ? err.message : err,
+        );
       }
+      redirect("/auth/complete-profile?next=/dashboard");
     }
   } catch (e) {
     if (isRedirectError(e)) throw e;
