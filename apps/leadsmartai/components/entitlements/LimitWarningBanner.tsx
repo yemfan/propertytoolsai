@@ -23,7 +23,7 @@ const LABEL_BY_ACTION: Record<AgentLimitApiAction, { thing: string; plural: stri
   add_contact: { thing: "contact", plural: "contacts", unit: "total" },
   download_full_report: { thing: "download", plural: "downloads", unit: "today" },
   invite_team: { thing: "team invite", plural: "team invites", unit: "" },
-  ai_action: { thing: "AI action", plural: "AI actions", unit: "this month" },
+  ai_action: { thing: "AI token", plural: "AI tokens", unit: "this month" },
 };
 
 export function LimitWarningBanner({ action }: { action: AgentLimitApiAction }) {

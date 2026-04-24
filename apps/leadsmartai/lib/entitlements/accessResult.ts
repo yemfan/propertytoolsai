@@ -163,6 +163,26 @@ export async function canUseAiAction(userId: string): Promise<AccessResult> {
     };
   }
 
+  // Check the bonus wallet first — referrals + promos deposit here.
+  // Bonus tokens are consumed before the monthly plan quota, so they
+  // actually extend the user's runway rather than silently filling
+  // a cap they may never reach.
+  const { data: userRow } = await supabase
+    .from("leadsmart_users")
+    .select("bonus_tokens")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const bonusTokens = ((userRow as { bonus_tokens?: number } | null)?.bonus_tokens) ?? 0;
+  if (bonusTokens > 0) {
+    return {
+      allowed: true,
+      reason: null,
+      plan: entitlement.plan,
+      currentUsage: 0,
+      limit: null,
+    };
+  }
+
   const limit = entitlement.ai_actions_per_month;
   // NULL = unlimited (Elite, or legacy rows not yet backfilled).
   if (limit == null) {

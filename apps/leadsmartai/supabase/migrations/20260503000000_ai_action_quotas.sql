@@ -47,17 +47,19 @@ group by user_id, product, date_trunc('month', usage_date);
 comment on view public.entitlement_ai_usage_monthly is
   'Rolling monthly AI-action counters, aggregated from daily buckets. Used by canUseAiAction.';
 
--- Backfill the cap onto existing entitlement rows. We default Starter
--- to 10 so recently-activated free users don't get a surprise zero,
--- and existing Growth/Elite stay unlimited pending the next sync via
--- planRowFromCatalog.
+-- Backfill the monthly token cap onto existing entitlement rows. We
+-- present these as "AI tokens" in UI copy (see planCatalog.ts) to
+-- match the mental model of finer-grained usage — internally still
+-- 1 cap unit = 1 AI action for now.
+--
+-- Starter: 100 / Pro (growth): 5,000 / Elite: unlimited (NULL).
 update public.product_entitlements
-set ai_actions_per_month = 10
+set ai_actions_per_month = 100
 where plan = 'starter'
   and ai_actions_per_month is null;
 
 update public.product_entitlements
-set ai_actions_per_month = 500
+set ai_actions_per_month = 5000
 where plan = 'growth'
   and ai_actions_per_month is null;
 -- Elite stays NULL (unlimited).
