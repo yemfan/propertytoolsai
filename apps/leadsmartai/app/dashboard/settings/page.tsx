@@ -3,6 +3,7 @@ import { getCurrentAgentContext } from "@/lib/dashboardService";
 import AgentAiSettingsPanel from "@/components/dashboard/AgentAiSettingsPanel";
 import AgentVoiceSettingsPanel from "@/components/dashboard/AgentVoiceSettingsPanel";
 import ChannelsCard from "@/components/dashboard/ChannelsCard";
+import { GmailSyncCard } from "@/components/dashboard/GmailSyncCard";
 import ComplianceCard from "@/components/dashboard/ComplianceCard";
 import { CommissionDefaultsPanel } from "@/components/dashboard/CommissionDefaultsPanel";
 import { TransactionNotificationsPanel } from "@/components/dashboard/TransactionNotificationsPanel";
@@ -88,6 +89,7 @@ export default async function SettingsPage() {
         channels={
           <>
             <ChannelsCard agentId={ctx.agentId} />
+            <GmailSyncCard />
             <Card
               title="Transaction Coordinator notifications"
               description="Delivery preferences for deal-level nudges: daily email digest of overdue tasks, plus a closing-window wire-fraud SMS escalation."
