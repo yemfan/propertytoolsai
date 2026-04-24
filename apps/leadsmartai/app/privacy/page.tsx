@@ -77,10 +77,49 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
             integration&rsquo;s OAuth scope permits.
           </li>
         </ul>
+        <p className="font-semibold text-slate-900">
+          Categories collected (for California residents)
+        </p>
         <p>
-          [REQUIRES LEGAL REVIEW] Enumerate the specific categories of personal information
-          collected for CCPA/CPRA purposes (identifiers, commercial information, internet
-          activity, geolocation, professional information, inferences).
+          For purposes of the California Consumer Privacy Act / California Privacy Rights
+          Act (CCPA/CPRA), we collect the following statutory categories of personal
+          information from agents using the Service:
+        </p>
+        <ul>
+          <li>
+            <strong>Identifiers</strong> — name, email, postal address, phone, account
+            login, IP address, device identifiers.
+          </li>
+          <li>
+            <strong>Customer records</strong> (Cal. Civ. Code § 1798.80) — billing
+            information, brokerage / license details.
+          </li>
+          <li>
+            <strong>Commercial information</strong> — subscription tier, transactions,
+            referral activity.
+          </li>
+          <li>
+            <strong>Internet / network activity</strong> — pages viewed, features used,
+            session timing, referrer, browser + OS metadata, error diagnostics.
+          </li>
+          <li>
+            <strong>Geolocation data</strong> — approximate location derived from IP. We
+            do not collect precise device geolocation.
+          </li>
+          <li>
+            <strong>Professional information</strong> — license number, brokerage
+            affiliation, role.
+          </li>
+          <li>
+            <strong>Inferences</strong> drawn from the above to characterize agent
+            preferences and recommend product features.
+          </li>
+        </ul>
+        <p>
+          We do not knowingly collect <strong>sensitive personal information</strong>
+          under CPRA § 1798.140(ae). For information about <em>contacts</em> the agent
+          uploads or imports — which is the agent&rsquo;s data, not LeadSmart&rsquo;s —
+          see section 5 (How we share information) and section 11 (Retention).
         </p>
       </>
     ),
@@ -113,9 +152,17 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
             communications.
           </li>
         </ul>
+        <p className="font-semibold text-slate-900">
+          We do not train AI models on your data
+        </p>
         <p>
-          [REQUIRES LEGAL REVIEW] Confirm whether aggregated/de-identified data is used for
-          general model improvement; if so, disclose here with an opt-out.
+          We do <strong>not</strong> use your account information, your content (including
+          contacts, messages, and notes), or AI-generated output to train, fine-tune, or
+          otherwise develop generalized machine-learning models — neither our own nor
+          those of any third party. If we ever change this practice we will update this
+          policy and offer an opt-out before the new use begins. Data processed by our
+          third-party AI providers is subject to their no-training contractual terms,
+          described in section 4.
         </p>
       </>
     ),
@@ -141,10 +188,49 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
             the input.
           </li>
         </ul>
+        <p className="font-semibold text-slate-900">Current AI sub-processors</p>
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 text-left">
+              <th className="py-2 pr-3 font-semibold">Provider</th>
+              <th className="py-2 pr-3 font-semibold">Purpose</th>
+              <th className="py-2 font-semibold">Retention &amp; training</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-slate-100 align-top">
+              <td className="py-2 pr-3 font-medium">Anthropic (Claude)</td>
+              <td className="py-2 pr-3">
+                Deal review, growth opportunity generation, AI message drafting,
+                contact summarization.
+              </td>
+              <td className="py-2">
+                Per Anthropic&rsquo;s API terms: input + output retained up to 30 days
+                for trust &amp; safety. <strong>No training on customer API
+                inputs/outputs.</strong>
+              </td>
+            </tr>
+            <tr className="border-b border-slate-100 align-top">
+              <td className="py-2 pr-3 font-medium">OpenAI</td>
+              <td className="py-2 pr-3">
+                AI assistant explanations, behavior-based recommendations.
+              </td>
+              <td className="py-2">
+                Per OpenAI&rsquo;s API data-usage policy: API inputs/outputs retained up
+                to 30 days for abuse monitoring (or zero retention under ZDR
+                arrangements where applicable). <strong>No training on API customer
+                data by default.</strong>
+              </td>
+            </tr>
+          </tbody>
+        </table>
         <p>
-          [REQUIRES LEGAL REVIEW] Confirm sub-processor DPA terms, list each AI provider
-          and its purpose, and state whether content is retained by the provider after
-          processing.
+          Each provider operates under its own data-protection terms (Anthropic
+          Commercial Terms, OpenAI Business / API Terms) which require them to act as a
+          processor of your data, prohibit secondary use, and require deletion at the
+          end of the retention window. We update this table when we add or remove a
+          provider; the &ldquo;last updated&rdquo; date at the top of this page reflects
+          the current set.
         </p>
       </>
     ),
@@ -326,9 +412,13 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
         </ul>
         <p>
           We do <strong>not</strong> sell personal information in exchange for monetary
-          consideration. [REQUIRES LEGAL REVIEW] Confirm with counsel whether any data
-          sharing constitutes a &ldquo;sale&rdquo; or &ldquo;share&rdquo; under CCPA/CPRA
-          definitions, which are broader than intuitive.
+          consideration. We also do not currently &ldquo;sell&rdquo; or &ldquo;share&rdquo;
+          personal information as those terms are defined under CCPA/CPRA — including for
+          cross-context behavioral advertising. We do not load advertising trackers
+          (Facebook Pixel, Google Ads conversion tracking, TikTok Pixel, LinkedIn
+          Insight, etc.) on the Service. If we ever change this practice we will update
+          this policy and post the &ldquo;Do Not Sell or Share My Personal
+          Information&rdquo; control described in section 9 before the new use begins.
         </p>
       </>
     ),
@@ -389,10 +479,30 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
           through your browser settings. Blocking essential cookies will break functions
           like staying signed in.
         </p>
+        <p className="font-semibold text-slate-900">Categories of cookies we use</p>
+        <ul>
+          <li>
+            <strong>Strictly necessary</strong> — authentication, session integrity,
+            security, fraud prevention, load balancing. These are always active; the
+            Service does not function without them.
+          </li>
+          <li>
+            <strong>Functional</strong> — remember preferences (language, sidebar
+            state, last-viewed contact). Disabling these works, but you&rsquo;ll
+            re-enter preferences on each visit.
+          </li>
+          <li>
+            <strong>Analytics</strong> — aggregate usage measurement to help us
+            understand which features are useful. These are gated on your explicit
+            opt-in; the Service ships zero analytics payloads to third parties until
+            you grant consent.
+          </li>
+        </ul>
         <p>
-          [REQUIRES LEGAL REVIEW] Add explicit category breakdown (strictly necessary,
-          functional, analytics, advertising) and wire a consent banner for EU/California
-          visitors.
+          We do <strong>not</strong> use advertising or cross-context tracking
+          cookies. EU and California visitors see a consent banner controlling the
+          analytics category; you can change your choice at any time from the cookie
+          preferences link in the footer.
         </p>
       </>
     ),
@@ -426,10 +536,58 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
           </a>
           . We will respond within the timeframes required by applicable law.
         </p>
+        <p className="font-semibold text-slate-900">
+          California &mdash; Do Not Sell or Share My Personal Information
+        </p>
         <p>
-          [REQUIRES LEGAL REVIEW] Add California-specific &ldquo;Do Not Sell or Share My
-          Personal Information&rdquo; link if applicable, plus EU Data Protection
-          Authority contact paths.
+          As described in section 6, we do not currently &ldquo;sell&rdquo; or
+          &ldquo;share&rdquo; personal information under CCPA/CPRA. To submit a
+          Do-Not-Sell-or-Share request anyway (it will be honored as a
+          forward-looking opt-out), email{" "}
+          <a
+            href="mailto:contact@leadsmart-ai.com?subject=Do%20Not%20Sell%20or%20Share%20My%20Personal%20Information"
+            className="text-[#0072ce] hover:underline"
+          >
+            contact@leadsmart-ai.com
+          </a>{" "}
+          with the subject line &ldquo;Do Not Sell or Share My Personal
+          Information.&rdquo; You may also designate an authorized agent to make
+          the request on your behalf in accordance with CCPA/CPRA procedures.
+        </p>
+
+        <p className="font-semibold text-slate-900">
+          European Economic Area, United Kingdom, Switzerland
+        </p>
+        <p>
+          If you are located in the EEA, the UK, or Switzerland, you may lodge a
+          complaint with your local data protection authority. A current list of
+          EEA Data Protection Authorities is available at{" "}
+          <a
+            href="https://www.edpb.europa.eu/about-edpb/about-edpb/members_en"
+            className="text-[#0072ce] hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            edpb.europa.eu/about-edpb/about-edpb/members
+          </a>
+          . UK residents may contact the Information Commissioner&rsquo;s Office
+          (ICO) at{" "}
+          <a
+            href="https://ico.org.uk"
+            className="text-[#0072ce] hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            ico.org.uk
+          </a>
+          . You may also contact us first at{" "}
+          <a
+            href="mailto:contact@leadsmart-ai.com"
+            className="text-[#0072ce] hover:underline"
+          >
+            contact@leadsmart-ai.com
+          </a>
+          , and we will respond within applicable legal timeframes.
         </p>
       </>
     ),
@@ -446,10 +604,58 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
           information within 90 days, except where retention is required for legal,
           accounting, or fraud-prevention purposes.
         </p>
+        <p className="font-semibold text-slate-900">
+          Retention by category
+        </p>
+        <ul>
+          <li>
+            <strong>Account + profile data</strong> — kept while your account is active;
+            removed or anonymized within 90 days after account deletion.
+          </li>
+          <li>
+            <strong>Contact records you upload</strong> (CRM contacts, leads, notes) —
+            kept while your account is active; deleted within 90 days after account
+            deletion. You can delete individual contacts at any time.
+          </li>
+          <li>
+            <strong>SMS + email logs (including TCPA / CAN-SPAM consent records and
+            opt-out evidence)</strong> — retained for at least 4 years after the last
+            communication, in line with the TCPA statute of limitations and the FCC
+            consent-recordkeeping standard.
+          </li>
+          <li>
+            <strong>Gmail-synced messages</strong> (when Gmail sync is connected) — see
+            section 5 (Google user data); retained until you delete the message, the
+            associated contact, or your account.
+          </li>
+          <li>
+            <strong>Billing + tax records</strong> — retained for at least 7 years for
+            tax and audit compliance.
+          </li>
+          <li>
+            <strong>Behavioral / usage logs</strong> — retained for up to 13 months,
+            then aggregated or deleted.
+          </li>
+          <li>
+            <strong>AI inference logs</strong> (the request/response sent to OpenAI or
+            Anthropic) — held no longer than 30 days on the provider side per their
+            terms; we do not retain a separate copy beyond what is necessary to render
+            the resulting output to you.
+          </li>
+          <li>
+            <strong>Security + audit logs</strong> — up to 24 months, retained longer
+            only when actively needed for an investigation.
+          </li>
+          <li>
+            <strong>Backups</strong> — encrypted backups roll off on a 35-day cycle.
+            Deleted records are removed from active systems immediately and from
+            backups as the backup cycle completes.
+          </li>
+        </ul>
         <p>
-          [REQUIRES LEGAL REVIEW] Confirm retention windows per data category and align
-          with counsel on minimum legal retention (financial records, TCPA opt-in proof,
-          etc.).
+          Where a longer retention is required by law (subpoena, ongoing audit, fraud
+          investigation, regulatory hold), we retain only the minimum data required and
+          for only as long as the obligation persists.
         </p>
       </>
     ),
