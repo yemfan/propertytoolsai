@@ -12,6 +12,13 @@ export type PlanCatalogEntry = {
   alertsLevel: "basic" | "full" | "advanced";
   reportsDownloadLevel: "limited" | "full" | "unlimited";
   teamAccess: boolean;
+  /**
+   * Monthly cap on AI-bearing actions (deal review, growth opps,
+   * AI SMS draft, AI deal commentary, etc.). NULL = unlimited.
+   * CMA reports are NOT counted here — they have their own daily
+   * cap via `cmaReportsPerDay`.
+   */
+  aiActionsPerMonth: number | null;
   /** Marketing bullets for comparison UI */
   bullets: string[];
 };
@@ -26,8 +33,10 @@ export const PLAN_CATALOG: Record<AgentPlan, PlanCatalogEntry> = {
     alertsLevel: "basic",
     reportsDownloadLevel: "limited",
     teamAccess: false,
+    aiActionsPerMonth: 10,
     bullets: [
       "CMA reports: 2 per day",
+      "AI actions: 10 per month (deal review, growth opps, AI SMS)",
       "Lead management: up to 5 leads",
       "Alerts: basic",
       "CRM: up to 50 contacts",
@@ -43,8 +52,10 @@ export const PLAN_CATALOG: Record<AgentPlan, PlanCatalogEntry> = {
     alertsLevel: "full",
     reportsDownloadLevel: "full",
     teamAccess: false,
+    aiActionsPerMonth: 500,
     bullets: [
       "CMA reports: 5 per day",
+      "AI actions: 500 per month",
       "Lead management: up to 500 leads",
       "Alerts: full + engagement tracking",
       "CRM: up to 500 contacts",
@@ -60,8 +71,10 @@ export const PLAN_CATALOG: Record<AgentPlan, PlanCatalogEntry> = {
     alertsLevel: "advanced",
     reportsDownloadLevel: "unlimited",
     teamAccess: true,
+    aiActionsPerMonth: null,
     bullets: [
       "CMA reports: 10 per day (expandable)",
+      "AI actions: unlimited",
       "Lead management: unlimited",
       "Alerts: advanced + automation",
       "CRM: unlimited contacts",
@@ -79,6 +92,7 @@ export function planRowFromCatalog(plan: AgentPlan): {
   alerts_level: string;
   reports_download_level: string;
   team_access: boolean;
+  ai_actions_per_month: number | null;
 } {
   const p = PLAN_CATALOG[plan];
   return {
@@ -89,5 +103,6 @@ export function planRowFromCatalog(plan: AgentPlan): {
     alerts_level: p.alertsLevel,
     reports_download_level: p.reportsDownloadLevel,
     team_access: p.teamAccess,
+    ai_actions_per_month: p.aiActionsPerMonth,
   };
 }

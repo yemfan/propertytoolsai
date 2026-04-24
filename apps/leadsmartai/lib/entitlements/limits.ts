@@ -213,6 +213,79 @@ export async function canDownloadFullReport(
   };
 }
 
+export async function canUseAiAction(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<EntitlementCheckResult> {
+  const ent = await getActiveAgentEntitlement(supabase, userId);
+  if (!ent) {
+    return {
+      allowed: false,
+      reason: "No active LeadSmart AI Agent entitlement.",
+      reasonCode: "no_agent_entitlement",
+      plan: null,
+      product: PRODUCT_LEADSMART_AGENT,
+      currentUsage: {},
+      limit: null,
+    };
+  }
+  const cap = ent.ai_actions_per_month;
+  const used = await getAiActionsUsedThisMonth(supabase, userId);
+
+  // NULL cap = unlimited (Elite, or legacy rows before migration).
+  if (cap == null) {
+    return {
+      allowed: true,
+      reason: null,
+      reasonCode: null,
+      plan: ent.plan,
+      product: ent.product,
+      currentUsage: { aiActionsThisMonth: used },
+      limit: null,
+    };
+  }
+
+  const allowed = used < cap;
+  return {
+    allowed,
+    reason: allowed
+      ? null
+      : `You've used all ${cap} AI actions for the month on ${formatPlanLabel(ent.plan)}. Upgrade to Pro for 500 per month or Elite for unlimited.`,
+    reasonCode: allowed ? null : ("ai_usage_limit_reached" satisfies LimitReason),
+    plan: ent.plan,
+    product: ent.product,
+    currentUsage: { aiActionsThisMonth: used },
+    limit: cap,
+  };
+}
+
+/**
+ * Sum ai_actions_used across the current UTC calendar month.
+ * Reads the monthly rollup view added in 20260503000000_ai_action_quotas.
+ */
+async function getAiActionsUsedThisMonth(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<number> {
+  const monthStart = utcMonthStartDateString();
+  const { data } = await supabase
+    .from("entitlement_ai_usage_monthly")
+    .select("ai_actions_used")
+    .eq("user_id", userId)
+    .eq("product", PRODUCT_LEADSMART_AGENT)
+    .eq("month_start", monthStart)
+    .maybeSingle();
+  const row = data as { ai_actions_used: number } | null;
+  return row?.ai_actions_used ?? 0;
+}
+
+function utcMonthStartDateString(): string {
+  const d = new Date();
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  return `${y}-${m}-01`;
+}
+
 export async function canInviteTeam(
   supabase: SupabaseClient,
   userId: string
