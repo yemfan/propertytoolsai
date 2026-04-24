@@ -77,10 +77,10 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
           and to keep it up to date. You are responsible for safeguarding your credentials
           and for all activity under your account. Notify us immediately at{" "}
           <a
-            href="mailto:support@leadsmart-ai.com"
+            href="mailto:contact@leadsmart-ai.com"
             className="text-[#0072ce] hover:underline"
           >
-            support@leadsmart-ai.com
+            contact@leadsmart-ai.com
           </a>{" "}
           if you suspect unauthorized access.
         </p>
@@ -426,10 +426,10 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
           <li>
             <strong>Contact.</strong> Notices to LeadSmart should be sent to{" "}
             <a
-              href="mailto:support@leadsmart-ai.com"
+              href="mailto:contact@leadsmart-ai.com"
               className="text-[#0072ce] hover:underline"
             >
-              support@leadsmart-ai.com
+              contact@leadsmart-ai.com
             </a>
             .
           </li>
