@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ERROR_DASHBOARD_NO_AGENT_ROW } from "@leadsmart/shared";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
@@ -74,9 +75,20 @@ export default async function DashboardLayout({
         .eq("user_id", ctx.userId);
     }
     if (!staff && status && !["active", "trialing"].includes(status)) {
-      // Allow access to billing page so users can manage/reactivate subscription.
-      // All other dashboard pages require an active subscription.
-      redirect("/start-free/agent");
+      // Inactive-sub flow:
+      //   - /dashboard/billing is always allowed so users can reactivate.
+      //   - Everything else inside /dashboard/* redirects to billing,
+      //     which keeps them in the authenticated agent shell with the
+      //     familiar sidebar and lets them reactivate in one click.
+      //     Previously we sent them to /start-free/agent, but that's a
+      //     pre-signup marketing page with an unfamiliar nav — confusing
+      //     when the user is already signed in.
+      // `x-pathname` is injected by the proxy (apps/leadsmartai/proxy.ts).
+      const pathname = (await headers()).get("x-pathname") ?? "";
+      const billingAllowed = pathname.startsWith("/dashboard/billing");
+      if (!billingAllowed) {
+        redirect("/dashboard/billing?reactivate=1");
+      }
     }
   } catch (e) {
     if (isRedirectError(e)) throw e;
