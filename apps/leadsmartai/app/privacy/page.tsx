@@ -19,7 +19,7 @@ import Link from "next/link";
  * Any section still marked "[REQUIRES LEGAL REVIEW]" is a gap to close.
  */
 
-const LAST_UPDATED = "April 17, 2026";
+const LAST_UPDATED = "April 24, 2026";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -70,8 +70,10 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
           <li>
             <strong>Information from integrations you connect</strong> — lead sources such
             as Zillow, Realtor.com, Follow Up Boss, kvCORE, Sierra Interactive, Facebook
-            Lead Ads, Google, and any IDX site you link. We receive only what the
-            integration scope permits.
+            Lead Ads, Google, and any IDX site you link. If you connect Gmail, we also
+            receive the content of email messages sent to or from CRM contacts — see
+            section 5 for the specific Gmail handling rules. We receive only what each
+            integration&rsquo;s OAuth scope permits.
           </li>
         </ul>
         <p>
@@ -147,8 +149,156 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
     ),
   },
   {
+    id: "google-user-data",
+    title: "5. Google user data — Gmail sync",
+    body: (
+      <>
+        <p>
+          Agents may optionally connect their Google account to enable Gmail sync.
+          When connected, LeadSmart requests the <code>gmail.readonly</code> OAuth
+          scope and reads new messages on a periodic schedule to automatically log
+          conversations with CRM contacts. Connecting is explicit and reversible —
+          the feature stays off until you click &ldquo;Connect Gmail&rdquo; in
+          Settings.
+        </p>
+
+        <p className="font-semibold text-slate-900">What we access</p>
+        <ul>
+          <li>
+            The <code>gmail.readonly</code> scope (read-only access to Gmail
+            messages and metadata).
+          </li>
+          <li>
+            Your Gmail address (<code>userinfo.email</code>), used only to label
+            the connected account in the LeadSmart UI.
+          </li>
+        </ul>
+
+        <p className="font-semibold text-slate-900">How we use Gmail data</p>
+        <ul>
+          <li>
+            For each message we read, we extract the <strong>From</strong>,{" "}
+            <strong>To</strong>, <strong>Cc</strong>, <strong>Subject</strong>,
+            and plain-text <strong>body</strong>.
+          </li>
+          <li>
+            We check whether any counterparty&rsquo;s email matches a contact
+            in <em>your</em> CRM.
+          </li>
+          <li>
+            <strong>If matched:</strong> we store a copy of the message in
+            LeadSmart so it appears on the contact&rsquo;s timeline.
+          </li>
+          <li>
+            <strong>If not matched:</strong> we discard the message in memory.
+            We do not store it, index it, or use it for any other purpose.
+          </li>
+        </ul>
+
+        <p className="font-semibold text-slate-900">How we don&apos;t use Gmail data</p>
+        <ul>
+          <li>
+            We do <strong>not</strong> use Gmail data to serve advertising to
+            any user.
+          </li>
+          <li>
+            We do <strong>not</strong> use Gmail data to train, fine-tune, or
+            otherwise develop generalized machine-learning models, including
+            large language models.
+          </li>
+          <li>
+            We do <strong>not</strong> sell, license, or transfer Gmail data to
+            any third party, except the sub-processors necessary to operate
+            the Service (database hosting, infrastructure) and only under
+            contractual obligations that mirror these restrictions.
+          </li>
+          <li>
+            Humans at LeadSmart do not read your Gmail content except when (i)
+            you give explicit written permission for specific messages, (ii)
+            it is necessary for security or to prevent abuse, (iii) it is
+            required for compliance with applicable law, or (iv) the content
+            is first aggregated and anonymized in a way that cannot be used to
+            identify you or your contacts.
+          </li>
+        </ul>
+
+        <p className="font-semibold text-slate-900">Limited use disclosure</p>
+        <p className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
+          LeadSmart AI&apos;s use and transfer to any other app of information
+          received from Google APIs will adhere to the{" "}
+          <a
+            href="https://developers.google.com/terms/api-services-user-data-policy"
+            className="text-[#0072ce] hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Google API Services User Data Policy
+          </a>
+          , including the{" "}
+          <a
+            href="https://developers.google.com/terms/api-services-user-data-policy#limited-use"
+            className="text-[#0072ce] hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Limited Use
+          </a>{" "}
+          requirements.
+        </p>
+
+        <p className="font-semibold text-slate-900">Retention and deletion</p>
+        <ul>
+          <li>
+            Matched messages are retained in your LeadSmart CRM until you
+            delete them, delete the associated contact, or delete your
+            account. When your account is deleted, messages are removed or
+            anonymized within 90 days, aligned with section 11 below.
+          </li>
+          <li>
+            <strong>Disconnecting Gmail</strong> from Settings revokes our
+            access token and stops all future sync immediately. Messages
+            already logged to your CRM remain until you delete them — they
+            are treated as part of your CRM history, not as live Google data.
+          </li>
+        </ul>
+
+        <p className="font-semibold text-slate-900">Your controls</p>
+        <ul>
+          <li>
+            <strong>Disconnect inside LeadSmart</strong> — Settings &rarr;
+            Channels &rarr; Gmail sync &rarr; Disconnect.
+          </li>
+          <li>
+            <strong>Revoke via Google</strong> — visit{" "}
+            <a
+              href="https://myaccount.google.com/permissions"
+              className="text-[#0072ce] hover:underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              myaccount.google.com/permissions
+            </a>{" "}
+            and remove LeadSmart AI. Any in-flight sync is terminated at the
+            Google side.
+          </li>
+          <li>
+            <strong>Delete stored messages</strong> — remove individual
+            messages from a contact&apos;s timeline, or email{" "}
+            <a
+              href="mailto:support@leadsmart-ai.com"
+              className="text-[#0072ce] hover:underline"
+            >
+              support@leadsmart-ai.com
+            </a>{" "}
+            to purge all Gmail-synced content from your account.
+          </li>
+        </ul>
+      </>
+    ),
+  },
+  {
     id: "sharing",
-    title: "5. How we share information",
+    title: "6. How we share information",
     body: (
       <>
         <p>We share information only with:</p>
@@ -184,7 +334,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
   },
   {
     id: "sms-email-compliance",
-    title: "6. SMS and email compliance",
+    title: "7. SMS and email compliance",
     body: (
       <>
         <p>
@@ -221,7 +371,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
   },
   {
     id: "cookies",
-    title: "7. Cookies and tracking",
+    title: "8. Cookies and tracking",
     body: (
       <>
         <p>
@@ -240,7 +390,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
   },
   {
     id: "rights",
-    title: "8. Your rights",
+    title: "9. Your rights",
     body: (
       <>
         <p>Depending on where you live, you may have the right to:</p>
@@ -277,7 +427,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
   },
   {
     id: "retention",
-    title: "9. Retention",
+    title: "10. Retention",
     body: (
       <>
         <p>
@@ -297,7 +447,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
   },
   {
     id: "security",
-    title: "10. Security",
+    title: "11. Security",
     body: (
       <>
         <p>
@@ -312,7 +462,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
   },
   {
     id: "children",
-    title: "11. Children",
+    title: "12. Children",
     body: (
       <>
         <p>
@@ -325,7 +475,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
   },
   {
     id: "changes",
-    title: "12. Changes to this policy",
+    title: "13. Changes to this policy",
     body: (
       <>
         <p>
@@ -339,7 +489,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
   },
   {
     id: "contact",
-    title: "13. Contact",
+    title: "14. Contact",
     body: (
       <>
         <p>

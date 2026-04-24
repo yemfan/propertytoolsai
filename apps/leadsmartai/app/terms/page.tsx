@@ -18,7 +18,7 @@ import Link from "next/link";
  * governing law, where defaults vary materially by jurisdiction.
  */
 
-const LAST_UPDATED = "April 17, 2026";
+const LAST_UPDATED = "April 24, 2026";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -267,6 +267,27 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
           kvCORE, Twilio, SendGrid, Stripe, Google, Facebook, and others). Your use of
           those services is governed by their own terms and privacy policies. LeadSmart is
           not responsible for third-party services.
+        </p>
+        <p>
+          <strong>Gmail sync (optional).</strong> If you connect your Google
+          account, LeadSmart reads messages from your Gmail on a periodic
+          schedule and logs conversations with your CRM contacts. Our handling
+          of Gmail data is described in detail in section 5 of the{" "}
+          <Link href="/privacy#google-user-data" className="text-[#0072ce] hover:underline">
+            Privacy Policy
+          </Link>
+          , including the Google API Services User Data Policy Limited Use
+          disclosure. You can disconnect Gmail at any time from Settings, or
+          revoke access directly at{" "}
+          <a
+            href="https://myaccount.google.com/permissions"
+            className="text-[#0072ce] hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            myaccount.google.com/permissions
+          </a>
+          .
         </p>
       </>
     ),
