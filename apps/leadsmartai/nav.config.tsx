@@ -15,14 +15,23 @@ function navEmoji(emoji: string) {
 /**
  * LeadSmart AI — agent portal sidebar.
  *
- * Groups:
+ * Organized around the agent's workflow stages rather than a generic
+ * CRM taxonomy, so "what am I doing right now?" maps cleanly to one
+ * section.
+ *
+ * Sections:
  *   Home        — daily overview
- *   CRM         — contacts (unified leads+sphere via Smart Lists), tasks, calendar
+ *   Leads       — prospecting + ops (contacts, queue, tasks, calendar)
+ *   Deals       — active-deal execution (showings → offers → transactions)
+ *   Listings    — listing-side output (presentations, open houses, reports)
  *   Communicate — inbox, drafts, templates, marketing plans
- *   Tools       — property analysis, presentations, reports, open houses
+ *   Workflow    — property tools + playbooks
  *   Insights    — performance, growth
  *   Account     — settings, billing, profile, support
  *   Admin       — role-gated platform management
+ *
+ * No URL changes in this reshape — only re-parenting of existing
+ * items + two new section labels.
  */
 const navConfig = {
   id: "leadsmart",
@@ -36,12 +45,18 @@ const navConfig = {
       icon: navEmoji("🏠"),
     },
 
-    /* ── CRM ── */
+    /* ── Leads ── daily prospecting + ops ── */
     {
-      label: "CRM",
+      label: "Leads",
       defaultOpen: true,
       icon: navEmoji("👥"),
       items: [
+        {
+          label: "Lead Queue",
+          href: "/dashboard/lead-queue",
+          match: ["/dashboard/lead-queue"],
+          icon: navEmoji("📋"),
+        },
         {
           // Unified people hub — Smart Lists inside this page segment into
           // Leads, Sphere, All. Old /dashboard/leads and /dashboard/sphere
@@ -56,17 +71,26 @@ const navConfig = {
           icon: navEmoji("👥"),
         },
         {
-          label: "Lead Queue",
-          href: "/dashboard/lead-queue",
-          match: ["/dashboard/lead-queue"],
-          icon: navEmoji("📋"),
-        },
-        {
           label: "Tasks",
           href: "/dashboard/tasks",
           match: ["/dashboard/tasks"],
           icon: navEmoji("✅"),
         },
+        {
+          label: "Calendar",
+          href: "/dashboard/calendar",
+          match: ["/dashboard/calendar"],
+          icon: navEmoji("📅"),
+        },
+      ],
+    },
+
+    /* ── Deals ── active-deal execution ── */
+    {
+      label: "Deals",
+      defaultOpen: true,
+      icon: navEmoji("🔑"),
+      items: [
         {
           // Buyer-side property-visit tracker: schedule + feedback capture.
           // See apps/leadsmartai/lib/showings.
@@ -91,11 +115,31 @@ const navConfig = {
           match: ["/dashboard/transactions"],
           icon: navEmoji("🔑"),
         },
+      ],
+    },
+
+    /* ── Listings ── listing-side output ── */
+    {
+      label: "Listings",
+      icon: navEmoji("🏷️"),
+      items: [
         {
-          label: "Calendar",
-          href: "/dashboard/calendar",
-          match: ["/dashboard/calendar"],
-          icon: navEmoji("📅"),
+          label: "Presentations",
+          href: "/dashboard/seller-presentation",
+          match: ["/dashboard/seller-presentation", "/dashboard/presentations"],
+          icon: navEmoji("📊"),
+        },
+        {
+          label: "Open Houses",
+          href: "/dashboard/open-houses",
+          match: ["/dashboard/open-houses", "/dashboard/open-house"],
+          icon: navEmoji("🏠"),
+        },
+        {
+          label: "Reports",
+          href: "/dashboard/reports",
+          match: ["/dashboard/reports", "/dashboard/comparison-report"],
+          icon: navEmoji("📄"),
         },
       ],
     },
@@ -103,7 +147,6 @@ const navConfig = {
     /* ── Communicate ── */
     {
       label: "Communicate",
-      defaultOpen: true,
       icon: navEmoji("💬"),
       items: [
         {
@@ -133,9 +176,9 @@ const navConfig = {
       ],
     },
 
-    /* ── Tools ── */
+    /* ── Workflow ── property tools + playbooks ── */
     {
-      label: "Tools",
+      label: "Workflow",
       icon: navEmoji("🧰"),
       items: [
         {
@@ -143,24 +186,6 @@ const navConfig = {
           href: "/dashboard/tools",
           match: ["/dashboard/tools"],
           icon: navEmoji("🏡"),
-        },
-        {
-          label: "Presentations",
-          href: "/dashboard/seller-presentation",
-          match: ["/dashboard/seller-presentation", "/dashboard/presentations"],
-          icon: navEmoji("📊"),
-        },
-        {
-          label: "Reports",
-          href: "/dashboard/reports",
-          match: ["/dashboard/reports", "/dashboard/comparison-report"],
-          icon: navEmoji("📄"),
-        },
-        {
-          label: "Open Houses",
-          href: "/dashboard/open-houses",
-          match: ["/dashboard/open-houses", "/dashboard/open-house"],
-          icon: navEmoji("🏠"),
         },
         {
           label: "Playbooks",
