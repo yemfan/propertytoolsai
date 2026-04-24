@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { getOpportunities } from "@/lib/growth/opportunitiesService";
 import { canUseAiAction } from "@/lib/entitlements/accessResult";
-import { incrementUsage } from "@/lib/entitlements/usage";
+import { consumeAiToken } from "@/lib/entitlements/consumeAiToken";
 
 export const runtime = "nodejs";
 // Cold generation takes 10-20s for the Claude call; the default 10s
@@ -29,7 +29,7 @@ export async function GET() {
         : true;
     if (!fromCache) {
       try {
-        await incrementUsage(userId, "ai_actions_used");
+        await consumeAiToken(userId);
       } catch (usageErr) {
         console.warn("[growth/opportunities GET] usage increment failed:", usageErr);
       }
@@ -57,7 +57,7 @@ export async function POST() {
 
     const result = await getOpportunities(String(agentId), { forceRefresh: true });
     try {
-      await incrementUsage(userId, "ai_actions_used");
+      await consumeAiToken(userId);
     } catch (usageErr) {
       console.warn("[growth/opportunities POST] usage increment failed:", usageErr);
     }

@@ -5,7 +5,7 @@ import {
   regenerateDealReview,
 } from "@/lib/deal-review/service";
 import { canUseAiAction } from "@/lib/entitlements/accessResult";
-import { incrementUsage } from "@/lib/entitlements/usage";
+import { consumeAiToken } from "@/lib/entitlements/consumeAiToken";
 
 export const runtime = "nodejs";
 // Claude cold generation runs 10-30s. Cached reads return in milliseconds.
@@ -51,7 +51,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
             aiQuotaResult: check,
           });
         }
-        await incrementUsage(userId, "ai_actions_used");
+        await consumeAiToken(userId);
       } catch (usageErr) {
         console.warn("[deal-review GET] usage increment failed:", usageErr);
       }
@@ -84,7 +84,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     if (!result) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
 
     try {
-      await incrementUsage(userId, "ai_actions_used");
+      await consumeAiToken(userId);
     } catch (usageErr) {
       console.warn("[deal-review POST] usage increment failed:", usageErr);
     }

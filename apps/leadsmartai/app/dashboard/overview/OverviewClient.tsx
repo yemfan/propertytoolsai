@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { UsageMeter } from "@/components/dashboard/UsageMeter";
+import { ReferAFriendCard } from "@/components/referrals/ReferAFriendCard";
 
 type Stats = { totalLeads: number; hotLeads: number; messagesSent: number; inactiveLeads: number };
 type TaskItem = { id: string; title: string; status: string; priority: string; due_at: string | null; lead_name: string | null };
@@ -198,6 +199,9 @@ export default function OverviewClient({ greetingName, planType }: { greetingNam
 
       {/* Plan Usage */}
       <UsageMeter />
+
+      {/* "Like it?" referral CTA */}
+      <ReferAFriendCard />
     </div>
   );
 }

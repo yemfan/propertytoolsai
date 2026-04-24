@@ -2,6 +2,7 @@ import "server-only";
 
 import { PRODUCT_LEADSMART_AGENT } from "./product";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { grantReferralBonusIfPending } from "@/lib/referrals/service";
 
 /**
  * Idempotently ensure a user has an active LeadSmart AI Agent Starter
@@ -65,9 +66,9 @@ export async function ensureStarterEntitlement(
       alerts_level: "basic",
       reports_download_level: "limited",
       team_access: false,
-      // Starter gets a small monthly AI allowance so users can taste
-      // the AI features before upgrading — see planCatalog.
-      ai_actions_per_month: 10,
+      // Starter's monthly AI token allowance — see planCatalog for
+      // the canonical numbers + per-tier UI copy.
+      ai_actions_per_month: 100,
       source: "auto_starter_on_inactive",
       starts_at: now,
       updated_at: now,
@@ -79,6 +80,22 @@ export async function ensureStarterEntitlement(
   }
 
   await syncUserRowToActive(userId, { plan: "starter" });
+
+  // This is the moment the user "becomes real" — Starter plan
+  // assigned, subscription_status flipped to active. If they came
+  // in via a referral link, credit both them and the referrer now.
+  // Idempotent (bonus_granted_at guard) so it's safe to call on
+  // every retry/resume.
+  try {
+    await grantReferralBonusIfPending(userId);
+  } catch (err) {
+    // Best-effort — don't block Starter activation on referral
+    // bookkeeping failures.
+    console.warn(
+      "[ensureStarterEntitlement] grantReferralBonusIfPending failed:",
+      err instanceof Error ? err.message : err,
+    );
+  }
 
   return { changed: true, reason: "assigned starter" };
 }

@@ -14,6 +14,7 @@ import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
 import { resolveRoleHomePath } from "@/lib/rolePortalPaths";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { formatUsPhoneInput, formatUsPhoneStored, isValidUsPhone } from "@/lib/usPhone";
+import { consumeStashedReferralCode } from "@/components/referrals/ReferralCodeCapture";
 
 export default function CompleteProfilePage() {
   return (
@@ -149,6 +150,24 @@ function CompleteProfileInner() {
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) {
         throw new Error(json.error || "Could not save profile");
+      }
+
+      // Redeem a referral code if one was stashed from `?ref=CODE` on
+      // an earlier visit. Failures here are logged but not fatal — the
+      // user's onboarding finishes either way; the referrer just
+      // misses their bonus.
+      const refCode = consumeStashedReferralCode();
+      if (refCode) {
+        try {
+          await fetch("/api/referrals/redeem", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: refCode }),
+          });
+        } catch (referralErr) {
+          console.warn("referral redemption failed:", referralErr);
+        }
       }
 
       const meRes = await fetch("/api/me", { credentials: "include" });

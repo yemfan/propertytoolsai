@@ -10,6 +10,7 @@ import {
   canUseAiAction,
 } from "@/lib/entitlements/accessResult";
 import { incrementUsage } from "@/lib/entitlements/usage";
+import { consumeAiToken } from "@/lib/entitlements/consumeAiToken";
 
 const consumeUsageSchema = z.object({
   action: z.enum([
@@ -117,7 +118,8 @@ export async function POST(req: Request) {
             { status: 403 }
           );
         }
-        await incrementUsage(user.id, "ai_actions_used");
+        // Consumes from bonus_tokens first, then the monthly counter.
+        await consumeAiToken(user.id);
         break;
       }
 
