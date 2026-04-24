@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { LimitWarningBanner } from "@/components/entitlements/LimitWarningBanner";
 
 type QueueLead = {
   id: number | string;
@@ -104,6 +105,10 @@ export function LeadQueueClient() {
           Refresh
         </button>
       </div>
+
+      {/* Shows only when the agent is at/near their max-leads cap —
+          claiming more from the queue will be blocked otherwise. */}
+      <LimitWarningBanner action="add_lead" />
 
       {feedback && (
         <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-sm text-blue-800">
