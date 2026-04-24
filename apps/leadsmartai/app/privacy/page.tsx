@@ -285,10 +285,10 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
             <strong>Delete stored messages</strong> — remove individual
             messages from a contact&apos;s timeline, or email{" "}
             <a
-              href="mailto:support@leadsmart-ai.com"
+              href="mailto:contact@leadsmart-ai.com"
               className="text-[#0072ce] hover:underline"
             >
-              support@leadsmart-ai.com
+              contact@leadsmart-ai.com
             </a>{" "}
             to purge all Gmail-synced content from your account.
           </li>
@@ -410,10 +410,10 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
         <p>
           To exercise any of these rights, email{" "}
           <a
-            href="mailto:support@leadsmart-ai.com"
+            href="mailto:contact@leadsmart-ai.com"
             className="text-[#0072ce] hover:underline"
           >
-            support@leadsmart-ai.com
+            contact@leadsmart-ai.com
           </a>
           . We will respond within the timeframes required by applicable law.
         </p>
@@ -495,10 +495,10 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
         <p>
           Questions about this Privacy Policy can be directed to{" "}
           <a
-            href="mailto:support@leadsmart-ai.com"
+            href="mailto:contact@leadsmart-ai.com"
             className="text-[#0072ce] hover:underline"
           >
-            support@leadsmart-ai.com
+            contact@leadsmart-ai.com
           </a>
           .
         </p>

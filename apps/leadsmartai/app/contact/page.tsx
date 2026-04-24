@@ -25,7 +25,7 @@ export default function ContactPage() {
           url: "https://leadsmart-ai.com/contact",
           name: "LeadSmart AI Contact",
           availableLanguage: ["en"],
-          email: "support@leadsmart-ai.com",
+          email: "contact@leadsmart-ai.com",
         }}
       />
       <div className="text-center">
@@ -86,10 +86,10 @@ export default function ContactPage() {
               </div>
             </div>
             <a
-              href="mailto:support@leadsmart-ai.com"
+              href="mailto:contact@leadsmart-ai.com"
               className="mt-3 block text-sm font-medium text-[#0072ce] hover:underline"
             >
-              support@leadsmart-ai.com
+              contact@leadsmart-ai.com
             </a>
           </div>
 
