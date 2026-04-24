@@ -37,8 +37,9 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
         <p>
           These Terms of Service (&ldquo;Terms&rdquo;) govern your access to and use of
           leadsmart-ai.com and the LeadSmart AI Service (the &ldquo;Service&rdquo;)
-          provided by LeadSmart AI (&ldquo;LeadSmart,&rdquo; &ldquo;we,&rdquo;
-          &ldquo;us,&rdquo; or &ldquo;our&rdquo;). By creating an account, starting a
+          provided by MAXY Investment Inc., a Texas corporation, doing business as
+          LeadSmart AI (&ldquo;LeadSmart,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo;
+          or &ldquo;our&rdquo;). By creating an account, starting a
           trial, or otherwise using the Service, you agree to these Terms and our{" "}
           <Link href="/privacy" className="text-[#0072ce] hover:underline">
             Privacy Policy
@@ -434,16 +435,79 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
     body: (
       <>
         <p>
-          [REQUIRES LEGAL REVIEW] These Terms are governed by the laws of{" "}
-          <span className="italic">[State / jurisdiction — confirm with counsel]</span>,
-          without regard to conflict-of-laws principles. Any dispute will be resolved in
-          the state or federal courts located in{" "}
-          <span className="italic">[venue — confirm with counsel]</span>, except that
-          either party may seek injunctive relief in any court of competent jurisdiction.
+          These Terms are governed by the laws of the State of Texas, without
+          regard to its conflict-of-laws principles. The United Nations
+          Convention on Contracts for the International Sale of Goods does not
+          apply.
         </p>
+
+        <p className="font-semibold text-slate-900">Binding individual arbitration</p>
         <p>
-          [REQUIRES LEGAL REVIEW] Consider adding an arbitration clause + class-action
-          waiver, and confirm it is enforceable in the target jurisdictions.
+          Any dispute, claim, or controversy arising out of or relating to these
+          Terms or the Service (a &ldquo;Dispute&rdquo;) will be resolved by{" "}
+          <strong>binding individual arbitration</strong> administered by the
+          American Arbitration Association (AAA) under its Commercial
+          Arbitration Rules and Consumer Arbitration Rules where applicable.
+          The arbitration will be conducted by a single arbitrator. The seat of
+          arbitration is Texas, and proceedings may be conducted in person, by
+          video, or on the documents at the arbitrator&rsquo;s discretion. The
+          arbitrator&apos;s award is final and may be entered as a judgment in
+          any court of competent jurisdiction.
+        </p>
+
+        <p className="font-semibold text-slate-900">Class-action waiver</p>
+        <p>
+          You and LeadSmart agree that any Dispute will be brought only in an
+          individual capacity. <strong>Neither you nor LeadSmart will bring,
+          consolidate, or participate in any class, collective, or
+          representative action.</strong> The arbitrator may not consolidate
+          claims of more than one person and may not preside over any form of a
+          representative proceeding. If this class-action waiver is held
+          unenforceable as to any specific claim, that claim (and only that
+          claim) will be severed and proceed in court; the remainder of this
+          section continues to apply.
+        </p>
+
+        <p className="font-semibold text-slate-900">Carve-outs from arbitration</p>
+        <p>The arbitration agreement does not apply to:</p>
+        <ul>
+          <li>
+            small-claims court actions filed in either party&rsquo;s home
+            jurisdiction within the small-claims limit;
+          </li>
+          <li>
+            either party seeking injunctive or other equitable relief in a
+            court of competent jurisdiction to prevent actual or threatened
+            infringement, misappropriation, or violation of intellectual
+            property rights, confidentiality, or unauthorized access; or
+          </li>
+          <li>
+            actions to compel arbitration or enforce an arbitration award.
+          </li>
+        </ul>
+
+        <p className="font-semibold text-slate-900">Court venue (where arbitration does not apply)</p>
+        <p>
+          Where a Dispute is not subject to arbitration under the carve-outs
+          above, you and LeadSmart agree to exclusive personal jurisdiction
+          and venue in the state and federal courts located in Texas, except
+          that either party may seek injunctive relief in any court of
+          competent jurisdiction.
+        </p>
+
+        <p className="font-semibold text-slate-900">30-day opt-out</p>
+        <p>
+          You may opt out of this arbitration agreement by emailing{" "}
+          <a
+            href="mailto:contact@leadsmart-ai.com"
+            className="text-[#0072ce] hover:underline"
+          >
+            contact@leadsmart-ai.com
+          </a>{" "}
+          within 30 days of first creating your LeadSmart account. The
+          notice must include your name, the email associated with your
+          account, and the words &ldquo;Arbitration Opt-Out.&rdquo; Opting
+          out does not affect the rest of these Terms.
         </p>
       </>
     ),
