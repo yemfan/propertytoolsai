@@ -180,11 +180,6 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
             and analogous laws in your jurisdiction.
           </li>
           <li>
-            Agree that LeadSmart acts on your behalf as a messaging vendor and that you
-            remain the &ldquo;sender&rdquo; for CAN-SPAM and the caller/texter for TCPA
-            purposes, unless we expressly agree otherwise in writing.
-          </li>
-          <li>
             Honor opt-outs immediately. We automatically suppress STOP / UNSUBSCRIBE /
             HELP requests for numbers and addresses on your account, but you remain
             responsible for wider compliance across channels.
@@ -194,9 +189,39 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
             from content you cause the Service to send.
           </li>
         </ul>
+        <p className="font-semibold text-slate-900">10DLC brand and sender allocation</p>
         <p>
-          [REQUIRES LEGAL REVIEW] Confirm the allocation of sender / caller responsibility
-          between LeadSmart and the customer — varies depending on 10DLC brand setup.
+          LeadSmart operates the SMS sending infrastructure under its own
+          registered 10DLC brand and campaign with The Campaign Registry
+          (TCR). For purposes of the laws listed above, Customer is the
+          &ldquo;caller&rdquo; under the TCPA and the &ldquo;sender&rdquo; under
+          CAN-SPAM. That means:
+        </p>
+        <ul>
+          <li>
+            <strong>Customer is responsible for</strong> obtaining and
+            documenting prior express written consent from each recipient,
+            for the content of every message, and for accurate identification
+            of itself as the sender.
+          </li>
+          <li>
+            <strong>LeadSmart is responsible for</strong> carrier registration
+            and brand maintenance, throughput compliance, opt-out automation
+            (STOP / UNSUBSCRIBE / HELP across English and Chinese keyword
+            sets), and rate-limit enforcement at the platform level.
+          </li>
+        </ul>
+        <p>
+          Enterprise customers may elect to bring their own 10DLC brand and
+          campaign for a separate legal identity or higher throughput tier;
+          contact{" "}
+          <a
+            href="mailto:contact@leadsmart-ai.com"
+            className="text-[#0072ce] hover:underline"
+          >
+            contact@leadsmart-ai.com
+          </a>{" "}
+          to discuss.
         </p>
       </>
     ),

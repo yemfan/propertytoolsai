@@ -362,9 +362,17 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
           </li>
         </ul>
         <p>
-          [REQUIRES LEGAL REVIEW] Confirm whether the product signup flow captures written
-          consent that transfers responsibility to LeadSmart for sending messages, or
-          whether the agent / operator remains the sole obligor.
+          For 10DLC sender / caller allocation: LeadSmart maintains a registered
+          10DLC brand and campaign with The Campaign Registry (TCR) and operates
+          the SMS sending infrastructure as the messaging vendor. You remain the
+          &ldquo;caller&rdquo; under the TCPA and the &ldquo;sender&rdquo; under
+          the CAN-SPAM Act, which means consent capture and message content are
+          your responsibility. Section 6 of the{" "}
+          <Link href="/terms#sms-email-compliance" className="text-[#0072ce] hover:underline">
+            Terms of Service
+          </Link>{" "}
+          spells this out in detail, including the option to bring your own
+          10DLC brand for enterprise use cases.
         </p>
       </>
     ),
