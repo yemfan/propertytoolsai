@@ -1149,3 +1149,241 @@ export async function upsertMobileShowingFeedback(
   }
   return { ok: true, feedback: res.data.feedback };
 }
+
+// ── Offers ────────────────────────────────────────────────────────
+//
+// Mobile mirrors of /api/mobile/offers/*. Like the showings types,
+// these declare the wire shape inline because @leadsmart/shared
+// doesn't have offer DTOs yet — keep in sync with
+// apps/leadsmartai/lib/offers/types.ts.
+
+export type MobileOfferStatus =
+  | "draft"
+  | "submitted"
+  | "countered"
+  | "accepted"
+  | "rejected"
+  | "withdrawn"
+  | "expired";
+
+export type MobileFinancingType =
+  | "cash"
+  | "conventional"
+  | "fha"
+  | "va"
+  | "jumbo"
+  | "other";
+
+export type MobileCounterDirection = "seller_to_buyer" | "buyer_to_seller";
+
+export type MobileOfferRow = {
+  id: string;
+  agent_id: string;
+  contact_id: string;
+  showing_id: string | null;
+  transaction_id: string | null;
+  property_address: string;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  mls_number: string | null;
+  mls_url: string | null;
+  list_price: number | null;
+  offer_price: number;
+  earnest_money: number | null;
+  down_payment: number | null;
+  financing_type: MobileFinancingType | null;
+  closing_date_proposed: string | null;
+  inspection_contingency: boolean;
+  appraisal_contingency: boolean;
+  loan_contingency: boolean;
+  contingency_notes: string | null;
+  status: MobileOfferStatus;
+  current_price: number | null;
+  offer_expires_at: string | null;
+  submitted_at: string | null;
+  accepted_at: string | null;
+  closed_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MobileOfferListItem = MobileOfferRow & {
+  contact_name: string | null;
+  counter_count: number;
+};
+
+export type MobileOfferCounterRow = {
+  id: string;
+  offer_id: string;
+  counter_number: number;
+  direction: MobileCounterDirection;
+  price: number | null;
+  changed_fields: Record<string, unknown> | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type MobileOfferDetail = {
+  offer: MobileOfferRow;
+  counters: MobileOfferCounterRow[];
+  contactName: string | null;
+};
+
+export type MobileOfferStatusFilter =
+  | MobileOfferStatus
+  | "active"
+  | "won"
+  | "lost"
+  | "all";
+
+export async function fetchMobileOffers(opts?: {
+  contactId?: string;
+  status?: MobileOfferStatusFilter;
+}): Promise<({ ok: true } & { offers: MobileOfferListItem[] }) | MobileApiFailure> {
+  const q = new URLSearchParams();
+  if (opts?.contactId) q.set("contactId", opts.contactId);
+  if (opts?.status) q.set("status", opts.status);
+  const path = q.toString()
+    ? `${MOBILE_API_PATHS.offers}?${q.toString()}`
+    : MOBILE_API_PATHS.offers;
+  const res = await mobileGet<{ offers?: MobileOfferListItem[] }>(path);
+  if (res.ok === false) return res;
+  return { ok: true, offers: res.data.offers ?? [] };
+}
+
+export async function fetchMobileOfferDetail(
+  id: string,
+): Promise<({ ok: true } & MobileOfferDetail) | MobileApiFailure> {
+  const res = await mobileGet<{
+    offer?: MobileOfferRow;
+    counters?: MobileOfferCounterRow[];
+    contactName?: string | null;
+  }>(MOBILE_API_PATHS.offer(id));
+  if (res.ok === false) return res;
+  if (!res.data.offer) {
+    return { ok: false, status: 404, message: "Offer not found" };
+  }
+  return {
+    ok: true,
+    offer: res.data.offer,
+    counters: res.data.counters ?? [],
+    contactName: res.data.contactName ?? null,
+  };
+}
+
+export type MobileCreateOfferInput = {
+  contactId: string;
+  propertyAddress: string;
+  offerPrice: number;
+  showingId?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  mlsNumber?: string | null;
+  listPrice?: number | null;
+  earnestMoney?: number | null;
+  downPayment?: number | null;
+  financingType?: MobileFinancingType | null;
+  closingDateProposed?: string | null;
+  inspectionContingency?: boolean;
+  appraisalContingency?: boolean;
+  loanContingency?: boolean;
+  contingencyNotes?: string | null;
+  offerExpiresAt?: string | null;
+  notes?: string | null;
+  /** When true, the offer is created as `submitted` (stamps submitted_at). */
+  submitNow?: boolean;
+};
+
+export async function createMobileOffer(
+  input: MobileCreateOfferInput,
+): Promise<({ ok: true } & { offer: MobileOfferRow }) | MobileApiFailure> {
+  const res = await mobilePost<{ offer?: MobileOfferRow }>(
+    MOBILE_API_PATHS.offers,
+    input as unknown as Record<string, unknown>,
+  );
+  if (res.ok === false) return res;
+  if (!res.data.offer) {
+    return { ok: false, status: 500, message: "Create offer returned no row" };
+  }
+  return { ok: true, offer: res.data.offer };
+}
+
+export type MobileUpdateOfferInput = Partial<{
+  property_address: string;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  mls_number: string | null;
+  list_price: number | null;
+  offer_price: number;
+  earnest_money: number | null;
+  down_payment: number | null;
+  financing_type: MobileFinancingType | null;
+  closing_date_proposed: string | null;
+  inspection_contingency: boolean;
+  appraisal_contingency: boolean;
+  loan_contingency: boolean;
+  contingency_notes: string | null;
+  status: MobileOfferStatus;
+  current_price: number | null;
+  offer_expires_at: string | null;
+  notes: string | null;
+}>;
+
+export async function updateMobileOffer(
+  id: string,
+  patch: MobileUpdateOfferInput,
+): Promise<({ ok: true } & { offer: MobileOfferRow }) | MobileApiFailure> {
+  const res = await mobilePatch<{ offer?: MobileOfferRow }>(
+    MOBILE_API_PATHS.offer(id),
+    patch as Record<string, unknown>,
+  );
+  if (res.ok === false) return res;
+  if (!res.data.offer) {
+    return { ok: false, status: 500, message: "Update offer returned no row" };
+  }
+  return { ok: true, offer: res.data.offer };
+}
+
+export async function addMobileOfferCounter(
+  offerId: string,
+  input: {
+    direction: MobileCounterDirection;
+    price?: number | null;
+    notes?: string | null;
+    changedFields?: Record<string, unknown> | null;
+  },
+): Promise<({ ok: true } & { counter: MobileOfferCounterRow }) | MobileApiFailure> {
+  const res = await mobilePost<{ counter?: MobileOfferCounterRow }>(
+    MOBILE_API_PATHS.offerCounters(offerId),
+    {
+      direction: input.direction,
+      price: input.price ?? null,
+      notes: input.notes ?? null,
+      changedFields: input.changedFields ?? null,
+    },
+  );
+  if (res.ok === false) return res;
+  if (!res.data.counter) {
+    return { ok: false, status: 500, message: "Counter save returned no row" };
+  }
+  return { ok: true, counter: res.data.counter };
+}
+
+export async function convertMobileOfferToTransaction(
+  offerId: string,
+  opts?: { mutualAcceptanceDate?: string | null },
+): Promise<({ ok: true } & { transaction: { id: string } }) | MobileApiFailure> {
+  const res = await mobilePost<{ transaction?: { id: string } }>(
+    MOBILE_API_PATHS.offerConvert(offerId),
+    { mutualAcceptanceDate: opts?.mutualAcceptanceDate ?? null },
+  );
+  if (res.ok === false) return res;
+  if (!res.data.transaction || typeof res.data.transaction.id !== "string") {
+    return { ok: false, status: 500, message: "Convert returned no transaction" };
+  }
+  return { ok: true, transaction: { id: res.data.transaction.id } };
+}

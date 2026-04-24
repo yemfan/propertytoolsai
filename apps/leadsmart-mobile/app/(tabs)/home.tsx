@@ -230,7 +230,7 @@ export default function HomeScreen() {
           </View>
           <SectionRule color={tokens.border} />
           <View style={styles.chipRow}>
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: 7 }).map((_, i) => (
               <Skeleton
                 key={i}
                 width={88}
@@ -349,6 +349,12 @@ export default function HomeScreen() {
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
             <Text style={styles.chipText}>Showings</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/offers")}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>Offers</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/notifications")}

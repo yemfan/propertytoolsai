@@ -316,6 +316,36 @@ export default function ShowingDetailScreen() {
           </View>
           {statusError ? <Text style={styles.inlineError}>{statusError}</Text> : null}
 
+          {/* Draft offer CTA — surfaced once the showing is attended (or any
+              feedback row exists). Saves the agent from hunting for the
+              Offers tab when the buyer just said "I want to write on this." */}
+          {(showing.status === "attended" || feedback != null) ? (
+            <Pressable
+              onPress={() => {
+                hapticButtonPress();
+                router.push({
+                  pathname: "/offers/new",
+                  params: {
+                    contactId: showing.contact_id,
+                    contactName: contactName ?? "",
+                    showingId: showing.id,
+                    propertyAddress: showing.property_address,
+                    city: showing.city ?? "",
+                    state: showing.state ?? "",
+                    zip: showing.zip ?? "",
+                    mlsNumber: showing.mls_number ?? "",
+                  },
+                });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Draft an offer for this property"
+              style={({ pressed }) => [styles.draftOfferBtn, pressed && styles.draftOfferBtnPressed]}
+            >
+              <Ionicons name="document-text" size={16} color={tokens.textOnAccent} />
+              <Text style={styles.draftOfferBtnText}>Draft offer for this property</Text>
+            </Pressable>
+          ) : null}
+
           {/* Quick contact actions */}
           <View style={styles.quickRow}>
             <ContactActionButton
@@ -676,6 +706,19 @@ function createStyles(t: ThemeTokens) {
       gap: 8,
       marginTop: 16,
     },
+    draftOfferBtn: {
+      marginTop: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: t.successButton,
+      minHeight: 44,
+    },
+    draftOfferBtnPressed: { opacity: 0.85 },
+    draftOfferBtnText: { fontSize: 14, fontWeight: "700", color: t.textOnAccent },
     quickBtn: {
       flex: 1,
       flexDirection: "row",
