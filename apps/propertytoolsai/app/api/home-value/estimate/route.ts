@@ -226,7 +226,15 @@ export async function POST(req: Request) {
       comps: compsMapped,
       recommendations: {
         type: result.intentInference.applied,
-        actions: result.recommendations.map((x) => x.title),
+        // Preserve href + reason so the client can render clickable
+        // CTAs. Previously this was `.map((x) => x.title)` which
+        // threw away the destination and left the Next Steps cards
+        // as inert blocks.
+        actions: result.recommendations.map((x) => ({
+          title: x.title,
+          href: x.href,
+          reason: x.reason,
+        })),
       },
       provider: {
         source: result.market.source ?? "pipeline",

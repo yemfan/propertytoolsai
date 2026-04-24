@@ -394,17 +394,23 @@ export function useHomeValueEstimate() {
     setHistory(getHomeValueHistory());
   }
 
-  const nextActions = useMemo(() => {
+  const nextActions = useMemo<
+    Array<string | { title: string; href?: string; reason?: string }>
+  >(() => {
     if (unlockResult?.report?.recommendations?.actions?.length) {
       return unlockResult.report.recommendations.actions;
     }
     if (estimateResult?.recommendations?.actions?.length) {
       return estimateResult.recommendations.actions;
     }
+    // Generic fallback — the backend normally returns richer
+    // intent-tailored suggestions (seller vs buyer vs investor) with
+    // actual destination hrefs. This triggers only when neither a
+    // fresh estimate nor a cached unlock has them.
     return [
-      "Get a detailed CMA report",
-      "Compare this home with recent local sales",
-      "Estimate mortgage affordability",
+      { title: "Get a detailed CMA report", href: "/smart-cma-builder" },
+      { title: "Compare this home with recent local sales", href: "/ai-property-comparison" },
+      { title: "Estimate mortgage affordability", href: "/affordability-calculator" },
     ];
   }, [unlockResult, estimateResult]);
 

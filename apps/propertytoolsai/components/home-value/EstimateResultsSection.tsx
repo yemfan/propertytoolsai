@@ -39,7 +39,9 @@ export function EstimateResultsSection({
   setDetails: React.Dispatch<React.SetStateAction<EstimateDetails>>;
   leadForm: LeadForm;
   setLeadForm: React.Dispatch<React.SetStateAction<LeadForm>>;
-  nextActions: string[];
+  nextActions: Array<
+    string | { title: string; href?: string; reason?: string }
+  >;
   onRefreshEstimate: () => void;
   onUnlockReport: () => void;
   unlockError?: string | null;

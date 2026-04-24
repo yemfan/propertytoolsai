@@ -96,7 +96,13 @@ export type EstimateResponse = {
   comps: EstimateComp[];
   recommendations?: {
     type?: string;
-    actions?: string[];
+    /**
+     * Each action is a CTA with a destination. Historically this was
+     * `string[]` (labels only), which made the buttons unclickable —
+     * see NextSteps. Keeping optional `href`/`reason` so older
+     * callers still work, but the UI should prefer href when present.
+     */
+    actions?: Array<{ title: string; href?: string; reason?: string }>;
   };
   provider?: {
     source: string;
@@ -123,7 +129,7 @@ export type UnlockReportResponse = {
     };
     recommendations?: {
       type?: string;
-      actions?: string[];
+      actions?: Array<{ title: string; href?: string; reason?: string }>;
     };
     pdfUrl?: string;
   };
