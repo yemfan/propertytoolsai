@@ -6,6 +6,7 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import { CsvImportModal } from "@/components/crm/CsvImportModal";
 import { SendPostcardModal } from "@/components/postcards/SendPostcardModal";
+import { LimitWarningBanner } from "@/components/entitlements/LimitWarningBanner";
 import { listOutboundEnabled, type LocaleId } from "@/lib/locales/registry";
 
 type LeadRow = {
@@ -236,6 +237,9 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
           <p className="text-sm text-gray-500">{leads.length} total contacts</p>
         </div>
       </div>
+
+      {/* Shows only when the agent is at/near their CRM contact cap. */}
+      <LimitWarningBanner action="add_contact" />
 
       {/* Charts */}
       {stats && (

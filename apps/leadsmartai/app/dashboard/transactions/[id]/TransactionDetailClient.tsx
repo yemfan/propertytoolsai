@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { DealReviewPanel } from "@/components/dashboard/DealReviewPanel";
 import { ListingFeedbackPanel } from "@/components/dashboard/ListingFeedbackPanel";
 import { PlaybooksPanel } from "@/components/dashboard/PlaybooksPanel";
+import { LimitWarningBanner } from "@/components/entitlements/LimitWarningBanner";
 import type {
   CounterpartyRole,
   TransactionCounterpartyRow,
@@ -240,9 +241,14 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
       />
 
       {/* AI deal review — only makes sense once the deal is closed.
-          Panel handles its own loading / cache / regenerate flow. */}
+          Panel handles its own loading / cache / regenerate flow.
+          Banner above warns the agent if they're running low on AI
+          tokens before they hit Regenerate. */}
       {txn.status === "closed" ? (
-        <DealReviewPanel transactionId={txn.id} />
+        <div className="space-y-3">
+          <LimitWarningBanner action="ai_action" />
+          <DealReviewPanel transactionId={txn.id} />
+        </div>
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
