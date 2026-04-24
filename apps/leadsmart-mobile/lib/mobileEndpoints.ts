@@ -42,4 +42,11 @@ export const MOBILE_API_PATHS = {
     `/api/mobile/offers/${encodeURIComponent(id)}/counters`,
   offerConvert: (id: string) =>
     `/api/mobile/offers/${encodeURIComponent(id)}/convert`,
+  transactions: "/api/mobile/transactions",
+  transaction: (id: string) =>
+    `/api/mobile/transactions/${encodeURIComponent(id)}`,
+  transactionTasks: (id: string) =>
+    `/api/mobile/transactions/${encodeURIComponent(id)}/tasks`,
+  transactionTask: (id: string, taskId: string) =>
+    `/api/mobile/transactions/${encodeURIComponent(id)}/tasks/${encodeURIComponent(taskId)}`,
 } as const;

@@ -212,12 +212,28 @@ export default function OfferDetailScreen() {
               return;
             }
             hapticSuccess();
+            // Pull fresh offer to surface the back-link (transaction_id),
+            // then deep-link into the new transaction so the agent lands
+            // on the deal pipeline view immediately. The Alert before this
+            // already explained what's about to happen — no second confirm.
+            refresh();
             Alert.alert(
               "Transaction created",
-              "The deal is now in your transactions list. Open it on the web to finish editing.",
+              "Open it now to finish setting deadlines and counterparties?",
+              [
+                { text: "Later", style: "cancel" },
+                {
+                  text: "Open transaction",
+                  style: "default",
+                  onPress: () => {
+                    router.push({
+                      pathname: "/transactions/[id]",
+                      params: { id: res.transaction.id },
+                    });
+                  },
+                },
+              ],
             );
-            // Pull fresh offer to surface the back-link (transaction_id).
-            refresh();
           },
         },
       ],
