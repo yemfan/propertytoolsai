@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import { CsvImportModal } from "@/components/crm/CsvImportModal";
+import { SendPostcardModal } from "@/components/postcards/SendPostcardModal";
 import { listOutboundEnabled, type LocaleId } from "@/lib/locales/registry";
 
 type LeadRow = {
@@ -119,6 +120,12 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
   const [addFields, setAddFields] = useState({ name: "", email: "", phone: "", property_address: "", notes: "" });
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+  const [postcardTarget, setPostcardTarget] = useState<{
+    contactId: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+  } | null>(null);
 
   const loadStats = useCallback(async () => {
     try {
@@ -483,10 +490,29 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                       </Link>
                       <Link
                         href={`/dashboard/transactions/new?contactId=${encodeURIComponent(c.id)}`}
-                        className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                        className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 mr-2"
                       >
                         Start deal
                       </Link>
+                      {/* Animated postcard — birthday / anniversary /
+                          seasonal / thinking-of-you. Opens in a modal
+                          so agents can use it on any contact, not just
+                          sphere-tagged ones. */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPostcardTarget({
+                            contactId: c.id,
+                            name: c.name ?? "",
+                            email: c.email,
+                            phone: c.phone,
+                          })
+                        }
+                        className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                        title="Send an animated postcard"
+                      >
+                        💌 Postcard
+                      </button>
                     </td>
                   </tr>
                 );
@@ -508,6 +534,17 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
         onClose={() => setCsvImportOpen(false)}
         onImported={() => window.location.reload()}
       />
+
+      {postcardTarget ? (
+        <SendPostcardModal
+          open={postcardTarget !== null}
+          onClose={() => setPostcardTarget(null)}
+          target={postcardTarget}
+          onSent={() => {
+            setActionMsg("Postcard sent ✓");
+          }}
+        />
+      ) : null}
     </div>
   );
 }
