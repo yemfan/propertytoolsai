@@ -1,10 +1,12 @@
 "use client";
 
 import AddressAutocomplete from "@/components/AddressAutocomplete";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ToolLeadGate } from "@/components/ToolLeadGate";
 import { SaveResultsButton } from "@/components/SaveResultsButton";
+import { buildSensitivityTables } from "@/lib/aiDealAnalyzer/sensitivity";
+import type { DealCommentary } from "@/lib/aiDealAnalyzer/types";
 
 type Inputs = {
   address: string;
@@ -192,6 +194,127 @@ function AiRealEstateDealAnalyzerPageInner() {
     };
   }, [inputs]);
 
+  // ── AI commentary ──────────────────────────────────────────────
+  // Debounce the Claude call by 1.2s of input idle time. Every call
+  // costs tokens; we don't want a user typing in the rent field to
+  // fire 10 requests. The fallback path is fast and deterministic
+  // so the UI has something to show while the AI call is in flight.
+  const [commentary, setCommentary] = useState<DealCommentary | null>(null);
+  const [commentaryLoading, setCommentaryLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestIdRef = useRef(0);
+
+  const fetchCommentary = useCallback(async () => {
+    const myRequestId = ++requestIdRef.current;
+    setCommentaryLoading(true);
+    try {
+      const res = await fetch("/api/ai-deal-analyzer/commentary", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          inputs: {
+            propertyAddress: inputs.address || null,
+            purchasePrice: inputs.purchasePrice,
+            bedrooms: inputs.bedrooms,
+            bathrooms: inputs.bathrooms,
+            squareFeet: inputs.squareFeet,
+            yearBuilt: inputs.yearBuilt,
+            downPaymentPercent: inputs.downPaymentPercent,
+            interestRate: inputs.interestRate,
+            loanTermYears: inputs.loanTermYears,
+            monthlyRent: inputs.monthlyRent,
+            otherIncome: inputs.otherIncome,
+            propertyTaxPercent: inputs.propertyTaxPercent,
+            insuranceMonthly: inputs.insuranceMonthly,
+            maintenancePercent: inputs.maintenancePercent,
+            managementPercent: inputs.managementPercent,
+            vacancyPercent: inputs.vacancyPercent,
+          },
+          metrics: results,
+        }),
+      });
+      const body = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        commentary?: DealCommentary;
+      } | null;
+      if (myRequestId !== requestIdRef.current) return; // stale
+      if (body?.ok && body.commentary) setCommentary(body.commentary);
+    } catch {
+      /* swallow — commentary panel handles the null case */
+    } finally {
+      if (myRequestId === requestIdRef.current) setCommentaryLoading(false);
+    }
+  }, [inputs, results]);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => void fetchCommentary(), 1200);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [fetchCommentary]);
+
+  // ── Sensitivity (pure math, no I/O) ────────────────────────────
+  const sensitivity = useMemo(
+    () =>
+      buildSensitivityTables({
+        propertyAddress: inputs.address || null,
+        purchasePrice: inputs.purchasePrice,
+        downPaymentPercent: inputs.downPaymentPercent,
+        interestRate: inputs.interestRate,
+        loanTermYears: inputs.loanTermYears,
+        monthlyRent: inputs.monthlyRent,
+        otherIncome: inputs.otherIncome,
+        propertyTaxPercent: inputs.propertyTaxPercent,
+        insuranceMonthly: inputs.insuranceMonthly,
+        maintenancePercent: inputs.maintenancePercent,
+        managementPercent: inputs.managementPercent,
+        vacancyPercent: inputs.vacancyPercent,
+      }),
+    [inputs],
+  );
+
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [specialistBooked, setSpecialistBooked] = useState(false);
+  async function onDownloadPdf() {
+    if (!commentary) return;
+    setDownloadingPdf(true);
+    try {
+      const { buildDealAnalyzerPdf } = await import("@/lib/aiDealAnalyzer/buildPdf");
+      const doc = buildDealAnalyzerPdf({
+        inputs: {
+          propertyAddress: inputs.address || null,
+          purchasePrice: inputs.purchasePrice,
+          bedrooms: inputs.bedrooms,
+          bathrooms: inputs.bathrooms,
+          squareFeet: inputs.squareFeet,
+          yearBuilt: inputs.yearBuilt,
+          downPaymentPercent: inputs.downPaymentPercent,
+          interestRate: inputs.interestRate,
+          loanTermYears: inputs.loanTermYears,
+          monthlyRent: inputs.monthlyRent,
+          otherIncome: inputs.otherIncome,
+          propertyTaxPercent: inputs.propertyTaxPercent,
+          insuranceMonthly: inputs.insuranceMonthly,
+          maintenancePercent: inputs.maintenancePercent,
+          managementPercent: inputs.managementPercent,
+          vacancyPercent: inputs.vacancyPercent,
+        },
+        metrics: results,
+        commentary,
+        sensitivity,
+      });
+      const fileBase = (inputs.address || "deal-analysis")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 40);
+      doc.save(`${fileBase || "deal-analysis"}-report.pdf`);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
+
   return (
     <div className="w-full max-w-6xl py-10">
       <Link
@@ -218,8 +341,9 @@ function AiRealEstateDealAnalyzerPageInner() {
         AI Real Estate Deal Analyzer
       </h1>
       <p className="text-gray-600 mb-8 max-w-3xl">
-        Analyze rental property investments instantly. Estimate cash flow,
-        cap rate, and ROI based on your assumptions.
+        Model a rental deal, then see an AI-written strategic read, stress-test
+        the numbers with sensitivity scenarios, and download a branded PDF
+        report.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -233,14 +357,30 @@ function AiRealEstateDealAnalyzerPageInner() {
         />
 
         <div className="space-y-6">
-          <ResultsPanel
-            inputs={inputs}
-            results={results}
-          />
-          <InvestmentSummary
-            results={results}
+          <ResultsPanel inputs={inputs} results={results} />
+          <AIDealCommentaryPanel
+            commentary={commentary}
+            loading={commentaryLoading}
           />
         </div>
+      </div>
+
+      <div className="mt-8">
+        <SensitivitySection sensitivity={sensitivity} />
+      </div>
+
+      <div className="mt-6 flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={() => void onDownloadPdf()}
+          disabled={!commentary || downloadingPdf}
+          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m-9 9h12a2 2 0 002-2V6a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+          {downloadingPdf ? "Generating…" : "Download PDF report"}
+        </button>
       </div>
 
       <div className="mt-6">
@@ -252,23 +392,41 @@ function AiRealEstateDealAnalyzerPageInner() {
         />
       </div>
 
-      <div className="mt-8">
-        <ToolLeadGate
-          tool="ai_deal_analyzer"
-          source="ai_real_estate_deal_analyzer"
-          intent="invest"
-          propertyAddress={inputs.address || undefined}
-          show={results.capRate > 0 || results.monthlyCashFlow !== 0}
-          title="Get Your Full Deal Analysis Report"
-          description="Unlock the complete investment analysis with AI-powered market context, sensitivity scenarios, and a shareable PDF."
-          benefits={[
-            "AI-powered deal score with market comps",
-            "Sensitivity analysis: how rates, rent, and vacancy change your return",
-            "Downloadable PDF report for lenders and partners",
-            "Connect with a local investment specialist",
-          ]}
-        />
-      </div>
+      {specialistBooked ? (
+        <div className="mt-8 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          <div className="flex items-start gap-3">
+            <span className="text-lg">✅</span>
+            <div>
+              <div className="font-semibold">Request received</div>
+              <p className="mt-1 text-emerald-800">
+                An investment specialist familiar with rentals like
+                {inputs.address ? ` ${inputs.address}` : " this one"} will
+                reach out within 24 hours. They&apos;ll have your deal
+                analysis on hand — no need to re-explain.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-8">
+          <ToolLeadGate
+            tool="ai_deal_analyzer"
+            source="ai_real_estate_deal_analyzer"
+            intent="invest"
+            propertyAddress={inputs.address || undefined}
+            show={results.capRate > 0 || results.monthlyCashFlow !== 0}
+            title="Talk to an investment specialist about this deal"
+            description="Get a 20-minute call with a local investor-focused agent. They'll walk your numbers, flag anything the AI missed, and tell you what comparable deals are closing for."
+            benefits={[
+              "20-min call with a local investor-focused agent",
+              "They already have your AI analysis — no re-explaining",
+              "Free — you only pay if you hire them",
+              "Usually reach out within 24 hours",
+            ]}
+            onUnlocked={() => setSpecialistBooked(true)}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -561,76 +719,196 @@ function ResultsPanel({ inputs, results }: ResultsPanelProps) {
   );
 }
 
-type InvestmentSummaryProps = {
-  results: CalculatedResults;
-};
-
-function InvestmentSummary({ results }: InvestmentSummaryProps) {
-  const { monthlyCashFlow, capRate, cashOnCashReturn } = results;
-
-  let summary = "";
-  const bullets: string[] = [];
-
-  if (monthlyCashFlow > 0) {
-    summary =
-      "This property appears to generate positive cash flow based on the assumptions provided.";
-  } else if (monthlyCashFlow < 0) {
-    summary =
-      "This property appears to generate negative cash flow under the current assumptions.";
-  } else {
-    summary =
-      "This property appears to break even on cash flow with the current assumptions.";
-  }
-
-  if (capRate >= 7) {
-    bullets.push(
-      "The cap rate is above average for many rental markets, suggesting a potentially strong income-producing asset."
-    );
-  } else if (capRate <= 4 && capRate > 0) {
-    bullets.push(
-      "The cap rate is relatively low, which may indicate a premium price, lower income, or a market focused more on appreciation than cash flow."
-    );
-  } else if (capRate === 0) {
-    bullets.push(
-      "Cap rate could not be calculated. Check your purchase price and NOI assumptions."
-    );
-  } else {
-    bullets.push(
-      "The cap rate is in a moderate range; compare it to similar properties in the same area for better context."
+/**
+ * AI commentary panel — shows the deal score, headline, strengths,
+ * risks, and suggested next moves. While Claude's response is in
+ * flight we keep the previous commentary visible with a subtle
+ * "updating…" badge so the panel doesn't flash empty on every
+ * keystroke.
+ */
+function AIDealCommentaryPanel({
+  commentary,
+  loading,
+}: {
+  commentary: DealCommentary | null;
+  loading: boolean;
+}) {
+  if (!commentary) {
+    return (
+      <div className="bg-white shadow-md rounded-lg p-6 text-sm text-gray-500">
+        {loading
+          ? "Analyzing this deal…"
+          : "Enter your deal inputs to see the AI analysis."}
+      </div>
     );
   }
 
-  if (cashOnCashReturn > 10) {
-    bullets.push(
-      "Cash-on-cash return looks strong relative to the amount of cash invested, given your current down payment assumptions."
-    );
-  } else if (cashOnCashReturn > 0 && cashOnCashReturn <= 5) {
-    bullets.push(
-      "Cash-on-cash return is modest. Consider whether appreciation or value-add improvements could justify the investment."
-    );
-  }
-
-  bullets.push(
-    "Investors should verify local rental demand, property condition, and market trends before making any final decision."
-  );
+  const score = commentary.dealScore;
+  const scoreColor =
+    score >= 70
+      ? "bg-emerald-500"
+      : score >= 50
+        ? "bg-amber-500"
+        : "bg-rose-500";
 
   return (
-    <div className="bg-white shadow-md rounded-lg p-6 space-y-3 text-sm text-gray-700">
-      <h2 className="text-lg font-semibold text-gray-900">
-        AI Investment Summary
-      </h2>
-      <p>{summary}</p>
-      <ul className="list-disc list-inside space-y-1">
-        {bullets.map((item, idx) => (
-          <li key={idx}>{item}</li>
-        ))}
-      </ul>
-      <p className="mt-2 text-xs text-gray-500">
-        This summary is generated from simple rules based on cash flow and
-        returns. It is not financial advice. Always perform full due
-        diligence or consult a professional advisor.
+    <div className="bg-white shadow-md rounded-lg p-6 space-y-4 text-sm text-gray-700">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900">
+              AI deal analysis
+            </h2>
+            {loading ? (
+              <span className="text-[11px] font-medium text-slate-400">
+                updating…
+              </span>
+            ) : null}
+            {!commentary.aiGenerated ? (
+              <span
+                className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600"
+                title="AI is temporarily unavailable; using rule-based fallback"
+              >
+                Offline mode
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1 font-medium text-slate-900">
+            {commentary.headline}
+          </p>
+        </div>
+        <div
+          className={`flex h-16 w-16 flex-col items-center justify-center rounded-lg ${scoreColor} text-white`}
+        >
+          <div className="text-xl font-bold leading-none">{score}</div>
+          <div className="text-[9px] uppercase tracking-wide opacity-90">score</div>
+        </div>
+      </div>
+
+      <p className="text-slate-700 leading-relaxed">{commentary.summary}</p>
+
+      {commentary.strengths.length ? (
+        <div>
+          <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+            Strengths
+          </h3>
+          <ul className="space-y-1 text-slate-700">
+            {commentary.strengths.map((s, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="text-emerald-600">✓</span>
+                <span>{s}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {commentary.risks.length ? (
+        <div>
+          <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-rose-700">
+            Risks
+          </h3>
+          <ul className="space-y-1 text-slate-700">
+            {commentary.risks.map((s, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="text-rose-600">⚠</span>
+                <span>{s}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {commentary.nextMoves.length ? (
+        <div>
+          <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+            Next moves
+          </h3>
+          <ul className="space-y-1 text-slate-700">
+            {commentary.nextMoves.map((s, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="text-blue-600">→</span>
+                <span>{s}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <p className="text-[11px] text-gray-400">
+        {commentary.aiGenerated
+          ? "Commentary generated by Claude based on your inputs. Not financial advice — verify with a local expert."
+          : "Commentary generated from deterministic rules (AI temporarily unavailable)."}
       </p>
     </div>
+  );
+}
+
+/**
+ * Sensitivity analysis tables — stress-test the deal by seeing how
+ * monthly cash flow / cap rate / CoC shift as rate, rent, and
+ * vacancy move around their base assumptions. Pure client-side math.
+ */
+function SensitivitySection({
+  sensitivity,
+}: {
+  sensitivity: ReturnType<typeof buildSensitivityTables>;
+}) {
+  return (
+    <section className="bg-white shadow-md rounded-lg p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Sensitivity analysis
+          </h2>
+          <p className="mt-1 text-sm text-gray-600">
+            What happens to this deal if rates, rents, or vacancy move? One
+            variable shifts at a time — everything else stays at your inputs.
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
+        {sensitivity.map((table) => (
+          <div key={table.axis} className="rounded-lg border border-slate-200">
+            <div className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-700">
+              {table.axisLabel}
+            </div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-slate-500">
+                  <th className="px-3 py-1.5 font-medium">Scenario</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Cash / mo</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Cap</th>
+                  <th className="px-3 py-1.5 text-right font-medium">CoC</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {table.cells.map((cell, i) => (
+                  <tr key={i} className="hover:bg-slate-50">
+                    <td className="px-3 py-1.5 text-slate-700">{cell.label}</td>
+                    <td
+                      className={`px-3 py-1.5 text-right font-medium tabular-nums ${
+                        cell.monthlyCashFlow >= 0
+                          ? "text-emerald-700"
+                          : "text-rose-700"
+                      }`}
+                    >
+                      ${Math.round(cell.monthlyCashFlow).toLocaleString()}
+                    </td>
+                    <td className="px-3 py-1.5 text-right tabular-nums text-slate-700">
+                      {cell.capRate.toFixed(1)}%
+                    </td>
+                    <td className="px-3 py-1.5 text-right tabular-nums text-slate-700">
+                      {cell.cashOnCashReturn.toFixed(1)}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

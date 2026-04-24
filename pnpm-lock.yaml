@@ -239,7 +239,7 @@ importers:
         version: 9.39.4(jiti@2.6.1)
       eslint-config-next:
         specifier: ^16.2.0
-        version: 16.2.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+        version: 16.2.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
       tsx:
         specifier: ^4.19.3
         version: 4.21.0
@@ -252,6 +252,9 @@ importers:
 
   apps/propertytoolsai:
     dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.73.0
+        version: 0.73.0(zod@4.3.6)
       '@axe-core/playwright':
         specifier: ^4.10.2
         version: 4.11.2(playwright-core@1.59.1)
@@ -381,7 +384,7 @@ importers:
         version: 9.39.4(jiti@2.6.1)
       eslint-config-next:
         specifier: ^16.2.0
-        version: 16.2.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+        version: 16.2.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
       tsx:
         specifier: ^4.19.3
         version: 4.21.0
@@ -1403,7 +1406,7 @@ packages:
 
   '@expo/bunyan@4.0.1':
     resolution: {integrity: sha512-+Lla7nYSiHZirgK+U/uYzsLv/X+HaJienbD5AKX1UQZHYfWaP+9uuQluRB4GrEVWF0GZ7vEVp/jzaOT9k/SQlg==}
-    engines: {'0': node >=0.10.0}
+    engines: {node: '>=0.10.0'}
 
   '@expo/cli@0.22.28':
     resolution: {integrity: sha512-lvt72KNitGuixYD2l3SZmRKVu2G4zJpmg5V7WfUBNpmUU5oODBw/6qmiJ6kSLAlfDozscUk+BBGknBBzxUrwrA==}
@@ -7015,6 +7018,12 @@ snapshots:
       json-schema-to-ts: 3.1.1
     optionalDependencies:
       zod: 3.25.76
+
+  '@anthropic-ai/sdk@0.73.0(zod@4.3.6)':
+    dependencies:
+      json-schema-to-ts: 3.1.1
+    optionalDependencies:
+      zod: 4.3.6
 
   '@axe-core/playwright@4.11.2(playwright-core@1.59.1)':
     dependencies:
