@@ -173,6 +173,21 @@ export function AiSmsModal({
     el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
+  // ── Safety read on the latest inbound message ───────────────
+  // STOP-keywords (TCPA opt-out) hard-block both AI drafting and
+  // hand-typed sending. Crisis/escalation language only blocks AI
+  // drafting; the agent can still reply by hand. We compute these
+  // client-side so the UI can surface a banner immediately, and
+  // also rely on the server to enforce the same rules.
+  const lastInbound = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].direction === "inbound") return messages[i];
+    }
+    return null;
+  })();
+  const optedOut = lastInbound ? isStopKeyword(lastInbound.body) : false;
+  const needsHuman = lastInbound ? isEscalationLanguage(lastInbound.body) : false;
+
   // ── Auto-draft when a NEW inbound message arrives ───────────
   // The agent's mental model: "the lead replied; tell me what to
   // say next". This effect watches for an inbound message we
@@ -184,11 +199,17 @@ export function AiSmsModal({
     if (last.direction !== "inbound") return;
     if (lastAutoDraftedFor.current === last.id) return;
     if (compose.trim()) return; // don't clobber an in-progress edit
+    if (optedOut || needsHuman) {
+      // Don't burn an AI call we know the server will reject. The
+      // banner above the compose box explains why.
+      lastAutoDraftedFor.current = last.id;
+      return;
+    }
 
     lastAutoDraftedFor.current = last.id;
     void runDraft({ silent: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, open, selectedContact]);
+  }, [messages, open, selectedContact, optedOut, needsHuman]);
 
   // ── Generate draft ──────────────────────────────────────────
   const runDraft = useCallback(
@@ -497,6 +518,21 @@ export function AiSmsModal({
 
               {/* Compose */}
               <div className="border-t border-slate-200 bg-white px-4 py-3">
+                {optedOut ? (
+                  <div className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900">
+                    <strong className="font-semibold">Contact opted out.</strong>{" "}
+                    Their last message was a stop keyword (STOP / UNSUBSCRIBE / etc.).
+                    Texting them again would violate opt-out compliance — both
+                    AI drafting and sending are blocked.
+                  </div>
+                ) : needsHuman ? (
+                  <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    <strong className="font-semibold">This needs you, not AI.</strong>{" "}
+                    The contact's last message looks like a complaint, dispute,
+                    or urgent issue. AI drafting is paused — reply personally if
+                    you choose to.
+                  </div>
+                ) : null}
                 {info ? (
                   <p className="mb-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs text-blue-800">
                     {info}
@@ -526,8 +562,15 @@ export function AiSmsModal({
                     <button
                       type="button"
                       onClick={() => void runDraft()}
-                      disabled={drafting || sending}
+                      disabled={drafting || sending || optedOut || needsHuman}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:border-blue-300 hover:bg-blue-100 disabled:opacity-60"
+                      title={
+                        optedOut
+                          ? "Contact opted out — AI drafting disabled."
+                          : needsHuman
+                            ? "Reply personally — AI drafting paused for this thread."
+                            : undefined
+                      }
                     >
                       <SparkIcon />
                       {drafting
@@ -543,8 +586,9 @@ export function AiSmsModal({
                   <button
                     type="button"
                     onClick={() => void onSend()}
-                    disabled={sending || drafting || !compose.trim()}
+                    disabled={sending || drafting || !compose.trim() || optedOut}
                     className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                    title={optedOut ? "Sending blocked — contact opted out." : undefined}
                   >
                     {sending ? "Sending…" : "Send SMS"}
                   </button>
@@ -602,6 +646,22 @@ function formatTime(iso: string): string {
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return "";
   return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
+// ── Safety helpers (mirror server-side ai-sms/safety.ts) ─────────
+//
+// We duplicate the regexes here so the UI can show the warning
+// banner the moment a STOP / escalation reply lands, without a
+// round-trip. Server still enforces — these are advisory at the
+// client. Keep them in sync with apps/leadsmartai/lib/ai-sms/safety.ts.
+
+function isStopKeyword(body: string): boolean {
+  return /^(stop|unsubscribe|end|quit|cancel)$/i.test(body.trim());
+}
+
+function isEscalationLanguage(body: string): boolean {
+  const t = body.toLowerCase();
+  return /(lawsuit|attorney|complaint|fraud|scam|angry|terrible|file against|urgent now)/.test(t);
 }
 
 function SparkIcon() {

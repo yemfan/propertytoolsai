@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
-import { sendSmsForAgent } from "@/lib/sales-model-sms";
+import { shouldStopMessaging } from "@/lib/ai-sms/safety";
+import { loadSmsConversation, sendSmsForAgent } from "@/lib/sales-model-sms";
 
 export const runtime = "nodejs";
 
@@ -41,6 +42,33 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { ok: false, error: "contactId is required.", code: "missing_contact_id" },
       { status: 400 },
+    );
+  }
+
+  // Hard block on opt-out. We block the SEND (not just the AI draft)
+  // because TCPA / 10DLC compliance hinges on actually not texting
+  // someone who said STOP — even a hand-typed message is a violation.
+  // Crisis/escalation language only blocks the AI DRAFT (in the draft
+  // route) — agents can still send a personal hand-typed reply.
+  const conv = await loadSmsConversation(agentId, contactId);
+  if (!conv.contact) {
+    return NextResponse.json(
+      { ok: false, error: "Contact not found.", code: "contact_not_found" },
+      { status: 404 },
+    );
+  }
+  const lastInbound = [...conv.messages]
+    .reverse()
+    .find((m) => m.direction === "inbound");
+  if (lastInbound && shouldStopMessaging(lastInbound.body)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "This contact replied with a stop keyword. Texting them again would violate opt-out compliance.",
+        code: "opt_out",
+      },
+      { status: 423 },
     );
   }
 
