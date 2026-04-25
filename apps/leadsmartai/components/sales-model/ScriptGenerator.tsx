@@ -10,28 +10,100 @@ import {
 /**
  * Script Generator.
  *
- * Picks the right template for the (model, kind) pair and fills in
- * the agent's situation. Pure local logic for MVP — no LLM call —
- * which keeps the screen useful even when the AI quota is exhausted
- * and lets us ship without an OpenAI / Anthropic dependency in this
- * PR. The wire is set up so swapping the local template for a real
- * model call later is a one-function change in `generateScript`.
+ * Calls `POST /api/sales-model/generate-script` (real LLM under the
+ * hood) so the output reasons about the agent's actual situation,
+ * not just substring-substitutes it into a template. The route
+ * applies the model's identity + tone + the kind's structural rules
+ * as the system prompt, and the agent's typed briefing as the user
+ * message, then returns the generated script.
  *
- * The four model branches encode the *tone* (calm / direct / energetic
- * / neutral) — the kind picks the *structure* (greeting → ack → value
- * → CTA, etc.). This 4×5 matrix produces 20 deliberately-different
- * outputs without hand-writing 20 templates.
+ * Fallback to local templates is preserved for two cases:
+ *   1. AI is not configured on the environment (preview / dev
+ *      without an OpenAI key) — route returns 503 `ai_unconfigured`,
+ *      we render the local template so the screen remains useful.
+ *   2. The agent has hit their AI quota (402) — we surface the
+ *      error inline AND render the local template as a degraded
+ *      output so they can still get *something* without going to
+ *      billing.
+ *
+ * Every other failure (network, 500, malformed body) shows an
+ * error and lets the user retry.
  */
 export function ScriptGenerator({ model }: { model: SalesModel }) {
   const [kind, setKind] = useState<ScriptKind>("dm_reply");
   const [situation, setSituation] = useState("");
   const [output, setOutput] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<"ai" | "fallback" | null>(null);
 
   const placeholder = useMemo(() => placeholderFor(kind), [kind]);
 
-  const onGenerate = () => {
+  const onGenerate = async () => {
     const trimmed = situation.trim();
-    setOutput(generateScript({ model, kind, situation: trimmed }));
+    if (!trimmed) {
+      setError("Describe the situation first — the AI uses it to tailor the script.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setOutput(null);
+    setSource(null);
+
+    try {
+      const res = await fetch("/api/sales-model/generate-script", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ kind, situation: trimmed, salesModel: model.id }),
+      });
+      const json = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        script?: string;
+        source?: "ai" | "fallback";
+        error?: string;
+        code?: string;
+      } | null;
+
+      if (res.ok && json?.ok && typeof json.script === "string" && json.script.trim()) {
+        setOutput(json.script.trim());
+        setSource(json.source ?? "ai");
+        return;
+      }
+
+      // Soft-fail to local template only for "AI unavailable on this
+      // env" or "out of quota". Hard errors (auth, validation) get
+      // surfaced — the local template wouldn't fix them.
+      const code = json?.code;
+      if (code === "ai_unconfigured" || res.status === 402) {
+        const local = generateLocalScript({ model, kind, situation: trimmed });
+        setOutput(local);
+        setSource("fallback");
+        if (code === "ai_unconfigured") {
+          setError(
+            "AI is not configured on this environment — showing a template instead. Set OPENAI_API_KEY to enable AI.",
+          );
+        } else {
+          setError(json?.error ?? "AI quota reached — showing a template instead.");
+        }
+        return;
+      }
+
+      setError(json?.error ?? `Could not generate script (HTTP ${res.status}).`);
+    } catch (e) {
+      // Network error — fall back to local template so the agent
+      // isn't stuck staring at a spinner-then-error.
+      const local = generateLocalScript({ model, kind, situation: trimmed });
+      setOutput(local);
+      setSource("fallback");
+      setError(
+        e instanceof Error
+          ? `Network error: ${e.message} — showing a template instead.`
+          : "Network error — showing a template instead.",
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   const onCopy = async () => {
@@ -99,10 +171,11 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={onGenerate}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          onClick={() => void onGenerate()}
+          disabled={busy}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
         >
-          Generate Script
+          {busy ? "Generating…" : "Generate Script"}
         </button>
         {output ? (
           <button
@@ -113,7 +186,25 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
             Copy
           </button>
         ) : null}
+        {source ? (
+          <span
+            className={[
+              "ml-1 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+              source === "ai"
+                ? "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200"
+                : "bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200",
+            ].join(" ")}
+          >
+            {source === "ai" ? "AI-generated" : "Template fallback"}
+          </span>
+        ) : null}
       </div>
+
+      {error ? (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          {error}
+        </div>
+      ) : null}
 
       {output ? (
         <pre className="mt-4 max-h-96 overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 font-mono text-xs leading-relaxed text-slate-800">
@@ -140,15 +231,18 @@ function placeholderFor(kind: ScriptKind): string {
 }
 
 /**
- * The local template engine. (model, kind) selects the structure +
- * tone; situation is woven in as the lead context.
+ * Local fallback generator — used when the AI route returns 503
+ * (`ai_unconfigured`) or 402 (quota), or on network failure. The
+ * online path goes through `/api/sales-model/generate-script` which
+ * actually reasons about the situation; this function just gives the
+ * agent something usable when AI isn't available, so they aren't
+ * stuck on an error.
  *
- * Output shape is deliberately copy-and-send ready — no [BRACKET]
- * placeholders the agent has to remember to fill. If the situation
- * is empty we still produce a complete script using a generic stand-in
- * so the agent gets a structural example.
+ * (model, kind) selects the structure + tone; situation is appended
+ * as a "Situation:" prefix so the agent at least sees their own
+ * input woven into the output instead of vanishing.
  */
-function generateScript({
+function generateLocalScript({
   model,
   kind,
   situation,
