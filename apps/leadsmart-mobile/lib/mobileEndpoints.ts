@@ -28,4 +28,5 @@ export const MOBILE_API_PATHS = {
   notificationPreferences: "/api/mobile/notification-preferences",
   leadQueue: "/api/dashboard/lead-queue",
   leadQueueClaim: "/api/dashboard/lead-queue/claim",
+  cma: "/api/mobile/cma",
 } as const;

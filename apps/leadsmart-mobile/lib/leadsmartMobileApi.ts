@@ -793,3 +793,88 @@ export async function claimQueueLead(
   if (!res.data.ok) return { ok: false, status: 200, message: res.data.error ?? "Claim failed" };
   return { ok: true, leadId: String(res.data.leadId ?? leadId) };
 }
+
+// ── CMA ───────────────────────────────────────────────────────────
+//
+// Mobile mirror of /api/mobile/cma. The web flow doesn't persist
+// CMA reports — each generation is a fresh computation against the
+// property warehouse + comps. So this is a single POST + render
+// surface, not a list/detail flow.
+
+export type MobileCmaSubject = {
+  address: string;
+  beds: number;
+  baths: number;
+  sqft: number;
+  propertyType: string | null;
+  yearBuilt: number;
+  condition: string;
+};
+
+export type MobileCmaComp = {
+  address: string;
+  price: number;
+  sqft: number;
+  beds: number | null;
+  baths: number | null;
+  distanceMiles: number;
+  soldDate: string;
+  propertyType: string | null;
+  pricePerSqft: number;
+};
+
+export type MobileCmaStrategies = {
+  aggressive: number;
+  market: number;
+  premium: number;
+  daysOnMarket: { aggressive: number; market: number; premium: number };
+};
+
+export type MobileCmaReport = {
+  summary: string;
+  subject: MobileCmaSubject;
+  comps: MobileCmaComp[];
+  avgPricePerSqft: number;
+  estimatedValue: number;
+  low: number;
+  high: number;
+  strategies: MobileCmaStrategies;
+};
+
+type CmaJson = MobileJsonError &
+  Partial<MobileCmaReport> & {
+    usage?: { reached?: boolean; remaining?: number; limit?: number };
+  };
+
+export async function generateMobileCma(input: {
+  address: string;
+  sqft?: number | null;
+  condition?: string | null;
+}): Promise<({ ok: true } & MobileCmaReport) | MobileApiFailure> {
+  const res = await mobilePost<CmaJson>(MOBILE_API_PATHS.cma, {
+    address: input.address,
+    sqft: input.sqft ?? undefined,
+    condition: input.condition ?? undefined,
+  });
+  if (res.ok === false) return res;
+  const d = res.data;
+  if (!d.subject || !Array.isArray(d.comps)) {
+    return { ok: false, status: 200, message: "Invalid CMA response." };
+  }
+  return {
+    ok: true,
+    summary: d.summary ?? "",
+    subject: d.subject,
+    comps: d.comps,
+    avgPricePerSqft: Number(d.avgPricePerSqft ?? 0),
+    estimatedValue: Number(d.estimatedValue ?? 0),
+    low: Number(d.low ?? 0),
+    high: Number(d.high ?? 0),
+    strategies: d.strategies ?? {
+      aggressive: 0,
+      market: 0,
+      premium: 0,
+      daysOnMarket: { aggressive: 0, market: 0, premium: 0 },
+    },
+  };
+}
