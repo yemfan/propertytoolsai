@@ -182,6 +182,12 @@ const navConfig = {
       icon: navEmoji("🧰"),
       items: [
         {
+          label: "Sales Model",
+          href: "/dashboard/sales-model",
+          match: ["/dashboard/sales-model"],
+          icon: navEmoji("🎯"),
+        },
+        {
           label: "Property Tools",
           href: "/dashboard/tools",
           match: ["/dashboard/tools"],
