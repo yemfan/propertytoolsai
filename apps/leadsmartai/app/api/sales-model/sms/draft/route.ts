@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { needsHumanEscalation, shouldStopMessaging } from "@/lib/ai-sms/safety";
 import { canUseAiAction } from "@/lib/entitlements/accessResult";
 import { consumeAiToken } from "@/lib/entitlements/consumeAiToken";
 import { getSelectedSalesModelServer } from "@/lib/sales-model-server";
@@ -77,6 +78,41 @@ export async function POST(req: Request) {
       { ok: false, error: "Contact not found.", code: "contact_not_found" },
       { status: 404 },
     );
+  }
+
+  // Safety guards. If the most recent inbound message is an opt-out
+  // ("STOP", "UNSUBSCRIBE", etc.) or carries crisis/legal language,
+  // we refuse to draft. These guards already exist for the auto-
+  // responder; we wire them in here so the agent-supervised modal
+  // can't accidentally text someone who's asked us to stop, and so
+  // the agent gets a clear "human takeover" hint when something's
+  // actually wrong instead of an AI-tone reply to a complaint.
+  const lastInbound = [...conv.messages]
+    .reverse()
+    .find((m) => m.direction === "inbound");
+  if (lastInbound) {
+    if (shouldStopMessaging(lastInbound.body)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "This contact replied with a stop keyword. Don't text them again until they re-engage.",
+          code: "opt_out",
+        },
+        { status: 423 },
+      );
+    }
+    if (needsHumanEscalation(lastInbound.body)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "This message looks like it needs you personally — language suggests a complaint, dispute, or urgent issue. Reply directly instead of using AI.",
+          code: "needs_human",
+        },
+        { status: 409 },
+      );
+    }
   }
 
   // Quota gate.
