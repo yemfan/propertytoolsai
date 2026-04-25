@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import AgentAiSettingsPanel from "@/components/dashboard/AgentAiSettingsPanel";
 import AgentVoiceSettingsPanel from "@/components/dashboard/AgentVoiceSettingsPanel";
+import MissedCallSettingsPanel from "@/components/dashboard/MissedCallSettingsPanel";
 import ChannelsCard from "@/components/dashboard/ChannelsCard";
 import ComplianceCard from "@/components/dashboard/ComplianceCard";
 import { CommissionDefaultsPanel } from "@/components/dashboard/CommissionDefaultsPanel";
@@ -36,6 +37,13 @@ export default async function SettingsPage() {
             <div className="p-5">
               <h2 className="text-sm font-semibold text-gray-900 mb-3">Phone Voice</h2>
               <AgentVoiceSettingsPanel />
+            </div>
+            <div className="p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-1">Missed Call Text-Back</h2>
+              <p className="mb-3 text-xs text-gray-500">
+                Auto-text inbound callers when you can't pick up. Forward calls to your personal mobile and capture every missed lead.
+              </p>
+              <MissedCallSettingsPanel />
             </div>
           </div>
         }
