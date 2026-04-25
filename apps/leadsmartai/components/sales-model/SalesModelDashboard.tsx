@@ -6,6 +6,7 @@ import {
   type SalesModelId,
 } from "@/lib/sales-models";
 import { updateSelectedSalesModel } from "@/lib/sales-model-storage";
+import { AiEmailModal } from "./AiEmailModal";
 import { AiSmsModal } from "./AiSmsModal";
 import { DailyActionPlan } from "./DailyActionPlan";
 import { IdentityBlock } from "./IdentityBlock";
@@ -34,6 +35,7 @@ export function SalesModelDashboard({
   const [modelId, setModelId] = useState<SalesModelId>(initialModelId);
   const [switchOpen, setSwitchOpen] = useState(false);
   const [smsOpen, setSmsOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
   const model = getSalesModel(modelId);
 
   return (
@@ -58,6 +60,14 @@ export function SalesModelDashboard({
           >
             <SmsIcon />
             Launch AI SMS
+          </button>
+          <button
+            type="button"
+            onClick={() => setEmailOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-700"
+          >
+            <EmailIcon />
+            Launch AI Email
           </button>
           <button
             type="button"
@@ -103,6 +113,12 @@ export function SalesModelDashboard({
         model={model}
         onClose={() => setSmsOpen(false)}
       />
+
+      <AiEmailModal
+        open={emailOpen}
+        model={model}
+        onClose={() => setEmailOpen(false)}
+      />
     </div>
   );
 }
@@ -121,6 +137,25 @@ function SmsIcon() {
       aria-hidden
     >
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
+  );
+}
+
+function EmailIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+      <polyline points="22,6 12,13 2,6"></polyline>
     </svg>
   );
 }
