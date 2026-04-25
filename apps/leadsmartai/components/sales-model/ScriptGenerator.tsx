@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   SCRIPT_KINDS,
   type SalesModel,
@@ -13,9 +13,15 @@ import {
  * Calls `POST /api/sales-model/generate-script` (real LLM under the
  * hood) so the output reasons about the agent's actual situation,
  * not just substring-substitutes it into a template. The route
- * applies the model's identity + tone + the kind's structural rules
- * as the system prompt, and the agent's typed briefing as the user
- * message, then returns the generated script.
+ * applies the model's identity + tone as the system prompt and asks
+ * the LLM to *classify* what kind of message the situation calls
+ * for (DM reply / follow-up / objection handling / appointment
+ * setting / consultation opening) before generating it.
+ *
+ * The classification comes back as `detectedKind` so we can show
+ * the agent the AI's read on the situation — useful both as a
+ * confidence signal and as feedback when the read is wrong (so the
+ * agent can rephrase the situation).
  *
  * Fallback to local templates is preserved for two cases:
  *   1. AI is not configured on the environment (preview / dev
@@ -30,14 +36,12 @@ import {
  * error and lets the user retry.
  */
 export function ScriptGenerator({ model }: { model: SalesModel }) {
-  const [kind, setKind] = useState<ScriptKind>("dm_reply");
   const [situation, setSituation] = useState("");
   const [output, setOutput] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<"ai" | "fallback" | null>(null);
-
-  const placeholder = useMemo(() => placeholderFor(kind), [kind]);
+  const [detectedKind, setDetectedKind] = useState<ScriptKind | null>(null);
 
   const onGenerate = async () => {
     const trimmed = situation.trim();
@@ -48,6 +52,7 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
     setBusy(true);
     setError(null);
     setOutput(null);
+    setDetectedKind(null);
     setSource(null);
 
     try {
@@ -55,11 +60,14 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ kind, situation: trimmed, salesModel: model.id }),
+        // No `kind` — the API auto-classifies and returns its pick
+        // as `detectedKind` so we can show the agent what the AI read.
+        body: JSON.stringify({ situation: trimmed, salesModel: model.id }),
       });
       const json = (await res.json().catch(() => null)) as {
         ok?: boolean;
         script?: string;
+        detectedKind?: string | null;
         source?: "ai" | "fallback";
         error?: string;
         code?: string;
@@ -68,6 +76,12 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
       if (res.ok && json?.ok && typeof json.script === "string" && json.script.trim()) {
         setOutput(json.script.trim());
         setSource(json.source ?? "ai");
+        // Trust the model's classification only if it's a known kind.
+        const dk = json.detectedKind;
+        const dkValid =
+          typeof dk === "string" &&
+          (SCRIPT_KINDS.find((k) => k.value === dk)?.value ?? null);
+        setDetectedKind((dkValid as ScriptKind) ?? null);
         return;
       }
 
@@ -76,7 +90,7 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
       // surfaced — the local template wouldn't fix them.
       const code = json?.code;
       if (code === "ai_unconfigured" || res.status === 402) {
-        const local = generateLocalScript({ model, kind, situation: trimmed });
+        const local = generateLocalScript({ model, situation: trimmed });
         setOutput(local);
         setSource("fallback");
         if (code === "ai_unconfigured") {
@@ -93,7 +107,7 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
     } catch (e) {
       // Network error — fall back to local template so the agent
       // isn't stuck staring at a spinner-then-error.
-      const local = generateLocalScript({ model, kind, situation: trimmed });
+      const local = generateLocalScript({ model, situation: trimmed });
       setOutput(local);
       setSource("fallback");
       setError(
@@ -106,14 +120,47 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
     }
   };
 
+  const [copied, setCopied] = useState(false);
   const onCopy = async () => {
     if (!output) return;
+    let ok = false;
     try {
       await navigator.clipboard.writeText(output);
+      ok = true;
     } catch {
-      // Clipboard unavailable — user can select-all manually.
+      // Clipboard API can throw in non-HTTPS contexts, locked
+      // iframes, or when the document doesn't have focus. Fall
+      // back to a hidden-textarea + execCommand so we still get
+      // something on the user's clipboard rather than failing
+      // silently like before.
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = output;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+      } catch {
+        ok = false;
+      }
+    }
+    if (ok) {
+      setCopied(true);
+      // 1.6s feels right — long enough to register, short enough
+      // to disappear before the agent moves on. Matches the
+      // Tool-prompt-modal copy button so the feedback feels
+      // consistent across the screen.
+      window.setTimeout(() => setCopied(false), 1600);
     }
   };
+
+  const detectedLabel = detectedKind
+    ? SCRIPT_KINDS.find((k) => k.value === detectedKind)?.label
+    : null;
 
   return (
     <section
@@ -123,49 +170,32 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
       <header className="mb-4">
         <h2 className="text-base font-semibold text-slate-900">Script Generator</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Pick the script type and describe the situation — the output is
-          tuned to your <span className="font-medium text-slate-800">{model.name}</span> tone.
+          Describe the situation — the AI figures out what kind of message
+          you need (DM reply, follow-up, objection, appointment, opener) and
+          writes it in your{" "}
+          <span className="font-medium text-slate-800">{model.name}</span> tone.
         </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[200px_1fr]">
-        <div>
-          <label
-            htmlFor="script-kind"
-            className="block text-xs font-semibold uppercase tracking-wider text-slate-500"
-          >
-            Script type
-          </label>
-          <select
-            id="script-kind"
-            value={kind}
-            onChange={(e) => setKind(e.target.value as ScriptKind)}
-            className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          >
-            {SCRIPT_KINDS.map((k) => (
-              <option key={k.value} value={k.value}>
-                {k.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label
-            htmlFor="script-situation"
-            className="block text-xs font-semibold uppercase tracking-wider text-slate-500"
-          >
-            Describe the situation
-          </label>
-          <textarea
-            id="script-situation"
-            value={situation}
-            onChange={(e) => setSituation(e.target.value)}
-            placeholder={placeholder}
-            rows={4}
-            className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          />
-        </div>
+      <div>
+        <label
+          htmlFor="script-situation"
+          className="block text-xs font-semibold uppercase tracking-wider text-slate-500"
+        >
+          Describe the situation
+        </label>
+        <textarea
+          id="script-situation"
+          value={situation}
+          onChange={(e) => setSituation(e.target.value)}
+          placeholder="e.g. I have a buyer named Mary. I want to set an initial appointment, but she said interest rates are too high and prices are falling, so she wants to wait."
+          rows={4}
+          className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+        />
+        <p className="mt-1.5 text-xs text-slate-500">
+          Include the lead's name, what you want from this message, and any
+          context they've shared (objections, timeline, etc.).
+        </p>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -180,10 +210,17 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
         {output ? (
           <button
             type="button"
-            onClick={onCopy}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+            onClick={() => void onCopy()}
+            aria-label={copied ? "Copied to clipboard" : "Copy script to clipboard"}
+            className={[
+              "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition",
+              copied
+                ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50",
+            ].join(" ")}
           >
-            Copy
+            {copied ? <CheckIcon /> : <CopyIcon />}
+            {copied ? "Copied!" : "Copy"}
           </button>
         ) : null}
         {source ? (
@@ -198,6 +235,11 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
             {source === "ai" ? "AI-generated" : "Template fallback"}
           </span>
         ) : null}
+        {detectedLabel ? (
+          <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 ring-1 ring-inset ring-slate-200">
+            Read as: {detectedLabel}
+          </span>
+        ) : null}
       </div>
 
       {error ? (
@@ -207,212 +249,122 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
       ) : null}
 
       {output ? (
-        <pre className="mt-4 max-h-96 overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 font-mono text-xs leading-relaxed text-slate-800">
-          {output}
-        </pre>
+        // Output panel with a floating copy affordance pinned to the
+        // top-right. Two copy entry points (this one + the action-row
+        // button above) is intentional — agents reading the output are
+        // already looking at this region, and the action-row button
+        // can scroll out of view on long scripts.
+        <div className="relative mt-4">
+          <button
+            type="button"
+            onClick={() => void onCopy()}
+            aria-label={copied ? "Copied to clipboard" : "Copy script to clipboard"}
+            className={[
+              "absolute right-2 top-2 z-10 inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium shadow-sm transition",
+              copied
+                ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                : "border-slate-200 bg-white/90 text-slate-700 backdrop-blur hover:border-slate-300 hover:bg-white",
+            ].join(" ")}
+          >
+            {copied ? <CheckIcon /> : <CopyIcon />}
+            {copied ? "Copied" : "Copy"}
+          </button>
+          <pre className="max-h-96 overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 pr-20 font-mono text-xs leading-relaxed text-slate-800">
+            {output}
+          </pre>
+        </div>
       ) : null}
     </section>
   );
 }
 
-function placeholderFor(kind: ScriptKind): string {
-  switch (kind) {
-    case "dm_reply":
-      return "e.g. Buyer DM'd asking about a 2-bed condo near the lake — they're new to the area.";
-    case "follow_up":
-      return "e.g. Spoke 2 weeks ago about a townhouse but no reply since.";
-    case "objection_handling":
-      return "e.g. They said the asking price feels too high vs. comps they've seen on Zillow.";
-    case "appointment_setting":
-      return "e.g. Qualified buyer ready to tour 3 properties this Saturday.";
-    case "consultation_opening":
-      return "e.g. First-time buyer, relocating from another city, wants help understanding the process.";
-  }
+// ── Inline icons ──────────────────────────────────────────────────
+//
+// 14×14 currentColor SVGs so the copy/check pair stays visually
+// balanced and inherits the button's text color in both default +
+// "copied" states. Inlined to avoid pulling in an icon-pack
+// dependency for two glyphs.
+
+function CopyIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+  );
 }
 
 /**
  * Local fallback generator — used when the AI route returns 503
  * (`ai_unconfigured`) or 402 (quota), or on network failure. The
  * online path goes through `/api/sales-model/generate-script` which
- * actually reasons about the situation; this function just gives the
- * agent something usable when AI isn't available, so they aren't
- * stuck on an error.
+ * actually classifies the situation and reasons about it; this
+ * function just gives the agent something tone-correct when AI
+ * isn't available so they aren't stuck on an error.
  *
- * (model, kind) selects the structure + tone; situation is appended
- * as a "Situation:" prefix so the agent at least sees their own
- * input woven into the output instead of vanishing.
+ * One template per model (no per-kind branching since the user no
+ * longer picks a kind). The structure is intentionally generic
+ * (acknowledge → context → ask), tuned only for tone — agents will
+ * paraphrase before sending in the rare case this fires.
  */
 function generateLocalScript({
   model,
-  kind,
   situation,
 }: {
   model: SalesModel;
-  kind: ScriptKind;
   situation: string;
 }): string {
-  const ctx = situation || "the lead's current question";
+  const ctx = situation || "what you're working through";
   switch (model.id) {
     case "advisor":
-      return advisorScript(kind, ctx);
+      return `Thanks for sharing the context — happy to think through this with you.
+
+Quick read on the situation: ${ctx}. There are usually two or three angles worth checking before we make any decisions, and the most useful next step is usually a short call where we line them up against your actual goal.
+
+Open to a 15-minute call this week, or would a written summary be more useful first? Either works.`;
     case "closer":
-      return closerScript(kind, ctx);
+      return `Quick note on this: ${ctx}.
+
+Three questions: are you actively looking right now? Has anything shifted on your timeline? And what would make this an obvious yes vs. an obvious wait?
+
+I have time tomorrow at 10am or 2pm — which works better for a 15-minute call?`;
     case "influencer":
-      return influencerScript(kind, ctx);
+      return `Heyyy 👋 thanks for the context!
+
+Okay so on ${ctx} — this comes up a lot and there's actually a really helpful way to think about it that most people don't know. I'll send a quick voice note with my take if that's easier, or we can hop on a 10-min call. Whatever feels good 💛`;
     case "custom":
-      return customScript(kind, ctx);
-  }
-}
+      return `Thanks for the context. Here's how I'd suggest we move forward:
 
-// ── Advisor — calm, analytical, trust-based ──────────────────────
+Based on the situation (${ctx}), the most useful next step is a short conversation to align on what you're trying to accomplish and the constraints we should plan around.
 
-function advisorScript(kind: ScriptKind, ctx: string): string {
-  switch (kind) {
-    case "dm_reply":
-      return `Thanks for reaching out — happy to think through this with you.
-
-Quick read on what you mentioned (${ctx}): there are usually two or three angles worth checking before we make any decisions. The biggest one is whether the timing aligns with your overall plan — happy to walk you through what I'd look at.
-
-Want me to send over a 2-page brief tailored to your situation, or would a 15-minute call be easier? Either works.`;
-    case "follow_up":
-      return `Hi — circling back on the conversation we started about ${ctx}. No pressure on timing.
-
-Two things have shifted in the market since we last spoke that might be worth a 10-minute review. I'll keep it brief and you can decide if it's worth a deeper look.
-
-Open to a quick call this week, or would a written summary be more useful?`;
-    case "objection_handling":
-      return `That's a fair concern — and honestly, it's the right question to ask. Here's how I'd think about ${ctx}:
-
-There are usually three drivers behind that gap: comparables that aren't truly comparable, condition adjustments most buyers underestimate, and timing of the data itself.
-
-What I'd suggest: let me pull a side-by-side of the 5 closest real comps with the adjustments factored in. That'll give you a number you can defend either way — and if the gap is real, we'll see it clearly.`;
-    case "appointment_setting":
-      return `Great — given what you've shared about ${ctx}, the most useful next step is a 30-minute strategy call.
-
-Goal of the call: get clear on your decision criteria, identify the two or three risks worth managing, and leave you with a written plan you can act on either with me or independently.
-
-I have Tuesday at 10am or Thursday at 4pm open. Which works?`;
-    case "consultation_opening":
-      return `Thanks for taking the time today. Here's how I usually run these — feel free to redirect at any point.
-
-I want to spend the first 10 minutes understanding ${ctx} — what you're trying to accomplish, the timeline, and the constraints. Then I'll share what I'd recommend looking at, what I'd avoid, and what the next 30 days could look like.
-
-Worst case, you walk away with a clearer plan. Sound fair?`;
-  }
-}
-
-// ── Closer — direct, structured, action-oriented ─────────────────
-
-function closerScript(kind: ScriptKind, ctx: string): string {
-  switch (kind) {
-    case "dm_reply":
-      return `Hi — got your message about ${ctx}.
-
-Quick yes/no: are you actively looking right now, or just gathering info?
-
-If active, I have time tomorrow at 10am or 2pm for a 15-minute call. Which works?`;
-    case "follow_up":
-      return `Quick follow-up — last time we spoke about ${ctx}.
-
-Three quick questions: still in the market? Still on the same timeline? Anything change?
-
-I have two slots open this week — Wednesday 11am or Friday 3pm. Which is easier for you?`;
-    case "objection_handling":
-      return `I hear you on ${ctx}. Let me ask you this: if I could show you that the number actually makes sense once you factor in [X], would that change how you're thinking about it?
-
-Here's what most buyers in your position do — they ask for the side-by-side, they look at it, and they either move forward with confidence or walk away knowing why.
-
-Want me to send the side-by-side over today?`;
-    case "appointment_setting":
-      return `Based on what you told me about ${ctx}, the next step is a property tour.
-
-I have three homes that match what you described. We can see all three in 90 minutes.
-
-Saturday 10am works on my end. Does that work for you, or is Sunday afternoon better?`;
-    case "consultation_opening":
-      return `Appreciate you making time. I'll keep this tight — 30 minutes, three sections.
-
-Section one: what you're trying to accomplish around ${ctx}.
-Section two: what I've seen work and what I've seen waste time.
-Section three: agree on the next two actions and who does what by when.
-
-Sound good? Let's start with what triggered you to reach out today.`;
-  }
-}
-
-// ── Influencer — friendly, energetic, social-first ───────────────
-
-function influencerScript(kind: ScriptKind, ctx: string): string {
-  switch (kind) {
-    case "dm_reply":
-      return `Hey hey 👋 thanks for the DM!
-
-Okay so on ${ctx} — totally a question I get all the time, and there's actually a really cool way to think about it that most people don't know.
-
-I'll send over a quick voice note with my take if that's easier? Or we can hop on a 10-min call. Whatever feels good 💛`;
-    case "follow_up":
-      return `Heyyy 👋 popping back in because I just thought of you 🙂
-
-Last we chatted about ${ctx} — I've actually got a fresh take I think you'll love. Want me to send over a quick video?
-
-No pressure either way, just keeping you in the loop because I know timing can shift fast in this market.`;
-    case "objection_handling":
-      return `Totally hear you on ${ctx} — and honestly? Smart to push back on that.
-
-Here's the thing most people don't realize though: there's usually a story behind the number that completely changes how you read it. Let me show you what I mean — I'll record a quick walk-through and you can decide.
-
-Real talk — if it doesn't add up after seeing it, I'll be the first one to tell you to walk 💯`;
-    case "appointment_setting":
-      return `Okay love this — based on what you said about ${ctx}, I want to set you up with a tour that actually shows you what's possible.
-
-I've handpicked three places I think you'll get genuinely excited about. Saturday morning we make it a vibe — coffee, tour, real talk.
-
-10am Saturday? Or hit me with what works for you ✨`;
-    case "consultation_opening":
-      return `Sooo glad you made it 🎉
-
-Quick game plan for today — I want to actually understand what you're trying to do with ${ctx}, share the inside-baseball stuff people don't usually tell you, and leave you feeling 100x more confident than when you got on this call.
-
-You don't need to have all the answers — that's literally my job. So let's just talk. What's the thing that's been on your mind the most?`;
-  }
-}
-
-// ── Custom — neutral, tone-agnostic ──────────────────────────────
-//
-// Default to a clean, professional voice that doesn't impose any
-// particular persona. The agent can edit freely.
-
-function customScript(kind: ScriptKind, ctx: string): string {
-  switch (kind) {
-    case "dm_reply":
-      return `Hi — thanks for reaching out about ${ctx}.
-
-Happy to help. To make sure I send you the most useful info, could you share a couple of details: timeline, area you're focused on, and any must-haves?
-
-Once I have that, I'll get back to you with a clear next step.`;
-    case "follow_up":
-      return `Hi — following up on our earlier conversation about ${ctx}.
-
-Wanted to check in to see if anything has shifted on your end, and to share an update from my side that may be relevant.
-
-Let me know if a quick call this week makes sense, or if email is easier — both work for me.`;
-    case "objection_handling":
-      return `Thanks for raising that — it's a reasonable concern about ${ctx}.
-
-Here's how I'd suggest we work through it: let's look at the actual data side-by-side and walk through the assumptions. If the concern still holds up after that, we adjust the plan; if not, we move forward with more confidence.
-
-I can put that together and send it over today. Want me to proceed?`;
-    case "appointment_setting":
-      return `Based on what you've shared about ${ctx}, the next step is a 30-minute call to align on the plan.
-
-I have a few options open — Tuesday 10am, Wednesday 2pm, or Thursday 4pm. Which works best for you?
-
-If none of those fit, send me two times that work and I'll confirm.`;
-    case "consultation_opening":
-      return `Thanks for the time today. Here's how I'd suggest we use it:
-
-First, I'd like to understand your situation — specifically ${ctx} — so I can give you advice that actually fits your case. Then I'll share what I'd recommend, including what I'd avoid, and we'll agree on a clear next step.
-
-Feel free to interrupt at any point. Where would you like to start?`;
+I have a few openings this week — Tuesday 10am, Wednesday 2pm, or Thursday 4pm. Which works best?`;
   }
 }

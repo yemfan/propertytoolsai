@@ -57,14 +57,30 @@ export async function POST(req: Request) {
     );
   }
 
-  // Parse + validate body.
+  // Parse + validate body. `kind` is OPTIONAL — when absent (the
+  // common case post-UI-cleanup) the model auto-classifies what
+  // kind of message the situation calls for and returns its pick
+  // alongside the generated script. We still accept an explicit
+  // override so future "force this format" UX (e.g. a "regenerate
+  // as objection handling" button) doesn't need a new endpoint.
   const body = (await req.json().catch(() => ({}))) as {
     kind?: unknown;
     situation?: unknown;
     salesModel?: unknown;
   };
-  const kind = body.kind;
-  if (typeof kind !== "string" || !VALID_KINDS.has(kind as ScriptKind)) {
+  const explicitKind: ScriptKind | null =
+    typeof body.kind === "string" && VALID_KINDS.has(body.kind as ScriptKind)
+      ? (body.kind as ScriptKind)
+      : null;
+  if (
+    body.kind !== undefined &&
+    body.kind !== null &&
+    body.kind !== "" &&
+    explicitKind === null
+  ) {
+    // Pass through the case where the caller sent something for
+    // `kind` but it's not a recognized value — surface as 400 so we
+    // don't silently mask a typo.
     return NextResponse.json(
       {
         ok: false,
@@ -118,11 +134,13 @@ export async function POST(req: Request) {
     );
   }
 
-  // Build the prompts. System carries the agent's identity + tone +
-  // structural guardrails for the chosen kind. User carries the
+  // Build the prompts. System carries the agent's identity + tone
+  // and either (a) per-kind structural rules when the caller forced
+  // a kind, or (b) a "decide which kind fits and produce it"
+  // instruction set when no kind was given. User carries the
   // briefing they typed.
-  const systemPrompt = buildSystemPrompt(model.id, kind as ScriptKind);
-  const userPrompt = buildUserPrompt(model.id, kind as ScriptKind, situation);
+  const systemPrompt = buildSystemPrompt(model.id, explicitKind);
+  const userPrompt = buildUserPrompt(situation, explicitKind);
 
   // Call OpenAI. If no key is configured (dev / preview without
   // secrets) we return a clear 503 so the client can fall back to
@@ -140,6 +158,7 @@ export async function POST(req: Request) {
   }
 
   let scriptText = "";
+  let detectedKind: ScriptKind | null = null;
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -149,11 +168,12 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         model: openaiModel,
-        // Slightly higher temperature than reply-generator (0.55) —
-        // scripts benefit from a bit more variety in phrasing while
-        // still staying on-tone. The system prompt holds the lane.
         temperature: 0.7,
-        max_tokens: 600,
+        max_tokens: 700,
+        // Force JSON so we can pull `detectedKind` out alongside the
+        // script. response_format is supported on gpt-4o-mini and
+        // newer; for older models the prompt itself instructs JSON.
+        response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -175,7 +195,22 @@ export async function POST(req: Request) {
       );
     }
 
-    scriptText = String(json?.choices?.[0]?.message?.content ?? "").trim();
+    const raw = String(json?.choices?.[0]?.message?.content ?? "").trim();
+    const parsed = parseScriptJson(raw);
+    if (parsed) {
+      scriptText = parsed.script.trim();
+      // Trust the model's classification only if it's a known kind.
+      detectedKind =
+        parsed.detectedKind && VALID_KINDS.has(parsed.detectedKind as ScriptKind)
+          ? (parsed.detectedKind as ScriptKind)
+          : null;
+    } else {
+      // Model didn't return parseable JSON. The string is still
+      // probably the script — better to ship something than fail
+      // hard on a parse-shape miss. detectedKind stays null in that
+      // case so the client knows it's "AI-generated, no auto-tag".
+      scriptText = raw;
+    }
   } catch (e) {
     console.error("[generate-script] fetch failed:", e);
     return NextResponse.json(
@@ -201,19 +236,51 @@ export async function POST(req: Request) {
     );
   });
 
-  return NextResponse.json({ ok: true, script: scriptText, source: "ai" as const });
+  return NextResponse.json({
+    ok: true,
+    script: scriptText,
+    detectedKind,
+    source: "ai" as const,
+  });
 }
 
 // ── Prompt builders ────────────────────────────────────────────────
 
-function buildSystemPrompt(modelId: ReturnType<typeof getSalesModel>["id"], kind: ScriptKind): string {
+function buildSystemPrompt(
+  modelId: ReturnType<typeof getSalesModel>["id"],
+  explicitKind: ScriptKind | null,
+): string {
   const m = getSalesModel(modelId);
-  const kindLabel = SCRIPT_KINDS.find((k) => k.value === kind)?.label ?? kind;
 
-  // The structural "do this, not that" rules per kind. These are
-  // tight on purpose — agents will paste-and-send so we'd rather
-  // be specific than poetic.
-  const structure = STRUCTURE_BY_KIND[kind];
+  // When the caller forced a kind, we lock the structure to it.
+  // When they didn't (the common case), we hand the model the full
+  // catalog and ask it to pick — and to tell us what it picked.
+  // Many real situations blend kinds (objection raised inside an
+  // appointment-setting context); the model is better-positioned
+  // than a dropdown to call that.
+  const kindCatalog = SCRIPT_KINDS.map(
+    (k) => `- "${k.value}" — ${k.label}: ${STRUCTURE_BY_KIND[k.value].split("\n")[0]}`,
+  ).join("\n");
+
+  const kindSection = explicitKind
+    ? `Output type (caller-forced): ${SCRIPT_KINDS.find((k) => k.value === explicitKind)?.label ?? explicitKind}.
+
+Structure for this output type:
+${STRUCTURE_BY_KIND[explicitKind]}`
+    : `Output type: decide based on the situation.
+
+Available types and what they're for:
+${kindCatalog}
+
+How to choose:
+- Read the situation. Identify the agent's actual goal.
+- Pick the SINGLE type that best matches. If the situation blends
+  two (e.g. an objection raised while trying to set an appointment),
+  pick the one that resolves the agent's NEXT MOVE.
+- Use the structure for the chosen type from the rules below.
+
+Structures:
+${SCRIPT_KINDS.map((k) => `### ${k.label} ("${k.value}")\n${STRUCTURE_BY_KIND[k.value]}`).join("\n\n")}`;
 
   return `You are an AI assistant helping a real-estate agent write the next message to a lead.
 
@@ -225,32 +292,66 @@ The agent is operating in their sales-model identity:
 
 Output rules — match the tone above EXACTLY. Tone is the most important constraint.
 
-Output type: ${kindLabel}.
-Structure for this output type:
-${structure}
+${kindSection}
 
 General rules:
 - Write the message ready-to-send. No "[BRACKETS]" placeholders unless a fact is genuinely unknown.
 - If the agent's situation provides the lead's name, use it. Otherwise no greeting placeholder.
 - Length: 80–220 words unless the format demands shorter (e.g. SMS-style DMs ~60 words).
-- Plain text only. No markdown, no bullet lists unless the message is naturally a list.
+- Plain text only inside the "script" field. No markdown, no bullet lists unless the message is naturally a list.
 - Do not invent facts about the property, comps, or numbers. If a fact is needed and not provided, write the sentence around its absence ("once we line up the comps") rather than fabricating.
-- Do not break character into the wrong tone. ${m.id === "influencer" ? "Don't go corporate." : m.id === "closer" ? "Don't get fluffy or apologetic." : m.id === "advisor" ? "Don't get pushy or overly casual." : "Default to a clean professional voice the agent can adjust."}`;
+- Do not break character into the wrong tone. ${m.id === "influencer" ? "Don't go corporate." : m.id === "closer" ? "Don't get fluffy or apologetic." : m.id === "advisor" ? "Don't get pushy or overly casual." : "Default to a clean professional voice the agent can adjust."}
+
+OUTPUT FORMAT — return strict JSON only, no markdown fence, with exactly these two fields:
+{
+  "detectedKind": "<one of: ${SCRIPT_KINDS.map((k) => k.value).join(" | ")}>",
+  "script": "<the message ready to send>"
 }
 
-function buildUserPrompt(
-  _modelId: ReturnType<typeof getSalesModel>["id"],
-  kind: ScriptKind,
-  situation: string,
-): string {
-  void _modelId;
-  const kindLabel = SCRIPT_KINDS.find((k) => k.value === kind)?.label ?? kind;
-  return `Generate a ${kindLabel} for the following situation. Use the agent's voice (per the system rules above).
+The "script" field is plain text. Newlines are allowed. Do not include any keys other than detectedKind and script.`;
+}
+
+function buildUserPrompt(situation: string, explicitKind: ScriptKind | null): string {
+  if (explicitKind) {
+    const label = SCRIPT_KINDS.find((k) => k.value === explicitKind)?.label ?? explicitKind;
+    return `Generate a ${label} for the following situation. Use the agent's voice and the format rules from the system prompt.
 
 Situation:
 ${situation}
 
-Write the message the agent should send next. Output ONLY the message text — no preamble like "Here's your script:" and no closing meta-commentary. The agent will paste it directly.`;
+Return JSON: { "detectedKind": "${explicitKind}", "script": "..." }.`;
+  }
+  return `The agent has described a situation. Decide which type of message best fits the agent's next move, then write it in their voice. Use the format rules from the system prompt.
+
+Situation:
+${situation}
+
+Return JSON: { "detectedKind": "...", "script": "..." }.`;
+}
+
+/**
+ * Tolerant JSON parser for the model's reply. Handles:
+ *   - Markdown ```json ... ``` fences (some older models wrap)
+ *   - Leading/trailing whitespace
+ *   - Extra fields beyond detectedKind/script
+ *
+ * Returns null when the payload is unparseable or missing the script
+ * field — caller falls back to using the raw content as plain text.
+ */
+function parseScriptJson(raw: string): { script: string; detectedKind: string | null } | null {
+  let t = raw.trim();
+  if (t.startsWith("```")) {
+    t = t.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  }
+  try {
+    const j = JSON.parse(t) as { script?: unknown; detectedKind?: unknown };
+    const script = typeof j.script === "string" ? j.script : "";
+    if (!script.trim()) return null;
+    const detectedKind = typeof j.detectedKind === "string" ? j.detectedKind : null;
+    return { script, detectedKind };
+  } catch {
+    return null;
+  }
 }
 
 const STRUCTURE_BY_KIND: Record<ScriptKind, string> = {

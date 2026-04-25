@@ -6,6 +6,7 @@ import {
   type SalesModelId,
 } from "@/lib/sales-models";
 import { updateSelectedSalesModel } from "@/lib/sales-model-storage";
+import { AiSmsModal } from "./AiSmsModal";
 import { DailyActionPlan } from "./DailyActionPlan";
 import { IdentityBlock } from "./IdentityBlock";
 import { ModelToolsGrid } from "./ModelToolsGrid";
@@ -32,6 +33,7 @@ export function SalesModelDashboard({
 }) {
   const [modelId, setModelId] = useState<SalesModelId>(initialModelId);
   const [switchOpen, setSwitchOpen] = useState(false);
+  const [smsOpen, setSmsOpen] = useState(false);
   const model = getSalesModel(modelId);
 
   return (
@@ -48,13 +50,23 @@ export function SalesModelDashboard({
             {model.description}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setSwitchOpen(true)}
-          className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-        >
-          Switch model
-        </button>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setSmsOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+          >
+            <SmsIcon />
+            Launch AI SMS
+          </button>
+          <button
+            type="button"
+            onClick={() => setSwitchOpen(true)}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+          >
+            Switch model
+          </button>
+        </div>
       </div>
 
       <IdentityBlock model={model} />
@@ -85,6 +97,30 @@ export function SalesModelDashboard({
             : { ok: false, error: "Saved locally, but could not sync to your account." };
         }}
       />
+
+      <AiSmsModal
+        open={smsOpen}
+        model={model}
+        onClose={() => setSmsOpen(false)}
+      />
     </div>
+  );
+}
+
+function SmsIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
   );
 }
