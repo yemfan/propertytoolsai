@@ -230,7 +230,7 @@ export default function HomeScreen() {
           </View>
           <SectionRule color={tokens.border} />
           <View style={styles.chipRow}>
-            {Array.from({ length: 5 }).map((_, i) => (
+            {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton
                 key={i}
                 width={88}
@@ -331,6 +331,12 @@ export default function HomeScreen() {
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
             <Text style={styles.chipText}>Appointments</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/cma" as never)}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>CMA</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/notifications")}
