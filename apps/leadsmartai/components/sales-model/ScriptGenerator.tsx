@@ -120,12 +120,41 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
     }
   };
 
+  const [copied, setCopied] = useState(false);
   const onCopy = async () => {
     if (!output) return;
+    let ok = false;
     try {
       await navigator.clipboard.writeText(output);
+      ok = true;
     } catch {
-      // Clipboard unavailable — user can select-all manually.
+      // Clipboard API can throw in non-HTTPS contexts, locked
+      // iframes, or when the document doesn't have focus. Fall
+      // back to a hidden-textarea + execCommand so we still get
+      // something on the user's clipboard rather than failing
+      // silently like before.
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = output;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+      } catch {
+        ok = false;
+      }
+    }
+    if (ok) {
+      setCopied(true);
+      // 1.6s feels right — long enough to register, short enough
+      // to disappear before the agent moves on. Matches the
+      // Tool-prompt-modal copy button so the feedback feels
+      // consistent across the screen.
+      window.setTimeout(() => setCopied(false), 1600);
     }
   };
 
@@ -181,10 +210,17 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
         {output ? (
           <button
             type="button"
-            onClick={onCopy}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+            onClick={() => void onCopy()}
+            aria-label={copied ? "Copied to clipboard" : "Copy script to clipboard"}
+            className={[
+              "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition",
+              copied
+                ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50",
+            ].join(" ")}
           >
-            Copy
+            {copied ? <CheckIcon /> : <CopyIcon />}
+            {copied ? "Copied!" : "Copy"}
           </button>
         ) : null}
         {source ? (
@@ -213,11 +249,76 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
       ) : null}
 
       {output ? (
-        <pre className="mt-4 max-h-96 overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 font-mono text-xs leading-relaxed text-slate-800">
-          {output}
-        </pre>
+        // Output panel with a floating copy affordance pinned to the
+        // top-right. Two copy entry points (this one + the action-row
+        // button above) is intentional — agents reading the output are
+        // already looking at this region, and the action-row button
+        // can scroll out of view on long scripts.
+        <div className="relative mt-4">
+          <button
+            type="button"
+            onClick={() => void onCopy()}
+            aria-label={copied ? "Copied to clipboard" : "Copy script to clipboard"}
+            className={[
+              "absolute right-2 top-2 z-10 inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium shadow-sm transition",
+              copied
+                ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                : "border-slate-200 bg-white/90 text-slate-700 backdrop-blur hover:border-slate-300 hover:bg-white",
+            ].join(" ")}
+          >
+            {copied ? <CheckIcon /> : <CopyIcon />}
+            {copied ? "Copied" : "Copy"}
+          </button>
+          <pre className="max-h-96 overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-slate-50 p-4 pr-20 font-mono text-xs leading-relaxed text-slate-800">
+            {output}
+          </pre>
+        </div>
       ) : null}
     </section>
+  );
+}
+
+// ── Inline icons ──────────────────────────────────────────────────
+//
+// 14×14 currentColor SVGs so the copy/check pair stays visually
+// balanced and inherits the button's text color in both default +
+// "copied" states. Inlined to avoid pulling in an icon-pack
+// dependency for two glyphs.
+
+function CopyIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
   );
 }
 
