@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import IdxDisclaimer from "@/components/idx/IdxDisclaimer";
 import IdxFiltersBar from "@/components/idx/IdxFiltersBar";
@@ -108,7 +109,16 @@ export default async function HomesSearchPage(props: {
         </p>
       </header>
 
-      <IdxFiltersBar />
+      <Suspense
+        fallback={
+          <div
+            className="h-[200px] rounded-2xl border border-slate-200 bg-white shadow-sm md:h-[120px]"
+            aria-hidden
+          />
+        }
+      >
+        <IdxFiltersBar />
+      </Suspense>
 
       <section className="mt-6">
         {errorBanner ? (
