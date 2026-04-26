@@ -1,5 +1,5 @@
 import type { NavConfig } from "@repo/ui";
-import { Calculator, FileText, Home, LayoutDashboard, Mail, MessageCircle, Sparkles, Users } from "lucide-react";
+import { Calculator, FileText, Home, LayoutDashboard, Mail, MessageCircle, Search, Sparkles, Users } from "lucide-react";
 
 /**
  * Public marketing + free tools shell (non-dashboard routes).
@@ -14,6 +14,12 @@ const marketingNavConfig = {
       href: "/",
       match: ["/"],
       icon: <Home size={18} strokeWidth={2} aria-hidden />,
+    },
+    {
+      label: "Homes for sale",
+      href: "/homes",
+      match: ["/homes", "/homes/search", "/homes/[id]"],
+      icon: <Search size={18} strokeWidth={2} aria-hidden />,
     },
     {
       label: "Site",

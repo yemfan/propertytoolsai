@@ -1,8 +1,37 @@
 import { supabaseServer } from "@/lib/supabaseServer";
-import { generateReply, type ReplyMessage } from "@/lib/aiReplyGenerator";
+import { generateReply, type IdxReplyContext, type ReplyMessage } from "@/lib/aiReplyGenerator";
 import { sendSMS } from "@/lib/twilioSms";
 import { sendEmail } from "@/lib/email";
 import { appendMessages, getOrCreateConversation, type StoredMessage } from "@/lib/leadConversationHelpers";
+
+/**
+ * Parse `contacts.notes` for IDX-captured context. The IDX lead-capture
+ * endpoint stores a JSON blob in `notes` with `idx_action`, `listing_id`,
+ * `listing_address`, `listing_price`, `search_filters`. Non-IDX leads have a
+ * plain-text or null `notes` value, in which case JSON.parse throws and we
+ * return null cleanly.
+ */
+export function parseIdxContextFromNotes(notes: string | null | undefined): IdxReplyContext | null {
+  if (!notes || typeof notes !== "string") return null;
+  try {
+    const parsed = JSON.parse(notes) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object") return null;
+    const action = parsed.idx_action;
+    if (typeof action !== "string") return null;
+    return {
+      action,
+      listingId: typeof parsed.listing_id === "string" ? parsed.listing_id : null,
+      listingAddress: typeof parsed.listing_address === "string" ? parsed.listing_address : null,
+      listingPrice: typeof parsed.listing_price === "number" ? parsed.listing_price : null,
+      searchFilters:
+        parsed.search_filters && typeof parsed.search_filters === "object"
+          ? (parsed.search_filters as Record<string, unknown>)
+          : null,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export type FollowupKind = "1h" | "24h" | "3d";
 
@@ -70,6 +99,7 @@ type LeadRow = {
   lead_status?: string | null;
   contact_method?: string | null;
   automation_disabled?: boolean | null;
+  notes?: string | null;
 };
 
 /**
@@ -110,7 +140,7 @@ export async function processDueFollowupJobs(limit = 25): Promise<{
     const { data: lead, error: leadErr } = await supabaseServer
       .from("contacts")
       .select(
-        "id,name,email,phone,property_address,search_location,price_min,price_max,intent,rating,source,lead_status,contact_method,automation_disabled,sms_ai_enabled"
+        "id,name,email,phone,property_address,search_location,price_min,price_max,intent,rating,source,lead_status,contact_method,automation_disabled,sms_ai_enabled,notes"
       )
       .eq("id", leadId)
       .maybeSingle();
@@ -153,10 +183,12 @@ export async function processDueFollowupJobs(limit = 25): Promise<{
     const conv = await getOrCreateConversation(leadId, agentId);
     const messages = (Array.isArray((conv as any).messages) ? (conv as any).messages : []) as ReplyMessage[];
 
+    const idx = parseIdxContextFromNotes(L.notes);
     const text = await generateReply({
       lead: L,
       messages,
       task: `${String(job.kind)} follow-up — no reply yet`,
+      idx,
     });
 
     const method = String(L.contact_method ?? "email");
