@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 
 import { sendEmail } from "@/lib/email";
 import { supabaseServer } from "@/lib/supabaseServer";
+import {
+  dispatchOutboundDemoCall,
+  isDispatchOutboundDemoCallFailure,
+} from "@/lib/voice-ai-demo/outboundCall";
 
 export const runtime = "nodejs";
 
@@ -110,6 +114,41 @@ export async function POST(req: Request) {
 
     const leadId = String(inserted.id);
 
+    // For "have it call me" intent, fire the outbound demo call. Best-effort —
+    // any failure (Twilio not configured, network, etc.) falls back to the
+    // sales-notification email path so a human can do the call manually.
+    let outboundCallSid: string | null = null;
+    let outboundCallError: string | null = null;
+    if (intent === "hear_it" && phone) {
+      try {
+        const result = await dispatchOutboundDemoCall({ toPhone: phone, leadId });
+        if (isDispatchOutboundDemoCallFailure(result)) {
+          outboundCallError = `${result.code}:${result.reason}`;
+          console.warn("[voice-ai-demo-request] outbound dispatch failed", outboundCallError);
+        } else {
+          outboundCallSid = result.callSid;
+          // Mark the lead with the demo call sid + flip its stage so the sales
+          // team's CRM filter shows "AI is calling now" vs "needs manual touch".
+          try {
+            await supabaseServer
+              .from("contacts")
+              .update({
+                stage: "voice_demo_dialing",
+                notes: JSON.stringify({
+                  voice_ai_demo: { intent, brokerage, twilio_call_sid: result.callSid },
+                }),
+              } as Record<string, unknown>)
+              .eq("id", leadId);
+          } catch (e) {
+            console.warn("[voice-ai-demo-request] post-dispatch update failed", e);
+          }
+        }
+      } catch (e) {
+        outboundCallError = e instanceof Error ? e.message : "outbound_dispatch_threw";
+        console.warn("[voice-ai-demo-request] outbound dispatch threw", e);
+      }
+    }
+
     // Notify the sales/founder address (best-effort; never block the response).
     const notifyTo = process.env.VOICE_DEMO_NOTIFY_EMAIL?.trim();
     if (notifyTo) {
@@ -131,7 +170,11 @@ export async function POST(req: Request) {
             ``,
             `Action: ${
               intent === "hear_it"
-                ? "Trigger an outbound demo call to the phone above (Twilio voice + OpenAI Realtime)."
+                ? outboundCallSid
+                  ? `AI demo call dispatched (Twilio call sid: ${outboundCallSid}). Just monitor — no action needed unless they ask for a human.`
+                  : outboundCallError
+                    ? `Outbound demo call FAILED: ${outboundCallError}. Place the demo call manually.`
+                    : "Trigger an outbound demo call to the phone above (Twilio voice + OpenAI Realtime)."
                 : "Reach out within one business day to schedule a private demo."
             }`,
           ].join("\n"),
@@ -141,7 +184,16 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, leadId, intent });
+    return NextResponse.json({
+      ok: true,
+      leadId,
+      intent,
+      // For "hear_it" — surface whether the call was actually dispatched. The
+      // form does not branch on this today (the success message stays the
+      // same either way) but exposes it for future debugging / status pages.
+      outboundCallSid,
+      outboundCallError,
+    });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Server error";
     console.error("voice-ai-demo-request", e);
