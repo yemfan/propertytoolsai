@@ -1,8 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import IdxDisclaimer from "@/components/idx/IdxDisclaimer";
 import IdxFiltersBar from "@/components/idx/IdxFiltersBar";
+
+/**
+ * The filter bar is a client component that calls `useSearchParams()` — Next
+ * 15+ requires any consumer of that hook to either force dynamic rendering
+ * or sit inside a <Suspense> boundary. The /homes page is otherwise fully
+ * static (popular-cities tiles, value-prop blurbs), so we keep the static
+ * shell and isolate the dynamic part behind Suspense — best of both.
+ */
+function FiltersBarFallback() {
+  return (
+    <div
+      className="h-[200px] rounded-2xl border border-slate-200 bg-white shadow-sm md:h-[120px]"
+      aria-hidden
+    />
+  );
+}
 
 export const metadata: Metadata = {
   title: "Homes for sale | LeadSmart AI",
@@ -34,7 +51,9 @@ export default function HomesIndexPage() {
         </p>
       </header>
 
-      <IdxFiltersBar />
+      <Suspense fallback={<FiltersBarFallback />}>
+        <IdxFiltersBar />
+      </Suspense>
 
       <section className="mt-10">
         <h2 className="text-lg font-semibold text-slate-900">Popular markets</h2>
