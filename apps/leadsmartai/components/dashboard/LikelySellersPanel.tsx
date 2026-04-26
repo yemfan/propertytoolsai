@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import EquityMessageDraftModal from "@/components/dashboard/EquityMessageDraftModal";
 import type {
   SphereSellerFactor,
   SphereSellerLabel,
@@ -53,6 +54,7 @@ export default function LikelySellersPanel(props: { defaultLimit?: number } = {}
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<LabelFilter>("all");
+  const [draftFor, setDraftFor] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,10 +143,13 @@ export default function LikelySellersPanel(props: { defaultLimit?: number } = {}
         ) : (
           <ul className="divide-y divide-slate-100">
             {filtered.map((r) => (
-              <li key={r.contactId}>
+              <li
+                key={r.contactId}
+                className="flex items-center gap-3 rounded-xl px-2 py-3 hover:bg-slate-50 sm:gap-4"
+              >
                 <Link
                   href={`/dashboard/contacts/${encodeURIComponent(r.contactId)}`}
-                  className="flex items-center gap-3 rounded-xl px-2 py-3 hover:bg-slate-50 sm:gap-4"
+                  className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4"
                 >
                   <ScoreBadge score={r.score} label={r.label} />
                   <div className="min-w-0 flex-1">
@@ -162,11 +167,25 @@ export default function LikelySellersPanel(props: { defaultLimit?: number } = {}
                     ) : null}
                   </div>
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => setDraftFor({ id: r.contactId, name: r.fullName })}
+                  className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Draft message
+                </button>
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      <EquityMessageDraftModal
+        open={draftFor !== null}
+        contactId={draftFor?.id ?? null}
+        contactName={draftFor?.name ?? null}
+        onClose={() => setDraftFor(null)}
+      />
     </section>
   );
 }
