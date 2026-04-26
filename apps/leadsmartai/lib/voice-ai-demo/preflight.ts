@@ -112,3 +112,13 @@ export function normalizeTargetPhone(input: string | null | undefined): string |
 export function buildOutboundDemoTwimlUrl(appBaseUrl: string): string {
   return `${appBaseUrl.replace(/\/$/, "")}/api/twilio/voice/outbound-demo`;
 }
+
+/**
+ * Pure: builds the URL Twilio will POST to on every call-status transition
+ * (initiated → ringing → in-progress → completed / failed / busy / no-answer
+ * / canceled). The route at this URL writes one `contact_events` row per
+ * transition for the sales-team timeline.
+ */
+export function buildOutboundDemoStatusUrl(appBaseUrl: string): string {
+  return `${appBaseUrl.replace(/\/$/, "")}/api/twilio/voice/outbound-demo/status`;
+}
