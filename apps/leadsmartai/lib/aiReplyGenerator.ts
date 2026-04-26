@@ -6,6 +6,16 @@ export type ReplyMessage = {
   created_at?: string;
 };
 
+export type IdxReplyContext = {
+  /** Action the consumer took on the public IDX site that generated this lead. */
+  action?: "favorite" | "save_search" | "schedule_tour" | "contact_agent" | "view_threshold" | string;
+  listingId?: string | null;
+  listingAddress?: string | null;
+  listingPrice?: number | null;
+  /** Saved-search filters the consumer set, e.g. { city, state, priceMax, beds }. */
+  searchFilters?: Record<string, unknown> | null;
+};
+
 export type GenerateReplyContext = {
   lead: {
     name?: string | null;
@@ -22,6 +32,12 @@ export type GenerateReplyContext = {
   preferences?: Record<string, unknown>;
   /** e.g. "initial outreach" | "1h follow-up" */
   task?: string;
+  /**
+   * Listing/search context surfaced by the IDX site when the lead was captured.
+   * The cron pulls this from `contacts.notes` (json). Optional — non-IDX leads
+   * have no value and the prompt falls back cleanly.
+   */
+  idx?: IdxReplyContext | null;
 };
 
 function fmtPriceRange(min: number | null | undefined, max: number | null | undefined) {
@@ -31,10 +47,69 @@ function fmtPriceRange(min: number | null | undefined, max: number | null | unde
   return `up to $${Math.round(max as number).toLocaleString()}`;
 }
 
+function fmtIdxAction(action: string | undefined): string | null {
+  if (!action) return null;
+  switch (action) {
+    case "favorite":
+      return "saved this home as a favorite";
+    case "save_search":
+      return "saved a search matching their criteria";
+    case "schedule_tour":
+      return "requested a tour";
+    case "contact_agent":
+      return "asked to talk to an agent";
+    case "view_threshold":
+      return "browsed multiple listings";
+    default:
+      return null;
+  }
+}
+
+export function fmtIdxLine(idx: IdxReplyContext | null | undefined): string | null {
+  if (!idx) return null;
+  const phrase = fmtIdxAction(idx.action);
+  if (idx.listingAddress) {
+    const priceStr = idx.listingPrice ? ` (listed at $${Math.round(idx.listingPrice).toLocaleString()})` : "";
+    if (phrase) return `Lead ${phrase}: ${idx.listingAddress}${priceStr}.`;
+    return `Lead is interested in ${idx.listingAddress}${priceStr}.`;
+  }
+  if (idx.searchFilters) {
+    const f = idx.searchFilters as Record<string, unknown>;
+    const summary = [
+      f.city ? String(f.city) : null,
+      f.state ? String(f.state) : null,
+      f.zip ? `ZIP ${String(f.zip)}` : null,
+      f.priceMin || f.priceMax
+        ? `${f.priceMin ? `$${Number(f.priceMin).toLocaleString()}` : "any"}–${f.priceMax ? `$${Number(f.priceMax).toLocaleString()}` : "any"}`
+        : null,
+      f.bedsMin ? `${f.bedsMin}+ beds` : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    if (summary) {
+      if (phrase) return `Lead ${phrase} (filters: ${summary}).`;
+      return `Lead is searching for: ${summary}.`;
+    }
+  }
+  return phrase ? `Lead ${phrase}.` : null;
+}
+
 function fallbackReply(ctx: GenerateReplyContext): string {
   const name = ctx.lead.name?.trim() || "there";
-  const addr = ctx.lead.property_address?.trim() || ctx.lead.search_location?.trim() || "your area";
+  // For IDX leads the listing address is the strongest hook. Fall back through
+  // search_location → "your area" so non-IDX flows are unchanged.
+  const addr =
+    ctx.idx?.listingAddress?.trim() ||
+    ctx.lead.property_address?.trim() ||
+    ctx.lead.search_location?.trim() ||
+    "your area";
   const range = fmtPriceRange(ctx.lead.price_min, ctx.lead.price_max);
+  if (ctx.idx?.action === "schedule_tour") {
+    return `Hi ${name}, thanks for asking about a tour at ${addr}. What day this week works for you? Reply with a couple of options and I'll line it up. — LeadSmart AI`;
+  }
+  if (ctx.idx?.action === "favorite") {
+    return `Hi ${name}, you saved ${addr} — great pick. Want me to send a few similar homes that just hit the market? Reply YES and I'll line them up. — LeadSmart AI`;
+  }
   if (ctx.task?.includes("follow")) {
     return `Hi ${name}, just checking in on ${addr}. Still exploring options in the ${range} range? Happy to answer questions — reply anytime. — LeadSmart AI`;
   }
@@ -69,13 +144,15 @@ export async function generateReply(context: GenerateReplyContext): Promise<stri
     .map((m) => `${m.role}: ${m.content}`)
     .join("\n");
 
+  const idxLine = fmtIdxLine(context.idx);
+
   const userPrompt = `Task: ${context.task ?? "Write one reply message"}
 
 Lead context:
 - Name: ${context.lead.name ?? "unknown"}
 - Location: ${loc}
 - Price range: ${range}
-- Behavior / CRM: ${behavior || "n/a"}
+- Behavior / CRM: ${behavior || "n/a"}${idxLine ? `\n- IDX activity: ${idxLine}` : ""}
 
 Conversation so far:
 ${transcript || "(no prior messages)"}
@@ -85,7 +162,7 @@ Constraints:
 - Warm, professional, not spammy.
 - Sign off as "— LeadSmart AI" or similar short brand line.
 - Ask at most one clear question.
-`;
+${idxLine ? "- If IDX activity is provided, reference the specific listing or search by address/criteria — that is the lead's hook.\n" : ""}`;
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -178,13 +255,15 @@ export async function generateEmailReplyDraft(context: GenerateReplyContext): Pr
     .map((m) => `${m.role}: ${m.content}`)
     .join("\n");
 
+  const idxLine = fmtIdxLine(context.idx);
+
   const userPrompt = `You help real estate agents reply by email.
 
 Lead:
 - Name: ${context.lead.name ?? "unknown"}
 - Location: ${loc}
 - Price range: ${range}
-- CRM: ${behavior || "n/a"}
+- CRM: ${behavior || "n/a"}${idxLine ? `\n- IDX activity: ${idxLine}` : ""}
 
 Email thread (oldest to newest in transcript):
 ${transcript || "(no prior messages)"}
