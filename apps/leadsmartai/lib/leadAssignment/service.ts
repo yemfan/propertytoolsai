@@ -8,6 +8,10 @@ import {
   pickNextAgent,
   type AgentLastAssignment,
 } from "@/lib/leadAssignment/pickNextAgent";
+import {
+  filterAgentsByZip,
+  parseAgentZipCoverage,
+} from "@/lib/leadAssignment/zipCoverage";
 
 /**
  * Round-robin (least-recently-assigned) IDX lead assignment.
@@ -21,6 +25,13 @@ import {
  *   3. null — lead is captured into the unassigned pool. The agent
  *     dashboard already has a "Hot leads / lead inbox" surface for
  *     unassigned rows (see AgentDashboardClient).
+ *
+ * ZIP-based filtering: when `IDX_AGENT_ZIP_COVERAGE` is set (JSON object
+ * mapping agent ids to ZIP arrays) AND the caller supplies a `zip`, the
+ * round-robin allowlist is narrowed to agents whose declared coverage
+ * includes that ZIP. If no listed agent covers the ZIP, the picker falls
+ * back to the full allowlist — preferring an imperfect-fit agent over
+ * silently dropping the lead.
  *
  * Why derive last-assignment from `contacts` instead of an event row:
  *   - Self-correcting: if a lead is deleted or reassigned, the
@@ -37,6 +48,16 @@ import {
 
 export const IDX_LEAD_SOURCE = "idx_homes_for_sale";
 
+export type AssignNextAgentOptions = {
+  /**
+   * Optional 5-digit US ZIP for the lead. When provided AND
+   * `IDX_AGENT_ZIP_COVERAGE` declares per-agent coverage, the round-robin
+   * allowlist is narrowed to agents who service this ZIP. Falls back to
+   * the full allowlist when no listed agent covers it.
+   */
+  zip?: string | null;
+};
+
 /**
  * Public API. Returns the assigned `agent_id`, or null if no assignment is
  * possible (empty allowlist + no fallback). Failures from the timestamp
@@ -44,13 +65,17 @@ export const IDX_LEAD_SOURCE = "idx_homes_for_sale";
  * leaving the lead unassigned — keeps the funnel flowing if Supabase has
  * a transient issue.
  */
-export async function assignNextAgentForIdxLead(): Promise<string | null> {
+export async function assignNextAgentForIdxLead(
+  opts: AssignNextAgentOptions = {},
+): Promise<string | null> {
   const allowlist = parseAgentAllowlist(process.env.IDX_ROUND_ROBIN_AGENT_IDS);
 
-  // Path 1: round-robin across the allowlist.
+  // Path 1: round-robin across the allowlist (optionally narrowed by ZIP).
   if (allowlist.length > 0) {
-    const map = await fetchLastAssignmentMap(allowlist);
-    return pickNextAgent(allowlist, map);
+    const coverage = parseAgentZipCoverage(process.env.IDX_AGENT_ZIP_COVERAGE);
+    const filtered = filterAgentsByZip(allowlist, opts.zip ?? null, coverage);
+    const map = await fetchLastAssignmentMap(filtered);
+    return pickNextAgent(filtered, map);
   }
 
   // Path 2: single-agent fallback — original demo behavior.
