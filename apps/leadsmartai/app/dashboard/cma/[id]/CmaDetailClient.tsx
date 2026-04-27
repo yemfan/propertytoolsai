@@ -114,23 +114,31 @@ export default function CmaDetailClient({ cmaId }: { cmaId: string }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          href="/dashboard/cma"
-          className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <Link
+            href="/dashboard/cma"
+            className="text-xs font-semibold text-slate-500 hover:text-slate-700"
+          >
+            ← All CMAs
+          </Link>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+            {cma.title || cma.subjectAddress}
+          </h1>
+          {cma.title ? (
+            <p className="text-sm text-slate-600">{cma.subjectAddress}</p>
+          ) : null}
+          <p className="mt-1 text-xs text-slate-400">
+            Saved {formatDate(cma.createdAt)} · {cma.compCount} comp{cma.compCount === 1 ? "" : "s"}
+            {cma.confidenceScore != null ? ` · confidence ${cma.confidenceScore}` : ""}
+          </p>
+        </div>
+        <a
+          href={`/api/dashboard/cma/${encodeURIComponent(cma.id)}/pdf`}
+          className="shrink-0 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
         >
-          ← All CMAs
-        </Link>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
-          {cma.title || cma.subjectAddress}
-        </h1>
-        {cma.title ? (
-          <p className="text-sm text-slate-600">{cma.subjectAddress}</p>
-        ) : null}
-        <p className="mt-1 text-xs text-slate-400">
-          Saved {formatDate(cma.createdAt)} · {cma.compCount} comp{cma.compCount === 1 ? "" : "s"}
-          {cma.confidenceScore != null ? ` · confidence ${cma.confidenceScore}` : ""}
-        </p>
+          ↓ Download PDF
+        </a>
       </div>
 
       {/* Headline value range */}
