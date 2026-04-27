@@ -3,6 +3,28 @@
 import { FormEvent, useState } from "react";
 import { Send } from "lucide-react";
 
+/**
+ * Public contact form on /contact.
+ *
+ * Doubles as the proof-of-consent surface required by Twilio's toll-free
+ * verification (TFV) review. The phone field is OPTIONAL — leaving it
+ * blank submits a contact request with no SMS opt-in. The SMS-consent
+ * checkbox is also optional, but it's the ONLY way the user authorizes
+ * receiving text messages from us; submitting without ticking it means
+ * they get email follow-up only.
+ *
+ * The disclosure block below the checkbox includes the four elements
+ * Twilio + the FCC TCPA expect to see at the point of opt-in:
+ *
+ *   1. WHO is sending — "LeadSmart AI"
+ *   2. WHAT kinds of messages — "customer care + marketing"
+ *   3. FREQUENCY — "message frequency varies"
+ *   4. OPT-OUT + COST — "Reply STOP to opt out, message and data rates may apply"
+ *
+ * Don't change the disclosure copy without updating the verification
+ * record submitted to Twilio. Re-verification is required when the
+ * disclosure materially changes.
+ */
 export default function ContactForm() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
@@ -14,8 +36,10 @@ export default function ContactForm() {
     const body = {
       name: String(fd.get("name") ?? "").trim(),
       email: String(fd.get("email") ?? "").trim(),
+      phone: String(fd.get("phone") ?? "").trim(),
       subject: String(fd.get("subject") ?? "").trim(),
       message: String(fd.get("message") ?? "").trim(),
+      smsConsent: fd.get("smsConsent") === "on",
     };
 
     try {
@@ -77,6 +101,20 @@ export default function ContactForm() {
       </div>
 
       <div>
+        <label htmlFor="contact-phone" className="block text-sm font-medium text-slate-700">
+          Phone <span className="font-normal text-slate-400">(optional)</span>
+        </label>
+        <input
+          id="contact-phone"
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          placeholder="(555) 123-4567"
+          className="mt-1.5 block w-full rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-[#0072ce] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0072ce]/20"
+        />
+      </div>
+
+      <div>
         <label htmlFor="contact-subject" className="block text-sm font-medium text-slate-700">
           Subject
         </label>
@@ -102,6 +140,45 @@ export default function ContactForm() {
           placeholder="Tell us more about your question or feedback..."
           className="mt-1.5 block w-full resize-y rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-[#0072ce] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0072ce]/20"
         />
+      </div>
+
+      {/* SMS opt-in — Twilio TFV proof-of-consent surface. The four-element
+          disclosure beneath the checkbox is required; do not edit without
+          re-submitting verification. */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+        <label htmlFor="contact-sms-consent" className="flex cursor-pointer items-start gap-3">
+          <input
+            id="contact-sms-consent"
+            name="smsConsent"
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-[#0072ce] focus:ring-[#0072ce]"
+          />
+          <span className="text-sm text-slate-700">
+            <span className="font-semibold text-slate-900">
+              Yes, send me text messages from LeadSmart AI.
+            </span>{" "}
+            By checking this box and providing my phone number above, I consent to
+            receive text messages from <strong>LeadSmart AI</strong> for{" "}
+            <strong>customer care and marketing</strong> related to real-estate
+            services, account updates, and product information.
+          </span>
+        </label>
+        <p className="mt-3 pl-7 text-xs leading-relaxed text-slate-500">
+          Message frequency varies. Message and data rates may apply. Reply{" "}
+          <strong>STOP</strong> to opt out at any time, or <strong>HELP</strong> for
+          help. Consent is not a condition of any purchase. See our{" "}
+          <a
+            href="/privacy"
+            className="font-medium text-[#0072ce] hover:underline"
+          >
+            Privacy Policy
+          </a>{" "}
+          and{" "}
+          <a href="/terms" className="font-medium text-[#0072ce] hover:underline">
+            Terms of Service
+          </a>{" "}
+          for details.
+        </p>
       </div>
 
       {status === "error" && (
