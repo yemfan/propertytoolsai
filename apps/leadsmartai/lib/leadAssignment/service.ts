@@ -8,36 +8,40 @@ import {
   pickNextAgent,
   type AgentLastAssignment,
 } from "@/lib/leadAssignment/pickNextAgent";
+import { loadRoutingConfigFromDb } from "@/lib/leadAssignment/rulesDbService";
 import {
   filterAgentsByZip,
   parseAgentZipCoverage,
+  type AgentZipCoverage,
 } from "@/lib/leadAssignment/zipCoverage";
 
 /**
  * Round-robin (least-recently-assigned) IDX lead assignment.
  *
  * Resolution order, in priority:
- *   1. `IDX_ROUND_ROBIN_AGENT_IDS` (comma-separated) — pilot allowlist.
- *      The picker rotates across these agents using `contacts.created_at`
- *      timestamps as the per-agent last-assignment marker. No new schema.
- *   2. `IDX_DEMO_AGENT_ID` — single-agent fallback, preserves existing
+ *   1. DB-backed `agent_lead_routing` rows where `in_round_robin = true`.
+ *      Populated by the per-agent settings UI (preferred long-term path).
+ *   2. `IDX_ROUND_ROBIN_AGENT_IDS` env (comma-separated) — back-compat
+ *      fallback for setups that haven't migrated to the UI yet.
+ *   3. `IDX_DEMO_AGENT_ID` env — single-agent fallback, preserves
  *      pre-round-robin behavior for solo-agent demos.
- *   3. null — lead is captured into the unassigned pool. The agent
+ *   4. null — lead is captured into the unassigned pool. The agent
  *     dashboard already has a "Hot leads / lead inbox" surface for
  *     unassigned rows (see AgentDashboardClient).
  *
- * ZIP-based filtering: when `IDX_AGENT_ZIP_COVERAGE` is set (JSON object
- * mapping agent ids to ZIP arrays) AND the caller supplies a `zip`, the
- * round-robin allowlist is narrowed to agents whose declared coverage
- * includes that ZIP. If no listed agent covers the ZIP, the picker falls
- * back to the full allowlist — preferring an imperfect-fit agent over
- * silently dropping the lead.
+ * ZIP-based filtering: each enrolled agent declares their served ZIPs
+ * (DB column `zip_coverage[]` or env `IDX_AGENT_ZIP_COVERAGE`). When the
+ * caller supplies a `zip`, the round-robin allowlist is narrowed to
+ * agents whose declared coverage includes it. If no listed agent covers
+ * the ZIP, the picker falls back to the full allowlist — preferring an
+ * imperfect-fit agent over silently dropping the lead.
  *
  * Why derive last-assignment from `contacts` instead of an event row:
  *   - Self-correcting: if a lead is deleted or reassigned, the
  *     rotation immediately reflects reality.
  *   - One supabase query (group-by) instead of two (event read + write).
- *   - No new schema. The `contacts` row created downstream IS the record.
+ *   - No new schema needed for THIS table. The `contacts` row created
+ *     downstream IS the last-assigned-at record.
  *
  * Caveat: there's a TOCTOU window between the picker reading timestamps
  * and the lead-capture route inserting the new contact. With a small
@@ -68,21 +72,35 @@ export type AssignNextAgentOptions = {
 export async function assignNextAgentForIdxLead(
   opts: AssignNextAgentOptions = {},
 ): Promise<string | null> {
-  const allowlist = parseAgentAllowlist(process.env.IDX_ROUND_ROBIN_AGENT_IDS);
-
-  // Path 1: round-robin across the allowlist (optionally narrowed by ZIP).
-  if (allowlist.length > 0) {
-    const coverage = parseAgentZipCoverage(process.env.IDX_AGENT_ZIP_COVERAGE);
-    const filtered = filterAgentsByZip(allowlist, opts.zip ?? null, coverage);
+  // Path 1: DB-backed rules (preferred). Falls through silently if no
+  // agent has enrolled via the settings UI.
+  const dbConfig = await loadRoutingConfigFromDb();
+  if (dbConfig.hasEnrolledRows) {
+    const filtered = filterAgentsByZip(
+      dbConfig.allowlist,
+      opts.zip ?? null,
+      dbConfig.coverage,
+    );
     const map = await fetchLastAssignmentMap(filtered);
     return pickNextAgent(filtered, map);
   }
 
-  // Path 2: single-agent fallback — original demo behavior.
+  // Path 2: env-backed allowlist (back-compat).
+  const envAllowlist = parseAgentAllowlist(process.env.IDX_ROUND_ROBIN_AGENT_IDS);
+  if (envAllowlist.length > 0) {
+    const envCoverage: AgentZipCoverage = parseAgentZipCoverage(
+      process.env.IDX_AGENT_ZIP_COVERAGE,
+    );
+    const filtered = filterAgentsByZip(envAllowlist, opts.zip ?? null, envCoverage);
+    const map = await fetchLastAssignmentMap(filtered);
+    return pickNextAgent(filtered, map);
+  }
+
+  // Path 3: single-agent fallback — original demo behavior.
   const demo = process.env.IDX_DEMO_AGENT_ID?.trim();
   if (demo) return demo;
 
-  // Path 3: no assignment.
+  // Path 4: no assignment.
   return null;
 }
 

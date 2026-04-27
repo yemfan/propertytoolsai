@@ -8,6 +8,7 @@ import ComplianceCard from "@/components/dashboard/ComplianceCard";
 import { CommissionDefaultsPanel } from "@/components/dashboard/CommissionDefaultsPanel";
 import { TransactionNotificationsPanel } from "@/components/dashboard/TransactionNotificationsPanel";
 import HomeValueSmartLinkCopyShare from "@/components/dashboard/HomeValueSmartLinkCopyShare";
+import LeadRoutingSettingsPanel from "@/components/dashboard/LeadRoutingSettingsPanel";
 import ReviewPolicyPanel from "@/components/dashboard/ReviewPolicyPanel";
 import SettingsTabsClient from "@/components/dashboard/SettingsTabsClient";
 import TemplatesSummaryCard from "@/components/dashboard/TemplatesSummaryCard";
@@ -96,6 +97,7 @@ export default async function SettingsPage() {
         channels={
           <>
             <ChannelsCard agentId={ctx.agentId} />
+            <LeadRoutingSettingsPanel />
             <Card
               title="Transaction Coordinator notifications"
               description="Delivery preferences for deal-level nudges: daily email digest of overdue tasks, plus a closing-window wire-fraud SMS escalation."
