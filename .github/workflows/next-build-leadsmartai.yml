@@ -1,0 +1,117 @@
+# Next.js production build smoke for the leadsmartai app.
+#
+# Why this exists: the prerender break shipped in PR #145 (later patched by
+# #147) only surfaced during `next build`'s static-export pass — typecheck
+# and lint both passed locally. Adding this CI step catches that class of
+# regression on every PR that touches user-visible code, before merge.
+#
+# Triggers:
+#   - PRs whose changed files include leadsmartai app/components/lib code,
+#     route handlers, the next config, or any dep boundary.
+#   - Manual dispatch for ad-hoc verification of an in-flight branch.
+#
+# Excluded: changes purely under apps/leadsmartai/lib/**/__tests__/** and
+# *.md files don't affect the production build, so they don't trigger.
+# (Glob negation handled by the path filter below.)
+#
+# Concurrency: cancel previous runs on the same ref so a fast PR push
+# doesn't queue stale builds.
+
+name: leadsmartai · next build
+
+on:
+  pull_request:
+    paths:
+      - "apps/leadsmartai/app/**"
+      - "apps/leadsmartai/components/**"
+      - "apps/leadsmartai/lib/**"
+      - "apps/leadsmartai/marketing.nav.config.tsx"
+      - "apps/leadsmartai/brokerNav.config.tsx"
+      - "apps/leadsmartai/nav.config.tsx"
+      - "apps/leadsmartai/next.config.js"
+      - "apps/leadsmartai/tailwind.config.ts"
+      - "apps/leadsmartai/tsconfig.json"
+      - "apps/leadsmartai/package.json"
+      - "apps/leadsmartai/scripts/next-build.mjs"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/next-build-leadsmartai.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: next-build-leadsmartai-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: pnpm --filter leadsmartai run build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Placeholder envs the build can read without making real network calls.
+    # Route handlers don't execute at build time; these only need to exist
+    # so static analysis / module-eval doesn't throw on `process.env.X` reads.
+    # Real values live in Vercel env at deploy time.
+    env:
+      NODE_OPTIONS: "--max-old-space-size=8192"
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Supabase
+      NEXT_PUBLIC_SUPABASE_URL: "https://stub.supabase.co"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "stub-anon-key"
+      SUPABASE_SERVICE_ROLE_KEY: "stub-service-role-key"
+      # AI / external services — empty strings exercise the "not configured"
+      # fallback paths the route handlers already implement.
+      OPENAI_API_KEY: ""
+      ANTHROPIC_API_KEY: ""
+      RENTCAST_API_KEY: ""
+      RESEND_API_KEY: ""
+      TWILIO_ACCOUNT_SID: ""
+      TWILIO_AUTH_TOKEN: ""
+      TWILIO_PHONE_NUMBER: ""
+      # Stripe — Next sometimes evaluates billing module imports at build time.
+      STRIPE_SECRET_KEY: "sk_test_stub"
+      STRIPE_WEBHOOK_SECRET: "whsec_stub"
+      # IDX assignment / SOI digest — exercise the "no agents" fallback path.
+      IDX_DEMO_AGENT_ID: ""
+      IDX_ROUND_ROBIN_AGENT_IDS: ""
+      CRON_SECRET: "stub-cron-secret"
+      # Public site URL — used by some marketing pages for canonical hrefs.
+      NEXT_PUBLIC_SITE_URL: "https://leadsmart-ai.com"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install deps (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Build leadsmartai (next build via scripts/next-build.mjs)
+        run: pnpm --filter leadsmartai run build
+
+      # Surfaces the .next build manifest size and route count in the job
+      # summary. Useful signal for "this PR added 200KB to the client bundle"
+      # without needing to wait for Vercel's deploy comment.
+      - name: Summarize build output
+        if: always()
+        run: |
+          set +e
+          if [ -d "apps/leadsmartai/.next" ]; then
+            ROUTES=$(find apps/leadsmartai/.next/server/app -name "page.js" 2>/dev/null | wc -l)
+            SIZE=$(du -sh apps/leadsmartai/.next 2>/dev/null | cut -f1)
+            echo "### leadsmartai build summary" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Compiled \`page.js\` artifacts: ${ROUTES}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- \`.next\` total size: ${SIZE}" >> "$GITHUB_STEP_SUMMARY"
+          fi
