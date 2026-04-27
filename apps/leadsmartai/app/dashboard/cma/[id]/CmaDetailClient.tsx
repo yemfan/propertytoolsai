@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import CmaEmailToSellerButton from "@/components/dashboard/CmaEmailToSellerButton";
 import {
   buildListingStrategyBands,
   formatBandTag,
@@ -133,12 +134,15 @@ export default function CmaDetailClient({ cmaId }: { cmaId: string }) {
             {cma.confidenceScore != null ? ` · confidence ${cma.confidenceScore}` : ""}
           </p>
         </div>
-        <a
-          href={`/api/dashboard/cma/${encodeURIComponent(cma.id)}/pdf`}
-          className="shrink-0 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-        >
-          ↓ Download PDF
-        </a>
+        <div className="flex shrink-0 items-center gap-2">
+          <a
+            href={`/api/dashboard/cma/${encodeURIComponent(cma.id)}/pdf`}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            ↓ Download PDF
+          </a>
+          <CmaEmailToSellerButton cmaId={cma.id} defaultRecipient={null} />
+        </div>
       </div>
 
       {/* Headline value range */}

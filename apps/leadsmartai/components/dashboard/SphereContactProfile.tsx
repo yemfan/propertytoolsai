@@ -7,6 +7,7 @@ import {
   relationshipLabel,
 } from "@/lib/contacts/formatters";
 import AddSignalButton from "./AddSignalButton";
+import GenerateCmaButton from "./GenerateCmaButton";
 import GenerateDraftButton from "./GenerateDraftButton";
 import SavedSearchesPanel from "./SavedSearchesPanel";
 import FavoritesPanel from "./FavoritesPanel";
@@ -42,12 +43,18 @@ export default function SphereContactProfile({
         >
           ← Back to Sphere
         </Link>
-        {contact.email && !contact.doNotContactEmail ? (
-          <SendRecommendationsButton
+        <div className="flex items-center gap-2">
+          <GenerateCmaButton
             contactId={contact.id}
-            contactFirstName={contact.firstName}
+            defaultAddress={contact.closingAddress ?? contact.propertyAddress ?? null}
           />
-        ) : null}
+          {contact.email && !contact.doNotContactEmail ? (
+            <SendRecommendationsButton
+              contactId={contact.id}
+              contactFirstName={contact.firstName}
+            />
+          ) : null}
+        </div>
       </div>
 
       <header className="rounded-xl border border-gray-200 bg-white p-5">
