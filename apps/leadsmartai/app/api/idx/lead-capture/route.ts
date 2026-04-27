@@ -10,6 +10,8 @@ import {
   buildSavedSearchName,
   idxFiltersToSavedSearchCriteria,
 } from "@/lib/idx/savedSearch";
+import { assignNextAgentForIdxLead } from "@/lib/leadAssignment/service";
+import { extractZipFromAddress } from "@/lib/leadAssignment/zipCoverage";
 
 /**
  * IDX public-site lead capture. Single-shot handler called by the IDX modal
@@ -21,8 +23,10 @@ import {
  *     listing/search itself, not a generated home-value report.
  *   - The `notes` field carries the listing/search context as JSON so the AI
  *     auto-reply has full context about what the consumer was looking at.
- *   - `agent_id` falls back to IDX_DEMO_AGENT_ID until per-agent IDX routing
- *     ships; the column is nullable in the contacts schema.
+ *   - `agent_id` is resolved by `assignNextAgentForIdxLead`, which uses a
+ *     least-recently-assigned rotation across IDX_ROUND_ROBIN_AGENT_IDS
+ *     (comma-separated). Falls back to single IDX_DEMO_AGENT_ID, then to
+ *     null (unassigned pool) when neither env is set.
  *
  * Table is `contacts` (not `leads` — renamed when the schema unified
  * leads/sphere/past_clients in 20260319_*).
@@ -97,7 +101,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Phone must be a valid US number." }, { status: 400 });
     }
 
-    const agentId = process.env.IDX_DEMO_AGENT_ID?.trim() || null;
+    // Resolve the lead's ZIP for coverage-based routing. searchFilters.zip
+    // is the explicit signal (set by save_search). For listing-based actions
+    // we fall back to extracting from the formatted address — better than
+    // round-robin'ing across out-of-market agents when the data is right
+    // there in the listing string.
+    const filterZip = (() => {
+      const raw = (body.searchFilters as { zip?: unknown } | null | undefined)?.zip;
+      return typeof raw === "string" ? raw : null;
+    })();
+    const leadZip = filterZip ?? extractZipFromAddress(body.listingAddress ?? null);
+
+    const agentId = await assignNextAgentForIdxLead({ zip: leadZip });
 
     const notesPayload = {
       idx_action: action,
@@ -174,8 +189,9 @@ export async function POST(req: Request) {
     }
 
     // Schedule the 1h/24h/3d AI text follow-ups so the cron picks this lead
-    // up. Requires an agent_id (the table FKs to agents). When the demo agent
-    // env var is unset we silently skip — the email sequence still runs.
+    // up. Requires an agent_id (the table FKs to agents). When no agent could
+    // be assigned (both IDX_ROUND_ROBIN_AGENT_IDS and IDX_DEMO_AGENT_ID unset)
+    // we silently skip — the email sequence still runs.
     if (agentId) {
       try {
         await scheduleFollowUpsForLead(leadId, agentId);
