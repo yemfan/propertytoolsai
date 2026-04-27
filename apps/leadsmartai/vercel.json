@@ -77,6 +77,10 @@
       "schedule": "0 14 * * *"
     },
     {
+      "path": "/api/cron/sphere-buyer-digest",
+      "schedule": "0 16 * * *"
+    },
+    {
       "path": "/api/cron/transactions-overdue-nudges",
       "schedule": "0 15 * * *"
     },
