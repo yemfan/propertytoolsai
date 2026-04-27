@@ -12,6 +12,7 @@ import SavedSearchesPanel from "./SavedSearchesPanel";
 import FavoritesPanel from "./FavoritesPanel";
 import SendRecommendationsButton from "./SendRecommendationsButton";
 import AISuggestedPropertiesPanel from "./AISuggestedPropertiesPanel";
+import VoiceCallTimelinePanel from "./VoiceCallTimelinePanel";
 
 /**
  * Read-only contact profile. Per-contact trigger toggles (sphere_contact_triggers)
@@ -218,10 +219,12 @@ export default function SphereContactProfile({
         contactFirstName={contact.firstName}
       />
 
+      <VoiceCallTimelinePanel contactId={contact.id} />
+
       <section className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-5">
-        <h2 className="text-sm font-semibold text-gray-700">Timeline</h2>
+        <h2 className="text-sm font-semibold text-gray-700">Message timeline</h2>
         <p className="mt-0.5 text-xs text-gray-500">
-          Per-contact message history lands here once the send log integration is wired. Pulls from{" "}
+          Per-contact SMS / email history lands here once the send-log integration is wired. Pulls from{" "}
           <code className="font-mono">communications</code> scoped to this contact.
         </p>
       </section>
