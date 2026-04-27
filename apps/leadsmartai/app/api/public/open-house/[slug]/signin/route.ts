@@ -1,4 +1,10 @@
 import { NextResponse } from "next/server";
+import {
+  CONSENT_SOURCE_OPEN_HOUSE_SIGNIN,
+  OPEN_HOUSE_SIGNIN_DISCLOSURE_VERSION,
+} from "@/lib/consent/disclosureVersions";
+import { extractRequestMeta } from "@/lib/consent/extractRequestMeta";
+import { recordInboundContactRequest } from "@/lib/consent/service";
 import { recordPublicSignin, type PublicSigninInput } from "@/lib/open-houses/publicService";
 import { sendOpenHouseInstantReply } from "@/lib/open-houses/sendInstantReply";
 
@@ -26,12 +32,19 @@ export async function POST(
       Omit<PublicSigninInput, "slug">
     >;
 
+    const cleanName = asNullableString(body.name);
+    const cleanEmail = asNullableString(body.email);
+    const cleanPhone = asNullableString(body.phone);
+    const cleanNotes = asNullableString(body.notes);
+    const marketingConsent = Boolean(body.marketingConsent);
+    const isBuyerAgented = Boolean(body.isBuyerAgented);
+
     const result = await recordPublicSignin({
       slug,
-      name: asNullableString(body.name),
-      email: asNullableString(body.email),
-      phone: asNullableString(body.phone),
-      isBuyerAgented: Boolean(body.isBuyerAgented),
+      name: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone,
+      isBuyerAgented,
       buyerAgentName: asNullableString(body.buyerAgentName),
       buyerAgentBrokerage: asNullableString(body.buyerAgentBrokerage),
       timeline:
@@ -46,8 +59,31 @@ export async function POST(
         ["looking", "just_browsing", "neighbor", "other"].includes(body.buyerStatus)
           ? (body.buyerStatus as PublicSigninInput["buyerStatus"])
           : null,
-      marketingConsent: Boolean(body.marketingConsent),
-      notes: asNullableString(body.notes),
+      marketingConsent,
+      notes: cleanNotes,
+    });
+
+    // Audit trail (TCPA defense). Best-effort — never blocks the
+    // sign-in. The visitor row already captures the same consent flag
+    // structurally; this row carries the EXACT disclosure text shown
+    // (via the version tag) plus the IP + UA the existing visitor row
+    // doesn't store. SMS effectively requires marketingConsent=true AND
+    // not-buyer-agented (Realtor® code-of-ethics gate), so we record
+    // those as the load-bearing signals here.
+    const meta = extractRequestMeta(req);
+    void recordInboundContactRequest({
+      source: CONSENT_SOURCE_OPEN_HOUSE_SIGNIN,
+      name: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone,
+      subject: `open-house signin: ${slug}`,
+      message: cleanNotes,
+      smsConsent: marketingConsent && !isBuyerAgented,
+      emailConsent: marketingConsent,
+      consentDisclosureVersion: OPEN_HOUSE_SIGNIN_DISCLOSURE_VERSION,
+      ipAddress: meta.ipAddress,
+      userAgent: meta.userAgent,
+      contactId: null,
     });
 
     // Speed-to-lead: instant SMS auto-reply while the visitor is still
