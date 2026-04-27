@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
+import {
+  CONSENT_SOURCE_IDX_LEAD_CAPTURE,
+  IDX_LEAD_CAPTURE_DISCLOSURE_VERSION,
+} from "@/lib/consent/disclosureVersions";
+import { extractRequestMeta } from "@/lib/consent/extractRequestMeta";
+import { recordInboundContactRequest } from "@/lib/consent/service";
 import { scheduleEmailSequenceForLeadSkipDay0 } from "@/lib/emailSequences";
 import { generateReply, type IdxReplyContext } from "@/lib/aiReplyGenerator";
 import { scheduleFollowUpsForLead } from "@/lib/followUp";
@@ -158,6 +164,28 @@ export async function POST(req: Request) {
     }
 
     const leadId = String(inserted.id);
+
+    // Audit trail (TCPA defense). Best-effort — never blocks the lead
+    // capture. The contacts row already stamps tcpa_consent_at when SMS
+    // consent + phone are present, but the audit row carries the EXACT
+    // disclosure text (via the version tag) plus the IP + UA — the
+    // load-bearing artifacts if a regulator or carrier ever asks "show
+    // me proof this number consented on date X".
+    const meta = extractRequestMeta(req);
+    void recordInboundContactRequest({
+      source: CONSENT_SOURCE_IDX_LEAD_CAPTURE,
+      name,
+      email,
+      phone,
+      subject: `idx ${action}`,
+      message: typeof body.listingAddress === "string" ? body.listingAddress : null,
+      smsConsent,
+      emailConsent: null,
+      consentDisclosureVersion: IDX_LEAD_CAPTURE_DISCLOSURE_VERSION,
+      ipAddress: meta.ipAddress,
+      userAgent: meta.userAgent,
+      contactId: leadId,
+    });
 
     // Best-effort: kick off the existing email follow-up sequence.
     try {
