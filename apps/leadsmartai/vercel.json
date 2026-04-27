@@ -77,6 +77,10 @@
       "schedule": "0 10 * * *"
     },
     {
+      "path": "/api/cron/sphere-drip-send",
+      "schedule": "5 * * * *"
+    },
+    {
       "path": "/api/cron/sphere-seller-digest",
       "schedule": "0 14 * * *"
     },
