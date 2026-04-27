@@ -73,6 +73,10 @@
       "schedule": "0 9 * * *"
     },
     {
+      "path": "/api/cron/sphere-drip-enroll",
+      "schedule": "0 10 * * *"
+    },
+    {
       "path": "/api/cron/sphere-seller-digest",
       "schedule": "0 14 * * *"
     },

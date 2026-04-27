@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { subscriptionRequiredResponse, userHasCrmFeature } from "@/lib/billing/subscriptionAccess";
+import {
+  attachEnrollments,
+  BOTH_HIGH_CADENCE_KEY,
+  listEnrollmentsForAgent,
+} from "@/lib/sphereDrip/service";
 import { fetchMonetizationViewForAgent } from "@/lib/sphereMonetization/service";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 
@@ -51,18 +56,27 @@ export async function GET(req: Request) {
     const limitPerSide = limitRaw != null ? Number(limitRaw) : 100;
     const minScore = minScoreRaw != null ? Number(minScoreRaw) : 0;
 
-    const rows = await fetchMonetizationViewForAgent(agentId, {
-      limitPerSide: Number.isFinite(limitPerSide) ? limitPerSide : 100,
-      minScore: Number.isFinite(minScore) ? minScore : 0,
-    });
+    const [rows, enrollments] = await Promise.all([
+      fetchMonetizationViewForAgent(agentId, {
+        limitPerSide: Number.isFinite(limitPerSide) ? limitPerSide : 100,
+        minScore: Number.isFinite(minScore) ? minScore : 0,
+      }),
+      // Best-effort — if the drip table is missing or RLS misconfigured we
+      // still want the monetization rows to render. Caught + treated as
+      // "no enrollments".
+      listEnrollmentsForAgent(agentId, BOTH_HIGH_CADENCE_KEY).catch(() => []),
+    ]);
+
+    const decoratedRows = attachEnrollments(rows, enrollments);
 
     return NextResponse.json({
       ok: true,
-      rows,
+      rows: decoratedRows,
       meta: {
         limitPerSide: Number.isFinite(limitPerSide) ? limitPerSide : 100,
         minScore: Number.isFinite(minScore) ? minScore : 0,
-        note: "Combined view joins seller-prediction and buyer-prediction scores by contactId.",
+        cadenceKey: BOTH_HIGH_CADENCE_KEY,
+        note: "Combined view joins seller-prediction and buyer-prediction scores by contactId. Each row also carries the agent's drip enrollment state for the both_high cadence.",
       },
     });
   } catch (e: unknown) {
