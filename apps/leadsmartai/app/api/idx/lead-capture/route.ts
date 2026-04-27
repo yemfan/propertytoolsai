@@ -11,6 +11,7 @@ import {
   idxFiltersToSavedSearchCriteria,
 } from "@/lib/idx/savedSearch";
 import { assignNextAgentForIdxLead } from "@/lib/leadAssignment/service";
+import { extractZipFromAddress } from "@/lib/leadAssignment/zipCoverage";
 
 /**
  * IDX public-site lead capture. Single-shot handler called by the IDX modal
@@ -100,7 +101,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Phone must be a valid US number." }, { status: 400 });
     }
 
-    const agentId = await assignNextAgentForIdxLead();
+    // Resolve the lead's ZIP for coverage-based routing. searchFilters.zip
+    // is the explicit signal (set by save_search). For listing-based actions
+    // we fall back to extracting from the formatted address — better than
+    // round-robin'ing across out-of-market agents when the data is right
+    // there in the listing string.
+    const filterZip = (() => {
+      const raw = (body.searchFilters as { zip?: unknown } | null | undefined)?.zip;
+      return typeof raw === "string" ? raw : null;
+    })();
+    const leadZip = filterZip ?? extractZipFromAddress(body.listingAddress ?? null);
+
+    const agentId = await assignNextAgentForIdxLead({ zip: leadZip });
 
     const notesPayload = {
       idx_action: action,
