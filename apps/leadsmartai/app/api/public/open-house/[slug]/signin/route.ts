@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { recordPublicSignin, type PublicSigninInput } from "@/lib/open-houses/publicService";
+import { sendOpenHouseInstantReply } from "@/lib/open-houses/sendInstantReply";
 
 export const runtime = "nodejs";
 
@@ -49,7 +50,22 @@ export async function POST(
       notes: asNullableString(body.notes),
     });
 
-    return NextResponse.json({ ok: true, ...result });
+    // Speed-to-lead: instant SMS auto-reply while the visitor is still
+    // at the door. Best-effort — never fails the sign-in. Eligibility
+    // (phone + consent + non-agented) is enforced inside the orchestrator.
+    let instantReplyStatus: "sent" | "skipped" | "failed" = "skipped";
+    try {
+      const outcome = await sendOpenHouseInstantReply(result.visitorId);
+      instantReplyStatus = outcome.status;
+    } catch (smsErr) {
+      console.error(
+        "[open-house.signin] instant reply orchestrator threw:",
+        smsErr instanceof Error ? smsErr.message : smsErr,
+      );
+      instantReplyStatus = "failed";
+    }
+
+    return NextResponse.json({ ok: true, ...result, instantReplyStatus });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Sign-in failed";
     const status = /not found/i.test(message) ? 404 : 400;
