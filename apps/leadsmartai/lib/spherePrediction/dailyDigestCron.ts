@@ -8,6 +8,7 @@ import {
   DEDUP_DAYS,
   pickNewHighCandidates,
 } from "@/lib/spherePrediction/digestFormat";
+import { shouldRunDigestForAgentToday } from "@/lib/spherePrediction/digestCadence";
 import {
   topLikelySellersForAgent,
   type LikelySellerRow,
@@ -126,6 +127,24 @@ export async function runSphereSellerDigestForAgent(
   opts: { dryRun?: boolean; limit?: number } = {},
 ): Promise<AgentDigestResult> {
   const limit = opts.limit ?? 50;
+
+  // Per-agent cadence gate (env-driven, no schema). Skip agents who opted
+  // out (`SPHERE_DIGEST_OFF_AGENT_IDS`) or chose weekly cadence on a non-
+  // Monday. The dryRun + agentId-override paths in the cron route still
+  // honor cadence so manual testing reflects what production will do —
+  // pass `?agentId=<id>` to test a specific agent's flow on the right day.
+  if (
+    !shouldRunDigestForAgentToday(
+      agentId,
+      {
+        SPHERE_DIGEST_WEEKLY_AGENT_IDS: process.env.SPHERE_DIGEST_WEEKLY_AGENT_IDS,
+        SPHERE_DIGEST_OFF_AGENT_IDS: process.env.SPHERE_DIGEST_OFF_AGENT_IDS,
+      },
+      new Date(),
+    )
+  ) {
+    return { agentId, sent: false, reason: "cadence_skip" };
+  }
 
   const ranked = await topLikelySellersForAgent(agentId, { limit, label: "high" });
   if (ranked.length === 0) {
