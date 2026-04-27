@@ -1,20 +1,32 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 
+import {
+  CONSENT_SOURCE_CONTACT_FORM,
+  CONTACT_FORM_DISCLOSURE_VERSION,
+} from "@/lib/consent/disclosureVersions";
+import { extractRequestMeta } from "@/lib/consent/extractRequestMeta";
+import { recordInboundContactRequest } from "@/lib/consent/service";
+
+export const runtime = "nodejs";
+
 /**
  * Public contact-form intake.
  *
  * Doubles as the proof-of-consent endpoint for Twilio toll-free
  * verification — the form at /contact is the user-visible surface.
- * When `smsConsent` is true the request body captures the user's
- * affirmative SMS opt-in alongside the phone number; this endpoint
- * forwards everything via email so the submission is auditable
- * without yet introducing a dedicated DB table.
  *
- * NOTE before going to real production traffic: TCPA expects a
- * persisted consent record (timestamp + IP + the exact disclosure
- * text shown). The follow-up to this PR should add an
- * `inbound_contact_requests` table and write the audit trail there.
+ * Order of work:
+ *   1. Validate the submission (name + email required; smsConsent w/o
+ *      phone is malformed).
+ *   2. Persist a row in `inbound_contact_requests` (audit table from
+ *      migration 20260510000000) with the IP, UA, and pinned disclosure
+ *      version. Best-effort — a DB outage MUST NOT block the email send.
+ *   3. Forward the submission via SMTP so a human sees it.
+ *
+ * The audit row is the load-bearing piece for TCPA defense — if a
+ * carrier or regulator ever asks "show me proof this number consented
+ * on date X", the row + the consent_disclosure_version is the answer.
  */
 export async function POST(req: Request) {
   try {
@@ -55,6 +67,25 @@ export async function POST(req: Request) {
       );
     }
 
+    // Audit-row write FIRST so the consent record exists even if the
+    // email send fails downstream. Best-effort — recordInbound...
+    // catches its own errors and returns null on failure.
+    const meta = extractRequestMeta(req);
+    await recordInboundContactRequest({
+      source: CONSENT_SOURCE_CONTACT_FORM,
+      name: name ?? null,
+      email: email ?? null,
+      phone: cleanPhone || null,
+      subject: subject?.trim() || null,
+      message: message?.trim() || null,
+      smsConsent: consent,
+      emailConsent: null, // /contact has no separate email-consent toggle
+      consentDisclosureVersion: CONTACT_FORM_DISCLOSURE_VERSION,
+      ipAddress: meta.ipAddress,
+      userAgent: meta.userAgent,
+      contactId: null,
+    });
+
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT ?? 587),
@@ -74,6 +105,9 @@ Email: ${email}
 Phone: ${cleanPhone || "(not provided)"}
 SMS consent: ${consent ? "YES — opted in to receive text messages" : "no"}
 SMS consent timestamp: ${consent ? new Date().toISOString() : "n/a"}
+Disclosure version: ${CONTACT_FORM_DISCLOSURE_VERSION}
+IP: ${meta.ipAddress ?? "(unknown)"}
+User-agent: ${meta.userAgent ?? "(unknown)"}
 
 Message:
 ${message || "(no message provided)"}`,
