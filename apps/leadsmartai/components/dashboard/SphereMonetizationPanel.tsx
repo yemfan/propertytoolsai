@@ -9,6 +9,15 @@ import {
   type MonetizationRow,
 } from "@/lib/sphereMonetization/mergeRows";
 
+type EnrollmentInfo = {
+  status: "active" | "paused" | "completed" | "exited";
+  currentStep: number;
+  totalSteps: number;
+  nextDueAt: string | null;
+};
+
+type RowWithEnrollment = MonetizationRow & { enrollment: EnrollmentInfo | null };
+
 const LABEL_TONE: Record<"high" | "medium" | "low", string> = {
   high: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   medium: "bg-amber-50 text-amber-700 ring-amber-200",
@@ -39,7 +48,7 @@ export default function SphereMonetizationPanel(
 ) {
   const limitPerSide = props.defaultLimitPerSide ?? 100;
 
-  const [rows, setRows] = useState<MonetizationRow[]>([]);
+  const [rows, setRows] = useState<RowWithEnrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<MonetizationFilter>("all");
@@ -56,14 +65,35 @@ export default function SphereMonetizationPanel(
         );
         const data = (await res.json().catch(() => ({}))) as {
           ok?: boolean;
-          rows?: MonetizationRow[];
+          rows?: Array<MonetizationRow & {
+            enrollment?: {
+              status: EnrollmentInfo["status"];
+              currentStep: number;
+              nextDueAt: string | null;
+            } | null;
+          }>;
           error?: string;
         };
         if (cancelled) return;
         if (!res.ok || data.ok === false) {
           throw new Error(data.error ?? `HTTP ${res.status}`);
         }
-        setRows(data.rows ?? []);
+        // Normalize the optional enrollment payload onto every row.
+        // The cadence has 6 steps; pinned here so the UI doesn't depend
+        // on an extra round-trip just to render the "x/6" badge.
+        const TOTAL_STEPS = 6;
+        const normalized: RowWithEnrollment[] = (data.rows ?? []).map((r) => ({
+          ...r,
+          enrollment: r.enrollment
+            ? {
+                status: r.enrollment.status,
+                currentStep: r.enrollment.currentStep,
+                nextDueAt: r.enrollment.nextDueAt,
+                totalSteps: TOTAL_STEPS,
+              }
+            : null,
+        }));
+        setRows(normalized);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
@@ -76,7 +106,10 @@ export default function SphereMonetizationPanel(
   }, [limitPerSide]);
 
   const filtered = useMemo(
-    () => filterMonetizationRows(rows, filter),
+    // The filter is type-preserving (it returns a subset of input rows
+    // unchanged) but the helper signature widens to MonetizationRow.
+    // Cast the result back so the enrollment overlay stays typed.
+    () => filterMonetizationRows(rows, filter) as RowWithEnrollment[],
     [rows, filter],
   );
 
@@ -143,11 +176,12 @@ export default function SphereMonetizationPanel(
                 >
                   <CombinedBadge score={r.combinedScore} bothHigh={r.bothMediumOrHigh} />
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <p className="truncate text-sm font-semibold text-slate-900">
                         {r.fullName}
                       </p>
                       <LifecyclePill stage={r.lifecycleStage} />
+                      {r.enrollment ? <DripBadge enrollment={r.enrollment} /> : null}
                     </div>
                     <p className="mt-0.5 truncate text-xs text-slate-600">
                       {bestReason(r)}
@@ -259,6 +293,67 @@ function SidePill({
       </span>
     </span>
   );
+}
+
+function DripBadge({ enrollment }: { enrollment: EnrollmentInfo }) {
+  if (enrollment.status === "completed") {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200"
+        title="Sphere drip cadence completed"
+      >
+        Drip done
+      </span>
+    );
+  }
+  if (enrollment.status === "exited") {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 ring-1 ring-slate-200"
+        title="Removed from sphere drip"
+      >
+        Drip exited
+      </span>
+    );
+  }
+  if (enrollment.status === "paused") {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 ring-1 ring-amber-200"
+        title="Sphere drip paused"
+      >
+        Drip paused
+      </span>
+    );
+  }
+  // Active.
+  const stepLabel = `${enrollment.currentStep}/${enrollment.totalSteps}`;
+  const dueLabel = enrollment.nextDueAt ? formatDueRelative(enrollment.nextDueAt) : null;
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 ring-1 ring-indigo-200"
+      title={
+        enrollment.nextDueAt
+          ? `In sphere drip — step ${enrollment.currentStep} of ${enrollment.totalSteps} (next due ${enrollment.nextDueAt})`
+          : `In sphere drip — step ${enrollment.currentStep} of ${enrollment.totalSteps}`
+      }
+    >
+      Drip {stepLabel}
+      {dueLabel ? <span className="font-normal normal-case text-indigo-500"> · {dueLabel}</span> : null}
+    </span>
+  );
+}
+
+function formatDueRelative(iso: string): string {
+  const ts = Date.parse(iso);
+  if (!Number.isFinite(ts)) return "";
+  const diffDays = Math.round((ts - Date.now()) / 86_400_000);
+  if (diffDays < -1) return `${-diffDays}d overdue`;
+  if (diffDays === -1) return "1d overdue";
+  if (diffDays === 0) return "due today";
+  if (diffDays === 1) return "due tmrw";
+  if (diffDays <= 30) return `due in ${diffDays}d`;
+  return `due ${new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 }
 
 function LifecyclePill({ stage }: { stage: MonetizationRow["lifecycleStage"] }) {
