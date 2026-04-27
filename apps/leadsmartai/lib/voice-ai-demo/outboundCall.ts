@@ -3,6 +3,7 @@ import "server-only";
 import twilio from "twilio";
 
 import {
+  buildOutboundDemoStatusUrl,
   buildOutboundDemoTwimlUrl,
   isOutboundCallEnvFailure,
   normalizeTargetPhone,
@@ -22,6 +23,7 @@ import {
 
 // Re-export pure helpers so existing call sites can import from a single module.
 export {
+  buildOutboundDemoStatusUrl,
   buildOutboundDemoTwimlUrl,
   isOutboundCallEnvFailure,
   normalizeTargetPhone,
@@ -96,6 +98,7 @@ export async function dispatchOutboundDemoCall(
   }
 
   const url = buildOutboundDemoTwimlUrl(envCheck.env.appBaseUrl);
+  const statusCallback = buildOutboundDemoStatusUrl(envCheck.env.appBaseUrl);
   const client = twilio(envCheck.env.accountSid, envCheck.env.authToken);
 
   try {
@@ -104,6 +107,13 @@ export async function dispatchOutboundDemoCall(
       to: toE164,
       url,
       method: "POST",
+      // Status callbacks land in /api/twilio/voice/outbound-demo/status,
+      // which writes one `contact_events` row per transition. Listed here
+      // are every state the sales-team timeline cares about (initiated →
+      // ringing → answered → completed, plus failure terminals).
+      statusCallback,
+      statusCallbackMethod: "POST",
+      statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
     });
     return { ok: true, callSid: String(call.sid), toE164 };
   } catch (e) {
