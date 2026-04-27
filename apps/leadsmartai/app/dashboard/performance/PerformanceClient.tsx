@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
+import { PipelineForecastPanel } from "@/components/dashboard/PipelineForecastPanel";
 import { RevenuePanel } from "@/components/dashboard/RevenuePanel";
 
 type Summary = {
@@ -109,6 +110,16 @@ export default function PerformanceClient() {
       <section>
         <h2 className="mb-2 text-sm font-semibold text-gray-900">Revenue &amp; commission</h2>
         <RevenuePanel />
+      </section>
+
+      <section className="space-y-4 border-t border-slate-200 pt-5">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-900">Pipeline forecast</h2>
+          <p className="mt-0.5 text-xs text-gray-500">
+            What&apos;s on deck — active and pending deals weighted by close-date proximity.
+          </p>
+        </div>
+        <PipelineForecastPanel />
       </section>
 
       <section className="space-y-4 border-t border-slate-200 pt-5">
