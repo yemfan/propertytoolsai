@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { DealReviewPanel } from "@/components/dashboard/DealReviewPanel";
 import { ListingFeedbackPanel } from "@/components/dashboard/ListingFeedbackPanel";
+import PostToFacebookCard from "@/components/dashboard/PostToFacebookCard";
 import { PlaybooksPanel } from "@/components/dashboard/PlaybooksPanel";
 import { LimitWarningBanner } from "@/components/entitlements/LimitWarningBanner";
 import type {
@@ -223,6 +224,13 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
             <span className="text-slate-400">→</span>
           </Link>
         </div>
+      ) : null}
+
+      {/* Listing-side social posting — push to a connected Facebook Page
+          with one click. v1 manual-trigger only; auto-on-active is a
+          follow-up. */}
+      {txn.transaction_type === "listing_rep" || txn.transaction_type === "dual" ? (
+        <PostToFacebookCard transactionId={txn.id} />
       ) : null}
 
       {/* Cross-agent showing feedback — listing-side only. Agent sends a
