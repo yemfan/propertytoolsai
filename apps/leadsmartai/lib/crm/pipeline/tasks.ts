@@ -3,17 +3,23 @@ import type { CrmTaskRow, TaskPriority, TaskSource, TaskStatus } from "./types";
 
 export async function listTasksForAgent(params: {
   agentId: string;
+  /** When provided, lists tasks across these agent ids (team mode).
+   *  Falls back to single-agent filter when omitted. */
+  agentIds?: ReadonlyArray<string>;
   leadId?: string | null;
   status?: TaskStatus | "open_only";
   limit?: number;
 }): Promise<CrmTaskRow[]> {
   const lim = Math.min(Math.max(params.limit ?? 100, 1), 200);
+  const ids = params.agentIds && params.agentIds.length > 0
+    ? params.agentIds
+    : [params.agentId];
   let q = supabaseServer
     .from("crm_tasks")
     .select(
       "id,agent_id,contact_id,pipeline_stage_id,title,description,status,priority,due_at,completed_at,source,ai_rationale,metadata_json,created_at,updated_at"
     )
-    .eq("agent_id", params.agentId as any)
+    .in("agent_id", ids as string[])
     .order("due_at", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false })
     .limit(lim);

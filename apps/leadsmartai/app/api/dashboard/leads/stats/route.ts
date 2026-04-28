@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { getAgentScopeForAgent } from "@/lib/teams/scope.server";
 
 export async function GET() {
   try {
@@ -11,10 +12,11 @@ export async function GET() {
     const { data: agent } = await supabase.from("agents").select("id").eq("auth_user_id", userData.user.id).maybeSingle();
     if (!agent?.id) return NextResponse.json({ ok: false, error: "Agent not found" }, { status: 403 });
 
+    const scope = await getAgentScopeForAgent(String(agent.id));
     const { data: leads } = await supabaseServer
       .from("contacts")
       .select("id, lead_status, source, created_at")
-      .eq("agent_id", String(agent.id))
+      .in("agent_id", scope.agentIds)
       .limit(5000);
 
     const rows = (leads ?? []) as Array<{

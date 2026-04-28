@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { getUserFromRequest } from "@/lib/authFromRequest";
+import { getAgentScopeForAgent } from "@/lib/teams/scope.server";
 
 async function getAgentIdForUser(userId: string) {
   try {
@@ -34,13 +35,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: true, days: [] });
     }
 
+    const scope = await getAgentScopeForAgent(String(agentId));
     const sinceIso = daysAgoIso(13); // last 14 days including today
 
     const [tasksRes, eventsRes] = await Promise.all([
       supabaseServer
         .from("tasks")
         .select("status,updated_at", { count: "exact" })
-        .eq("agent_id", agentId)
+        .in("agent_id", scope.agentIds)
         .gte("updated_at", sinceIso)
         .limit(1000),
       supabaseServer
