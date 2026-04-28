@@ -15,6 +15,7 @@ export type LimitReason =
   | "contact_limit_reached"
   | "download_limit_reached"
   | "team_access_not_enabled"
+  | "team_seat_cap_reached"
   | "ai_usage_limit_reached"
   | "crm_prediction_locked"
   | "crm_automation_locked"

@@ -12,6 +12,11 @@ export type PlanCatalogEntry = {
   alertsLevel: "basic" | "full" | "advanced";
   reportsDownloadLevel: "limited" | "full" | "unlimited";
   teamAccess: boolean;
+  /** Maximum members on a team (including owner). Null = unlimited.
+   *  0 means the plan can't run a team — paired with teamAccess=false.
+   *  Owner counts as one seat; pending invites also occupy a seat so
+   *  the owner can't oversubscribe by inviting many emails at once. */
+  teamSeatCap: number | null;
   /**
    * Monthly cap on AI-bearing actions (deal review, growth opps,
    * AI SMS draft, AI deal commentary, etc.). NULL = unlimited.
@@ -33,6 +38,7 @@ export const PLAN_CATALOG: Record<AgentPlan, PlanCatalogEntry> = {
     alertsLevel: "basic",
     reportsDownloadLevel: "limited",
     teamAccess: false,
+    teamSeatCap: 0,
     aiActionsPerMonth: 100,
     bullets: [
       "CMA reports: 2 per day",
@@ -52,6 +58,7 @@ export const PLAN_CATALOG: Record<AgentPlan, PlanCatalogEntry> = {
     alertsLevel: "full",
     reportsDownloadLevel: "full",
     teamAccess: false,
+    teamSeatCap: 0,
     aiActionsPerMonth: 5000,
     bullets: [
       "CMA reports: 5 per day",
@@ -71,6 +78,7 @@ export const PLAN_CATALOG: Record<AgentPlan, PlanCatalogEntry> = {
     alertsLevel: "advanced",
     reportsDownloadLevel: "unlimited",
     teamAccess: true,
+    teamSeatCap: 10,
     aiActionsPerMonth: null,
     bullets: [
       "CMA reports: 10 per day (expandable)",
@@ -79,7 +87,7 @@ export const PLAN_CATALOG: Record<AgentPlan, PlanCatalogEntry> = {
       "Alerts: advanced + automation",
       "CRM: unlimited contacts",
       "Report downloads: unlimited",
-      "Team access: included",
+      "Team access: up to 10 seats included",
     ],
   },
 };
