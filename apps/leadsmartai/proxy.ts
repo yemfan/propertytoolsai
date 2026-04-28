@@ -8,7 +8,13 @@ import { fetchUserPortalContext } from "@/lib/rolePortalServer";
 import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
 import { matchesPortalKind } from "@/lib/rolePortalPaths";
 
+/** Public marketing pages under /agent/* that bypass the auth gate. */
+const PUBLIC_AGENT_PATHS = new Set<string>([
+  "/agent/compare",
+]);
+
 function isAgentPath(pathname: string) {
+  if (PUBLIC_AGENT_PATHS.has(pathname)) return false;
   return pathname === "/agent" || pathname.startsWith("/agent/");
 }
 
@@ -64,9 +70,15 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Forward the resolved pathname to server components so layouts
+  // can branch on it (e.g. /agent/layout.tsx skips the workspace
+  // access check for public marketing pages like /agent/compare).
+  const forwardedHeaders = new Headers(req.headers);
+  forwardedHeaders.set("x-pathname", pathname);
+
   let res = NextResponse.next({
     request: {
-      headers: req.headers,
+      headers: forwardedHeaders,
     },
   });
 
