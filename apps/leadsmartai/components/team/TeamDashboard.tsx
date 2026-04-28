@@ -7,6 +7,7 @@ import {
   removeMember,
   revokeInvite,
 } from "@/app/dashboard/team/actions";
+import { TeamBreakdownPanel } from "./TeamBreakdownPanel";
 import type { TeamInvite, TeamMembership, TeamRoster } from "@/lib/teams/types";
 
 /**
@@ -59,6 +60,8 @@ export function TeamDashboard({
         isOwner={isOwner}
         members={roster.members}
       />
+
+      <TeamBreakdownPanel teamId={roster.team.id} />
 
       {isOwner ? (
         <InviteCard teamId={roster.team.id} pendingInvites={roster.pendingInvites} />
