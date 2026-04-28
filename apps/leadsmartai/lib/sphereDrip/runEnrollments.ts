@@ -2,6 +2,7 @@ import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
+import { listEnabledAgentIdsFromDb } from "./prefsDbService";
 import {
   enrollEligibleContactsForAgent,
   type EnrollmentRunResult,
@@ -12,11 +13,15 @@ import {
  * contacts and runs the enrollment service for each. Drives the daily
  * cron at /api/cron/sphere-drip-enroll.
  *
- * Pilot opt-in: only agents in the `SPHERE_DRIP_ENABLED_AGENT_IDS`
- * env allowlist are processed. Empty / missing → no agents run, which
- * is the safe default during rollout. We'll promote this to a DB-backed
- * per-agent toggle in a follow-up (same migration story as the
- * IDX-routing rules in PR #165).
+ * Resolution order (PR-O):
+ *   1. DB row in agent_sphere_drip_prefs with enabled=true → process
+ *   2. SPHERE_DRIP_ENABLED_AGENT_IDS env allowlist (back-compat) →
+ *      processed UNLESS the agent has a DB row with enabled=false
+ *   3. Otherwise → skipped
+ *
+ * Empty / missing on both sides → no agents run (safe default during
+ * rollout). The `?force=1` query param on the cron route still bypasses
+ * the gate for one-off testing.
  */
 
 export type RunEnrollmentsOptions = {
@@ -41,8 +46,8 @@ export type RunEnrollmentsResult = {
 export async function runSphereDripEnrollments(
   opts: RunEnrollmentsOptions = {},
 ): Promise<RunEnrollmentsResult> {
-  const allowlist = parseAllowlist(process.env.SPHERE_DRIP_ENABLED_AGENT_IDS);
-  const allowlistSet = new Set(allowlist);
+  const enabledIds = await listEnabledAgentIdsFromDb();
+  const enabledSet = new Set(enabledIds);
 
   const candidateAgentIds = opts.agentId
     ? [opts.agentId]
@@ -50,7 +55,7 @@ export async function runSphereDripEnrollments(
 
   const targets = candidateAgentIds.filter((id) => {
     if (opts.forceProcess) return true;
-    return allowlistSet.has(id);
+    return enabledSet.has(id);
   });
 
   const perAgent: RunEnrollmentsAgentResult[] = [];
@@ -96,18 +101,4 @@ async function listAgentsWithSphereContacts(): Promise<string[]> {
     if (id != null) s.add(String(id));
   }
   return Array.from(s);
-}
-
-function parseAllowlist(raw: string | null | undefined): string[] {
-  if (!raw || typeof raw !== "string") return [];
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const part of raw.split(",")) {
-    const trimmed = part.trim();
-    if (!trimmed) continue;
-    if (seen.has(trimmed)) continue;
-    seen.add(trimmed);
-    out.push(trimmed);
-  }
-  return out;
 }

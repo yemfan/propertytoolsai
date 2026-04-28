@@ -3,6 +3,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 import { BOTH_HIGH_CADENCE_KEY } from "./cadence";
+import { listEnabledAgentIdsFromDb } from "./prefsDbService";
 import {
   processSphereDripSendsForAgent,
   type SendProcessorAgentResult,
@@ -11,9 +12,12 @@ import {
 /**
  * Multi-agent runner for the sphere-drip send pipeline. Walks every
  * agent that has at least one due active enrollment and invokes the
- * processor per-agent. Pilot opt-in via `SPHERE_DRIP_ENABLED_AGENT_IDS`
- * env (same allowlist gating the enroll cron uses) so we can flip the
- * send pipeline on agent-by-agent.
+ * processor per-agent. Gated by the same DB-first / env-fallback
+ * resolution as the enroll cron (PR-O):
+ *   1. agent_sphere_drip_prefs.enabled = true → process
+ *   2. SPHERE_DRIP_ENABLED_AGENT_IDS env (back-compat) → process
+ *      UNLESS DB has enabled = false
+ *   3. otherwise skip
  *
  * The send processor itself is the part that creates message_drafts
  * + advances the cadence step. The actual SMS/email delivery rides
@@ -45,8 +49,8 @@ export type RunSendsResult = {
 export async function runSphereDripSends(
   opts: RunSendsOptions = {},
 ): Promise<RunSendsResult> {
-  const allowlist = parseAllowlist(process.env.SPHERE_DRIP_ENABLED_AGENT_IDS);
-  const allowlistSet = new Set(allowlist);
+  const enabledIds = await listEnabledAgentIdsFromDb();
+  const enabledSet = new Set(enabledIds);
 
   const candidateAgentIds = opts.agentId
     ? [opts.agentId]
@@ -54,7 +58,7 @@ export async function runSphereDripSends(
 
   const targets = candidateAgentIds.filter((id) => {
     if (opts.forceProcess) return true;
-    return allowlistSet.has(id);
+    return enabledSet.has(id);
   });
 
   const perAgent: RunSendsAgentResult[] = [];
@@ -111,18 +115,4 @@ async function listAgentsWithDueEnrollments(): Promise<string[]> {
     if (id != null) s.add(String(id));
   }
   return Array.from(s);
-}
-
-function parseAllowlist(raw: string | null | undefined): string[] {
-  if (!raw || typeof raw !== "string") return [];
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const part of raw.split(",")) {
-    const trimmed = part.trim();
-    if (!trimmed) continue;
-    if (seen.has(trimmed)) continue;
-    seen.add(trimmed);
-    out.push(trimmed);
-  }
-  return out;
 }
