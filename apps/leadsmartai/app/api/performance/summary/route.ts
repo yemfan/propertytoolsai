@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { getUserFromRequest } from "@/lib/authFromRequest";
+import { getAgentScopeForAgent } from "@/lib/teams/scope.server";
 
 async function getAgentIdForUser(userId: string) {
   try {
@@ -33,6 +34,11 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: true, metrics: {}, alerts: [] });
     }
 
+    // Team-aware scope. For solo agents this resolves to [agentId];
+    // for team owners it expands to every member's id so the summary
+    // aggregates across the whole roster.
+    const scope = await getAgentScopeForAgent(String(agentId));
+
     const todayIso = startOfTodayIso();
     const sevenDaysAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -47,24 +53,24 @@ export async function GET(req: Request) {
       supabaseServer
         .from("tasks")
         .select("id", { count: "exact", head: true })
-        .eq("agent_id", agentId)
+        .in("agent_id", scope.agentIds)
         .eq("status", "done")
         .gte("updated_at", sevenDaysAgoIso),
       supabaseServer
         .from("tasks")
         .select("id", { count: "exact", head: true })
-        .eq("agent_id", agentId)
+        .in("agent_id", scope.agentIds)
         .eq("status", "skipped")
         .gte("updated_at", sevenDaysAgoIso),
       supabaseServer
         .from("tasks")
         .select("id", { count: "exact", head: true })
-        .eq("agent_id", agentId)
+        .in("agent_id", scope.agentIds)
         .eq("status", "pending"),
       supabaseServer
         .from("contacts")
         .select("id,rating,engagement_score,created_at,last_activity_at", { count: "exact" })
-        .eq("agent_id", agentId)
+        .in("agent_id", scope.agentIds)
         .limit(500),
       supabaseServer
         .from("contact_events")
@@ -74,7 +80,7 @@ export async function GET(req: Request) {
       supabaseServer
         .from("communications")
         .select("contact_id,created_at")
-        .eq("agent_id", agentId)
+        .in("agent_id", scope.agentIds)
         .gte("created_at", sevenDaysAgoIso)
         .limit(2000),
     ]);
@@ -187,7 +193,16 @@ export async function GET(req: Request) {
       },
     };
 
-    return NextResponse.json({ ok: true, metrics, alerts });
+    return NextResponse.json({
+      ok: true,
+      metrics,
+      alerts,
+      scope: {
+        kind: scope.scope,
+        teamId: scope.primaryTeamId,
+        agentCount: scope.agentIds.length,
+      },
+    });
   } catch (e: any) {
     return NextResponse.json(
       { ok: false, error: e?.message ?? "Server error" },
