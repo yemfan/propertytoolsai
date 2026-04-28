@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
+import { EmailEngagementPanel } from "@/components/dashboard/EmailEngagementPanel";
 import { PipelineForecastPanel } from "@/components/dashboard/PipelineForecastPanel";
 import { RevenuePanel } from "@/components/dashboard/RevenuePanel";
 
@@ -120,6 +121,16 @@ export default function PerformanceClient() {
           </p>
         </div>
         <PipelineForecastPanel />
+      </section>
+
+      <section className="space-y-4 border-t border-slate-200 pt-5">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-900">Email engagement</h2>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Opens & clicks across outbound mail — pulled from Resend webhook events.
+          </p>
+        </div>
+        <EmailEngagementPanel />
       </section>
 
       <section className="space-y-4 border-t border-slate-200 pt-5">
