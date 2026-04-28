@@ -17,6 +17,10 @@ import {
   DRIP_ELIGIBLE_LIFECYCLES,
   type DripCadence,
 } from "./cadence";
+import {
+  buildReenrollmentPatch,
+  decideReenrollment,
+} from "./reenrollment";
 
 /**
  * Auto-enrollment + visibility service for the sphere drip.
@@ -38,6 +42,9 @@ export type EnrollmentRunResult = {
   bothHighEligible: number;
   alreadyEnrolled: number;
   newlyEnrolled: number;
+  /** Prior completed/exited rows that were reactivated this run because
+   *  the contact re-entered both_high AND the cooldown elapsed. */
+  reenrolled: number;
   exited: number;
 };
 
@@ -73,15 +80,36 @@ export async function enrollEligibleContactsForAgent(
     bothHighEligible: eligibleRows.length,
     alreadyEnrolled: 0,
     newlyEnrolled: 0,
+    reenrolled: 0,
     exited: 0,
   };
 
   // 1. Newly-eligible contacts → insert active enrollment.
+  //    Prior rows that are completed/exited get a re-enrollment check
+  //    (decider returns 'reenroll' when the cooldown elapsed; otherwise
+  //    we leave the row alone and count it as alreadyEnrolled).
   for (const row of eligibleRows) {
     const prior = existingByContactId.get(row.contactId);
     if (prior) {
-      // Already enrolled. If they were exited and re-entered both_high,
-      // we leave them exited — re-enrollment is a follow-up nuance.
+      const decision = decideReenrollment({ prior, nowIso });
+      if (decision.kind === "reenroll") {
+        if (dryRun) {
+          result.reenrolled += 1;
+          continue;
+        }
+        const nextDueAt = computeNextDueAt(BOTH_HIGH_CADENCE, 0, nowIso, null);
+        const patch = buildReenrollmentPatch({ nowIso, nextDueAt });
+        const { error } = await supabaseAdmin
+          .from("sphere_drip_enrollments")
+          .update(patch)
+          .eq("id", prior.id);
+        if (error) {
+          throw new Error(`Failed to re-enroll ${prior.id}: ${error.message}`);
+        }
+        result.reenrolled += 1;
+        continue;
+      }
+      // skip — already-active, paused, still in cooldown, etc.
       result.alreadyEnrolled += 1;
       continue;
     }
@@ -149,7 +177,7 @@ export async function listEnrollmentsForAgent(
   let query = supabaseAdmin
     .from("sphere_drip_enrollments")
     .select(
-      "id, agent_id, contact_id, cadence_key, enrolled_at, current_step, status, last_sent_at, next_due_at, completed_at, exit_reason",
+      "id, agent_id, contact_id, cadence_key, enrolled_at, current_step, status, last_sent_at, next_due_at, completed_at, exit_reason, updated_at",
     )
     .eq("agent_id", agentId);
   if (cadenceKey) query = query.eq("cadence_key", cadenceKey);
@@ -169,6 +197,7 @@ export async function listEnrollmentsForAgent(
     next_due_at: string | null;
     completed_at: string | null;
     exit_reason: string | null;
+    updated_at: string | null;
   }>).map<DripEnrollmentRow>((r) => ({
     id: r.id,
     agentId: String(r.agent_id),
@@ -181,6 +210,7 @@ export async function listEnrollmentsForAgent(
     nextDueAt: r.next_due_at,
     completedAt: r.completed_at,
     exitReason: r.exit_reason,
+    updatedAt: r.updated_at,
   }));
 }
 

@@ -19,6 +19,11 @@ export type DripEnrollmentRow = {
   nextDueAt: string | null;
   completedAt: string | null;
   exitReason: string | null;
+  /** Trigger-stamped on every UPDATE. Used by the re-enrollment
+   *  decider as the cooldown anchor for exited rows (no dedicated
+   *  exited_at column — exited rows are terminal, so updated_at IS
+   *  the exit time). */
+  updatedAt: string | null;
 };
 
 export type MonetizationRowWithEnrollment = MonetizationRow & {
