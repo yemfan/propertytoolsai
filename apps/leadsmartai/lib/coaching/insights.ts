@@ -77,8 +77,14 @@ export type ResponseTimeInput = {
    *  to first outbound message). Null when no data yet. */
   avgMinutes: number | null;
   /** Hardcoded benchmark in minutes — top quartile based on industry
-   *  data. We use 5 minutes as the "speed-to-lead" target. */
+   *  data. Used as a fallback when peerBenchmarks isn't supplied or
+   *  the platform-wide population is too small to be meaningful. */
   benchmarkMinutes: number;
+  /** Optional real peer-percentile description, when the service has
+   *  computed benchmarks across the platform-wide agent population.
+   *  Empty string when rank is 'unknown' (small pool — see
+   *  describeRankAgainstPeers). */
+  peerDescription?: string;
 };
 
 export function buildResponseTimeInsight(
@@ -90,28 +96,46 @@ export function buildResponseTimeInsight(
   // 1.5–4x = warn (room to improve).
   // 4x+ = crit (most leads gone cold by then).
   const ratio = input.avgMinutes / input.benchmarkMinutes;
+  const peerLine = input.peerDescription?.trim() ?? "";
+
   if (ratio < 1.0) {
     return {
       id: "response_time",
       severity: "info",
       title: "Response time on point",
-      description: `Your first-response time averages ${input.avgMinutes}m — ahead of the ${input.benchmarkMinutes}-minute speed-to-lead target.`,
+      description: appendPeerLine(
+        `Your first-response time averages ${input.avgMinutes}m — ahead of the ${input.benchmarkMinutes}-minute speed-to-lead target.`,
+        peerLine,
+      ),
       metric: { value: `${input.avgMinutes}m`, label: "avg response" },
     };
   }
 
   const severity: InsightSeverity = ratio >= 4 ? "crit" : ratio >= 1.5 ? "warn" : "info";
+  const baseDescription =
+    severity === "crit"
+      ? `Your first-response time averages ${input.avgMinutes}m — most hot leads have gone elsewhere by then. Industry top-quartile is ${input.benchmarkMinutes}m.`
+      : `Your first-response time averages ${input.avgMinutes}m. Top quartile is ${input.benchmarkMinutes}m. Faster first replies convert ~3x better.`;
+
   return {
     id: "response_time",
     severity,
     title: "Slow first response",
-    description:
-      severity === "crit"
-        ? `Your first-response time averages ${input.avgMinutes}m — most hot leads have gone elsewhere by then. Industry top-quartile is ${input.benchmarkMinutes}m.`
-        : `Your first-response time averages ${input.avgMinutes}m. Top quartile is ${input.benchmarkMinutes}m. Faster first replies convert ~3x better.`,
+    description: appendPeerLine(baseDescription, peerLine),
     metric: { value: `${input.avgMinutes}m`, label: "avg response" },
     cta: { href: "/dashboard/performance", label: "View performance" },
   };
+}
+
+/**
+ * Append the peer-benchmark line when present. Keeps the response-time
+ * builder honest about its hardcoded copy — the peer line layers ON
+ * TOP of the existing description so existing callers (and tests) see
+ * the same baseline behavior, with the peer info as additive.
+ */
+function appendPeerLine(base: string, peerLine: string): string {
+  if (!peerLine) return base;
+  return `${base} ${peerLine}`;
 }
 
 // ── 3. Sphere drip health ───────────────────────────────────────────
