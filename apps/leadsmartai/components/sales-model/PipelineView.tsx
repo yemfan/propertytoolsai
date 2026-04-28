@@ -1,6 +1,7 @@
 "use client";
 
 import type { SalesModel } from "@/lib/sales-models";
+import type { StageActivity } from "@/lib/sales-model/pipelineActivity";
 
 /**
  * Sales pipeline visualization — horizontal stage cards.
@@ -10,12 +11,19 @@ import type { SalesModel } from "@/lib/sales-models";
  * The component just renders whatever's in `model.pipeline` so adding
  * stages for a new model means no UI changes here.
  *
- * No active-stage state for MVP — this is a visualization, not a
- * live drag-and-drop board. (The dashboard's other CRM surfaces
- * already have a real Kanban; this view's job is to anchor the
- * agent's mental model of "what does winning look like for me".)
+ * `activity` (when provided) shows a per-stage count under each card —
+ * "412 all-time", "9 this week", etc. — so the path-to-close panel
+ * doesn't feel decorative. The numbers are computed by
+ * `lib/sales-model/pipelineActivity` from a snapshot of the agent's
+ * contacts + transactions tables.
  */
-export function PipelineView({ model }: { model: SalesModel }) {
+export function PipelineView({
+  model,
+  activity,
+}: {
+  model: SalesModel;
+  activity?: StageActivity[];
+}) {
   const stages = model.pipeline;
   return (
     <section
@@ -34,11 +42,12 @@ export function PipelineView({ model }: { model: SalesModel }) {
       <ol className="flex snap-x gap-2 overflow-x-auto pb-1 md:gap-3">
         {stages.map((stage, idx) => {
           const isLast = idx === stages.length - 1;
+          const stageActivity = activity?.[idx];
           return (
             <li key={`${model.id}-stage-${idx}`} className="flex shrink-0 snap-start items-center">
               <div
                 className={[
-                  "flex min-w-[112px] flex-col items-start gap-1 rounded-xl border px-3 py-2.5",
+                  "flex min-w-[124px] flex-col items-start gap-1 rounded-xl border px-3 py-2.5",
                   isLast
                     ? "border-emerald-200 bg-emerald-50"
                     : "border-slate-200 bg-slate-50",
@@ -55,6 +64,24 @@ export function PipelineView({ model }: { model: SalesModel }) {
                 >
                   {stage}
                 </span>
+                {stageActivity && stageActivity.count != null ? (
+                  <span
+                    className={[
+                      "mt-0.5 inline-flex items-baseline gap-1 text-[11px] tabular-nums",
+                      isLast ? "text-emerald-700" : "text-slate-600",
+                    ].join(" ")}
+                  >
+                    <span
+                      className={[
+                        "text-sm font-semibold",
+                        isLast ? "text-emerald-800" : "text-slate-900",
+                      ].join(" ")}
+                    >
+                      {stageActivity.count}
+                    </span>
+                    <span>{stageActivity.label}</span>
+                  </span>
+                ) : null}
               </div>
               {!isLast ? (
                 <span className="mx-1 text-slate-300 md:mx-2" aria-hidden>
