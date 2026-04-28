@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
+import { CallButton } from "@/components/contacts/CallButton";
 import { CsvImportModal } from "@/components/crm/CsvImportModal";
 import { SendPostcardModal } from "@/components/postcards/SendPostcardModal";
 import { BulkSendPostcardModal } from "@/components/postcards/BulkSendPostcardModal";
@@ -484,7 +485,12 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                     </td>
                     <td className="px-4 py-2.5 font-medium text-gray-900">{c.name ?? "\u2014"}</td>
                     <td className="px-4 py-2.5 text-gray-600 max-w-[180px] truncate">{c.email ?? "\u2014"}</td>
-                    <td className="px-4 py-2.5 text-gray-600">{c.phone ?? "\u2014"}</td>
+                    <td className="px-4 py-2.5 text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <span>{c.phone ?? "\u2014"}</span>
+                        <CallButton contactId={c.id} hasPhone={Boolean(c.phone)} />
+                      </div>
+                    </td>
                     <td className="px-4 py-2.5 text-gray-600 min-w-[200px] max-w-[320px]"><span className="block truncate" title={c.property_address ?? ""}>{c.property_address ?? "\u2014"}</span></td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1.5">
