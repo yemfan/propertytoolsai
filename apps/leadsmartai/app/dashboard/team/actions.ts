@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { TeamSeatError } from "@/lib/teams/seatLimits.server";
 import {
   createTeam as svcCreateTeam,
   getRole,
@@ -42,17 +43,24 @@ export async function inviteMember(formData: FormData) {
   const role = await getRole({ teamId, agentId: ctx.agentId });
   if (role !== "owner") return { ok: false as const, error: "Owner only" };
 
-  const result = await inviteByEmail({
-    teamId,
-    invitedEmail: email,
-    invitedByAgentId: ctx.agentId,
-  });
-  revalidatePath("/dashboard/team");
-  return {
-    ok: true as const,
-    inviteId: result.invite.id,
-    rawToken: result.rawToken,
-  };
+  try {
+    const result = await inviteByEmail({
+      teamId,
+      invitedEmail: email,
+      invitedByAgentId: ctx.agentId,
+    });
+    revalidatePath("/dashboard/team");
+    return {
+      ok: true as const,
+      inviteId: result.invite.id,
+      rawToken: result.rawToken,
+    };
+  } catch (e) {
+    if (e instanceof TeamSeatError) {
+      return { ok: false as const, error: e.message };
+    }
+    throw e;
+  }
 }
 
 export async function removeMember(formData: FormData) {

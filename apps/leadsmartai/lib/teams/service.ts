@@ -8,6 +8,7 @@ import {
   hashInviteToken,
   isInviteUsable,
 } from "./inviteToken";
+import { assertCanAddSeatToTeam } from "./seatLimits.server";
 import type {
   Team,
   TeamInvite,
@@ -118,6 +119,11 @@ export async function inviteByEmail(args: {
   /** Override "now" for tests. */
   nowIso?: string;
 }): Promise<{ invite: TeamInvite; rawToken: string }> {
+  // Block at the gate when the owner's plan is wrong tier or the
+  // team is full. Throws TeamSeatError; the caller (server action)
+  // surfaces a friendly message to the agent.
+  await assertCanAddSeatToTeam(args.teamId);
+
   const nowIso = args.nowIso ?? new Date().toISOString();
   const expiresAt = computeInviteExpiresAt({
     nowIso,
