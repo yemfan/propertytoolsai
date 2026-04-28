@@ -73,6 +73,7 @@ export async function runSphereDripEnrollments(
         bothHighEligible: 0,
         alreadyEnrolled: 0,
         newlyEnrolled: 0,
+        reenrolled: 0,
         exited: 0,
       });
     }

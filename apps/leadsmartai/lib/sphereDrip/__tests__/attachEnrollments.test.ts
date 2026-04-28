@@ -40,6 +40,7 @@ function enrollment(
     nextDueAt: "2026-04-01T00:00:00.000Z",
     completedAt: null,
     exitReason: null,
+    updatedAt: null,
     ...overrides,
   };
 }
