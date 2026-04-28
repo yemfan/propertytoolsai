@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type InsightSeverity = "info" | "warn" | "crit";
 
@@ -56,6 +56,28 @@ export default function CoachingClient() {
   const [generatedAt, setGeneratedAt] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
+
+  const onDismiss = useCallback(async (insightId: string) => {
+    setDismissingId(insightId);
+    // Optimistic remove — the server-side filter will agree on the
+    // next refresh, but the agent feels the click immediately.
+    setInsights((prev) => prev.filter((i) => i.id !== insightId));
+    try {
+      await fetch("/api/dashboard/coaching/dismiss", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ insightId }),
+      });
+    } catch {
+      // Best-effort — if the network call fails, the optimistic remove
+      // still gives the agent the UX they expected for this session.
+      // Next refresh re-fetches truth from the server.
+    } finally {
+      setDismissingId(null);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,16 +163,28 @@ export default function CoachingClient() {
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">{i.description}</p>
               </div>
-              {i.metric ? (
-                <div className="shrink-0 text-right">
-                  <p className="text-2xl font-bold tabular-nums text-slate-900">
-                    {i.metric.value}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                    {i.metric.label}
-                  </p>
-                </div>
-              ) : null}
+              <div className="flex shrink-0 items-start gap-2">
+                {i.metric ? (
+                  <div className="text-right">
+                    <p className="text-2xl font-bold tabular-nums text-slate-900">
+                      {i.metric.value}
+                    </p>
+                    <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                      {i.metric.label}
+                    </p>
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => void onDismiss(i.id)}
+                  disabled={dismissingId === i.id}
+                  title="Snooze for 7 days"
+                  aria-label={`Dismiss ${i.title} for 7 days`}
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  ×
+                </button>
+              </div>
             </div>
             {i.cta ? (
               <div className="mt-3">

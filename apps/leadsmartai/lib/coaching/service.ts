@@ -1,7 +1,17 @@
 import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { supabaseServer } from "@/lib/supabaseServer";
 
+import {
+  computePeerBenchmarks,
+  describeRankAgainstPeers,
+  rankAgentAgainstPeers,
+} from "./benchmarks";
+import {
+  filterDismissedInsights,
+  type CoachingDismissal,
+} from "./dismissals";
 import {
   buildDripHealthInsight,
   buildPastDueCommissionInsight,
@@ -47,19 +57,38 @@ export async function getCoachingDashboard(
     dripInput,
     pastDueInput,
     unrepliedInput,
+    peerAverages,
+    dismissals,
   ] = await Promise.all([
     fetchStaleContacts(agentId, nowMs),
     fetchResponseTime(agentId),
     fetchDripHealth(agentId, nowMs),
     fetchPastDueCommission(agentId, nowMs),
     fetchUnrepliedHotLeads(agentId, nowMs),
+    fetchPlatformResponseTimeAverages(),
+    fetchActiveDismissalsForAgent(agentId),
   ]);
+
+  // Layer real peer benchmarks onto the response-time insight when the
+  // platform-wide population is large enough. The hardcoded
+  // RESPONSE_TIME_BENCHMARK_MINUTES stays as a fallback for the copy
+  // when peerDescription is empty (small pool).
+  const benchmarks = computePeerBenchmarks(peerAverages);
+  const rank = rankAgentAgainstPeers(responseInput.avgMinutes, benchmarks);
+  const peerDescription = describeRankAgainstPeers({
+    rank,
+    agentAverageMinutes: responseInput.avgMinutes,
+    benchmarks,
+  });
 
   const insights: CoachingInsight[] = [];
   const stale = buildStaleContactsInsight(staleInput);
   if (stale) insights.push(stale);
 
-  const response = buildResponseTimeInsight(responseInput);
+  const response = buildResponseTimeInsight({
+    ...responseInput,
+    peerDescription,
+  });
   if (response) insights.push(response);
 
   const drip = buildDripHealthInsight(dripInput);
@@ -71,8 +100,11 @@ export async function getCoachingDashboard(
   const unreplied = buildUnrepliedHotLeadsInsight(unrepliedInput);
   if (unreplied) insights.push(unreplied);
 
+  // Filter out anything the agent has actively dismissed.
+  const visible = filterDismissedInsights(insights, dismissals, generatedAt);
+
   return {
-    insights: sortInsightsBySeverity(insights),
+    insights: sortInsightsBySeverity(visible),
     generatedAt,
   };
 }
@@ -298,5 +330,143 @@ async function fetchUnrepliedHotLeads(agentId: string, nowMs: number) {
   } catch (e) {
     console.warn("[coaching] fetchUnrepliedHotLeads failed:", e);
     return { count: 0, hours: HOT_LEADS_LOOKBACK_HOURS };
+  }
+}
+
+/**
+ * Compute average first-response time PER AGENT across the platform.
+ * Returns the raw averages (one number per agent that has at least
+ * one observation in the last 30 days). The pure benchmark helper
+ * computes percentiles + ranks against this list.
+ *
+ * Implementation note: we project just `agent_id, contact_id,
+ * created_at` from the two underlying tables and compute averages
+ * in-memory. The query volume is bounded by the platform's lead
+ * inflow over 30 days; for thousands of leads this is fine. If
+ * volume grows past tens of thousands we'll want a SQL aggregation
+ * (window function or materialized view).
+ */
+async function fetchPlatformResponseTimeAverages(): Promise<number[]> {
+  try {
+    const sinceIso = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    const [{ data: leadRows, error: leadErr }, { data: commRows, error: commErr }] =
+      await Promise.all([
+        supabaseAdmin
+          .from("contacts")
+          .select("id, agent_id, created_at")
+          .gte("created_at", sinceIso)
+          .limit(20_000),
+        supabaseAdmin
+          .from("communications")
+          .select("contact_id, agent_id, created_at")
+          .gte("created_at", sinceIso)
+          .limit(50_000),
+      ]);
+    if (leadErr) throw new Error(leadErr.message);
+    if (commErr) throw new Error(commErr.message);
+
+    const leads = (leadRows ?? []) as Array<{
+      id: string;
+      agent_id: string | number | null;
+      created_at: string;
+    }>;
+    const comms = (commRows ?? []) as Array<{
+      contact_id: string | null;
+      agent_id: string | number | null;
+      created_at: string;
+    }>;
+
+    // First comm per contact (earliest by created_at).
+    const firstByContact = new Map<string, string>();
+    for (const c of comms) {
+      if (!c.contact_id) continue;
+      const existing = firstByContact.get(c.contact_id);
+      if (!existing || c.created_at < existing) {
+        firstByContact.set(c.contact_id, c.created_at);
+      }
+    }
+
+    // Sum + count of response-time deltas per agent.
+    const sumByAgent = new Map<string, { sum: number; count: number }>();
+    for (const lead of leads) {
+      if (lead.agent_id == null) continue;
+      const first = firstByContact.get(lead.id);
+      if (!first) continue;
+      const deltaMs = Date.parse(first) - Date.parse(lead.created_at);
+      if (deltaMs <= 0) continue;
+      const minutes = deltaMs / 60_000;
+      const key = String(lead.agent_id);
+      const existing = sumByAgent.get(key);
+      if (existing) {
+        existing.sum += minutes;
+        existing.count += 1;
+      } else {
+        sumByAgent.set(key, { sum: minutes, count: 1 });
+      }
+    }
+
+    const averages: number[] = [];
+    for (const { sum, count } of sumByAgent.values()) {
+      if (count > 0) averages.push(Math.round(sum / count));
+    }
+    return averages;
+  } catch (e) {
+    console.warn("[coaching] fetchPlatformResponseTimeAverages failed:", e);
+    return [];
+  }
+}
+
+/**
+ * Read still-active dismissals for the agent. Uses the RLS-scoped
+ * server client so the query is gated on agent ownership at the DB
+ * layer (defense-in-depth alongside the explicit agent_id filter).
+ */
+async function fetchActiveDismissalsForAgent(
+  agentId: string,
+): Promise<CoachingDismissal[]> {
+  try {
+    const nowIso = new Date().toISOString();
+    const { data, error } = await supabaseServer
+      .from("coaching_dismissals")
+      .select("insight_id, dismissed_until")
+      .eq("agent_id", agentId)
+      .gt("dismissed_until", nowIso);
+    if (error) throw new Error(error.message);
+    return ((data ?? []) as Array<{
+      insight_id: string;
+      dismissed_until: string;
+    }>).map((r) => ({
+      insightId: r.insight_id,
+      dismissedUntil: r.dismissed_until,
+    }));
+  } catch (e) {
+    console.warn("[coaching] fetchActiveDismissalsForAgent failed:", e);
+    return [];
+  }
+}
+
+/**
+ * Upsert the agent's dismissal for one insight id. The dismissed_until
+ * timestamp is computed by the caller via `computeDismissedUntil`.
+ *
+ * Used by the POST /api/dashboard/coaching/dismiss endpoint.
+ */
+export async function upsertCoachingDismissal(args: {
+  agentId: string;
+  insightId: string;
+  dismissedUntilIso: string;
+}): Promise<void> {
+  const { error } = await supabaseServer
+    .from("coaching_dismissals")
+    .upsert(
+      {
+        agent_id: args.agentId,
+        insight_id: args.insightId,
+        dismissed_until: args.dismissedUntilIso,
+      },
+      { onConflict: "agent_id,insight_id" },
+    );
+  if (error) {
+    throw new Error(`Failed to save dismissal: ${error.message}`);
   }
 }
