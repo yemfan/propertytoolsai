@@ -5,6 +5,10 @@ import {
   getSalesModel,
   type SalesModelId,
 } from "@/lib/sales-models";
+import {
+  buildPipelineActivity,
+  type ActivitySnapshot,
+} from "@/lib/sales-model/pipelineActivity";
 import { updateSelectedSalesModel } from "@/lib/sales-model-storage";
 import { AiSmsModal } from "./AiSmsModal";
 import { DailyActionPlan } from "./DailyActionPlan";
@@ -28,13 +32,19 @@ import { SwitchModelModal } from "./SwitchModelModal";
  */
 export function SalesModelDashboard({
   initialModelId,
+  activitySnapshot,
 }: {
   initialModelId: SalesModelId;
+  /** Pre-fetched on the server. The activity snapshot is the same
+   *  across model switches — selecting a different sales model just
+   *  remaps the same numbers to different stage labels. */
+  activitySnapshot: ActivitySnapshot;
 }) {
   const [modelId, setModelId] = useState<SalesModelId>(initialModelId);
   const [switchOpen, setSwitchOpen] = useState(false);
   const [smsOpen, setSmsOpen] = useState(false);
   const model = getSalesModel(modelId);
+  const pipelineActivity = buildPipelineActivity(model, activitySnapshot);
 
   return (
     <div className="space-y-6">
@@ -73,7 +83,7 @@ export function SalesModelDashboard({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <DailyActionPlan model={model} />
-        <PipelineView model={model} />
+        <PipelineView model={model} activity={pipelineActivity} />
       </div>
 
       <ModelToolsGrid model={model} />

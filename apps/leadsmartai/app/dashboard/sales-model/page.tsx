@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { getSelectedSalesModelServer } from "@/lib/sales-model-server";
+import { loadActivitySnapshot } from "@/lib/sales-model/pipelineActivity.server";
 import { SalesModelDashboard } from "@/components/sales-model/SalesModelDashboard";
 
 export const metadata: Metadata = {
@@ -25,5 +26,11 @@ export default async function SalesModelPage() {
   if (!selected) {
     redirect("/dashboard/sales-model/onboarding");
   }
-  return <SalesModelDashboard initialModelId={selected} />;
+  const activitySnapshot = await loadActivitySnapshot(userId);
+  return (
+    <SalesModelDashboard
+      initialModelId={selected}
+      activitySnapshot={activitySnapshot}
+    />
+  );
 }
