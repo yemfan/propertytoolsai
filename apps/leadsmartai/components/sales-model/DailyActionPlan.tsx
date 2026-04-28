@@ -70,21 +70,18 @@ export function DailyActionPlan({ model }: { model: SalesModel }) {
       aria-label="Today's action plan"
       className="rounded-2xl border border-slate-200 bg-white p-6 ring-1 ring-slate-900/[0.04] shadow-sm"
     >
-      <header className="flex items-baseline justify-between gap-3">
-        <h2 className="text-base font-semibold text-slate-900">Today's Action Plan</h2>
-        <span className="text-xs font-medium text-slate-500 tabular-nums">
-          {completed} / {total} done
-        </span>
+      <header className="flex items-center gap-4">
+        <ProgressRing completed={completed} total={total} />
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base font-semibold text-slate-900">Today&apos;s Action Plan</h2>
+          <p className="mt-0.5 text-xs text-slate-500 tabular-nums">
+            {completed} of {total} done
+            {total > 0 ? ` · ${Math.round((completed / total) * 100)}%` : ""}
+          </p>
+        </div>
       </header>
 
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
-        <div
-          className="h-full rounded-full bg-blue-500 transition-all"
-          style={{ width: `${total > 0 ? (completed / total) * 100 : 0}%` }}
-        />
-      </div>
-
-      <ul className="mt-4 space-y-1">
+      <ul className="mt-5 space-y-1">
         {model.tasks.map((task, idx) => {
           const isDone = done.has(idx);
           return (
@@ -94,14 +91,22 @@ export function DailyActionPlan({ model }: { model: SalesModel }) {
                 onClick={() => toggle(idx)}
                 aria-pressed={isDone}
                 className={[
-                  "group flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left transition",
+                  "group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition",
                   "min-h-[44px]",
                   isDone ? "bg-emerald-50/60" : "hover:bg-slate-50",
                 ].join(" ")}
               >
                 <span
                   className={[
-                    "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
+                    "flex-1 text-sm",
+                    isDone ? "text-slate-500 line-through" : "text-slate-800",
+                  ].join(" ")}
+                >
+                  {task}
+                </span>
+                <span
+                  className={[
+                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition",
                     isDone
                       ? "border-emerald-500 bg-emerald-500 text-white"
                       : "border-slate-300 bg-white text-transparent group-hover:border-slate-400",
@@ -110,20 +115,76 @@ export function DailyActionPlan({ model }: { model: SalesModel }) {
                 >
                   ✓
                 </span>
-                <span
-                  className={[
-                    "text-sm",
-                    isDone ? "text-slate-500 line-through" : "text-slate-800",
-                  ].join(" ")}
-                >
-                  {task}
-                </span>
               </button>
             </li>
           );
         })}
       </ul>
     </section>
+  );
+}
+
+/**
+ * Circular SVG progress ring shown in the panel header. Renders the
+ * completion fraction as an arc + the "X/N" count in the center.
+ *
+ * Pure presentational — caller passes the numbers, this just paints.
+ * Uses stroke-dasharray to represent progress without runtime layout.
+ */
+function ProgressRing({
+  completed,
+  total,
+  size = 56,
+  stroke = 6,
+}: {
+  completed: number;
+  total: number;
+  size?: number;
+  stroke?: number;
+}) {
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const ratio = total > 0 ? Math.max(0, Math.min(1, completed / total)) : 0;
+  const dashOffset = circumference * (1 - ratio);
+  const isComplete = total > 0 && completed >= total;
+
+  return (
+    <div
+      className="relative shrink-0"
+      style={{ width: size, height: size }}
+      aria-hidden
+    >
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={stroke}
+          className="text-slate-100"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          className={isComplete ? "text-emerald-500 transition-all" : "text-blue-500 transition-all"}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-xs font-semibold tabular-nums text-slate-700">
+          {completed}
+          <span className="text-slate-400">/{total}</span>
+        </span>
+      </div>
+    </div>
   );
 }
 
