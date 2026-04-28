@@ -110,10 +110,21 @@ const navConfig = {
         {
           // Per-deal coordinator: deadlines, checklist, counterparties
           // for buyer-rep closings. See apps/leadsmartai/lib/transactions.
+          // `match` is exact (see packages/ui/navigation/matchPath.ts), so
+          // /dashboard/transactions/coordinator highlights its own entry
+          // below without colliding with this one.
           label: "Transactions",
           href: "/dashboard/transactions",
           match: ["/dashboard/transactions"],
           icon: navEmoji("🔑"),
+        },
+        {
+          // Stage-grouped kanban over all in-flight transactions.
+          // Companion to the per-deal detail page above.
+          label: "Coordinator",
+          href: "/dashboard/transactions/coordinator",
+          match: ["/dashboard/transactions/coordinator"],
+          icon: navEmoji("🗂️"),
         },
       ],
     },
@@ -128,6 +139,15 @@ const navConfig = {
           href: "/dashboard/seller-presentation",
           match: ["/dashboard/seller-presentation", "/dashboard/presentations"],
           icon: navEmoji("📊"),
+        },
+        {
+          // Per-agent CMA library — pulls comps + valuation from the
+          // upstream propertytoolsai engine and stores snapshots here.
+          // Each saved CMA has a PDF + email-to-seller flow.
+          label: "CMAs",
+          href: "/dashboard/cma",
+          match: ["/dashboard/cma"],
+          icon: navEmoji("📐"),
         },
         {
           label: "Open Houses",
@@ -214,6 +234,24 @@ const navConfig = {
           icon: navEmoji("📈"),
         },
         {
+          // Actionable nudges pulled live from CRM data: stale past
+          // clients, unreplied hot leads, response-time benchmark, drip
+          // health, past-due deals.
+          label: "Coaching",
+          href: "/dashboard/coaching",
+          match: ["/dashboard/coaching"],
+          icon: navEmoji("🧭"),
+        },
+        {
+          // Combined sphere monetization view — seller + buyer scores
+          // per past-client / sphere contact, side-by-side, sorted by
+          // combined leverage. Pairs with the both_high drip cadence.
+          label: "Sphere monetization",
+          href: "/dashboard/sphere/monetization",
+          match: ["/dashboard/sphere/monetization"],
+          icon: navEmoji("💎"),
+        },
+        {
           label: "Growth & Opportunities",
           href: "/dashboard/growth",
           match: ["/dashboard/growth"],
@@ -295,6 +333,16 @@ const navConfig = {
           roles: ["admin", "support"],
           match: ["/admin/lead-queue"],
           icon: navEmoji("📋"),
+        },
+        {
+          // Read-only roster of every agent in the IDX routing pool
+          // (DB rules + env allowlist), with last-assignment + 30d
+          // activity. Companion to PR #165's per-agent settings.
+          label: "Lead Routing",
+          href: "/dashboard/admin/lead-routing",
+          roles: ["admin"],
+          match: ["/dashboard/admin/lead-routing"],
+          icon: navEmoji("🛣️"),
         },
       ],
     },
