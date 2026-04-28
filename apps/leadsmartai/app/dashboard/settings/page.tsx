@@ -11,6 +11,7 @@ import HomeValueSmartLinkCopyShare from "@/components/dashboard/HomeValueSmartLi
 import LeadRoutingSettingsPanel from "@/components/dashboard/LeadRoutingSettingsPanel";
 import ReviewPolicyPanel from "@/components/dashboard/ReviewPolicyPanel";
 import SettingsTabsClient from "@/components/dashboard/SettingsTabsClient";
+import SphereDripSettingsPanel from "@/components/dashboard/SphereDripSettingsPanel";
 import TemplatesSummaryCard from "@/components/dashboard/TemplatesSummaryCard";
 import TimingPanel from "@/components/dashboard/TimingPanel";
 import MlsCsvImportClient from "./MlsCsvImportClient";
@@ -65,6 +66,8 @@ export default async function SettingsPage() {
             >
               <TimingPanel />
             </Card>
+
+            <SphereDripSettingsPanel />
           </>
         }
         tools={
