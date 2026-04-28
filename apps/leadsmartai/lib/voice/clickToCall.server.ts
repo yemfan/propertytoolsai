@@ -84,7 +84,9 @@ export async function startClickToCall(args: {
   }
 
   const callId = String((callRow as { id: string }).id);
-  const bridgeUrl = `${args.appBaseUrl.replace(/\/+$/, "")}/api/voice/bridge/${callId}`;
+  const baseUrl = args.appBaseUrl.replace(/\/+$/, "");
+  const bridgeUrl = `${baseUrl}/api/voice/bridge/${callId}`;
+  const statusCallbackUrl = `${baseUrl}/api/voice/status-callback`;
 
   // 2. Place the actual call.
   let twilioCallSid: string;
@@ -95,6 +97,9 @@ export async function startClickToCall(args: {
       from: normalized.callerId,
       url: bridgeUrl,
       method: "GET",
+      statusCallback: statusCallbackUrl,
+      statusCallbackMethod: "POST",
+      statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
     });
     twilioCallSid = call.sid;
   } catch (e) {
