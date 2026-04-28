@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { getTeamAccessStatus } from "@/lib/teams/access.server";
+import { getSeatUsageForTeam } from "@/lib/teams/seatLimits.server";
 import { getRoster, listTeamsForAgent } from "@/lib/teams/service";
 import { TeamDashboard } from "@/components/team/TeamDashboard";
 import type { TeamRoster } from "@/lib/teams/types";
@@ -13,9 +15,9 @@ export const metadata: Metadata = {
 
 /**
  * Team management page. Server component:
- *   - Resolves the calling agent
- *   - Loads the agent's first owned/joined team + its roster
- *   - Hands the data to the client component
+ *   - Resolves the calling agent + their team-access status
+ *   - When they have a team: loads roster + seat usage
+ *   - Hands everything to the client component
  *
  * MVP scope: one team per agent on this page. Multi-team support is
  * a follow-up — when an agent owns several teams, the page would
@@ -23,15 +25,24 @@ export const metadata: Metadata = {
  */
 export default async function TeamPage() {
   const ctx = await getCurrentAgentContext();
-  const teams = await listTeamsForAgent(ctx.agentId);
+  const [teams, access] = await Promise.all([
+    listTeamsForAgent(ctx.agentId),
+    getTeamAccessStatus(ctx.agentId),
+  ]);
 
   let roster: TeamRoster | null = null;
   let isOwner = false;
+  let seatUsage: { used: number; cap: number | null; full: boolean } | null = null;
 
   if (teams.length > 0) {
     const team = teams[0];
-    roster = await getRoster(team.id);
+    const [r, seat] = await Promise.all([
+      getRoster(team.id),
+      getSeatUsageForTeam(team.id),
+    ]);
+    roster = r;
     isOwner = team.ownerAgentId === ctx.agentId;
+    seatUsage = { used: seat.used, cap: seat.cap, full: seat.full };
   }
 
   return (
@@ -39,6 +50,8 @@ export default async function TeamPage() {
       currentAgentId={ctx.agentId}
       isOwner={isOwner}
       roster={roster}
+      access={access}
+      seatUsage={seatUsage}
     />
   );
 }

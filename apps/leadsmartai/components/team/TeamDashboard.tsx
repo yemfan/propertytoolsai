@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
   createTeam,
@@ -7,8 +8,11 @@ import {
   removeMember,
   revokeInvite,
 } from "@/app/dashboard/team/actions";
+import type { TeamAccessStatus } from "@/lib/teams/access.server";
 import { TeamBreakdownPanel } from "./TeamBreakdownPanel";
 import type { TeamInvite, TeamMembership, TeamRoster } from "@/lib/teams/types";
+
+type SeatUsageProps = { used: number; cap: number | null; full: boolean };
 
 /**
  * Team management surface.
@@ -25,12 +29,22 @@ export function TeamDashboard({
   currentAgentId,
   isOwner,
   roster,
+  access,
+  seatUsage,
 }: {
   currentAgentId: string;
   isOwner: boolean;
   roster: TeamRoster | null;
+  access: TeamAccessStatus;
+  seatUsage: SeatUsageProps | null;
 }) {
-  if (!roster) return <CreateTeamCard />;
+  if (!roster) {
+    return access.canCreate ? (
+      <CreateTeamCard />
+    ) : (
+      <UpgradeRequiredCard reason={access.reason} />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -54,6 +68,8 @@ export function TeamDashboard({
         )}
       </header>
 
+      {isOwner && seatUsage ? <SeatUsageBanner usage={seatUsage} /> : null}
+
       <RosterCard
         teamId={roster.team.id}
         currentAgentId={currentAgentId}
@@ -67,6 +83,94 @@ export function TeamDashboard({
         <InviteCard teamId={roster.team.id} pendingInvites={roster.pendingInvites} />
       ) : null}
     </div>
+  );
+}
+
+// ── Seat usage banner ───────────────────────────────────────────
+
+function SeatUsageBanner({ usage }: { usage: SeatUsageProps }) {
+  const capLabel = usage.cap == null ? "∞" : String(usage.cap);
+  const ratio =
+    usage.cap == null || usage.cap === 0 ? 0 : Math.min(1, usage.used / usage.cap);
+  const pct = Math.round(ratio * 100);
+  const tone = usage.full
+    ? "border-amber-200 bg-amber-50 text-amber-900"
+    : pct >= 80
+      ? "border-amber-200 bg-amber-50/60 text-amber-900"
+      : "border-slate-200 bg-slate-50 text-slate-800";
+  const barColor = usage.full
+    ? "bg-amber-500"
+    : pct >= 80
+      ? "bg-amber-400"
+      : "bg-blue-500";
+
+  return (
+    <div
+      className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-sm ${tone}`}
+    >
+      <div className="min-w-0 flex-1">
+        <p className="font-medium tabular-nums">
+          {usage.used} of {capLabel} seats used
+        </p>
+        {usage.cap != null ? (
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/70 ring-1 ring-inset ring-black/[0.04]">
+            <div
+              className={`h-full rounded-full ${barColor}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        ) : null}
+      </div>
+      {usage.full ? (
+        <Link
+          href="/dashboard/billing"
+          className="rounded-md border border-amber-300 bg-white px-2.5 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+        >
+          Request more seats
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+// ── Upgrade-required state for non-Elite plans ───────────────────
+
+function UpgradeRequiredCard({
+  reason,
+}: {
+  reason: TeamAccessStatus["reason"];
+}) {
+  const isPlanIssue = reason === "team_access_not_enabled";
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 ring-1 ring-slate-900/[0.04] shadow-sm">
+      <header>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">
+          Team feature
+        </p>
+        <h1 className="mt-1 text-2xl font-semibold text-slate-900">
+          {isPlanIssue ? "Upgrade to start a team" : "Subscription not found"}
+        </h1>
+        <p className="mt-2 max-w-xl text-sm text-slate-600">
+          {isPlanIssue ? (
+            <>
+              Teams require the <strong>Elite</strong> plan, which includes up to
+              10 seats, roster-wide rollups across the dashboard, and round-robin
+              lead routing across your members.
+            </>
+          ) : (
+            "We couldn't find an active subscription for your account. Reach out to support if this looks wrong."
+          )}
+        </p>
+      </header>
+      <div className="mt-5">
+        <Link
+          href="/dashboard/billing"
+          className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+        >
+          {isPlanIssue ? "View plans" : "Manage billing"}
+        </Link>
+      </div>
+    </section>
   );
 }
 

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { getTeamAccessStatus } from "@/lib/teams/access.server";
 import { TeamSeatError } from "@/lib/teams/seatLimits.server";
 import {
   createTeam as svcCreateTeam,
@@ -26,6 +27,23 @@ export async function createTeam(formData: FormData) {
   if (name.length > 80) return { ok: false as const, error: "Name too long" };
 
   const ctx = await getCurrentAgentContext();
+
+  // Pre-flight: block creation when the plan can't host a team.
+  // Without this gate, a Starter agent could create a team and then
+  // hit "Owner's plan does not include team access" on every invite —
+  // a confusing dead-end with a useless team row in the DB.
+  const access = await getTeamAccessStatus(ctx.agentId);
+  if (!access.canCreate) {
+    return {
+      ok: false as const,
+      error:
+        access.reason === "team_access_not_enabled"
+          ? "Team access requires the Elite plan. Upgrade to start a team."
+          : "We couldn't verify your subscription. Try again or contact support.",
+      code: access.reason,
+    };
+  }
+
   const team = await svcCreateTeam({ name, ownerAgentId: ctx.agentId });
   revalidatePath("/dashboard/team");
   return { ok: true as const, teamId: team.id };
