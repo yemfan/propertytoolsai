@@ -3,23 +3,21 @@
 import type { SalesModel } from "@/lib/sales-models";
 
 /**
- * Hero/identity block at the top of the sales-model dashboard.
+ * Compact identity strip at the top of the sales-model dashboard.
  *
- * Reads the entire identity block from the model config — title,
- * philosophy, tone, lead types — so adding a new model means no UI
- * changes here.
- *
- * The visual treatment is deliberately bold (gradient + emoji + large
- * title) so the screen reads as "this is your operating mode" rather
- * than "settings page". The colored gradient changes per model id so
- * agents get a small visual anchor when switching.
+ * The whole block reads from the model config so adding a new model
+ * means no UI changes here. We deliberately keep this dense — the
+ * page header above already says which model is active, so this
+ * surface only needs to anchor "operating mode" without eating real
+ * estate. Tone + lead types ride as inline meta rather than their
+ * own cards.
  */
 export function IdentityBlock({ model }: { model: SalesModel }) {
   return (
     <section
       aria-label="Operating identity"
       className={[
-        "relative overflow-hidden rounded-2xl border bg-white p-6 md:p-8",
+        "relative overflow-hidden rounded-xl border bg-white px-4 py-3 sm:px-5 sm:py-4",
         "ring-1 ring-slate-900/[0.04] shadow-sm",
         "border-slate-200",
       ].join(" ")}
@@ -31,41 +29,40 @@ export function IdentityBlock({ model }: { model: SalesModel }) {
           gradientFor(model.id),
         ].join(" ")}
       />
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3">
         <div
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl shadow ring-1 ring-slate-900/10"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-xl shadow-sm ring-1 ring-slate-900/10"
           aria-hidden
         >
           {model.emoji}
         </div>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            {model.label}
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold text-slate-900 md:text-3xl">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold text-slate-900 sm:text-base">
             {model.identityTitle}
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-700 md:text-base">
+            <span className="ml-2 inline-flex items-center rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-600 ring-1 ring-slate-200/80">
+              {model.label}
+            </span>
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-slate-700 sm:text-sm">
             {model.philosophy}
           </p>
+          <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <MetaPair label="Style" value={model.tone} />
+            <MetaPair label="Best for" value={model.leadTypes.join(", ")} />
+          </dl>
         </div>
       </div>
-
-      <dl className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <DefRow label="Communication style" value={model.tone} />
-        <DefRow label="Best-fit lead types" value={model.leadTypes.join(", ")} />
-      </dl>
     </section>
   );
 }
 
-function DefRow({ label, value }: { label: string; value: string }) {
+function MetaPair({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-white/70 p-3 ring-1 ring-slate-200/80 backdrop-blur">
-      <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+    <div className="flex min-w-0 items-baseline gap-1.5">
+      <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
         {label}
       </dt>
-      <dd className="mt-1 text-sm text-slate-800">{value}</dd>
+      <dd className="truncate text-slate-700">{value}</dd>
     </div>
   );
 }
