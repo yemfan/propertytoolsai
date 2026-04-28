@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { getAgentScopeForAgent } from "@/lib/teams/scope.server";
 
 export async function GET() {
   try {
@@ -11,14 +12,14 @@ export async function GET() {
     const { data: agent } = await supabase.from("agents").select("id").eq("auth_user_id", userData.user.id).maybeSingle();
     if (!agent?.id) return NextResponse.json({ ok: false, error: "Agent not found" }, { status: 403 });
 
-    const agentId = String(agent.id);
+    const scope = await getAgentScopeForAgent(String(agent.id));
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
 
-    // Fetch tasks from last 30 days
+    // Fetch tasks from last 30 days (agent or team roster)
     const { data: recentTasks } = await supabaseServer
       .from("crm_tasks")
       .select("id, status, due_at, completed_at, created_at")
-      .eq("agent_id", agentId)
+      .in("agent_id", scope.agentIds)
       .gte("created_at", thirtyDaysAgo)
       .limit(2000);
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
+import { getAgentScopeForAgent } from "@/lib/teams/scope.server";
 import type { LeadStatus } from "@leadsmart/shared";
 
 export async function GET(req: Request) {
@@ -35,13 +36,14 @@ export async function GET(req: Request) {
       );
     }
 
+    const scope = await getAgentScopeForAgent(String(agentId));
     let q = supabase
       .from("contacts")
       .select(
         "id,agent_id,name,email,phone,property_address,source,lead_status,notes,engagement_score,last_activity_at,rating,contact_frequency,contact_method,last_contacted_at,next_contact_at,search_location,search_radius,price_min,price_max,beds,baths,created_at,pipeline_stage_id,prediction_score,prediction_label,prediction_factors,prediction_computed_at",
         { count: "exact" }
       )
-      .eq("agent_id", agentId);
+      .in("agent_id", scope.agentIds);
 
     // High-level filter presets
     if (filter === "hot") {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { createTask, listTasksForAgent, updateTaskForAgent } from "@/lib/crm/pipeline/tasks";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { getAgentScopeForAgent } from "@/lib/teams/scope.server";
 import type { TaskPriority, TaskStatus } from "@/lib/crm/pipeline/types";
 
 export const runtime = "nodejs";
@@ -19,8 +20,10 @@ export async function GET(req: Request) {
     else if (statusParam === "done" || statusParam === "cancelled") statusFilter = statusParam;
     else statusFilter = "open_only";
 
+    const scope = await getAgentScopeForAgent(agentId);
     const tasks = await listTasksForAgent({
       agentId,
+      agentIds: scope.agentIds,
       leadId: leadId || undefined,
       status: statusFilter,
       limit: 150,

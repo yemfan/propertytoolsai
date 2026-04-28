@@ -1,18 +1,20 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { getAgentScopeForAgent } from "@/lib/teams/scope.server";
 
 export async function GET() {
   try {
     const { agentId } = await getCurrentAgentContext();
+    const scope = await getAgentScopeForAgent(agentId);
 
-    // Core lead aggregates (scoped to this agent)
+    // Core lead aggregates (scoped to this agent or team roster)
     const { data: leadAgg, error: leadAggErr } = await supabaseServer
       .from("contacts")
       .select(
         "id, rating, engagement_score, last_activity_at"
       )
-      .eq("agent_id", agentId);
+      .in("agent_id", scope.agentIds);
 
     if (leadAggErr) throw leadAggErr;
 
