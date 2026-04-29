@@ -4,8 +4,9 @@ export type PlanTier = "free" | "pro" | "premium";
 
 export function normalizePlanType(raw: string | null | undefined): PlanTier {
   const p = String(raw ?? "free").toLowerCase();
-  if (p === "premium" || p === "elite") return "premium";
-  if (p === "pro") return "pro";
+  // Team is treated as premium for rate-limit purposes (unlimited).
+  if (p === "premium" || p === "elite" || p === "team") return "premium";
+  if (p === "pro" || p === "growth") return "pro";
   return "free";
 }
 

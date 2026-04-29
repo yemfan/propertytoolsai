@@ -1,7 +1,7 @@
 import { supabaseServer } from "@/lib/supabaseServer";
 import { throwIfSupabaseError } from "@/lib/supabaseThrow";
 
-export type Plan = "free" | "pro" | "premium";
+export type Plan = "free" | "pro" | "premium" | "team";
 export type SubscriptionStatus =
   | "active"
   | "trialing"
@@ -15,6 +15,7 @@ export type SubscriptionStatus =
 function planTokens(plan: Plan) {
   if (plan === "pro") return 100;
   if (plan === "premium") return 300;
+  if (plan === "team") return 1500;
   return 10;
 }
 

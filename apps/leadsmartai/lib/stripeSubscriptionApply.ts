@@ -34,13 +34,15 @@ export function checkoutSuccessShouldSyncSubscription(params: {
 /** Maps Stripe subscription status + resolved SKU to the plan stored on `agents` / `user_profiles`. */
 export function computeAgentPlanFromSubscriptionSync(params: {
   subscriptionStatus: Stripe.Subscription["status"];
-  resolvedPaidPlan: "pro" | "premium" | "free";
-}): "free" | "pro" | "premium" {
+  resolvedPaidPlan: "pro" | "premium" | "team" | "free";
+}): "free" | "pro" | "premium" | "team" {
   if (!subscriptionStatusIndicatesPaidAccess(params.subscriptionStatus)) return "free";
   return params.resolvedPaidPlan !== "free" ? params.resolvedPaidPlan : "pro";
 }
 
-function planFromPriceId(priceId: string | null | undefined): "pro" | "premium" | null {
+function planFromPriceId(
+  priceId: string | null | undefined,
+): "pro" | "premium" | "team" | null {
   if (!priceId) return null;
   if (priceId === process.env.STRIPE_PRICE_ID_PRO) return "pro";
   const consumerPrem = (process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM ?? "").trim();
@@ -49,6 +51,11 @@ function planFromPriceId(priceId: string | null | undefined): "pro" | "premium" 
   if (agentPro && priceId === agentPro) return "pro";
   const agentPremium = (process.env.STRIPE_PRICE_ID_AGENT_PREMIUM ?? "").trim();
   if (agentPremium && priceId === agentPremium) return "premium";
+  const agentTeam = (process.env.STRIPE_PRICE_ID_AGENT_TEAM ?? "").trim();
+  if (agentTeam && priceId === agentTeam) return "team";
+  // Legacy STRIPE_PRICE_ID_TEAM fallback (CRM team uses this same env var
+  // for "premium" entitlements; agent_team checkouts always set
+  // internal_plan="agent_team" so the metadata branch above wins for them).
   return null;
 }
 
@@ -58,17 +65,18 @@ function planFromPriceId(priceId: string | null | undefined): "pro" | "premium" 
  */
 export function resolvePaidPlanFromStripe(
   subscription: Stripe.Subscription,
-  checkoutPlanMeta?: string | null
-): "pro" | "premium" | "free" {
+  checkoutPlanMeta?: string | null,
+): "pro" | "premium" | "team" | "free" {
   const internal = String(subscription.metadata?.internal_plan ?? "").trim();
   if (internal === "crm_starter") return "pro";
   if (internal === "crm_pro" || internal === "crm_team") return "premium";
+  if (internal === "agent_team") return "team";
 
   const priceId = subscription.items.data[0]?.price?.id;
   const fromEnv = planFromPriceId(priceId);
   if (fromEnv) return fromEnv;
   const hint = String(checkoutPlanMeta ?? subscription.metadata?.plan ?? "").toLowerCase();
-  if (hint === "pro" || hint === "premium") return hint;
+  if (hint === "pro" || hint === "premium" || hint === "team") return hint;
   return "free";
 }
 

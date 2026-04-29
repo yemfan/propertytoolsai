@@ -33,8 +33,13 @@ export async function GET() {
       return NextResponse.json({ ok: true, count: 0, limit: 0, plan: planType });
     }
 
-    // Limits: free=no CRM, pro=500, premium=unlimited
-    const limit = planType === "pro" ? 500 : planType === "premium" ? null : 0;
+    // Limits: free=no CRM, pro=500, premium/team=unlimited
+    const limit =
+      planType === "pro"
+        ? 500
+        : planType === "premium" || planType === "team"
+          ? null
+          : 0;
 
     const { count, error } = await supabase
       .from("contacts")

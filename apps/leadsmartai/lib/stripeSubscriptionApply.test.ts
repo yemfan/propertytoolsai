@@ -10,12 +10,15 @@ import {
 
 function mockSubscription(
   status: Stripe.Subscription["status"],
-  opts?: { priceId?: string; planMeta?: string }
+  opts?: { priceId?: string; planMeta?: string; internalPlan?: string }
 ): Stripe.Subscription {
+  const metadata: Record<string, string> = {};
+  if (opts?.planMeta) metadata.plan = opts.planMeta;
+  if (opts?.internalPlan) metadata.internal_plan = opts.internalPlan;
   return {
     status,
     items: { data: [{ price: { id: opts?.priceId ?? undefined } }] },
-    metadata: opts?.planMeta ? { plan: opts.planMeta } : {},
+    metadata,
   } as unknown as Stripe.Subscription;
 }
 
@@ -130,17 +133,44 @@ describe("computeAgentPlanFromSubscriptionSync", () => {
       })
     ).toBe("pro");
   });
+  it("active + team stays team", () => {
+    expect(
+      computeAgentPlanFromSubscriptionSync({
+        subscriptionStatus: "active",
+        resolvedPaidPlan: "team",
+      })
+    ).toBe("team");
+  });
+  it("trialing + team stays team", () => {
+    expect(
+      computeAgentPlanFromSubscriptionSync({
+        subscriptionStatus: "trialing",
+        resolvedPaidPlan: "team",
+      })
+    ).toBe("team");
+  });
+  it("downgrades team to free when subscription is canceled", () => {
+    expect(
+      computeAgentPlanFromSubscriptionSync({
+        subscriptionStatus: "canceled",
+        resolvedPaidPlan: "team",
+      })
+    ).toBe("free");
+  });
 });
 
 describe("resolvePaidPlanFromStripe", () => {
   let prevPro: string | undefined;
   let prevConsumerPremium: string | undefined;
+  let prevAgentTeam: string | undefined;
 
   beforeEach(() => {
     prevPro = process.env.STRIPE_PRICE_ID_PRO;
     prevConsumerPremium = process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM;
+    prevAgentTeam = process.env.STRIPE_PRICE_ID_AGENT_TEAM;
     process.env.STRIPE_PRICE_ID_PRO = "price_pro_test";
     process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM = "price_premium_test";
+    process.env.STRIPE_PRICE_ID_AGENT_TEAM = "price_team_test";
   });
 
   afterEach(() => {
@@ -148,6 +178,8 @@ describe("resolvePaidPlanFromStripe", () => {
     else process.env.STRIPE_PRICE_ID_PRO = prevPro;
     if (prevConsumerPremium === undefined) delete process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM;
     else process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM = prevConsumerPremium;
+    if (prevAgentTeam === undefined) delete process.env.STRIPE_PRICE_ID_AGENT_TEAM;
+    else process.env.STRIPE_PRICE_ID_AGENT_TEAM = prevAgentTeam;
   });
 
   it("uses env price id for pro", () => {
@@ -166,5 +198,37 @@ describe("resolvePaidPlanFromStripe", () => {
   });
   it("returns free when nothing matches", () => {
     expect(resolvePaidPlanFromStripe(mockSubscription("active", { priceId: "price_unknown" }))).toBe("free");
+  });
+
+  it("agent_team internal_plan resolves to team (highest precedence)", () => {
+    // Even with a mismatched price, internal_plan="agent_team" wins.
+    expect(
+      resolvePaidPlanFromStripe(
+        mockSubscription("active", { internalPlan: "agent_team", priceId: "price_pro_test" }),
+      ),
+    ).toBe("team");
+  });
+  it("uses STRIPE_PRICE_ID_AGENT_TEAM env price for team", () => {
+    expect(
+      resolvePaidPlanFromStripe(mockSubscription("active", { priceId: "price_team_test" })),
+    ).toBe("team");
+  });
+  it("falls back to subscription metadata plan=team", () => {
+    expect(
+      resolvePaidPlanFromStripe(mockSubscription("active", { planMeta: "team" })),
+    ).toBe("team");
+  });
+  it("checkout metadata 'team' wins over unknown price", () => {
+    expect(
+      resolvePaidPlanFromStripe(
+        mockSubscription("active", { priceId: "price_unknown" }),
+        "team",
+      ),
+    ).toBe("team");
+  });
+  it("crm_team internal_plan stays as premium (not team) — CRM bundle preserved", () => {
+    expect(
+      resolvePaidPlanFromStripe(mockSubscription("active", { internalPlan: "crm_team" })),
+    ).toBe("premium");
   });
 });

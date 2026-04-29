@@ -21,7 +21,7 @@ const PLANS: Array<{
   price: string;
   priceUnit?: string;
   /** Maps to `POST /api/create-checkout-session` body `{ plan, cancel_surface: "agent" }` */
-  checkoutPlan?: "pro" | "premium";
+  checkoutPlan?: "pro" | "premium" | "team";
   /** When set, the CTA links to a static URL instead of triggering checkout. */
   ctaHref?: string;
   description: string;
@@ -96,7 +96,7 @@ const PLANS: Array<{
     name: "Team",
     price: "$199/mo",
     priceUnit: "per team",
-    ctaHref: "/contact?topic=team",
+    checkoutPlan: "team",
     description: "For brokerages and small teams up to 5 seats.",
     coachingBadge: "Top Producer Track for whole team",
     features: [
@@ -108,7 +108,7 @@ const PLANS: Array<{
       "Top Producer Track for every member",
       "Team owner controls + seat invites",
     ],
-    cta: "Contact sales",
+    cta: "Start 14-day trial",
   },
 ];
 
@@ -168,7 +168,7 @@ export default function AgentPricingClientPage() {
     }
   }
 
-  async function handlePaidPlan(plan: "pro" | "premium") {
+  async function handlePaidPlan(plan: "pro" | "premium" | "team") {
     try {
       setLoadingPlan(plan);
       setError("");
