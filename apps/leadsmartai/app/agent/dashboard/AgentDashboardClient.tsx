@@ -1,5 +1,6 @@
 "use client";
 
+import { CoachingProgramsCard } from "@/components/coaching/CoachingProgramsCard";
 import {
   ActionButton,
   DashboardShell,
@@ -35,6 +36,7 @@ export default function AgentDashboardClient() {
         <KpiCard key={k.label} label={k.label} value={k.value} subtext={kpiSubtext(k)} />
       ))}
     >
+        <CoachingProgramsCard />
         <section className="grid gap-6 xl:grid-cols-12">
           <SectionCard
             title="Hot leads / lead inbox"

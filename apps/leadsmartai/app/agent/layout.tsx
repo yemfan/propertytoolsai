@@ -12,6 +12,7 @@ import { fetchUserPortalContext } from "@/lib/rolePortalServer";
 const PUBLIC_AGENT_PATHS = new Set<string>([
   "/agent/compare",
   "/agent/pricing",
+  "/agent/coaching",
 ]);
 
 export default async function AgentPortalLayout({ children }: { children: ReactNode }) {
