@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { getProgramViews } from "@/lib/coaching-programs/service";
 import { COACHING_PROGRAMS } from "@/lib/coaching-programs/programs";
+import { loadProgressInput } from "@/lib/coaching-programs/progress.server";
+import { computeProgress } from "@/lib/coaching-programs/progress";
 import type { AgentPlan } from "@/lib/entitlements/types";
 
 /**
@@ -18,26 +20,38 @@ export async function GET() {
   try {
     const ctx = await getCurrentAgentContext();
     const plan = normalizeAgentPlan(ctx.planType);
-    const views = await getProgramViews({
-      agentId: ctx.agentId,
-      plan,
-    });
+
+    // Run views + progress-input fetch in parallel — both go to
+    // Supabase, no point sequencing.
+    const [views, progressInput] = await Promise.all([
+      getProgramViews({ agentId: ctx.agentId, plan }),
+      loadProgressInput(ctx.agentId),
+    ]);
+
     return NextResponse.json({
       ok: true,
       plan,
-      programs: views.map((v) => ({
-        slug: v.programSlug,
-        status: v.status,
-        enrolledAt: v.enrolledAt,
-        meta: {
-          name: COACHING_PROGRAMS[v.programSlug].name,
-          tagline: COACHING_PROGRAMS[v.programSlug].tagline,
-          annualTransactionTarget:
-            COACHING_PROGRAMS[v.programSlug].annualTransactionTarget,
-          conversionRateTargetPct:
-            COACHING_PROGRAMS[v.programSlug].conversionRateTargetPct,
-        },
-      })),
+      programs: views.map((v) => {
+        const meta = COACHING_PROGRAMS[v.programSlug];
+        // Progress is per-program because the target differs;
+        // the underlying counts are shared.
+        const progress = computeProgress(progressInput, {
+          annualTransactionTarget: meta.annualTransactionTarget,
+          conversionRateTargetPct: meta.conversionRateTargetPct,
+        });
+        return {
+          slug: v.programSlug,
+          status: v.status,
+          enrolledAt: v.enrolledAt,
+          meta: {
+            name: meta.name,
+            tagline: meta.tagline,
+            annualTransactionTarget: meta.annualTransactionTarget,
+            conversionRateTargetPct: meta.conversionRateTargetPct,
+          },
+          progress,
+        };
+      }),
     });
   } catch (e) {
     return NextResponse.json(
