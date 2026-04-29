@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 /* ── Scroll-triggered fade-in hook ── */
 function useScrollReveal() {
@@ -170,10 +170,15 @@ function CountUp({ target, suffix = "" }: { target: number; suffix?: string }) {
 }
 
 /* ── Interactive FAQ Accordion ── */
-let faqId = 0;
 function FaqItem({ q, a, defaultOpen = false }: { q: string; a: string; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
-  const [id] = useState(() => `faq-${++faqId}`);
+  // useId() produces SSR-safe identifiers that match between
+  // server and client renders. The previous module-level counter
+  // (`let faqId = 0; ++faqId`) re-counted from 1 on the client
+  // while the server reached 17 by the first render, producing a
+  // hydration mismatch on every page load.
+  const reactId = useId();
+  const id = `faq-${reactId}`;
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white transition-all duration-200 hover:border-slate-300">
       <button
