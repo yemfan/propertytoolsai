@@ -14,10 +14,16 @@ export function getStripePriceIdForPlan(plan: "pro" | "premium"): string {
  * LeadSmart **agent** checkout — three tiers:
  *   - `pro`     → `STRIPE_PRICE_ID_AGENT_PRO`     → internal `agent_starter` (Growth)
  *   - `premium` → `STRIPE_PRICE_ID_AGENT_PREMIUM` → internal `agent_pro` (Elite, solo)
- *   - `team`    → `STRIPE_PRICE_ID_AGENT_TEAM`    → internal `agent_team` (Team SKU, $199/5 seats)
+ *   - `team`    → `STRIPE_PRICE_ID_TEAM`          → internal `agent_team` (Team SKU, $199/5 seats)
  *
- * Falls back to legacy env var names (STRIPE_PRICE_ID_ELITE, STRIPE_PRICE_ID_TEAM)
- * if the canonical names aren't set.
+ * Team uses `STRIPE_PRICE_ID_TEAM` as the canonical env var since
+ * the price was provisioned under that name well before the agent
+ * Team SKU shipped. CRM and agent flows can share the same Stripe
+ * Price ID — the `internal_plan` metadata on the checkout session
+ * disambiguates which entitlement tier the webhook should apply.
+ *
+ * Pro/Premium fall back to legacy names (STRIPE_PRICE_ID_PRO,
+ * STRIPE_PRICE_ID_ELITE) if the canonical names aren't set.
  */
 export function getStripePriceIdForAgentPlan(
   plan: "pro" | "premium" | "team",
@@ -31,10 +37,10 @@ export function getStripePriceIdForAgentPlan(
   }
   if (plan === "team") {
     const raw =
-      process.env.STRIPE_PRICE_ID_AGENT_TEAM ||
       process.env.STRIPE_PRICE_ID_TEAM ||
+      process.env.STRIPE_PRICE_ID_AGENT_TEAM ||
       "";
-    return validateStripePriceEnv(raw || undefined, "STRIPE_PRICE_ID_AGENT_TEAM");
+    return validateStripePriceEnv(raw || undefined, "STRIPE_PRICE_ID_TEAM");
   }
   // premium / elite (solo)
   const raw =
