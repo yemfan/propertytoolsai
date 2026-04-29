@@ -21,6 +21,16 @@ import { useEffect, useState } from "react";
  * that joins to transactions + contacts data.
  */
 
+type ProgressTone = "ahead" | "on_track" | "behind" | "no_data";
+
+type ProgressMetric = {
+  actual: number;
+  target: number;
+  display: string;
+  tone: ProgressTone;
+  ratio: number;
+};
+
 type ProgramView = {
   slug: "producer_track" | "top_producer_track";
   status: "enrolled" | "opted_out" | "eligible_not_enrolled" | "not_eligible";
@@ -30,6 +40,10 @@ type ProgramView = {
     tagline: string;
     annualTransactionTarget: number;
     conversionRateTargetPct: number;
+  };
+  progress?: {
+    transactions: ProgressMetric;
+    conversion: ProgressMetric;
   };
 };
 
@@ -105,6 +119,7 @@ export function CoachingProgramsCard() {
 function ProgramRow({ program }: { program: ProgramView }) {
   const isEnrolled = program.status === "enrolled";
   const isOptedOut = program.status === "opted_out";
+  const showProgress = isEnrolled && !!program.progress;
   return (
     <div
       className={[
@@ -131,16 +146,29 @@ function ProgramRow({ program }: { program: ProgramView }) {
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-        <Mini
-          label="Goal"
-          value={`${program.meta.annualTransactionTarget} deals`}
-        />
-        <Mini
-          label="Conv. target"
-          value={`${program.meta.conversionRateTargetPct}%`}
-        />
-      </div>
+      {showProgress && program.progress ? (
+        <div className="mt-3 space-y-2.5">
+          <ProgressMetricRow
+            label="Transactions YTD"
+            metric={program.progress.transactions}
+          />
+          <ProgressMetricRow
+            label="Conversion (12mo)"
+            metric={program.progress.conversion}
+          />
+        </div>
+      ) : (
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+          <Mini
+            label="Goal"
+            value={`${program.meta.annualTransactionTarget} deals`}
+          />
+          <Mini
+            label="Conv. target"
+            value={`${program.meta.conversionRateTargetPct}%`}
+          />
+        </div>
+      )}
 
       {!isEnrolled ? (
         <p className="mt-3 text-[11px] text-slate-600">
@@ -153,6 +181,70 @@ function ProgramRow({ program }: { program: ProgramView }) {
           Your dashboard tasks + weekly playbooks are tracking toward this goal.
         </p>
       )}
+    </div>
+  );
+}
+
+const TONE_STYLES: Record<
+  ProgressTone,
+  { label: string; text: string; bar: string; chipBg: string }
+> = {
+  ahead: {
+    label: "Ahead",
+    text: "text-emerald-700",
+    bar: "bg-emerald-500",
+    chipBg: "bg-emerald-50 ring-emerald-200",
+  },
+  on_track: {
+    label: "On track",
+    text: "text-blue-700",
+    bar: "bg-blue-500",
+    chipBg: "bg-blue-50 ring-blue-200",
+  },
+  behind: {
+    label: "Behind",
+    text: "text-amber-700",
+    bar: "bg-amber-500",
+    chipBg: "bg-amber-50 ring-amber-200",
+  },
+  no_data: {
+    label: "No data",
+    text: "text-slate-500",
+    bar: "bg-slate-300",
+    chipBg: "bg-slate-50 ring-slate-200",
+  },
+};
+
+function ProgressMetricRow({
+  label,
+  metric,
+}: {
+  label: string;
+  metric: ProgressMetric;
+}) {
+  const tone = TONE_STYLES[metric.tone];
+  const widthPct = Math.round(Math.min(1, Math.max(0, metric.ratio)) * 100);
+  return (
+    <div className="rounded-md bg-white px-2.5 py-2 ring-1 ring-slate-200">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+          {label}
+        </p>
+        <span
+          className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ring-1 ${tone.text} ${tone.chipBg}`}
+        >
+          {tone.label}
+        </span>
+      </div>
+      <p className="mt-0.5 text-sm font-semibold tabular-nums text-slate-900">
+        {metric.display}
+      </p>
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className={`h-full rounded-full ${tone.bar}`}
+          style={{ width: `${widthPct}%` }}
+        />
+      </div>
     </div>
   );
 }
