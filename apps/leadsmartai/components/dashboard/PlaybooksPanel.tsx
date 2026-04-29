@@ -39,6 +39,16 @@ export function PlaybooksPanel({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
+  /**
+   * IDs of playbook tasks the agent has ticked for "Add to Tasks
+   * List". Distinct from the completion checkbox so an agent can
+   * line up several rows and bulk-promote them to /dashboard/tasks
+   * without losing their place in the playbook.
+   */
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [addingToTasks, setAddingToTasks] = useState(false);
+  const [addToTasksError, setAddToTasksError] = useState<string | null>(null);
+  const [addToTasksMessage, setAddToTasksMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -98,6 +108,83 @@ export function PlaybooksPanel({
     await load();
   }
 
+  function toggleSelected(taskId: string) {
+    setAddToTasksMessage(null);
+    setAddToTasksError(null);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  }
+
+  /**
+   * Promote each selected playbook task into the agent's main
+   * /dashboard/tasks list. Sequential POSTs (small N, no bulk
+   * endpoint) — Promise.allSettled so a single failure doesn't
+   * block the rest. After success the selection clears.
+   */
+  async function addSelectedToTasksList() {
+    if (selectedIds.size === 0 || addingToTasks) return;
+    setAddingToTasks(true);
+    setAddToTasksError(null);
+    setAddToTasksMessage(null);
+
+    const ids = Array.from(selectedIds);
+    const targets = tasks.filter((t) => ids.includes(t.id));
+
+    const results = await Promise.allSettled(
+      targets.map(async (t) => {
+        const res = await fetch("/api/dashboard/tasks", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            title: t.title,
+            description: t.notes ?? null,
+            // Playbook due_date is YYYY-MM-DD; convert to noon UTC
+            // so the agent's local timezone doesn't bump the date.
+            dueAt: t.due_date ? `${t.due_date}T12:00:00.000Z` : null,
+            priority: "medium",
+          }),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as
+            | { error?: string }
+            | null;
+          throw new Error(body?.error ?? `HTTP ${res.status}`);
+        }
+        return t.id;
+      }),
+    );
+
+    const succeeded: string[] = [];
+    const failed: string[] = [];
+    results.forEach((r, i) => {
+      const t = targets[i];
+      if (r.status === "fulfilled") succeeded.push(t.id);
+      else failed.push(t.title);
+    });
+
+    setAddingToTasks(false);
+
+    if (succeeded.length > 0) {
+      setAddToTasksMessage(
+        `Added ${succeeded.length} task${succeeded.length === 1 ? "" : "s"} to your Tasks list.`,
+      );
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const id of succeeded) next.delete(id);
+        return next;
+      });
+    }
+    if (failed.length > 0) {
+      setAddToTasksError(
+        `Couldn't add ${failed.length} task${failed.length === 1 ? "" : "s"}: ${failed.slice(0, 3).join(", ")}${failed.length > 3 ? "…" : ""}`,
+      );
+    }
+  }
+
   const { batches, open, done } = useMemo(() => groupTasks(tasks), [tasks]);
 
   if (loading && !tasks.length) {
@@ -119,6 +206,21 @@ export function PlaybooksPanel({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void addSelectedToTasksList()}
+            disabled={selectedIds.size === 0 || addingToTasks}
+            title={
+              selectedIds.size === 0
+                ? "Tick the box on any open playbook item to enable"
+                : `Add ${selectedIds.size} selected task${selectedIds.size === 1 ? "" : "s"} to your Tasks list`
+            }
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 disabled:hover:bg-white"
+          >
+            {addingToTasks
+              ? "Adding…"
+              : `+ Add to Tasks List${selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}`}
+          </button>
           {open > 0 ? (
             <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-800">
               {open} open
@@ -141,6 +243,22 @@ export function PlaybooksPanel({
 
       {error ? (
         <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>
+      ) : null}
+      {addToTasksMessage ? (
+        <div className="mt-3 rounded-md bg-green-50 px-3 py-2 text-xs text-green-700">
+          {addToTasksMessage}{" "}
+          <a
+            href="/dashboard/tasks"
+            className="font-semibold underline hover:text-green-900"
+          >
+            View Tasks list →
+          </a>
+        </div>
+      ) : null}
+      {addToTasksError ? (
+        <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
+          {addToTasksError}
+        </div>
       ) : null}
 
       {batches.length === 0 ? (
@@ -182,13 +300,37 @@ export function PlaybooksPanel({
                     <ul className="space-y-1">
                       {section.items.map((t) => {
                         const complete = t.completed_at != null;
+                        const isSelected = selectedIds.has(t.id);
                         return (
                           <li key={t.id} className="flex items-start gap-2">
+                            {/*
+                              Selection checkbox — for "Add to Tasks
+                              List". Hidden once the item is complete
+                              (no point promoting a finished task to
+                              an active list). Slate styling so it
+                              reads as a different control than the
+                              blue completion checkbox.
+                            */}
+                            {complete ? (
+                              <span
+                                aria-hidden
+                                className="mt-0.5 inline-block h-4 w-4 shrink-0"
+                              />
+                            ) : (
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelected(t.id)}
+                                aria-label={`Select "${t.title}" to add to Tasks list`}
+                                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-slate-700 accent-slate-700"
+                              />
+                            )}
                             <input
                               type="checkbox"
                               checked={complete}
                               onChange={(e) => void toggleTask(t, e.target.checked)}
-                              className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                              aria-label={`Mark "${t.title}" ${complete ? "incomplete" : "complete"}`}
+                              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300"
                             />
                             <div className="flex-1">
                               <div
