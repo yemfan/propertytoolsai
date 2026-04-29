@@ -24,6 +24,13 @@ export type PlanCatalogEntry = {
    * cap via `cmaReportsPerDay`.
    */
   aiActionsPerMonth: number | null;
+  /**
+   * LeadSmart AI Coaching programs bundled with this tier. Slugs
+   * match `lib/coaching-programs/programs.ts:ProgramSlug`. Empty
+   * array means no coaching access — the dashboard widget hides;
+   * the pricing page surfaces an "Upgrade for coaching" CTA.
+   */
+  coachingPrograms: string[];
   /** Marketing bullets for comparison UI */
   bullets: string[];
 };
@@ -40,6 +47,7 @@ export const PLAN_CATALOG: Record<AgentPlan, PlanCatalogEntry> = {
     teamAccess: false,
     teamSeatCap: 0,
     aiActionsPerMonth: 100,
+    coachingPrograms: [],
     bullets: [
       "Up to 5 leads · 50 contacts",
       "2 CMA reports / day",
@@ -61,6 +69,7 @@ export const PLAN_CATALOG: Record<AgentPlan, PlanCatalogEntry> = {
     teamAccess: false,
     teamSeatCap: 0,
     aiActionsPerMonth: 5000,
+    coachingPrograms: ["producer_track"],
     bullets: [
       "Everything in Starter, plus:",
       "Up to 500 leads · 500 contacts",
@@ -85,6 +94,7 @@ export const PLAN_CATALOG: Record<AgentPlan, PlanCatalogEntry> = {
     teamAccess: true,
     teamSeatCap: 10,
     aiActionsPerMonth: null,
+    coachingPrograms: ["producer_track", "top_producer_track"],
     bullets: [
       "Everything in Pro, plus:",
       "Unlimited leads & contacts",
