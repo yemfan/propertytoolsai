@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  agentPlanFromStoredPlan,
   canPlanAccessProgram,
   COACHING_PROGRAMS,
   planAutoEnrollsProgram,
@@ -84,5 +85,33 @@ describe("programsForPlan", () => {
   it("team → both programs in display order", () => {
     const out = programsForPlan("team").map((p) => p.slug);
     expect(out).toEqual(["producer_track", "top_producer_track"]);
+  });
+});
+
+describe("coaching-programs / agentPlanFromStoredPlan", () => {
+  it("maps starter / free → starter", () => {
+    expect(agentPlanFromStoredPlan("starter")).toBe("starter");
+    expect(agentPlanFromStoredPlan("free")).toBe("starter");
+  });
+  it("maps pro / growth → growth", () => {
+    expect(agentPlanFromStoredPlan("pro")).toBe("growth");
+    expect(agentPlanFromStoredPlan("growth")).toBe("growth");
+  });
+  it("maps elite / premium → elite", () => {
+    expect(agentPlanFromStoredPlan("elite")).toBe("elite");
+    expect(agentPlanFromStoredPlan("premium")).toBe("elite");
+  });
+  it("maps team → team", () => {
+    expect(agentPlanFromStoredPlan("team")).toBe("team");
+  });
+  it("normalizes case", () => {
+    expect(agentPlanFromStoredPlan("PREMIUM")).toBe("elite");
+    expect(agentPlanFromStoredPlan("Team")).toBe("team");
+  });
+  it("returns null for unknown / null / empty", () => {
+    expect(agentPlanFromStoredPlan(null)).toBeNull();
+    expect(agentPlanFromStoredPlan(undefined)).toBeNull();
+    expect(agentPlanFromStoredPlan("")).toBeNull();
+    expect(agentPlanFromStoredPlan("legacy_god_mode")).toBeNull();
   });
 });

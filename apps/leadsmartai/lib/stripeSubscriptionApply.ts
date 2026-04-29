@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import { supabaseServer } from "@/lib/supabaseServer";
 import { throwIfSupabaseError } from "@/lib/supabaseThrow";
 import { setUserPlanFromStripe, type Plan } from "@/lib/subscriptionSync";
+import { agentPlanFromStoredPlan } from "@/lib/coaching-programs/programs";
 
 /** Checkout Session: customer completed payment or no charge is due yet (e.g. trial). */
 export function checkoutPaymentIndicatesSuccess(
@@ -136,6 +137,12 @@ export async function persistAgentAndProfileFromSubscription(params: {
       resetTokens: agentPlan === "free",
       trialEndsAt,
     });
+
+    await runCoachingAutoEnroll({
+      authUserId: params.userId,
+      stripeCustomerId: null,
+      storedPlan: agentPlan,
+    });
     return;
   }
 
@@ -149,5 +156,56 @@ export async function persistAgentAndProfileFromSubscription(params: {
       })
       .eq("stripe_customer_id", params.customerId);
     throwIfSupabaseError(error, "Could not update agents by customer id");
+
+    await runCoachingAutoEnroll({
+      authUserId: null,
+      stripeCustomerId: params.customerId,
+      storedPlan: agentPlan,
+    });
+  }
+}
+
+/**
+ * Idempotent best-effort auto-enroll into LeadSmart AI Coaching
+ * programs after a Stripe-driven plan change. Resolves the
+ * agents.id by either auth_user_id or stripe_customer_id depending
+ * on which the webhook handler had in scope, then delegates to the
+ * coaching service. Errors are logged + swallowed — coaching
+ * enrollment must never block a billing webhook from succeeding.
+ */
+async function runCoachingAutoEnroll(args: {
+  authUserId: string | null;
+  stripeCustomerId: string | null;
+  storedPlan: "free" | "pro" | "premium" | "team";
+}): Promise<void> {
+  try {
+    const plan = agentPlanFromStoredPlan(args.storedPlan);
+    if (!plan) return;
+
+    let query = supabaseServer.from("agents").select("id").limit(1);
+    if (args.authUserId) {
+      query = query.eq("auth_user_id", args.authUserId);
+    } else if (args.stripeCustomerId) {
+      query = query.eq("stripe_customer_id", args.stripeCustomerId);
+    } else {
+      return;
+    }
+    const { data, error } = await query.maybeSingle();
+    if (error || !data) return;
+
+    const agentId = String((data as { id?: unknown }).id ?? "");
+    if (!agentId) return;
+
+    // Dynamic import: keeps `server-only` out of the static import
+    // graph so this module's pure helpers stay test-friendly.
+    const { autoEnrollForPlan } = await import(
+      "@/lib/coaching-programs/service"
+    );
+    await autoEnrollForPlan({ agentId, plan });
+  } catch (e) {
+    console.warn(
+      "[coaching] auto-enroll on subscription change failed:",
+      (e as Error).message,
+    );
   }
 }
