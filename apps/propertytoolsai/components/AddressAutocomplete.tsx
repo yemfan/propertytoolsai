@@ -51,12 +51,18 @@ function loadPlacesLibrary(apiKey: string): Promise<google.maps.PlacesLibrary> {
 
 /** Normalize for comparing Google vs React-controlled value (spaces, NBSP). */
 function normAddr(s: string) {
-  return s.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+  return s.replace(/ /g, " ").replace(/\s+/g, " ").trim();
 }
 
-function pickAddressParts(place: google.maps.places.PlaceResult) {
-  const parts = place.address_components ?? [];
-  const byType = (type: string) => parts.find((p) => p.types.includes(type))?.long_name ?? null;
+/**
+ * Extract `{ city, state, zip }` from the new Place API's
+ * `addressComponents` (long-form: `longText` instead of legacy
+ * `long_name`). The legacy locality / sublocality / postal-code
+ * conventions still apply.
+ */
+function pickAddressParts(components: google.maps.places.AddressComponent[]) {
+  const byType = (type: string) =>
+    components.find((c) => c.types.includes(type))?.longText ?? null;
   return {
     city: byType("locality") ?? byType("sublocality") ?? null,
     state: byType("administrative_area_level_1"),
@@ -64,26 +70,34 @@ function pickAddressParts(place: google.maps.places.PlaceResult) {
   };
 }
 
-/** Zillow-style: primary line + locality (Places structured_formatting). */
-function formatPredictionLines(p: google.maps.places.AutocompletePrediction) {
-  const sf = p.structured_formatting;
-  if (sf?.main_text) {
-    return {
-      primary: sf.main_text,
-      secondary: sf.secondary_text ?? "",
-    };
-  }
-  const parts = p.description.split(",");
-  if (parts.length <= 1) {
-    return { primary: p.description, secondary: "" };
-  }
-  return {
-    primary: parts[0]?.trim() ?? p.description,
-    secondary: parts.slice(1).join(",").trim(),
-  };
-}
+/**
+ * Normalized prediction row used throughout the component. Holds a
+ * reference back to the underlying suggestion so we can resolve a
+ * `Place` for details fetching when the user picks a row.
+ */
+type Prediction = {
+  placeId: string;
+  primary: string;
+  secondary: string;
+  description: string;
+  suggestion: google.maps.places.AutocompleteSuggestion;
+};
 
 const DEBOUNCE_MS = 180;
+
+/**
+ * Real-estate-friendly equivalent of the legacy `types: ["geocode"]`
+ * filter. The new Places API doesn't accept `geocode` as a primary
+ * type, so we explicitly include the address-y types we want
+ * (street addresses, routes, sub-premises, localities, ZIPs).
+ */
+const INCLUDED_PRIMARY_TYPES = [
+  "street_address",
+  "subpremise",
+  "route",
+  "locality",
+  "postal_code",
+];
 
 function SearchIcon({ className }: { className?: string }) {
   return (
@@ -144,18 +158,23 @@ export default function AddressAutocomplete({
   const committedSelectionRef = useRef<string | null>(null);
   /** Block prediction fetch briefly after a pick (handles Strict Mode + async getDetails). */
   const suppressPredictionsUntilMsRef = useRef(0);
-  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
-  const autoServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
   /** Session token: pair predictions + details for Places billing (Google recommendation). */
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
+  /**
+   * Increments on every fetch so an in-flight request from a stale
+   * keystroke can't overwrite predictions from a newer query. The
+   * legacy callback API offered no cancellation; the new Promise
+   * API doesn't either, so we gate on this counter at resolve time.
+   */
+  const requestSeqRef = useRef(0);
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [placesReady, setPlacesReady] = useState(false);
   const [placesError, setPlacesError] = useState<string | null>(null);
-  /** Non-fatal hint when predictions are empty (e.g. ZERO_RESULTS) — distinct from REQUEST_DENIED. */
+  /** Non-fatal hint when predictions are empty (e.g. zero results). */
   const [placesHint, setPlacesHint] = useState<string | null>(null);
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() ?? "";
@@ -171,17 +190,18 @@ export default function AddressAutocomplete({
 
     (async () => {
       try {
-        const places = await loadPlacesLibrary(apiKey);
+        // Just need the library loaded — the new API uses the
+        // global `google.maps.places.AutocompleteSuggestion` and
+        // `Place` classes directly, no per-instance services.
+        await loadPlacesLibrary(apiKey);
         if (cancelled) return;
-
-        autoServiceRef.current = new places.AutocompleteService();
-        const el = document.createElement("div");
-        placesServiceRef.current = new places.PlacesService(el);
         setPlacesReady(true);
       } catch (e) {
         console.error("Failed to load Google Places:", e);
         if (!cancelled) {
-          setPlacesError("Could not load Google Maps. Check the API key and Maps JavaScript API.");
+          setPlacesError(
+            "Could not load Google Maps. Check the API key and Maps JavaScript API.",
+          );
         }
       }
     })();
@@ -223,75 +243,109 @@ export default function AddressAutocomplete({
     }
 
     const t = setTimeout(() => {
-      const svc = autoServiceRef.current;
-      if (!svc) return;
-
-      setLoading(true);
-      setPlacesHint(null);
-
-      const token = sessionTokenRef.current ?? new google.maps.places.AutocompleteSessionToken();
-      sessionTokenRef.current = token;
-
-      svc.getPlacePredictions(
-        {
-          input: query,
-          componentRestrictions: { country: "us" },
-          /** Streets, cities, ZIPs — consumer real-estate search (Zillow-like), not random businesses. */
-          types: ["geocode"],
-          sessionToken: token,
-        },
-        (res, status) => {
-          setLoading(false);
-
-          if (process.env.NODE_ENV === "development") {
-            if (status !== google.maps.places.PlacesServiceStatus.OK) {
-              console.warn("[AddressAutocomplete] getPlacePredictions status:", status);
-            }
-          }
-
-          if (status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED) {
-            setPlacesError(
-              "Places request denied. In Google Cloud → Credentials → your browser key: enable Places API + Maps JavaScript API, billing, and HTTP referrer restrictions that include this exact origin (e.g. http://localhost:3000/* and http://localhost:3001/* — match the port shown in your address bar)."
-            );
-            setPredictions([]);
-            setActiveIndex(-1);
-            setOpen(false);
-            return;
-          }
-
-          if (status === google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT) {
-            setPlacesError(
-              "Google Places quota exceeded for this key. Check billing and Places API quotas in Google Cloud Console."
-            );
-            setPredictions([]);
-            setActiveIndex(-1);
-            setOpen(false);
-            return;
-          }
-
-          if (status !== google.maps.places.PlacesServiceStatus.OK || !res?.length) {
-            if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-              setPlacesHint("No matches yet — try a street number, city, or ZIP.");
-            } else if (status !== google.maps.places.PlacesServiceStatus.OK) {
-              setPlacesHint(`Address lookup returned ${String(status)}. Check the browser console and Google Cloud API status.`);
-            } else {
-              setPlacesHint(null);
-            }
-            setPredictions([]);
-            setActiveIndex(-1);
-            setOpen(false);
-            return;
-          }
-          setPlacesHint(null);
-          setPredictions(res);
-          setActiveIndex(0);
-          setOpen(true);
-        }
-      );
+      void fetchPredictions(query);
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, ready, disabled, placesReady, minChars]);
+
+  /**
+   * Fire a single prediction request via the new
+   * `AutocompleteSuggestion.fetchAutocompleteSuggestions` API
+   * (Promise-based; no callback/status tuple).
+   */
+  async function fetchPredictions(query: string) {
+    const token =
+      sessionTokenRef.current ??
+      new google.maps.places.AutocompleteSessionToken();
+    sessionTokenRef.current = token;
+
+    const seq = ++requestSeqRef.current;
+    setLoading(true);
+    setPlacesHint(null);
+
+    try {
+      const { suggestions } =
+        await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+          input: query,
+          includedPrimaryTypes: INCLUDED_PRIMARY_TYPES,
+          includedRegionCodes: ["us"],
+          sessionToken: token,
+        });
+
+      // Drop the response if the user has typed more characters
+      // since this request was issued.
+      if (seq !== requestSeqRef.current) return;
+
+      const items: Prediction[] = suggestions
+        .filter((s) => s.placePrediction != null)
+        .map((s) => {
+          const p = s.placePrediction!;
+          const primary = p.mainText?.text ?? p.text?.text ?? "";
+          const secondary = p.secondaryText?.text ?? "";
+          return {
+            placeId: p.placeId,
+            primary,
+            secondary,
+            description: p.text?.text ?? `${primary}${secondary ? ", " + secondary : ""}`,
+            suggestion: s,
+          };
+        });
+
+      setLoading(false);
+
+      if (items.length === 0) {
+        setPlacesHint("No matches yet — try a street number, city, or ZIP.");
+        setPredictions([]);
+        setActiveIndex(-1);
+        setOpen(false);
+        return;
+      }
+
+      setPlacesHint(null);
+      setPredictions(items);
+      setActiveIndex(0);
+      setOpen(true);
+    } catch (e) {
+      if (seq !== requestSeqRef.current) return;
+      setLoading(false);
+      setPredictions([]);
+      setActiveIndex(-1);
+      setOpen(false);
+
+      const message = e instanceof Error ? e.message : String(e);
+      const lower = message.toLowerCase();
+
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[AddressAutocomplete] fetchAutocompleteSuggestions failed:", e);
+      }
+
+      if (
+        lower.includes("denied") ||
+        lower.includes("api key") ||
+        lower.includes("referer") ||
+        lower.includes("referrer") ||
+        lower.includes("not authorized")
+      ) {
+        setPlacesError(
+          "Places request denied. In Google Cloud → Credentials → your browser key: enable the Places API (New) + Maps JavaScript API, confirm billing is active, and add HTTP referrer restrictions that include this exact origin (e.g. https://propertytoolsai.com/* and https://www.propertytoolsai.com/*).",
+        );
+        return;
+      }
+
+      if (lower.includes("quota") || lower.includes("over_query_limit")) {
+        setPlacesError(
+          "Google Places quota exceeded for this key. Check billing and Places API (New) quotas in Google Cloud Console.",
+        );
+        return;
+      }
+
+      setPlacesHint(
+        `Address lookup hit a transient error. Retrying as you type. (${message})`,
+      );
+    }
+  }
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -308,7 +362,12 @@ export default function AddressAutocomplete({
     sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
   }
 
-  function selectPrediction(prediction: google.maps.places.AutocompletePrediction) {
+  /**
+   * Apply the selected prediction to the input + fetch its details
+   * (formatted address, lat/lng, address components) via the new
+   * `Place.fetchFields` API.
+   */
+  async function selectPrediction(prediction: Prediction) {
     setOpen(false);
     setPredictions([]);
     setActiveIndex(-1);
@@ -318,58 +377,62 @@ export default function AddressAutocomplete({
     suppressPredictionsUntilMsRef.current = Date.now() + 2800;
     onChange(optimistic);
 
-    const places = placesServiceRef.current;
-    const token = sessionTokenRef.current;
-
-    if (!places) {
+    const placePrediction = prediction.suggestion.placePrediction;
+    if (!placePrediction) {
       newSessionToken();
       onSelect?.({
         formattedAddress: prediction.description,
         lat: null,
         lng: null,
-        placeId: prediction.place_id ?? null,
+        placeId: prediction.placeId || null,
       });
       return;
     }
 
-    places.getDetails(
-      {
-        placeId: prediction.place_id,
-        fields: ["formatted_address", "geometry", "address_components", "place_id"],
-        sessionToken: token ?? undefined,
-      },
-      (place, status) => {
-        newSessionToken();
+    try {
+      const place = placePrediction.toPlace();
+      await place.fetchFields({
+        fields: [
+          "displayName",
+          "formattedAddress",
+          "location",
+          "addressComponents",
+          "id",
+        ],
+      });
 
-        if (status !== google.maps.places.PlacesServiceStatus.OK || !place) {
-          committedSelectionRef.current = normAddr(prediction.description);
-          onSelect?.({
-            formattedAddress: prediction.description,
-            lat: null,
-            lng: null,
-            placeId: prediction.place_id ?? null,
-          });
-          return;
-        }
+      newSessionToken();
 
-        const formatted = place.formatted_address ?? prediction.description;
-        const lat = place.geometry?.location?.lat?.() ?? null;
-        const lng = place.geometry?.location?.lng?.() ?? null;
-        const { city, state, zip } = pickAddressParts(place);
+      const formatted = place.formattedAddress ?? prediction.description;
+      const lat = place.location?.lat() ?? null;
+      const lng = place.location?.lng() ?? null;
+      const components = place.addressComponents ?? [];
+      const { city, state, zip } = pickAddressParts(components);
 
-        committedSelectionRef.current = normAddr(formatted);
-        onChange(formatted);
-        onSelect?.({
-          formattedAddress: formatted,
-          lat,
-          lng,
-          placeId: place.place_id ?? prediction.place_id ?? null,
-          city,
-          state,
-          zip,
-        });
+      committedSelectionRef.current = normAddr(formatted);
+      onChange(formatted);
+      onSelect?.({
+        formattedAddress: formatted,
+        lat,
+        lng,
+        placeId: place.id ?? prediction.placeId ?? null,
+        city,
+        state,
+        zip,
+      });
+    } catch (e) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[AddressAutocomplete] place.fetchFields failed:", e);
       }
-    );
+      newSessionToken();
+      committedSelectionRef.current = normAddr(prediction.description);
+      onSelect?.({
+        formattedAddress: prediction.description,
+        lat: null,
+        lng: null,
+        placeId: prediction.placeId || null,
+      });
+    }
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -387,7 +450,7 @@ export default function AddressAutocomplete({
     if (e.key === "Enter") {
       e.preventDefault();
       const selected = predictions[activeIndex] ?? predictions[0];
-      if (selected) selectPrediction(selected);
+      if (selected) void selectPrediction(selected);
       return;
     }
     if (e.key === "Escape") {
@@ -478,32 +541,31 @@ export default function AddressAutocomplete({
           className="absolute z-[9999] mt-1.5 max-h-[min(22rem,calc(100vh-8rem))] w-full overflow-y-auto rounded-2xl border border-slate-200/90 bg-white py-1 shadow-xl shadow-slate-900/10 ring-1 ring-slate-900/[0.04]"
           role="listbox"
         >
-          {predictions.map((p, idx) => {
-            const { primary, secondary } = formatPredictionLines(p);
-            return (
-              <button
-                key={p.place_id}
-                type="button"
-                role="option"
-                aria-selected={idx === activeIndex}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => selectPrediction(p)}
-                onMouseEnter={() => setActiveIndex(idx)}
-                className={cn(
-                  "flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors",
-                  idx === activeIndex ? "bg-sky-50" : "hover:bg-slate-50"
-                )}
-              >
-                <MapPinIcon className="mt-0.5 shrink-0 text-slate-400" />
-                <span className="min-w-0 flex-1">
-                  <span className="block font-medium text-slate-900">{primary}</span>
-                  {secondary ? (
-                    <span className="mt-0.5 block text-sm font-normal text-slate-500">{secondary}</span>
-                  ) : null}
-                </span>
-              </button>
-            );
-          })}
+          {predictions.map((p, idx) => (
+            <button
+              key={p.placeId}
+              type="button"
+              role="option"
+              aria-selected={idx === activeIndex}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => void selectPrediction(p)}
+              onMouseEnter={() => setActiveIndex(idx)}
+              className={cn(
+                "flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors",
+                idx === activeIndex ? "bg-sky-50" : "hover:bg-slate-50"
+              )}
+            >
+              <MapPinIcon className="mt-0.5 shrink-0 text-slate-400" />
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium text-slate-900">{p.primary}</span>
+                {p.secondary ? (
+                  <span className="mt-0.5 block text-sm font-normal text-slate-500">
+                    {p.secondary}
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          ))}
           <div className="border-t border-slate-100 px-3 py-1.5">
             <p className="text-[10px] leading-tight text-slate-400">Powered by Google</p>
           </div>
