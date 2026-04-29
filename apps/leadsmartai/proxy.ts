@@ -13,6 +13,7 @@ import { matchesPortalKind } from "@/lib/rolePortalPaths";
 const PUBLIC_AGENT_PATHS = new Set<string>([
   "/agent/compare",
   "/agent/pricing",
+  "/agent/coaching",
 ]);
 
 function isAgentPath(pathname: string) {

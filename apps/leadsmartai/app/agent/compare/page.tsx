@@ -318,6 +318,24 @@ const CATEGORIES: Category[] = [
   {
     title: "Differentiators",
     rows: [
+      r("LeadSmart AI Coaching (Producer Track + Top Producer Track)", {
+        leadsmart: "yes",
+        followup_boss: "no",
+        kvcore: "no",
+        lofty: "no",
+        boomtown: "no",
+        liondesk: "no",
+        sierra: "no",
+      }),
+      r("Auto-enrolled coaching with conv-rate + transaction targets", {
+        leadsmart: "yes",
+        followup_boss: "no",
+        kvcore: "no",
+        lofty: "no",
+        boomtown: "no",
+        liondesk: "no",
+        sierra: "no",
+      }),
       r("Bilingual / Chinese-market support (中文)", {
         leadsmart: "yes",
         followup_boss: "no",
