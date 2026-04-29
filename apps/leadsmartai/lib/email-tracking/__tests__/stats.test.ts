@@ -8,7 +8,7 @@ function ev(overrides: Partial<EmailEvent> & { eventType: EmailEvent["eventType"
     externalMessageId: "msg-1",
     eventId: null,
     agentId: "agent-1",
-    leadId: 1,
+    contactId: "00000000-0000-0000-0000-000000000001",
     url: null,
     metadata: {},
     occurredAt: "2026-04-28T00:00:00Z",

@@ -20,7 +20,7 @@ export type EmailEvent = {
   externalMessageId: string;
   eventId: string | null;
   agentId: string | null;
-  leadId: number | null;
+  contactId: string | null;
   eventType: EmailEventType;
   url: string | null;
   metadata: Record<string, unknown>;

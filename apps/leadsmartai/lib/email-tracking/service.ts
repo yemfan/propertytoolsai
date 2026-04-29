@@ -20,10 +20,10 @@ export async function recordEmailEvent(
   event: ParsedEmailEvent,
   svixId: string | null,
 ): Promise<{ inserted: boolean; reason?: string }> {
-  // Resolve agent + lead from the original send via email_messages.
+  // Resolve agent + contact from the original send via email_messages.
   const { data: msg, error: msgErr } = await supabaseAdmin
     .from("email_messages")
-    .select("agent_id, lead_id")
+    .select("agent_id, contact_id")
     .eq("external_message_id", event.externalMessageId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -37,7 +37,7 @@ export async function recordEmailEvent(
     external_message_id: event.externalMessageId,
     event_id: svixId ?? null,
     agent_id: (msg as { agent_id?: string | null } | null)?.agent_id ?? null,
-    lead_id: (msg as { lead_id?: number | null } | null)?.lead_id ?? null,
+    contact_id: (msg as { contact_id?: string | null } | null)?.contact_id ?? null,
     event_type: event.eventType,
     url: event.url,
     metadata: event.metadata,
@@ -85,18 +85,18 @@ export async function getAgentEvents(
 }
 
 /**
- * All events for one lead's email thread. Renders inline icons in the
+ * All events for one contact's email thread. Renders inline icons in the
  * contact detail timeline (delivered ✓, opened 👁, clicked 🔗).
  */
-export async function getLeadEvents(leadId: number): Promise<EmailEvent[]> {
+export async function getContactEvents(contactId: string): Promise<EmailEvent[]> {
   const { data, error } = await supabaseAdmin
     .from("email_events")
     .select("*")
-    .eq("lead_id", leadId)
+    .eq("contact_id", contactId)
     .order("occurred_at", { ascending: false })
     .limit(500);
   if (error) {
-    console.warn("[email-tracking] getLeadEvents failed:", error);
+    console.warn("[email-tracking] getContactEvents failed:", error);
     return [];
   }
   return (data ?? []).map(mapRow);
@@ -108,7 +108,7 @@ function mapRow(row: Record<string, unknown>): EmailEvent {
     externalMessageId: String(row.external_message_id ?? ""),
     eventId: (row.event_id as string | null) ?? null,
     agentId: (row.agent_id as string | null) ?? null,
-    leadId: (row.lead_id as number | null) ?? null,
+    contactId: (row.contact_id as string | null) ?? null,
     eventType: (row.event_type as EmailEventType) ?? "sent",
     url: (row.url as string | null) ?? null,
     metadata: (row.metadata as Record<string, unknown> | null) ?? {},
