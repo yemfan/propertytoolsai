@@ -8,9 +8,11 @@ import { fetchUserPortalContext } from "@/lib/rolePortalServer";
 import { consumerShouldUsePropertyToolsApp } from "@/lib/signupOriginApp";
 import { matchesPortalKind } from "@/lib/rolePortalPaths";
 
-/** Public marketing pages under /agent/* that bypass the auth gate. */
+/** Public marketing pages under /agent/* that bypass the auth gate.
+ *  Keep in sync with the matching set in app/agent/layout.tsx. */
 const PUBLIC_AGENT_PATHS = new Set<string>([
   "/agent/compare",
+  "/agent/pricing",
 ]);
 
 function isAgentPath(pathname: string) {

@@ -11,6 +11,7 @@ import { fetchUserPortalContext } from "@/lib/rolePortalServer";
  *  proxy.ts. */
 const PUBLIC_AGENT_PATHS = new Set<string>([
   "/agent/compare",
+  "/agent/pricing",
 ]);
 
 export default async function AgentPortalLayout({ children }: { children: ReactNode }) {
