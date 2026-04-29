@@ -34,16 +34,16 @@ const HOMEPAGE_FAQ = [
 ] as const;
 
 export const metadata: Metadata = {
-  title: "LeadSmart AI — The AI Deal Engine for Real Estate",
+  title: "LeadSmart AI — The AI Deal Engine + Coaching for Real Estate",
   description:
-    "We don’t just generate leads — we turn them into closed deals, automatically. Capture, qualify, and convert buyers and sellers with AI. Focus on closing, not chasing.",
+    "Capture, qualify, convert, and coach — every stage of the deal on real-estate-native AI. Includes the LeadSmart AI Coaching program with annual transaction targets. Pro from $49/mo, Team from $199/mo.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "LeadSmart AI — The AI Deal Engine for Real Estate",
+    title: "LeadSmart AI — The AI Deal Engine + Coaching for Real Estate",
     description:
-      "High-intent buyers and sellers, captured and converted with AI. No setup required — works in minutes.",
+      "The AI deal engine + producer-development program built for real estate agents. 14-day trial, cancel anytime.",
   },
 };
 
