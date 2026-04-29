@@ -28,11 +28,11 @@ async function getAgentContext(agentId: string) {
       .limit(15),
     supabaseServer
       .from("lead_calendar_events")
-      .select("id, title, start_at, end_at, contact_id, status")
+      .select("id, title, starts_at, ends_at, contact_id, status")
       .eq("agent_id", agentId as any)
       .eq("status", "scheduled")
-      .gte("start_at", new Date().toISOString())
-      .order("start_at", { ascending: true })
+      .gte("starts_at", new Date().toISOString())
+      .order("starts_at", { ascending: true })
       .limit(10),
   ]);
 
@@ -80,7 +80,7 @@ ${context.leads.map((l: any) => `- ${l.name || "Unknown"} | ${l.rating || "—"}
 ${context.tasks.map((t: any) => `- [${t.priority || "normal"}] ${t.title} | Due: ${t.due_at ? new Date(t.due_at).toLocaleDateString() : "no date"} | Status: ${t.status}`).join("\n") || "No open tasks."}
 
 ### Upcoming Appointments (${context.upcoming_events.length}):
-${context.upcoming_events.map((e: any) => `- ${e.title} | ${new Date(e.start_at).toLocaleString()}`).join("\n") || "No upcoming appointments."}
+${context.upcoming_events.map((e: any) => `- ${e.title} | ${new Date(e.starts_at).toLocaleString()}`).join("\n") || "No upcoming appointments."}
 `;
 
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
