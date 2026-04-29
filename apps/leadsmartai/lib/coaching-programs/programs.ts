@@ -20,18 +20,18 @@ export type ProgramSlug = "producer_track" | "top_producer_track";
 /** Plan tiers eligible to enroll in each program. The pricing
  *  table on /agent/pricing must stay in sync with this set. */
 const PROGRAM_PLAN_ELIGIBILITY: Record<ProgramSlug, ReadonlyArray<AgentPlan>> = {
-  producer_track: ["growth", "elite"],
-  top_producer_track: ["elite"],
+  producer_track: ["growth", "elite", "team"],
+  top_producer_track: ["elite", "team"],
 };
 
 /**
  * Programs that bundle automatically (auto-enroll on plan upgrade).
- * Top Producer Track is bundled into Premium today; future tiers
- * (Team) join here too once the plan id lands.
+ * Top Producer Track is bundled into Premium and Team — both tiers
+ * include it as part of the plan price.
  */
 const PROGRAM_AUTO_ENROLL: Record<ProgramSlug, ReadonlyArray<AgentPlan>> = {
-  producer_track: ["growth", "elite"],
-  top_producer_track: ["elite"],
+  producer_track: ["growth", "elite", "team"],
+  top_producer_track: ["elite", "team"],
 };
 
 export type CoachingProgram = {

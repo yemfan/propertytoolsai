@@ -79,6 +79,12 @@ describe("planAutoEnrollment", () => {
     expect(out.skip).toEqual([]);
   });
 
+  it("team with no enrollments → enroll BOTH programs (Top Producer Track included on Team)", () => {
+    const out = planAutoEnrollment({ plan: "team", existing: [] });
+    expect(out.enroll.sort()).toEqual(["producer_track", "top_producer_track"]);
+    expect(out.skip).toEqual([]);
+  });
+
   it("idempotent: existing active enrollment skips with 'already_enrolled'", () => {
     const out = planAutoEnrollment({
       plan: "elite",

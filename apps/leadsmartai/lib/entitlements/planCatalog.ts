@@ -1,7 +1,7 @@
 import type { AgentPlan } from "./types";
 
 /** Canonical plan ids stored in product_entitlements.plan */
-export const AGENT_PLANS = ["starter", "growth", "elite"] as const;
+export const AGENT_PLANS = ["starter", "growth", "elite", "team"] as const;
 
 export type PlanCatalogEntry = {
   label: string;
@@ -98,15 +98,33 @@ export const PLAN_CATALOG: Record<AgentPlan, PlanCatalogEntry> = {
     bullets: [
       "Everything in Pro, plus:",
       "Unlimited leads & contacts",
-      "Team accounts: up to 10 seats",
-      "Round-robin lead routing across team",
+      "Top Producer Track coaching included",
       "ISA workflow + qualified handoff",
-      "Per-member breakdown reporting",
-      "Roster-wide dashboard rollups",
       "E-signature workflow (Dotloop / DocuSign)",
       "Advanced AI coaching + peer benchmarks",
       "Unlimited AI actions",
       "Priority support",
+    ],
+  },
+  team: {
+    label: "Team",
+    cmaReportsPerDay: 10,
+    maxLeads: null,
+    maxContacts: null,
+    alertsLevel: "advanced",
+    reportsDownloadLevel: "unlimited",
+    teamAccess: true,
+    teamSeatCap: 5,
+    aiActionsPerMonth: null,
+    coachingPrograms: ["producer_track", "top_producer_track"],
+    bullets: [
+      "Everything in Premium, plus:",
+      "Up to 5 team seats (contact sales for more)",
+      "Round-robin lead routing across the roster",
+      "Per-member breakdown reporting",
+      "Roster-wide dashboard rollups",
+      "Top Producer Track for every team member",
+      "Team owner controls + seat invites",
     ],
   },
 };
