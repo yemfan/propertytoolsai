@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
-export type SettingsTabId = "voice" | "messages" | "tools" | "channels";
+export type SettingsTabId =
+  | "voice"
+  | "messages"
+  | "tools"
+  | "channels"
+  | "coaching";
 
 type Tab = {
   id: SettingsTabId;
@@ -20,6 +25,11 @@ const TABS: readonly Tab[] = [
     label: "Channels & Compliance",
     description: "The plumbing behind every send.",
   },
+  {
+    id: "coaching",
+    label: "Coaching",
+    description: "Manage your LeadSmart AI Coaching enrollments.",
+  },
 ];
 
 const isTabId = (v: string): v is SettingsTabId =>
@@ -30,11 +40,13 @@ export default function SettingsTabsClient({
   messages,
   tools,
   channels,
+  coaching,
 }: {
   voice: ReactNode;
   messages: ReactNode;
   tools: ReactNode;
   channels: ReactNode;
+  coaching: ReactNode;
 }) {
   // Default tab is "messages" per handoff — returning agents are usually here
   // to tune a rule, not change their personality.
@@ -63,7 +75,9 @@ export default function SettingsTabsClient({
         ? messages
         : activeTab === "tools"
           ? tools
-          : channels;
+          : activeTab === "channels"
+            ? channels
+            : coaching;
 
   return (
     <>

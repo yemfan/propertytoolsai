@@ -11,6 +11,7 @@ import HomeValueSmartLinkCopyShare from "@/components/dashboard/HomeValueSmartLi
 import LeadRoutingSettingsPanel from "@/components/dashboard/LeadRoutingSettingsPanel";
 import ReviewPolicyPanel from "@/components/dashboard/ReviewPolicyPanel";
 import SettingsTabsClient from "@/components/dashboard/SettingsTabsClient";
+import { CoachingSettingsPanel } from "@/components/coaching/CoachingSettingsPanel";
 import SocialConnectionsPanel from "@/components/dashboard/SocialConnectionsPanel";
 import SphereDripSettingsPanel from "@/components/dashboard/SphereDripSettingsPanel";
 import TemplatesSummaryCard from "@/components/dashboard/TemplatesSummaryCard";
@@ -117,6 +118,14 @@ export default async function SettingsPage() {
             </Card>
             <ComplianceCard />
           </>
+        }
+        coaching={
+          <Card
+            title="LeadSmart AI Coaching"
+            description="Enroll or opt out of each coaching program. Auto-enrollment on plan upgrades respects prior opt-outs — once you opt out, we won't re-enroll you without an explicit choice here."
+          >
+            <CoachingSettingsPanel />
+          </Card>
         }
       />
     </div>
