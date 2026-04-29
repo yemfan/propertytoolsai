@@ -65,7 +65,7 @@ export async function fetchSmartCma(
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         address: input.address,
-        lead_id: input.leadId ?? undefined,
+        lead_id: input.leadId ?? undefined, // allow-leads-ref: outbound /api/smart-cma payload key, not a DB column
         beds: input.beds,
         baths: input.baths,
         sqft: input.sqft,
