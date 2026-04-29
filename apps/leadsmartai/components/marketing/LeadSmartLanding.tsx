@@ -900,8 +900,59 @@ export default function LeadSmartLanding() {
             </div>
             <p className="mt-6 text-sm text-gray-500 dark:text-slate-400">
               See the full feature comparison →{" "}
-              <a href="/pricing" className="font-semibold text-[#0072ce] hover:underline dark:text-[#4da3e8]">View all plans</a>
+              <a href="/agent/pricing" className="font-semibold text-[#0072ce] hover:underline dark:text-[#4da3e8]">View all plans</a>
             </p>
+          </div>
+        </section>
+
+        {/* HOW WE COMPARE */}
+        <section id="compare" className="bg-slate-50 px-6 py-16 md:py-20 dark:bg-slate-900/30">
+          <div className="mx-auto max-w-5xl text-center">
+            <RevealSection>
+              <h2 className="font-heading text-2xl font-semibold md:text-3xl dark:text-white">
+                How we stack up vs. the rest
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-gray-600 dark:text-slate-400">
+                LeadSmart AI vs. Follow Up Boss, kvCORE, Lofty, BoomTown, LionDesk, and Sierra Interactive — at a fraction of the price.
+              </p>
+            </RevealSection>
+
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                {
+                  title: "AI-native, not retrofitted",
+                  body: "Coaching, deal coach, equity-based outreach — built in, not a 'with AI' add-on.",
+                },
+                {
+                  title: "Half the price",
+                  body: "$49–$99/mo covers what BoomTown / kvCORE / Lofty charge $500–$1,500/mo for.",
+                },
+                {
+                  title: "Bilingual + WeChat",
+                  body: "中文 templates, WeChat + Xiaohongshu paths, Advisor sales-model. Nobody else does this.",
+                },
+                {
+                  title: "Modern stack = fast shipping",
+                  body: "We added 15+ gap-closing features in a month. Legacy CRMs ship features quarterly.",
+                },
+              ].map((it, i) => (
+                <RevealSection key={it.title} delay={i * 60}>
+                  <div className="h-full rounded-xl border border-slate-200/80 bg-white p-5 text-left shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                    <h3 className="font-heading text-sm font-semibold text-slate-900 dark:text-white">{it.title}</h3>
+                    <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{it.body}</p>
+                  </div>
+                </RevealSection>
+              ))}
+            </div>
+
+            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+              <Button href="/agent/compare" className="px-6 py-2.5 text-sm">
+                See full comparison
+              </Button>
+              <Button variant="outline" href="/agent/pricing" className="px-6 py-2.5 text-sm">
+                View pricing
+              </Button>
+            </div>
           </div>
         </section>
 
