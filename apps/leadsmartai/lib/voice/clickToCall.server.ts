@@ -65,7 +65,7 @@ export async function startClickToCall(args: {
       from_phone: normalized.callerId,
       to_phone: normalized.contactPhone,
       agent_id: args.agentId,
-      lead_id: args.contactId,
+      contact_id: args.contactId,
       status: "queued",
       metadata: {
         kind: "click_to_call",

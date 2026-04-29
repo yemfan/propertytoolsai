@@ -1,0 +1,40 @@
+# CI guard against post-rename regressions.
+#
+# The leads→contacts cluster migration renamed the base table; two
+# subsequent commits silently shipped with stale `from("leads")` and
+# `lead_id` references that broke at runtime. The schema-audit pass
+# in late April 2026 chased them across multiple files. This workflow
+# fails any PR that re-introduces the same class of regression.
+#
+# The script ignores tables that legitimately keep `lead_id` columns
+# (lead_calls, lead_tasks, lead_events, etc.) and accepts a
+# `// allow-leads-ref: <reason>` comment on the same line for the
+# rare false-positive case.
+
+name: leadsmartai · no-leads-refs
+
+on:
+  pull_request:
+    paths:
+      - "apps/leadsmartai/app/**"
+      - "apps/leadsmartai/lib/**"
+      - "apps/leadsmartai/components/**"
+      - "apps/leadsmartai/scripts/check-no-leads-refs.mjs"
+      - ".github/workflows/check-no-leads-refs.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guard:
+    name: leads→contacts regression guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run check
+        run: node apps/leadsmartai/scripts/check-no-leads-refs.mjs
