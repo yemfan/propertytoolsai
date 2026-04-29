@@ -5,9 +5,9 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  BarChart3,
-  Brain,
-  Repeat2,
+  GraduationCap,
+  Target,
+  TrendingUp,
   Zap,
 } from "lucide-react";
 import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
@@ -365,7 +365,7 @@ export default function LeadSmartLanding() {
             <div className="max-w-xl lg:max-w-2xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#0072ce]/20 bg-white/80 px-4 py-1.5 text-xs font-medium text-[#0072ce] shadow-sm backdrop-blur-sm dark:border-[#0072ce]/30 dark:bg-slate-900/80 dark:text-[#4da3e8]" style={{ animation: "fadeInUp 0.7s ease-out both" }}>
                 <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0072ce] opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-[#0072ce]" /></span>
-                AI-powered CRM for agents
+                AI deal engine + coaching for real estate
               </div>
               <h1
                 className="font-heading text-4xl font-extrabold leading-[1.08] tracking-tight text-gray-950 md:text-5xl lg:text-[3rem] dark:text-white"
@@ -622,65 +622,89 @@ export default function LeadSmartLanding() {
         <section id="features" className="bg-slate-50/70 px-6 py-16 md:py-20 dark:bg-slate-900/30">
           <div className="mx-auto max-w-7xl">
             <RevealSection className="mx-auto max-w-2xl text-center">
-              <h2 className="font-heading text-2xl font-semibold md:text-3xl dark:text-white">
-                Close More Deals with Less Work
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0072ce]">
+                The deal workflow
+              </p>
+              <h2 className="mt-2 font-heading text-2xl font-semibold md:text-3xl dark:text-white">
+                Capture → Qualify → Convert → <span className="bg-gradient-to-r from-[#0072ce] to-[#4F46E5] bg-clip-text text-transparent">Coach</span>
               </h2>
               <p className="mt-3 text-base text-gray-600 md:text-lg dark:text-slate-400">
-                Every feature built specifically for real estate agents — not generic sales teams.
+                Every stage of the deal — from first reply to closing table to next year&apos;s 15th transaction — runs on real-estate-native AI. Not a generic sales CRM with AI sprinkled on.
               </p>
             </RevealSection>
             {/*
-             * Feature cards — icons migrated from emoji (⚡🧠📊🔄) to Lucide
-             * SVG icons. Emoji render differently across OS (Apple vs Google
-             * vs Windows), can't respect brand color, and signaled "MVP built
-             * in a weekend" on a product asking for credit card details.
-             * Each card has a unique tinted chip background + brand-colored
-             * stroke so the grid reads as a coordinated icon set rather than
-             * four mismatched emoji.
+             * Deal workflow cards — replaces the prior generic CRM grid
+             * (Follow-Up / Scoring / Pipeline / Drips) with the four
+             * stages that actually map to how a real estate deal closes.
+             * The fourth card surfaces LeadSmart AI Coaching, which is
+             * the genuine moat: nobody else bundles a coaching program
+             * with annual transaction targets into the CRM tier.
              */}
             <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {([
                 {
+                  step: "1",
                   accent: "primary",
                   icon: <Zap size={22} strokeWidth={2} aria-hidden />,
-                  title: "Instant AI Follow-Up",
+                  title: "Capture",
                   description:
-                    "Respond to every new lead in under 60 seconds — automatically, day or night. Never lose a hot lead to a faster competitor.",
-                  bullets: ["SMS + email replies", "Personalized by source", "24/7 automation"],
+                    "Reply to every lead in under 60 seconds — Zillow, Facebook, your site, missed calls. Source-aware AI replies, not generic templates.",
+                  bullets: [
+                    "SMS + email + voice in 60s",
+                    "Click-to-call (Twilio bridge)",
+                    "Missed-call text-back",
+                  ],
                   chipBg: "bg-blue-50",
                   chipText: "text-[#0072ce]",
                 },
                 {
+                  step: "2",
                   accent: "primaryDark",
-                  icon: <Brain size={22} strokeWidth={2} aria-hidden />,
-                  title: "Smart Lead Scoring",
+                  icon: <Target size={22} strokeWidth={2} aria-hidden />,
+                  title: "Qualify",
                   description:
-                    "AI ranks every lead by buying intent so you spend your time on the people most likely to close — not tire-kickers.",
-                  bullets: ["Behavioral scoring", "Hot / warm / cold labels", "Priority inbox view"],
+                    "Stop spending time on tire-kickers. Behavioral scoring + sphere prediction + equity signals tell you who's actually ready to transact.",
+                  bullets: [
+                    "Hot / warm / cold scoring",
+                    "Sphere + equity signals",
+                    "Buyer Broker Agreement (BBA) workflow",
+                  ],
                   chipBg: "bg-violet-50",
                   chipText: "text-violet-600",
                 },
                 {
+                  step: "3",
                   accent: "success",
-                  icon: <BarChart3 size={22} strokeWidth={2} aria-hidden />,
-                  title: "Live Pipeline Dashboard",
+                  icon: <TrendingUp size={22} strokeWidth={2} aria-hidden />,
+                  title: "Convert",
                   description:
-                    "See every lead, every follow-up, and every scheduled tour in one place. Know exactly where your pipeline stands.",
-                  bullets: ["Stage-by-stage tracking", "Tour & offer milestones", "Team visibility"],
+                    "Move qualified buyers to closing without leaving the dashboard. Tours, offers, video email, e-sign, and transaction coordination — all on one timeline.",
+                  bullets: [
+                    "Tour booking + offer tracking",
+                    "Video email (record & send)",
+                    "E-sign + wire-fraud SMS",
+                  ],
                   chipBg: "bg-emerald-50",
                   chipText: "text-emerald-600",
                 },
                 {
+                  step: "4",
                   accent: "accent",
-                  icon: <Repeat2 size={22} strokeWidth={2} aria-hidden />,
-                  title: "Drip Automation",
+                  icon: <GraduationCap size={22} strokeWidth={2} aria-hidden />,
+                  title: "Coach",
+                  badge: "Included on Pro+",
                   description:
-                    "Multi-step nurture sequences keep leads warm for weeks without you lifting a finger — until they're ready to buy.",
-                  bullets: ["Preset + custom drips", "Auto pause on reply", "CRM sync"],
+                    "LeadSmart AI Coaching turns the dashboard into a producer-development program. Daily plans, weekly playbooks, monthly reviews — tied to a real annual transaction target.",
+                  bullets: [
+                    "Producer Track: 10 deals / 3% conv",
+                    "Top Producer Track: 15 deals / 5% conv",
+                    "AI deep-dives + peer benchmarks",
+                  ],
                   chipBg: "bg-amber-50",
                   chipText: "text-amber-600",
                 },
               ] as {
+                step: string;
                 accent: "primary" | "primaryDark" | "success" | "accent";
                 icon: ReactNode;
                 title: string;
@@ -688,19 +712,37 @@ export default function LeadSmartLanding() {
                 bullets: string[];
                 chipBg: string;
                 chipText: string;
+                badge?: string;
               }[]).map((f, i) => (
                 <RevealSection key={f.title} delay={i * 100}>
-                  <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/[0.06] dark:border-slate-700 dark:bg-slate-900 dark:hover:shadow-[#0072ce]/[0.08]">
+                  <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/[0.06] dark:border-slate-700 dark:bg-slate-900 dark:hover:shadow-[#0072ce]/[0.08]">
                     {/* Gradient overlay on hover */}
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#0072ce]/[0.02] via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                    <div className={`mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl ${f.chipBg} ${f.chipText}`}>
-                      {f.icon}
+                    <div className="mb-5 flex items-start justify-between gap-2">
+                      <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ${f.chipBg} ${f.chipText}`}>
+                        {f.icon}
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                        Step {f.step}
+                      </span>
                     </div>
-                    <h3 className="font-heading text-base font-bold text-slate-900 dark:text-white">{f.title}</h3>
-                    <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{f.description}</p>
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="font-heading text-base font-bold text-slate-900 dark:text-white">{f.title}</h3>
+                      {f.badge ? (
+                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-[#0072ce] ring-1 ring-blue-200 dark:bg-blue-900/30 dark:text-[#4da3e8] dark:ring-blue-800">
+                          {f.badge}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                      {f.description}
+                    </p>
                     <ul className="mt-5 space-y-2">
                       {f.bullets.map((b) => (
-                        <li key={b} className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300">
+                        <li
+                          key={b}
+                          className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300"
+                        >
                           <BrandCheck tone={f.accent} />
                           {b}
                         </li>
@@ -710,6 +752,21 @@ export default function LeadSmartLanding() {
                 </RevealSection>
               ))}
             </div>
+
+            {/* Coaching deep-link — surfaces the marketing surface for
+              * Producer Track / Top Producer Track. The FAQ + comparison
+              * pages already point here; the landing should too. */}
+            <RevealSection delay={400} className="mt-10 text-center">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Curious about the coaching tracks?{" "}
+                <Link
+                  href="/agent/coaching"
+                  className="font-semibold text-[#0072ce] hover:underline dark:text-[#4da3e8]"
+                >
+                  See how Producer Track + Top Producer Track work →
+                </Link>
+              </p>
+            </RevealSection>
           </div>
         </section>
 
@@ -804,9 +861,15 @@ export default function LeadSmartLanding() {
                   <CardContent className="p-5 text-left">
                     <h3 className="font-heading text-base font-semibold dark:text-white">Starter</h3>
                     <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">$0 <span className="text-xs font-normal text-gray-500 dark:text-slate-400">forever</span></p>
-                    <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Limited functions and usages.</p>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">For new agents testing the platform.</p>
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 dark:text-slate-300">
-                      {["25 leads/month", "Email follow-up only", "Pipeline dashboard", "Basic lead scoring", "1 drip sequence"].map((f) => (
+                      {[
+                        "Up to 5 leads · 50 contacts",
+                        "2 CMA reports / day",
+                        "AI SMS + email responder (basic)",
+                        "Click-to-call (Twilio bridge)",
+                        "100 AI actions / month",
+                      ].map((f) => (
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="primary" />{f}</li>
                       ))}
                     </ul>
@@ -832,14 +895,24 @@ export default function LeadSmartLanding() {
                     <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-500">
                       {billingCycle === "annual" ? "$490 billed yearly" : "Billed monthly"}
                     </p>
-                    <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Full CRM and AI for active agents.</p>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">For active agents closing deals consistently.</p>
+                    <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold text-[#0072ce] ring-1 ring-blue-200 dark:bg-blue-900/30 dark:text-[#4da3e8] dark:ring-blue-800">
+                      ★ Producer Track included
+                    </div>
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 dark:text-slate-300">
-                      {["500 leads/month", "SMS + email AI follow-up", "Advanced lead scoring", "Unlimited drip sequences", "Tour & offer tracking", "CRM integrations"].map((f) => (
+                      {[
+                        "500 leads · 500 contacts",
+                        "Producer Track coaching (auto-enrolled)",
+                        "Video email (record & send)",
+                        "Buyer Broker Agreement workflow",
+                        "Sphere + equity signals",
+                        "5,000 AI actions / month",
+                      ].map((f) => (
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="primary" />{f}</li>
                       ))}
                     </ul>
-                    <Button className="mt-5 w-full text-xs shadow-lg shadow-[#0072ce]/20" href={`/pricing?checkout_plan=pro&cycle=${billingCycle}`} aria-label={`Start free trial — Pro plan at $${billingCycle === "annual" ? 41 : 49} per month`}>Start free trial</Button>
-                    <p className="mt-1.5 text-center text-[11px] text-gray-400 dark:text-slate-500">14-day trial · No card needed</p>
+                    <Button className="mt-5 w-full text-xs shadow-lg shadow-[#0072ce]/20" href={`/agent/pricing?checkout_plan=pro&cycle=${billingCycle}`} aria-label={`Start free trial — Pro plan at $${billingCycle === "annual" ? 41 : 49} per month`}>Start 14-day trial</Button>
+                    <p className="mt-1.5 text-center text-[11px] text-gray-400 dark:text-slate-500">Cancel anytime during the trial</p>
                   </CardContent>
                 </Card>
               </RevealSection>
@@ -847,7 +920,7 @@ export default function LeadSmartLanding() {
               <RevealSection delay={200}>
                 <Card className="h-full dark:border-slate-700 dark:bg-slate-900">
                   <CardContent className="p-5 text-left">
-                    <h3 className="font-heading text-base font-semibold dark:text-white">Elite</h3>
+                    <h3 className="font-heading text-base font-semibold dark:text-white">Premium</h3>
                     <div className="mt-1 flex items-baseline gap-2">
                       <p className="text-2xl font-bold text-slate-900 dark:text-white">
                         ${billingCycle === "annual" ? 82 : 99}{" "}
@@ -860,13 +933,23 @@ export default function LeadSmartLanding() {
                     <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-500">
                       {billingCycle === "annual" ? "$990 billed yearly" : "Billed monthly"}
                     </p>
-                    <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">For top producers closing 10+ deals/month.</p>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">For top producers running solo.</p>
+                    <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-2.5 py-0.5 text-[10px] font-semibold text-violet-700 ring-1 ring-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:ring-violet-800">
+                      ★ Top Producer Track included
+                    </div>
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 dark:text-slate-300">
-                      {["Unlimited leads", "Priority AI routing", "Multi-channel automation", "Predictive lead scoring", "Custom drip campaigns", "Dedicated onboarding"].map((f) => (
+                      {[
+                        "Unlimited leads & contacts",
+                        "Top Producer Track coaching",
+                        "ISA workflow + qualified handoff",
+                        "E-signature (Dotloop / DocuSign)",
+                        "Unlimited AI actions",
+                        "Priority support",
+                      ].map((f) => (
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="success" />{f}</li>
                       ))}
                     </ul>
-                    <Button className="mt-5 w-full text-xs" variant="outline" href={`/pricing?checkout_plan=premium&cycle=${billingCycle}`} aria-label={`Start free trial — Elite plan at $${billingCycle === "annual" ? 82 : 99} per month`}>Start free trial</Button>
+                    <Button className="mt-5 w-full text-xs" variant="outline" href={`/agent/pricing?checkout_plan=premium&cycle=${billingCycle}`} aria-label={`Start free trial — Premium plan at $${billingCycle === "annual" ? 82 : 99} per month`}>Start 14-day trial</Button>
                   </CardContent>
                 </Card>
               </RevealSection>
@@ -885,15 +968,26 @@ export default function LeadSmartLanding() {
                       )}
                     </div>
                     <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-500">
-                      {billingCycle === "annual" ? "$1,990 billed yearly" : "Billed monthly"}
+                      {billingCycle === "annual" ? "$1,990 billed yearly · per team" : "Billed monthly · per team"}
                     </p>
-                    <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">Multiple agents, one shared pipeline.</p>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">For brokerages and small teams up to 5 seats.</p>
+                    <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-800">
+                      ★ Top Producer Track for whole team
+                    </div>
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 dark:text-slate-300">
-                      {["Up to 10 agents", "Shared lead pool & routing", "Team performance dashboard", "Admin controls", "White-label option", "Priority support SLA"].map((f) => (
+                      {[
+                        "Up to 5 team seats",
+                        "Round-robin lead routing",
+                        "Per-member breakdown reporting",
+                        "Roster-wide dashboard rollups",
+                        "Top Producer Track for every member",
+                        "Team owner controls + seat invites",
+                      ].map((f) => (
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="accent" />{f}</li>
                       ))}
                     </ul>
-                    <Button className="mt-5 w-full text-xs" variant="outline" href="/contact" aria-label={`Contact sales — Team plan at $${billingCycle === "annual" ? 165 : 199} per month`}>Contact sales</Button>
+                    <Button className="mt-5 w-full text-xs" variant="outline" href={`/agent/pricing?checkout_plan=team&cycle=${billingCycle}`} aria-label={`Start free trial — Team plan at $${billingCycle === "annual" ? 165 : 199} per month`}>Start 14-day trial</Button>
+                    <p className="mt-1.5 text-center text-[11px] text-gray-400 dark:text-slate-500">More than 5 seats? <a href="/contact?topic=team" className="underline hover:text-slate-600 dark:hover:text-slate-300">Contact sales</a></p>
                   </CardContent>
                 </Card>
               </RevealSection>
@@ -1003,8 +1097,10 @@ export default function LeadSmartLanding() {
             <div className="absolute left-1/2 top-1/2 h-[500px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.12] blur-[100px]" style={{ background: "conic-gradient(from 0deg at 50% 50%, #0072ce 0deg, #4F46E5 120deg, #7c3aed 240deg, #0072ce 360deg)" }} />
           </div>
           <RevealSection>
-            <h2 className="font-heading text-3xl font-extrabold md:text-4xl lg:text-5xl">Stop Losing Deals</h2>
-            <p className="mt-4 text-lg text-gray-400">Start converting leads automatically — no setup, no code, no contracts</p>
+            <h2 className="font-heading text-3xl font-extrabold md:text-4xl lg:text-5xl">Close more deals. Become a top producer.</h2>
+            <p className="mt-4 text-lg text-gray-400">
+              The AI deal engine + coaching program built for real estate. No setup, no contracts, 14-day trial.
+            </p>
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Button className="shadow-xl shadow-[#0072ce]/20 px-8 py-3 text-base" href={primaryCtaHref}>
                 Get My First Leads
@@ -1030,7 +1126,7 @@ export default function LeadSmartLanding() {
               <div className="col-span-2 md:col-span-1">
                 <LeadSmartLogo compact className="max-w-[200px] opacity-90" priority={false} />
                 <p className="mt-4 max-w-xs text-sm text-gray-600 dark:text-slate-400">
-                  AI-powered lead follow-up, scoring, and pipeline management built for top-producing real estate agents.
+                  The AI deal engine + coaching program for real estate — capture, qualify, convert, and grow your annual transaction count.
                 </p>
               </div>
 
