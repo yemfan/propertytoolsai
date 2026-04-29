@@ -72,7 +72,7 @@ export async function scanForDuplicateLeads(limit = 2000) {
         reason_json: c.reasons,
         updated_at: nowIso(),
       })),
-      { onConflict: "primary_lead_id,duplicate_contact_id" }
+      { onConflict: "primary_contact_id,duplicate_contact_id" }
     );
     if (upErr) throw upErr;
   }
@@ -114,14 +114,14 @@ export async function mergeDuplicateLeadPair(primaryLeadId: string, duplicateLea
 
   const { error: u2 } = await supabaseAdmin
     .from("contacts")
-    .update({ merged_into_contact_id: primaryLeadId, updated_at: nowIso() })
+    .update({ merged_into_lead_id: primaryLeadId, updated_at: nowIso() })
     .eq("id", duplicateLeadId);
   if (u2) throw u2;
 
   const { error: u3 } = await supabaseAdmin
     .from("lead_duplicate_candidates")
     .update({ status: "merged", updated_at: nowIso() })
-    .eq("primary_lead_id", primaryLeadId)
+    .eq("primary_contact_id", primaryLeadId)
     .eq("duplicate_contact_id", duplicateLeadId);
   if (u3) throw u3;
 
