@@ -1,6 +1,6 @@
 export type ProductKey = "leadsmart_agent";
 
-export type AgentPlan = "starter" | "growth" | "elite";
+export type AgentPlan = "starter" | "growth" | "elite" | "team";
 
 /** @deprecated Prefer `AgentPlan` — kept for existing imports */
 export type AgentPlanId = AgentPlan;

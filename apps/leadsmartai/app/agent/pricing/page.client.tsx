@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { messageFromUnknownError } from "@/lib/supabaseThrow";
 
-type AgentPlan = "starter" | "growth" | "elite";
+type AgentPlan = "starter" | "growth" | "elite" | "team";
 
 type AccessResponse = {
   success?: boolean;
@@ -19,12 +19,17 @@ const PLANS: Array<{
   key: AgentPlan;
   name: string;
   price: string;
+  priceUnit?: string;
   /** Maps to `POST /api/create-checkout-session` body `{ plan, cancel_surface: "agent" }` */
   checkoutPlan?: "pro" | "premium";
+  /** When set, the CTA links to a static URL instead of triggering checkout. */
+  ctaHref?: string;
   description: string;
   features: string[];
   cta: string;
   featured?: boolean;
+  /** Coaching badge displayed at the top of the card. */
+  coachingBadge?: string;
 }> = [
   {
     key: "starter",
@@ -49,10 +54,12 @@ const PLANS: Array<{
     price: "$49/mo",
     checkoutPlan: "pro",
     description: "For active agents closing deals consistently.",
+    coachingBadge: "Producer Track included",
     features: [
       "Everything in Starter, plus:",
       "Up to 500 leads · 500 contacts",
       "5 CMA reports / day",
+      "Producer Track coaching (auto-enrolled)",
       "Email open / click tracking",
       "Video email (record & send)",
       "Newsletter / mass-email composer",
@@ -70,21 +77,38 @@ const PLANS: Array<{
     name: "Agent Premium",
     price: "$99/mo",
     checkoutPlan: "premium",
-    description: "For top producers and growing teams.",
+    description: "For top producers running solo.",
+    coachingBadge: "Top Producer Track included",
     features: [
       "Everything in Pro, plus:",
       "Unlimited leads & contacts",
-      "Team accounts: up to 10 seats",
-      "Round-robin lead routing across team",
+      "Top Producer Track coaching",
       "ISA workflow + qualified handoff",
-      "Per-member breakdown reporting",
-      "Roster-wide dashboard rollups",
       "E-signature workflow (Dotloop / DocuSign)",
       "Advanced AI coaching + peer benchmarks",
       "Unlimited AI actions",
       "Priority support",
     ],
     cta: "Start 14-day trial",
+  },
+  {
+    key: "team",
+    name: "Team",
+    price: "$199/mo",
+    priceUnit: "per team",
+    ctaHref: "/contact?topic=team",
+    description: "For brokerages and small teams up to 5 seats.",
+    coachingBadge: "Top Producer Track for whole team",
+    features: [
+      "Everything in Premium, plus:",
+      "Up to 5 team seats (contact sales for more)",
+      "Round-robin lead routing across the roster",
+      "Per-member breakdown reporting",
+      "Roster-wide dashboard rollups",
+      "Top Producer Track for every member",
+      "Team owner controls + seat invites",
+    ],
+    cta: "Contact sales",
   },
 ];
 
@@ -207,7 +231,7 @@ export default function AgentPricingClientPage() {
           </div>
         )}
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {PLANS.map((plan) => {
             const isCurrent = currentPlan === plan.key;
 
@@ -215,15 +239,20 @@ export default function AgentPricingClientPage() {
               <div
                 key={plan.key}
                 className={[
-                  "rounded-3xl border bg-white p-6 shadow-sm",
+                  "flex flex-col rounded-3xl border bg-white p-6 shadow-sm",
                   plan.featured ? "border-gray-900 ring-1 ring-gray-900" : "",
                 ].join(" ")}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-2xl font-semibold text-gray-900">{plan.name}</h2>
-                    <div className="mt-2 text-3xl font-semibold tracking-tight text-gray-900">
-                      {plan.price}
+                  <div className="min-w-0">
+                    <h2 className="text-xl font-semibold text-gray-900">{plan.name}</h2>
+                    <div className="mt-2 flex items-baseline gap-1">
+                      <span className="text-3xl font-semibold tracking-tight text-gray-900">
+                        {plan.price}
+                      </span>
+                      {plan.priceUnit ? (
+                        <span className="text-xs text-gray-500">{plan.priceUnit}</span>
+                      ) : null}
                     </div>
                     <p className="mt-3 text-sm leading-6 text-gray-600">
                       {plan.description}
@@ -237,19 +266,35 @@ export default function AgentPricingClientPage() {
                   )}
                 </div>
 
-                <ul className="mt-6 space-y-3">
+                {plan.coachingBadge ? (
+                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-200">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M12 2 L15 8.5 L22 9.5 L17 14.5 L18.5 22 L12 18 L5.5 22 L7 14.5 L2 9.5 L9 8.5 Z" />
+                    </svg>
+                    {plan.coachingBadge}
+                  </div>
+                ) : null}
+
+                <ul className="mt-5 flex-1 space-y-2">
                   {plan.features.map((feature) => (
                     <li
                       key={feature}
-                      className="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-700"
+                      className="rounded-lg bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-700"
                     >
                       {feature}
                     </li>
                   ))}
                 </ul>
 
-                <div className="mt-6">
-                  {plan.key === "starter" ? (
+                <div className="mt-5">
+                  {plan.ctaHref ? (
+                    <a
+                      href={plan.ctaHref}
+                      className="block w-full rounded-2xl bg-gray-900 px-4 py-3 text-center text-sm font-medium text-white transition hover:bg-gray-800"
+                    >
+                      {plan.cta}
+                    </a>
+                  ) : plan.key === "starter" ? (
                     <button
                       type="button"
                       disabled={isCurrent || loadingPlan === "starter"}
@@ -287,7 +332,7 @@ export default function AgentPricingClientPage() {
             Which plan is right for you?
           </h3>
 
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl bg-gray-50 p-5">
               <div className="text-sm font-semibold text-gray-900">Starter</div>
               <p className="mt-2 text-sm text-gray-600">
@@ -298,16 +343,36 @@ export default function AgentPricingClientPage() {
             <div className="rounded-2xl bg-gray-50 p-5">
               <div className="text-sm font-semibold text-gray-900">Agent Pro</div>
               <p className="mt-2 text-sm text-gray-600">
-                Best for solo agents actively converting leads and managing a serious pipeline.
+                Best for solo agents actively converting leads. Includes Producer Track coaching.
               </p>
             </div>
 
             <div className="rounded-2xl bg-gray-50 p-5">
               <div className="text-sm font-semibold text-gray-900">Agent Premium</div>
               <p className="mt-2 text-sm text-gray-600">
-                Best for top producers and teams needing scale, automation, and collaboration.
+                Best for solo top producers wanting unlimited everything + Top Producer Track coaching.
               </p>
             </div>
+
+            <div className="rounded-2xl bg-gray-50 p-5">
+              <div className="text-sm font-semibold text-gray-900">Team</div>
+              <p className="mt-2 text-sm text-gray-600">
+                Best for brokerages with up to 5 agents sharing leads, routing, and team-wide coaching.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/60 p-5 text-sm text-slate-700">
+            <p className="font-semibold text-slate-900">LeadSmart AI Coaching — built into the product, not an add-on</p>
+            <p className="mt-1.5 text-slate-700">
+              Every paid plan auto-enrolls in our coaching programs:
+              <strong className="ml-1">Producer Track</strong> on Pro
+              (target: 10 transactions / 3% conversion) and{" "}
+              <strong>Top Producer Track</strong> on Premium and Team
+              (target: 15 transactions / 5% conversion). No upsell —
+              the daily action plan, peer benchmarks, and AI deep-dives
+              are part of the price.
+            </p>
           </div>
         </div>
       </div>
