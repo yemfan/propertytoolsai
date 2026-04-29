@@ -135,3 +135,36 @@ export function programsForPlan(plan: AgentPlan | null): CoachingProgram[] {
     p.eligiblePlans.includes(plan),
   );
 }
+
+/**
+ * Canonical mapper from the legacy `agents.plan_type` text column
+ * (and the Stripe sync's `"free" | "pro" | "premium" | "team"` union)
+ * to the canonical `AgentPlan` used by coaching-program eligibility.
+ *
+ * Anywhere we need to ask "is this agent eligible for the Top
+ * Producer Track?" goes through this — keeps mappings consistent
+ * across the webhook, the /api/coaching/me read path, and any
+ * future signup hooks.
+ *
+ * Unknown values fall through to `null` so the caller can decide
+ * whether to bail or treat as a Starter equivalent.
+ */
+export function agentPlanFromStoredPlan(
+  raw: string | null | undefined,
+): AgentPlan | null {
+  switch (String(raw ?? "").toLowerCase()) {
+    case "starter":
+    case "free":
+      return "starter";
+    case "pro":
+    case "growth":
+      return "growth";
+    case "elite":
+    case "premium":
+      return "elite";
+    case "team":
+      return "team";
+    default:
+      return null;
+  }
+}
