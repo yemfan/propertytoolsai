@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getKeywordPagesForCity, TRAFFIC_CITIES } from "@/lib/trafficSeo";
+import { HELP_GUIDES } from "@/lib/help/guides";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -38,6 +39,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/how-to-calculate-cap-rate",
   ];
 
+  // User-facing help hub — index, FAQ, and one page per how-to
+  // guide. The FAQPage + HowTo JSON-LD on these pages are the
+  // primary SERP rich-result targets.
+  const helpRoutes = [
+    "/help",
+    "/help/faq",
+    ...HELP_GUIDES.map((g) => `/help/guides/${g.slug}`),
+  ];
+
   const seoRoutes = TRAFFIC_CITIES.flatMap((c) => [
     `/home-value/${c.slug}`,
     `/sell-house/${c.slug}`,
@@ -60,6 +70,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     ...staticRoutes,
     ...calculatorRoutes,
+    ...helpRoutes,
     ...seoRoutes,
     ...keywordRoutes,
   ].map((path) => ({
