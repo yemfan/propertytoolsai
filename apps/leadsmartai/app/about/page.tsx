@@ -1,9 +1,28 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import JsonLd from "@/components/JsonLd";
+
+export const metadata: Metadata = {
+  title: "About LeadSmart AI — the AI growth engine for real estate",
+  description:
+    "LeadSmart AI is the AI deal engine + coaching program built for real estate agents and financing professionals. Learn how we help agents close more deals and become top producers.",
+  alternates: { canonical: "/about" },
+  openGraph: {
+    title: "About LeadSmart AI",
+    description:
+      "The AI deal engine + coaching program for real estate professionals — capture, qualify, convert, and grow your annual transaction count.",
+    url: "/about",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "About LeadSmart AI",
+    description:
+      "The AI deal engine + coaching program for real estate professionals.",
+  },
+};
 
 export default function AboutLeadSmartAIPage() {
   return (

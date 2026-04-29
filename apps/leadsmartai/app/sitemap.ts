@@ -11,6 +11,31 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/landing/home-value",
     "/landing/mortgage-calculator",
     "/content/video-scripts",
+    // Public marketing surfaces — high SEO priority alongside the
+    // home page since they're the primary conversion targets from
+    // organic search.
+    "/about",
+    "/agent/pricing",
+    "/agent/coaching",
+    "/agent/compare",
+  ];
+
+  // Calculator hub — every public calculator page is indexable
+  // and was previously orphaned from the sitemap, leaving Google
+  // to discover them via crawl alone.
+  const calculatorRoutes = [
+    "/mortgage-calculator",
+    "/affordability-calculator",
+    "/cap-rate-calculator",
+    "/cap-rate-roi-calculator",
+    "/cash-flow-calculator",
+    "/down-payment-calculator",
+    "/refinance-calculator",
+    "/rent-vs-buy-calculator",
+    "/roi-calculator",
+    "/adjustable-rate-calculator",
+    "/cap-rate-calculator-how-to-use-it",
+    "/how-to-calculate-cap-rate",
   ];
 
   const seoRoutes = TRAFFIC_CITIES.flatMap((c) => [
@@ -24,11 +49,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...getKeywordPagesForCity("market-report", c.slug).map((k) => `/market-report/${c.slug}/${k.keywordSlug}`),
   ]);
 
-  return [...staticRoutes, ...seoRoutes, ...keywordRoutes].map((path) => ({
+  const HIGH_PRIORITY = new Set([
+    "/",
+    "/about",
+    "/agent/pricing",
+    "/agent/coaching",
+    "/agent/compare",
+  ]);
+
+  return [
+    ...staticRoutes,
+    ...calculatorRoutes,
+    ...seoRoutes,
+    ...keywordRoutes,
+  ].map((path) => ({
     url: `${base}${path}`,
     lastModified: now,
     changeFrequency: "weekly",
-    priority: path === "/" ? 1 : 0.7,
+    priority: path === "/" ? 1 : HIGH_PRIORITY.has(path) ? 0.9 : 0.7,
   }));
 }
 
