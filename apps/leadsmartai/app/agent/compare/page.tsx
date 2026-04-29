@@ -13,6 +13,20 @@ export const metadata: Metadata = {
     "BoomTown vs",
     "real estate AI CRM",
   ],
+  alternates: { canonical: "/agent/compare" },
+  openGraph: {
+    title: "LeadSmart AI vs. the rest — feature comparison",
+    description:
+      "Side-by-side comparison vs Follow Up Boss, kvCORE, Lofty, BoomTown, LionDesk, and Sierra Interactive — at a fraction of the price.",
+    url: "/agent/compare",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "LeadSmart AI vs. the rest",
+    description:
+      "Feature comparison vs Follow Up Boss, kvCORE, Lofty, BoomTown, LionDesk, and Sierra Interactive.",
+  },
 };
 
 /**
