@@ -9,7 +9,7 @@ import {
 } from "@/lib/stripePriceIds";
 
 type Body = {
-  plan: "pro" | "premium";
+  plan: "pro" | "premium" | "team";
   with_trial?: boolean;
   /** Where to send the user if they cancel Checkout (default: consumer `/pricing`). */
   cancel_surface?: "consumer" | "agent";
@@ -31,22 +31,29 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json().catch(() => ({}))) as Partial<Body>;
-    if (body.plan !== "pro" && body.plan !== "premium") {
+    if (body.plan !== "pro" && body.plan !== "premium" && body.plan !== "team") {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
     const isAgentSurface = body.cancel_surface === "agent";
+    if (body.plan === "team" && !isAgentSurface) {
+      return NextResponse.json(
+        { error: "Team plan is only available on the agent checkout surface." },
+        { status: 400 },
+      );
+    }
+
     const trialDays = isAgentSurface
       ? Number(process.env.STRIPE_AGENT_TRIAL_DAYS ?? process.env.STRIPE_TRIAL_DAYS ?? 14)
       : Number(process.env.STRIPE_TRIAL_DAYS ?? 7);
-    /** Agent Growth + Agent Premium: 14-day trial by default (set `STRIPE_AGENT_TRIAL_DAYS=0` to disable). */
+    /** Agent Growth / Premium / Team: 14-day trial by default (set `STRIPE_AGENT_TRIAL_DAYS=0` to disable). */
     const withTrial = isAgentSurface
       ? trialDays > 0
       : Boolean(body.with_trial) && (body.plan === "pro" || body.plan === "premium");
 
     const price = isAgentSurface
       ? getStripePriceIdForAgentPlan(body.plan)
-      : getStripePriceIdForPlan(body.plan);
+      : getStripePriceIdForPlan(body.plan as "pro" | "premium");
 
     try {
       const priceRow = await stripe.prices.retrieve(price);
@@ -83,7 +90,12 @@ export async function POST(req: Request) {
         plan: body.plan,
         ...(isAgentSurface
           ? {
-              internal_plan: body.plan === "premium" ? "agent_pro" : "agent_starter",
+              internal_plan:
+                body.plan === "team"
+                  ? "agent_team"
+                  : body.plan === "premium"
+                    ? "agent_pro"
+                    : "agent_starter",
             }
           : {}),
       },

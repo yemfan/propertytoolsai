@@ -11,14 +11,17 @@ export function getStripePriceIdForPlan(plan: "pro" | "premium"): string {
 }
 
 /**
- * LeadSmart **agent** checkout (Growth vs Elite entitlements).
- * - `pro` → `STRIPE_PRICE_ID_AGENT_PRO` → internal `agent_starter` (Growth)
- * - `premium` → `STRIPE_PRICE_ID_AGENT_PREMIUM` → internal `agent_pro` (Elite)
+ * LeadSmart **agent** checkout — three tiers:
+ *   - `pro`     → `STRIPE_PRICE_ID_AGENT_PRO`     → internal `agent_starter` (Growth)
+ *   - `premium` → `STRIPE_PRICE_ID_AGENT_PREMIUM` → internal `agent_pro` (Elite, solo)
+ *   - `team`    → `STRIPE_PRICE_ID_AGENT_TEAM`    → internal `agent_team` (Team SKU, $199/5 seats)
  *
  * Falls back to legacy env var names (STRIPE_PRICE_ID_ELITE, STRIPE_PRICE_ID_TEAM)
  * if the canonical names aren't set.
  */
-export function getStripePriceIdForAgentPlan(plan: "pro" | "premium"): string {
+export function getStripePriceIdForAgentPlan(
+  plan: "pro" | "premium" | "team",
+): string {
   if (plan === "pro") {
     const raw =
       process.env.STRIPE_PRICE_ID_AGENT_PRO ||
@@ -26,7 +29,14 @@ export function getStripePriceIdForAgentPlan(plan: "pro" | "premium"): string {
       "";
     return validateStripePriceEnv(raw || undefined, "STRIPE_PRICE_ID_AGENT_PRO");
   }
-  // premium / elite
+  if (plan === "team") {
+    const raw =
+      process.env.STRIPE_PRICE_ID_AGENT_TEAM ||
+      process.env.STRIPE_PRICE_ID_TEAM ||
+      "";
+    return validateStripePriceEnv(raw || undefined, "STRIPE_PRICE_ID_AGENT_TEAM");
+  }
+  // premium / elite (solo)
   const raw =
     process.env.STRIPE_PRICE_ID_AGENT_PREMIUM ||
     process.env.STRIPE_PRICE_ID_ELITE ||
