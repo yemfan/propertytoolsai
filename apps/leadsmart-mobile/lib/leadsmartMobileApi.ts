@@ -214,6 +214,31 @@ async function mobilePut<T extends MobileJsonError>(
   return { ok: true, data };
 }
 
+async function mobileDelete<T extends MobileJsonError>(
+  path: string
+): Promise<MobileApiFailure | { ok: true; data: T }> {
+  const cfg = requireConfig();
+  if (!isMobileConfig(cfg)) return cfg;
+
+  const { base, token } = cfg;
+  const res = await apiFetch<T>(`${base}${path}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+    credentials: "omit",
+  });
+
+  if (!res.ok) {
+    return parseMobileFailure(res.status, res.body, res.error);
+  }
+
+  const data = res.data;
+  if (!data || data.ok === false || data.success === false) {
+    return parseMobileFailure(res.status, data, "Request failed");
+  }
+
+  return { ok: true, data };
+}
+
 type InboxJson = MobileJsonError & {
   threads?: MobileInboxThreadDto[];
   generatedAt?: string;
@@ -1386,4 +1411,223 @@ export async function convertMobileOfferToTransaction(
     return { ok: false, status: 500, message: "Convert returned no transaction" };
   }
   return { ok: true, transaction: { id: res.data.transaction.id } };
+}
+
+// ── Transactions ──────────────────────────────────────────────────
+//
+// Mobile mirrors of /api/mobile/transactions/*. Wire shape declared
+// inline; keep in sync with apps/leadsmartai/lib/transactions/types.ts.
+
+export type MobileTransactionType = "buyer_rep" | "listing_rep" | "dual";
+export type MobileTransactionStatus = "active" | "closed" | "terminated" | "pending";
+export type MobileTransactionStage =
+  | "contract"
+  | "inspection"
+  | "appraisal"
+  | "loan"
+  | "closing";
+export type MobileTransactionTaskSource = "seed" | "custom";
+
+export type MobileTransactionRow = {
+  id: string;
+  agent_id: string;
+  contact_id: string;
+  transaction_type: MobileTransactionType;
+  property_address: string;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  purchase_price: number | null;
+  status: MobileTransactionStatus;
+  terminated_reason: string | null;
+  listing_start_date: string | null;
+  mutual_acceptance_date: string | null;
+  inspection_deadline: string | null;
+  inspection_completed_at: string | null;
+  appraisal_deadline: string | null;
+  appraisal_completed_at: string | null;
+  loan_contingency_deadline: string | null;
+  loan_contingency_removed_at: string | null;
+  closing_date: string | null;
+  closing_date_actual: string | null;
+  commission_pct: number | null;
+  gross_commission: number | null;
+  brokerage_split_pct: number | null;
+  referral_fee_pct: number | null;
+  agent_net_commission: number | null;
+  seller_update_enabled: boolean;
+  seller_update_last_sent_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MobileTransactionTaskRow = {
+  id: string;
+  transaction_id: string;
+  stage: MobileTransactionStage;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  completed_at: string | null;
+  completed_by: string | null;
+  order_index: number;
+  seed_key: string | null;
+  source: MobileTransactionTaskSource;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MobileTransactionCounterpartyRow = {
+  id: string;
+  transaction_id: string;
+  role: "title" | "lender" | "inspector" | "insurance" | "co_agent" | "other";
+  name: string;
+  company: string | null;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MobileTransactionListItem = MobileTransactionRow & {
+  contact_name: string | null;
+  task_total: number;
+  task_completed: number;
+  task_overdue: number;
+};
+
+export type MobileTransactionDetail = {
+  transaction: MobileTransactionRow;
+  tasks: MobileTransactionTaskRow[];
+  counterparties: MobileTransactionCounterpartyRow[];
+  contactName: string | null;
+};
+
+export async function fetchMobileTransactions(): Promise<
+  ({ ok: true } & { transactions: MobileTransactionListItem[] }) | MobileApiFailure
+> {
+  const res = await mobileGet<{ transactions?: MobileTransactionListItem[] }>(
+    MOBILE_API_PATHS.transactions,
+  );
+  if (res.ok === false) return res;
+  return { ok: true, transactions: res.data.transactions ?? [] };
+}
+
+export async function fetchMobileTransactionDetail(
+  id: string,
+): Promise<({ ok: true } & MobileTransactionDetail) | MobileApiFailure> {
+  const res = await mobileGet<{
+    transaction?: MobileTransactionRow;
+    tasks?: MobileTransactionTaskRow[];
+    counterparties?: MobileTransactionCounterpartyRow[];
+    contactName?: string | null;
+  }>(MOBILE_API_PATHS.transaction(id));
+  if (res.ok === false) return res;
+  if (!res.data.transaction) {
+    return { ok: false, status: 404, message: "Transaction not found" };
+  }
+  return {
+    ok: true,
+    transaction: res.data.transaction,
+    tasks: res.data.tasks ?? [],
+    counterparties: res.data.counterparties ?? [],
+    contactName: res.data.contactName ?? null,
+  };
+}
+
+export type MobileUpdateTransactionInput = Partial<{
+  property_address: string;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  purchase_price: number | null;
+  status: MobileTransactionStatus;
+  terminated_reason: string | null;
+  listing_start_date: string | null;
+  mutual_acceptance_date: string | null;
+  inspection_deadline: string | null;
+  inspection_completed_at: string | null;
+  appraisal_deadline: string | null;
+  appraisal_completed_at: string | null;
+  loan_contingency_deadline: string | null;
+  loan_contingency_removed_at: string | null;
+  closing_date: string | null;
+  closing_date_actual: string | null;
+  notes: string | null;
+  seller_update_enabled: boolean;
+}>;
+
+export async function updateMobileTransaction(
+  id: string,
+  patch: MobileUpdateTransactionInput,
+): Promise<({ ok: true } & { transaction: MobileTransactionRow }) | MobileApiFailure> {
+  const res = await mobilePatch<{ transaction?: MobileTransactionRow }>(
+    MOBILE_API_PATHS.transaction(id),
+    patch as Record<string, unknown>,
+  );
+  if (res.ok === false) return res;
+  if (!res.data.transaction) {
+    return { ok: false, status: 500, message: "Update returned no row" };
+  }
+  return { ok: true, transaction: res.data.transaction };
+}
+
+export async function addMobileTransactionTask(
+  transactionId: string,
+  input: {
+    stage: MobileTransactionStage;
+    title: string;
+    description?: string | null;
+    due_date?: string | null;
+  },
+): Promise<({ ok: true } & { task: MobileTransactionTaskRow }) | MobileApiFailure> {
+  const res = await mobilePost<{ task?: MobileTransactionTaskRow }>(
+    MOBILE_API_PATHS.transactionTasks(transactionId),
+    {
+      stage: input.stage,
+      title: input.title,
+      description: input.description ?? null,
+      due_date: input.due_date ?? null,
+    },
+  );
+  if (res.ok === false) return res;
+  if (!res.data.task) {
+    return { ok: false, status: 500, message: "Task create returned no row" };
+  }
+  return { ok: true, task: res.data.task };
+}
+
+export async function updateMobileTransactionTask(
+  transactionId: string,
+  taskId: string,
+  patch: Partial<{
+    title: string;
+    description: string | null;
+    due_date: string | null;
+    completed: boolean;
+    stage: MobileTransactionStage;
+  }>,
+): Promise<({ ok: true } & { task: MobileTransactionTaskRow }) | MobileApiFailure> {
+  const res = await mobilePatch<{ task?: MobileTransactionTaskRow }>(
+    MOBILE_API_PATHS.transactionTask(transactionId, taskId),
+    patch as Record<string, unknown>,
+  );
+  if (res.ok === false) return res;
+  if (!res.data.task) {
+    return { ok: false, status: 500, message: "Task update returned no row" };
+  }
+  return { ok: true, task: res.data.task };
+}
+
+export async function deleteMobileTransactionTask(
+  transactionId: string,
+  taskId: string,
+): Promise<{ ok: true } | MobileApiFailure> {
+  const res = await mobileDelete<MobileJsonError>(
+    MOBILE_API_PATHS.transactionTask(transactionId, taskId),
+  );
+  if (res.ok === false) return res;
+  return { ok: true };
 }
