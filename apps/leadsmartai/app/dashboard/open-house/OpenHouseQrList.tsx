@@ -101,8 +101,8 @@ export default function OpenHouseQrList({
               </div>
 
               <div className="text-[11px] text-slate-500">
-                Visitors can sign up using this QR code. Their details will be stored in your CRM
-                as a new lead.
+                Visitors can sign up using this QR code. Their details will be saved to
+                LeadSmart AI as a new lead.
               </div>
             </div>
           );

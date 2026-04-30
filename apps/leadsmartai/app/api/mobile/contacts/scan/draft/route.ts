@@ -84,7 +84,7 @@ export async function POST(req: Request) {
         rawLines: extracted.rawLines,
       },
       message:
-        "Review and edit fields in the app, then call /api/mobile/contacts/scan/finalize. Nothing was saved to the CRM yet.",
+        "Review and edit fields in the app, then call /api/mobile/contacts/scan/finalize. Nothing was saved to LeadSmart AI yet.",
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Server error";

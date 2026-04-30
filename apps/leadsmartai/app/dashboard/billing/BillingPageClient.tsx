@@ -212,7 +212,7 @@ export default function BillingPageClient() {
             Billing &amp; Subscription
           </h1>
           <p className="mt-1 text-sm text-brand-text/60">
-            Manage your CRM plan, payment method, and view invoice history.
+            Manage your LeadSmart AI plan, payment method, and view invoice history.
           </p>
         </div>
         <button

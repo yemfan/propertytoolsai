@@ -16,7 +16,7 @@ export default function CoachingPage() {
         </h1>
         <p className="mt-2 text-sm text-slate-600">
           Where your week needs your attention. Each card is pulled live
-          from data already in your CRM — no extra setup.
+          from data already in LeadSmart AI — no extra setup.
         </p>
       </header>
 

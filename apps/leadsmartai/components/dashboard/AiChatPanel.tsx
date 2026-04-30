@@ -74,7 +74,7 @@ export function AiChatPanel() {
       <button
         onClick={() => setOpen(true)}
         className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-transform hover:scale-105"
-        aria-label="Open AI Assistant"
+        aria-label="Open LeadSmart AI Assistant"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -88,7 +88,7 @@ export function AiChatPanel() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-blue-600 text-white">
         <div>
-          <p className="text-sm font-bold">AI Assistant</p>
+          <p className="text-sm font-bold">LeadSmart AI Assistant</p>
           <p className="text-[11px] opacity-80">Ask about your leads, tasks, pipeline</p>
         </div>
         <button
@@ -152,7 +152,7 @@ export function AiChatPanel() {
               send(input);
             }
           }}
-          placeholder="Ask your AI assistant..."
+          placeholder="Ask LeadSmart AI..."
           className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
           disabled={loading}
         />
