@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { LifeBuoy, Mail, MessageCircle } from "lucide-react";
 import ContactForm from "./ContactForm";
+import TeamSalesPanel from "./TeamSalesPanel";
 import JsonLd from "@/components/JsonLd";
 
 export const metadata: Metadata = {
@@ -15,7 +16,14 @@ export const metadata: Metadata = {
   keywords: ["contact", "support", "LeadSmart AI", "CRM", "lead management"],
 };
 
-export default function ContactPage() {
+export default async function ContactPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ topic?: string }>;
+}) {
+  const { topic } = await searchParams;
+  const isTeam = topic === "team";
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
       <JsonLd
@@ -38,6 +46,12 @@ export default function ContactPage() {
           We&apos;d love to hear from you.
         </p>
       </div>
+
+      {isTeam ? (
+        <div className="mt-12">
+          <TeamSalesPanel />
+        </div>
+      ) : null}
 
       <div className="mt-12 grid gap-8 lg:grid-cols-5">
         {/* Contact form */}
