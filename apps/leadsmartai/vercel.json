@@ -13,6 +13,10 @@
       "schedule": "*/15 * * * *"
     },
     {
+      "path": "/api/cron/daily-briefing",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/jobs/greetings/run",
       "schedule": "0 14 * * *"
     },
