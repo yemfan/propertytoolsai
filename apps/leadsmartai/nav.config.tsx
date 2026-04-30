@@ -198,7 +198,7 @@ const navConfig = {
       ],
     },
 
-    /* ── Workflow ── property tools + playbooks ── */
+    /* ── Workflow ── sales model + playbooks ── */
     {
       label: "Workflow",
       icon: navEmoji("🧰"),
@@ -208,12 +208,6 @@ const navConfig = {
           href: "/dashboard/sales-model",
           match: ["/dashboard/sales-model"],
           icon: navEmoji("🎯"),
-        },
-        {
-          label: "Property Tools",
-          href: "/dashboard/tools",
-          match: ["/dashboard/tools"],
-          icon: navEmoji("🏡"),
         },
         {
           label: "Playbooks",
@@ -260,6 +254,16 @@ const navConfig = {
           icon: navEmoji("🚀"),
         },
       ],
+    },
+
+    /* ── Property Tools ── top-level shortcut to the calculator
+       suite, pulled out of Workflow so agents can find it without
+       expanding a group. ── */
+    {
+      label: "Property Tools",
+      href: "/dashboard/tools",
+      match: ["/dashboard/tools"],
+      icon: navEmoji("🏡"),
     },
 
     /* ── Account ── */

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Check, X, CalendarClock, Pencil } from "lucide-react";
 
 type TaskRow = {
   id: string;
@@ -156,6 +157,22 @@ export default function TasksClient({
     await updateTask(id, { status: "done" });
   }
 
+  async function markCancelled(id: string) {
+    await updateTask(id, { status: "cancelled" });
+  }
+
+  /**
+   * "Move to" / snooze — push the due date out by `days` (tomorrow,
+   * next week). Keeps status open so the task stays on the user's
+   * radar; just out of today's view.
+   */
+  async function snoozeBy(id: string, days: number) {
+    const target = new Date();
+    target.setDate(target.getDate() + days);
+    target.setHours(9, 0, 0, 0);
+    await updateTask(id, { dueAt: target.toISOString() });
+  }
+
   function startEdit(task: TaskRow) {
     setEditingId(task.id);
     setEditFields({ title: task.title, description: task.description, priority: task.priority, status: task.status, due_at: task.due_at });
@@ -233,16 +250,49 @@ export default function TasksClient({
         </div>
       )}
 
-      {/* Filters */}
+      {/* Status tabs — clickable counts replace the old select.
+          Always show all four so the agent can see at a glance how
+          much of each bucket exists. */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-gray-200">
+        {([
+          { key: "open", label: "Open" },
+          { key: "done", label: "Completed" },
+          { key: "cancelled", label: "Cancelled" },
+          { key: "all", label: "All" },
+        ] as const).map((tab) => {
+          const count =
+            tab.key === "all"
+              ? tasks.length
+              : tasks.filter((t) => t.status === tab.key).length;
+          const active = statusFilter === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setStatusFilter(tab.key)}
+              className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition ${
+                active
+                  ? "border-blue-600 text-blue-700"
+                  : "border-transparent text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              {tab.label}
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
+                  active ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search */}
       <div className="flex flex-wrap gap-2">
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks..."
           className="flex-1 min-w-[200px] max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
-          <option value="all">All</option>
-          <option value="open">Open</option>
-          <option value="done">Done</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
       </div>
 
       {/* Tasks table */}
@@ -308,11 +358,45 @@ export default function TasksClient({
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_COLORS[t.status] ?? ""}`}>{t.status}</span>
                     </td>
                     <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] truncate">{t.description ?? "\u2014"}</td>
+                    {/* Row actions \u2014 compact icon buttons. Complete /
+                        cancel / move-to (snooze) only render when the
+                        task is still open; Edit is always available. */}
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      {t.status === "open" && (
-                        <button onClick={() => void markDone(t.id)} disabled={actionLoading} className="rounded-lg bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50 mr-2">Done</button>
-                      )}
-                      <button onClick={() => startEdit(t)} className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">Edit</button>
+                      <div className="inline-flex items-center gap-0.5">
+                        {t.status === "open" && (
+                          <>
+                            <TaskIconButton
+                              onClick={() => void markDone(t.id)}
+                              disabled={actionLoading}
+                              title="Mark complete"
+                              ariaLabel="Mark complete"
+                              tone="success"
+                            >
+                              <Check className="h-4 w-4" strokeWidth={2.5} />
+                            </TaskIconButton>
+                            <TaskIconButton
+                              onClick={() => void markCancelled(t.id)}
+                              disabled={actionLoading}
+                              title="Cancel task"
+                              ariaLabel="Cancel task"
+                              tone="danger"
+                            >
+                              <X className="h-4 w-4" strokeWidth={2.5} />
+                            </TaskIconButton>
+                            <SnoozeMenu
+                              disabled={actionLoading}
+                              onSnooze={(days) => void snoozeBy(t.id, days)}
+                            />
+                          </>
+                        )}
+                        <TaskIconButton
+                          onClick={() => startEdit(t)}
+                          title="Edit task"
+                          ariaLabel="Edit task"
+                        >
+                          <Pencil className="h-4 w-4" strokeWidth={2} />
+                        </TaskIconButton>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -328,6 +412,122 @@ export default function TasksClient({
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Compact icon-only button used for the row-level actions on the
+ * tasks table. Tone variants paint the icon for affirmative
+ * (success / green) or destructive (danger / red) actions; default
+ * tone is neutral gray.
+ */
+function TaskIconButton({
+  children,
+  onClick,
+  title,
+  ariaLabel,
+  disabled,
+  tone,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  title: string;
+  ariaLabel: string;
+  disabled?: boolean;
+  tone?: "success" | "danger";
+}) {
+  const toneClasses =
+    tone === "success"
+      ? "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+      : tone === "danger"
+        ? "text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+        : "text-gray-500 hover:bg-gray-100 hover:text-gray-900";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={ariaLabel}
+      className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-40 ${toneClasses}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * "Move to" / snooze menu — opens a small popover with quick
+ * presets that bump the due date forward without forcing the user
+ * into the full edit flow. Click-away closes.
+ */
+function SnoozeMenu({
+  disabled,
+  onSnooze,
+}: {
+  disabled?: boolean;
+  onSnooze: (days: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const onAway = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-snooze-menu]")) setOpen(false);
+    };
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onAway);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onAway);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [open]);
+
+  const presets: Array<{ label: string; days: number }> = [
+    { label: "Tomorrow", days: 1 },
+    { label: "In 3 days", days: 3 },
+    { label: "Next week", days: 7 },
+  ];
+
+  return (
+    <div className="relative inline-block" data-snooze-menu>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        disabled={disabled}
+        title="Move to a later date"
+        aria-label="Move task to a later date"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-amber-600 transition hover:bg-amber-50 hover:text-amber-700 disabled:opacity-40"
+      >
+        <CalendarClock className="h-4 w-4" strokeWidth={2} />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 z-20 mt-1 w-36 origin-top-right overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg ring-1 ring-black/5"
+        >
+          {presets.map((p) => (
+            <button
+              key={p.days}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onSnooze(p.days);
+              }}
+              className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
