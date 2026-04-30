@@ -31,4 +31,9 @@ export const MOBILE_API_PATHS = {
   cma: "/api/mobile/cma",
   postcards: "/api/mobile/postcards",
   postcardTemplates: "/api/mobile/postcards/templates",
+  showings: "/api/mobile/showings",
+  showing: (id: string) =>
+    `/api/mobile/showings/${encodeURIComponent(id)}`,
+  showingFeedback: (id: string) =>
+    `/api/mobile/showings/${encodeURIComponent(id)}/feedback`,
 } as const;
