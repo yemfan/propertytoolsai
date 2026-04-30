@@ -12,7 +12,8 @@
 alter table if exists public.user_profiles
   add column if not exists email text,
   add column if not exists invited_by uuid references auth.users (id) on delete set null,
-  add column if not exists invited_at timestamptz;
+  add column if not exists invited_at timestamptz,
+  add column if not exists is_active boolean not null default true;
 
 create index if not exists idx_user_profiles_email on public.user_profiles (email);
 
@@ -155,20 +156,22 @@ begin
   if to_regclass('public.profiles') is null then
     raise notice '20260473550000: public.profiles missing — skip merge from profiles.';
   else
-    insert into public.user_profiles (user_id, full_name, email, invited_by, invited_at)
+    insert into public.user_profiles (user_id, full_name, email, invited_by, invited_at, is_active)
     select
       p.id,
       p.full_name,
       p.email,
       p.invited_by,
-      p.invited_at
+      p.invited_at,
+      coalesce(p.is_active, true)
     from public.profiles p
     on conflict (user_id) do update
     set
       full_name = coalesce(excluded.full_name, public.user_profiles.full_name),
       email = coalesce(excluded.email, public.user_profiles.email),
       invited_by = coalesce(excluded.invited_by, public.user_profiles.invited_by),
-      invited_at = coalesce(excluded.invited_at, public.user_profiles.invited_at);
+      invited_at = coalesce(excluded.invited_at, public.user_profiles.invited_at),
+      is_active = coalesce(excluded.is_active, public.user_profiles.is_active);
   end if;
 end $merge$;
 

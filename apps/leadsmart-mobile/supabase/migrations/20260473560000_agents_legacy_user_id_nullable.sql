@@ -12,6 +12,7 @@ begin
     return;
   end if;
 
+  -- Only drop NOT NULL when the column is marked not-null (idempotent for re-runs).
   if exists (
     select 1
     from information_schema.columns
