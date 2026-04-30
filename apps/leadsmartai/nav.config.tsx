@@ -52,12 +52,6 @@ const navConfig = {
       icon: navEmoji("👥"),
       items: [
         {
-          label: "Lead Queue",
-          href: "/dashboard/lead-queue",
-          match: ["/dashboard/lead-queue"],
-          icon: navEmoji("📋"),
-        },
-        {
           // Unified people hub — Smart Lists inside this page segment into
           // Leads, Sphere, All. Old /dashboard/leads and /dashboard/sphere
           // routes redirect here.
@@ -81,6 +75,14 @@ const navConfig = {
           href: "/dashboard/calendar",
           match: ["/dashboard/calendar"],
           icon: navEmoji("📅"),
+        },
+        {
+          // Triage queue lives at the bottom — agents land here only when
+          // they're actively claiming new inbound, not for daily prospecting.
+          label: "Lead Queue",
+          href: "/dashboard/lead-queue",
+          match: ["/dashboard/lead-queue"],
+          icon: navEmoji("📋"),
         },
       ],
     },
