@@ -1202,3 +1202,34 @@ export async function upsertMobileShowingFeedback(
   }
   return { ok: true, feedback: res.data.feedback };
 }
+
+// ── Click-to-Call (Twilio bridge) ──────────────────────────────────
+//
+// Mirrors /api/voice/click-to-call. Server bridges the agent's phone to
+// the contact's via Twilio: the agent's device rings first, then the
+// contact's leg is dialed and joined. Logged to lead_calls.
+
+type ClickToCallJson = MobileJsonError & {
+  callId?: string;
+  twilioCallSid?: string;
+};
+
+export type MobileClickToCallSuccess = {
+  ok: true;
+  callId?: string;
+  twilioCallSid?: string;
+};
+
+export async function postMobileClickToCall(
+  contactId: string,
+): Promise<MobileClickToCallSuccess | MobileApiFailure> {
+  const res = await mobilePost<ClickToCallJson>(MOBILE_API_PATHS.clickToCall, {
+    contactId,
+  });
+  if (res.ok === false) return res;
+  return {
+    ok: true,
+    callId: res.data.callId,
+    twilioCallSid: res.data.twilioCallSid,
+  };
+}
