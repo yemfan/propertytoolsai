@@ -878,3 +878,122 @@ export async function generateMobileCma(input: {
     },
   };
 }
+
+// ── Postcards ─────────────────────────────────────────────────────
+//
+// Mobile mirrors of /api/mobile/postcards/*. Wire shape declared
+// inline; keep in sync with apps/leadsmartai/lib/postcards/types.ts.
+
+export type MobilePostcardTemplateKey =
+  | "birthday"
+  | "anniversary"
+  | "holiday_seasonal"
+  | "thinking_of_you";
+
+export type MobilePostcardChannel = "email" | "sms" | "wechat";
+
+export type MobilePostcardTemplate = {
+  key: MobilePostcardTemplateKey;
+  title: string;
+  tagline: string;
+  suggestedWhen: string;
+  defaultMessage: string;
+  accentColor: string;
+  emojiBadge: string;
+};
+
+export type MobilePostcardSend = {
+  id: string;
+  agent_id: string;
+  contact_id: string | null;
+  template_key: MobilePostcardTemplateKey;
+  slug: string;
+  recipient_name: string;
+  recipient_email: string | null;
+  recipient_phone: string | null;
+  personal_message: string | null;
+  channels: string[];
+  email_sent_at: string | null;
+  sms_sent_at: string | null;
+  wechat_sent_at: string | null;
+  email_error: string | null;
+  sms_error: string | null;
+  wechat_error: string | null;
+  opened_at: string | null;
+  open_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type PostcardTemplatesJson = MobileJsonError & {
+  templates?: MobilePostcardTemplate[];
+};
+type PostcardsListJson = MobileJsonError & {
+  postcards?: MobilePostcardSend[];
+};
+type PostcardSendJson = MobileJsonError & {
+  send?: MobilePostcardSend;
+  publicUrl?: string;
+  deliveries?: Record<string, { ok: boolean; reason?: string }>;
+};
+
+export async function fetchMobilePostcardTemplates(): Promise<
+  ({ ok: true } & { templates: MobilePostcardTemplate[] }) | MobileApiFailure
+> {
+  const res = await mobileGet<PostcardTemplatesJson>(
+    MOBILE_API_PATHS.postcardTemplates,
+  );
+  if (res.ok === false) return res;
+  return { ok: true, templates: res.data.templates ?? [] };
+}
+
+export async function fetchMobilePostcards(opts?: {
+  contactId?: string;
+  limit?: number;
+}): Promise<({ ok: true } & { postcards: MobilePostcardSend[] }) | MobileApiFailure> {
+  const q = new URLSearchParams();
+  if (opts?.contactId) q.set("contactId", opts.contactId);
+  if (opts?.limit) q.set("limit", String(opts.limit));
+  const path = q.toString()
+    ? `${MOBILE_API_PATHS.postcards}?${q.toString()}`
+    : MOBILE_API_PATHS.postcards;
+  const res = await mobileGet<PostcardsListJson>(path);
+  if (res.ok === false) return res;
+  return { ok: true, postcards: res.data.postcards ?? [] };
+}
+
+export type MobileSendPostcardInput = {
+  templateKey: MobilePostcardTemplateKey;
+  recipientName: string;
+  channels: MobilePostcardChannel[];
+  contactId?: string | null;
+  recipientEmail?: string | null;
+  recipientPhone?: string | null;
+  personalMessage?: string | null;
+};
+
+export async function sendMobilePostcard(
+  input: MobileSendPostcardInput,
+): Promise<
+  | ({ ok: true } & {
+      send: MobilePostcardSend;
+      publicUrl: string;
+      deliveries: Record<string, { ok: boolean; reason?: string }>;
+    })
+  | MobileApiFailure
+> {
+  const res = await mobilePost<PostcardSendJson>(
+    MOBILE_API_PATHS.postcards,
+    input as unknown as Record<string, unknown>,
+  );
+  if (res.ok === false) return res;
+  if (!res.data.send) {
+    return { ok: false, status: 500, message: "Postcard send returned no row" };
+  }
+  return {
+    ok: true,
+    send: res.data.send,
+    publicUrl: res.data.publicUrl ?? "",
+    deliveries: res.data.deliveries ?? {},
+  };
+}
