@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Send } from "lucide-react";
 
 /**
@@ -25,8 +26,33 @@ import { Send } from "lucide-react";
  * record submitted to Twilio. Re-verification is required when the
  * disclosure materially changes.
  */
+/**
+ * Topic-aware prefill. Marketing CTAs hand us a `?topic=...` query
+ * param so sales can tell at a glance which surface drove the inquiry
+ * (e.g. the Team pricing card vs. a generic "Contact us" link). Add
+ * cases here as new topics get linked from the marketing pages —
+ * unrecognized values fall through to the empty default.
+ */
+function prefillForTopic(topic: string | null): { subject: string; message: string } {
+  switch (topic) {
+    case "team":
+      return {
+        subject: "Team plan inquiry — more than 5 seats",
+        message:
+          "Hi LeadSmart team,\n\nI'm interested in the Team plan for my brokerage. We have ___ agents and would like to learn more about pricing, onboarding, and the Top Producer Track for the whole team.\n\n",
+      };
+    default:
+      return { subject: "", message: "" };
+  }
+}
+
 export default function ContactForm() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const searchParams = useSearchParams();
+  const prefill = useMemo(
+    () => prefillForTopic(searchParams?.get("topic") ?? null),
+    [searchParams],
+  );
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -124,6 +150,7 @@ export default function ContactForm() {
           type="text"
           required
           placeholder="How can we help?"
+          defaultValue={prefill.subject}
           className="mt-1.5 block w-full rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-[#0072ce] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0072ce]/20"
         />
       </div>
@@ -138,6 +165,7 @@ export default function ContactForm() {
           rows={5}
           required
           placeholder="Tell us more about your question or feedback..."
+          defaultValue={prefill.message}
           className="mt-1.5 block w-full resize-y rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-[#0072ce] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0072ce]/20"
         />
       </div>
