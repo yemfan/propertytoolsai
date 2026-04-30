@@ -1,8 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  Plus,
+  Pencil,
+  Check,
+  Home as HomeIcon,
+  FileText,
+  Key,
+  MessageCircle,
+  ScanLine,
+  Upload,
+  Download,
+  UserPlus,
+  Mail,
+} from "lucide-react";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
 import { CallButton } from "@/components/contacts/CallButton";
 import { CsvImportModal } from "@/components/crm/CsvImportModal";
@@ -118,6 +132,27 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
   const [sortAsc, setSortAsc] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const addMenuRef = useRef<HTMLDivElement>(null);
+
+  // Click-outside to close the +Add dropdown.
+  useEffect(() => {
+    if (!addMenuOpen) return;
+    const onClickAway = (e: MouseEvent) => {
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
+        setAddMenuOpen(false);
+      }
+    };
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setAddMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onClickAway);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onClickAway);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [addMenuOpen]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<Partial<LeadRow>>({});
   const [addFields, setAddFields] = useState({ name: "", email: "", phone: "", property_address: "", notes: "" });
@@ -269,31 +304,79 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
         </div>
       )}
 
-      {/* Action buttons */}
+      {/* Action toolbar — single +Add dropdown anchored to the right.
+          Replaces the previous four-button row (Enter Contact / Scan
+          Card / Upload CSV / Download Template). Same actions live
+          inside the dropdown menu. */}
       {actionMsg && <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-800">{actionMsg}</div>}
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setShowAddForm((v) => !v)}
-          className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800"
-        >
-          {showAddForm ? "Cancel" : "Enter A Contact"}
-        </button>
-        <Link
-          href="/dashboard/contacts/scan"
-          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Scan Business Card
-        </Link>
-        <button
-          onClick={() => setCsvImportOpen(true)}
-          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Upload CSV
-        </button>
-        <button type="button" onClick={downloadTemplate} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-          Download Template
-        </button>
+      <div className="flex justify-end">
+        <div ref={addMenuRef} className="relative inline-block">
+          <button
+            type="button"
+            onClick={() => {
+              if (showAddForm) setShowAddForm(false);
+              setAddMenuOpen((v) => !v);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800"
+            aria-haspopup="menu"
+            aria-expanded={addMenuOpen}
+          >
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+            Add…
+          </button>
+          {addMenuOpen ? (
+            <div
+              role="menu"
+              className="absolute right-0 z-20 mt-2 w-56 origin-top-right overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg ring-1 ring-black/5"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setAddMenuOpen(false);
+                  setShowAddForm(true);
+                }}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <UserPlus className="h-4 w-4 text-gray-500" />
+                Enter a contact
+              </button>
+              <Link
+                href="/dashboard/contacts/scan"
+                role="menuitem"
+                onClick={() => setAddMenuOpen(false)}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <ScanLine className="h-4 w-4 text-gray-500" />
+                Scan business card
+              </Link>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setAddMenuOpen(false);
+                  setCsvImportOpen(true);
+                }}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <Upload className="h-4 w-4 text-gray-500" />
+                Upload CSV
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setAddMenuOpen(false);
+                  downloadTemplate();
+                }}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <Download className="h-4 w-4 text-gray-500" />
+                Download template
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {/* Inline add form */}
@@ -399,11 +482,11 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                   { key: "name" as SortKey, label: "Name" },
                   { key: "email" as SortKey, label: "Email" },
                   { key: null, label: "Phone" },
-                  { key: null, label: "Address" },
                   { key: "rating" as SortKey, label: "Rating" },
                   { key: "last_contacted_at" as SortKey, label: "Last Contacted" },
-                  { key: null, label: "Memo" },
                   { key: null, label: "" },
+                  { key: null, label: "Memo" },
+                  { key: null, label: "Address" },
                 ] as const).map((col, i) => (
                   <th
                     key={i}
@@ -429,7 +512,6 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                       <td className="px-4 py-2"><input value={editFields.name ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, name: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
                       <td className="px-4 py-2"><input value={editFields.email ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, email: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
                       <td className="px-4 py-2"><input value={editFields.phone ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, phone: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
-                      <td className="px-4 py-2"><input value={editFields.property_address ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, property_address: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-2">
                           <select value={editFields.rating ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, rating: e.target.value || null }))} className="rounded border border-gray-300 px-2 py-1 text-sm">
@@ -457,11 +539,12 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                         </div>
                       </td>
                       <td className="px-4 py-2 text-xs text-gray-500">{timeAgo(c.last_contacted_at)}</td>
-                      <td className="px-4 py-2"><input value={editFields.notes ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, notes: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" placeholder="Notes" /></td>
                       <td className="px-4 py-2 whitespace-nowrap">
                         <button onClick={() => void saveEdit(c.id)} disabled={actionLoading} className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 mr-2">Save</button>
                         <button onClick={() => setEditingId(null)} className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
                       </td>
+                      <td className="px-4 py-2"><input value={editFields.notes ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, notes: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" placeholder="Notes" /></td>
+                      <td className="px-4 py-2"><input value={editFields.property_address ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, property_address: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
                     </tr>
                   );
                 }
@@ -484,14 +567,27 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                       />
                     </td>
                     <td className="px-4 py-2.5 font-medium text-gray-900">{c.name ?? "\u2014"}</td>
-                    <td className="px-4 py-2.5 text-gray-600 max-w-[180px] truncate">{c.email ?? "\u2014"}</td>
+                    <td className="px-4 py-2.5 text-gray-600 max-w-[180px]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate">{c.email ?? "\u2014"}</span>
+                        {c.email ? (
+                          <a
+                            href={`mailto:${c.email}`}
+                            className="shrink-0 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-blue-600"
+                            title={`Email ${c.email}`}
+                            aria-label="Email contact"
+                          >
+                            <Mail className="h-3.5 w-3.5" strokeWidth={2} />
+                          </a>
+                        ) : null}
+                      </div>
+                    </td>
                     <td className="px-4 py-2.5 text-gray-600">
                       <div className="flex items-center gap-2">
                         <span>{c.phone ?? "\u2014"}</span>
                         <CallButton contactId={c.id} hasPhone={Boolean(c.phone)} />
                       </div>
                     </td>
-                    <td className="px-4 py-2.5 text-gray-600 min-w-[200px] max-w-[320px]"><span className="block truncate" title={c.property_address ?? ""}>{c.property_address ?? "\u2014"}</span></td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1.5">
                         {c.rating ? (
@@ -547,53 +643,84 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                       </div>
                     </td>
                     <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{timeAgo(c.last_contacted_at)}</td>
-                    <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] truncate">{c.notes ?? "\u2014"}</td>
+                    {/* Row actions \u2014 compact icon buttons with hover
+                        tooltips. SMS is new and only renders when the
+                        contact has a phone on file. */}
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <button onClick={() => startEdit(c)} className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 mr-2">Edit</button>
-                      <button onClick={() => void markContacted(c.id)} disabled={actionLoading} className="rounded-lg bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50 mr-2">Contacted</button>
-                      {/* One-click start of a buyer-rep transaction for this
-                          contact. NewTransactionClient resolves the display
-                          name via ContactPicker on mount — we just pass the
-                          id. Property address is filled in-form; we don't
-                          pre-fill from `property_address` because that's the
-                          buyer's home, not the subject property. */}
-                      <Link
-                        href={`/dashboard/showings/new?contactId=${encodeURIComponent(c.id)}`}
-                        className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 mr-2"
-                      >
-                        Showing
-                      </Link>
-                      <Link
-                        href={`/dashboard/offers/new?contactId=${encodeURIComponent(c.id)}`}
-                        className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 mr-2"
-                      >
-                        Offer
-                      </Link>
-                      <Link
-                        href={`/dashboard/transactions/new?contactId=${encodeURIComponent(c.id)}`}
-                        className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 mr-2"
-                      >
-                        Start deal
-                      </Link>
-                      {/* Animated postcard — birthday / anniversary /
-                          seasonal / thinking-of-you. Opens in a modal
-                          so agents can use it on any contact, not just
-                          sphere-tagged ones. */}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setPostcardTarget({
-                            contactId: c.id,
-                            name: c.name ?? "",
-                            email: c.email,
-                            phone: c.phone,
-                          })
-                        }
-                        className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                        title="Send an animated postcard"
-                      >
-                        💌 Postcard
-                      </button>
+                      <div className="inline-flex items-center gap-0.5">
+                        <RowIconButton
+                          onClick={() => startEdit(c)}
+                          title="Edit contact"
+                          ariaLabel="Edit contact"
+                        >
+                          <Pencil className="h-4 w-4" strokeWidth={2} />
+                        </RowIconButton>
+                        <RowIconButton
+                          onClick={() => void markContacted(c.id)}
+                          disabled={actionLoading}
+                          title="Mark contacted"
+                          ariaLabel="Mark contacted"
+                          tone="success"
+                        >
+                          <Check className="h-4 w-4" strokeWidth={2.5} />
+                        </RowIconButton>
+                        {c.phone ? (
+                          <RowIconButton
+                            href={`sms:${c.phone}`}
+                            title={`Text ${c.phone}`}
+                            ariaLabel="Send SMS"
+                          >
+                            <MessageCircle className="h-4 w-4" strokeWidth={2} />
+                          </RowIconButton>
+                        ) : null}
+                        <RowIconButton
+                          href={`/dashboard/showings/new?contactId=${encodeURIComponent(c.id)}`}
+                          title="Schedule showing"
+                          ariaLabel="Schedule showing"
+                        >
+                          <HomeIcon className="h-4 w-4" strokeWidth={2} />
+                        </RowIconButton>
+                        <RowIconButton
+                          href={`/dashboard/offers/new?contactId=${encodeURIComponent(c.id)}`}
+                          title="Draft offer"
+                          ariaLabel="Draft offer"
+                        >
+                          <FileText className="h-4 w-4" strokeWidth={2} />
+                        </RowIconButton>
+                        <RowIconButton
+                          href={`/dashboard/transactions/new?contactId=${encodeURIComponent(c.id)}`}
+                          title="Start deal"
+                          ariaLabel="Start deal"
+                        >
+                          <Key className="h-4 w-4" strokeWidth={2} />
+                        </RowIconButton>
+                        {/* Animated postcard — birthday / anniversary /
+                            seasonal / thinking-of-you. Opens in a modal so
+                            agents can use it on any contact, not just
+                            sphere-tagged ones. */}
+                        <RowIconButton
+                          onClick={() =>
+                            setPostcardTarget({
+                              contactId: c.id,
+                              name: c.name ?? "",
+                              email: c.email,
+                              phone: c.phone,
+                            })
+                          }
+                          title="Send postcard"
+                          ariaLabel="Send postcard"
+                        >
+                          <span className="text-base leading-none" aria-hidden>💌</span>
+                        </RowIconButton>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] truncate" title={c.notes ?? ""}>
+                      {c.notes ?? "—"}
+                    </td>
+                    <td className="px-4 py-2.5 text-gray-600 min-w-[200px] max-w-[320px]">
+                      <span className="block truncate" title={c.property_address ?? ""}>
+                        {c.property_address ?? "—"}
+                      </span>
                     </td>
                   </tr>
                 );
@@ -646,5 +773,64 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
         />
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Compact icon-only button used for the row-level actions on the
+ * contacts table. Renders as `<button>` when `onClick` is provided
+ * or `<a>` when `href` is provided. Same hover affordance for both
+ * shapes so the row reads consistently regardless of whether the
+ * action navigates or stays on the page.
+ *
+ * `tone="success"` paints the icon green for the "mark contacted"
+ * affirmative action; default tone is neutral gray.
+ */
+function RowIconButton({
+  children,
+  onClick,
+  href,
+  title,
+  ariaLabel,
+  disabled,
+  tone,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  href?: string;
+  title: string;
+  ariaLabel: string;
+  disabled?: boolean;
+  tone?: "success";
+}) {
+  const base =
+    "inline-flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-40";
+  const toneClasses =
+    tone === "success"
+      ? "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+      : "text-gray-500 hover:bg-gray-100 hover:text-gray-900";
+  if (href) {
+    return (
+      <Link
+        href={href}
+        title={title}
+        aria-label={ariaLabel}
+        className={`${base} ${toneClasses}`}
+      >
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={ariaLabel}
+      className={`${base} ${toneClasses}`}
+    >
+      {children}
+    </button>
   );
 }
