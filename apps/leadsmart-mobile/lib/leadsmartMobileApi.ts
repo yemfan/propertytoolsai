@@ -905,6 +905,59 @@ export async function generateMobileCma(input: {
   };
 }
 
+// ── Coaching ──────────────────────────────────────────────────────
+//
+// Mobile mirror of /api/mobile/coaching/me. The wire shape matches
+// /api/coaching/me on the web — keep these types in sync with
+// COACHING_PROGRAMS in apps/leadsmartai/lib/coaching-programs/programs.ts.
+
+export type MobileCoachingProgramSlug =
+  | "producer_track"
+  | "top_producer_track";
+
+export type MobileCoachingProgramStatus =
+  | "enrolled"
+  | "opted_out"
+  | "eligible_not_enrolled"
+  | "not_eligible";
+
+export type MobileCoachingPlan =
+  | "starter"
+  | "growth"
+  | "elite"
+  | "team"
+  | null;
+
+export type MobileCoachingProgram = {
+  slug: MobileCoachingProgramSlug;
+  status: MobileCoachingProgramStatus;
+  enrolledAt: string | null;
+  meta: {
+    name: string;
+    tagline: string;
+    annualTransactionTarget: number;
+    conversionRateTargetPct: number;
+  };
+};
+
+type CoachingJson = MobileJsonError & {
+  plan?: MobileCoachingPlan;
+  programs?: MobileCoachingProgram[];
+};
+
+export async function fetchMobileCoaching(): Promise<
+  | ({ ok: true } & { plan: MobileCoachingPlan; programs: MobileCoachingProgram[] })
+  | MobileApiFailure
+> {
+  const res = await mobileGet<CoachingJson>(MOBILE_API_PATHS.coaching);
+  if (res.ok === false) return res;
+  return {
+    ok: true,
+    plan: res.data.plan ?? null,
+    programs: res.data.programs ?? [],
+  };
+}
+
 // ── Postcards ─────────────────────────────────────────────────────
 //
 // Mobile mirrors of /api/mobile/postcards/*. Wire shape declared
