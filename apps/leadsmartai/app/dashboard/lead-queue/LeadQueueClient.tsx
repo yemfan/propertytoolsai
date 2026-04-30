@@ -15,12 +15,17 @@ type QueueLead = {
   created_at: string | null;
 };
 
+type Feedback =
+  | { kind: "success"; message: string }
+  | { kind: "merged"; message: string; existingContactId: string }
+  | { kind: "error"; message: string };
+
 export function LeadQueueClient() {
   const [leads, setLeads] = useState<QueueLead[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
 
   const fetchQueue = useCallback(async () => {
     try {
@@ -52,19 +57,39 @@ export function LeadQueueClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ leadId }),
       });
-      const body = await res.json().catch(() => ({}));
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        code?: string;
+        leadId?: string | number;
+        merged?: boolean;
+      };
       if (res.ok && body.ok) {
         setLeads((prev) => prev.filter((l) => String(l.id) !== leadId));
         setTotal((prev) => Math.max(0, prev - 1));
-        setFeedback("Lead claimed! Upgrade to Pro for smart lead routing and AI prioritization.");
+        if (body.merged && body.leadId) {
+          setFeedback({
+            kind: "merged",
+            message: "Already in your contacts — merged with the existing record.",
+            existingContactId: String(body.leadId),
+          });
+        } else {
+          setFeedback({ kind: "success", message: "Lead claimed." });
+        }
       } else if (res.status === 409) {
-        setFeedback("This lead was already claimed by another agent.");
+        setFeedback({
+          kind: "error",
+          message: "This lead was already claimed by another agent.",
+        });
         fetchQueue();
       } else {
-        setFeedback(body.error ?? "Failed to claim lead.");
+        setFeedback({
+          kind: "error",
+          message: body.error ?? "Failed to claim lead.",
+        });
       }
     } catch {
-      setFeedback("Network error. Please try again.");
+      setFeedback({ kind: "error", message: "Network error. Please try again." });
     } finally {
       setClaiming(null);
     }
@@ -110,14 +135,7 @@ export function LeadQueueClient() {
           claiming more from the queue will be blocked otherwise. */}
       <LimitWarningBanner action="add_lead" />
 
-      {feedback && (
-        <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-sm text-blue-800">
-          {feedback}{" "}
-          <a href="/agent/pricing" className="font-semibold text-blue-700 underline hover:text-blue-900">
-            View plans
-          </a>
-        </div>
-      )}
+      {feedback && <FeedbackBanner feedback={feedback} />}
 
       {leads.length === 0 ? (
         <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm">
@@ -169,6 +187,34 @@ export function LeadQueueClient() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function FeedbackBanner({ feedback }: { feedback: Feedback }) {
+  if (feedback.kind === "success") {
+    return (
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+        {feedback.message}
+      </div>
+    );
+  }
+  if (feedback.kind === "merged") {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+        {feedback.message}{" "}
+        <a
+          href={`/dashboard/contacts/${encodeURIComponent(feedback.existingContactId)}`}
+          className="font-semibold underline hover:text-amber-950"
+        >
+          Open contact →
+        </a>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-800">
+      {feedback.message}
     </div>
   );
 }
