@@ -75,6 +75,7 @@ export function AiChatPanel() {
       <button
         onClick={() => setOpen(true)}
         className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg ring-1 ring-blue-100 transition-transform hover:scale-105 hover:ring-blue-200"
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-transform hover:scale-105"
         aria-label="Open LeadSmart AI Assistant"
       >
         <img
@@ -167,7 +168,7 @@ export function AiChatPanel() {
               send(input);
             }
           }}
-          placeholder="Ask your AI assistant..."
+          placeholder="Ask LeadSmart AI..."
           className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
           disabled={loading}
         />

@@ -33,7 +33,7 @@ export async function getDashboardAgentContext(): Promise<
     return {
       ok: false,
       response: NextResponse.json(
-        { ok: false, error: "Complete agent signup before using the CRM.", code: "NO_AGENT_ROW" },
+        { ok: false, error: "Complete agent signup before using LeadSmart AI.", code: "NO_AGENT_ROW" },
         { status: 403 }
       ),
     };

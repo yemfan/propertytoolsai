@@ -75,11 +75,11 @@ export default function ClientTrackerPage() {
       {data?.ok && data.stages && data.activeIndex != null && (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
           <div className="text-xs font-semibold text-slate-500 uppercase">
-            CRM status: <span className="capitalize text-slate-800">{data.leadStatus ?? "—"}</span>
+            Lead status: <span className="capitalize text-slate-800">{data.leadStatus ?? "—"}</span>
           </div>
           <TransactionPipeline stages={data.stages} activeIndex={data.activeIndex} />
           <p className="text-xs text-slate-500 leading-relaxed">
-            Stages are estimated from your CRM status. Your agent can advance milestones as your transaction
+            Stages are estimated from your lead status in LeadSmart AI. Your agent can advance milestones as your transaction
             progresses.
           </p>
         </div>

@@ -145,7 +145,7 @@ export async function canAddContact(
     allowed,
     reason: allowed
       ? null
-      : `You’ve reached your CRM contact limit (${used}/${cap}) on ${formatPlanLabel(ent.plan)}. Upgrade for a higher cap.`,
+      : `You’ve reached your contact limit (${used}/${cap}) on ${formatPlanLabel(ent.plan)}. Upgrade for a higher cap.`,
     reasonCode: allowed ? null : ("contact_limit_reached" satisfies LimitReason),
     plan: ent.plan,
     product: ent.product,

@@ -107,7 +107,7 @@ export default function ClientDashboardPage() {
         <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
           <p className="font-semibold">Client portal (buyer / seller)</p>
           <p className="mt-1 leading-relaxed">
-            This page only shows a deal when your login email matches a lead in CRM. Your{" "}
+            This page only shows a deal when your login email matches a lead in LeadSmart AI. Your{" "}
             <span className="font-medium">agent workspace</span> (leads, pipeline, tools) is separate —{" "}
             <Link
               href={resolveRoleHomePath(meApi?.role ?? null, Boolean(meApi?.has_agent_record))}
