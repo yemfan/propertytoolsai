@@ -90,7 +90,7 @@ export default function StartFreeAgentClientPage() {
           Choose your plan
         </h1>
         <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-600">
-          Pick a plan to unlock your CRM, AI tools, and lead pipeline. Start free or go straight to a paid plan with a
+          Pick a plan to unlock LeadSmart AI — pipeline, AI tools, and coaching. Start free or go straight to a paid plan with a
           14-day trial (cancel anytime).
         </p>
 

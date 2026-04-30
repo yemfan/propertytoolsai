@@ -135,7 +135,7 @@ export default function ClientChatPage() {
             </button>
           </form>
           <p className="text-[10px] text-slate-400 mt-2 text-center">
-            Updates every few seconds. Your agent replies from the CRM dashboard (coming soon) or in person.
+            Updates every few seconds. Your agent replies from LeadSmart AI (coming soon) or in person.
           </p>
         </>
       )}

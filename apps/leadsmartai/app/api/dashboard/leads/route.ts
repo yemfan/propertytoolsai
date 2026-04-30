@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     const agentId = (agentRow as any)?.id;
     if (agentId == null) {
       return NextResponse.json(
-        { error: "Complete agent signup before using the CRM.", code: "NO_AGENT_ROW" },
+        { error: "Complete agent signup before using LeadSmart AI.", code: "NO_AGENT_ROW" },
         { status: 403 }
       );
     }

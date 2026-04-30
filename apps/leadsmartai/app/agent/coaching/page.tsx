@@ -58,7 +58,7 @@ const COACHING_FAQ: ReadonlyArray<{ q: string; a: string }> = [
   },
   {
     q: "How do you measure the conversion-rate target?",
-    a: "Lead-to-close — the percentage of contacts created in your CRM (any source) that result in a closed transaction. Visible on your performance dashboard with a moving 12-month window.",
+    a: "Lead-to-close — the percentage of contacts created in LeadSmart AI (any source) that result in a closed transaction. Visible on your performance dashboard with a moving 12-month window.",
   },
 ];
 
