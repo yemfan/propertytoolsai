@@ -30,6 +30,7 @@ export const MOBILE_API_PATHS = {
   leadQueueClaim: "/api/dashboard/lead-queue/claim",
   cma: "/api/mobile/cma",
   coaching: "/api/mobile/coaching/me",
+  briefings: "/api/mobile/briefings",
   postcards: "/api/mobile/postcards",
   postcardTemplates: "/api/mobile/postcards/templates",
   showings: "/api/mobile/showings",
