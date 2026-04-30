@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { BrandRefreshControl } from "../../components/BrandRefreshControl";
+import { BriefingsCard } from "../../components/home/BriefingsCard";
 import { DailyAgendaList } from "../../components/home/DailyAgendaList";
 import { PriorityAlertCard } from "../../components/home/PriorityAlertCard";
 import { Skeleton } from "../../components/Skeleton";
@@ -304,6 +305,8 @@ export default function HomeScreen() {
           </Text>
           <Text style={styles.summaryLine}>{summaryLine}</Text>
         </View>
+
+        <BriefingsCard />
 
         <SectionRule color={tokens.border} />
 

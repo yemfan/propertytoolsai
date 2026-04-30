@@ -1233,3 +1233,48 @@ export async function postMobileClickToCall(
     twilioCallSid: res.data.twilioCallSid,
   };
 }
+
+// ── Daily Briefings (☀️ morning + 🌙 evening) ──────────────────────
+//
+// Mirrors /api/dashboard/briefings. The mobile home screen shows the
+// latest of each kind, no history pager — keeps the small screen
+// focused on what's current.
+
+export type MobileBriefingKind = "morning" | "evening";
+
+export type MobileBriefingInsights = {
+  topHotLeads?: Array<{ name: string; score: number; address: string }>;
+  needsFollowUp?: Array<{ name: string; daysInactive: number; address: string }>;
+  completedTasks?: Array<{ title: string; type: string }>;
+  missedTasks?: Array<{ title: string; type: string }>;
+  tomorrowTasks?: Array<{ title: string; type: string }>;
+  topOpportunity?: string;
+  suggestedActions?: string[];
+};
+
+export type MobileBriefing = {
+  id: string;
+  kind: MobileBriefingKind;
+  headline: string | null;
+  summary: string;
+  insights: MobileBriefingInsights;
+  created_at: string;
+};
+
+type BriefingsJson = MobileJsonError & {
+  morning?: MobileBriefing[];
+  evening?: MobileBriefing[];
+};
+
+export async function fetchMobileBriefings(): Promise<
+  | ({ ok: true } & { morning: MobileBriefing[]; evening: MobileBriefing[] })
+  | MobileApiFailure
+> {
+  const res = await mobileGet<BriefingsJson>(MOBILE_API_PATHS.briefings);
+  if (res.ok === false) return res;
+  return {
+    ok: true,
+    morning: res.data.morning ?? [],
+    evening: res.data.evening ?? [],
+  };
+}
