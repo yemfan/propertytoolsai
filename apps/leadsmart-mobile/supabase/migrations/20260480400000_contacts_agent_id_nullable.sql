@@ -1,0 +1,21 @@
+-- Contacts: agent_id must be nullable.
+--
+-- The home-value intake flow (apps/propertytoolsai/lib/home-value/lead.ts,
+-- and the lead-capture and open-house routes) creates a lead row BEFORE
+-- auto-assigning an agent. The caller has no agent_id at insert time.
+--
+-- My initial contacts schema marked agent_id NOT NULL, which blocked every
+-- intake write with "null value in column agent_id violates not-null
+-- constraint". The user hit this as "Failed to unlock report. Please try
+-- again." on the valuation unlock form.
+--
+-- Drop the NOT NULL. Agents are populated by autoAssignLeadToAgent() post-
+-- insert; unassigned rows are expected during the intake window.
+--
+-- Side effect on the unique index uq_contacts_agent_email (agent_id,
+-- lower(email)): Postgres treats NULL != NULL for uniqueness, so two
+-- unassigned rows with the same email will both be allowed. That's
+-- acceptable because assignment runs within seconds of intake; dedup on
+-- email only matters once an agent owns the row.
+
+alter table public.contacts alter column agent_id drop not null;
