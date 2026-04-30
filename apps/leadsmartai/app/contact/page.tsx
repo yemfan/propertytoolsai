@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { LifeBuoy, Mail, MessageCircle } from "lucide-react";
 import ContactForm from "./ContactForm";
@@ -48,7 +49,9 @@ export default function ContactPage() {
             <p className="mt-1 text-sm text-slate-500">
               Fill out the form below and we&apos;ll get back to you within 24 hours.
             </p>
-            <ContactForm />
+            <Suspense fallback={null}>
+              <ContactForm />
+            </Suspense>
           </div>
         </div>
 

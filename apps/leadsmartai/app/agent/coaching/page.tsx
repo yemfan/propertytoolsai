@@ -18,7 +18,49 @@ export const metadata: Metadata = {
     "real estate agent training",
     "leadsmart coaching",
   ],
+  alternates: { canonical: "/agent/coaching" },
+  openGraph: {
+    title: "LeadSmart AI Coaching — Producer Track + Top Producer Track",
+    description:
+      "AI-driven coaching built into LeadSmart AI. Producer Track (10 deals / 3% conv) and Top Producer Track (15 deals / 5% conv) — included in your plan, no add-on fee.",
+    url: "/agent/coaching",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "LeadSmart AI Coaching",
+    description:
+      "Producer Track + Top Producer Track — AI coaching built into LeadSmart AI for real estate agents.",
+  },
 };
+
+/**
+ * Canonical FAQ list — single source of truth for both the
+ * `<FAQ />` component below and the FAQPage JSON-LD emitted by
+ * the page so the schema and the rendered text never drift apart.
+ */
+const COACHING_FAQ: ReadonlyArray<{ q: string; a: string }> = [
+  {
+    q: "Is this a separate paid program?",
+    a: "No. Coaching is built into the plan price. Producer Track is included with Pro and above; Top Producer Track is included with Premium and Team. No upsell, no add-on fee.",
+  },
+  {
+    q: "What's the difference between Producer Track and Top Producer Track?",
+    a: "Producer Track gives you the daily plan, weekly playbooks, monthly review, and basic peer benchmarks — targeting 10 transactions and 3% conversion. Top Producer Track adds custom playbooks generated from YOUR live deals, monthly AI deep-dives, top-10% peer benchmarks, and priority access to new AI features — targeting 15 transactions and 5% conversion.",
+  },
+  {
+    q: "Will I be auto-enrolled?",
+    a: "Yes — when you upgrade to a plan that includes a program, you're auto-enrolled the next time you sign in. You can opt out in settings; we won't re-enroll you automatically after that.",
+  },
+  {
+    q: "What about agents on the Starter plan?",
+    a: "Starter doesn't include coaching. Upgrade to Pro to start Producer Track, or Premium for Top Producer Track.",
+  },
+  {
+    q: "How do you measure the conversion-rate target?",
+    a: "Lead-to-close — the percentage of contacts created in your CRM (any source) that result in a closed transaction. Visible on your performance dashboard with a moving 12-month window.",
+  },
+];
 
 /**
  * Public marketing landing for LeadSmart AI Coaching. Reads the
@@ -33,6 +75,21 @@ export default function AgentCoachingPage() {
   const programs = PROGRAM_ORDER.map((slug) => COACHING_PROGRAMS[slug]);
   return (
     <div className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: COACHING_FAQ.map((item) => ({
+              "@type": "Question",
+              name: item.q,
+              acceptedAnswer: { "@type": "Answer", text: item.a },
+            })),
+          }),
+        }}
+      />
       <div className="mx-auto max-w-5xl px-4 py-12 md:px-6 md:py-16">
         <header className="text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">
@@ -251,28 +308,7 @@ function Methodology() {
 // ── FAQ ────────────────────────────────────────────────────────
 
 function FAQ() {
-  const faqs: Array<{ q: string; a: string }> = [
-    {
-      q: "Is this a separate paid program?",
-      a: "No. Coaching is built into the plan price. Producer Track is included with Pro and above; Top Producer Track is included with Premium and Team. No upsell, no add-on fee.",
-    },
-    {
-      q: "What's the difference between Producer Track and Top Producer Track?",
-      a: "Producer Track gives you the daily plan, weekly playbooks, monthly review, and basic peer benchmarks — targeting 10 transactions and 3% conversion. Top Producer Track adds custom playbooks generated from YOUR live deals, monthly AI deep-dives, top-10% peer benchmarks, and priority access to new AI features — targeting 15 transactions and 5% conversion.",
-    },
-    {
-      q: "Will I be auto-enrolled?",
-      a: "Yes — when you upgrade to a plan that includes a program, you're auto-enrolled the next time you sign in. You can opt out in settings; we won't re-enroll you automatically after that.",
-    },
-    {
-      q: "What about agents on the Starter plan?",
-      a: "Starter doesn't include coaching. Upgrade to Pro to start Producer Track, or Premium for Top Producer Track.",
-    },
-    {
-      q: "How do you measure the conversion-rate target?",
-      a: "Lead-to-close — the percentage of contacts created in your CRM (any source) that result in a closed transaction. Visible on your performance dashboard with a moving 12-month window.",
-    },
-  ];
+  const faqs = COACHING_FAQ;
   return (
     <section className="mt-16">
       <h2 className="text-center text-xl font-semibold text-slate-900 md:text-2xl">
