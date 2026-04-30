@@ -3,8 +3,7 @@ import { getCachedAccessToken } from "./session/tokenCache";
 
 /** Base URL for `apps/leadsmartai` (Next) API routes, without trailing slash. */
 export function getLeadsmartApiBaseUrl(): string {
-  const fromEnv =
-    process.env.EXPO_PUBLIC_LEADSMART_API_URL ?? process.env.NEXT_PUBLIC_LEADSMART_API_URL;
+  const fromEnv = process.env.EXPO_PUBLIC_LEADSMART_API_URL;
   if (typeof fromEnv === "string" && fromEnv.trim()) {
     return fromEnv.trim().replace(/\/$/, "");
   }
@@ -31,10 +30,9 @@ export function getLeadsmartAccessToken(): string {
   return "";
 }
 
-/** Supabase project URL — `EXPO_PUBLIC_` or `NEXT_PUBLIC_` (shared `.env.local` with web). */
+/** Supabase project URL. */
 export function getSupabaseUrl(): string {
-  const fromEnv =
-    process.env.EXPO_PUBLIC_SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const fromEnv = process.env.EXPO_PUBLIC_SUPABASE_URL;
   if (typeof fromEnv === "string" && fromEnv.trim()) {
     return fromEnv.trim().replace(/\/$/, "");
   }
@@ -47,8 +45,7 @@ export function getSupabaseUrl(): string {
 
 /** Supabase anon key for Realtime + RLS. */
 export function getSupabaseAnonKey(): string {
-  const fromEnv =
-    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const fromEnv = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
   if (typeof fromEnv === "string" && fromEnv.trim()) {
     return fromEnv.trim();
   }

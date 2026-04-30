@@ -32,21 +32,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     ...config.extra,
-    /** Supports `EXPO_PUBLIC_*` (Expo) or `NEXT_PUBLIC_*` (shared .env.local with web). */
-    leadsmartApiUrl: envFirst(
-      process.env.EXPO_PUBLIC_LEADSMART_API_URL,
-      process.env.NEXT_PUBLIC_LEADSMART_API_URL
-    ),
+    leadsmartApiUrl: envFirst(process.env.EXPO_PUBLIC_LEADSMART_API_URL),
     /** Dev: Supabase JWT for `Authorization: Bearer` (same session as LeadSmart AI web). */
-    leadsmartAccessToken: envFirst(
-      process.env.EXPO_PUBLIC_LEADSMART_ACCESS_TOKEN,
-      process.env.NEXT_PUBLIC_LEADSMART_ACCESS_TOKEN
-    ),
-    supabaseUrl: envFirst(process.env.EXPO_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_URL),
-    supabaseAnonKey: envFirst(
-      process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ),
+    leadsmartAccessToken: envFirst(process.env.EXPO_PUBLIC_LEADSMART_ACCESS_TOKEN),
+    supabaseUrl: envFirst(process.env.EXPO_PUBLIC_SUPABASE_URL),
+    supabaseAnonKey: envFirst(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY),
     /** EAS project ID for `getExpoPushTokenAsync` (production / dev builds). */
     eas: {
       projectId: envFirst(process.env.EXPO_PUBLIC_EAS_PROJECT_ID, DEFAULT_EAS_PROJECT_ID),
