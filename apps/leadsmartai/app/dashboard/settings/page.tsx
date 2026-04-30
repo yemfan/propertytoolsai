@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import AgentAiSettingsPanel from "@/components/dashboard/AgentAiSettingsPanel";
 import AgentVoiceSettingsPanel from "@/components/dashboard/AgentVoiceSettingsPanel";
+import BriefingScheduleCard from "@/components/dashboard/BriefingScheduleCard";
 import MissedCallSettingsPanel from "@/components/dashboard/MissedCallSettingsPanel";
 import ChannelsCard from "@/components/dashboard/ChannelsCard";
 import ComplianceCard from "@/components/dashboard/ComplianceCard";
@@ -47,6 +48,13 @@ export default async function SettingsPage() {
                 Auto-text inbound callers when you can't pick up. Forward calls to your personal mobile and capture every missed lead.
               </p>
               <MissedCallSettingsPanel />
+            </div>
+            <div className="p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-1">Daily Briefings</h2>
+              <p className="mb-3 text-xs text-gray-500">
+                When the ☀️ morning plan and 🌙 evening summary fire each day on your dashboard and in the mobile app.
+              </p>
+              <BriefingScheduleCard />
             </div>
           </div>
         }
