@@ -68,17 +68,21 @@ export function AiChatPanel() {
     [messages, loading]
   );
 
-  // Floating button
+  // Floating button — uses the LeadSmart AI mascot so the assistant
+  // has a recognizable face in the corner before it's opened.
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-transform hover:scale-105"
-        aria-label="Open AI Assistant"
+        className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg ring-1 ring-blue-100 transition-transform hover:scale-105 hover:ring-blue-200"
+        aria-label="Open LeadSmart AI Assistant"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-        </svg>
+        <img
+          src="/ai-assistant-mascot.png"
+          alt=""
+          aria-hidden
+          className="h-14 w-14 object-contain"
+        />
       </button>
     );
   }
@@ -86,14 +90,25 @@ export function AiChatPanel() {
   return (
     <div className="fixed bottom-6 right-6 z-50 w-[380px] max-h-[560px] flex flex-col bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-blue-600 text-white">
-        <div>
-          <p className="text-sm font-bold">AI Assistant</p>
-          <p className="text-[11px] opacity-80">Ask about your leads, tasks, pipeline</p>
+      <div className="flex items-center justify-between gap-3 px-4 py-3 bg-blue-600 text-white">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/95 ring-1 ring-white/40">
+            <img
+              src="/ai-assistant-mascot.png"
+              alt=""
+              aria-hidden
+              className="h-8 w-8 object-contain"
+            />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-bold truncate">LeadSmart AI Assistant</p>
+            <p className="text-[11px] opacity-80 truncate">Ask about your leads, tasks, pipeline</p>
+          </div>
         </div>
         <button
           onClick={() => setOpen(false)}
-          className="text-white/80 hover:text-white text-xl leading-none"
+          className="text-white/80 hover:text-white text-xl leading-none shrink-0"
+          aria-label="Close LeadSmart AI Assistant"
         >
           &times;
         </button>
