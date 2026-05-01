@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { SmsConsentNotice, composeConsentVersion } from "@/components/consent/SmsConsentNotice";
 import { useSignupProfilePrefill, type SignupPrefillConsumer } from "@/lib/hooks/useSignupProfilePrefill";
 import { safeInternalRedirect } from "@/lib/loginUrl";
@@ -17,6 +18,7 @@ const CONSENT_LANGUAGES = ["en", "zh"] as const;
 function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { openAgentSignup } = useAuth();
   const { values: prefill, hasSession, loading: prefillLoading } = useSignupProfilePrefill("consumer");
   const pv = prefill as SignupPrefillConsumer;
 
@@ -119,6 +121,7 @@ function SignupForm() {
         }
 
         const after = safeInternalRedirect(searchParams.get("redirect"));
+        openAgentSignup({ fullName: fullName.trim(), email: email.trim() });
         router.push(after ?? "/");
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err ?? "");
@@ -221,6 +224,7 @@ function SignupForm() {
         }).catch(() => {});
       }
 
+      openAgentSignup({ fullName: fullName.trim(), email: email.trim() });
       router.push("/");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e ?? "");
