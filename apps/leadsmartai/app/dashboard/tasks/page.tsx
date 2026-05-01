@@ -13,24 +13,22 @@ export const metadata: Metadata = {
 export default async function TasksPage() {
   const ctx = await getCurrentAgentContext();
 
-  const [tasksRes, leadsRes] = await Promise.all([
-    supabaseServer
-      .from("crm_tasks")
-      .select("id, title, description, status, priority, due_at, completed_at, source, contact_id, created_at, updated_at")
-      .eq("agent_id", ctx.agentId)
-      .order("updated_at", { ascending: false })
-      .limit(500),
-    supabaseServer
-      .from("contacts")
-      .select("id, name")
-      .eq("agent_id", ctx.agentId)
-      .limit(500),
-  ]);
+  // TasksClient fetches the unified task list (crm + playbook) on
+  // mount via /api/dashboard/tasks/unified. We still SSR the contact
+  // list so the "+ Add task" form's contact picker is populated
+  // immediately without a flash.
+  const { data: leads } = await supabaseServer
+    .from("contacts")
+    .select("id, name")
+    .eq("agent_id", ctx.agentId)
+    .limit(500);
 
   return (
     <TasksClient
-      tasks={(tasksRes.data ?? []) as any[]}
-      leads={(leadsRes.data ?? []).map((l: any) => ({ id: String(l.id), name: l.name }))}
+      leads={(leads ?? []).map((l: { id: string | number; name: string | null }) => ({
+        id: String(l.id),
+        name: l.name,
+      }))}
     />
   );
 }
