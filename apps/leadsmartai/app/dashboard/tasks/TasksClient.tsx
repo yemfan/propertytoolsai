@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Check, X, CalendarClock, Pencil } from "lucide-react";
@@ -182,47 +181,61 @@ export default function TasksClient({
    * Routes the patch to the correct backend based on the task's
    * namespaced id prefix:
    *   - "crm:<uuid>" → PATCH /api/dashboard/tasks
-   *   - "pb:<uuid>"  → PATCH /api/dashboard/playbooks/[taskId] (via
-   *                    `completed: boolean` body, the only mutation
-   *                    the playbook endpoint currently supports)
-   *
-   * Phase 2 lands richer playbook mutations (cancel/snooze/edit)
-   * — for now playbook tasks only support marking complete.
+   *   - "pb:<uuid>"  → PATCH /api/dashboard/playbooks/[taskId]
+   *                    Supported body fields: completed, cancelled, dueDate.
+   *                    Title / description / priority edits aren't
+   *                    supported on playbook rows yet — they live on
+   *                    the playbook detail flows.
    */
   async function updateTask(id: string, patch: Record<string, unknown>) {
     setActionLoading(true); setActionMsg(null);
     try {
       if (id.startsWith("pb:")) {
         const rawId = id.slice(3);
-        // Playbook backend only supports a completion toggle today.
-        // Map "status" patches to the toggle; reject other mutations.
-        if (patch.status === "done" || patch.status === "open") {
-          const res = await fetch(`/api/dashboard/playbooks/${rawId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ completed: patch.status === "done" }),
-          });
-          const body = await res.json().catch(() => ({}));
-          if (!res.ok || !body.ok) throw new Error(body.error ?? "Update failed");
-          setTasks((prev) =>
-            prev.map((t) =>
-              t.id === id
-                ? {
-                    ...t,
-                    status: patch.status === "done" ? "done" : "open",
-                    completed_at: patch.status === "done" ? new Date().toISOString() : null,
-                  }
-                : t,
-            ),
+        const pbBody: Record<string, unknown> = {};
+        if (patch.status === "done") pbBody.completed = true;
+        else if (patch.status === "open") {
+          // Reopening clears whichever closed state the row was in.
+          pbBody.completed = false;
+          pbBody.cancelled = false;
+        } else if (patch.status === "cancelled") pbBody.cancelled = true;
+        if (patch.dueAt) {
+          // Convert ISO → YYYY-MM-DD; playbook tasks store date only.
+          pbBody.dueDate = String(patch.dueAt).slice(0, 10);
+        }
+        if (Object.keys(pbBody).length === 0) {
+          setActionMsg(
+            "Title / description / priority edits aren't supported on playbook tasks — open the playbook view to edit.",
           );
-          setEditingId(null);
-          setActionMsg("Updated.");
-          loadStats();
           return;
         }
-        setActionMsg(
-          "Cancel / snooze / edit on playbook tasks is coming in the next update — open the playbook view to edit there.",
+        const res = await fetch(`/api/dashboard/playbooks/${rawId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(pbBody),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || !body.ok) throw new Error(body.error ?? "Update failed");
+        setTasks((prev) =>
+          prev.map((t) => {
+            if (t.id !== id) return t;
+            const next = { ...t };
+            if (patch.status === "done") {
+              next.status = "done";
+              next.completed_at = new Date().toISOString();
+            } else if (patch.status === "cancelled") {
+              next.status = "cancelled";
+            } else if (patch.status === "open") {
+              next.status = "open";
+              next.completed_at = null;
+            }
+            if (typeof patch.dueAt === "string") next.due_at = patch.dueAt;
+            return next;
+          }),
         );
+        setEditingId(null);
+        setActionMsg("Updated.");
+        loadStats();
         return;
       }
       const rawId = id.startsWith("crm:") ? id.slice(4) : id;
@@ -520,11 +533,7 @@ export default function TasksClient({
                             <Check className="h-4 w-4" strokeWidth={2.5} />
                           </TaskIconButton>
                         )}
-                        {/* Cancel / snooze / edit are CRM-only in Phase 1.
-                            Playbook tasks land richer mutations in Phase 2;
-                            for now they show a "manage in playbook view"
-                            link instead. */}
-                        {!isPlaybookRow && t.status === "open" && (
+                        {t.status === "open" && (
                           <>
                             <TaskIconButton
                               onClick={() => void markCancelled(t.id)}
@@ -549,15 +558,7 @@ export default function TasksClient({
                           >
                             <Pencil className="h-4 w-4" strokeWidth={2} />
                           </TaskIconButton>
-                        ) : (
-                          <Link
-                            href="/dashboard/playbooks"
-                            className="text-[10px] font-medium text-gray-400 hover:text-gray-700 hover:underline px-1.5"
-                            title="Manage from playbook view"
-                          >
-                            Manage →
-                          </Link>
-                        )}
+                        ) : null}
                       </div>
                     </td>
                   </tr>

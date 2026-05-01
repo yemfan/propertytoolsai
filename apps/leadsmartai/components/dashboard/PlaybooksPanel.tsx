@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Check, Plus } from "lucide-react";
 import type { PlaybookAnchor } from "@/lib/playbooks/definitions";
 import type { PlaybookTaskRow } from "@/lib/playbooks/types";
 
@@ -311,35 +312,39 @@ export function PlaybooksPanel({
                         const isSelected = selectedIds.has(t.id);
                         return (
                           <li key={t.id} className="flex items-start gap-2">
-                            {/*
-                              Selection checkbox — for "Add to Tasks
-                              List". Hidden once the item is complete
-                              (no point promoting a finished task to
-                              an active list). Slate styling so it
-                              reads as a different control than the
-                              blue completion checkbox.
-                            */}
-                            {complete ? (
-                              <span
-                                aria-hidden
-                                className="mt-0.5 inline-block h-4 w-4 shrink-0"
-                              />
-                            ) : (
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => toggleSelected(t.id)}
-                                aria-label={`Select "${t.title}" to add to Tasks list`}
-                                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-slate-700 accent-slate-700"
-                              />
-                            )}
-                            <input
-                              type="checkbox"
-                              checked={complete}
-                              onChange={(e) => void toggleTask(t, e.target.checked)}
-                              aria-label={`Mark "${t.title}" ${complete ? "incomplete" : "complete"}`}
-                              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300"
-                            />
+                            <div className="mt-0.5 inline-flex shrink-0 items-center gap-0.5">
+                              {/*
+                                "Add to Tasks list" — toggle selection
+                                for the bulk header button. Hidden once
+                                complete (no point promoting a done item).
+                              */}
+                              {complete ? (
+                                <span aria-hidden className="inline-block h-6 w-6" />
+                              ) : (
+                                <PlaybookActionButton
+                                  active={isSelected}
+                                  onClick={() => toggleSelected(t.id)}
+                                  title={
+                                    isSelected
+                                      ? "Remove from Tasks list selection"
+                                      : "Select to add to Tasks list"
+                                  }
+                                  ariaLabel={`Select "${t.title}" to add to Tasks list`}
+                                  tone="select"
+                                >
+                                  <Plus className="h-4 w-4" strokeWidth={2.25} />
+                                </PlaybookActionButton>
+                              )}
+                              <PlaybookActionButton
+                                active={complete}
+                                onClick={() => void toggleTask(t, !complete)}
+                                title={complete ? "Mark incomplete" : "Mark complete"}
+                                ariaLabel={`Mark "${t.title}" ${complete ? "incomplete" : "complete"}`}
+                                tone="complete"
+                              >
+                                <Check className="h-4 w-4" strokeWidth={2.5} />
+                              </PlaybookActionButton>
+                            </div>
                             <div className="flex-1">
                               <div
                                 className={`text-sm ${
@@ -412,16 +417,26 @@ export function PlaybooksPanel({
  * On success the parent's `onApplied(count, title)` runs so the
  * PlaybooksPanel can show a non-blocking confirmation banner.
  */
-function PlaybookPickerModal({
+export function PlaybookPickerModal({
   anchorKind,
   anchorId,
   defaultAnchorDate,
+  leads,
   onClose,
   onApplied,
 }: {
   anchorKind: PlaybookAnchor;
   anchorId: string | null;
   defaultAnchorDate?: string;
+  /**
+   * If provided, the picker also lists playbooks that don't accept the
+   * parent's `anchorKind` but do accept "contact" — and the review step
+   * shows a contact dropdown so the agent picks the lead. Used on the
+   * standalone /dashboard/playbooks page where `anchorKind="generic"`
+   * but lead-bound playbooks (write_offer, seller_presentation,
+   * listing_launch) should still be applicable.
+   */
+  leads?: Array<{ id: string; name: string | null }>;
   onClose: () => void;
   onApplied: (createdCount: number, title: string) => void;
 }) {
@@ -431,10 +446,18 @@ function PlaybookPickerModal({
   const [anchorDate, setAnchorDate] = useState<string>(
     defaultAnchorDate ?? todayYmd(),
   );
+  /**
+   * Contact picked in the review step when the selected playbook needs
+   * a contact (i.e. doesn't accept the parent's anchorKind). Empty
+   * string until the agent picks one.
+   */
+  const [pickedContactId, setPickedContactId] = useState<string>("");
   /** Indexes of items the agent unchecked in the review step. */
   const [skipIndexes, setSkipIndexes] = useState<Set<number>>(new Set());
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const contactPickerEnabled = Array.isArray(leads) && leads.length > 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -445,24 +468,39 @@ function PlaybookPickerModal({
         playbooks?: PlaybookMeta[];
       } | null;
       if (!cancelled && body?.ok && Array.isArray(body.playbooks)) {
-        setPlaybooks(body.playbooks.filter((p) => p.validAnchors.includes(anchorKind)));
+        setPlaybooks(
+          body.playbooks.filter(
+            (p) =>
+              p.validAnchors.includes(anchorKind) ||
+              (contactPickerEnabled && p.validAnchors.includes("contact")),
+          ),
+        );
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [anchorKind]);
+  }, [anchorKind, contactPickerEnabled]);
 
   const selectedPlaybook = playbooks.find((p) => p.key === selected) ?? null;
   const includedCount =
     selectedPlaybook != null
       ? selectedPlaybook.items.length - skipIndexes.size
       : 0;
+  /**
+   * Determines whether the selected playbook needs a contact pick at
+   * apply-time. True iff the playbook doesn't accept the parent's
+   * `anchorKind` (so we'd otherwise be applying it to a kind it
+   * doesn't support — fall back to "contact").
+   */
+  const needsContact =
+    selectedPlaybook != null && !selectedPlaybook.validAnchors.includes(anchorKind);
 
   function goToReview() {
     if (!selected) return;
     // Reset skip state when entering review (e.g. after re-picking).
     setSkipIndexes(new Set());
+    setPickedContactId("");
     setError(null);
     setStage("review");
   }
@@ -482,16 +520,22 @@ function PlaybookPickerModal({
       setError("Pick at least one task to apply.");
       return;
     }
+    if (needsContact && !pickedContactId) {
+      setError("Pick a contact for this playbook.");
+      return;
+    }
     setError(null);
     setApplying(true);
     try {
+      const effectiveAnchorKind: PlaybookAnchor = needsContact ? "contact" : anchorKind;
+      const effectiveAnchorId = needsContact ? pickedContactId : anchorId;
       const res = await fetch("/api/dashboard/playbooks", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           templateKey: selectedPlaybook.key,
-          anchorKind,
-          anchorId,
+          anchorKind: effectiveAnchorKind,
+          anchorId: effectiveAnchorId,
           anchorDate,
           skipIndexes: Array.from(skipIndexes),
         }),
@@ -570,6 +614,15 @@ function PlaybookPickerModal({
             onAnchorDateChange={setAnchorDate}
             skipIndexes={skipIndexes}
             onToggleItem={toggleItem}
+            contactPicker={
+              needsContact && leads
+                ? {
+                    leads,
+                    pickedId: pickedContactId,
+                    onPick: setPickedContactId,
+                  }
+                : null
+            }
           />
         ) : null}
 
@@ -608,7 +661,7 @@ function PlaybookPickerModal({
             <button
               type="button"
               onClick={() => void apply()}
-              disabled={includedCount === 0 || applying}
+              disabled={includedCount === 0 || applying || (needsContact && !pickedContactId)}
               className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
             >
               {applying
@@ -633,12 +686,19 @@ function ReviewStep({
   onAnchorDateChange,
   skipIndexes,
   onToggleItem,
+  contactPicker,
 }: {
   playbook: PlaybookMeta;
   anchorDate: string;
   onAnchorDateChange: (next: string) => void;
   skipIndexes: Set<number>;
   onToggleItem: (idx: number) => void;
+  /** Non-null when the playbook needs a contact and the parent supplied a list. */
+  contactPicker: {
+    leads: Array<{ id: string; name: string | null }>;
+    pickedId: string;
+    onPick: (id: string) => void;
+  } | null;
 }) {
   const grouped = useMemo(() => {
     const out = new Map<string, Array<{ item: PlaybookItemMeta; idx: number }>>();
@@ -653,6 +713,28 @@ function ReviewStep({
 
   return (
     <div className="mt-4 space-y-4">
+      {contactPicker ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <label className="block text-xs font-medium text-amber-900">
+            Contact (lead) *
+          </label>
+          <p className="mt-0.5 text-[11px] text-amber-800">
+            This playbook is lead-bound — every task will be linked to the contact you pick.
+          </p>
+          <select
+            value={contactPicker.pickedId}
+            onChange={(e) => contactPicker.onPick(e.target.value)}
+            className="mt-2 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm"
+          >
+            <option value="">Select a contact…</option>
+            {contactPicker.leads.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name ?? `Contact #${l.id}`}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
       <div className="rounded-lg bg-slate-50 p-3">
         <label className="block text-xs font-medium text-slate-700">
           {playbook.anchorHint} *
@@ -707,6 +789,49 @@ function ReviewStep({
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * Square icon-only toggle button used for the per-row playbook actions
+ * (add-to-tasks selection + mark-complete). `active` flips the button to
+ * a filled state so the agent can read the current value at a glance —
+ * blue ring when selected for promotion, emerald fill when completed.
+ */
+export function PlaybookActionButton({
+  children,
+  onClick,
+  title,
+  ariaLabel,
+  active,
+  tone,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  title: string;
+  ariaLabel: string;
+  active: boolean;
+  tone: "select" | "complete";
+}) {
+  const toneClasses =
+    tone === "complete"
+      ? active
+        ? "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700"
+        : "border-slate-300 bg-white text-slate-400 hover:border-emerald-500 hover:text-emerald-600"
+      : active
+        ? "border-blue-500 bg-blue-50 text-blue-700 hover:bg-blue-100"
+        : "border-slate-300 bg-white text-slate-400 hover:border-slate-400 hover:text-slate-700";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={ariaLabel}
+      aria-pressed={active}
+      className={`inline-flex h-6 w-6 items-center justify-center rounded-md border transition ${toneClasses}`}
+    >
+      {children}
+    </button>
   );
 }
 

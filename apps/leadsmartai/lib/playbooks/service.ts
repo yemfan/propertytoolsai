@@ -101,7 +101,7 @@ export async function listTasksForAnchor(
  */
 export async function listAllTasksForAgent(
   agentId: string,
-  opts?: { includeCompleted?: boolean },
+  opts?: { includeCompleted?: boolean; includeCancelled?: boolean },
 ): Promise<PlaybookTaskRow[]> {
   let q = supabaseAdmin
     .from("playbook_task_instances")
@@ -111,6 +111,9 @@ export async function listAllTasksForAgent(
     .limit(500);
   if (!opts?.includeCompleted) {
     q = q.is("completed_at", null);
+  }
+  if (!opts?.includeCancelled) {
+    q = q.is("cancelled_at", null);
   }
   const { data, error } = await q;
   if (error) throw new Error(error.message);
@@ -126,6 +129,58 @@ export async function toggleTask(
     .from("playbook_task_instances")
     .update({
       completed_at: completed ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", taskId)
+    .eq("agent_id", agentId)
+    .select("*")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as PlaybookTaskRow | null) ?? null;
+}
+
+/**
+ * Soft-cancel — sets cancelled_at instead of removing the row, so the
+ * agent can still see "things I decided not to do" in the cancelled
+ * tab. Pass cancelled=false to un-cancel (back to open).
+ */
+export async function cancelTask(
+  agentId: string,
+  taskId: string,
+  cancelled: boolean,
+): Promise<PlaybookTaskRow | null> {
+  const { data, error } = await supabaseAdmin
+    .from("playbook_task_instances")
+    .update({
+      cancelled_at: cancelled ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", taskId)
+    .eq("agent_id", agentId)
+    .select("*")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as PlaybookTaskRow | null) ?? null;
+}
+
+/**
+ * Move the task to a later (or earlier) date. Accepts YYYY-MM-DD; pass
+ * null to clear the due date entirely. Doesn't touch completed_at /
+ * cancelled_at — caller decides whether rescheduling should reactivate
+ * a closed task (so far: no, just rescheduling).
+ */
+export async function rescheduleTask(
+  agentId: string,
+  taskId: string,
+  dueDate: string | null,
+): Promise<PlaybookTaskRow | null> {
+  if (dueDate != null && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+    throw new Error("dueDate must be YYYY-MM-DD or null");
+  }
+  const { data, error } = await supabaseAdmin
+    .from("playbook_task_instances")
+    .update({
+      due_date: dueDate,
       updated_at: new Date().toISOString(),
     })
     .eq("id", taskId)

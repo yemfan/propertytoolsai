@@ -139,25 +139,26 @@ type PlaybookRowSlim = {
   section: string | null;
   due_date: string | null;
   completed_at: string | null;
+  cancelled_at: string | null;
 };
 
 async function fetchPlaybookTasks(
   agentId: string,
   status: "all" | "open" | "done" | "cancelled",
 ): Promise<PlaybookRowSlim[]> {
-  // Playbook rows have no "cancelled" state yet (Phase 2). For the
-  // cancelled filter return nothing; for done filter return rows
-  // with completed_at; for open/all return everything (open path
-  // filters at normalize time).
-  if (status === "cancelled") return [];
   let q = supabaseAdmin
     .from("playbook_task_instances")
-    .select("id,template_key,apply_batch_id,anchor_kind,anchor_id,title,notes,section,due_date,completed_at")
+    .select("id,template_key,apply_batch_id,anchor_kind,anchor_id,title,notes,section,due_date,completed_at,cancelled_at")
     .eq("agent_id", agentId)
     .order("due_date", { ascending: true, nullsFirst: false })
     .limit(250);
-  if (status === "done") q = q.not("completed_at", "is", null);
-  if (status === "open") q = q.is("completed_at", null);
+  if (status === "open") {
+    q = q.is("completed_at", null).is("cancelled_at", null);
+  } else if (status === "done") {
+    q = q.not("completed_at", "is", null);
+  } else if (status === "cancelled") {
+    q = q.not("cancelled_at", "is", null);
+  }
   const { data, error } = await q;
   if (error) {
     console.error("[tasks/unified] playbook fetch", error);
@@ -236,7 +237,7 @@ function normalizePlaybookTask(
     source: isCoaching ? "coaching" : "playbook",
     title: row.title,
     description: row.notes ?? null,
-    status: row.completed_at ? "done" : "open",
+    status: row.cancelled_at ? "cancelled" : row.completed_at ? "done" : "open",
     priority: null,
     due_at: dueAtIso,
     completed_at: row.completed_at,
