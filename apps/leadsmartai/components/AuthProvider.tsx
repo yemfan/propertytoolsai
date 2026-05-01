@@ -91,7 +91,9 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       },
       closeAuth: () => setAuthOpen(false),
       openAgentSignup: (prefill) => {
-        if (user) return;
+        // Allowed for both signed-out (collect account + agent fields) and
+        // signed-in users (post-signup "Complete agent setup" upgrade path).
+        // The form switches headings/fields based on session state.
         setAgentSignupPrefill(prefill ?? null);
         setAgentSignupOpen(true);
       },
