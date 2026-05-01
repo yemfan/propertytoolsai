@@ -12,6 +12,14 @@ type PlaybookMeta = {
   validAnchors: PlaybookAnchor[];
   anchorHint: string;
   itemCount: number;
+  items: PlaybookItemMeta[];
+};
+
+type PlaybookItemMeta = {
+  title: string;
+  section: string | null;
+  offsetDays: number;
+  notes: string | null;
 };
 
 /**
@@ -375,8 +383,15 @@ export function PlaybooksPanel({
           anchorId={anchorId}
           defaultAnchorDate={defaultAnchorDate}
           onClose={() => setShowPicker(false)}
-          onApplied={() => {
+          onApplied={(count, title) => {
             setShowPicker(false);
+            setAddToTasksMessage(
+              count === 1
+                ? `Added 1 task from "${title}".`
+                : `Added ${count} tasks from "${title}".`,
+            );
+            // Clear the success banner after a few seconds — non-blocking.
+            window.setTimeout(() => setAddToTasksMessage(null), 5000);
             void load();
           }}
         />
@@ -385,6 +400,18 @@ export function PlaybooksPanel({
   );
 }
 
+/**
+ * Two-stage modal:
+ *   1. `pick`   — pick a playbook from the available catalog. Bottom
+ *                 button reads "Review tasks →" once one is selected.
+ *   2. `review` — show the picked playbook's items with checkboxes
+ *                 (all checked by default), the anchor date, and a
+ *                 final "Apply N tasks" button. Deselected items are
+ *                 sent as `skipIndexes` so they're not created.
+ *
+ * On success the parent's `onApplied(count, title)` runs so the
+ * PlaybooksPanel can show a non-blocking confirmation banner.
+ */
 function PlaybookPickerModal({
   anchorKind,
   anchorId,
@@ -396,13 +423,16 @@ function PlaybookPickerModal({
   anchorId: string | null;
   defaultAnchorDate?: string;
   onClose: () => void;
-  onApplied: () => void;
+  onApplied: (createdCount: number, title: string) => void;
 }) {
   const [playbooks, setPlaybooks] = useState<PlaybookMeta[]>([]);
+  const [stage, setStage] = useState<"pick" | "review">("pick");
   const [selected, setSelected] = useState<string | null>(null);
   const [anchorDate, setAnchorDate] = useState<string>(
     defaultAnchorDate ?? todayYmd(),
   );
+  /** Indexes of items the agent unchecked in the review step. */
+  const [skipIndexes, setSkipIndexes] = useState<Set<number>>(new Set());
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -423,8 +453,35 @@ function PlaybookPickerModal({
     };
   }, [anchorKind]);
 
-  async function apply() {
+  const selectedPlaybook = playbooks.find((p) => p.key === selected) ?? null;
+  const includedCount =
+    selectedPlaybook != null
+      ? selectedPlaybook.items.length - skipIndexes.size
+      : 0;
+
+  function goToReview() {
     if (!selected) return;
+    // Reset skip state when entering review (e.g. after re-picking).
+    setSkipIndexes(new Set());
+    setError(null);
+    setStage("review");
+  }
+
+  function toggleItem(idx: number) {
+    setSkipIndexes((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  }
+
+  async function apply() {
+    if (!selectedPlaybook) return;
+    if (includedCount === 0) {
+      setError("Pick at least one task to apply.");
+      return;
+    }
     setError(null);
     setApplying(true);
     try {
@@ -432,10 +489,11 @@ function PlaybookPickerModal({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          templateKey: selected,
+          templateKey: selectedPlaybook.key,
           anchorKind,
           anchorId,
           anchorDate,
+          skipIndexes: Array.from(skipIndexes),
         }),
       });
       const body = (await res.json().catch(() => ({}))) as {
@@ -446,7 +504,7 @@ function PlaybookPickerModal({
         setError(body.error ?? "Failed to apply.");
         return;
       }
-      onApplied();
+      onApplied(includedCount, selectedPlaybook.title);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error.");
     } finally {
@@ -454,16 +512,18 @@ function PlaybookPickerModal({
     }
   }
 
-  const selectedPlaybook = playbooks.find((p) => p.key === selected) ?? null;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
       <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-xl">
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">Apply playbook</h3>
+            <h3 className="text-base font-semibold text-slate-900">
+              {stage === "pick" ? "Apply playbook" : selectedPlaybook?.title ?? "Review tasks"}
+            </h3>
             <p className="mt-0.5 text-xs text-slate-500">
-              Pick a curated checklist. Tasks will be scheduled relative to your anchor date.
+              {stage === "pick"
+                ? "Pick a curated checklist. You'll review the tasks before they're added."
+                : "Untick anything you don't want to add. Each task's due date is offset from your anchor date."}
             </p>
           </div>
           <button
@@ -476,48 +536,41 @@ function PlaybookPickerModal({
           </button>
         </div>
 
-        <div className="mt-4 grid max-h-[400px] gap-2 overflow-y-auto">
-          {playbooks.length === 0 ? (
-            <p className="text-sm text-slate-500">No playbooks available for this anchor.</p>
-          ) : (
-            playbooks.map((p) => (
-              <button
-                key={p.key}
-                type="button"
-                onClick={() => setSelected(p.key)}
-                className={`rounded-lg border p-3 text-left transition-colors ${
-                  selected === p.key
-                    ? "border-slate-900 bg-slate-900/5"
-                    : "border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold text-slate-900">{p.title}</div>
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
-                    {p.itemCount} tasks
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-600">{p.description}</p>
-              </button>
-            ))
-          )}
-        </div>
-
-        {selectedPlaybook ? (
-          <div className="mt-4 rounded-lg bg-slate-50 p-3">
-            <label className="block text-xs font-medium text-slate-700">
-              {selectedPlaybook.anchorHint} *
-            </label>
-            <input
-              type="date"
-              value={anchorDate}
-              onChange={(e) => setAnchorDate(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-            />
-            <p className="mt-1 text-[11px] text-slate-500">
-              Each task&apos;s due date is offset from this anchor (e.g. &quot;7 days before&quot;).
-            </p>
+        {stage === "pick" ? (
+          <div className="mt-4 grid max-h-[400px] gap-2 overflow-y-auto">
+            {playbooks.length === 0 ? (
+              <p className="text-sm text-slate-500">No playbooks available for this anchor.</p>
+            ) : (
+              playbooks.map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => setSelected(p.key)}
+                  className={`rounded-lg border p-3 text-left transition-colors ${
+                    selected === p.key
+                      ? "border-slate-900 bg-slate-900/5"
+                      : "border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-semibold text-slate-900">{p.title}</div>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
+                      {p.itemCount} tasks
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-600">{p.description}</p>
+                </button>
+              ))
+            )}
           </div>
+        ) : selectedPlaybook ? (
+          <ReviewStep
+            playbook={selectedPlaybook}
+            anchorDate={anchorDate}
+            onAnchorDateChange={setAnchorDate}
+            skipIndexes={skipIndexes}
+            onToggleItem={toggleItem}
+          />
         ) : null}
 
         {error ? (
@@ -525,25 +578,143 @@ function PlaybookPickerModal({
         ) : null}
 
         <div className="mt-4 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => void apply()}
-            disabled={!selected || applying}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-          >
-            {applying ? "Applying…" : "Apply"}
-          </button>
+          {stage === "review" ? (
+            <button
+              type="button"
+              onClick={() => setStage("pick")}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+            >
+              ← Back
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+          )}
+          {stage === "pick" ? (
+            <button
+              type="button"
+              onClick={goToReview}
+              disabled={!selected}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              Review tasks →
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void apply()}
+              disabled={includedCount === 0 || applying}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              {applying
+                ? "Applying…"
+                : `Apply ${includedCount} task${includedCount === 1 ? "" : "s"}`}
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
+}
+
+/**
+ * Review-stage body. Renders a checkbox per playbook item grouped by
+ * section (when the playbook author tagged sections), plus the anchor
+ * date input. All items default to checked; agents untick to exclude.
+ */
+function ReviewStep({
+  playbook,
+  anchorDate,
+  onAnchorDateChange,
+  skipIndexes,
+  onToggleItem,
+}: {
+  playbook: PlaybookMeta;
+  anchorDate: string;
+  onAnchorDateChange: (next: string) => void;
+  skipIndexes: Set<number>;
+  onToggleItem: (idx: number) => void;
+}) {
+  const grouped = useMemo(() => {
+    const out = new Map<string, Array<{ item: PlaybookItemMeta; idx: number }>>();
+    playbook.items.forEach((item, idx) => {
+      const key = item.section ?? "";
+      const list = out.get(key) ?? [];
+      list.push({ item, idx });
+      out.set(key, list);
+    });
+    return Array.from(out.entries()); // [section, items[]]
+  }, [playbook]);
+
+  return (
+    <div className="mt-4 space-y-4">
+      <div className="rounded-lg bg-slate-50 p-3">
+        <label className="block text-xs font-medium text-slate-700">
+          {playbook.anchorHint} *
+        </label>
+        <input
+          type="date"
+          value={anchorDate}
+          onChange={(e) => onAnchorDateChange(e.target.value)}
+          className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div className="max-h-[360px] overflow-y-auto rounded-lg border border-slate-200">
+        {grouped.map(([section, items], gi) => (
+          <div key={`${section}-${gi}`}>
+            {section ? (
+              <div className="border-b border-slate-100 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                {section}
+              </div>
+            ) : null}
+            <ul className="divide-y divide-slate-100">
+              {items.map(({ item, idx }) => {
+                const checked = !skipIndexes.has(idx);
+                return (
+                  <li key={idx}>
+                    <label className="flex cursor-pointer items-start gap-3 px-3 py-2.5 hover:bg-slate-50">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => onToggleItem(idx)}
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className={`text-sm leading-tight ${checked ? "text-slate-900" : "text-slate-400 line-through"}`}>
+                          {item.title}
+                        </div>
+                        {item.notes ? (
+                          <p className={`mt-0.5 text-[11px] leading-snug ${checked ? "text-slate-500" : "text-slate-400"}`}>
+                            {item.notes}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span className="shrink-0 text-[10px] text-slate-400 tabular-nums">
+                        {formatOffset(item.offsetDays)}
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** "+3d", "today", "−7d" — compact label for the offset column. */
+function formatOffset(days: number): string {
+  if (days === 0) return "today";
+  if (days > 0) return `+${days}d`;
+  return `${days}d`;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────
