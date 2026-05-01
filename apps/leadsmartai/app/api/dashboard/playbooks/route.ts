@@ -58,7 +58,11 @@ export async function GET(req: Request) {
 
     if (all) {
       const includeCompleted = url.searchParams.get("includeCompleted") === "1";
-      const tasks = await listAllTasksForAgent(String(agentId), { includeCompleted });
+      const includeCancelled = url.searchParams.get("includeCancelled") === "1";
+      const tasks = await listAllTasksForAgent(String(agentId), {
+        includeCompleted,
+        includeCancelled,
+      });
       return NextResponse.json({ ok: true, tasks });
     }
 

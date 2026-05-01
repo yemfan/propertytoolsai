@@ -39,7 +39,8 @@ export const PLAYBOOKS: Playbook[] = [
     title: "Write an offer",
     description:
       "Prep through submission for a buyer-rep offer. Anchor = planned offer submission date.",
-    validAnchors: ["transaction", "contact", "generic"],
+    // Lead-bound: an offer always exists for a specific buyer.
+    validAnchors: ["transaction", "contact"],
     anchorHint: "Planned submit date",
     items: [
       // Prep
@@ -110,101 +111,13 @@ export const PLAYBOOKS: Playbook[] = [
     ],
   },
   {
-    key: "host_open_house",
-    category: "open_house",
-    title: "Host an open house",
-    description:
-      "Prep, day-of, and follow-up. Anchor = the open-house date.",
-    validAnchors: ["open_house", "transaction", "generic"],
-    anchorHint: "Open house date",
-    items: [
-      // Before
-      {
-        section: "1 week before",
-        title: "Confirm open house with seller + neighbors",
-        notes: "Courtesy notice to immediate neighbors keeps the peace.",
-        offsetDays: -7,
-      },
-      {
-        section: "1 week before",
-        title: "Order yard signs + directional arrows",
-        notes: "Check intersections — minimum 4 pointers, more if on a side street.",
-        offsetDays: -7,
-      },
-      {
-        section: "1 week before",
-        title: "Send invite blast to sphere + past clients in area",
-        offsetDays: -6,
-      },
-      {
-        section: "3 days before",
-        title: "Print flyers + sign-in sheets (or prep iPad kiosk)",
-        notes: "If iPad: test the sign-in URL + QR code today, not day-of.",
-        offsetDays: -3,
-      },
-      {
-        section: "3 days before",
-        title: "Schedule broker preview (optional)",
-        offsetDays: -3,
-      },
-      {
-        section: "3 days before",
-        title: "Confirm MLS listing has open-house entry with correct time",
-        offsetDays: -3,
-      },
-      {
-        section: "Day before",
-        title: "Walk through + declutter touch-ups + music + snacks shopping",
-        offsetDays: -1,
-      },
-      // Day of
-      {
-        section: "Day of",
-        title: "Arrive 45 min early — set signs, open windows, light candles",
-        offsetDays: 0,
-      },
-      {
-        section: "Day of",
-        title: "Launch iPad kiosk + verify online sync",
-        notes: "Home screen installed, airplane-mode test the queue flush.",
-        offsetDays: 0,
-      },
-      {
-        section: "Day of",
-        title: "Greet every visitor + sign-in prompt",
-        offsetDays: 0,
-      },
-      // After
-      {
-        section: "After",
-        title: "Pick up signs + lock up",
-        offsetDays: 0,
-      },
-      {
-        section: "After",
-        title: "Send thank-you to every opted-in visitor",
-        notes: "Auto-sent next-day, but skim the list for VIPs worth a personal touch.",
-        offsetDays: 1,
-      },
-      {
-        section: "After",
-        title: "Seller recap: visitor count, hot leads, feedback themes",
-        offsetDays: 1,
-      },
-      {
-        section: "After",
-        title: "3-day check-in with hot-timeline visitors",
-        offsetDays: 3,
-      },
-    ],
-  },
-  {
     key: "seller_presentation",
     category: "listing",
     title: "Seller presentation",
     description:
       "Prep through listing agreement. Anchor = presentation meeting date.",
-    validAnchors: ["contact", "transaction", "generic"],
+    // Lead-bound: a presentation is always prepped for a specific seller.
+    validAnchors: ["contact", "transaction"],
     anchorHint: "Presentation meeting date",
     items: [
       // Prep
@@ -282,7 +195,10 @@ export const PLAYBOOKS: Playbook[] = [
     title: "Listing launch week",
     description:
       "Day of MLS go-live through the critical first 72 hours. Anchor = MLS live date.",
-    validAnchors: ["transaction", "generic"],
+    // Lead-bound: every listing launch has a seller behind it. Apply
+    // from the transaction once it exists, or from the seller contact
+    // pre-listing.
+    validAnchors: ["transaction", "contact"],
     anchorHint: "MLS go-live date",
     items: [
       {
