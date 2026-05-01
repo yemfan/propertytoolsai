@@ -31,7 +31,9 @@ export async function GET(req: Request) {
     const all = url.searchParams.get("all") === "1";
 
     if (!anchorKind && !all) {
-      // Metadata-only catalog for the picker.
+      // Metadata catalog for the picker. Include `items` so the
+      // review-tasks step in the modal can render checkboxes
+      // without an extra round-trip.
       return NextResponse.json({
         ok: true,
         playbooks: PLAYBOOKS.map((p) => ({
@@ -42,6 +44,12 @@ export async function GET(req: Request) {
           validAnchors: p.validAnchors,
           anchorHint: p.anchorHint,
           itemCount: p.items.length,
+          items: p.items.map((it) => ({
+            title: it.title,
+            section: it.section ?? null,
+            offsetDays: it.offsetDays,
+            notes: it.notes ?? null,
+          })),
         })),
       });
     }
@@ -75,6 +83,7 @@ export async function POST(req: Request) {
       anchorKind: PlaybookAnchor;
       anchorId: string | null;
       anchorDate: string;
+      skipIndexes: number[];
     }>;
     if (!body.templateKey || !body.anchorKind || !body.anchorDate) {
       return NextResponse.json(
@@ -88,6 +97,9 @@ export async function POST(req: Request) {
       anchorKind: body.anchorKind,
       anchorId: body.anchorId ?? null,
       anchorDate: body.anchorDate,
+      skipIndexes: Array.isArray(body.skipIndexes)
+        ? body.skipIndexes.filter((n): n is number => Number.isInteger(n))
+        : undefined,
     });
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
