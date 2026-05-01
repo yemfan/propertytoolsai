@@ -1,21 +1,38 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Check, X, CalendarClock, Pencil } from "lucide-react";
 
+/**
+ * Unified task shape merging crm_tasks (manual + briefing) with
+ * playbook_task_instances (per-anchor batches + coaching). The id
+ * is namespaced ("crm:<uuid>" / "pb:<uuid>") so writes can route
+ * back to the right backend.
+ */
+type UnifiedSource = "manual" | "briefing" | "playbook" | "coaching";
+
 type TaskRow = {
   id: string;
+  source: UnifiedSource;
   title: string;
   description: string | null;
   status: string;
   priority: string;
   due_at: string | null;
   completed_at: string | null;
-  source: string;
   contact_id: string | null;
-  created_at: string;
-  updated_at: string;
+  contact_name: string | null;
+  /** Populated only for source="playbook"|"coaching". */
+  playbook?: {
+    templateKey: string;
+    title: string;
+    section: string | null;
+    batchId: string | null;
+    anchorKind: "transaction" | "open_house" | "contact" | "generic";
+    anchorId: string | null;
+  };
 };
 
 type LeadInfo = { id: string; name: string | null };
@@ -81,15 +98,15 @@ function MiniPie({ data, title }: { data: ChartItem[]; title: string }) {
 }
 
 export default function TasksClient({
-  tasks: initialTasks,
   leads,
 }: {
-  tasks: TaskRow[];
   leads: LeadInfo[];
 }) {
-  const [tasks, setTasks] = useState(initialTasks);
+  const [tasks, setTasks] = useState<TaskRow[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("open");
+  const [sourceFilter, setSourceFilter] = useState<UnifiedSource | "all">("all");
   const [search, setSearch] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [addFields, setAddFields] = useState({ title: "", description: "", priority: "normal", due_at: "", contact_id: "" });
@@ -99,6 +116,32 @@ export default function TasksClient({
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
   const leadMap = new Map(leads.map((l) => [l.id, l.name ?? `Lead #${l.id}`]));
+
+  /**
+   * Fetch the unified task list. Re-runs whenever the status tab
+   * changes — server-side filtering is cheaper than fetching All
+   * and filtering client-side, especially once an agent has
+   * hundreds of completed tasks across both backends.
+   */
+  const loadTasks = useCallback(async () => {
+    setTasksLoading(true);
+    try {
+      const res = await fetch(`/api/dashboard/tasks/unified?status=${encodeURIComponent(statusFilter)}`);
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        tasks?: TaskRow[];
+      };
+      if (body.ok && Array.isArray(body.tasks)) setTasks(body.tasks);
+    } catch {
+      /* silent — error banner not worth rendering for read failures */
+    } finally {
+      setTasksLoading(false);
+    }
+  }, [statusFilter]);
+
+  useEffect(() => {
+    void loadTasks();
+  }, [loadTasks]);
 
   const loadStats = useCallback(async () => {
     try {
@@ -135,17 +178,66 @@ export default function TasksClient({
     finally { setActionLoading(false); }
   }
 
+  /**
+   * Routes the patch to the correct backend based on the task's
+   * namespaced id prefix:
+   *   - "crm:<uuid>" → PATCH /api/dashboard/tasks
+   *   - "pb:<uuid>"  → PATCH /api/dashboard/playbooks/[taskId] (via
+   *                    `completed: boolean` body, the only mutation
+   *                    the playbook endpoint currently supports)
+   *
+   * Phase 2 lands richer playbook mutations (cancel/snooze/edit)
+   * — for now playbook tasks only support marking complete.
+   */
   async function updateTask(id: string, patch: Record<string, unknown>) {
     setActionLoading(true); setActionMsg(null);
     try {
+      if (id.startsWith("pb:")) {
+        const rawId = id.slice(3);
+        // Playbook backend only supports a completion toggle today.
+        // Map "status" patches to the toggle; reject other mutations.
+        if (patch.status === "done" || patch.status === "open") {
+          const res = await fetch(`/api/dashboard/playbooks/${rawId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ completed: patch.status === "done" }),
+          });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok || !body.ok) throw new Error(body.error ?? "Update failed");
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.id === id
+                ? {
+                    ...t,
+                    status: patch.status === "done" ? "done" : "open",
+                    completed_at: patch.status === "done" ? new Date().toISOString() : null,
+                  }
+                : t,
+            ),
+          );
+          setEditingId(null);
+          setActionMsg("Updated.");
+          loadStats();
+          return;
+        }
+        setActionMsg(
+          "Cancel / snooze / edit on playbook tasks is coming in the next update — open the playbook view to edit there.",
+        );
+        return;
+      }
+      const rawId = id.startsWith("crm:") ? id.slice(4) : id;
       const res = await fetch("/api/dashboard/tasks", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId: id, ...patch }),
+        body: JSON.stringify({ taskId: rawId, ...patch }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.ok) throw new Error(body.error ?? "Update failed");
-      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...patch, status: String(patch.status ?? t.status) } as TaskRow : t));
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === id ? ({ ...t, ...patch, status: String(patch.status ?? t.status) } as TaskRow) : t,
+        ),
+      );
       setEditingId(null);
       setActionMsg("Updated.");
       loadStats();
@@ -178,12 +270,28 @@ export default function TasksClient({
     setEditFields({ title: task.title, description: task.description, priority: task.priority, status: task.status, due_at: task.due_at });
   }
 
+  /**
+   * Status filter is applied server-side (re-fetch on tab change),
+   * but source + search are client-side because the unified payload
+   * is bounded (~250 rows from each backend) and instant filtering
+   * feels better than another round-trip.
+   */
   const filtered = tasks.filter((t) => {
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
+    if (sourceFilter !== "all" && t.source !== sourceFilter) return false;
     if (!search.trim()) return true;
     const s = search.toLowerCase();
     return t.title.toLowerCase().includes(s) || (t.description ?? "").toLowerCase().includes(s);
   });
+
+  /** Counts for the source-chip badges. Computed pre-source-filter
+   *  so users see how many of each kind exist regardless of which
+   *  chip is currently active. */
+  const sourceCounts = useMemo(() => {
+    const out = { all: tasks.length, manual: 0, briefing: 0, playbook: 0, coaching: 0 };
+    for (const t of tasks) out[t.source] += 1;
+    return out;
+  }, [tasks]);
 
   return (
     <div className="space-y-4">
@@ -289,6 +397,39 @@ export default function TasksClient({
         })}
       </div>
 
+      {/* Source filter chips — applies on top of the status tab.
+          All four chips render even when their count is 0 so the
+          set is predictable; clicking the active chip re-toggles
+          to "All". */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {([
+          { key: "all", label: "All sources", emoji: null },
+          { key: "manual", label: "Manual", emoji: "✋" },
+          { key: "briefing", label: "Briefing", emoji: "☀️" },
+          { key: "playbook", label: "Playbook", emoji: "📋" },
+          { key: "coaching", label: "Coaching", emoji: "🎯" },
+        ] as const).map((chip) => {
+          const count = sourceCounts[chip.key];
+          const active = sourceFilter === chip.key;
+          return (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={() => setSourceFilter(active && chip.key !== "all" ? "all" : chip.key)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+                active
+                  ? "border-blue-200 bg-blue-50 text-blue-700"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+              }`}
+            >
+              {chip.emoji ? <span aria-hidden>{chip.emoji}</span> : null}
+              {chip.label}
+              <span className="rounded-full bg-white/70 px-1 text-[10px] tabular-nums">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Search */}
       <div className="flex flex-wrap gap-2">
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks..."
@@ -337,13 +478,18 @@ export default function TasksClient({
                     </tr>
                   );
                 }
+                const isPlaybookRow = t.source === "playbook" || t.source === "coaching";
                 return (
                   <tr key={t.id} className="hover:bg-gray-50/50">
                     <td className="px-4 py-2.5">
-                      <span className="font-medium text-gray-900">{t.title}</span>
-                      {t.source !== "agent" && <span className="ml-1.5 text-[10px] text-gray-400 uppercase">{t.source}</span>}
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium text-gray-900">{t.title}</span>
+                        <SourceChip task={t} />
+                      </div>
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-gray-600">{t.contact_id ? leadMap.get(String(t.contact_id)) ?? `#${t.contact_id}` : "\u2014"}</td>
+                    <td className="px-4 py-2.5 text-xs text-gray-600">
+                      {t.contact_name ? t.contact_name : t.contact_id ? leadMap.get(String(t.contact_id)) ?? `#${t.contact_id}` : "\u2014"}
+                    </td>
                     <td className="px-4 py-2.5 text-xs whitespace-nowrap">
                       {t.due_at ? (
                         <span className={t.status === "open" && t.due_at && new Date(t.due_at).getTime() < Date.now() ? "text-red-600 font-medium" : "text-gray-600"}>
@@ -364,16 +510,22 @@ export default function TasksClient({
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <div className="inline-flex items-center gap-0.5">
                         {t.status === "open" && (
+                          <TaskIconButton
+                            onClick={() => void markDone(t.id)}
+                            disabled={actionLoading}
+                            title="Mark complete"
+                            ariaLabel="Mark complete"
+                            tone="success"
+                          >
+                            <Check className="h-4 w-4" strokeWidth={2.5} />
+                          </TaskIconButton>
+                        )}
+                        {/* Cancel / snooze / edit are CRM-only in Phase 1.
+                            Playbook tasks land richer mutations in Phase 2;
+                            for now they show a "manage in playbook view"
+                            link instead. */}
+                        {!isPlaybookRow && t.status === "open" && (
                           <>
-                            <TaskIconButton
-                              onClick={() => void markDone(t.id)}
-                              disabled={actionLoading}
-                              title="Mark complete"
-                              ariaLabel="Mark complete"
-                              tone="success"
-                            >
-                              <Check className="h-4 w-4" strokeWidth={2.5} />
-                            </TaskIconButton>
                             <TaskIconButton
                               onClick={() => void markCancelled(t.id)}
                               disabled={actionLoading}
@@ -389,13 +541,23 @@ export default function TasksClient({
                             />
                           </>
                         )}
-                        <TaskIconButton
-                          onClick={() => startEdit(t)}
-                          title="Edit task"
-                          ariaLabel="Edit task"
-                        >
-                          <Pencil className="h-4 w-4" strokeWidth={2} />
-                        </TaskIconButton>
+                        {!isPlaybookRow ? (
+                          <TaskIconButton
+                            onClick={() => startEdit(t)}
+                            title="Edit task"
+                            ariaLabel="Edit task"
+                          >
+                            <Pencil className="h-4 w-4" strokeWidth={2} />
+                          </TaskIconButton>
+                        ) : (
+                          <Link
+                            href="/dashboard/playbooks"
+                            className="text-[10px] font-medium text-gray-400 hover:text-gray-700 hover:underline px-1.5"
+                            title="Manage from playbook view"
+                          >
+                            Manage →
+                          </Link>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -413,6 +575,40 @@ export default function TasksClient({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Per-row source chip — a small subtitle under the task title that
+ * tells the agent where this task came from. For playbook +
+ * coaching rows it also names the playbook + section so they can
+ * recognize a batch without leaving the page. Manual tasks render
+ * nothing (the absence of a chip = "I made this myself").
+ */
+function SourceChip({ task }: { task: TaskRow }) {
+  if (task.source === "manual") return null;
+  if (task.source === "briefing") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700">
+        <span aria-hidden>☀️</span>
+        Morning briefing
+      </span>
+    );
+  }
+  // Playbook + coaching share the same shape (template title + section).
+  const title = task.playbook?.title ?? task.source;
+  const section = task.playbook?.section;
+  const tone =
+    task.source === "coaching"
+      ? "text-emerald-700"
+      : "text-indigo-700";
+  const emoji = task.source === "coaching" ? "🎯" : "📋";
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${tone}`}>
+      <span aria-hidden>{emoji}</span>
+      {title}
+      {section ? <span className="text-gray-400">· {section}</span> : null}
+    </span>
   );
 }
 
