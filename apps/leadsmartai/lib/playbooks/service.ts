@@ -20,6 +20,12 @@ export type ApplyPlaybookInput = {
   anchorKind: PlaybookAnchor;
   anchorId: string | null;
   anchorDate: string; // YYYY-MM-DD — used to compute absolute due dates
+  /**
+   * Item indexes (0-based, into the playbook's `items` array) the
+   * agent unchecked in the review step. Defaults to none — all
+   * items are included.
+   */
+  skipIndexes?: number[];
 };
 
 export async function applyPlaybook(input: ApplyPlaybookInput): Promise<{
@@ -36,19 +42,26 @@ export async function applyPlaybook(input: ApplyPlaybookInput): Promise<{
   const anchor = parseYmd(input.anchorDate);
   if (!anchor) throw new Error("Invalid anchorDate (expected YYYY-MM-DD)");
 
+  const skip = new Set(input.skipIndexes ?? []);
   const batchId = randomUUID();
-  const rows = playbook.items.map((item) => ({
-    agent_id: input.agentId,
-    anchor_kind: input.anchorKind,
-    anchor_id: input.anchorId,
-    template_key: input.templateKey,
-    apply_batch_id: batchId,
-    title: item.title,
-    notes: item.notes ?? null,
-    section: item.section ?? null,
-    offset_days: item.offsetDays,
-    due_date: toYmd(addDays(anchor, item.offsetDays)),
-  }));
+  const rows = playbook.items
+    .map((item, idx) => ({ item, idx }))
+    .filter(({ idx }) => !skip.has(idx))
+    .map(({ item }) => ({
+      agent_id: input.agentId,
+      anchor_kind: input.anchorKind,
+      anchor_id: input.anchorId,
+      template_key: input.templateKey,
+      apply_batch_id: batchId,
+      title: item.title,
+      notes: item.notes ?? null,
+      section: item.section ?? null,
+      offset_days: item.offsetDays,
+      due_date: toYmd(addDays(anchor, item.offsetDays)),
+    }));
+  if (rows.length === 0) {
+    throw new Error("Pick at least one task to apply.");
+  }
 
   const { data, error } = await supabaseAdmin
     .from("playbook_task_instances")

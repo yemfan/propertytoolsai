@@ -290,9 +290,15 @@ const navConfig = {
           icon: navEmoji("👤"),
         },
         {
+          // Support staff inbox — hidden for non-staff so agents
+          // don't click through and bounce off /unauthorized. The
+          // public customer-support chat lives at /contact and the
+          // Help center; this sidebar entry is only useful to
+          // admin / support roles.
           label: "Support",
           href: "/support",
           match: ["/support"],
+          roles: ["admin", "support"],
           icon: <Headphones size={16} strokeWidth={2} aria-hidden />,
         },
       ],
