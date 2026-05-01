@@ -140,7 +140,7 @@ export async function createMobileLeadTask(params: {
 
   const row = {
     contact_id: params.leadId as never,
-    assigned_agent_id: params.agentId as never,
+    agent_id: params.agentId as never,
     title,
     description: params.description?.trim() || null,
     due_at: params.dueAt?.trim() || null,
@@ -148,7 +148,6 @@ export async function createMobileLeadTask(params: {
     priority: params.priority ?? "medium",
     task_type: params.taskType?.trim() || null,
     created_by: "mobile",
-    metadata_json: {},
   };
 
   const { data, error } = await supabaseAdmin
