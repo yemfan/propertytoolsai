@@ -291,11 +291,17 @@ export function PremiumSidebar({
                 {!collapsed ? (
                   <>
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">{section.label}</span>
-                    <span className="shrink-0 text-slate-400" aria-hidden>
+                    <span
+                      className={cn(
+                        "shrink-0 transition-colors group-hover/nav:text-slate-700",
+                        hasActiveChild ? "text-slate-700" : "text-slate-500"
+                      )}
+                      aria-hidden
+                    >
                       {isOpen ? (
-                        <ChevronDown className="h-4 w-4" strokeWidth={2} />
+                        <ChevronDown className="h-4 w-4" strokeWidth={2.5} />
                       ) : (
-                        <ChevronRight className="h-4 w-4" strokeWidth={2} />
+                        <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
                       )}
                     </span>
                   </>
