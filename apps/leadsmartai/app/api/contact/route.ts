@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
 
 import {
   CONSENT_SOURCE_CONTACT_FORM,
@@ -7,6 +6,7 @@ import {
 } from "@/lib/consent/disclosureVersions";
 import { extractRequestMeta } from "@/lib/consent/extractRequestMeta";
 import { recordInboundContactRequest } from "@/lib/consent/service";
+import { sendEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -86,21 +86,28 @@ export async function POST(req: Request) {
       contactId: null,
     });
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT ?? 587),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+    /* Send via Resend (lib/email.ts) instead of SMTP/nodemailer.
+     * Production env has RESEND_API_KEY set; SMTP_* are not
+     * configured, which was failing the previous nodemailer path
+     * silently and surfacing as "Something went wrong" in the UI.
+     *
+     * Sender email contains the submitter's address as reply-to so
+     * support can hit Reply directly. The audit row is already
+     * persisted above — even if Resend is down, the inbound is
+     * recorded for compliance. */
+    const recipient =
+      process.env.CONTACT_FORM_TO?.trim() || "fan.yes@gmail.com";
+    const trimmedSubject = subject?.trim();
+    const emailSubject = trimmedSubject
+      ? `[LeadSmart Contact] ${trimmedSubject}`
+      : "New LeadSmart AI contact";
 
-    await transporter.sendMail({
-      from: `"LeadSmart AI Contact" <fan.yes@gmail.com>`,
-      to: "fan.yes@gmail.com",
-      subject: subject ? `[LeadSmart Contact] ${subject}` : "New LeadSmart AI contact",
-      text: `Name: ${name}
+    try {
+      await sendEmail({
+        to: recipient,
+        subject: emailSubject,
+        replyTo: email,
+        text: `Name: ${name}
 Email: ${email}
 Phone: ${cleanPhone || "(not provided)"}
 SMS consent: ${consent ? "YES — opted in to receive text messages" : "no"}
@@ -111,11 +118,31 @@ User-agent: ${meta.userAgent ?? "(unknown)"}
 
 Message:
 ${message || "(no message provided)"}`,
-    });
+      });
+    } catch (sendErr) {
+      // Audit row is persisted above, so we have the submission on
+      // record. Surface a clearer error to the caller so the UI can
+      // tell the user "we got your message but email delivery
+      // failed — we'll still see it" instead of generic "something
+      // went wrong".
+      console.error("Contact form: Resend send failed", sendErr);
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "We received your message but couldn't send the confirmation email right now. We'll still see it — please reach out at contact@leadsmart-ai.com if you need an immediate reply.",
+          delivered: false,
+        },
+        { status: 502 },
+      );
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Error sending contact email", error);
-    return NextResponse.json({ ok: false }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "Server error" },
+      { status: 500 },
+    );
   }
 }
