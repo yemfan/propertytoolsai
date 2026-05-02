@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createLeadFromHomeValue } from "@/lib/home-value/lead";
-import { autoAssignLeadToAgent } from "@/lib/home-value/assignment";
+import { pickAgentForHomeValueLead } from "@/lib/home-value/assignment";
 import { queueHomeValueSequence } from "@/lib/home-value/followup-sequence";
 import { createAgentNotification } from "@/lib/home-value/agent-notification";
 
@@ -48,7 +48,26 @@ export async function POST(req: Request) {
 
     const propertyAddress = session.property_address || session.full_address || body.property_address || "";
 
-    // --- Core: create lead (must succeed) ---
+    // --- Pick the owning agent up front: contacts.agent_id is NOT NULL,
+    //     so we need an agent before the insert. Falls back to the first
+    //     accepting agent when zip/city don't match anyone's service area.
+    const picked = await pickAgentForHomeValueLead({
+      zip: session.zip,
+      city: session.city,
+    });
+    if (!picked) {
+      console.error("unlock-report: no eligible agent (accepts_new_leads=true)");
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "We couldn't route this report — no agents are currently accepting new leads. Please try again later.",
+        },
+        { status: 503 },
+      );
+    }
+
+    // --- Core: create contact row (owns lead) ---
     const lead = await createLeadFromHomeValue({
       name,
       email,
@@ -59,19 +78,21 @@ export async function POST(req: Request) {
       sessionId,
       zip: session.zip,
       city: session.city,
+      agentId: picked.id,
     });
 
-    // --- Best-effort: assignment, notification, followup ---
-    let assignment: { agentId: string; fullName: string | null; email: string | null } | null = null;
-    try {
-      assignment = await autoAssignLeadToAgent({
-        leadId: lead.id,
-        zip: session.zip,
-        city: session.city,
-      });
-    } catch (e) {
-      console.error("Assignment failed (non-fatal):", e);
-    }
+    // The picked agent is the assignment — wrap into the same shape the
+    // downstream notification + followup paths expect. Using authUserId
+    // (uuid) for agent_notifications.agent_id matches the column type
+    // and the legacy autoAssignLeadToAgent's behavior.
+    const assignment: { agentId: string; fullName: string | null; email: string | null } | null =
+      picked.authUserId != null
+        ? {
+            agentId: picked.authUserId,
+            fullName: picked.fullName,
+            email: picked.email,
+          }
+        : null;
 
     // Agent notification (fire-and-forget)
     if (assignment?.agentId) {
