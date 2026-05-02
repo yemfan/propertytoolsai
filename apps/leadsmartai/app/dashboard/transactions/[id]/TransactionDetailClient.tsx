@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { DealReviewPanel } from "@/components/dashboard/DealReviewPanel";
 import { ListingFeedbackPanel } from "@/components/dashboard/ListingFeedbackPanel";
 import PostToFacebookCard from "@/components/dashboard/PostToFacebookCard";
@@ -73,6 +73,92 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
     }
     return out;
   }, [tasks]);
+
+  /**
+   * Per-stage roll-up — feeds both the sticky pipeline stepper at the
+   * top of the left column AND each StageBlock's collapsed-by-default
+   * heuristic (a stage is "done" when it has tasks AND every task is
+   * completed). Empty stages are NOT considered done — they collapse
+   * by default but the pill renders muted to signal "nothing here yet"
+   * rather than "all clear".
+   */
+  const stageMetrics = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const out = {} as Record<
+      TransactionStage,
+      { total: number; completed: number; overdue: number; isComplete: boolean; isEmpty: boolean }
+    >;
+    for (const s of STAGE_ORDER) {
+      const stageTasks = tasksByStage.get(s) ?? [];
+      let completed = 0;
+      let overdue = 0;
+      for (const t of stageTasks) {
+        if (t.completed_at) {
+          completed += 1;
+        } else if (t.due_date && t.due_date < today) {
+          overdue += 1;
+        }
+      }
+      out[s] = {
+        total: stageTasks.length,
+        completed,
+        overdue,
+        isComplete: stageTasks.length > 0 && completed === stageTasks.length,
+        isEmpty: stageTasks.length === 0,
+      };
+    }
+    return out;
+  }, [tasksByStage]);
+
+  /**
+   * Per-stage open/closed state. `undefined` means "use the default":
+   * closed if the stage is complete OR empty, open otherwise. Once the
+   * agent toggles a stage manually, that override sticks until they
+   * navigate away — we don't auto-collapse a stage they explicitly
+   * opened just because they happened to complete its last task.
+   */
+  const [stageOverrides, setStageOverrides] = useState<
+    Partial<Record<TransactionStage, boolean>>
+  >({});
+
+  const isStageOpen = useCallback(
+    (stage: TransactionStage): boolean => {
+      const override = stageOverrides[stage];
+      if (override !== undefined) return override;
+      const m = stageMetrics[stage];
+      return !(m.isComplete || m.isEmpty);
+    },
+    [stageMetrics, stageOverrides],
+  );
+
+  const toggleStage = useCallback((stage: TransactionStage) => {
+    setStageOverrides((prev) => {
+      // If currently using the default, capture it explicitly so we
+      // can flip it. After this point the override sticks.
+      const next = { ...prev };
+      const m = stageMetrics[stage];
+      const currentlyOpen =
+        prev[stage] !== undefined ? prev[stage]! : !(m.isComplete || m.isEmpty);
+      next[stage] = !currentlyOpen;
+      return next;
+    });
+  }, [stageMetrics]);
+
+  /**
+   * Pill click → open the target stage AND scroll its section into
+   * view. `requestAnimationFrame` waits one frame so the layout
+   * settles after the open-state change before we measure / scroll;
+   * otherwise a previously-collapsed stage's anchor is at the wrong
+   * y-offset and we land in the wrong spot.
+   */
+  const focusStage = useCallback((stage: TransactionStage) => {
+    setStageOverrides((prev) => ({ ...prev, [stage]: true }));
+    requestAnimationFrame(() => {
+      document
+        .getElementById(`stage-${stage}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, []);
 
   const totals = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -260,8 +346,9 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        {/* ── Left column — tasks by stage ── */}
+        {/* ── Left column — sticky stage pipeline + tasks by stage ── */}
         <div className="space-y-4">
+          <StagePipeline metrics={stageMetrics} onStageClick={focusStage} />
           {STAGE_ORDER.map((stage) => {
             const stageTasks = tasksByStage.get(stage) ?? [];
             return (
@@ -270,6 +357,8 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
                 stage={stage}
                 tasks={stageTasks}
                 transactionId={txn.id}
+                open={isStageOpen(stage)}
+                onToggleOpen={() => toggleStage(stage)}
                 onToggle={toggleTask}
                 onAdd={(task) => setTasks((prev) => [...prev, task])}
                 onDelete={(id) => setTasks((prev) => prev.filter((x) => x.id !== id))}
@@ -402,6 +491,8 @@ function StageBlock({
   stage,
   tasks,
   transactionId,
+  open,
+  onToggleOpen,
   onToggle,
   onAdd,
   onDelete,
@@ -409,6 +500,10 @@ function StageBlock({
   stage: TransactionStage;
   tasks: TransactionTaskRow[];
   transactionId: string;
+  /** Controlled by parent so the sticky pipeline stepper can force a
+   *  closed stage open when the agent clicks its pill. */
+  open: boolean;
+  onToggleOpen: () => void;
   onToggle: (t: TransactionTaskRow) => void;
   onAdd: (t: TransactionTaskRow) => void;
   onDelete: (id: string) => void;
@@ -417,6 +512,7 @@ function StageBlock({
   const [newTitle, setNewTitle] = useState("");
   const [newDue, setNewDue] = useState("");
   const stageCompleted = tasks.filter((t) => t.completed_at).length;
+  const allDone = tasks.length > 0 && stageCompleted === tasks.length;
 
   async function submitAdd() {
     if (!newTitle.trim()) return;
@@ -434,106 +530,230 @@ function StageBlock({
     }
   }
 
+  /**
+   * `scroll-margin-top` keeps the stage header visible below the
+   * sticky StagePipeline strip when the agent clicks a pill — without
+   * it, the section's top edge lands right under the strip and the
+   * heading is hidden. 64px = the strip's vertical footprint with
+   * comfortable breathing room above it.
+   */
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">{STAGE_LABELS[stage]}</h3>
-          <p className="text-[11px] text-slate-500">
-            {stageCompleted}/{tasks.length} complete
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setAdding((v) => !v)}
-          className="text-xs font-medium text-slate-600 hover:text-slate-900"
-        >
-          {adding ? "Cancel" : "+ Add task"}
-        </button>
-      </header>
+    <section
+      id={`stage-${stage}`}
+      className="scroll-mt-16 rounded-2xl border border-slate-200 bg-white shadow-sm"
+    >
+      <button
+        type="button"
+        onClick={onToggleOpen}
+        aria-expanded={open}
+        aria-controls={`stage-body-${stage}`}
+        className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left transition hover:bg-slate-50/60"
+      >
+        <span className="flex min-w-0 items-center gap-2.5">
+          <ChevronGlyph open={open} />
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-slate-900">
+              {STAGE_LABELS[stage]}
+              {allDone ? (
+                <span className="ml-2 align-middle text-[10px] font-medium text-emerald-700">
+                  ✓ done
+                </span>
+              ) : null}
+            </span>
+            <span className="block text-[11px] text-slate-500">
+              {stageCompleted}/{tasks.length} complete
+            </span>
+          </span>
+        </span>
+      </button>
 
-      {adding ? (
-        <div className="border-b border-slate-100 bg-slate-50/50 px-5 py-3">
-          <input
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="Task title"
-            className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-            autoFocus
-          />
-          <div className="mt-2 flex items-center gap-2">
-            <input
-              type="date"
-              value={newDue}
-              onChange={(e) => setNewDue(e.target.value)}
-              className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-            />
+      {open ? (
+        <div id={`stage-body-${stage}`} className="border-t border-slate-100">
+          <div className="flex items-center justify-end px-5 py-2">
             <button
               type="button"
-              onClick={() => void submitAdd()}
-              disabled={!newTitle.trim()}
-              className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+              onClick={() => setAdding((v) => !v)}
+              className="text-xs font-medium text-slate-600 hover:text-slate-900"
             >
-              Add
+              {adding ? "Cancel" : "+ Add task"}
             </button>
           </div>
-        </div>
-      ) : null}
 
-      <ul className="divide-y divide-slate-100">
-        {tasks.length === 0 ? (
-          <li className="px-5 py-4 text-xs text-slate-500">No tasks in this stage yet.</li>
-        ) : (
-          tasks.map((t) => (
-            <li key={t.id} className="flex items-start gap-3 px-5 py-2.5">
+          {adding ? (
+            <div className="border-y border-slate-100 bg-slate-50/50 px-5 py-3">
               <input
-                type="checkbox"
-                checked={Boolean(t.completed_at)}
-                onChange={() => onToggle(t)}
-                className="mt-0.5 h-4 w-4 accent-slate-900"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="Task title"
+                className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                autoFocus
               />
-              <div className="flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <div
-                    className={`text-sm ${t.completed_at ? "text-slate-400 line-through" : "text-slate-800"}`}
-                  >
-                    {t.title}
-                    {t.seed_key === "verify_wire_instructions" ? (
-                      <span className="ml-2 rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700">
-                        anti-fraud
-                      </span>
-                    ) : null}
-                  </div>
-                  <TaskDueBadge dueDate={t.due_date} completed={Boolean(t.completed_at)} />
-                </div>
-                {t.description ? (
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">
-                    {t.description}
-                  </p>
-                ) : null}
-              </div>
-              {t.source === "custom" ? (
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="date"
+                  value={newDue}
+                  onChange={(e) => setNewDue(e.target.value)}
+                  className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                />
                 <button
                   type="button"
-                  title="Delete custom task"
-                  onClick={async () => {
-                    if (!confirm("Delete this custom task?")) return;
-                    const res = await fetch(
-                      `/api/dashboard/transactions/${transactionId}/tasks/${t.id}`,
-                      { method: "DELETE" },
-                    );
-                    if (res.ok) onDelete(t.id);
-                  }}
-                  className="text-[10px] text-slate-400 hover:text-red-600"
+                  onClick={() => void submitAdd()}
+                  disabled={!newTitle.trim()}
+                  className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
                 >
-                  ✕
+                  Add
                 </button>
-              ) : null}
-            </li>
-          ))
-        )}
-      </ul>
+              </div>
+            </div>
+          ) : null}
+
+          <ul className="divide-y divide-slate-100">
+            {tasks.length === 0 ? (
+              <li className="px-5 py-4 text-xs text-slate-500">No tasks in this stage yet.</li>
+            ) : (
+              tasks.map((t) => (
+                <li key={t.id} className="flex items-start gap-3 px-5 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(t.completed_at)}
+                    onChange={() => onToggle(t)}
+                    className="mt-0.5 h-4 w-4 accent-slate-900"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div
+                        className={`text-sm ${t.completed_at ? "text-slate-400 line-through" : "text-slate-800"}`}
+                      >
+                        {t.title}
+                        {t.seed_key === "verify_wire_instructions" ? (
+                          <span className="ml-2 rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700">
+                            anti-fraud
+                          </span>
+                        ) : null}
+                      </div>
+                      <TaskDueBadge dueDate={t.due_date} completed={Boolean(t.completed_at)} />
+                    </div>
+                    {t.description ? (
+                      <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">
+                        {t.description}
+                      </p>
+                    ) : null}
+                  </div>
+                  {t.source === "custom" ? (
+                    <button
+                      type="button"
+                      title="Delete custom task"
+                      onClick={async () => {
+                        if (!confirm("Delete this custom task?")) return;
+                        const res = await fetch(
+                          `/api/dashboard/transactions/${transactionId}/tasks/${t.id}`,
+                          { method: "DELETE" },
+                        );
+                        if (res.ok) onDelete(t.id);
+                      }}
+                      className="text-[10px] text-slate-400 hover:text-red-600"
+                    >
+                      ✕
+                    </button>
+                  ) : null}
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      ) : null}
     </section>
+  );
+}
+
+/**
+ * Inline chevron — rotates 90° between collapsed (▶) and expanded (▼)
+ * states. Inlined instead of pulling in `lucide-react` so the
+ * transaction-detail bundle doesn't grow for one tiny glyph.
+ */
+function ChevronGlyph({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={`h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform ${open ? "rotate-90" : ""}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      viewBox="0 0 24 24"
+      aria-hidden
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+/**
+ * Sticky stage stepper at the top of the left column. One pill per
+ * stage with completion + overdue counts. Clicking a pill calls
+ * `onStageClick(stage)` — the parent handles both opening that stage
+ * (in case it was collapsed because all tasks were done) and
+ * smooth-scrolling to its anchor below.
+ *
+ * Pill tones encode state at a glance:
+ *   emerald — every task in the stage is complete
+ *   rose    — at least one task is overdue
+ *   blue    — in progress (some completed but not all)
+ *   slate   — no tasks yet, or all tasks open and on time
+ *
+ * Sticky positioning means it stays visible while the agent scrolls
+ * through long pipelines — same affordance as a wizard stepper.
+ */
+function StagePipeline({
+  metrics,
+  onStageClick,
+}: {
+  metrics: Record<
+    TransactionStage,
+    { total: number; completed: number; overdue: number; isComplete: boolean; isEmpty: boolean }
+  >;
+  onStageClick: (stage: TransactionStage) => void;
+}) {
+  return (
+    <div className="sticky top-0 z-10 -mx-1 rounded-2xl border border-slate-200 bg-white/90 px-2 py-2 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/75">
+      <div className="flex items-stretch gap-1 overflow-x-auto">
+        {STAGE_ORDER.map((stage, idx) => {
+          const m = metrics[stage];
+          const tone =
+            m.overdue > 0
+              ? "border-rose-300 bg-rose-50 text-rose-900 hover:bg-rose-100"
+              : m.isComplete
+                ? "border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+                : m.completed > 0
+                  ? "border-blue-300 bg-blue-50 text-blue-900 hover:bg-blue-100"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50";
+          return (
+            <button
+              key={stage}
+              type="button"
+              onClick={() => onStageClick(stage)}
+              title={`Jump to ${STAGE_LABELS[stage]} — ${m.completed}/${m.total} complete${m.overdue > 0 ? `, ${m.overdue} overdue` : ""}`}
+              className={`group flex min-w-0 flex-1 items-center justify-between gap-2 rounded-xl border px-3 py-1.5 text-left transition ${tone}`}
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/80 text-[10px] font-bold tabular-nums">
+                  {idx + 1}
+                </span>
+                <span className="min-w-0 truncate text-xs font-semibold">
+                  {STAGE_LABELS[stage]}
+                </span>
+              </span>
+              <span className="shrink-0 text-[10px] font-medium tabular-nums opacity-80">
+                {m.isComplete ? "✓" : m.isEmpty ? "—" : `${m.completed}/${m.total}`}
+                {m.overdue > 0 ? (
+                  <span className="ml-1 rounded-full bg-rose-200/70 px-1 text-rose-900">
+                    !{m.overdue}
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
