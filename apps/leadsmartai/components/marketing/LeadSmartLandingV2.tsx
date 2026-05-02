@@ -15,6 +15,7 @@ import {
   HandHeart,
   LineChart,
   MessagesSquare,
+  PhoneMissed,
   Settings2,
   Sparkles,
   TrendingUp,
@@ -321,18 +322,25 @@ export default function LeadSmartLandingV2() {
                 agents.
               </p>
 
+              {/* Hero proof bullets — Missed Call Recovery sits in
+                  the middle slot so it lands right after the speed
+                  promise. This is placement 1 of 3 for Missed Call
+                  Recovery (also dedicated feature section and mid-
+                  page emotional hook strip further down). */}
               <ul className="mt-7 space-y-2.5 text-base text-slate-700 dark:text-slate-300">
                 <li className="flex items-start gap-2.5">
                   <span aria-hidden className="mt-0.5 text-lg">⚡</span>
                   <span>Respond to every lead in under 60 seconds</span>
                 </li>
                 <li className="flex items-start gap-2.5">
-                  <span aria-hidden className="mt-0.5 text-lg">🎯</span>
-                  <span>Focus only on high-intent buyers &amp; sellers</span>
+                  <span aria-hidden className="mt-0.5 text-lg">📞</span>
+                  <span>
+                    Instantly text back missed calls — never lose a lead again
+                  </span>
                 </li>
                 <li className="flex items-start gap-2.5">
-                  <span aria-hidden className="mt-0.5 text-lg">🔁</span>
-                  <span>Never lose a deal due to missed follow-up</span>
+                  <span aria-hidden className="mt-0.5 text-lg">🎯</span>
+                  <span>Focus only on high-intent buyers &amp; sellers</span>
                 </li>
               </ul>
 
@@ -517,6 +525,82 @@ export default function LeadSmartLandingV2() {
           </div>
         </section>
 
+        {/* ── MISSED CALL RECOVERY AI™ — placement 2 of 3 ───
+            Sits right after the Growth Engine grid because it
+            structurally belongs to the Follow Up pillar (which is
+            card #3 in the grid above). Full-width amber gradient
+            card so it reads as a featured / signature feature, not
+            yet-another-grid-card. Concise vs. the /features page
+            version — the landing should tease, the features page
+            sells. */}
+        <section
+          id="missed-call-recovery"
+          className="border-y border-amber-200/70 bg-gradient-to-b from-white via-amber-50/40 to-white px-6 py-20 dark:border-amber-900/40 dark:from-slate-950 dark:via-amber-950/15 dark:to-slate-950 md:py-24"
+        >
+          <div className="mx-auto max-w-5xl">
+            <RevealSection>
+              <div className="grid gap-8 lg:grid-cols-[2fr_3fr] lg:gap-12">
+                <div>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-amber-900 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white">
+                    📞 Signature feature · part of Follow Up
+                  </span>
+                  <h2 className="mt-5 font-heading text-3xl font-bold leading-tight text-amber-900 md:text-4xl dark:text-amber-200">
+                    Missed Call Recovery AI™
+                  </h2>
+                  <p className="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-200">
+                    Turn missed calls into conversations — automatically.
+                  </p>
+                </div>
+                <div className="space-y-4 text-base leading-relaxed text-slate-700 dark:text-slate-300">
+                  <p>
+                    When you miss a call, you&apos;re not just missing a call —
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {" "}
+                      you&apos;re missing a deal.
+                    </span>
+                  </p>
+                  <p>
+                    LeadSmart AI instantly sends a text back, starts the
+                    conversation, and keeps engaging until the lead is ready to
+                    talk — then hands off to you at the perfect moment.
+                  </p>
+                  <ul className="grid gap-2 pt-2 sm:grid-cols-2">
+                    {[
+                      "Instant missed-call text-back",
+                      "AI-powered SMS conversation",
+                      "Lead qualification via text",
+                      "Smart agent handoff when ready",
+                    ].map((f) => (
+                      <li
+                        key={f}
+                        className="flex items-start gap-2 rounded-lg border border-amber-200/70 bg-white/70 px-3 py-2 text-sm text-slate-700 backdrop-blur dark:border-amber-800/50 dark:bg-slate-900/60 dark:text-slate-300"
+                      >
+                        <CheckCircle2
+                          className="mt-0.5 h-4 w-4 shrink-0 text-amber-600"
+                          aria-hidden
+                        />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                    <Link
+                      href="/features#follow-up"
+                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-900 hover:underline dark:text-amber-300"
+                    >
+                      See how it works
+                      <ArrowRight size={14} aria-hidden />
+                    </Link>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      Included on every paid plan
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </RevealSection>
+          </div>
+        </section>
+
         {/* ── SALES STYLE ENGINE ─── */}
         <section className="border-y border-slate-200/80 bg-gradient-to-b from-white via-blue-50/30 to-white px-6 py-20 dark:border-slate-800 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 md:py-24">
           <div className="mx-auto max-w-6xl">
@@ -607,6 +691,40 @@ export default function LeadSmartLandingV2() {
                 automatically.
               </p>
             </RevealSection>
+          </div>
+        </section>
+
+        {/* ── MISSED CALL HOOK STRIP — placement 3 of 3 ───
+            Scroll-stopping emotional break between Results and Why
+            Us. Single bold line + short body + inline CTA so it
+            interrupts the page rhythm without becoming yet another
+            full-content section. Pairs with the hero bullet and the
+            dedicated section above. */}
+        <section
+          aria-label="Missed call hook"
+          className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 px-6 py-12 text-white md:py-14"
+        >
+          <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 text-center md:flex-row md:gap-8 md:text-left">
+            <div className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/30 md:inline-flex">
+              <PhoneMissed size={26} strokeWidth={2.25} aria-hidden />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-heading text-2xl font-bold leading-tight md:text-3xl">
+                <span aria-hidden className="mr-2 md:hidden">⚡</span>
+                Missed a call? You may have missed a deal.
+              </h3>
+              <p className="mt-2 text-sm text-white/90 md:text-base">
+                LeadSmart AI responds instantly when you can&apos;t — and turns
+                missed calls into real opportunities.
+              </p>
+            </div>
+            <Link
+              href="#missed-call-recovery"
+              className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-amber-700 shadow-md transition hover:bg-slate-50 md:text-base"
+            >
+              See How It Works
+              <ArrowRight size={16} aria-hidden />
+            </Link>
           </div>
         </section>
 
