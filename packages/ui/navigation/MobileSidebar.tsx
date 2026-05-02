@@ -210,12 +210,13 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
                       <span className="min-w-0 flex-1 truncate">{section.label}</span>
                       <span
                         className={cn(
-                          "shrink-0 text-slate-400 transition-transform duration-200 ease-out",
+                          "shrink-0 transition-transform duration-200 ease-out",
+                          "text-slate-500 transition-colors group-hover:text-slate-700",
                           isGroupOpen ? "rotate-0" : "-rotate-90"
                         )}
                         aria-hidden
                       >
-                        <ChevronDown className="h-4 w-4" strokeWidth={2} />
+                        <ChevronDown className="h-4 w-4" strokeWidth={2.5} />
                       </span>
                     </button>
                     {isGroupOpen ? (
