@@ -28,10 +28,15 @@ export async function getCoordinatorBoardForAgent(
 ): Promise<CoordinatorBoard> {
   const todayIso = new Date().toISOString().slice(0, 10);
 
+  // We do contact lookup as a separate batched query (not a PostgREST
+  // foreign-table embed) so the page doesn't go down whenever
+  // PostgREST's schema cache misses the transactions→contacts FK. The
+  // embed used to fail on production with "Could not find a relationship
+  // between 'transactions' and 'contacts' in the schema cache".
   const { data: txnRows, error: txnErr } = await supabaseAdmin
     .from("transactions")
     .select(
-      "id, agent_id, transaction_type, property_address, city, state, purchase_price, status, mutual_acceptance_date, closing_date, closing_date_actual, contacts(first_name, last_name, name)",
+      "id, agent_id, transaction_type, property_address, city, state, purchase_price, status, mutual_acceptance_date, closing_date, closing_date_actual, contact_id",
     )
     .eq("agent_id", agentId)
     .in("status", ACTIVE_STATUSES as unknown as never[])
@@ -51,16 +56,32 @@ export async function getCoordinatorBoardForAgent(
     mutual_acceptance_date: string | null;
     closing_date: string | null;
     closing_date_actual: string | null;
-    contacts:
-      | { first_name: string | null; last_name: string | null; name: string | null }
-      | { first_name: string | null; last_name: string | null; name: string | null }[]
-      | null;
+    contact_id: string | null;
   };
 
   const rawTxns = (txnRows ?? []) as RawTxn[];
 
   if (rawTxns.length === 0) {
     return buildCoordinatorBoard([], [], todayIso);
+  }
+
+  // Batch-fetch the contacts referenced by these transactions. One
+  // round-trip, indexed by id (FK), so the cost is negligible even at
+  // 100+ active deals.
+  const contactIds = Array.from(
+    new Set(rawTxns.map((r) => r.contact_id).filter((v): v is string => Boolean(v))),
+  );
+  const contactNameById = new Map<string, string>();
+  if (contactIds.length > 0) {
+    const { data: contactRows, error: contactsErr } = await supabaseAdmin
+      .from("contacts")
+      .select("id, first_name, last_name, name")
+      .in("id", contactIds);
+    if (contactsErr) throw new Error(contactsErr.message);
+    for (const c of (contactRows ?? []) as RawContact[]) {
+      const display = pickContactName(c);
+      if (display) contactNameById.set(c.id, display);
+    }
   }
 
   const transactions: CoordinatorTransactionInput[] = rawTxns.map((r) => ({
@@ -75,7 +96,7 @@ export async function getCoordinatorBoardForAgent(
     mutual_acceptance_date: r.mutual_acceptance_date,
     closing_date: r.closing_date,
     closing_date_actual: r.closing_date_actual,
-    contact_name: pickContactName(r.contacts),
+    contact_name: r.contact_id ? contactNameById.get(r.contact_id) ?? null : null,
   }));
 
   const txnIds = transactions.map((t) => t.id);
@@ -91,11 +112,7 @@ export async function getCoordinatorBoardForAgent(
   return buildCoordinatorBoard(transactions, tasks, todayIso);
 }
 
-function pickContactName(
-  contacts: RawContact | RawContact[] | null,
-): string | null {
-  if (!contacts) return null;
-  const c = Array.isArray(contacts) ? contacts[0] : contacts;
+function pickContactName(c: RawContact | null): string | null {
   if (!c) return null;
   if (c.first_name || c.last_name) {
     return `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim() || c.name || null;
@@ -104,6 +121,7 @@ function pickContactName(
 }
 
 type RawContact = {
+  id: string;
   first_name: string | null;
   last_name: string | null;
   name: string | null;

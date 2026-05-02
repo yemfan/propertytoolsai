@@ -130,27 +130,59 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
 // ─────────────────────────────────────────────────────────────────────
 
 export async function listTransactionsForAgent(agentId: string): Promise<TransactionListItem[]> {
-  // Two queries — the transactions + a task-counts aggregate — joined
-  // in memory. Keeps the service layer database-agnostic and avoids a
-  // view. N is small (tens per agent) so no N+1 concern.
+  // Three batched queries — transactions, contacts (by id), and task
+  // counts — joined in memory. Was a single PostgREST embed
+  // (`contacts!inner(...)`) but that fails on production whenever
+  // PostgREST's schema cache loses the transactions→contacts FK.
+  // Plain selects are robust regardless of cache state.
   const { data: txns, error } = await supabaseAdmin
     .from("transactions")
-    .select("*, contacts!inner(id, name, first_name, last_name)")
+    .select("*")
     .eq("agent_id", agentId)
     .order("closing_date", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   if (!txns || txns.length === 0) return [];
 
-  const ids = (txns as Array<{ id: string }>).map((t) => t.id);
-  const { data: taskRows } = await supabaseAdmin
-    .from("transaction_tasks")
-    .select("transaction_id, due_date, completed_at")
-    .in("transaction_id", ids);
+  const txnRows = txns as TransactionRow[];
+  const ids = txnRows.map((t) => t.id);
+  const contactIds = Array.from(
+    new Set(txnRows.map((t) => t.contact_id).filter((v): v is string => Boolean(v))),
+  );
+
+  type ContactRow = {
+    id: string;
+    name: string | null;
+    first_name: string | null;
+    last_name: string | null;
+  };
+
+  const [contactRes, tasksRes] = await Promise.all([
+    contactIds.length > 0
+      ? supabaseAdmin
+          .from("contacts")
+          .select("id, name, first_name, last_name")
+          .in("id", contactIds)
+      : Promise.resolve({ data: [] as ContactRow[], error: null as null }),
+    supabaseAdmin
+      .from("transaction_tasks")
+      .select("transaction_id, due_date, completed_at")
+      .in("transaction_id", ids),
+  ]);
+  if (contactRes.error) throw new Error(contactRes.error.message);
+
+  const contactNameById = new Map<string, string | null>();
+  for (const c of (contactRes.data ?? []) as ContactRow[]) {
+    const name =
+      (c.first_name && c.last_name
+        ? `${c.first_name} ${c.last_name}`.trim()
+        : c.name) ?? null;
+    contactNameById.set(c.id, name);
+  }
 
   const today = new Date().toISOString().slice(0, 10);
   const byTxn = new Map<string, { total: number; completed: number; overdue: number }>();
-  for (const t of (taskRows ?? []) as Array<{
+  for (const t of (tasksRes.data ?? []) as Array<{
     transaction_id: string;
     due_date: string | null;
     completed_at: string | null;
@@ -162,21 +194,11 @@ export async function listTransactionsForAgent(agentId: string): Promise<Transac
     byTxn.set(t.transaction_id, counter);
   }
 
-  return (txns as Array<TransactionRow & { contacts: { name: string | null; first_name: string | null; last_name: string | null } | null }>).map((t) => {
+  return txnRows.map((t) => {
     const counter = byTxn.get(t.id) ?? { total: 0, completed: 0, overdue: 0 };
-    const c = t.contacts;
-    const contactName =
-      (c?.first_name && c?.last_name
-        ? `${c.first_name} ${c.last_name}`.trim()
-        : c?.name) ?? null;
-    // Drop the embedded contacts object from the row before returning
-    // so the list-item shape matches TransactionListItem exactly.
-    const { contacts: _contacts, ...rest } = t as TransactionRow & {
-      contacts?: unknown;
-    };
-    void _contacts;
+    const contactName = t.contact_id ? contactNameById.get(t.contact_id) ?? null : null;
     return {
-      ...(rest as TransactionRow),
+      ...t,
       contact_name: contactName,
       task_total: counter.total,
       task_completed: counter.completed,
@@ -194,25 +216,33 @@ export async function getTransactionWithChildren(
   counterparties: TransactionCounterpartyRow[];
   contactName: string | null;
 } | null> {
+  // Plain select on transactions; contact name fetched separately so
+  // the page doesn't break on PostgREST schema-cache misses.
   const { data: txn, error } = await supabaseAdmin
     .from("transactions")
-    .select("*, contacts!inner(id, name, first_name, last_name)")
+    .select("*")
     .eq("id", id)
     .eq("agent_id", agentId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!txn) return null;
 
-  const withContact = txn as TransactionRow & {
-    contacts: { name: string | null; first_name: string | null; last_name: string | null } | null;
-  };
-  const c = withContact.contacts;
-  const contactName =
-    (c?.first_name && c?.last_name
-      ? `${c.first_name} ${c.last_name}`.trim()
-      : c?.name) ?? null;
+  const transaction = txn as TransactionRow;
 
-  const [{ data: tasks }, { data: counterparties }] = await Promise.all([
+  type ContactRow = {
+    name: string | null;
+    first_name: string | null;
+    last_name: string | null;
+  };
+
+  const [contactRes, tasksRes, counterpartiesRes] = await Promise.all([
+    transaction.contact_id
+      ? supabaseAdmin
+          .from("contacts")
+          .select("name, first_name, last_name")
+          .eq("id", transaction.contact_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null as ContactRow | null, error: null as null }),
     supabaseAdmin
       .from("transaction_tasks")
       .select("*")
@@ -224,13 +254,18 @@ export async function getTransactionWithChildren(
       .eq("transaction_id", id)
       .order("role", { ascending: true }),
   ]);
+  if (contactRes.error) throw new Error(contactRes.error.message);
 
-  const { contacts: _contacts, ...rest } = withContact as TransactionRow & { contacts?: unknown };
-  void _contacts;
+  const c = contactRes.data as ContactRow | null;
+  const contactName =
+    (c?.first_name && c?.last_name
+      ? `${c.first_name} ${c.last_name}`.trim()
+      : c?.name) ?? null;
+
   return {
-    transaction: rest as TransactionRow,
-    tasks: (tasks ?? []) as TransactionTaskRow[],
-    counterparties: (counterparties ?? []) as TransactionCounterpartyRow[],
+    transaction,
+    tasks: (tasksRes.data ?? []) as TransactionTaskRow[],
+    counterparties: (counterpartiesRes.data ?? []) as TransactionCounterpartyRow[],
     contactName,
   };
 }
