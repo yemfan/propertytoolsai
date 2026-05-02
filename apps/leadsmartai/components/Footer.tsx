@@ -2,12 +2,20 @@ import Link from "next/link";
 import { CookieSettingsLink } from "@/components/cookie-consent/CookieConsent";
 import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
 
+/**
+ * Public-only product links. Removed `/dashboard`, `/client/dashboard`,
+ * and `/dashboard/automation` because they're auth-gated — landing on
+ * a 401/redirect from a footer click feels broken to anyone not signed
+ * in. The same complaint led to dropping `Sign in` / `Get started`
+ * from the marketing landing footer; applying it consistently here.
+ *
+ * `/features` is the canonical destination for "what does LeadSmart
+ * actually do?" — see app/features/page.tsx.
+ */
 const productLinks = [
-  { label: "Lead Management", href: "/dashboard" },
+  { label: "Features", href: "/features" },
   { label: "AI Deal Assistant", href: "/deal-assistant" },
-  { label: "Client Portal", href: "/client/dashboard" },
   { label: "AI CMA Analyzer", href: "/ai-cma-analyzer" },
-  { label: "Automations", href: "/dashboard/automation" },
   { label: "Mobile App", href: "/start-free" },
 ];
 

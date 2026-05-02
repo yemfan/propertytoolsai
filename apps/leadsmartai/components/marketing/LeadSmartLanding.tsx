@@ -36,12 +36,18 @@ const vslAnchorHref = "#vsl";
  * mobile drawer. Hash slugs are computed once here so they stay in sync
  * if section IDs ever move.
  */
+/**
+ * `hash` slugs starting with `#` scroll within the landing page;
+ * route paths (starting with `/`) link out to dedicated pages
+ * (Features → `/features`, Pricing → `/pricing`). The same shape
+ * feeds desktop nav + mobile drawer so they stay in sync.
+ */
 const NAV_SECTIONS: { label: string; hash: string }[] = [
   { label: "Problem", hash: "#problem" },
   { label: "Solution", hash: "#solution" },
   { label: "How It Works", hash: "#how" },
-  { label: "Features", hash: "#features" },
-  { label: "Pricing", hash: "#pricing" },
+  { label: "Features", hash: "/features" },
+  { label: "Pricing", hash: "/pricing" },
 ];
 
 /* ── Scroll-triggered fade-in ── */
@@ -1112,118 +1118,12 @@ export default function LeadSmartLanding() {
           </RevealSection>
         </section>
 
-        {/*
-         * Footer — expanded to a 4-column layout (Product / Tools /
-         * Company / Legal) for the Batch 2 audit. The earlier single-
-         * row nav collapsed all links into one list, which hurt
-         * discoverability of the free calculators and made the site
-         * look unfinished. On mobile the columns stack as a 2×2 grid.
-         */}
-        <footer className="border-t border-gray-200 bg-white px-6 py-12 dark:border-slate-800 dark:bg-slate-950">
-          <div className="mx-auto max-w-7xl">
-            <div className="grid grid-cols-2 gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]">
-              {/* Brand column */}
-              <div className="col-span-2 md:col-span-1">
-                <LeadSmartLogo compact className="max-w-[200px] opacity-90" priority={false} />
-                <p className="mt-4 max-w-xs text-sm text-gray-600 dark:text-slate-400">
-                  The AI deal engine + coaching program for real estate — capture, qualify, convert, and grow your annual transaction count.
-                </p>
-              </div>
-
-              {/* Product */}
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200">Product</h3>
-                <ul className="mt-4 space-y-2 text-sm">
-                  {[
-                    { label: "Features", href: "#features" },
-                    { label: "Pricing", href: "/pricing" },
-                    { label: "How it works", href: "#how" },
-                    { label: "Sign in", href: "/login" },
-                    { label: "Get started", href: "/signup" },
-                  ].map((link) => (
-                    <li key={link.label}>
-                      <Link
-                        href={link.href}
-                        className="!text-gray-600 transition-colors hover:!text-[#0072ce] dark:!text-slate-400 dark:hover:!text-[#4da3e8]"
-                      >
-                        {link.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Free Tools */}
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200">Free Tools</h3>
-                <ul className="mt-4 space-y-2 text-sm">
-                  {[
-                    { label: "Mortgage Calculator", href: "/mortgage-calculator" },
-                    { label: "Affordability Calculator", href: "/affordability-calculator" },
-                    { label: "Rent vs Buy", href: "/rent-vs-buy-calculator" },
-                    { label: "Down Payment", href: "/down-payment-calculator" },
-                    { label: "Cash Flow", href: "/cash-flow-calculator" },
-                  ].map((link) => (
-                    <li key={link.label}>
-                      <Link
-                        href={link.href}
-                        className="!text-gray-600 transition-colors hover:!text-[#0072ce] dark:!text-slate-400 dark:hover:!text-[#4da3e8]"
-                      >
-                        {link.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Company */}
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200">Company</h3>
-                <ul className="mt-4 space-y-2 text-sm">
-                  {[
-                    { label: "About", href: "/about" },
-                    { label: "Contact", href: "/contact" },
-                    { label: "Support", href: "/support" },
-                  ].map((link) => (
-                    <li key={link.label}>
-                      <Link
-                        href={link.href}
-                        className="!text-gray-600 transition-colors hover:!text-[#0072ce] dark:!text-slate-400 dark:hover:!text-[#4da3e8]"
-                      >
-                        {link.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Legal */}
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-slate-200">Legal</h3>
-                <ul className="mt-4 space-y-2 text-sm">
-                  {[
-                    { label: "Privacy", href: "/privacy" },
-                    { label: "Terms", href: "/terms" },
-                  ].map((link) => (
-                    <li key={link.label}>
-                      <Link
-                        href={link.href}
-                        className="!text-gray-600 transition-colors hover:!text-[#0072ce] dark:!text-slate-400 dark:hover:!text-[#4da3e8]"
-                      >
-                        {link.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-gray-100 pt-6 text-xs text-gray-500 dark:border-slate-800/80 dark:text-slate-500 sm:flex-row">
-              <p>&copy; {new Date().getFullYear()} LeadSmart AI. All rights reserved.</p>
-              <p>Built for top-producing real estate agents.</p>
-            </div>
-          </div>
-        </footer>
+        {/* Footer is rendered by AppShell's marketing-home branch so
+            every public page (landing + features + about + calculators
+            + legal) shares the same `components/Footer.tsx`. Keeping
+            this comment as a breadcrumb because the inline footer
+            that used to live here was confusingly bigger than the
+            global one. */}
       </main>
 
       <ExitIntentPopup role="agent" />

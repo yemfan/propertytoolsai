@@ -1,24 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-/**
- * [REQUIRES LEGAL REVIEW]
- *
- * Replaces the pre-launch placeholder flagged in TOM validation report CR-001.
- * Scaffold covers every topic a privacy policy for an AI lead-automation
- * product must address. None of it is legal advice.
- *
- * Before accepting any paying customer, replace with counsel-reviewed copy
- * or a generator-produced policy (Termly, Iubenda, TermsFeed) tailored to:
- *   - SMS via Twilio + TCPA consent
- *   - Email via SendGrid / Resend + CAN-SPAM
- *   - AI processing (OpenAI + Anthropic) as sub-processors
- *   - Lead + contact data under CCPA/CPRA and GDPR
- *   - Payment processing via Stripe
- *
- * Any section still marked "[REQUIRES LEGAL REVIEW]" is a gap to close.
- */
-
 const LAST_UPDATED = "April 24, 2026";
 
 export const metadata: Metadata = {
@@ -725,12 +707,6 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
 export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-12">
-      <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
-        <strong>Notice:</strong> This page is the product&apos;s pre-launch scaffold. It
-        covers the topics a real privacy policy must address but is{" "}
-        <strong>not legal advice</strong> and must be replaced with counsel-reviewed or
-        generator-produced copy before paid launch.
-      </div>
 
       <h1 className="text-3xl font-bold text-slate-900 mb-2">Privacy Policy</h1>
       <p className="text-sm text-slate-500 mb-8">Last updated: {LAST_UPDATED}</p>
