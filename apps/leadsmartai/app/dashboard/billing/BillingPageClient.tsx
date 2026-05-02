@@ -3,9 +3,26 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-type PlanSlug = "starter" | "pro" | "team";
+type PlanSlug = "starter" | "pro" | "premium" | "team";
 
-type Catalog = Record<PlanSlug, { price: number; features: readonly string[] }>;
+/**
+ * Wire shape returned by `/api/billing/subscription` — server hands
+ * the full `PLANS` map straight through, so the rich fields
+ * (displayName / tagline / coachingTier / popular / price /
+ * features) are all available here. Older fields are kept on the
+ * type to ease the rename — anything we don't read is just ignored.
+ */
+type CatalogEntry = {
+  slug: PlanSlug;
+  displayName: string;
+  tagline: string;
+  price: number;
+  features: readonly string[];
+  coachingTier?: string;
+  popular?: boolean;
+};
+
+type Catalog = Record<PlanSlug, CatalogEntry>;
 
 type Invoice = {
   id: string;
@@ -32,12 +49,13 @@ type SubscriptionPayload = {
 
 const BRAND = "#0072CE";
 
-const PLAN_DISPLAY: Record<PlanSlug, { title: string; hint: string; popular?: boolean }> = {
-  starter: { title: "Starter", hint: "Core CRM + lead management" },
-  pro: { title: "Pro", hint: "Full AI, automation & predictions", popular: true },
-  team: { title: "Team", hint: "Multi-agent, routing & collaboration" },
-};
-
+/**
+ * Display metadata is now served by the API alongside `price` /
+ * `features` (catalog entry includes `displayName`, `tagline`,
+ * `popular`). Kept this lookup table for the feature flag → label
+ * mapping only — the new `producer_track_coaching` /
+ * `top_producer_track_coaching` flags use marketing-style copy.
+ */
 const FEATURE_LABELS: Record<string, string> = {
   basic_crm: "Core CRM",
   limited_ai: "AI drafts (limited)",
@@ -46,6 +64,8 @@ const FEATURE_LABELS: Record<string, string> = {
   prediction: "Lead predictions",
   multi_agent: "Multi-agent workspace",
   routing: "Smart lead routing",
+  producer_track_coaching: "Producer Track coaching",
+  top_producer_track_coaching: "Top Producer Track coaching",
 };
 
 function featureLabel(key: string) {
@@ -200,7 +220,13 @@ export default function BillingPageClient() {
     }
   };
 
-  const tiers: PlanSlug[] = ["starter", "pro", "team"];
+  /**
+   * Render order matches the catalog (Starter → Pro → Premium →
+   * Team). Listed explicitly here rather than `Object.keys(catalog)`
+   * so the order is deterministic and not dependent on JS object
+   * insertion ordering.
+   */
+  const tiers: PlanSlug[] = ["starter", "pro", "premium", "team"];
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 py-6">
@@ -284,10 +310,18 @@ export default function BillingPageClient() {
 
                 {subscription && (
                   <div className="text-right">
-                    <p className="text-3xl font-extrabold text-brand-text">
-                      ${subscription.tier.price}
-                    </p>
-                    <p className="text-sm text-gray-500">per month</p>
+                    {/* Free tier renders "Free" instead of "$0 per month"
+                        — same intent as the tier-card pricing. */}
+                    {subscription.tier.price === 0 ? (
+                      <p className="text-3xl font-extrabold text-brand-text">Free</p>
+                    ) : (
+                      <>
+                        <p className="text-3xl font-extrabold text-brand-text">
+                          ${subscription.tier.price}
+                        </p>
+                        <p className="text-sm text-gray-500">per month</p>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -374,12 +408,18 @@ export default function BillingPageClient() {
             <h2 className="mb-4 text-lg font-bold text-brand-text">
               {subscription ? "Change plan" : "Choose a plan"}
             </h2>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               {tiers.map((slug) => {
                 const row = catalog?.[slug];
-                const display = PLAN_DISPLAY[slug];
                 const isCurrent = subscription?.plan === slug;
                 const price = row?.price;
+                /* Tier card driven by the catalog entry — `displayName`,
+                   `tagline`, and `popular` come straight from
+                   `lib/billing/plans.ts`, so adding/renaming a tier
+                   updates the cards automatically. */
+                const displayName = row?.displayName ?? slug;
+                const tagline = row?.tagline ?? "";
+                const popular = row?.popular === true;
                 return (
                   <div
                     key={slug}
@@ -389,7 +429,7 @@ export default function BillingPageClient() {
                         : "border-gray-200"
                     }`}
                   >
-                    {display.popular && !isCurrent && (
+                    {popular && !isCurrent && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                         <span
                           className="rounded-full px-3 py-1 text-xs font-bold text-white shadow-sm"
@@ -412,15 +452,19 @@ export default function BillingPageClient() {
                       className="text-sm font-semibold"
                       style={{ color: isCurrent ? BRAND : "#6b7280" }}
                     >
-                      {display.title}
+                      {displayName}
                     </p>
                     <p className="mt-1 text-3xl font-extrabold text-brand-text">
-                      {price !== undefined ? `$${price}` : "—"}
-                      {price !== undefined && (
+                      {price === 0
+                        ? "Free"
+                        : price !== undefined
+                          ? `$${price}`
+                          : "—"}
+                      {price !== undefined && price > 0 && (
                         <span className="text-base font-normal text-gray-500">/mo</span>
                       )}
                     </p>
-                    <p className="mt-1 text-xs text-gray-500">{display.hint}</p>
+                    <p className="mt-1 text-xs text-gray-500">{tagline}</p>
 
                     <ul className="mt-4 flex-1 space-y-2 text-sm text-gray-600">
                       {(row?.features ?? []).map((f) => (
@@ -431,21 +475,35 @@ export default function BillingPageClient() {
                       ))}
                     </ul>
 
-                    <button
-                      type="button"
-                      onClick={() => void startCheckout(slug)}
-                      disabled={busyPlan !== null || isCurrent}
-                      className="mt-6 w-full rounded-xl py-2.5 text-sm font-bold text-white shadow transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                      style={{ background: isCurrent ? "#94a3b8" : BRAND }}
-                    >
-                      {busyPlan === slug
-                        ? "Redirecting…"
-                        : isCurrent
-                          ? "Current plan"
-                          : subscription
-                            ? "Switch plan"
-                            : "Get started"}
-                    </button>
+                    {/* Free tier (Starter at $0) has no Stripe Price ID,
+                        so the button can't go through checkout — show it
+                        as the implicit fallback when no paid sub is
+                        active, and disabled otherwise. The catalog's
+                        `stripePriceEnvVar: null` is the canonical signal. */}
+                    {price === 0 ? (
+                      <div
+                        className="mt-6 w-full rounded-xl bg-slate-100 py-2.5 text-center text-sm font-semibold text-slate-600"
+                        aria-disabled
+                      >
+                        {isCurrent ? "Current plan" : "Free — included by default"}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void startCheckout(slug)}
+                        disabled={busyPlan !== null || isCurrent}
+                        className="mt-6 w-full rounded-xl py-2.5 text-sm font-bold text-white shadow transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                        style={{ background: isCurrent ? "#94a3b8" : BRAND }}
+                      >
+                        {busyPlan === slug
+                          ? "Redirecting…"
+                          : isCurrent
+                            ? "Current plan"
+                            : subscription
+                              ? "Switch plan"
+                              : "Get started"}
+                      </button>
+                    )}
                   </div>
                 );
               })}

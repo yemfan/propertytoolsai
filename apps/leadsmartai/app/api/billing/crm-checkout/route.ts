@@ -6,8 +6,15 @@ import { getCrmStripePriceId, internalPlanForCrmSlug } from "@/lib/billing/crmSt
 import type { PlanSlug } from "@/lib/billing/plans";
 import { stripe } from "@/lib/stripe/server";
 
+/**
+ * Valid checkout slugs — paid tiers only. `starter` is the free tier
+ * and has no Stripe Price ID (catalog: `stripePriceEnvVar: null`),
+ * so it can't go through Stripe Checkout. The free path is handled
+ * by the dashboard billing page directly (Starter card renders as
+ * "Free — included by default" instead of a Switch button).
+ */
 const bodySchema = z.object({
-  plan: z.enum(["starter", "pro", "team"]),
+  plan: z.enum(["pro", "premium", "team"]),
 });
 
 function siteOrigin(req: Request): string {
