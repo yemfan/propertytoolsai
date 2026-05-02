@@ -58,7 +58,13 @@ async function apiRequest<T>(url: string, init?: RequestInit): Promise<T> {
 
   const json = await res.json();
   if (!res.ok || json?.success === false) {
-    throw new Error(json?.error || "Request failed");
+    // The estimate API returns ineligible responses as
+    // `{ success: false, status: "ineligible", reason, message }` —
+    // the helpful copy lives in `message`, not `error`. Fall through
+    // to `message` before the generic "Request failed" so users see
+    // "We found this address but don't have enough property details
+    // …" instead of a useless red banner.
+    throw new Error(json?.error || json?.message || "Request failed");
   }
   return json as T;
 }
