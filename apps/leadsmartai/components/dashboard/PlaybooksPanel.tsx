@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Plus } from "lucide-react";
-import type { PlaybookAnchor } from "@/lib/playbooks/definitions";
+import { getPlaybook, type PlaybookAnchor } from "@/lib/playbooks/definitions";
 import type { PlaybookTaskRow } from "@/lib/playbooks/types";
 
 type PlaybookMeta = {
@@ -924,14 +924,8 @@ function groupTasks(tasks: PlaybookTaskRow[]): {
 }
 
 function labelFor(templateKey: string | null): string {
-  const labels: Record<string, string> = {
-    write_offer: "Write an offer",
-    host_open_house: "Host an open house",
-    seller_presentation: "Seller presentation",
-    listing_launch: "Listing launch",
-  };
   if (!templateKey) return "Ad-hoc tasks";
-  return labels[templateKey] ?? templateKey;
+  return getPlaybook(templateKey)?.title ?? templateKey;
 }
 
 function todayYmd(): string {

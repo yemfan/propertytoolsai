@@ -2,6 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { AiActionGateBanner } from "@/components/entitlements/AiActionGateBanner";
+import {
+  detectAiActionGate,
+  type AiActionGate,
+} from "@/lib/entitlements/aiActionGate";
 import type { GrowthOpportunity, OpportunityCategory, OpportunityPriority } from "@/lib/growth/opportunityTypes";
 
 /**
@@ -79,6 +84,10 @@ export default function GrowthPage() {
   const [oppLoading, setOppLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
   const [oppError, setOppError] = useState<string | null>(null);
+  // Sticky entitlement gate when /api/dashboard/growth/opportunities
+  // returns 402. Surfaced as the shared upgrade banner so the agent
+  // sees the same affordance as on every other AI surface.
+  const [oppGate, setOppGate] = useState<AiActionGate | null>(null);
 
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
   const [codes, setCodes] = useState<ReferralCodeRow[]>([]);
@@ -87,6 +96,7 @@ export default function GrowthPage() {
 
   const loadOpportunities = useCallback(async (force = false) => {
     setOppError(null);
+    setOppGate(null);
     if (force) setRegenerating(true);
     else setOppLoading(true);
     try {
@@ -94,9 +104,14 @@ export default function GrowthPage() {
         method: force ? "POST" : "GET",
       });
       const body = (await res.json().catch(() => null)) as
-        | (OpportunitiesResponse & { error?: string })
+        | (OpportunitiesResponse & { error?: string; code?: string })
         | null;
       if (!res.ok || !body || !body.ok) {
+        const aiGate = detectAiActionGate(res.status, body);
+        if (aiGate) {
+          setOppGate(aiGate);
+          return;
+        }
         setOppError(body?.error ?? "Failed to load opportunities.");
         return;
       }
@@ -196,12 +211,16 @@ export default function GrowthPage() {
         </button>
       </div>
 
-      <OpportunitiesSection
-        loading={oppLoading && !opps}
-        error={oppError}
-        data={opps}
-        regenerating={regenerating}
-      />
+      {oppGate ? (
+        <AiActionGateBanner reason={oppGate.reason} />
+      ) : (
+        <OpportunitiesSection
+          loading={oppLoading && !opps}
+          error={oppError}
+          data={opps}
+          regenerating={regenerating}
+        />
+      )}
 
       <section className="space-y-3 border-t border-slate-200 pt-6">
         <h2 className="text-sm font-semibold text-slate-900">Traffic &amp; referrals (30 days)</h2>

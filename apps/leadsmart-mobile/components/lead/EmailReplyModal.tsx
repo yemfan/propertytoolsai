@@ -16,6 +16,8 @@ import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
 import { hapticError, hapticSuccess } from "../../lib/haptics";
 import { AiReplyButton } from "./AiReplyButton";
+import { AiActionGateBanner } from "../AiActionGateBanner";
+import type { AiActionGate } from "../../lib/aiActionGate";
 
 export function defaultEmailReplySubject(thread: MobileEmailMessageDto[]): string {
   const lastIn = [...thread].reverse().find((m) => m.direction === "inbound");
@@ -24,13 +26,26 @@ export function defaultEmailReplySubject(thread: MobileEmailMessageDto[]): strin
   return s.toLowerCase().startsWith("re:") ? s : `Re: ${s}`;
 }
 
+/**
+ * AI draft result handed back from the parent's `onRequestAiDraft`.
+ * Three terminal cases:
+ *   - `ok: true`             — fill subject + body
+ *   - `ok: false, gate`      — entitlement blocks AI; render the
+ *                              shared upgrade banner inline
+ *   - `ok: false, error`     — generic failure; show the red error string
+ */
+export type EmailAiDraftResult =
+  | { ok: true; subject: string; body: string }
+  | { ok: false; gate: AiActionGate }
+  | { ok: false; error: string };
+
 export type EmailReplyModalProps = {
   visible: boolean;
   onClose: () => void;
   initialSubject: string;
   emailThread: MobileEmailMessageDto[];
   onSend: (subject: string, body: string) => Promise<void>;
-  onRequestAiDraft: () => Promise<{ subject: string; body: string }>;
+  onRequestAiDraft: () => Promise<EmailAiDraftResult>;
 };
 
 export function EmailReplyModal({
@@ -49,23 +64,37 @@ export function EmailReplyModal({
   const [sending, setSending] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gate, setGate] = useState<AiActionGate | null>(null);
 
   useEffect(() => {
     if (visible) {
       setSubject(initialSubject);
       setBody("");
       setError(null);
+      setGate(null);
     }
   }, [visible, initialSubject]);
 
   const onAi = async () => {
     setError(null);
+    setGate(null);
     setAiLoading(true);
     try {
       const d = await onRequestAiDraft();
-      setSubject(d.subject);
-      setBody(d.body);
+      if (d.ok) {
+        setSubject(d.subject);
+        setBody(d.body);
+        return;
+      }
+      if ("gate" in d) {
+        setGate(d.gate);
+        return;
+      }
+      setError(d.error);
     } catch (e) {
+      // Defensive: parent contract returns failure shapes, but a thrown
+      // error (network blow-up before it can be caught upstream) still
+      // shouldn't crash the modal.
       setError(e instanceof Error ? e.message : "AI draft failed");
     } finally {
       setAiLoading(false);
@@ -106,6 +135,7 @@ export function EmailReplyModal({
           {emailThread.length === 0 ? (
             <Text style={styles.hint}>No email thread yet — you can still send a first message.</Text>
           ) : null}
+          {gate ? <AiActionGateBanner reason={gate.reason} /> : null}
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <Text style={styles.fieldLabel}>Subject</Text>
           <TextInput

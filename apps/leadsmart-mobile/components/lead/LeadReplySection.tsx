@@ -14,6 +14,8 @@ import { ReplyComposer } from "./ReplyComposer";
 import { hapticError, hapticSuccess } from "../../lib/haptics";
 import { useNetwork } from "../../lib/offline/NetworkContext";
 import { useWriteQueue } from "../../lib/offline/useWriteQueue";
+import { AiActionGateBanner } from "../AiActionGateBanner";
+import { detectAiActionGate, type AiActionGate } from "../../lib/aiActionGate";
 
 function appendSms(prev: MobileSmsMessageDto[], msg: MobileSmsMessageDto): MobileSmsMessageDto[] {
   if (prev.some((m) => m.id === msg.id)) return prev;
@@ -53,6 +55,11 @@ export function LeadReplySection({
   const [smsError, setSmsError] = useState<string | null>(null);
   const [smsSentFlash, setSmsSentFlash] = useState(false);
   const sentTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Sticky entitlement gate from /api/mobile/leads/.../{sms,email}/ai-reply.
+  // One state for both AI surfaces — if SMS AI is gated, email AI will be
+  // too, and showing the banner once at the top of the section is less
+  // noisy than per-button error strings.
+  const [gate, setGate] = useState<AiActionGate | null>(null);
 
   const [emailOpen, setEmailOpen] = useState(false);
 
@@ -78,9 +85,15 @@ export function LeadReplySection({
     try {
       const res = await postMobileSmsAiReply(leadId);
       if (res.ok === false) {
+        const aiGate = detectAiActionGate(res);
+        if (aiGate) {
+          setGate(aiGate);
+          return;
+        }
         setSmsError(res.message);
         return;
       }
+      setGate(null);
       setSmsText(res.suggestion);
     } finally {
       setSmsAiLoading(false);
@@ -127,12 +140,25 @@ export function LeadReplySection({
     }
   }, [leadId, smsText, setSms, flashSent, demo, isConnected, queueWrite]);
 
-  const onEmailAi = useCallback(async () => {
+  const onEmailAi = useCallback(async (): Promise<
+    | { ok: true; subject: string; body: string }
+    | { ok: false; gate: AiActionGate }
+    | { ok: false; error: string }
+  > => {
     const res = await postMobileEmailAiReply(leadId);
     if (res.ok === false) {
-      throw new Error(res.message);
+      const aiGate = detectAiActionGate(res);
+      if (aiGate) {
+        // Bubble the gate up so the section-level banner stays visible
+        // even after the email modal closes — agent will retry from
+        // either AI surface and they'll see the same affordance.
+        setGate(aiGate);
+        return { ok: false, gate: aiGate };
+      }
+      return { ok: false, error: res.message };
     }
-    return { subject: res.subject, body: res.body };
+    setGate(null);
+    return { ok: true, subject: res.subject, body: res.body };
   }, [leadId]);
 
   const onEmailSend = useCallback(
@@ -148,6 +174,7 @@ export function LeadReplySection({
 
   return (
     <View style={styles.block}>
+      {gate ? <AiActionGateBanner reason={gate.reason} /> : null}
       <ReplyComposer
         value={smsText}
         onChangeText={setSmsText}

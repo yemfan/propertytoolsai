@@ -1,6 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AiActionGateBanner } from "@/components/entitlements/AiActionGateBanner";
+import {
+  detectAiActionGate,
+  type AiActionGate,
+} from "@/lib/entitlements/aiActionGate";
 import type { DealReview } from "@/lib/deal-review/types";
 
 /**
@@ -16,6 +21,7 @@ type ReviewResponse = {
   usedFallback: boolean;
   aiConfigured: boolean;
   error?: string;
+  code?: string;
 };
 
 export function DealReviewPanel({ transactionId }: { transactionId: string }) {
@@ -23,10 +29,15 @@ export function DealReviewPanel({ transactionId }: { transactionId: string }) {
   const [loading, setLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Sticky entitlement gate from /api/dashboard/transactions/.../review.
+  // Replaces the raw red error string with the shared upgrade banner so
+  // the agent sees the same affordance everywhere AI is gated.
+  const [gate, setGate] = useState<AiActionGate | null>(null);
 
   const load = useCallback(
     async (force = false) => {
       setError(null);
+      setGate(null);
       if (force) setRegenerating(true);
       else setLoading(true);
       try {
@@ -36,6 +47,11 @@ export function DealReviewPanel({ transactionId }: { transactionId: string }) {
         );
         const body = (await res.json().catch(() => null)) as ReviewResponse | null;
         if (!res.ok || !body || !body.ok) {
+          const aiGate = detectAiActionGate(res.status, body);
+          if (aiGate) {
+            setGate(aiGate);
+            return;
+          }
           setError(body?.error ?? "Couldn't load deal review.");
           return;
         }
@@ -82,6 +98,8 @@ export function DealReviewPanel({ transactionId }: { transactionId: string }) {
         <div className="mt-6 rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-500">
           Generating your deal review. This takes about 15 seconds the first time.
         </div>
+      ) : gate ? (
+        <AiActionGateBanner reason={gate.reason} className="mt-4" />
       ) : error ? (
         <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           {error}
