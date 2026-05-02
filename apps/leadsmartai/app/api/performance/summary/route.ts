@@ -42,6 +42,8 @@ export async function GET(req: Request) {
     const todayIso = startOfTodayIso();
     const sevenDaysAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
+    // Phase 2c: read crm_tasks. Status remap from old vocabulary —
+    // skipped → cancelled, pending → open. (done stays done.)
     const [
       tasksDoneRes,
       tasksSkippedRes,
@@ -51,22 +53,22 @@ export async function GET(req: Request) {
       commsRes,
     ] = await Promise.all([
       supabaseServer
-        .from("tasks")
+        .from("crm_tasks")
         .select("id", { count: "exact", head: true })
         .in("agent_id", scope.agentIds)
         .eq("status", "done")
         .gte("updated_at", sevenDaysAgoIso),
       supabaseServer
-        .from("tasks")
+        .from("crm_tasks")
         .select("id", { count: "exact", head: true })
         .in("agent_id", scope.agentIds)
-        .eq("status", "skipped")
+        .eq("status", "cancelled")
         .gte("updated_at", sevenDaysAgoIso),
       supabaseServer
-        .from("tasks")
+        .from("crm_tasks")
         .select("id", { count: "exact", head: true })
         .in("agent_id", scope.agentIds)
-        .eq("status", "pending"),
+        .eq("status", "open"),
       supabaseServer
         .from("contacts")
         .select("id,rating,engagement_score,created_at,last_activity_at", { count: "exact" })

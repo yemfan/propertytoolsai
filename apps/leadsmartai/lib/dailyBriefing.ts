@@ -18,9 +18,9 @@ type LeadRow = {
 type TaskRow = {
   id: string;
   title: string | null;
-  type: string | null;
+  task_type: string | null;
   status: string | null;
-  due_date: string | null;
+  due_at: string | null;
   completed_at: string | null;
   created_at: string | null;
 };
@@ -153,48 +153,55 @@ async function generateMorning(agentId: string): Promise<BriefingOutput> {
 async function generateEvening(agentId: string): Promise<BriefingOutput> {
   const startUtc = startOfTodayUtcIso();
   const endUtc = endOfTodayUtcIso();
-  const todayStr = todayDate();
 
-  const { data: completedRaw } = await supabaseServer
-    .from("tasks")
-    .select("id,title,type,status,due_date,completed_at,created_at")
-    .eq("agent_id", agentId)
-    .eq("status", "completed")
-    .gte("completed_at", startUtc)
-    .lte("completed_at", endUtc)
-    .limit(50);
-  const completed = ((completedRaw as TaskRow[] | null) ?? []).map((t) => ({
-    title: t.title || "Task",
-    type: t.type || "task",
-  }));
-
-  const { data: missedRaw } = await supabaseServer
-    .from("tasks")
-    .select("id,title,type,status,due_date,completed_at,created_at")
-    .eq("agent_id", agentId)
-    .eq("due_date", todayStr)
-    .neq("status", "completed")
-    .limit(50);
-  const missed = ((missedRaw as TaskRow[] | null) ?? []).map((t) => ({
-    title: t.title || "Task",
-    type: t.type || "task",
-  }));
-
+  // Source: crm_tasks (Phase 2c — public.tasks is deprecated). Status
+  // map: legacy 'completed' → 'done', and we use due_at (timestamptz)
+  // bracketed by start/end-of-day UTC instead of date equality.
   const tomorrowStr = (() => {
     const d = new Date(startUtc);
     d.setUTCDate(d.getUTCDate() + 1);
     return d.toISOString().slice(0, 10);
   })();
-  const { data: tomorrowRaw } = await supabaseServer
-    .from("tasks")
-    .select("id,title,type,status,due_date,completed_at,created_at")
+  const tomorrowStartUtc = `${tomorrowStr}T00:00:00.000Z`;
+  const tomorrowEndUtc = `${tomorrowStr}T23:59:59.999Z`;
+
+  const { data: completedRaw } = await supabaseServer
+    .from("crm_tasks")
+    .select("id,title,task_type,status,due_at,completed_at,created_at")
     .eq("agent_id", agentId)
-    .eq("due_date", tomorrowStr)
-    .neq("status", "completed")
+    .eq("status", "done")
+    .gte("completed_at", startUtc)
+    .lte("completed_at", endUtc)
+    .limit(50);
+  const completed = ((completedRaw as TaskRow[] | null) ?? []).map((t) => ({
+    title: t.title || "Task",
+    type: t.task_type || "task",
+  }));
+
+  const { data: missedRaw } = await supabaseServer
+    .from("crm_tasks")
+    .select("id,title,task_type,status,due_at,completed_at,created_at")
+    .eq("agent_id", agentId)
+    .gte("due_at", startUtc)
+    .lte("due_at", endUtc)
+    .neq("status", "done")
+    .limit(50);
+  const missed = ((missedRaw as TaskRow[] | null) ?? []).map((t) => ({
+    title: t.title || "Task",
+    type: t.task_type || "task",
+  }));
+
+  const { data: tomorrowRaw } = await supabaseServer
+    .from("crm_tasks")
+    .select("id,title,task_type,status,due_at,completed_at,created_at")
+    .eq("agent_id", agentId)
+    .gte("due_at", tomorrowStartUtc)
+    .lte("due_at", tomorrowEndUtc)
+    .neq("status", "done")
     .limit(20);
   const tomorrow = ((tomorrowRaw as TaskRow[] | null) ?? []).map((t) => ({
     title: t.title || "Task",
-    type: t.type || "task",
+    type: t.task_type || "task",
   }));
 
   // Conversation count today. `communications` may not exist on
@@ -233,14 +240,24 @@ async function writeMorningTasks(
   agentId: string,
   ai: BriefingOutput,
 ): Promise<void> {
-  const day = todayDate();
+  // Phase 2c: write to crm_tasks with source='briefing' so the unified
+  // /dashboard/tasks view picks them up via its source chip. Previous
+  // implementation wrote to public.tasks, which the unified view never
+  // read — so briefing tasks were invisible to the agent.
+  //
+  // due_at is end-of-day local-ish (17:00 UTC, ~9-10am→10pm across US
+  // timezones) so a "due today" filter still matches when the cron
+  // runs in the small hours of the morning.
+  const dueAt = `${todayDate()}T17:00:00.000Z`;
   const tasks: Array<{
     agent_id: string;
-    contact_id: number | null;
+    contact_id: string | null;
     title: string;
     description: string;
-    type: string;
-    due_date: string;
+    task_type: string;
+    source: "briefing";
+    priority: "high" | "normal";
+    due_at: string;
   }> = [];
 
   for (const l of ai.insights.topHotLeads ?? []) {
@@ -249,8 +266,10 @@ async function writeMorningTasks(
       contact_id: null,
       title: `Call hot lead: ${l.name}`,
       description: `High-intent lead at ${l.address || "no address"}. Engagement score ${l.score}.`,
-      type: "call",
-      due_date: day,
+      task_type: "call",
+      source: "briefing",
+      priority: "high",
+      due_at: dueAt,
     });
   }
   for (const l of ai.insights.needsFollowUp ?? []) {
@@ -259,14 +278,16 @@ async function writeMorningTasks(
       contact_id: null,
       title: `Follow up with inactive lead: ${l.name}`,
       description: `Lead has been inactive for ${l.daysInactive} days at ${l.address || "no address"}.`,
-      type: "follow_up",
-      due_date: day,
+      task_type: "follow_up",
+      source: "briefing",
+      priority: "normal",
+      due_at: dueAt,
     });
   }
 
   if (!tasks.length) return;
   try {
-    await supabaseServer.from("tasks").insert(tasks);
+    await supabaseServer.from("crm_tasks").insert(tasks);
   } catch {
     // Ignore duplicate-constraint errors — same hot lead two days in a row.
   }

@@ -70,13 +70,17 @@ async function main() {
   }
   console.log("✓ cma_daily_usage");
 
-  const { error: tasks } = await supabase.from("tasks").select("id,agent_id,due_date").limit(1);
+  // Phase 2c: public.tasks deprecated — smoke test points at crm_tasks.
+  const { error: tasks } = await supabase
+    .from("crm_tasks")
+    .select("id,agent_id,due_at,source")
+    .limit(1);
   if (tasks) {
-    console.error(`✗ tasks: ${tasks.message}`);
+    console.error(`✗ crm_tasks: ${tasks.message}`);
     process.exitCode = 1;
     return;
   }
-  console.log("✓ tasks");
+  console.log("✓ crm_tasks");
 
   const { error: db } = await supabase.from("daily_briefings").select("id,agent_id,summary,created_at").limit(1);
   if (db) {
