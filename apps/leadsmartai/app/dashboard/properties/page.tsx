@@ -1,20 +1,25 @@
-import { supabaseServer } from "@/lib/supabaseServer";
-import PropertiesClient from "./PropertiesClient";
 import type { Metadata } from "next";
+import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { listListingsForAgent } from "@/lib/listings/service";
+import ListingsClient from "./ListingsClient";
 
+/**
+ * Listings — agent-side inventory view.
+ *
+ * Surfaces the agent's listing-rep + dual transactions with showings
+ * activity rolled up per property. URL kept as /dashboard/properties
+ * because the CommandPalette already links there; sidebar entry is
+ * labelled "Listings" (under Sellers).
+ */
 export const metadata: Metadata = {
-  title: "Properties",
-  description: "Track your active listings and property pipeline.",
-  keywords: ["properties", "listings", "inventory"],
+  title: "Listings",
+  description: "Your active listings — status, showings, and offers.",
+  keywords: ["listings", "inventory", "active"],
   robots: { index: false },
 };
 
-export default async function PropertiesPage() {
-  const { data } = await supabaseServer
-    .from("properties_warehouse")
-    .select("id, address, city, state, zip_code, beds, baths, sqft, property_type, year_built")
-    .order("updated_at", { ascending: false })
-    .limit(200);
-
-  return <PropertiesClient properties={(data ?? []) as any[]} />;
+export default async function ListingsPage() {
+  const { agentId } = await getCurrentAgentContext();
+  const listings = await listListingsForAgent(String(agentId));
+  return <ListingsClient listings={listings} />;
 }
