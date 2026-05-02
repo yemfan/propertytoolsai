@@ -22,7 +22,6 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
 
 export const metadata: Metadata = {
   title: "Features — LeadSmart AI",
@@ -54,29 +53,13 @@ export const metadata: Metadata = {
 const PRIMARY_CTA_HREF = "/onboarding";
 
 export default function FeaturesPage() {
+  /* AppShell already wraps non-home pages with `MarketingTopChrome`
+   * (top bar) + `PremiumSidebar` + `Footer`. The page's own
+   * `<header>` was stacking on top of that, producing two top bars
+   * and two `<main>` landmarks. Drop both — emit just the section
+   * content and let AppShell own the chrome. */
   return (
-    <main className="min-h-screen bg-white text-gray-900 dark:bg-slate-950 dark:text-slate-100">
-      {/* ── Top bar ─── */}
-      <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/85 backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/80">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Link href="/" aria-label="LeadSmart AI home">
-            <LeadSmartLogo className="max-w-[180px]" priority />
-          </Link>
-          <nav className="hidden items-center gap-6 text-sm md:flex" aria-label="Page sections">
-            <Link href="/#how" className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">How It Works</Link>
-            <Link href="/features" className="font-semibold text-[#0072ce] dark:text-[#4da3e8]" aria-current="page">Features</Link>
-            <Link href="/#why" className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">Why Us</Link>
-            <Link href="/pricing" className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">Pricing</Link>
-          </nav>
-          <Link
-            href={PRIMARY_CTA_HREF}
-            className="rounded-xl bg-[#0072ce] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#005ba8]"
-          >
-            Get started
-          </Link>
-        </div>
-      </header>
-
+    <>
       {/* ── HERO ─── */}
       <section className="relative overflow-hidden border-b border-slate-200/70 bg-gradient-to-b from-slate-50 via-white to-white px-6 py-20 dark:border-slate-800 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 md:py-28">
         <div className="pointer-events-none absolute inset-0 -z-0" aria-hidden>
@@ -173,8 +156,8 @@ export default function FeaturesPage() {
       </section>
 
       {/* ── GROWTH ENGINE — 5 deep pillar sections ─── */}
-      {GROWTH_ENGINE.map((p, i) => (
-        <PillarSection key={p.id} pillar={p} flipped={i % 2 === 1} />
+      {GROWTH_ENGINE.map((p) => (
+        <PillarSection key={p.id} pillar={p} />
       ))}
 
       {/* ── AI SALES STYLE ENGINE ─── */}
@@ -416,7 +399,7 @@ export default function FeaturesPage() {
 
       {/* Footer is provided by AppShell — see components/AppShell.tsx
           which renders <Footer /> for every public marketing page. */}
-    </main>
+    </>
   );
 }
 
@@ -555,59 +538,52 @@ const GROWTH_ENGINE: Pillar[] = [
   },
 ];
 
-function PillarSection({
-  pillar,
-  flipped,
-}: {
-  pillar: Pillar;
-  flipped: boolean;
-}) {
+function PillarSection({ pillar }: { pillar: Pillar }) {
+  /* Single layout for every pillar: header block on top (icon + step
+   * badge + headline + rationale + outcome chip), feature grid
+   * below in a 2-up. The previous alternating-side layout
+   * (`flipped`) confused the reading flow — odd-numbered pillars
+   * had cards on the left and text on the right, which fought the
+   * natural left-to-right scan. Stacked layout is also kinder on
+   * narrow viewports without `lg:order-N` reshuffling. */
   return (
     <section
       id={pillar.id}
       className="border-b border-slate-200/80 px-6 py-20 dark:border-slate-800 md:py-24"
     >
-      <div className="mx-auto max-w-7xl">
-        <div
-          className={`grid items-start gap-10 lg:gap-14 ${
-            flipped ? "lg:grid-cols-[2fr_1fr]" : "lg:grid-cols-[1fr_2fr]"
-          }`}
-        >
-          {/* Left rail — sticky icon + step + outcome */}
-          <div className={flipped ? "lg:order-2" : "lg:order-1"}>
-            <div className="lg:sticky lg:top-24">
-              <div className="flex items-center gap-3">
-                <span
-                  className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl ${pillar.chip.bg} ${pillar.chip.text}`}
-                >
-                  <pillar.icon size={26} strokeWidth={2} aria-hidden />
-                </span>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                  Step {pillar.step} · {pillar.shortName}
-                </span>
-              </div>
-              <h2 className="mt-5 font-heading text-3xl font-bold leading-tight text-slate-900 dark:text-white md:text-4xl">
-                <span aria-hidden className="mr-2">
-                  {pillar.emoji}
-                </span>
-                {pillar.headline}
-              </h2>
-              <p className="mt-4 text-base leading-relaxed text-slate-600 dark:text-slate-400 md:text-lg">
-                {pillar.rationale}
-              </p>
-              <p
-                className={`mt-6 inline-flex max-w-md items-start gap-2 rounded-xl border-2 px-4 py-3 text-sm font-semibold ${pillar.chip.bg} ${pillar.chip.text} ${pillar.chip.border}`}
+      <div className="mx-auto max-w-5xl">
+        <div className="space-y-10">
+          {/* Header — icon + badge + headline + rationale + outcome chip */}
+          <div>
+            <div className="flex items-center gap-3">
+              <span
+                className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl ${pillar.chip.bg} ${pillar.chip.text}`}
               >
-                <span aria-hidden>👉</span>
-                <span>{pillar.outcome}</span>
-              </p>
+                <pillar.icon size={26} strokeWidth={2} aria-hidden />
+              </span>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                Step {pillar.step} · {pillar.shortName}
+              </span>
             </div>
+            <h2 className="mt-5 font-heading text-3xl font-bold leading-tight text-slate-900 dark:text-white md:text-4xl">
+              <span aria-hidden className="mr-2">
+                {pillar.emoji}
+              </span>
+              {pillar.headline}
+            </h2>
+            <p className="mt-4 max-w-3xl text-base leading-relaxed text-slate-600 dark:text-slate-400 md:text-lg">
+              {pillar.rationale}
+            </p>
+            <p
+              className={`mt-6 inline-flex max-w-md items-start gap-2 rounded-xl border-2 px-4 py-3 text-sm font-semibold ${pillar.chip.bg} ${pillar.chip.text} ${pillar.chip.border}`}
+            >
+              <span aria-hidden>👉</span>
+              <span>{pillar.outcome}</span>
+            </p>
           </div>
 
-          {/* Right rail — feature list + optional signature card */}
-          <div
-            className={`space-y-5 ${flipped ? "lg:order-1" : "lg:order-2"}`}
-          >
+          {/* Feature grid + optional signature card */}
+          <div className="space-y-5">
             <ul
               className="grid gap-3 sm:grid-cols-2"
               aria-label={`${pillar.shortName} features`}
