@@ -159,20 +159,23 @@ export async function createVoiceHotFollowUpTask(
     .filter(Boolean)
     .join("\n\n");
 
+  // Phase 2c: crm_tasks doesn't have assigned_agent_id / created_by
+  // (those were lead_tasks columns the original writer assumed). The
+  // owning agent goes in agent_id; provenance goes in the new
+  // top-level source column.
   const { data: inserted, error } = await supabaseAdmin
     .from("crm_tasks")
     .insert({
+      agent_id: agentId as never,
       contact_id: params.leadId as never,
-      assigned_agent_id: agentId as never,
       title: spec.title,
       description,
       status: "open",
       priority: spec.priority,
       task_type: "voice_follow_up",
-      created_by: "system",
+      source: "ai_call",
       due_at: spec.dueAt,
       metadata_json: {
-        source: "ai_voice",
         twilio_call_sid: params.twilioCallSid,
         reason: params.needsHuman ? "needs_human" : "voice_hot_lead",
         inferred_intent: params.inferredIntent,

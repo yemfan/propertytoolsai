@@ -98,24 +98,19 @@ async function countCallsLogged(aid: number, start: string, end: string): Promis
 }
 
 async function countTasksCompleted(aid: number, start: string, end: string): Promise<number> {
-  // Check lead_tasks (newer) first, fall back to tasks (legacy).
-  const { count: ltCount } = await supabaseAdmin
+  // Phase 2c: single source of truth is crm_tasks (status='done').
+  // Pre-Phase-2c this function summed two queries — one against
+  // crm_tasks using a non-existent column (assigned_agent_id) and one
+  // against the deprecated public.tasks. Both halves were silently
+  // wrong; the consolidated query is now what we always meant.
+  const { count } = await supabaseAdmin
     .from("crm_tasks")
-    .select("id", { count: "exact", head: true })
-    .eq("assigned_agent_id", aid)
-    .eq("status", "closed")
-    .gte("updated_at", start)
-    .lt("updated_at", end);
-
-  const { count: tCount } = await supabaseAdmin
-    .from("tasks")
     .select("id", { count: "exact", head: true })
     .eq("agent_id", aid)
     .eq("status", "done")
     .gte("updated_at", start)
     .lt("updated_at", end);
-
-  return (ltCount ?? 0) + (tCount ?? 0);
+  return count ?? 0;
 }
 
 async function countAppointmentsBooked(aid: number, start: string, end: string): Promise<number> {

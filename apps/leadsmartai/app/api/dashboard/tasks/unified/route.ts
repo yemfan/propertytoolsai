@@ -21,16 +21,11 @@ export const runtime = "nodejs";
  * Query:
  *   - status=open|done|cancelled|all   (default: open)
  *
- * Notes / shortcuts taken in this phase:
- *   - `crm_tasks.source` doesn't exist in prod (schema drift), so we
- *     detect briefing-generated tasks by their title prefix. Phase 2
- *     migrates a real `source` column.
- *   - Playbook tasks have only `completed_at` / NULL — there's no
- *     cancelled state yet (lands in Phase 2). For now the "cancelled"
- *     filter only matches crm_tasks.
- *   - Coaching-program detection is `template_key` startsWith
- *     "producer_track" / "top_producer_track". Phase 2 may add an
- *     explicit `program_slug` column.
+ * Phase 2c: source detection moved off the title-prefix regex onto the
+ * real `crm_tasks.source` column, and coaching detection moved off the
+ * `template_key` startsWith hack onto `playbook_task_instances.program_slug`.
+ * Briefing tasks now actually surface here because the briefing writer
+ * also moved to crm_tasks (was writing to the deprecated public.tasks).
  */
 export async function GET(req: Request) {
   let ctx;
@@ -107,6 +102,7 @@ type CrmTaskRowSlim = {
   priority: string | null;
   due_at: string | null;
   completed_at: string | null;
+  source: string | null;
 };
 
 async function fetchCrmTasks(
@@ -115,7 +111,7 @@ async function fetchCrmTasks(
 ): Promise<CrmTaskRowSlim[]> {
   let q = supabaseAdmin
     .from("crm_tasks")
-    .select("id,contact_id,title,description,status,priority,due_at,completed_at")
+    .select("id,contact_id,title,description,status,priority,due_at,completed_at,source")
     .eq("agent_id", agentId)
     .order("due_at", { ascending: true, nullsFirst: false })
     .limit(250);
@@ -140,6 +136,7 @@ type PlaybookRowSlim = {
   due_date: string | null;
   completed_at: string | null;
   cancelled_at: string | null;
+  program_slug: string | null;
 };
 
 async function fetchPlaybookTasks(
@@ -148,7 +145,7 @@ async function fetchPlaybookTasks(
 ): Promise<PlaybookRowSlim[]> {
   let q = supabaseAdmin
     .from("playbook_task_instances")
-    .select("id,template_key,apply_batch_id,anchor_kind,anchor_id,title,notes,section,due_date,completed_at,cancelled_at")
+    .select("id,template_key,apply_batch_id,anchor_kind,anchor_id,title,notes,section,due_date,completed_at,cancelled_at,program_slug")
     .eq("agent_id", agentId)
     .order("due_date", { ascending: true, nullsFirst: false })
     .limit(250);
@@ -198,17 +195,17 @@ async function fetchContactNameMap(agentId: string): Promise<Map<string, string>
 
 // ── Normalizers ──────────────────────────────────────────────────────
 
-const BRIEFING_TITLE_RE = /^(Call hot lead:|Follow up with inactive lead:)/i;
-const COACHING_KEY_RE = /^(producer_track|top_producer_track)/i;
-
 function normalizeCrmTask(
   row: CrmTaskRowSlim,
   contacts: Map<string, string>,
 ): UnifiedTaskDto {
-  const isBriefing = BRIEFING_TITLE_RE.test(row.title);
+  // Phase 2c: source comes from the column. Older rows that predate
+  // the column default to 'manual' via the schema default; map any
+  // unrecognized value to 'manual' so the chip filter stays sane.
+  const src = normalizeCrmSource(row.source);
   return {
     id: `crm:${row.id}`,
-    source: isBriefing ? "briefing" : "manual",
+    source: src,
     title: row.title,
     description: row.description ?? null,
     status: normalizeStatus(row.status),
@@ -225,7 +222,8 @@ function normalizePlaybookTask(
   contacts: Map<string, string>,
 ): UnifiedTaskDto {
   const playbook = getPlaybook(row.template_key);
-  const isCoaching = COACHING_KEY_RE.test(row.template_key);
+  // Phase 2c: coaching is a column now; non-coaching rows have NULL.
+  const isCoaching = row.program_slug != null;
   const dueAtIso = row.due_date ? `${row.due_date}T17:00:00Z` : null; // synthesize end-of-day
   // Anchor → contact name resolution: only for anchor_kind=contact.
   const anchoredContactName =
@@ -257,6 +255,21 @@ function normalizePlaybookTask(
 function normalizeStatus(s: string): "open" | "done" | "cancelled" {
   if (s === "done" || s === "cancelled") return s;
   return "open";
+}
+
+/**
+ * crm_tasks.source check accepts manual, briefing, ai_call, automation,
+ * playbook, legacy. The unified-view chip palette is a smaller set —
+ * collapse ai_call/automation/legacy into "manual" for now (they all
+ * read as "the agent didn't make this themselves but it's not a
+ * playbook either"). Future iteration can split the chips out.
+ */
+function normalizeCrmSource(
+  s: string | null,
+): "manual" | "briefing" | "playbook" | "coaching" {
+  if (s === "briefing") return "briefing";
+  if (s === "playbook") return "playbook";
+  return "manual";
 }
 
 function normalizePriority(p: string | null): "low" | "normal" | "high" | "urgent" | null {

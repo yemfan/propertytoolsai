@@ -38,9 +38,11 @@ export async function GET(req: Request) {
     const scope = await getAgentScopeForAgent(String(agentId));
     const sinceIso = daysAgoIso(13); // last 14 days including today
 
+    // Phase 2c: read crm_tasks (public.tasks deprecated). Status names
+    // change below — "skipped" → "cancelled".
     const [tasksRes, eventsRes] = await Promise.all([
       supabaseServer
-        .from("tasks")
+        .from("crm_tasks")
         .select("status,updated_at", { count: "exact" })
         .in("agent_id", scope.agentIds)
         .gte("updated_at", sinceIso)
@@ -69,7 +71,7 @@ export async function GET(req: Request) {
       if (!map[key])
         map[key] = { tasksDone: 0, tasksSkipped: 0, engagementEvents: 0 };
       if (t.status === "done") map[key].tasksDone++;
-      if (t.status === "skipped") map[key].tasksSkipped++;
+      if (t.status === "cancelled") map[key].tasksSkipped++;
     }
 
     for (const e of events) {

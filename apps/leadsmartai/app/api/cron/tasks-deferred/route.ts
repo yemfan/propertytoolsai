@@ -16,10 +16,14 @@ export async function GET(req: Request) {
     const todayIso = startOfTodayIso();
     const todayDate = todayIso.slice(0, 10);
 
+    // Phase 2c: snoozed crm_tasks rows whose deferred_until has hit
+    // get flipped back to open. snoozed_until is cleared too so the
+    // unified view filter ("status='open'") starts surfacing them
+    // again.
     const { data, error } = await supabaseServer
-      .from("tasks")
+      .from("crm_tasks")
       .select("id")
-      .eq("status", "deferred")
+      .eq("status", "snoozed")
       .lte("deferred_until", todayDate)
       .limit(500);
     if (error) throw error;
@@ -28,8 +32,13 @@ export async function GET(req: Request) {
     if (ids.length) {
       const now = new Date().toISOString();
       await supabaseServer
-        .from("tasks")
-        .update({ status: "pending", updated_at: now })
+        .from("crm_tasks")
+        .update({
+          status: "open",
+          snoozed_until: null,
+          deferred_until: null,
+          updated_at: now,
+        })
         .in("id", ids);
     }
 

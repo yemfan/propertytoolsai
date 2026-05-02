@@ -34,10 +34,14 @@ export async function PUT(
     const body = (await req.json().catch(() => ({}))) as any;
     const { action, deferred_until } = body;
 
+    // Phase 2c: action vocabulary stays the same for callers, but we
+    // translate to the crm_tasks status set. "skip" → "cancelled";
+    // "defer" → "snoozed" with snoozed_until + deferred_until both
+    // set so the date-cron can pick it back up.
     let nextStatus: string | null = null;
     if (action === "done") nextStatus = "done";
-    else if (action === "skip") nextStatus = "skipped";
-    else if (action === "defer") nextStatus = "deferred";
+    else if (action === "skip") nextStatus = "cancelled";
+    else if (action === "defer") nextStatus = "snoozed";
 
     if (!nextStatus) {
       return NextResponse.json(
@@ -51,7 +55,11 @@ export async function PUT(
       updated_at: new Date().toISOString(),
     };
 
-    if (nextStatus === "deferred") {
+    if (nextStatus === "done") {
+      patch.completed_at = new Date().toISOString();
+    }
+
+    if (nextStatus === "snoozed") {
       if (!deferred_until) {
         return NextResponse.json(
           { ok: false, error: "deferred_until is required for defer action." },
@@ -59,14 +67,17 @@ export async function PUT(
         );
       }
       patch.deferred_until = deferred_until;
+      // snoozed_until is timestamptz; clamp to noon UTC of the date so
+      // the cron's date<=today comparison is unambiguous.
+      patch.snoozed_until = `${String(deferred_until).slice(0, 10)}T12:00:00.000Z`;
     }
 
     const { data, error } = await supabaseServer
-      .from("tasks")
+      .from("crm_tasks")
       .update(patch)
       .eq("id", id)
       .eq("agent_id", agentId)
-      .select("id,contact_id,title,description,type,status,due_date,deferred_until,created_at,updated_at")
+      .select("id,contact_id,title,description,task_type,status,due_at,deferred_until,source,priority,created_at,updated_at")
       .single();
     if (error) throw error;
 
