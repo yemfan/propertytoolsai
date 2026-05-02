@@ -165,7 +165,7 @@ export function checkPropertyEligibility(
       eligible: false,
       reason: "NON_RESIDENTIAL",
       message:
-        "This address doesn't appear to be a residential property. Our valuation model only supports homes — single family, condo, townhome, and multi-family.",
+        "Not a valid residential address. Our estimate only supports homes — please check the address and try again.",
       detail: `propertyType=${merged.propertyType}`,
       detectedType: merged.propertyType ?? undefined,
     };
@@ -183,14 +183,17 @@ export function checkPropertyEligibility(
       eligible: false,
       reason: "INSUFFICIENT_DATA",
       message:
-        "We couldn't find property records for this address. It may be a new build, vacant lot, or a non-residential parcel. Try adjusting the address, or enter the home details manually.",
+        "Not a valid residential address. Please check the address and try again.",
       detail: "no warehouse row, no rentcast subject, no user facts",
     };
   }
 
   // 3) We have SOME record but the core facts (beds/baths/sqft) are all
   //    missing or placeholders → estimate would be built entirely from
-  //    defaults. Surface it rather than pretending.
+  //    defaults. In practice this is usually a commercial parcel that
+  //    happens to be in our data sources, or a new build. Surface a
+  //    short, actionable message; manual entry is offered as a fallback
+  //    for cases where it really is the agent's home.
   if (!opts.userProvidedCoreFacts) {
     const sqftBad = looksLikePlaceholderSqft(merged.sqft);
     const bedsBad = !(merged.beds != null && merged.beds > 0);
@@ -200,7 +203,7 @@ export function checkPropertyEligibility(
         eligible: false,
         reason: "INSUFFICIENT_DATA",
         message:
-          "We found this address but don't have enough property details (square footage, bedrooms, bathrooms) to produce a reliable estimate. Enter the details manually to continue.",
+          "Not a valid residential address. Please check the address and try again, or enter the details manually if it's your home.",
         detail: `sqft=${merged.sqft}, beds=${merged.beds}, baths=${merged.baths}`,
       };
     }
