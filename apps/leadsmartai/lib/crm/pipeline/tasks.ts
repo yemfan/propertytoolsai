@@ -14,10 +14,16 @@ export async function listTasksForAgent(params: {
   const ids = params.agentIds && params.agentIds.length > 0
     ? params.agentIds
     : [params.agentId];
+  // `pipeline_stage_id` and `ai_rationale` were defined in a legacy
+  // migration that lives in supabase/migrations/_legacy/ and was never
+  // applied to production. PostgREST throws "column not found in
+  // schema cache" on any INSERT or SELECT that references them. Until
+  // the CRM-pipeline feature actually ships (and the columns are
+  // added by a real migration), we keep them out of the wire shape.
   let q = supabaseServer
     .from("crm_tasks")
     .select(
-      "id,agent_id,contact_id,pipeline_stage_id,title,description,status,priority,due_at,completed_at,source,ai_rationale,metadata_json,created_at,updated_at"
+      "id,agent_id,contact_id,title,description,status,priority,due_at,completed_at,source,metadata_json,created_at,updated_at"
     )
     .in("agent_id", ids as string[])
     .order("due_at", { ascending: true, nullsFirst: false })
@@ -39,26 +45,32 @@ export async function listTasksForAgent(params: {
 export async function createTask(params: {
   agentId: string;
   leadId?: string | null;
+  /**
+   * Accepted but currently ignored — `pipeline_stage_id` doesn't
+   * exist on `crm_tasks` in production (legacy migration was never
+   * applied). Kept on the function signature so callers compile
+   * during the transition; resurrect when the CRM-pipeline feature
+   * actually ships.
+   */
   pipelineStageId?: string | null;
   title: string;
   description?: string | null;
   priority?: TaskPriority;
   dueAt?: string | null;
   source?: TaskSource;
+  /** See `pipelineStageId` — same situation. */
   aiRationale?: string | null;
 }): Promise<CrmTaskRow> {
   const now = new Date().toISOString();
   const row = {
     agent_id: params.agentId as any,
     contact_id: params.leadId ?? null,
-    pipeline_stage_id: params.pipelineStageId ?? null,
     title: params.title.trim(),
     description: params.description?.trim() || null,
     status: "open" as const,
     priority: params.priority ?? "normal",
     due_at: params.dueAt ?? null,
     source: params.source ?? "agent",
-    ai_rationale: params.aiRationale ?? null,
     metadata_json: {},
     created_at: now,
     updated_at: now,
@@ -78,6 +90,7 @@ export async function updateTaskForAgent(
     status: TaskStatus;
     priority: TaskPriority;
     due_at: string | null;
+    /** Accepted but ignored — see createTask for the rationale. */
     pipeline_stage_id: string | null;
   }>
 ): Promise<CrmTaskRow> {
@@ -91,7 +104,8 @@ export async function updateTaskForAgent(
   }
   if (patch.priority != null) body.priority = patch.priority;
   if (patch.due_at !== undefined) body.due_at = patch.due_at;
-  if (patch.pipeline_stage_id !== undefined) body.pipeline_stage_id = patch.pipeline_stage_id;
+  // Intentionally not writing pipeline_stage_id — column doesn't exist
+  // on crm_tasks in production. See the SELECT-list comment above.
 
   const { data, error } = await supabaseServer
     .from("crm_tasks")
