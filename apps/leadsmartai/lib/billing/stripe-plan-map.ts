@@ -8,9 +8,12 @@ export type InternalPlan =
   | "agent_starter"
   | "agent_pro"
   | "loan_broker_pro"
-  /** LeadSmart CRM monthly tiers (`public.subscriptions.plan` maps to starter | pro | team). */
+  /** LeadSmart CRM monthly tiers — derived from `lib/billing/plans.ts`
+   *  `PLANS[slug].internalPlan`. Keep this union in sync with the
+   *  catalog when slugs are added or renamed. */
   | "crm_starter"
   | "crm_pro"
+  | "crm_premium"
   | "crm_team";
 
 /** Demo / fixture Price IDs. In production, also set `STRIPE_PRICE_ID_*` env vars (see `mapStripePriceToPlan`). */
@@ -23,11 +26,25 @@ const PRICE_ID_TO_PLAN: Record<string, InternalPlan> = {
   price_loan_broker_pro: "loan_broker_pro",
   price_crm_starter: "crm_starter",
   price_crm_pro: "crm_pro",
+  price_crm_premium: "crm_premium",
   price_crm_team: "crm_team",
 };
 
+/**
+ * CRM env-var → InternalPlan map. Mirrors the catalog's
+ * `stripePriceEnvVar` field per slug — keeps a single naming source.
+ * `STRIPE_PRICE_ID_ELITE` is honored as a legacy alias for the
+ * Premium tier so deployments that haven't renamed the env var yet
+ * keep resolving correctly.
+ */
+const CRM_ENV_TO_PLAN: ReadonlyArray<{ envKey: string; plan: InternalPlan }> = [
+  { envKey: "STRIPE_PRICE_ID_PRO", plan: "crm_pro" },
+  { envKey: "STRIPE_PRICE_ID_PREMIUM", plan: "crm_premium" },
+  { envKey: "STRIPE_PRICE_ID_ELITE", plan: "crm_premium" },
+  { envKey: "STRIPE_PRICE_ID_TEAM", plan: "crm_team" },
+];
+
 function planFromEnv(priceId: string): InternalPlan | undefined {
-  if (priceId === process.env.STRIPE_PRICE_ID_PRO) return "agent_starter";
   if (process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM && priceId === process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM) {
     return "consumer_premium";
   }
@@ -45,14 +62,9 @@ function planFromEnv(priceId: string): InternalPlan | undefined {
   if (process.env.STRIPE_PRICE_ID_LOAN_BROKER_PRO && priceId === process.env.STRIPE_PRICE_ID_LOAN_BROKER_PRO) {
     return "loan_broker_pro";
   }
-  if (process.env.STRIPE_PRICE_ID_PRO && priceId === process.env.STRIPE_PRICE_ID_PRO) {
-    return "crm_starter";
-  }
-  if (process.env.STRIPE_PRICE_ID_ELITE && priceId === process.env.STRIPE_PRICE_ID_ELITE) {
-    return "crm_pro";
-  }
-  if (process.env.STRIPE_PRICE_ID_TEAM && priceId === process.env.STRIPE_PRICE_ID_TEAM) {
-    return "crm_team";
+  for (const { envKey, plan } of CRM_ENV_TO_PLAN) {
+    const v = process.env[envKey];
+    if (v && priceId === v) return plan;
   }
   return undefined;
 }
@@ -70,6 +82,7 @@ const INTERNAL_PLAN_VALUES: InternalPlan[] = [
   "loan_broker_pro",
   "crm_starter",
   "crm_pro",
+  "crm_premium",
   "crm_team",
 ];
 

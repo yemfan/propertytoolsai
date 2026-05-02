@@ -6,7 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 const PAID_STATUSES = ["active", "trialing"] as const;
 
 function isPlanSlug(v: string): v is PlanSlug {
-  return v === "starter" || v === "pro" || v === "team";
+  return v === "starter" || v === "pro" || v === "premium" || v === "team";
 }
 
 /**
@@ -64,10 +64,16 @@ export async function getActiveCrmSubscription(userId: string): Promise<{
 }
 
 /**
- * Maps the new agent-side plan ids onto the legacy CRM `PlanSlug`
- * union so feature flags in `PLANS[...]` resolve correctly. The
- * paid agent plans (pro / growth / elite / premium) all map to
- * `pro` — they're the same tier of feature access.
+ * Maps the agent-side plan ids onto the catalog `PlanSlug` so feature
+ * flags in `PLANS[...]` resolve correctly. After the catalog rename
+ * the mapping is mostly identity, with two legacy aliases:
+ *
+ *   - `growth` (old name for $49 paid tier) → `pro`
+ *   - `elite`  (old name for $99 paid tier) → `premium`
+ *
+ * Free / Starter both land on `starter` (the new free tier), so any
+ * historical row that recorded the entry tier as either name is
+ * still gated correctly.
  */
 function mapAgentPlanToCrmSlug(planType: string): PlanSlug | null {
   switch (planType) {
@@ -76,9 +82,10 @@ function mapAgentPlanToCrmSlug(planType: string): PlanSlug | null {
       return "starter";
     case "pro":
     case "growth":
-    case "elite":
-    case "premium":
       return "pro";
+    case "premium":
+    case "elite":
+      return "premium";
     case "team":
       return "team";
     default:
