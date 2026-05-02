@@ -184,29 +184,43 @@ export async function runContactIngestion(params: {
   const leadId = String((inserted as { id?: unknown })?.id ?? "");
   if (!leadId) throw new Error("Insert failed");
 
+  // From this point on the contact row is committed — every step below is
+  // best-effort enrichment / audit. A missing table, missing column, or
+  // external-service hiccup must not bubble up as a 500 to the caller, or
+  // the user sees "Server error" even though the contact saved.
   const withId: LeadLike = { ...incoming, id: leadId };
-  await normalizeLeadFields(withId);
+  try {
+    await normalizeLeadFields(withId);
+  } catch (e) {
+    console.warn("[ingest] normalizeLeadFields", e);
+  }
 
   if (!skipEnrichment) {
-    const { data: row } = await supabaseAdmin.from("contacts").select("*").eq("id", leadId).maybeSingle();
-    if (row) {
-      const enrichment = await enrichLeadRecord(row as LeadLike);
-      const updatePayload: Record<string, unknown> = {
-        contact_completeness_score: enrichment.contactCompletenessScore,
-        enrichment_status: Object.keys(enrichment.changes).length ? "enriched" : "skipped_no_ai",
-        updated_at: new Date().toISOString(),
-      };
-      for (const [k, v] of Object.entries(enrichment.changes)) {
-        if (v !== undefined) updatePayload[k] = v;
-      }
-      await supabaseAdmin.from("contacts").update(updatePayload).eq("id", leadId);
+    try {
+      const { data: row } = await supabaseAdmin.from("contacts").select("*").eq("id", leadId).maybeSingle();
+      if (row) {
+        const enrichment = await enrichLeadRecord(row as LeadLike);
+        const updatePayload: Record<string, unknown> = {
+          contact_completeness_score: enrichment.contactCompletenessScore,
+          enrichment_status: Object.keys(enrichment.changes).length ? "enriched" : "skipped_no_ai",
+          updated_at: new Date().toISOString(),
+        };
+        for (const [k, v] of Object.entries(enrichment.changes)) {
+          if (v !== undefined) updatePayload[k] = v;
+        }
+        const { error: enrichUpdErr } = await supabaseAdmin.from("contacts").update(updatePayload).eq("id", leadId);
+        if (enrichUpdErr) console.warn("[ingest] contacts enrichment update", enrichUpdErr.message);
 
-      await supabaseAdmin.from("lead_enrichment_runs").insert({
-        contact_id: leadId,
-        run_type: "enrichment",
-        status: "completed",
-        changes_json: enrichment.changes,
-      } as Record<string, unknown>);
+        const { error: runInsErr } = await supabaseAdmin.from("lead_enrichment_runs").insert({
+          contact_id: leadId,
+          run_type: "enrichment",
+          status: "completed",
+          changes_json: enrichment.changes,
+        } as Record<string, unknown>);
+        if (runInsErr) console.warn("[ingest] lead_enrichment_runs insert", runInsErr.message);
+      }
+    } catch (e) {
+      console.warn("[ingest] enrichment step", e);
     }
   }
 
@@ -216,13 +230,17 @@ export async function runContactIngestion(params: {
     console.warn("[ingest] runLeadMarketplacePipeline", e);
   }
 
-  await logIntakeActivity({
-    leadId,
-    agentId,
-    intakeChannel,
-    importJobId,
-    extra: { duplicate_ignored: Boolean(dup && duplicateStrategy === "create_anyway") },
-  });
+  try {
+    await logIntakeActivity({
+      leadId,
+      agentId,
+      intakeChannel,
+      importJobId,
+      extra: { duplicate_ignored: Boolean(dup && duplicateStrategy === "create_anyway") },
+    });
+  } catch (e) {
+    console.warn("[ingest] logIntakeActivity", e);
+  }
 
   return { action: "inserted", leadId };
 }

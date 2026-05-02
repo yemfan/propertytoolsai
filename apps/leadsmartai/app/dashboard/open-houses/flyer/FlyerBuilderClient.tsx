@@ -107,10 +107,36 @@ export default function FlyerBuilderClient({
         body: JSON.stringify({ address }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.ok) throw new Error(body.error ?? "Could not find property");
-      setProperty(body.property);
+      if (!res.ok || !body.ok) {
+        if (res.status === 404) {
+          throw new Error(
+            `We couldn't find property data for "${address}". The address may be incorrect, or our data provider has no record for it. Try a different address or update the property's details first.`,
+          );
+        }
+        throw new Error(body.error ?? "Could not find property");
+      }
+
+      // Guard against the API returning a stub record with no usable data —
+      // happens when the external property lookup failed but a placeholder
+      // row exists in our DB. Without this, the user would be sent to the
+      // editable preview with empty fields and no clear signal of failure.
+      const p = body.property as PropertyData;
+      const hasData =
+        p?.beds != null ||
+        p?.baths != null ||
+        p?.sqft != null ||
+        p?.yearBuilt != null ||
+        p?.propertyType != null ||
+        p?.estimatedValue != null;
+      if (!hasData) {
+        throw new Error(
+          `We found "${address}" in your account, but property details (beds, baths, sqft, etc.) aren't available yet. Try refreshing the property data, or pick a different property.`,
+        );
+      }
+
+      setProperty(p);
       setDescription(body.description ?? "");
-      setListingPrice(body.property.estimatedValue ? `$${Math.round(body.property.estimatedValue).toLocaleString()}` : "");
+      setListingPrice(p.estimatedValue ? `$${Math.round(p.estimatedValue).toLocaleString()}` : "");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     } finally {

@@ -89,7 +89,17 @@ export async function POST(req: Request) {
       action: result.action,
     });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Server error";
+    // Supabase PostgrestError is a plain object with `message`, not an
+    // Error instance — `e instanceof Error` is false, so we'd previously
+    // fall through to "Server error" with no clue what failed. Pull the
+    // message off whatever shape it has and log the full object server-side.
+    console.error("[contacts/intake] failed", e);
+    const msg =
+      e instanceof Error
+        ? e.message
+        : typeof e === "object" && e !== null && "message" in e && typeof (e as { message: unknown }).message === "string"
+          ? (e as { message: string }).message
+          : "Server error";
     const status = /upgrade|not available|Premium|Pro/i.test(msg) ? 402 : 500;
     return NextResponse.json({ ok: false, error: msg }, { status });
   }
