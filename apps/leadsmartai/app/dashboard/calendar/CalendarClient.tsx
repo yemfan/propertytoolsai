@@ -3,7 +3,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type CalendarEvent = { id: string; contact_id: string; lead_name: string | null; title: string; starts_at: string; };
-type TaskItem = { id: string; contact_id: string | null; lead_name: string | null; title: string; due_at: string | null; priority: string; status: string; };
+// Mirrors /api/dashboard/tasks/unified output. Ids are namespaced
+// ("crm:<uuid>" or "pb:<uuid>") so write-paths can route to the right
+// backend (see markTaskDone). Contact display name comes through as
+// `contact_name`; we keep `lead_name` as an alias for the existing
+// dayMap consumer.
+type TaskItem = {
+  id: string;
+  contact_id: string | null;
+  lead_name: string | null;
+  title: string;
+  due_at: string | null;
+  priority: string | null;
+  status: string;
+};
 type FollowUp = { contact_id: string; lead_name: string | null; next_contact_at: string; overdue: boolean; };
 type DayEntry = { type: "event" | "task" | "followup"; id: string; title: string; leadName: string | null; time: string; priority?: string; status?: string; overdue?: boolean; };
 
@@ -36,11 +49,36 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
     const to = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59).toISOString();
     const [evRes, tkRes, fuRes] = await Promise.all([
       fetch(`/api/dashboard/calendar/events?from=${from}&to=${to}`).then((r) => r.json()).catch(() => ({})),
-      fetch("/api/dashboard/tasks?status=all").then((r) => r.json()).catch(() => ({})),
+      // Unified endpoint returns CRM tasks AND playbook task instances.
+      // The calendar previously used the CRM-only endpoint, which is why
+      // playbook tasks (the bulk of real activity) never rendered here.
+      fetch("/api/dashboard/tasks/unified?status=all").then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/reminders").then((r) => r.json()).catch(() => ({})),
     ]);
     setEvents(evRes.ok ? (evRes.events ?? []) : []);
-    setTasks(tkRes.ok ? (tkRes.tasks ?? []) : []);
+    // Map unified shape (id, contact_id, contact_name, title, due_at, priority, status)
+    // back to the local TaskItem alias (lead_name) consumed by dayMap below.
+    type UnifiedTask = {
+      id: string;
+      contact_id: string | null;
+      contact_name: string | null;
+      title: string;
+      due_at: string | null;
+      priority: string | null;
+      status: string;
+    };
+    const unifiedTasks: UnifiedTask[] = tkRes.ok ? (tkRes.tasks ?? []) : [];
+    setTasks(
+      unifiedTasks.map((t) => ({
+        id: t.id,
+        contact_id: t.contact_id,
+        lead_name: t.contact_name,
+        title: t.title,
+        due_at: t.due_at,
+        priority: t.priority ?? "normal",
+        status: t.status,
+      })),
+    );
     setFollowups(fuRes.ok ? (fuRes.followUps ?? fuRes.followups ?? []) : []);
   }, [currentMonth]);
 
@@ -124,8 +162,26 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
     finally { setAddLoading(false); }
   }
 
+  // Routes the patch by the namespaced id the unified endpoint returns:
+  //   "crm:<uuid>" → /api/dashboard/tasks (status: done)
+  //   "pb:<uuid>"  → /api/dashboard/playbooks/<uuid> (completed: true)
+  // Mirrors TasksClient.updateTask so behavior is consistent.
   async function markTaskDone(taskId: string) {
-    await fetch("/api/dashboard/tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ taskId, status: "done" }) });
+    if (taskId.startsWith("pb:")) {
+      const rawId = taskId.slice(3);
+      await fetch(`/api/dashboard/playbooks/${rawId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: true }),
+      });
+    } else {
+      const rawId = taskId.startsWith("crm:") ? taskId.slice(4) : taskId;
+      await fetch("/api/dashboard/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: rawId, status: "done" }),
+      });
+    }
     loadData();
   }
 
