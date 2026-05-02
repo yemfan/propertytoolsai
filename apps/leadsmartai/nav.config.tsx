@@ -48,7 +48,7 @@ const navConfig = {
       icon: navEmoji("🏠"),
     },
 
-    /* ── Leads ── daily prospecting + ops ── */
+    /* ── Leads ── daily prospecting + ops + lead-gen events ── */
     {
       label: "Leads",
       defaultOpen: true,
@@ -78,6 +78,17 @@ const navConfig = {
           href: "/dashboard/calendar",
           match: ["/dashboard/calendar"],
           icon: navEmoji("📅"),
+        },
+        {
+          // Open houses are a lead-generation surface — buyer-side
+          // agents host floor-time events for other agents' listings,
+          // and listing agents host their own. Either way the
+          // outcome is captured visitors, so it lives with Leads, not
+          // strictly under Sellers.
+          label: "Open Houses",
+          href: "/dashboard/open-houses",
+          match: ["/dashboard/open-houses", "/dashboard/open-house"],
+          icon: navEmoji("🏠"),
         },
         {
           // Triage queue lives at the bottom — agents land here only when
@@ -115,7 +126,10 @@ const navConfig = {
       ],
     },
 
-    /* ── Sellers ── listing-side activity ── */
+    /* ── Sellers ── listing-side activity. Open Houses lives under
+       Leads (lead-gen surface, used by both buyer- and listing-side
+       agents); CMAs live under Property Tools (used on both sides
+       too, for pricing strategy AND offer sizing). ── */
     {
       label: "Sellers",
       icon: navEmoji("🏷️"),
@@ -125,21 +139,6 @@ const navConfig = {
           href: "/dashboard/seller-presentation",
           match: ["/dashboard/seller-presentation", "/dashboard/presentations"],
           icon: navEmoji("📊"),
-        },
-        {
-          // Per-agent CMA library — pulls comps + valuation from the
-          // upstream propertytoolsai engine and stores snapshots here.
-          // Each saved CMA has a PDF + email-to-seller flow.
-          label: "CMAs",
-          href: "/dashboard/cma",
-          match: ["/dashboard/cma"],
-          icon: navEmoji("📐"),
-        },
-        {
-          label: "Open Houses",
-          href: "/dashboard/open-houses",
-          match: ["/dashboard/open-houses", "/dashboard/open-house"],
-          icon: navEmoji("🏠"),
         },
         {
           label: "Reports",
@@ -269,14 +268,33 @@ const navConfig = {
       ],
     },
 
-    /* ── Property Tools ── top-level shortcut to the calculator
-       suite, pulled out of Workflow so agents can find it without
-       expanding a group. ── */
+    /* ── Property Tools ── calculator suite + CMA library. CMAs live
+       here (not under Sellers) because they're useful on both sides:
+       sellers see them as pricing strategy, buyers use them to size
+       offers. The library at /dashboard/cma stores saved snapshots
+       (PDF + email-to-contact flow); the tools tile grid at
+       /dashboard/tools links out to the individual calculators
+       (Smart CMA Builder, AI Deal Closer, etc.). ── */
     {
       label: "Property Tools",
-      href: "/dashboard/tools",
-      match: ["/dashboard/tools"],
       icon: navEmoji("🏡"),
+      items: [
+        {
+          label: "All tools",
+          href: "/dashboard/tools",
+          match: ["/dashboard/tools"],
+          icon: navEmoji("🧰"),
+        },
+        {
+          // Per-agent CMA library — saved snapshots with PDF + email-
+          // to-contact flow. The Smart CMA Builder tile on the tools
+          // page is what creates new CMAs; this is where they live.
+          label: "CMAs",
+          href: "/dashboard/cma",
+          match: ["/dashboard/cma"],
+          icon: navEmoji("📐"),
+        },
+      ],
     },
 
     /* ── Account ── */
