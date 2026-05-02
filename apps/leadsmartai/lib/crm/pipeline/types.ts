@@ -16,7 +16,12 @@ export type CrmTaskRow = {
   id: string;
   agent_id: string;
   contact_id: string | null;
-  pipeline_stage_id: string | null;
+  /** Optional — column doesn't exist on `crm_tasks` in production
+   *  (legacy migration was never applied). Stays in the type so
+   *  consumers compile during the transition; reads + writes in
+   *  `lib/crm/pipeline/tasks.ts` skip it. Resurrect when the
+   *  CRM-pipeline feature actually ships. */
+  pipeline_stage_id?: string | null;
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -24,7 +29,8 @@ export type CrmTaskRow = {
   due_at: string | null;
   completed_at: string | null;
   source: TaskSource;
-  ai_rationale: string | null;
+  /** See `pipeline_stage_id` — same situation. */
+  ai_rationale?: string | null;
   metadata_json: Record<string, unknown>;
   created_at: string;
   updated_at: string;

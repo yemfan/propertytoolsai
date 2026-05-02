@@ -117,15 +117,18 @@ export default function TasksClient({
   const leadMap = new Map(leads.map((l) => [l.id, l.name ?? `Lead #${l.id}`]));
 
   /**
-   * Fetch the unified task list. Re-runs whenever the status tab
-   * changes — server-side filtering is cheaper than fetching All
-   * and filtering client-side, especially once an agent has
-   * hundreds of completed tasks across both backends.
+   * Always fetch the full superset. Tab counts at the top of the
+   * page are derived from this set, so they must reflect the agent's
+   * true totals regardless of which tab is active — switching tabs is
+   * a pure client-side filter, no refetch. Same fix as
+   * /dashboard/playbooks: the per-tab fetch made Open/Done/Cancelled
+   * counts under-report whenever the agent was on a tab whose query
+   * excluded the others.
    */
   const loadTasks = useCallback(async () => {
     setTasksLoading(true);
     try {
-      const res = await fetch(`/api/dashboard/tasks/unified?status=${encodeURIComponent(statusFilter)}`);
+      const res = await fetch(`/api/dashboard/tasks/unified?status=all`);
       const body = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         tasks?: TaskRow[];
@@ -136,11 +139,23 @@ export default function TasksClient({
     } finally {
       setTasksLoading(false);
     }
-  }, [statusFilter]);
+  }, []);
 
   useEffect(() => {
     void loadTasks();
   }, [loadTasks]);
+
+  /**
+   * Auto-dismiss the action banner ("Task added.", "Updated.", etc.)
+   * after 5s — without this the banner sits forever until the next
+   * action overwrites it, which made it look like the page was
+   * stuck. Matches PlaybooksPanel and the standalone Playbooks page.
+   */
+  useEffect(() => {
+    if (!actionMsg) return;
+    const t = window.setTimeout(() => setActionMsg(null), 5000);
+    return () => window.clearTimeout(t);
+  }, [actionMsg]);
 
   const loadStats = useCallback(async () => {
     try {
@@ -284,27 +299,30 @@ export default function TasksClient({
   }
 
   /**
-   * Status filter is applied server-side (re-fetch on tab change),
-   * but source + search are client-side because the unified payload
-   * is bounded (~250 rows from each backend) and instant filtering
-   * feels better than another round-trip.
+   * Two-pass client-side filter: first narrow by the active status
+   * tab, then narrow further by source chip + search. Source counts
+   * are derived from the post-status pool so the chips reflect "how
+   * many Manual / Briefing / Playbook / Coaching tasks are in the
+   * current tab", not "across all my history" — the latter would
+   * include long-closed tasks and stop being actionable.
    */
-  const filtered = tasks.filter((t) => {
-    if (statusFilter !== "all" && t.status !== statusFilter) return false;
+  const filteredByStatus = useMemo(() => {
+    if (statusFilter === "all") return tasks;
+    return tasks.filter((t) => t.status === statusFilter);
+  }, [tasks, statusFilter]);
+
+  const filtered = filteredByStatus.filter((t) => {
     if (sourceFilter !== "all" && t.source !== sourceFilter) return false;
     if (!search.trim()) return true;
     const s = search.toLowerCase();
     return t.title.toLowerCase().includes(s) || (t.description ?? "").toLowerCase().includes(s);
   });
 
-  /** Counts for the source-chip badges. Computed pre-source-filter
-   *  so users see how many of each kind exist regardless of which
-   *  chip is currently active. */
   const sourceCounts = useMemo(() => {
-    const out = { all: tasks.length, manual: 0, briefing: 0, playbook: 0, coaching: 0 };
-    for (const t of tasks) out[t.source] += 1;
+    const out = { all: filteredByStatus.length, manual: 0, briefing: 0, playbook: 0, coaching: 0 };
+    for (const t of filteredByStatus) out[t.source] += 1;
     return out;
-  }, [tasks]);
+  }, [filteredByStatus]);
 
   return (
     <div className="space-y-4">
