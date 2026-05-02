@@ -39,19 +39,22 @@ export function PlaybooksPageClient({ leads = [] }: { leads?: LeadInfo[] }) {
   const [showPicker, setShowPicker] = useState(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
+  // Always fetch the full superset (open + completed + cancelled) once.
+  // Tab + group filtering happens client-side. Earlier we re-fetched
+  // with narrower flags per tab, but that made the per-tab counts and
+  // stats tiles depend on the active tab — clicking Open would zero
+  // out "Completed" and "Cancelled" because the fetch only returned
+  // open rows. Bounded payload (server limits to 500), so loading the
+  // superset is cheap and lets every counter compute over the same
+  // data regardless of which tab is active.
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ all: "1" });
-      // Server filters by completed/cancelled, so we always fetch a
-      // consistent superset matching the active tab. "all" is loaded
-      // by passing both flags.
-      if (statusTab === "done" || statusTab === "all") {
-        params.set("includeCompleted", "1");
-      }
-      if (statusTab === "cancelled" || statusTab === "all") {
-        params.set("includeCancelled", "1");
-      }
+      const params = new URLSearchParams({
+        all: "1",
+        includeCompleted: "1",
+        includeCancelled: "1",
+      });
       const res = await fetch(`/api/dashboard/playbooks?${params.toString()}`);
       const body = (await res.json().catch(() => null)) as {
         ok?: boolean;
@@ -61,7 +64,7 @@ export function PlaybooksPageClient({ leads = [] }: { leads?: LeadInfo[] }) {
     } finally {
       setLoading(false);
     }
-  }, [statusTab]);
+  }, []);
 
   useEffect(() => {
     void load();
