@@ -15,23 +15,26 @@ function navEmoji(emoji: string) {
 /**
  * LeadSmart AI — agent portal sidebar.
  *
- * Organized around the agent's workflow stages rather than a generic
- * CRM taxonomy, so "what am I doing right now?" maps cleanly to one
- * section.
+ * Organized around which side of the deal the agent is working
+ * ("am I doing buyer work or seller work right now?") rather than the
+ * older Deals/Listings split, which was asymmetric — Deals owned
+ * Transactions even though listing-rep deals also become transactions.
  *
  * Sections:
- *   Home        — daily overview
- *   Leads       — prospecting + ops (contacts, queue, tasks, calendar)
- *   Deals       — active-deal execution (showings → offers → transactions)
- *   Listings    — listing-side output (presentations, open houses, reports)
- *   Communicate — inbox, drafts, templates, marketing plans
- *   Workflow    — property tools + playbooks
- *   Insights    — performance, growth
- *   Account     — settings, billing, profile, support
- *   Admin       — role-gated platform management
- *
- * No URL changes in this reshape — only re-parenting of existing
- * items + two new section labels.
+ *   Home         — daily overview
+ *   Leads        — prospecting + ops (contacts, queue, tasks, calendar)
+ *   Buyers       — buyer-side activity (showings → offers)
+ *   Sellers      — seller-side activity (presentations, CMAs, open
+ *                  houses, reports)
+ *   Transactions — operational layer that bridges both sides:
+ *                  the list of deals + the stage-grouped kanban
+ *                  (Coordinator). One transaction can be buyer-rep,
+ *                  listing-rep, or dual.
+ *   Communicate  — inbox, drafts, templates, marketing plans
+ *   Workflow     — property tools + playbooks
+ *   Insights     — performance, growth
+ *   Account      — settings, billing, profile, support
+ *   Admin        — role-gated platform management
  */
 const navConfig = {
   id: "leadsmart",
@@ -87,11 +90,11 @@ const navConfig = {
       ],
     },
 
-    /* ── Deals ── active-deal execution ── */
+    /* ── Buyers ── buyer-side activity ── */
     {
-      label: "Deals",
+      label: "Buyers",
       defaultOpen: true,
-      icon: navEmoji("🔑"),
+      icon: navEmoji("🛒"),
       items: [
         {
           // Buyer-side property-visit tracker: schedule + feedback capture.
@@ -109,31 +112,12 @@ const navConfig = {
           match: ["/dashboard/offers"],
           icon: navEmoji("📝"),
         },
-        {
-          // Per-deal coordinator: deadlines, checklist, counterparties
-          // for buyer-rep closings. See apps/leadsmartai/lib/transactions.
-          // `match` is exact (see packages/ui/navigation/matchPath.ts), so
-          // /dashboard/transactions/coordinator highlights its own entry
-          // below without colliding with this one.
-          label: "Transactions",
-          href: "/dashboard/transactions",
-          match: ["/dashboard/transactions"],
-          icon: navEmoji("🔑"),
-        },
-        {
-          // Stage-grouped kanban over all in-flight transactions.
-          // Companion to the per-deal detail page above.
-          label: "Coordinator",
-          href: "/dashboard/transactions/coordinator",
-          match: ["/dashboard/transactions/coordinator"],
-          icon: navEmoji("🗂️"),
-        },
       ],
     },
 
-    /* ── Listings ── listing-side output ── */
+    /* ── Sellers ── listing-side activity ── */
     {
-      label: "Listings",
+      label: "Sellers",
       icon: navEmoji("🏷️"),
       items: [
         {
@@ -162,6 +146,35 @@ const navConfig = {
           href: "/dashboard/reports",
           match: ["/dashboard/reports", "/dashboard/comparison-report"],
           icon: navEmoji("📄"),
+        },
+      ],
+    },
+
+    /* ── Transactions ── operational layer that spans both sides ──
+       Pulled out of Deals so listing-rep closings live in the same
+       place as buyer-rep ones. Two views of the same data:
+         All deals  → flat list (every status; click into a row for the
+                      per-deal timeline + tasks + counterparties)
+         Coordinator → stage-grouped kanban over in-flight deals
+       `match` is exact (see packages/ui/navigation/matchPath.ts), so
+       /dashboard/transactions/coordinator highlights Coordinator
+       without colliding with the All deals entry. */
+    {
+      label: "Transactions",
+      defaultOpen: true,
+      icon: navEmoji("🔑"),
+      items: [
+        {
+          label: "All deals",
+          href: "/dashboard/transactions",
+          match: ["/dashboard/transactions"],
+          icon: navEmoji("🔑"),
+        },
+        {
+          label: "Coordinator",
+          href: "/dashboard/transactions/coordinator",
+          match: ["/dashboard/transactions/coordinator"],
+          icon: navEmoji("🗂️"),
         },
       ],
     },
