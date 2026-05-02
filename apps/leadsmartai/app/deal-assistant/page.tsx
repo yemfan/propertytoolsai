@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import RequireAuthGate from "@/components/RequireAuthGate";
+import { AiActionGateBanner } from "@/components/entitlements/AiActionGateBanner";
+import {
+  detectAiActionGate,
+  type AiActionGate,
+} from "@/lib/entitlements/aiActionGate";
 
 type MarketHeat = "hot" | "balanced" | "cool";
 type Financing = "cash" | "conventional" | "fha" | "va" | "other";
@@ -43,6 +48,7 @@ type AnalyzeResponse = {
   };
   negotiation?: Record<string, ApiNegotiation>;
   message?: string;
+  code?: string;
 };
 
 const initialForm = {
@@ -87,6 +93,10 @@ export default function DealAssistantPage() {
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
+  // Sticky entitlement gate from /api/deal-assistant/analyze. Replaces
+  // the rose-tinted "Something went wrong" panel with the shared
+  // upgrade banner so the agent has a clear next step.
+  const [gate, setGate] = useState<AiActionGate | null>(null);
   const [negTab, setNegTab] = useState<"counter_offer" | "multiple_offers" | "seller_pushback">(
     "counter_offer"
   );
@@ -105,6 +115,7 @@ export default function DealAssistantPage() {
     e.preventDefault();
     setLoading(true);
     setResult(null);
+    setGate(null);
     try {
       const res = await fetch("/api/deal-assistant/analyze", {
         method: "POST",
@@ -133,6 +144,11 @@ export default function DealAssistantPage() {
         }),
       });
       const data = (await res.json()) as AnalyzeResponse;
+      const aiGate = detectAiActionGate(res.status, data);
+      if (aiGate) {
+        setGate(aiGate);
+        return;
+      }
       setResult(data);
     } catch {
       setResult({ ok: false, message: "Network error" });
@@ -374,6 +390,8 @@ export default function DealAssistantPage() {
               {loading ? "Analyzing…" : "Generate deal plan"}
             </button>
           </form>
+
+          {gate ? <AiActionGateBanner reason={gate.reason} /> : null}
 
           {result && !result.ok && (
             <div className="rounded-xl border border-rose-200 bg-rose-50 text-rose-900 px-4 py-3 text-sm">

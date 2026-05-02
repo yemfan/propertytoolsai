@@ -1,6 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AiActionGateBanner } from "@/components/entitlements/AiActionGateBanner";
+import {
+  detectAiActionGate,
+  type AiActionGate,
+} from "@/lib/entitlements/aiActionGate";
 import type { SalesModel } from "@/lib/sales-models";
 
 /**
@@ -66,6 +71,11 @@ export function AiSmsModal({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  // Sticky entitlement gate — once the server says the user can't run AI
+  // actions (no plan, or monthly cap), disable "Generate" until they
+  // close + reopen the modal, and surface a richer upgrade banner with a
+  // direct path to /dashboard/billing instead of just a red error string.
+  const [gate, setGate] = useState<AiActionGate | null>(null);
 
   // Track the last inbound message id we auto-drafted for, so we
   // don't repeatedly redraft for the same incoming message every
@@ -90,6 +100,7 @@ export function AiSmsModal({
     setSending(false);
     setError(null);
     setInfo(null);
+    setGate(null);
     lastAutoDraftedFor.current = null;
   }, [open]);
 
@@ -221,6 +232,16 @@ export function AiSmsModal({
           if (opts?.silent) {
             setInfo("AI drafted a reply for you — review and send.");
           }
+          return;
+        }
+        // Entitlement gate (HTTP 402) — switch the inline error to a
+        // sticky upgrade banner AND fire the global upgrade modal so the
+        // agent has a clear next step ("View plans") instead of just
+        // being told they're blocked.
+        const aiGate = detectAiActionGate(res.status, json);
+        if (aiGate) {
+          setGate(aiGate);
+          if (!opts?.silent) setError(null);
           return;
         }
         if (!opts?.silent) {
@@ -497,6 +518,9 @@ export function AiSmsModal({
 
               {/* Compose */}
               <div className="border-t border-slate-200 bg-white px-4 py-3">
+                {gate ? (
+                  <AiActionGateBanner reason={gate.reason} className="mb-2" />
+                ) : null}
                 {info ? (
                   <p className="mb-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs text-blue-800">
                     {info}
@@ -526,7 +550,14 @@ export function AiSmsModal({
                     <button
                       type="button"
                       onClick={() => void runDraft()}
-                      disabled={drafting || sending}
+                      disabled={drafting || sending || gate != null}
+                      title={
+                        gate
+                          ? gate.reason === "no_agent_entitlement"
+                            ? "Pick a plan that includes AI actions to enable this."
+                            : "You've hit this period's AI cap. Upgrade for a higher limit."
+                          : undefined
+                      }
                       className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:border-blue-300 hover:bg-blue-100 disabled:opacity-60"
                     >
                       <SparkIcon />

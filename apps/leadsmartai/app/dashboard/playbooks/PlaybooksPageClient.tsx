@@ -39,19 +39,29 @@ export function PlaybooksPageClient({ leads = [] }: { leads?: LeadInfo[] }) {
   const [showPicker, setShowPicker] = useState(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
+  // Auto-dismiss the "Marked complete" / "Cancelled" / "Moved to ..."
+  // banner after 5s — matches PlaybooksPanel's behaviour. Without it the
+  // banner sits forever until the next action overwrites it, which made
+  // it look like the page was stuck.
+  useEffect(() => {
+    if (!actionMsg) return;
+    const t = window.setTimeout(() => setActionMsg(null), 5000);
+    return () => window.clearTimeout(t);
+  }, [actionMsg]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ all: "1" });
-      // Server filters by completed/cancelled, so we always fetch a
-      // consistent superset matching the active tab. "all" is loaded
-      // by passing both flags.
-      if (statusTab === "done" || statusTab === "all") {
-        params.set("includeCompleted", "1");
-      }
-      if (statusTab === "cancelled" || statusTab === "all") {
-        params.set("includeCancelled", "1");
-      }
+      // Always fetch the full superset (open + completed + cancelled).
+      // Tab counts at the top of the page are derived from this set, so
+      // they must reflect the agent's true totals regardless of which
+      // tab is active — switching tabs is a pure client-side filter, no
+      // refetch.
+      const params = new URLSearchParams({
+        all: "1",
+        includeCompleted: "1",
+        includeCancelled: "1",
+      });
       const res = await fetch(`/api/dashboard/playbooks?${params.toString()}`);
       const body = (await res.json().catch(() => null)) as {
         ok?: boolean;
@@ -61,7 +71,7 @@ export function PlaybooksPageClient({ leads = [] }: { leads?: LeadInfo[] }) {
     } finally {
       setLoading(false);
     }
-  }, [statusTab]);
+  }, []);
 
   useEffect(() => {
     void load();

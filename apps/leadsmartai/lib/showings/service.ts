@@ -95,9 +95,14 @@ export async function listShowingsForAgent(
   agentId: string,
   opts?: { contactId?: string },
 ): Promise<ShowingListItem[]> {
+  // Three batched queries instead of a PostgREST `contacts!inner(...)`
+  // embed: showings rows, then contacts by id, then feedback by
+  // showing_id. The embed kept failing on production with "Could not
+  // find a relationship between 'showings' and 'contacts' in the schema
+  // cache" whenever PostgREST's schema cache lost the FK.
   let query = supabaseAdmin
     .from("showings")
-    .select("*, contacts!inner(id, name, first_name, last_name, email)")
+    .select("*")
     .eq("agent_id", agentId)
     .order("scheduled_at", { ascending: false });
   if (opts?.contactId) query = query.eq("contact_id", opts.contactId);
@@ -106,48 +111,59 @@ export async function listShowingsForAgent(
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) return [];
 
-  const ids = (data as Array<{ id: string }>).map((r) => r.id);
-  const { data: feedbackRows } = await supabaseAdmin
-    .from("showing_feedback")
-    .select("showing_id, rating, overall_reaction, would_offer")
-    .in("showing_id", ids);
+  const rows = data as ShowingRow[];
+  const showingIds = rows.map((r) => r.id);
+  const contactIds = Array.from(
+    new Set(rows.map((r) => r.contact_id).filter((v): v is string => Boolean(v))),
+  );
 
+  type ContactRow = {
+    id: string;
+    name: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+  };
   type FeedbackSummary = {
     showing_id: string;
     rating: number | null;
     overall_reaction: OverallReaction | null;
     would_offer: boolean;
   };
-  const byShowing = new Map<string, FeedbackSummary>();
-  for (const f of (feedbackRows ?? []) as FeedbackSummary[]) {
-    byShowing.set(f.showing_id, f);
+
+  // Run contact + feedback fetches in parallel — they're independent.
+  const [contactRes, feedbackRes] = await Promise.all([
+    contactIds.length > 0
+      ? supabaseAdmin
+          .from("contacts")
+          .select("id, name, first_name, last_name, email")
+          .in("id", contactIds)
+      : Promise.resolve({ data: [] as ContactRow[], error: null as null }),
+    supabaseAdmin
+      .from("showing_feedback")
+      .select("showing_id, rating, overall_reaction, would_offer")
+      .in("showing_id", showingIds),
+  ]);
+  if (contactRes.error) throw new Error(contactRes.error.message);
+
+  const contactById = new Map<string, ContactRow>();
+  for (const c of (contactRes.data ?? []) as ContactRow[]) {
+    contactById.set(c.id, c);
+  }
+  const feedbackByShowing = new Map<string, FeedbackSummary>();
+  for (const f of (feedbackRes.data ?? []) as FeedbackSummary[]) {
+    feedbackByShowing.set(f.showing_id, f);
   }
 
-  return (
-    data as Array<
-      ShowingRow & {
-        contacts: {
-          id: string;
-          name: string | null;
-          first_name: string | null;
-          last_name: string | null;
-          email: string | null;
-        } | null;
-      }
-    >
-  ).map((row) => {
-    const c = row.contacts;
+  return rows.map((row) => {
+    const c = row.contact_id ? contactById.get(row.contact_id) ?? null : null;
     const contactName =
       (c?.first_name || c?.last_name
         ? `${c?.first_name ?? ""} ${c?.last_name ?? ""}`.trim()
         : c?.name) ?? c?.email ?? null;
-    const f = byShowing.get(row.id);
-    // Drop the nested contacts object before returning to match the flat
-    // list-item shape.
-    const { contacts: _c, ...rest } = row as ShowingRow & { contacts?: unknown };
-    void _c;
+    const f = feedbackByShowing.get(row.id);
     return {
-      ...(rest as ShowingRow),
+      ...row,
       contact_name: contactName,
       feedback_rating: f?.rating ?? null,
       feedback_reaction: f?.overall_reaction ?? null,
@@ -165,41 +181,30 @@ export async function getShowingWithFeedback(
   contactName: string | null;
   siblingShowings: ShowingListItem[]; // same buyer, excluding current
 } | null> {
+  // Same shape as listShowingsForAgent — flat showings select, contact
+  // looked up separately to avoid PostgREST schema-cache fragility.
   const { data: showingData, error } = await supabaseAdmin
     .from("showings")
-    .select("*, contacts!inner(id, name, first_name, last_name, email)")
+    .select("*")
     .eq("agent_id", agentId)
     .eq("id", id)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!showingData) return null;
 
-  const withContact = showingData as ShowingRow & {
-    contacts: {
-      id: string;
-      name: string | null;
-      first_name: string | null;
-      last_name: string | null;
-      email: string | null;
-    } | null;
-  };
-  const c = withContact.contacts;
-  const contactName =
-    (c?.first_name || c?.last_name
-      ? `${c?.first_name ?? ""} ${c?.last_name ?? ""}`.trim()
-      : c?.name) ?? c?.email ?? null;
+  const showing = showingData as ShowingRow;
+  const contactName = showing.contact_id
+    ? await fetchContactDisplayName(showing.contact_id)
+    : null;
 
   // Feedback + other showings for the same buyer, in parallel.
   const [{ data: fbData }, siblings] = await Promise.all([
     supabaseAdmin.from("showing_feedback").select("*").eq("showing_id", id).maybeSingle(),
-    listShowingsForAgent(agentId, { contactId: withContact.contact_id }),
+    listShowingsForAgent(agentId, { contactId: showing.contact_id }),
   ]);
 
-  const { contacts: _contacts, ...rest } = withContact as ShowingRow & { contacts?: unknown };
-  void _contacts;
-
   return {
-    showing: rest as ShowingRow,
+    showing,
     feedback: (fbData as ShowingFeedbackRow | null) ?? null,
     contactName,
     siblingShowings: siblings.filter((s) => s.id !== id),

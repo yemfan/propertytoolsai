@@ -245,6 +245,174 @@ export const PLAYBOOKS: Playbook[] = [
       },
     ],
   },
+  {
+    key: "host_open_house",
+    category: "open_house",
+    title: "Host an open house",
+    description:
+      "Prep through visitor follow-up for a successful open house. Anchor = open house date.",
+    // Open-house anchor when the row exists; transaction when it's a
+    // pre-launch open house tied to a listing; "generic" so the standalone
+    // /dashboard/playbooks picker can apply it without forcing a contact
+    // pick — an open house is an event, not a person.
+    validAnchors: ["open_house", "transaction", "generic"],
+    anchorHint: "Open house date",
+    items: [
+      // Prep
+      {
+        section: "Prep",
+        title: "Post on MLS / Zillow / Redfin with date + time",
+        offsetDays: -7,
+      },
+      {
+        section: "Prep",
+        title: "Confirm signage route + neighbor permissions",
+        notes: "Plan 5–10 signs from the nearest arterial. Ask corner properties early.",
+        offsetDays: -3,
+      },
+      {
+        section: "Prep",
+        title: "Test sign-in QR + tablet — visitor flow end-to-end",
+        notes: "QR should land on your /open-houses sign-in page. Walk the captured-lead path once.",
+        offsetDays: -2,
+      },
+      {
+        section: "Prep",
+        title: "Email blast + IG/FB posts (T-7, T-2, day-of)",
+        offsetDays: -2,
+      },
+      {
+        section: "Prep",
+        title: "Final walk with seller — staging, lighting, scent",
+        notes: "Lights on, blinds open, neutral scent, clutter stowed.",
+        offsetDays: -1,
+      },
+      // Day-of
+      {
+        section: "Day-of",
+        title: "Arrive 60 min early — signs, refreshments, materials",
+        offsetDays: 0,
+      },
+      {
+        section: "Day-of",
+        title: "Sign in every visitor — phone + buyer-rep status",
+        notes: "Treat unsigned visitors like cash leaving the room.",
+        offsetDays: 0,
+      },
+      {
+        section: "Day-of",
+        title: "Pack down — collect signs, lock up, return keys",
+        offsetDays: 0,
+      },
+      // Follow-up
+      {
+        section: "Follow-up",
+        title: "Same-day thank-you SMS to every signed-in visitor",
+        notes: "1–2 personalized lines. Auto-thank covers consented contacts; this is your overlay for warm prospects.",
+        offsetDays: 0,
+      },
+      {
+        section: "Follow-up",
+        title: "Seller debrief — traffic count, feedback, pricing read",
+        offsetDays: 1,
+      },
+      {
+        section: "Follow-up",
+        title: "Add hot prospects to nurture + schedule follow-up showings",
+        offsetDays: 2,
+      },
+    ],
+  },
+  {
+    key: "transaction_close",
+    category: "closing",
+    title: "Close transaction",
+    description:
+      "Escrow open through close of escrow + post-close. Anchor = scheduled COE date.",
+    // Closing rides on a transaction row when it exists; "generic" so the
+    // standalone /dashboard/playbooks picker can apply it without forcing
+    // a contact pick — closing tasks track the escrow, not a single
+    // person.
+    validAnchors: ["transaction", "generic"],
+    anchorHint: "Close of escrow date",
+    items: [
+      // Open escrow
+      {
+        section: "Open escrow",
+        title: "Send executed contract to escrow + title",
+        offsetDays: -30,
+      },
+      {
+        section: "Open escrow",
+        title: "Confirm earnest money received by escrow",
+        offsetDays: -28,
+      },
+      {
+        section: "Open escrow",
+        title: "Schedule inspections (home, pest, sewer, roof as applicable)",
+        offsetDays: -27,
+      },
+      // Contingencies
+      {
+        section: "Contingencies",
+        title: "Walk inspection results + draft request-for-repairs / credits",
+        offsetDays: -22,
+      },
+      {
+        section: "Contingencies",
+        title: "Confirm lender ordered appraisal + requested loan docs",
+        offsetDays: -20,
+      },
+      {
+        section: "Contingencies",
+        title: "Remove inspection contingency in writing once resolved",
+        offsetDays: -17,
+      },
+      {
+        section: "Contingencies",
+        title: "Appraisal in — flag any low appraisal immediately",
+        offsetDays: -14,
+      },
+      {
+        section: "Contingencies",
+        title: "Clear-to-close confirmed with lender",
+        offsetDays: -7,
+      },
+      // Pre-close
+      {
+        section: "Pre-close",
+        title: "Schedule final walk-through (24–48h before COE)",
+        offsetDays: -2,
+      },
+      {
+        section: "Pre-close",
+        title: "Buyer signs loan docs + wires balance",
+        offsetDays: -1,
+      },
+      // Close
+      {
+        section: "Close",
+        title: "Confirm recording + keys handed over",
+        offsetDays: 0,
+      },
+      {
+        section: "Close",
+        title: "Send commission disbursement instructions to broker",
+        offsetDays: 0,
+      },
+      // Post-close
+      {
+        section: "Post-close",
+        title: "Closing gift + handwritten thank-you note",
+        offsetDays: 2,
+      },
+      {
+        section: "Post-close",
+        title: "Ask for a review (Zillow / Google) + add to sphere nurture",
+        offsetDays: 7,
+      },
+    ],
+  },
 ];
 
 export function getPlaybook(key: string): Playbook | null {

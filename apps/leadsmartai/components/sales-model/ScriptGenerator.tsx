@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { AiActionGateBanner } from "@/components/entitlements/AiActionGateBanner";
+import {
+  detectAiActionGate,
+  type AiActionGate,
+} from "@/lib/entitlements/aiActionGate";
 import {
   SCRIPT_KINDS,
   type SalesModel,
@@ -42,6 +47,11 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<"ai" | "fallback" | null>(null);
   const [detectedKind, setDetectedKind] = useState<ScriptKind | null>(null);
+  // Sticky entitlement gate when /api/sales-model/generate-script
+  // returns 402 with `no_agent_entitlement` or `ai_usage_limit_reached`.
+  // We still degrade to the local template so the agent isn't stuck —
+  // the banner sits above it as the actionable next step.
+  const [gate, setGate] = useState<AiActionGate | null>(null);
 
   const onGenerate = async () => {
     const trimmed = situation.trim();
@@ -54,6 +64,7 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
     setOutput(null);
     setDetectedKind(null);
     setSource(null);
+    setGate(null);
 
     try {
       const res = await fetch("/api/sales-model/generate-script", {
@@ -89,17 +100,21 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
       // env" or "out of quota". Hard errors (auth, validation) get
       // surfaced — the local template wouldn't fix them.
       const code = json?.code;
-      if (code === "ai_unconfigured" || res.status === 402) {
+      const aiGate = detectAiActionGate(res.status, json);
+      if (aiGate) {
         const local = generateLocalScript({ model, situation: trimmed });
         setOutput(local);
         setSource("fallback");
-        if (code === "ai_unconfigured") {
-          setError(
-            "AI is not configured on this environment — showing a template instead. Set OPENAI_API_KEY to enable AI.",
-          );
-        } else {
-          setError(json?.error ?? "AI quota reached — showing a template instead.");
-        }
+        setGate(aiGate);
+        return;
+      }
+      if (code === "ai_unconfigured") {
+        const local = generateLocalScript({ model, situation: trimmed });
+        setOutput(local);
+        setSource("fallback");
+        setError(
+          "AI is not configured on this environment — showing a template instead. Set OPENAI_API_KEY to enable AI.",
+        );
         return;
       }
 
@@ -242,6 +257,7 @@ export function ScriptGenerator({ model }: { model: SalesModel }) {
         ) : null}
       </div>
 
+      {gate ? <AiActionGateBanner reason={gate.reason} className="mt-3" /> : null}
       {error ? (
         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           {error}
