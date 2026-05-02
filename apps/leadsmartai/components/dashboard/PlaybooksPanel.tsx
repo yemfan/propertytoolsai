@@ -457,7 +457,14 @@ export function PlaybookPickerModal({
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const contactPickerEnabled = Array.isArray(leads) && leads.length > 0;
+  // The page passing a `leads` array (even an empty one) signals that
+  // the picker should also surface contact-anchor playbooks — the user
+  // is on the standalone /dashboard/playbooks page where those are
+  // applicable. Previously we gated this on `leads.length > 0`, which
+  // meant a fresh agent with zero contacts saw "No playbooks available"
+  // even though every contact-anchor playbook is technically pickable
+  // (we just need to send them to /contacts to create one first).
+  const contactPickerEnabled = Array.isArray(leads);
 
   useEffect(() => {
     let cancelled = false;
@@ -721,18 +728,31 @@ function ReviewStep({
           <p className="mt-0.5 text-[11px] text-amber-800">
             This playbook is lead-bound — every task will be linked to the contact you pick.
           </p>
-          <select
-            value={contactPicker.pickedId}
-            onChange={(e) => contactPicker.onPick(e.target.value)}
-            className="mt-2 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm"
-          >
-            <option value="">Select a contact…</option>
-            {contactPicker.leads.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name ?? `Contact #${l.id}`}
-              </option>
-            ))}
-          </select>
+          {contactPicker.leads.length === 0 ? (
+            <div className="mt-2 rounded-md border border-amber-300 bg-white px-3 py-2 text-xs text-amber-900">
+              You don&apos;t have any contacts yet.{" "}
+              <a
+                href="/dashboard/contacts"
+                className="font-semibold underline hover:text-amber-700"
+              >
+                Add a contact →
+              </a>{" "}
+              then come back to apply this playbook.
+            </div>
+          ) : (
+            <select
+              value={contactPicker.pickedId}
+              onChange={(e) => contactPicker.onPick(e.target.value)}
+              className="mt-2 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm"
+            >
+              <option value="">Select a contact…</option>
+              {contactPicker.leads.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name ?? `Contact #${l.id}`}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       ) : null}
       <div className="rounded-lg bg-slate-50 p-3">
