@@ -10,19 +10,18 @@ type CreateLeadInput = {
   sessionId: string;
   zip?: string;
   city?: string;
-  /** Owning agent (bigint id from public.agents). Required — contacts.agent_id is NOT NULL. */
-  agentId: number;
 };
 
 /**
- * Persist the home-value capture as a row in public.contacts. Pre-Phase-2c
- * this targeted public.leads, which is now a view consolidated into
- * contacts and not insertable — every unlock-report POST was 500'ing
- * with "relation leads is not insertable" which the API caught and
- * served back as the generic "Failed to unlock report" banner.
+ * Persist the home-value capture as a row in public.contacts with
+ * `agent_id = NULL` so it lands in the shared lead queue
+ * (/dashboard/lead-queue), where any agent can claim it.
  *
- * The caller (unlock-report route) now picks the owning agent up front
- * via pickAgentForHomeValueLead so we have an agent_id at insert time.
+ * Earlier we pre-assigned an agent here to satisfy the NOT NULL
+ * constraint, which had the side effect of bypassing the queue
+ * entirely — every home-value lead landed already-owned. The
+ * 20260605 migration drops NOT NULL on agent_id; this writer now
+ * passes null and lets the queue do its job.
  */
 export async function createLeadFromHomeValue(input: CreateLeadInput) {
   const engagementScore =
@@ -31,7 +30,7 @@ export async function createLeadFromHomeValue(input: CreateLeadInput) {
   const { data, error } = await supabaseAdmin
     .from("contacts")
     .insert({
-      agent_id: input.agentId,
+      // agent_id intentionally null — queue surfaces unowned leads.
       name: input.name,
       email: input.email,
       phone: input.phone || null,

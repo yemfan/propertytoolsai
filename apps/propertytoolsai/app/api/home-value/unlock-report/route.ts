@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createLeadFromHomeValue } from "@/lib/home-value/lead";
-import { pickAgentForHomeValueLead } from "@/lib/home-value/assignment";
 import { queueHomeValueSequence } from "@/lib/home-value/followup-sequence";
-import { createAgentNotification } from "@/lib/home-value/agent-notification";
 
 export async function POST(req: Request) {
   try {
@@ -48,26 +46,12 @@ export async function POST(req: Request) {
 
     const propertyAddress = session.property_address || session.full_address || body.property_address || "";
 
-    // --- Pick the owning agent up front: contacts.agent_id is NOT NULL,
-    //     so we need an agent before the insert. Falls back to the first
-    //     accepting agent when zip/city don't match anyone's service area.
-    const picked = await pickAgentForHomeValueLead({
-      zip: session.zip,
-      city: session.city,
-    });
-    if (!picked) {
-      console.error("unlock-report: no eligible agent (accepts_new_leads=true)");
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "We couldn't route this report — no agents are currently accepting new leads. Please try again later.",
-        },
-        { status: 503 },
-      );
-    }
-
-    // --- Core: create contact row (owns lead) ---
+    // --- Core: create unowned contact (lands in shared lead queue) ---
+    // Pre-assignment is intentionally gone: home-value leads now drop
+    // into /dashboard/lead-queue with agent_id=null so any agent can
+    // claim them. Targeted agent notification is removed for the same
+    // reason — there is no specific agent to notify until claim. Once
+    // claimed, the per-agent flow picks up downstream.
     const lead = await createLeadFromHomeValue({
       name,
       email,
@@ -78,40 +62,12 @@ export async function POST(req: Request) {
       sessionId,
       zip: session.zip,
       city: session.city,
-      agentId: picked.id,
     });
 
-    // The picked agent is the assignment — wrap into the same shape the
-    // downstream notification + followup paths expect. Using authUserId
-    // (uuid) for agent_notifications.agent_id matches the column type
-    // and the legacy autoAssignLeadToAgent's behavior.
-    const assignment: { agentId: string; fullName: string | null; email: string | null } | null =
-      picked.authUserId != null
-        ? {
-            agentId: picked.authUserId,
-            fullName: picked.fullName,
-            email: picked.email,
-          }
-        : null;
-
-    // Agent notification (fire-and-forget)
-    if (assignment?.agentId) {
-      createAgentNotification({
-        agentId: assignment.agentId,
-        leadId: String(lead.id),
-        type: "new_home_value_lead",
-        title: "New Home Value Lead Assigned",
-        message: `${name} unlocked a home value report for ${propertyAddress}.`,
-        actionUrl: `/agent/leads/${lead.id}`,
-        metadata: {
-          source: "home_value_estimate",
-          property_address: propertyAddress,
-          estimate_value: session.estimate_value,
-        },
-      }).catch((e) => console.error("Agent notification failed:", e));
-    }
-
-    // Followup sequence (fire-and-forget)
+    // Customer-facing follow-up sequence (email/SMS to the lead). We
+    // already accept null assignedAgent — the email template falls
+    // back to a generic "PropertyTools team" sender when the lead is
+    // still unclaimed.
     queueHomeValueSequence({
       leadId: String(lead.id),
       customerName: name,
@@ -119,8 +75,8 @@ export async function POST(req: Request) {
       customerPhone: phone ?? null,
       propertyAddress,
       estimateValue: session.estimate_value,
-      assignedAgentName: assignment?.fullName ?? null,
-      assignedAgentId: assignment?.agentId ?? null,
+      assignedAgentName: null,
+      assignedAgentId: null,
     }).catch((e) => console.error("Followup queue failed:", e));
 
     // Persist report row (best-effort)
@@ -145,7 +101,9 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       leadId: lead.id,
-      assignedAgent: assignment ?? null,
+      // Lead lives in the queue until an agent claims it; no
+      // assigned-agent payload to surface to the client at this point.
+      assignedAgent: null,
       report: {
         estimate: {
           value: session.estimate_value,
