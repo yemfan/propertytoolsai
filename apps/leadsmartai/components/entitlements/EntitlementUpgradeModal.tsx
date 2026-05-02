@@ -116,16 +116,24 @@ export default function EntitlementUpgradeModal({ open, onClose, reason, plan }:
           </button>
         </div>
 
+        {/* Two distinct destinations so the buttons aren't redundant:
+              Primary   → /dashboard/billing (in-app subscription
+                          management — current plan, Manage billing,
+                          Stripe portal, switch plans)
+              Secondary → /agent/pricing (the marketing-style plan
+                          comparison page with the full
+                          Starter / Pro / Premium / Team breakdown,
+                          feature lists, and coaching-tier copy) */}
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Link
-            href={crm ? "/dashboard/billing" : "/dashboard/billing"}
+            href="/dashboard/billing"
             className="rounded-2xl bg-gray-900 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-gray-800"
             onClick={onClose}
           >
             {crm ? "View plans & upgrade" : "Upgrade Now"}
           </Link>
           <Link
-            href="/dashboard/billing"
+            href="/agent/pricing"
             className="rounded-2xl border px-5 py-3 text-center text-sm font-medium text-gray-900 transition hover:bg-gray-50"
             onClick={onClose}
           >

@@ -40,6 +40,11 @@ export function AiActionGateBanner({
     >
       <p className="font-semibold">{title}</p>
       <p className="mt-0.5 leading-snug text-amber-800">{body}</p>
+      {/* Primary opens the upgrade modal (workspace-level UX), secondary
+          deep-links to the full plan-comparison page at /agent/pricing
+          (Starter / Pro / Premium / Team feature breakdown). Different
+          surfaces, different destinations — used to both go to
+          /dashboard/billing which made the second button feel redundant. */}
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -49,7 +54,7 @@ export function AiActionGateBanner({
           {isLimit ? "View plans & upgrade" : "Choose a plan"}
         </button>
         <a
-          href="/dashboard/billing"
+          href="/agent/pricing"
           className="rounded-md border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-medium text-amber-900 hover:bg-amber-100"
         >
           Compare plans
