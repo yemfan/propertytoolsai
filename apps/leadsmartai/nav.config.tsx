@@ -135,16 +135,22 @@ const navConfig = {
       icon: navEmoji("🏷️"),
       items: [
         {
+          // Agent's active + closed listings (listing-rep + dual
+          // transactions), with showings activity per listing. Backed
+          // by /dashboard/properties — kept the URL since the
+          // CommandPalette already links there. The previous
+          // implementation was a generic warehouse browser; we
+          // repurposed it for listings.
+          label: "Listings",
+          href: "/dashboard/properties",
+          match: ["/dashboard/properties"],
+          icon: navEmoji("🏷️"),
+        },
+        {
           label: "Presentations",
           href: "/dashboard/seller-presentation",
           match: ["/dashboard/seller-presentation", "/dashboard/presentations"],
           icon: navEmoji("📊"),
-        },
-        {
-          label: "Reports",
-          href: "/dashboard/reports",
-          match: ["/dashboard/reports", "/dashboard/comparison-report"],
-          icon: navEmoji("📄"),
         },
       ],
     },
