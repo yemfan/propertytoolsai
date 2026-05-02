@@ -48,6 +48,7 @@ function prefillForTopic(topic: string | null): { subject: string; message: stri
 
 export default function ContactForm() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const prefill = useMemo(
     () => prefillForTopic(searchParams?.get("topic") ?? null),
@@ -57,6 +58,7 @@ export default function ContactForm() {
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("sending");
+    setErrorMsg(null);
 
     const fd = new FormData(e.currentTarget);
     const body = {
@@ -74,9 +76,29 @@ export default function ContactForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error("Failed to send");
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+      };
+      if (!res.ok || json.ok === false) {
+        // Surface the API's specific error when present (e.g.
+        // "Please provide a phone number to receive SMS"), and fall
+        // back to the generic line otherwise. Was always showing
+        // "Something went wrong" before, which hid the actionable
+        // detail behind validation + delivery failures alike.
+        setErrorMsg(
+          typeof json.error === "string" && json.error.trim()
+            ? json.error
+            : "Something went wrong. Please try again or email us directly.",
+        );
+        setStatus("error");
+        return;
+      }
       setStatus("sent");
     } catch {
+      setErrorMsg(
+        "Network error. Please try again or email us at contact@leadsmart-ai.com.",
+      );
       setStatus("error");
     }
   }
@@ -211,7 +233,8 @@ export default function ContactForm() {
 
       {status === "error" && (
         <p className="text-sm font-medium text-rose-600">
-          Something went wrong. Please try again or email us directly.
+          {errorMsg ??
+            "Something went wrong. Please try again or email us directly."}
         </p>
       )}
 
