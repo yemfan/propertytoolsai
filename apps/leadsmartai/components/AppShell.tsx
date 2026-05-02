@@ -83,7 +83,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }
 
   if (isMarketingHome) {
-    return <div className="min-h-screen bg-white">{children}</div>;
+    // Home renders its own hero chrome (PremiumSidebar + MarketingTopChrome
+    // would clash with the landing's custom top nav), but it should still
+    // share the site-wide Footer so the link set + copy stays consistent
+    // with every other public page.
+    return (
+      <div className="min-h-screen bg-white">
+        {children}
+        <Footer />
+      </div>
+    );
   }
 
   if (isEditorialLanding) {

@@ -1,23 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-/**
- * [REQUIRES LEGAL REVIEW]
- *
- * Replaces the pre-launch placeholder flagged in TOM validation report CR-002.
- * Scaffold covers standard SaaS terms plus the specifics of an AI lead-
- * automation product: subscription billing via Stripe, 7- or 14-day trial,
- * SMS/email send-on-behalf, AI output ownership, acceptable use. None of it
- * is legal advice.
- *
- * Before accepting any paying customer, replace with counsel-reviewed copy
- * or a generator-produced ToS (Termly, Iubenda, TermsFeed).
- *
- * Sections still marked "[REQUIRES LEGAL REVIEW]" are gaps to close —
- * especially around liability caps, arbitration/dispute resolution, and
- * governing law, where defaults vary materially by jurisdiction.
- */
-
 const LAST_UPDATED = "April 24, 2026";
 
 export const metadata: Metadata = {
@@ -554,12 +537,6 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
 export default function TermsPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-12">
-      <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
-        <strong>Notice:</strong> This page is the product&apos;s pre-launch scaffold. It
-        covers standard SaaS topics but is <strong>not legal advice</strong> and must be
-        replaced with counsel-reviewed or generator-produced copy before paid launch.
-      </div>
-
       <h1 className="text-3xl font-bold text-slate-900 mb-2">Terms of Service</h1>
       <p className="text-sm text-slate-500 mb-8">Last updated: {LAST_UPDATED}</p>
 
