@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { CalendarClock, Check, Eye, Pencil, X } from "lucide-react";
 
 type CalendarEvent = { id: string; contact_id: string; lead_name: string | null; title: string; starts_at: string; };
 // Mirrors /api/dashboard/tasks/unified output. Ids are namespaced
@@ -279,6 +281,54 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
     loadData();
   }
 
+  // Mirrors TasksClient.markCancelled — cancellation routes by id prefix
+  // the same way markTaskDone does so the right backend handles it.
+  async function markTaskCancelled(taskId: string) {
+    if (taskId.startsWith("pb:")) {
+      const rawId = taskId.slice(3);
+      await fetch(`/api/dashboard/playbooks/${rawId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cancelled: true }),
+      });
+    } else {
+      const rawId = taskId.startsWith("crm:") ? taskId.slice(4) : taskId;
+      await fetch("/api/dashboard/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: rawId, status: "cancelled" }),
+      });
+    }
+    loadData();
+  }
+
+  // Mirrors TasksClient.snoozeBy — push the due date out by `days`.
+  // Status stays open; the task just leaves today's view. Playbook
+  // tasks store date-only (no time component) so we send YYYY-MM-DD;
+  // CRM tasks accept ISO with hour set to 9am local.
+  async function snoozeTaskBy(taskId: string, days: number) {
+    const target = new Date();
+    target.setDate(target.getDate() + days);
+    target.setHours(9, 0, 0, 0);
+    if (taskId.startsWith("pb:")) {
+      const rawId = taskId.slice(3);
+      const yyyyMmDd = target.toISOString().slice(0, 10);
+      await fetch(`/api/dashboard/playbooks/${rawId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dueDate: yyyyMmDd }),
+      });
+    } else {
+      const rawId = taskId.startsWith("crm:") ? taskId.slice(4) : taskId;
+      await fetch("/api/dashboard/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: rawId, dueAt: target.toISOString() }),
+      });
+    }
+    loadData();
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -487,6 +537,8 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
           currentMonth={currentMonth}
           today={today}
           markTaskDone={markTaskDone}
+          markTaskCancelled={markTaskCancelled}
+          snoozeTaskBy={snoozeTaskBy}
           cancelEvent={cancelEvent}
           prevMonth={prevMonth}
           nextMonth={nextMonth}
@@ -520,14 +572,13 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-1 shrink-0 ml-2">
-                    {entry.type === "task" && entry.status !== "done" && (
-                      <button onClick={() => void markTaskDone(entry.id)} className="rounded-lg bg-green-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-green-700">Done</button>
-                    )}
-                    {entry.type === "event" && (
-                      <button onClick={() => void cancelEvent(entry.id)} className="rounded-lg border border-red-200 px-2 py-1 text-[10px] font-medium text-red-600 hover:bg-red-50">Cancel</button>
-                    )}
-                  </div>
+                  <EntryActions
+                    entry={entry}
+                    markTaskDone={markTaskDone}
+                    markTaskCancelled={markTaskCancelled}
+                    snoozeTaskBy={snoozeTaskBy}
+                    cancelEvent={cancelEvent}
+                  />
                 </div>
               ))}
             </div>
@@ -549,6 +600,8 @@ function ListView({
   currentMonth,
   today,
   markTaskDone,
+  markTaskCancelled,
+  snoozeTaskBy,
   cancelEvent,
   prevMonth,
   nextMonth,
@@ -558,6 +611,8 @@ function ListView({
   currentMonth: Date;
   today: Date;
   markTaskDone: (taskId: string) => Promise<void> | void;
+  markTaskCancelled: (taskId: string) => Promise<void> | void;
+  snoozeTaskBy: (taskId: string, days: number) => Promise<void> | void;
   cancelEvent: (eventId: string) => Promise<void> | void;
   prevMonth: () => void;
   nextMonth: () => void;
@@ -622,24 +677,13 @@ function ListView({
                           </p>
                         </div>
                       </div>
-                      <div className="flex gap-1 shrink-0 ml-2">
-                        {entry.type === "task" && entry.status !== "done" && (
-                          <button
-                            onClick={() => void markTaskDone(entry.id)}
-                            className="rounded-lg bg-green-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-green-700"
-                          >
-                            Done
-                          </button>
-                        )}
-                        {entry.type === "event" && (
-                          <button
-                            onClick={() => void cancelEvent(entry.id)}
-                            className="rounded-lg border border-red-200 px-2 py-1 text-[10px] font-medium text-red-600 hover:bg-red-50"
-                          >
-                            Cancel
-                          </button>
-                        )}
-                      </div>
+                      <EntryActions
+                        entry={entry}
+                        markTaskDone={markTaskDone}
+                        markTaskCancelled={markTaskCancelled}
+                        snoozeTaskBy={snoozeTaskBy}
+                        cancelEvent={cancelEvent}
+                      />
                     </div>
                   ))}
                 </div>
@@ -648,6 +692,204 @@ function ListView({
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Per-entry action cluster ──────────────────────────────────────
+// Same surface for every entry type (event / task / followup / draft)
+// so the user sees consistent placement and styling in both the month
+// day-detail panel and the list view. Mirrors TasksClient's
+// TaskIconButton + SnoozeMenu so calendar and tasks-page UI agree.
+function EntryActions({
+  entry,
+  markTaskDone,
+  markTaskCancelled,
+  snoozeTaskBy,
+  cancelEvent,
+}: {
+  entry: DayEntry;
+  markTaskDone: (taskId: string) => Promise<void> | void;
+  markTaskCancelled: (taskId: string) => Promise<void> | void;
+  snoozeTaskBy: (taskId: string, days: number) => Promise<void> | void;
+  cancelEvent: (eventId: string) => Promise<void> | void;
+}) {
+  if (entry.type === "task" && entry.status !== "done") {
+    // Edit is CRM-only; playbook tasks don't support title/description
+    // edits via the simple PATCH route.
+    const isCrm = entry.id.startsWith("crm:");
+    return (
+      <div className="inline-flex items-center gap-0.5 shrink-0 ml-2">
+        <TaskIconButton
+          onClick={() => void markTaskDone(entry.id)}
+          title="Mark done"
+          ariaLabel="Mark done"
+          tone="success"
+        >
+          <Check className="h-4 w-4" strokeWidth={2.5} />
+        </TaskIconButton>
+        <TaskIconButton
+          onClick={() => void markTaskCancelled(entry.id)}
+          title="Cancel task"
+          ariaLabel="Cancel task"
+          tone="danger"
+        >
+          <X className="h-4 w-4" strokeWidth={2.5} />
+        </TaskIconButton>
+        <SnoozeMenu onSnooze={(days) => void snoozeTaskBy(entry.id, days)} />
+        {isCrm ? (
+          <TaskIconButton
+            href={`/dashboard/tasks?focus=${encodeURIComponent(entry.id.slice(4))}`}
+            title="Edit task"
+            ariaLabel="Edit task"
+          >
+            <Pencil className="h-4 w-4" strokeWidth={2} />
+          </TaskIconButton>
+        ) : null}
+      </div>
+    );
+  }
+  if (entry.type === "event") {
+    return (
+      <div className="inline-flex items-center gap-0.5 shrink-0 ml-2">
+        <TaskIconButton
+          onClick={() => void cancelEvent(entry.id)}
+          title="Cancel appointment"
+          ariaLabel="Cancel appointment"
+          tone="danger"
+        >
+          <X className="h-4 w-4" strokeWidth={2.5} />
+        </TaskIconButton>
+      </div>
+    );
+  }
+  if (entry.type === "draft") {
+    return (
+      <div className="inline-flex items-center gap-0.5 shrink-0 ml-2">
+        <TaskIconButton
+          href="/dashboard/drafts"
+          title="Review draft"
+          ariaLabel="Review draft"
+        >
+          <Eye className="h-4 w-4" strokeWidth={2} />
+        </TaskIconButton>
+      </div>
+    );
+  }
+  return null;
+}
+
+// Icon button that renders as <button> when given onClick or as <Link>
+// when given href. Same shape as TasksClient.TaskIconButton; kept
+// in-file rather than lifted to packages/ui because the ergonomics
+// of the two surfaces are still in flux.
+function TaskIconButton({
+  children,
+  onClick,
+  href,
+  title,
+  ariaLabel,
+  disabled,
+  tone,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  href?: string;
+  title: string;
+  ariaLabel: string;
+  disabled?: boolean;
+  tone?: "success" | "danger";
+}) {
+  const toneClasses =
+    tone === "success"
+      ? "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+      : tone === "danger"
+        ? "text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+        : "text-gray-500 hover:bg-gray-100 hover:text-gray-900";
+  const className = `inline-flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-40 ${toneClasses}`;
+  if (href) {
+    return (
+      <Link href={href} title={title} aria-label={ariaLabel} className={className}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={ariaLabel}
+      className={className}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Quick-snooze popover: presets bump the due date forward without
+// forcing the full edit flow. Same UX as the Tasks page so the user
+// learns the pattern in one place.
+function SnoozeMenu({ onSnooze }: { onSnooze: (days: number) => void }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const onAway = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-snooze-menu]")) setOpen(false);
+    };
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onAway);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onAway);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [open]);
+
+  const presets: Array<{ label: string; days: number }> = [
+    { label: "Tomorrow", days: 1 },
+    { label: "In 3 days", days: 3 },
+    { label: "Next week", days: 7 },
+  ];
+
+  return (
+    <div className="relative inline-block" data-snooze-menu>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        title="Move to a later date"
+        aria-label="Move task to a later date"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-amber-600 transition hover:bg-amber-50 hover:text-amber-700"
+      >
+        <CalendarClock className="h-4 w-4" strokeWidth={2} />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 z-20 mt-1 w-36 origin-top-right overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg ring-1 ring-black/5"
+        >
+          {presets.map((p) => (
+            <button
+              key={p.days}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onSnooze(p.days);
+              }}
+              className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
