@@ -268,47 +268,37 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
         </div>
       ) : null}
 
-      {/* Listing-side surfaces: offers compare, weekly seller update
-          toggle, and a link back to the listing presentation builder.
-          Buyer-rep deals don't render these. */}
+      {/* Listing-side surfaces: compact horizontal strip rather than the
+          previous 3-column card grid. Same items (offers, weekly seller
+          update, presentation builder) but the strip frees ~150px of
+          vertical real estate above the main content. PostToFacebook
+          and ListingFeedback stay as full sections below — they're UI
+          components, not nav links. Buyer-rep deals skip the strip. */}
       {txn.transaction_type === "listing_rep" || txn.transaction_type === "dual" ? (
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
+          <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            Listing tools
+          </span>
           <Link
             href={`/dashboard/transactions/${txn.id}/offers`}
-            className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-100"
+            title="Compare offers + net-to-seller"
           >
-            <div>
-              <div className="text-sm font-semibold text-slate-900">
-                📬 Offers on listing
-              </div>
-              <div className="mt-0.5 text-xs text-slate-500">
-                Compare offers + net-to-seller.
-              </div>
-            </div>
-            <span className="text-slate-400">→</span>
+            📬 Offers
           </Link>
-          <SellerUpdateToggle
+          <Link
+            href="/dashboard/seller-presentation"
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-100"
+            title="Open the CMA + pitch builder"
+          >
+            🎯 Presentation
+          </Link>
+          <SellerUpdateInlineToggle
             transaction={txn}
             onChange={(enabled) =>
               setTxn((prev) => ({ ...prev, seller_update_enabled: enabled } as TransactionRow))
             }
           />
-          {/* Listing presentation builder lives at /dashboard/seller-presentation
-              — quick jumpback for editing the pitch deck. */}
-          <Link
-            href="/dashboard/seller-presentation"
-            className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
-          >
-            <div>
-              <div className="text-sm font-semibold text-slate-900">
-                🎯 Listing presentation
-              </div>
-              <div className="mt-0.5 text-xs text-slate-500">
-                Open the CMA + pitch builder.
-              </div>
-            </div>
-            <span className="text-slate-400">→</span>
-          </Link>
         </div>
       ) : null}
 
@@ -371,85 +361,22 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
           })}
         </div>
 
-        {/* ── Right column — key dates, counterparties, notes ── */}
-        <aside className="space-y-4">
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-900">Key dates</h2>
-            <div className="mt-3 space-y-2 text-sm">
-              <DateRow
-                label="Mutual acceptance"
-                value={txn.mutual_acceptance_date}
-                onChange={(v) => patchTransaction({ mutual_acceptance_date: v }, "mutual")}
-                saving={savingField === "mutual"}
-                help="Setting this auto-fills contingency deadlines with CA defaults (17d inspection, 21d loan, 30d closing) unless already set."
-              />
-              <DateRow
-                label="Inspection deadline"
-                value={txn.inspection_deadline}
-                onChange={(v) => patchTransaction({ inspection_deadline: v }, "inspection")}
-                saving={savingField === "inspection"}
-              />
-              <DateRow
-                label="Appraisal deadline"
-                value={txn.appraisal_deadline}
-                onChange={(v) => patchTransaction({ appraisal_deadline: v }, "appraisal")}
-                saving={savingField === "appraisal"}
-              />
-              <DateRow
-                label="Loan contingency"
-                value={txn.loan_contingency_deadline}
-                onChange={(v) => patchTransaction({ loan_contingency_deadline: v }, "loan")}
-                saving={savingField === "loan"}
-              />
-              <DateRow
-                label="Closing date"
-                value={txn.closing_date}
-                onChange={(v) => patchTransaction({ closing_date: v }, "closing")}
-                saving={savingField === "closing"}
-              />
-            </div>
-
-            <div className="mt-4 border-t border-slate-100 pt-3">
-              <label className="block text-[11px] font-medium text-slate-500">Status</label>
-              <select
-                value={txn.status}
-                onChange={(e) => patchTransaction({ status: e.target.value }, "status")}
-                disabled={savingField === "status"}
-                className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-              >
-                <option value="active">Active</option>
-                <option value="pending">Pending</option>
-                <option value="closed">Closed</option>
-                <option value="terminated">Terminated</option>
-              </select>
-            </div>
-          </section>
-
-          <CounterpartiesBlock
-            transactionId={txn.id}
-            counterparties={cps}
-            onAdd={(cp) => setCps((prev) => [...prev, cp])}
-            onDelete={(id) => setCps((prev) => prev.filter((x) => x.id !== id))}
+        {/* ── Right column — Dates / People / Notes tabs ──
+            Replaces the previous always-stacked sections. The same
+            content is now reachable via tab clicks; default tab is
+            Dates because that's the most-touched surface (deadlines
+            move, contingencies extend). Persisted to localStorage so
+            an agent who lives on the People tab doesn't have to
+            re-click every visit. */}
+        <aside>
+          <RightRailTabs
+            txn={txn}
+            cps={cps}
+            savingField={savingField}
+            patchTransaction={patchTransaction}
+            onCpAdd={(cp) => setCps((prev) => [...prev, cp])}
+            onCpDelete={(id) => setCps((prev) => prev.filter((x) => x.id !== id))}
           />
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-900">Notes</h2>
-            <textarea
-              defaultValue={txn.notes ?? ""}
-              onBlur={(e) => {
-                const value = e.target.value.trim() || null;
-                if (value !== (txn.notes ?? null)) {
-                  void patchTransaction({ notes: value }, "notes");
-                }
-              }}
-              rows={5}
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-              placeholder="Anything you need to remember about this deal…"
-            />
-            {savingField === "notes" ? (
-              <div className="mt-1 text-[11px] text-slate-500">Saving…</div>
-            ) : null}
-          </section>
         </aside>
       </div>
     </div>
@@ -786,7 +713,13 @@ function TaskDueBadge({ dueDate, completed }: { dueDate: string | null; complete
   return <span className="text-[10px] text-slate-400">{dueDate}</span>;
 }
 
-function CounterpartiesBlock({
+/**
+ * Body content for the Counterparties tab in the right rail. Renders
+ * the add-form and the list, but no outer card wrapper — the tab pane
+ * provides that. Was previously its own `<section>` block before the
+ * right rail moved to tabs.
+ */
+function CounterpartiesBlockBody({
   transactionId,
   counterparties,
   onAdd,
@@ -825,9 +758,9 @@ function CounterpartiesBlock({
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div>
       <header className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-900">Counterparties</h2>
+        <p className="text-xs text-slate-500">Title / lender / inspector / insurance.</p>
         <button
           type="button"
           onClick={() => setAdding((v) => !v)}
@@ -938,15 +871,22 @@ function CounterpartiesBlock({
           ))}
         </ul>
       )}
-    </section>
+    </div>
   );
 }
 
 /**
- * Per-listing toggle for the weekly seller-update email. Clicks PATCH
- * the transaction, bubbles the new value back up via onChange.
+ * Compact inline toggle for the weekly seller-update email — used in
+ * the listing-tools strip on the transaction detail page. Clicks PATCH
+ * the transaction; the parent bubbles the new value via onChange.
+ *
+ * Replaces the previous standalone SellerUpdateToggle card; the strip
+ * is the new home so listing tools fit in one row above the deal body.
+ * strip. Shows a single label + switch in one row instead of the
+ * full bordered card. Same patch endpoint, same disabled-while-saving
+ * behavior.
  */
-function SellerUpdateToggle({
+function SellerUpdateInlineToggle({
   transaction,
   onChange,
 }: {
@@ -955,7 +895,6 @@ function SellerUpdateToggle({
 }) {
   const [saving, setSaving] = useState(false);
   const enabled = transaction.seller_update_enabled;
-  const lastSent = transaction.seller_update_last_sent_at;
 
   async function toggle() {
     setSaving(true);
@@ -979,36 +918,185 @@ function SellerUpdateToggle({
   }
 
   return (
-    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <div className="min-w-0">
-        <div className="text-sm font-semibold text-slate-900">
-          📧 Weekly seller update
-        </div>
-        <div className="mt-0.5 text-xs text-slate-500">
-          {enabled
-            ? lastSent
-              ? `On — last sent ${new Date(lastSent).toLocaleDateString()}`
-              : "On — first send goes out Monday"
-            : "Off — sellers get no weekly email"}
-        </div>
+    <button
+      type="button"
+      onClick={() => void toggle()}
+      role="switch"
+      aria-checked={enabled}
+      disabled={saving}
+      title={
+        enabled
+          ? "Weekly seller update is ON — click to turn off"
+          : "Weekly seller update is OFF — click to turn on"
+      }
+      className={`inline-flex items-center gap-2 rounded-lg border px-2.5 py-1 font-medium transition disabled:opacity-50 ${
+        enabled
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-100"
+      }`}
+    >
+      <span aria-hidden>📧</span>
+      <span>Weekly update {enabled ? "on" : "off"}</span>
+    </button>
+  );
+}
+
+/**
+ * Right-rail Dates / People / Notes tabs. The "Dates" pane carries the
+ * Status select since both deal with deal-level metadata that the
+ * coordinator changes together. Active tab is persisted per-tab via
+ * localStorage so an agent who lives on People doesn't have to re-click.
+ */
+function RightRailTabs({
+  txn,
+  cps,
+  savingField,
+  patchTransaction,
+  onCpAdd,
+  onCpDelete,
+}: {
+  txn: TransactionRow;
+  cps: TransactionCounterpartyRow[];
+  savingField: string | null;
+  patchTransaction: (patch: Record<string, unknown>, fieldKey: string) => Promise<void>;
+  onCpAdd: (cp: TransactionCounterpartyRow) => void;
+  onCpDelete: (id: string) => void;
+}) {
+  type Tab = "dates" | "people" | "notes";
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window === "undefined") return "dates";
+    try {
+      const v = window.localStorage.getItem("leadsmart.txn.detail.right-tab");
+      return v === "people" || v === "notes" ? v : "dates";
+    } catch {
+      return "dates";
+    }
+  });
+  const setTabPersist = useCallback((next: Tab) => {
+    setTab(next);
+    try {
+      window.localStorage.setItem("leadsmart.txn.detail.right-tab", next);
+    } catch {
+      // non-fatal
+    }
+  }, []);
+
+  const tabs: { key: Tab; label: string; count?: number }[] = [
+    { key: "dates", label: "Dates" },
+    { key: "people", label: "People", count: cps.length },
+    { key: "notes", label: "Notes" },
+  ];
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center gap-0.5 border-b border-slate-100 bg-slate-50 px-2 py-1.5">
+        {tabs.map((t) => {
+          const active = t.key === tab;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTabPersist(t.key)}
+              aria-current={active ? "page" : undefined}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                active
+                  ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              {t.label}
+              {typeof t.count === "number" ? (
+                <span className="ml-1 text-[10px] tabular-nums text-slate-400">{t.count}</span>
+              ) : null}
+            </button>
+          );
+        })}
       </div>
-      <button
-        type="button"
-        onClick={() => void toggle()}
-        role="switch"
-        aria-checked={enabled}
-        disabled={saving}
-        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
-          enabled ? "bg-slate-900" : "bg-slate-300"
-        }`}
-      >
-        <span
-          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-            enabled ? "translate-x-5" : "translate-x-0.5"
-          }`}
-        />
-      </button>
-    </div>
+
+      <div className="p-4">
+        {tab === "dates" ? (
+          <div>
+            <div className="space-y-2 text-sm">
+              <DateRow
+                label="Mutual acceptance"
+                value={txn.mutual_acceptance_date}
+                onChange={(v) => patchTransaction({ mutual_acceptance_date: v }, "mutual")}
+                saving={savingField === "mutual"}
+                help="Setting this auto-fills contingency deadlines with CA defaults (17d inspection, 21d loan, 30d closing) unless already set."
+              />
+              <DateRow
+                label="Inspection deadline"
+                value={txn.inspection_deadline}
+                onChange={(v) => patchTransaction({ inspection_deadline: v }, "inspection")}
+                saving={savingField === "inspection"}
+              />
+              <DateRow
+                label="Appraisal deadline"
+                value={txn.appraisal_deadline}
+                onChange={(v) => patchTransaction({ appraisal_deadline: v }, "appraisal")}
+                saving={savingField === "appraisal"}
+              />
+              <DateRow
+                label="Loan contingency"
+                value={txn.loan_contingency_deadline}
+                onChange={(v) => patchTransaction({ loan_contingency_deadline: v }, "loan")}
+                saving={savingField === "loan"}
+              />
+              <DateRow
+                label="Closing date"
+                value={txn.closing_date}
+                onChange={(v) => patchTransaction({ closing_date: v }, "closing")}
+                saving={savingField === "closing"}
+              />
+            </div>
+
+            <div className="mt-4 border-t border-slate-100 pt-3">
+              <label className="block text-[11px] font-medium text-slate-500">Status</label>
+              <select
+                value={txn.status}
+                onChange={(e) => patchTransaction({ status: e.target.value }, "status")}
+                disabled={savingField === "status"}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+              >
+                <option value="active">Active</option>
+                <option value="pending">Pending</option>
+                <option value="closed">Closed</option>
+                <option value="terminated">Terminated</option>
+              </select>
+            </div>
+          </div>
+        ) : null}
+
+        {tab === "people" ? (
+          <CounterpartiesBlockBody
+            transactionId={txn.id}
+            counterparties={cps}
+            onAdd={onCpAdd}
+            onDelete={onCpDelete}
+          />
+        ) : null}
+
+        {tab === "notes" ? (
+          <div>
+            <textarea
+              defaultValue={txn.notes ?? ""}
+              onBlur={(e) => {
+                const value = e.target.value.trim() || null;
+                if (value !== (txn.notes ?? null)) {
+                  void patchTransaction({ notes: value }, "notes");
+                }
+              }}
+              rows={9}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              placeholder="Anything you need to remember about this deal…"
+            />
+            {savingField === "notes" ? (
+              <div className="mt-1 text-[11px] text-slate-500">Saving…</div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </section>
   );
 }
 
