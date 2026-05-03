@@ -496,6 +496,15 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
                 type="button"
                 disabled={!isValid}
                 onClick={() => date && setSelectedDate(date)}
+                onDoubleClick={() => {
+                  // Double-click jumps to the list view focused on this day.
+                  // ListView reads selectedDate and scrolls + highlights the
+                  // matching day-row on mount/when it changes.
+                  if (!date) return;
+                  setSelectedDate(date);
+                  setView("list");
+                }}
+                title={isValid ? "Click to select · Double-click to open in list view" : undefined}
                 className={`min-h-[60px] border-b border-r border-gray-50 px-1 py-1 text-left transition ${
                   !isValid ? "bg-gray-50/50" :
                   isSelected ? "bg-blue-50" :
@@ -536,6 +545,7 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
           dayMap={dayMap}
           currentMonth={currentMonth}
           today={today}
+          selectedKey={selectedDate ? dateKey(selectedDate) : null}
           markTaskDone={markTaskDone}
           markTaskCancelled={markTaskCancelled}
           snoozeTaskBy={snoozeTaskBy}
@@ -599,6 +609,7 @@ function ListView({
   dayMap,
   currentMonth,
   today,
+  selectedKey,
   markTaskDone,
   markTaskCancelled,
   snoozeTaskBy,
@@ -610,6 +621,11 @@ function ListView({
   dayMap: Map<string, DayEntry[]>;
   currentMonth: Date;
   today: Date;
+  /**
+   * Day key (YYYY-MM-DD) to scroll into view + highlight on mount/change.
+   * Set when the user double-clicks a day in month view.
+   */
+  selectedKey: string | null;
   markTaskDone: (taskId: string) => Promise<void> | void;
   markTaskCancelled: (taskId: string) => Promise<void> | void;
   snoozeTaskBy: (taskId: string, days: number) => Promise<void> | void;
@@ -621,6 +637,16 @@ function ListView({
   // Sort the date keys ascending so the oldest entries in the month
   // come first — consistent with how a paper calendar reads.
   const sortedKeys = Array.from(dayMap.keys()).sort();
+
+  // Scroll the matching day-row into view when the user double-clicks
+  // a day in month view. Lookup by data-day-key attribute so the ref
+  // wiring stays declarative.
+  useEffect(() => {
+    if (!selectedKey) return;
+    if (typeof window === "undefined") return;
+    const el = document.querySelector<HTMLElement>(`[data-day-key="${selectedKey}"]`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedKey]);
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
@@ -645,8 +671,15 @@ function ListView({
             const entries = (dayMap.get(key) ?? []).slice().sort((a, b) => a.time.localeCompare(b.time));
             const date = new Date(`${key}T00:00:00`);
             const isToday = isSameDay(date, today);
+            const isSelected = selectedKey === key;
             return (
-              <div key={key} className="grid grid-cols-[120px_1fr] gap-3 px-4 py-3">
+              <div
+                key={key}
+                data-day-key={key}
+                className={`grid grid-cols-[120px_1fr] gap-3 px-4 py-3 transition ${
+                  isSelected ? "bg-blue-50 ring-1 ring-blue-200" : ""
+                }`}
+              >
                 <div className={`shrink-0 ${isToday ? "text-blue-700 font-semibold" : "text-gray-700"}`}>
                   <div className="text-xs uppercase tracking-wide">
                     {date.toLocaleDateString("en-US", { weekday: "short" })}
