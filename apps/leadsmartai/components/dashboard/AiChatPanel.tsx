@@ -9,6 +9,8 @@ type ThreadMessage = {
   message: string;
   direction: "inbound" | "outbound";
   created_at: string;
+  /** Latest Twilio status (queued | sent | delivered | failed | undelivered | …) — only present on outbound rows. */
+  twilio_status?: string | null;
 };
 
 type ContactOption = {
@@ -29,7 +31,10 @@ type ContactTab = {
   autoPilot: boolean;
   thread: ThreadMessage[];
   threadLoading: boolean;
+  /** Neutral/info banner (e.g. "Sent."). */
   message: string | null;
+  /** Distinct error state — rendered red, not the muted blue info banner. */
+  errorMessage: string | null;
 };
 
 type Tab = { kind: "guide" } | { kind: "contact"; tab: ContactTab };
@@ -53,7 +58,22 @@ function newContactTab(): ContactTab {
     thread: [],
     threadLoading: false,
     message: null,
+    errorMessage: null,
   };
+}
+
+const STATUS_FAILURE = new Set(["failed", "undelivered", "blocked", "rejected"]);
+const STATUS_PROVISIONAL = new Set(["queued", "accepted", "scheduled", "sending", "sent"]);
+const STATUS_SUCCESS = new Set(["delivered", "received"]);
+
+function statusBadge(status: string | null | undefined): { label: string; tone: "ok" | "pending" | "error" } | null {
+  if (!status) return null;
+  const s = status.toLowerCase();
+  if (STATUS_SUCCESS.has(s)) return { label: "Delivered", tone: "ok" };
+  if (STATUS_FAILURE.has(s)) return { label: s === "failed" ? "Failed" : s.charAt(0).toUpperCase() + s.slice(1), tone: "error" };
+  if (STATUS_PROVISIONAL.has(s)) return { label: s.charAt(0).toUpperCase() + s.slice(1), tone: "pending" };
+  // Unknown status — show raw so debugging stays useful.
+  return { label: s, tone: "pending" };
 }
 
 function contactLabel(c: ContactOption | null): string {
@@ -65,8 +85,19 @@ function contactLabel(c: ContactOption | null): string {
 // panel size changes meaningfully so a stale offscreen position
 // doesn't survive a redesign.
 const PANEL_POSITION_STORAGE_KEY = "leadsmart.ai-panel.position.v1";
-const PANEL_WIDTH = 440;
-const PANEL_MAX_HEIGHT = 640;
+const PANEL_SIZE_STORAGE_KEY = "leadsmart.ai-panel.size.v1";
+const PANEL_MIN_STORAGE_KEY = "leadsmart.ai-panel.minimized.v1";
+const PANEL_DEFAULT_WIDTH = 440;
+const PANEL_DEFAULT_HEIGHT = 640;
+const PANEL_MIN_WIDTH = 320;
+const PANEL_MIN_HEIGHT = 320;
+const PANEL_MAX_WIDTH = 800;
+const PANEL_MAX_HEIGHT_LIMIT = 900;
+// Kept for backwards compatibility with the existing clampToViewport math.
+const PANEL_WIDTH = PANEL_DEFAULT_WIDTH;
+const PANEL_MAX_HEIGHT = PANEL_DEFAULT_HEIGHT;
+
+type PanelSize = { width: number; height: number };
 
 type PanelPosition = { x: number; y: number };
 
@@ -94,18 +125,48 @@ export function AiChatPanel() {
   const [position, setPosition] = useState<PanelPosition | null>(null);
   const [dragging, setDragging] = useState(false);
 
-  // Hydrate saved position once on mount.
+  // Resize state. `null` = use defaults. Persisted to localStorage.
+  const [size, setSize] = useState<PanelSize | null>(null);
+  const [resizing, setResizing] = useState(false);
+
+  // Minimize state — when true, hide the body and tab strip; show only
+  // the header. Persisted so a minimized panel stays minimized across
+  // navigations.
+  const [minimized, setMinimized] = useState(false);
+
+  // Hydrate saved position, size, and minimized state once on mount.
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const raw = window.localStorage.getItem(PANEL_POSITION_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as PanelPosition;
-      if (typeof parsed?.x === "number" && typeof parsed?.y === "number") {
-        setPosition(clampToViewport(parsed));
+      const rawPos = window.localStorage.getItem(PANEL_POSITION_STORAGE_KEY);
+      if (rawPos) {
+        const parsed = JSON.parse(rawPos) as PanelPosition;
+        if (typeof parsed?.x === "number" && typeof parsed?.y === "number") {
+          setPosition(clampToViewport(parsed));
+        }
       }
     } catch {
       // ignore stale / malformed values
+    }
+    try {
+      const rawSize = window.localStorage.getItem(PANEL_SIZE_STORAGE_KEY);
+      if (rawSize) {
+        const parsed = JSON.parse(rawSize) as PanelSize;
+        if (typeof parsed?.width === "number" && typeof parsed?.height === "number") {
+          setSize({
+            width: Math.min(PANEL_MAX_WIDTH, Math.max(PANEL_MIN_WIDTH, parsed.width)),
+            height: Math.min(PANEL_MAX_HEIGHT_LIMIT, Math.max(PANEL_MIN_HEIGHT, parsed.height)),
+          });
+        }
+      }
+    } catch {
+      // ignore
+    }
+    try {
+      const rawMin = window.localStorage.getItem(PANEL_MIN_STORAGE_KEY);
+      if (rawMin === "1") setMinimized(true);
+    } catch {
+      // ignore
     }
   }, []);
 
@@ -119,6 +180,24 @@ export function AiChatPanel() {
       // private mode / quota — non-fatal
     }
   }, [position]);
+
+  useEffect(() => {
+    if (!size) return;
+    try {
+      window.localStorage.setItem(PANEL_SIZE_STORAGE_KEY, JSON.stringify(size));
+    } catch {
+      // non-fatal
+    }
+  }, [size]);
+
+  useEffect(() => {
+    try {
+      if (minimized) window.localStorage.setItem(PANEL_MIN_STORAGE_KEY, "1");
+      else window.localStorage.removeItem(PANEL_MIN_STORAGE_KEY);
+    } catch {
+      // non-fatal
+    }
+  }, [minimized]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -160,11 +239,42 @@ export function AiChatPanel() {
 
   const resetPosition = useCallback(() => {
     setPosition(null);
+    setSize(null);
     try {
       window.localStorage.removeItem(PANEL_POSITION_STORAGE_KEY);
+      window.localStorage.removeItem(PANEL_SIZE_STORAGE_KEY);
     } catch {
       // non-fatal
     }
+  }, []);
+
+  // Resize handler — bottom-right corner. Computes new size as
+  // (cursor - panel-top-left) so it tracks the corner under the cursor.
+  const onResizePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const handleEl = e.currentTarget;
+    const panelEl = handleEl.parentElement as HTMLElement | null;
+    if (!panelEl) return;
+    const rect = panelEl.getBoundingClientRect();
+    setResizing(true);
+    handleEl.setPointerCapture?.(e.pointerId);
+
+    const onMove = (ev: PointerEvent) => {
+      const w = Math.min(PANEL_MAX_WIDTH, Math.max(PANEL_MIN_WIDTH, ev.clientX - rect.left));
+      const h = Math.min(PANEL_MAX_HEIGHT_LIMIT, Math.max(PANEL_MIN_HEIGHT, ev.clientY - rect.top));
+      setSize({ width: w, height: h });
+    };
+    const onUp = (ev: PointerEvent) => {
+      setResizing(false);
+      handleEl.releasePointerCapture?.(ev.pointerId);
+      handleEl.removeEventListener("pointermove", onMove);
+      handleEl.removeEventListener("pointerup", onUp);
+      handleEl.removeEventListener("pointercancel", onUp);
+    };
+    handleEl.addEventListener("pointermove", onMove);
+    handleEl.addEventListener("pointerup", onUp);
+    handleEl.addEventListener("pointercancel", onUp);
   }, []);
 
   // ── AI Guide (free-form chat) state ─────────────────────────────
@@ -242,10 +352,10 @@ export function AiChatPanel() {
             threadLoading: false,
           });
         } else {
-          updateTab(tabId, { threadLoading: false, message: body.error ?? "Could not load thread." });
+          updateTab(tabId, { threadLoading: false, errorMessage: body.error ?? "Could not load thread." });
         }
       } catch {
-        updateTab(tabId, { threadLoading: false, message: "Network error loading thread." });
+        updateTab(tabId, { threadLoading: false, errorMessage: "Network error loading thread." });
       }
     },
     [updateTab],
@@ -253,7 +363,7 @@ export function AiChatPanel() {
 
   const onPickContact = useCallback(
     async (tabId: string, contact: ContactOption) => {
-      updateTab(tabId, { contact, draft: "", message: null });
+      updateTab(tabId, { contact, draft: "", message: null, errorMessage: null });
       await loadThread(tabId, contact.id);
     },
     [loadThread, updateTab],
@@ -262,7 +372,7 @@ export function AiChatPanel() {
   const generateDraft = useCallback(
     async (tab: ContactTab) => {
       if (!tab.contact || !tab.prompt.trim()) return;
-      updateTab(tab.tabId, { drafting: true, message: null });
+      updateTab(tab.tabId, { drafting: true, message: null, errorMessage: null });
       try {
         const res = await fetch("/api/dashboard/sms/draft", {
           method: "POST",
@@ -275,7 +385,7 @@ export function AiChatPanel() {
       } catch (e) {
         updateTab(tab.tabId, {
           drafting: false,
-          message: e instanceof Error ? e.message : "Draft failed.",
+          errorMessage: e instanceof Error ? e.message : "Draft failed.",
         });
       }
     },
@@ -285,7 +395,7 @@ export function AiChatPanel() {
   const sendDraft = useCallback(
     async (tab: ContactTab) => {
       if (!tab.contact || !tab.draft.trim() || !tab.contact.phone) return;
-      updateTab(tab.tabId, { sending: true, message: null });
+      updateTab(tab.tabId, { sending: true, message: null, errorMessage: null });
       try {
         const res = await fetch("/api/ai-sms/send", {
           method: "POST",
@@ -299,12 +409,17 @@ export function AiChatPanel() {
         const body = await res.json();
         if (!body.success) throw new Error(body.error ?? "Send failed");
         updateTab(tab.tabId, { sending: false, draft: "", prompt: "", message: "Sent." });
-        // Refresh thread to pick up the new outbound row.
+        // Refresh thread to pick up the new outbound row, then again after a short
+        // delay so a Twilio status callback (queued → sent → delivered/failed) shows up.
         await loadThread(tab.tabId, tab.contact.id);
+        const contactIdAtSend = tab.contact.id;
+        setTimeout(() => {
+          loadThread(tab.tabId, contactIdAtSend);
+        }, 4000);
       } catch (e) {
         updateTab(tab.tabId, {
           sending: false,
-          message: e instanceof Error ? e.message : "Send failed.",
+          errorMessage: e instanceof Error ? e.message : "Send failed.",
         });
       }
     },
@@ -315,7 +430,7 @@ export function AiChatPanel() {
     async (tab: ContactTab, next: boolean) => {
       if (!tab.contact) return;
       // Optimistic flip; revert on error.
-      updateTab(tab.tabId, { autoPilot: next, message: null });
+      updateTab(tab.tabId, { autoPilot: next, message: null, errorMessage: null });
       try {
         const res = await fetch("/api/dashboard/sms/auto-pilot", {
           method: "PATCH",
@@ -327,7 +442,7 @@ export function AiChatPanel() {
       } catch (e) {
         updateTab(tab.tabId, {
           autoPilot: !next,
-          message: e instanceof Error ? e.message : "Toggle failed.",
+          errorMessage: e instanceof Error ? e.message : "Toggle failed.",
         });
       }
     },
@@ -377,20 +492,26 @@ export function AiChatPanel() {
   // When the user has dragged, switch from Tailwind bottom/right anchor
   // to explicit top/left so it stays where they left it.
   const positionedClass = position ? "" : "bottom-6 right-6";
-  const positionedStyle: React.CSSProperties | undefined = position
-    ? { top: position.y, left: position.x, bottom: "auto", right: "auto" }
-    : undefined;
+  const sizeStyle: React.CSSProperties = size
+    ? { width: size.width, height: minimized ? "auto" : size.height, maxHeight: size.height }
+    : { width: PANEL_DEFAULT_WIDTH, maxHeight: PANEL_DEFAULT_HEIGHT };
+  const positionedStyle: React.CSSProperties = {
+    ...sizeStyle,
+    ...(position
+      ? { top: position.y, left: position.x, bottom: "auto", right: "auto" }
+      : {}),
+  };
 
   return (
     <div
-      className={`fixed z-50 flex max-h-[640px] w-[440px] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl ${positionedClass} ${dragging ? "select-none" : ""}`}
+      className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl ${positionedClass} ${dragging || resizing ? "select-none" : ""}`}
       style={positionedStyle}
     >
       {/* Header — also the drag handle. */}
       <div
         onPointerDown={onHeaderPointerDown}
         onDoubleClick={resetPosition}
-        title="Drag to reposition · Double-click to reset"
+        title="Drag to reposition · Double-click to reset position + size"
         className={`flex items-center justify-between gap-3 bg-blue-600 px-4 py-3 text-white touch-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
         <div className="flex min-w-0 items-center gap-3">
@@ -402,66 +523,99 @@ export function AiChatPanel() {
             <p className="truncate text-[11px] opacity-80">Guide + per-contact SMS drafting</p>
           </div>
         </div>
-        <button
-          onClick={() => setOpen(false)}
-          className="shrink-0 text-xl leading-none text-white/80 hover:text-white"
-          aria-label="Close LeadSmart AI"
-        >
-          &times;
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            onClick={() => setMinimized((v) => !v)}
+            className="inline-flex h-7 w-7 items-center justify-center rounded text-white/80 hover:bg-white/10 hover:text-white"
+            aria-label={minimized ? "Expand LeadSmart AI" : "Minimize LeadSmart AI"}
+            title={minimized ? "Expand" : "Minimize"}
+          >
+            {/* Render an em-dash for minimize, a small square outline for expand. */}
+            {minimized ? (
+              <span aria-hidden className="block h-2.5 w-2.5 rounded-sm border border-white" />
+            ) : (
+              <span aria-hidden className="block h-px w-3.5 bg-white" />
+            )}
+          </button>
+          <button
+            onClick={() => setOpen(false)}
+            className="inline-flex h-7 w-7 items-center justify-center rounded text-xl leading-none text-white/80 hover:bg-white/10 hover:text-white"
+            aria-label="Close LeadSmart AI"
+          >
+            &times;
+          </button>
+        </div>
       </div>
 
-      {/* Tab strip */}
-      <div className="flex items-center gap-1 overflow-x-auto border-b border-gray-200 bg-gray-50 px-2 py-1">
-        <TabPill
-          label="AI Guide"
-          active={activeTabId === "guide"}
-          onClick={() => setActiveTabId("guide")}
-        />
-        {contactTabs.map((t) => (
-          <TabPill
-            key={t.tabId}
-            label={contactLabel(t.contact)}
-            active={activeTabId === t.tabId}
-            onClick={() => setActiveTabId(t.tabId)}
-            onClose={() => closeContactTab(t.tabId)}
-            tone={t.autoPilot ? "autopilot" : undefined}
+      {/* Tab strip + body — hidden when minimized so only the header shows. */}
+      {!minimized ? (
+        <>
+          <div className="flex items-center gap-1 overflow-x-auto border-b border-gray-200 bg-gray-50 px-2 py-1">
+            <TabPill
+              label="AI Guide"
+              active={activeTabId === "guide"}
+              onClick={() => setActiveTabId("guide")}
+            />
+            {contactTabs.map((t) => (
+              <TabPill
+                key={t.tabId}
+                label={contactLabel(t.contact)}
+                active={activeTabId === t.tabId}
+                onClick={() => setActiveTabId(t.tabId)}
+                onClose={() => closeContactTab(t.tabId)}
+                tone={t.autoPilot ? "autopilot" : undefined}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={openNewContactTab}
+              className="ml-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-blue-50 hover:text-blue-600"
+              aria-label="New contact tab"
+              title="New contact tab"
+            >
+              +
+            </button>
+          </div>
+
+          {activeTabId === "guide" ? (
+            <GuideTabBody
+              messages={guideMessages}
+              loading={guideLoading}
+              input={guideInput}
+              setInput={setGuideInput}
+              send={sendGuide}
+              scrollRef={guideScrollRef}
+              quickPrompts={QUICK_PROMPTS}
+            />
+          ) : activeContactTab ? (
+            <ContactTabBody
+              tab={activeContactTab}
+              updateTab={updateTab}
+              generateDraft={generateDraft}
+              sendDraft={sendDraft}
+              toggleAutoPilot={toggleAutoPilot}
+              onPickContact={onPickContact}
+            />
+          ) : (
+            <div className="flex-1 p-4 text-sm text-gray-500">Tab not found.</div>
+          )}
+
+          {/* Resize handle — bottom-right corner. Only visible while not
+              minimized. Pointer events; cursor flips to nwse-resize. */}
+          <div
+            onPointerDown={onResizePointerDown}
+            title="Drag to resize"
+            aria-label="Resize panel"
+            className={`absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize touch-none ${
+              resizing ? "bg-blue-200/40" : "hover:bg-blue-200/30"
+            }`}
+            style={{
+              backgroundImage:
+                "linear-gradient(135deg, transparent 0 50%, rgba(100,116,139,0.45) 50% 60%, transparent 60% 70%, rgba(100,116,139,0.45) 70% 80%, transparent 80%)",
+            }}
           />
-        ))}
-        <button
-          type="button"
-          onClick={openNewContactTab}
-          className="ml-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-blue-50 hover:text-blue-600"
-          aria-label="New contact tab"
-          title="New contact tab"
-        >
-          +
-        </button>
-      </div>
-
-      {/* Body */}
-      {activeTabId === "guide" ? (
-        <GuideTabBody
-          messages={guideMessages}
-          loading={guideLoading}
-          input={guideInput}
-          setInput={setGuideInput}
-          send={sendGuide}
-          scrollRef={guideScrollRef}
-          quickPrompts={QUICK_PROMPTS}
-        />
-      ) : activeContactTab ? (
-        <ContactTabBody
-          tab={activeContactTab}
-          updateTab={updateTab}
-          generateDraft={generateDraft}
-          sendDraft={sendDraft}
-          toggleAutoPilot={toggleAutoPilot}
-          onPickContact={onPickContact}
-        />
-      ) : (
-        <div className="flex-1 p-4 text-sm text-gray-500">Tab not found.</div>
-      )}
+        </>
+      ) : null}
     </div>
   );
 }
@@ -708,8 +862,16 @@ function ContactTabBody({
               </div>
             ) : null}
 
+            {tab.errorMessage ? (
+              <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-800">
+                {tab.errorMessage}
+              </p>
+            ) : null}
+
             {tab.message ? (
-              <p className="rounded-lg bg-blue-50 px-3 py-1.5 text-xs text-blue-800">{tab.message}</p>
+              <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-800">
+                {tab.message}
+              </p>
             ) : null}
 
             <div>
@@ -722,18 +884,41 @@ function ContactTabBody({
                     No messages yet.
                   </p>
                 )}
-                {tab.thread.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs ${
-                      m.direction === "outbound"
-                        ? "ml-auto bg-blue-600 text-white"
-                        : "mr-auto bg-white text-gray-800 ring-1 ring-gray-200"
-                    }`}
-                  >
-                    <div className="whitespace-pre-wrap">{m.message}</div>
-                  </div>
-                ))}
+                {tab.thread.map((m) => {
+                  const badge = m.direction === "outbound" ? statusBadge(m.twilio_status) : null;
+                  return (
+                    <div
+                      key={m.id}
+                      className={`max-w-[85%] ${m.direction === "outbound" ? "ml-auto" : "mr-auto"}`}
+                    >
+                      <div
+                        className={`rounded-lg px-2.5 py-1.5 text-xs ${
+                          m.direction === "outbound"
+                            ? badge?.tone === "error"
+                              ? "bg-rose-600 text-white"
+                              : "bg-blue-600 text-white"
+                            : "bg-white text-gray-800 ring-1 ring-gray-200"
+                        }`}
+                      >
+                        <div className="whitespace-pre-wrap">{m.message}</div>
+                      </div>
+                      {badge ? (
+                        <div
+                          className={`mt-0.5 flex justify-end pr-0.5 text-[10px] font-medium ${
+                            badge.tone === "ok"
+                              ? "text-emerald-700"
+                              : badge.tone === "error"
+                                ? "text-rose-700"
+                                : "text-gray-500"
+                          }`}
+                          title={`Twilio status: ${m.twilio_status ?? "unknown"}`}
+                        >
+                          {badge.label}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </>
