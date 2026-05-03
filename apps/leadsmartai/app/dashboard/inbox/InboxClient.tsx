@@ -142,12 +142,14 @@ export default function InboxClient() {
       {/* Left panel — conversation list */}
       <div className="w-full max-w-sm shrink-0 flex flex-col border-r border-gray-200">
         <div className="shrink-0 border-b border-gray-100 p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-900">
-              Conversations
-              {unreadCount > 0 && <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-semibold text-white">{unreadCount}</span>}
-            </h2>
-            <p className="text-[11px] text-gray-500">All sent + received SMS and email, threaded by contact.</p>
+          <div>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-900">
+                Conversations
+                {unreadCount > 0 && <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-semibold text-white">{unreadCount}</span>}
+              </h2>
+            </div>
+            <p className="mt-0.5 text-[11px] text-gray-500">All sent + received SMS and email, threaded by contact.</p>
           </div>
           <input
             value={search}
