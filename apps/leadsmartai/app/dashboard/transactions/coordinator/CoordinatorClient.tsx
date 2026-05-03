@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type {
   CoordinatorBoard,
   CoordinatorStageColumn,
   CoordinatorTransactionCard,
 } from "@/lib/transactions/coordinator/grouping";
+import type { TransactionType } from "@/lib/transactions/types";
 
 function formatMoney(n: number | null): string {
   if (n == null) return "—";
@@ -103,9 +104,77 @@ export default function CoordinatorClient() {
     );
   }
 
+  return <CoordinatorBody board={board} />;
+}
+
+/**
+ * Inner body once the data has loaded. Split out so the role filter
+ * + per-column metrics can be computed against the loaded board
+ * without bloating the wrapper component.
+ */
+type RoleFilter = "all" | TransactionType;
+
+const ROLE_LABELS: Record<RoleFilter, string> = {
+  all: "All",
+  buyer_rep: "Buyer-side",
+  listing_rep: "Listing-side",
+  dual: "Dual",
+};
+
+function CoordinatorBody({ board }: { board: CoordinatorBoard }) {
+  const [role, setRole] = useState<RoleFilter>(() => {
+    if (typeof window === "undefined") return "all";
+    try {
+      const v = window.localStorage.getItem("leadsmart.txn.coordinator.role");
+      return v === "buyer_rep" || v === "listing_rep" || v === "dual" ? v : "all";
+    } catch {
+      return "all";
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("leadsmart.txn.coordinator.role", role);
+    } catch {
+      // non-fatal
+    }
+  }, [role]);
+
+  /**
+   * Column slices after applying the role filter. `cards` are filtered
+   * client-side; we keep totals from the full board so the KPI strip
+   * stays a stable headline number.
+   */
+  const filteredColumns = useMemo(() => {
+    if (role === "all") return board.columns;
+    return board.columns.map((c) => ({
+      ...c,
+      cards: c.cards.filter((card) => card.transaction.transaction_type === role),
+    }));
+  }, [board.columns, role]);
+
   return (
     <div className="space-y-6">
       <KpiStrip totals={board.totals} />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          Show
+        </span>
+        {(Object.keys(ROLE_LABELS) as RoleFilter[]).map((r) => (
+          <button
+            key={r}
+            type="button"
+            onClick={() => setRole(r)}
+            className={`rounded-full border px-3 py-1 text-xs font-medium ${
+              role === r
+                ? "border-slate-900 bg-slate-900 text-white"
+                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+            }`}
+          >
+            {ROLE_LABELS[r]}
+          </button>
+        ))}
+      </div>
 
       {board.totals.transactionCount === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-12 text-center text-sm text-slate-600">
@@ -117,7 +186,7 @@ export default function CoordinatorClient() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-5">
-          {board.columns.map((column) => (
+          {filteredColumns.map((column) => (
             <StageColumn key={column.stage} column={column} />
           ))}
         </div>
@@ -158,7 +227,35 @@ function KpiStrip({ totals }: { totals: CoordinatorBoard["totals"] }) {
   );
 }
 
+/**
+ * Per-column bottleneck signal: average days until the earliest open
+ * deadline across cards in this column. Negative means the column is
+ * running overdue on average — surface red so the agent can spot the
+ * stuck stage without scanning every card.
+ *
+ * Uses the same `byStage[stage].earliestDue` already computed for the
+ * card body, so this is pure derived state.
+ */
+function avgDaysToDeadline(column: CoordinatorStageColumn): number | null {
+  const todayMs = Date.parse(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`);
+  if (!Number.isFinite(todayMs)) return null;
+  const samples: number[] = [];
+  for (const card of column.cards) {
+    const due = card.byStage[column.stage]?.earliestDue;
+    if (!due) continue;
+    const dueMs = Date.parse(`${due}T00:00:00Z`);
+    if (!Number.isFinite(dueMs)) continue;
+    samples.push(Math.round((dueMs - todayMs) / 86_400_000));
+  }
+  if (samples.length === 0) return null;
+  const sum = samples.reduce((s, n) => s + n, 0);
+  return Math.round(sum / samples.length);
+}
+
 function StageColumn({ column }: { column: CoordinatorStageColumn }) {
+  const avg = avgDaysToDeadline(column);
+  const overdueCards = column.cards.filter((c) => c.byStage[column.stage]?.overdueCount > 0).length;
+
   return (
     <section className="flex min-h-[200px] flex-col rounded-2xl border border-slate-200 bg-slate-50">
       <header className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
@@ -169,6 +266,21 @@ function StageColumn({ column }: { column: CoordinatorStageColumn }) {
           {column.cards.length}
         </span>
       </header>
+
+      {/* Bottleneck signal — only render when at least one card has a
+          dated deadline. Negative avg = column is running overdue. */}
+      {avg != null ? (
+        <div className="flex items-center justify-between border-b border-slate-200/70 px-3 py-1.5 text-[10px]">
+          <span className={avg < 0 ? "font-semibold text-rose-700" : "text-slate-500"}>
+            {avg < 0 ? `Avg ${-avg}d past` : `Avg ${avg}d to deadline`}
+          </span>
+          {overdueCards > 0 ? (
+            <span className="font-semibold text-rose-700">
+              {overdueCards} overdue
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       {column.cards.length === 0 ? (
         <div className="flex flex-1 items-center justify-center px-4 py-6 text-center text-[11px] text-slate-400">
