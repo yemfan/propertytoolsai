@@ -335,14 +335,18 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
       />
 
       {/* AI deal review — only makes sense once the deal is closed.
-          Panel handles its own loading / cache / regenerate flow.
-          Banner above warns the agent if they're running low on AI
-          tokens before they hit Regenerate. */}
+          Wrapped in a collapsible expander so it doesn't dominate the
+          top of the detail page on closed deals; the dates / tasks /
+          counterparties are still the primary content. Open by default
+          when the deal is freshly closed (no override yet) — once the
+          agent collapses it the choice persists for the session. */}
       {txn.status === "closed" ? (
-        <div className="space-y-3">
-          <LimitWarningBanner action="ai_action" />
-          <DealReviewPanel transactionId={txn.id} />
-        </div>
+        <PostCloseReviewExpander>
+          <div className="space-y-3">
+            <LimitWarningBanner action="ai_action" />
+            <DealReviewPanel transactionId={txn.id} />
+          </div>
+        </PostCloseReviewExpander>
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -1005,5 +1009,39 @@ function SellerUpdateToggle({
         />
       </button>
     </div>
+  );
+}
+
+/**
+ * Collapsible wrapper for the post-close DealReviewPanel. Open by
+ * default — the AI summary is the agent's first deliverable on a
+ * just-closed deal — but agents who don't need it on every visit can
+ * collapse and the choice persists per-tab via component state. (We
+ * don't persist to localStorage because the panel content is per-deal,
+ * not a global preference.)
+ */
+function PostCloseReviewExpander({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
+      >
+        <div className="flex items-center gap-2">
+          <span aria-hidden className="text-base">🏁</span>
+          <h2 className="text-sm font-semibold text-slate-900">Post-close review</h2>
+        </div>
+        <span
+          aria-hidden
+          className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+        >
+          ▾
+        </span>
+      </button>
+      {open ? <div className="border-t border-slate-100 px-4 py-3">{children}</div> : null}
+    </section>
   );
 }
