@@ -44,7 +44,7 @@ export async function GET(req: Request) {
 
     const { data: rows, error: rowsErr } = await supabaseAdmin
       .from("sms_messages")
-      .select("id, message, direction, created_at")
+      .select("id, message, direction, created_at, twilio_status")
       .eq("contact_id", contactId)
       .order("created_at", { ascending: true })
       .limit(limit);
