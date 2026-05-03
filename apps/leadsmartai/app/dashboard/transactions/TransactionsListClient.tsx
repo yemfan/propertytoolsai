@@ -4,6 +4,12 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { TransactionListItem, TransactionType } from "@/lib/transactions/types";
 import { TransactionsViewToggle } from "./TransactionsViewToggle";
+import {
+  formatClosingLabel,
+  TransactionStatusPill,
+  TransactionTasksBadge,
+  TransactionTypeBadge,
+} from "@/components/transactions/TransactionAtoms";
 
 function daysUntil(dateIso: string | null): number | null {
   if (!dateIso) return null;
@@ -13,33 +19,6 @@ function daysUntil(dateIso: string | null): number | null {
   const ms = target.getTime() - today.getTime();
   return Math.round(ms / 86_400_000);
 }
-
-function statusStyle(status: string): string {
-  switch (status) {
-    case "active":
-      return "bg-blue-50 text-blue-700 border-blue-200";
-    case "closed":
-      return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    case "terminated":
-      return "bg-red-50 text-red-700 border-red-200";
-    case "pending":
-      return "bg-amber-50 text-amber-800 border-amber-200";
-    default:
-      return "bg-slate-50 text-slate-700 border-slate-200";
-  }
-}
-
-const TYPE_LABELS: Record<TransactionType, string> = {
-  buyer_rep: "Buyer",
-  listing_rep: "Listing",
-  dual: "Dual",
-};
-
-const TYPE_STYLES: Record<TransactionType, string> = {
-  buyer_rep: "bg-violet-50 text-violet-700 border-violet-200",
-  listing_rep: "bg-orange-50 text-orange-700 border-orange-200",
-  dual: "bg-indigo-50 text-indigo-700 border-indigo-200",
-};
 
 type StatusFilter =
   | "active"
@@ -250,10 +229,6 @@ export function TransactionsListClient({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {visible.map((t) => {
-                const days = daysUntil(t.closing_date);
-                const closingLabel = t.closing_date
-                  ? `${t.closing_date}${days != null ? ` · ${days >= 0 ? `${days}d` : `${-days}d past`}` : ""}`
-                  : "—";
                 return (
                   <tr key={t.id} className="hover:bg-slate-50/60">
                     <td className="px-5 py-3">
@@ -272,31 +247,18 @@ export function TransactionsListClient({
                     </td>
                     <td className="px-5 py-3 text-slate-700">{t.contact_name ?? "—"}</td>
                     <td className="px-5 py-3">
-                      <span
-                        className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${TYPE_STYLES[t.transaction_type]}`}
-                      >
-                        {TYPE_LABELS[t.transaction_type]}
-                      </span>
+                      <TransactionTypeBadge type={t.transaction_type} />
                     </td>
                     <td className="px-5 py-3">
-                      <span
-                        className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${statusStyle(t.status)}`}
-                      >
-                        {t.status}
-                      </span>
+                      <TransactionStatusPill status={t.status} />
                     </td>
-                    <td className="px-5 py-3 text-slate-700">{closingLabel}</td>
+                    <td className="px-5 py-3 text-slate-700">{formatClosingLabel(t.closing_date)}</td>
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-slate-600">
-                          {t.task_completed}/{t.task_total}
-                        </span>
-                        {t.task_overdue > 0 ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">
-                            {t.task_overdue} overdue
-                          </span>
-                        ) : null}
-                      </div>
+                      <TransactionTasksBadge
+                        total={t.task_total}
+                        completed={t.task_completed}
+                        overdue={t.task_overdue}
+                      />
                     </td>
                   </tr>
                 );

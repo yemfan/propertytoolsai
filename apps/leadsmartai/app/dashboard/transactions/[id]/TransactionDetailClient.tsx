@@ -7,6 +7,7 @@ import { ListingFeedbackPanel } from "@/components/dashboard/ListingFeedbackPane
 import PostToFacebookCard from "@/components/dashboard/PostToFacebookCard";
 import { PlaybooksPanel } from "@/components/dashboard/PlaybooksPanel";
 import { LimitWarningBanner } from "@/components/entitlements/LimitWarningBanner";
+import { TransactionTypeBadge } from "@/components/transactions/TransactionAtoms";
 import type {
   CounterpartyRole,
   TransactionCounterpartyRow,
@@ -221,16 +222,15 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
             <span>{txn.property_address}</span>
           </div>
           <h1 className="mt-1 text-2xl font-semibold text-slate-900">{txn.property_address}</h1>
-          <div className="mt-1 text-sm text-slate-600">
-            {initial.contactName ?? "—"}
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+            <span>{initial.contactName ?? "—"}</span>
             {txn.purchase_price ? (
               <>
-                {" · "}
+                <span aria-hidden>·</span>
                 <span>${txn.purchase_price.toLocaleString()}</span>
               </>
             ) : null}
-            {" · "}
-            <span className="capitalize">{txn.transaction_type.replace("_", " ")}</span>
+            <TransactionTypeBadge type={txn.transaction_type} />
           </div>
         </div>
 

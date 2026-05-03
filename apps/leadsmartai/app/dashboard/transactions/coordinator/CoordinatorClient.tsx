@@ -9,6 +9,7 @@ import type {
   CoordinatorTransactionCard,
 } from "@/lib/transactions/coordinator/grouping";
 import type { TransactionType } from "@/lib/transactions/types";
+import { TransactionTypeBadge } from "@/components/transactions/TransactionAtoms";
 
 function formatMoney(n: number | null): string {
   if (n == null) return "—";
@@ -329,10 +330,13 @@ function CardForStage({
         ) : null}
       </div>
 
-      <p className="mt-1 truncate text-[11px] text-slate-500">
-        {txn.contact_name ?? "—"}
-        {txn.purchase_price ? ` · ${formatMoney(txn.purchase_price)}` : ""}
-      </p>
+      <div className="mt-1 flex items-center gap-1.5 truncate text-[11px] text-slate-500">
+        <TransactionTypeBadge type={txn.transaction_type} />
+        <span className="truncate">
+          {txn.contact_name ?? "—"}
+          {txn.purchase_price ? ` · ${formatMoney(txn.purchase_price)}` : ""}
+        </span>
+      </div>
 
       {stageMetrics.nextUpTitle ? (
         <p className="mt-2 line-clamp-2 text-[11px] text-slate-700">
