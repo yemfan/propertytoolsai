@@ -541,8 +541,8 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
 // ── List view ─────────────────────────────────────────────────────
 // Flat chronological list of every entry in the current month, grouped
 // by date. Honors the same filter chips as the month grid (showEvents
-// / showTasks / showFollowups, applied upstream when dayMap is built).
-type DayEntry = { type: "event" | "task" | "followup"; id: string; title: string; leadName: string | null; time: string; priority?: string; status?: string; overdue?: boolean; };
+// / showTasks / showFollowups / showDrafts, applied upstream when
+// dayMap is built). Re-uses the DayEntry type defined at module scope.
 
 function ListView({
   dayMap,
