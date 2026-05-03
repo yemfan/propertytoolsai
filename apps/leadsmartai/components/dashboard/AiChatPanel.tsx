@@ -61,11 +61,111 @@ function contactLabel(c: ContactOption | null): string {
   return c.name?.trim() || c.email?.trim() || c.phone?.trim() || "Contact";
 }
 
+// localStorage key for the panel's last position. Bumped if the
+// panel size changes meaningfully so a stale offscreen position
+// doesn't survive a redesign.
+const PANEL_POSITION_STORAGE_KEY = "leadsmart.ai-panel.position.v1";
+const PANEL_WIDTH = 440;
+const PANEL_MAX_HEIGHT = 640;
+
+type PanelPosition = { x: number; y: number };
+
+function clampToViewport(p: PanelPosition): PanelPosition {
+  if (typeof window === "undefined") return p;
+  const maxX = Math.max(0, window.innerWidth - PANEL_WIDTH);
+  // Use the panel's likely visible height (capped at PANEL_MAX_HEIGHT)
+  // rather than its full max — keeps the drag handle reachable even if
+  // a later viewport resize would have stranded it.
+  const maxY = Math.max(0, window.innerHeight - 120);
+  return {
+    x: Math.min(maxX, Math.max(0, p.x)),
+    y: Math.min(maxY, Math.max(0, p.y)),
+  };
+}
+
 export function AiChatPanel() {
   const [open, setOpen] = useState(false);
 
   const [activeTabId, setActiveTabId] = useState<string>("guide");
   const [contactTabs, setContactTabs] = useState<ContactTab[]>([]);
+
+  // Drag/reposition state. `null` = use the default bottom-right
+  // anchor (Tailwind classes); a value = explicit top/left positioning.
+  const [position, setPosition] = useState<PanelPosition | null>(null);
+  const [dragging, setDragging] = useState(false);
+
+  // Hydrate saved position once on mount.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(PANEL_POSITION_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as PanelPosition;
+      if (typeof parsed?.x === "number" && typeof parsed?.y === "number") {
+        setPosition(clampToViewport(parsed));
+      }
+    } catch {
+      // ignore stale / malformed values
+    }
+  }, []);
+
+  // Persist + re-clamp on viewport resize so the panel never strands
+  // off-screen if the user shrinks the window.
+  useEffect(() => {
+    if (!position) return;
+    try {
+      window.localStorage.setItem(PANEL_POSITION_STORAGE_KEY, JSON.stringify(position));
+    } catch {
+      // private mode / quota — non-fatal
+    }
+  }, [position]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function onResize() {
+      setPosition((cur) => (cur ? clampToViewport(cur) : cur));
+    }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // Drag handlers — attached to the header. Skips if the user clicked
+  // an interactive control (the close button) so X still closes.
+  const onHeaderPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest("button")) return;
+    const headerEl = e.currentTarget;
+    const panelEl = headerEl.parentElement as HTMLElement | null;
+    if (!panelEl) return;
+    const rect = panelEl.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+
+    setDragging(true);
+    headerEl.setPointerCapture?.(e.pointerId);
+
+    const onMove = (ev: PointerEvent) => {
+      setPosition(clampToViewport({ x: ev.clientX - offsetX, y: ev.clientY - offsetY }));
+    };
+    const onUp = (ev: PointerEvent) => {
+      setDragging(false);
+      headerEl.releasePointerCapture?.(ev.pointerId);
+      headerEl.removeEventListener("pointermove", onMove);
+      headerEl.removeEventListener("pointerup", onUp);
+      headerEl.removeEventListener("pointercancel", onUp);
+    };
+    headerEl.addEventListener("pointermove", onMove);
+    headerEl.addEventListener("pointerup", onUp);
+    headerEl.addEventListener("pointercancel", onUp);
+  }, []);
+
+  const resetPosition = useCallback(() => {
+    setPosition(null);
+    try {
+      window.localStorage.removeItem(PANEL_POSITION_STORAGE_KEY);
+    } catch {
+      // non-fatal
+    }
+  }, []);
 
   // ── AI Guide (free-form chat) state ─────────────────────────────
   const [guideMessages, setGuideMessages] = useState<GuideMessage[]>([]);
@@ -274,10 +374,25 @@ export function AiChatPanel() {
 
   const activeContactTab = contactTabs.find((t) => t.tabId === activeTabId) ?? null;
 
+  // When the user has dragged, switch from Tailwind bottom/right anchor
+  // to explicit top/left so it stays where they left it.
+  const positionedClass = position ? "" : "bottom-6 right-6";
+  const positionedStyle: React.CSSProperties | undefined = position
+    ? { top: position.y, left: position.x, bottom: "auto", right: "auto" }
+    : undefined;
+
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex max-h-[640px] w-[440px] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3 bg-blue-600 px-4 py-3 text-white">
+    <div
+      className={`fixed z-50 flex max-h-[640px] w-[440px] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl ${positionedClass} ${dragging ? "select-none" : ""}`}
+      style={positionedStyle}
+    >
+      {/* Header — also the drag handle. */}
+      <div
+        onPointerDown={onHeaderPointerDown}
+        onDoubleClick={resetPosition}
+        title="Drag to reposition · Double-click to reset"
+        className={`flex items-center justify-between gap-3 bg-blue-600 px-4 py-3 text-white touch-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
+      >
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/95 ring-1 ring-white/40">
             <img src="/ai-assistant-mascot.png" alt="" aria-hidden className="h-8 w-8 object-contain" />
