@@ -96,7 +96,15 @@ export async function listFiringsForAgent(
   }
 
   const { data, error } = await q;
-  if (error) throw error;
+  if (error) {
+    // trigger_firings, message_drafts, and templates are all part of the
+    // same scheduler stack that is currently absent in prod (migration
+    // drift). Surface as an empty page rather than 500 the whole route —
+    // the activity feed is a debug surface and "no rows yet" reads
+    // identically to "table missing" from the user's perspective.
+    console.warn("[scheduler/firings] aggregator failed", error.message);
+    return { rows: [], hasMore: false, nextCursor: null };
+  }
 
   const rows = (data ?? []).map((r) => {
     const raw = r as unknown as Record<string, unknown> & {

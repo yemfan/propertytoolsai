@@ -190,7 +190,7 @@ const navConfig = {
       icon: navEmoji("💬"),
       items: [
         {
-          label: "Messages",
+          label: "Conversations",
           href: "/dashboard/inbox",
           match: ["/dashboard/inbox", "/dashboard/calls"],
           icon: navEmoji("💬"),
