@@ -18,10 +18,37 @@ type TaskItem = {
   status: string;
 };
 type FollowUp = { contact_id: string; lead_name: string | null; next_contact_at: string; overdue: boolean; };
-type DayEntry = { type: "event" | "task" | "followup"; id: string; title: string; leadName: string | null; time: string; priority?: string; status?: string; overdue?: boolean; };
+// Pending draft from /api/dashboard/drafts?status=pending — surfaces on
+// the calendar as "items needing your review today" so the agent can
+// see review work alongside appointments + tasks.
+type DraftItem = {
+  id: string;
+  contactFullName: string;
+  channel: "sms" | "email";
+  templateName: string | null;
+  createdAt: string;
+  scheduledFor: string | null;
+  body: string;
+};
+type DayEntry = {
+  type: "event" | "task" | "followup" | "draft";
+  id: string;
+  title: string;
+  leadName: string | null;
+  time: string;
+  priority?: string;
+  status?: string;
+  overdue?: boolean;
+  channel?: "sms" | "email";
+};
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const DOT_COLORS = { event: "bg-blue-500", task: "bg-green-500", followup: "bg-amber-500" };
+const DOT_COLORS = {
+  event: "bg-blue-500",
+  task: "bg-green-500",
+  followup: "bg-amber-500",
+  draft: "bg-purple-500",
+};
 
 function dateKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 function isSameDay(a: Date, b: Date) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
@@ -33,6 +60,7 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [followups, setFollowups] = useState<FollowUp[]>([]);
+  const [drafts, setDrafts] = useState<DraftItem[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [addType, setAddType] = useState<"event" | "task">("event");
   const [addFields, setAddFields] = useState({ title: "", leadId: "", startsAt: "", dueAt: "", priority: "normal" });
@@ -41,19 +69,40 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
   const [showEvents, setShowEvents] = useState(true);
   const [showTasks, setShowTasks] = useState(true);
   const [showFollowups, setShowFollowups] = useState(true);
+  const [showDrafts, setShowDrafts] = useState(true);
   const [gcalStatus, setGcalStatus] = useState<{ configured: boolean; connected: boolean } | null>(null);
   const [gcalDisconnecting, setGcalDisconnecting] = useState(false);
+  // Month grid (default) vs flat chronological list. Persisted so the
+  // user's preference survives navigations.
+  const [view, setView] = useState<"month" | "list">(() => {
+    if (typeof window === "undefined") return "month";
+    try {
+      return window.localStorage.getItem("leadsmart.calendar.view") === "list" ? "list" : "month";
+    } catch {
+      return "month";
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("leadsmart.calendar.view", view);
+    } catch {
+      // private mode / quota — non-fatal
+    }
+  }, [view]);
 
   const loadData = useCallback(async () => {
     const from = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).toISOString();
     const to = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59).toISOString();
-    const [evRes, tkRes, fuRes] = await Promise.all([
+    const [evRes, tkRes, fuRes, drRes] = await Promise.all([
       fetch(`/api/dashboard/calendar/events?from=${from}&to=${to}`).then((r) => r.json()).catch(() => ({})),
       // Unified endpoint returns CRM tasks AND playbook task instances.
       // The calendar previously used the CRM-only endpoint, which is why
       // playbook tasks (the bulk of real activity) never rendered here.
       fetch("/api/dashboard/tasks/unified?status=all").then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/reminders").then((r) => r.json()).catch(() => ({})),
+      // Pending drafts — review queue. Surfaces on the calendar so the
+      // agent sees review work alongside appointments + tasks.
+      fetch("/api/dashboard/drafts?status=pending").then((r) => r.json()).catch(() => ({})),
     ]);
     setEvents(evRes.ok ? (evRes.events ?? []) : []);
     // Map unified shape (id, contact_id, contact_name, title, due_at, priority, status)
@@ -80,6 +129,27 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
       })),
     );
     setFollowups(fuRes.ok ? (fuRes.followUps ?? fuRes.followups ?? []) : []);
+    type DraftFromApi = {
+      id: string;
+      contactFullName?: string;
+      channel?: "sms" | "email";
+      templateName?: string | null;
+      createdAt?: string;
+      scheduledFor?: string | null;
+      body?: string;
+    };
+    const apiDrafts: DraftFromApi[] = drRes.ok ? (drRes.drafts ?? []) : [];
+    setDrafts(
+      apiDrafts.map((d) => ({
+        id: d.id,
+        contactFullName: d.contactFullName ?? "(no name)",
+        channel: d.channel === "email" ? "email" : "sms",
+        templateName: d.templateName ?? null,
+        createdAt: d.createdAt ?? new Date().toISOString(),
+        scheduledFor: d.scheduledFor ?? null,
+        body: d.body ?? "",
+      })),
+    );
   }, [currentMonth]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -111,8 +181,26 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
       const k = dateKey(new Date(f.next_contact_at));
       add(k, { type: "followup", id: f.contact_id, title: `Follow up with ${f.lead_name ?? "lead"}`, leadName: f.lead_name, time: f.next_contact_at, overdue: f.overdue });
     }
+    if (showDrafts) for (const d of drafts) {
+      // Use scheduledFor when set (the day the draft is targeted to send),
+      // otherwise createdAt (when the trigger fired and the draft landed
+      // in the review queue).
+      const slot = d.scheduledFor ?? d.createdAt;
+      const k = dateKey(new Date(slot));
+      const title = d.templateName
+        ? `Review draft: ${d.templateName}`
+        : `Review draft to ${d.contactFullName}`;
+      add(k, {
+        type: "draft",
+        id: d.id,
+        title,
+        leadName: d.contactFullName,
+        time: slot,
+        channel: d.channel,
+      });
+    }
     return map;
-  }, [events, tasks, followups, showEvents, showTasks, showFollowups]);
+  }, [events, tasks, followups, drafts, showEvents, showTasks, showFollowups, showDrafts]);
 
   // Month grid
   const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
@@ -122,15 +210,16 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
   const today = new Date();
 
   const monthStats = useMemo(() => {
-    let evCount = 0, tkCount = 0, fuCount = 0;
+    let evCount = 0, tkCount = 0, fuCount = 0, drCount = 0;
     dayMap.forEach((entries) => {
       for (const e of entries) {
         if (e.type === "event") evCount++;
         else if (e.type === "task") tkCount++;
-        else fuCount++;
+        else if (e.type === "followup") fuCount++;
+        else if (e.type === "draft") drCount++;
       }
     });
-    return { events: evCount, tasks: tkCount, followups: fuCount };
+    return { events: evCount, tasks: tkCount, followups: fuCount, drafts: drCount };
   }, [dayMap]);
 
   const selectedEntries = selectedDate ? (dayMap.get(dateKey(selectedDate)) ?? []) : [];
@@ -197,7 +286,7 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Calendar</h1>
           <p className="text-sm text-gray-500">
-            {monthStats.events} appointments &middot; {monthStats.tasks} tasks &middot; {monthStats.followups} follow-ups
+            {monthStats.events} appointments &middot; {monthStats.tasks} tasks &middot; {monthStats.followups} follow-ups &middot; {monthStats.drafts} drafts
           </p>
         </div>
         <button onClick={() => setShowAdd((v) => !v)} className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800">
@@ -273,23 +362,48 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
         </div>
       )}
 
-      {/* Filters */}
-      <div className="flex gap-2">
-        <button onClick={() => { setShowEvents(true); setShowTasks(true); setShowFollowups(true); }} className={`rounded-lg px-3 py-1 text-xs font-medium ${showEvents && showTasks && showFollowups ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-500"}`}>
+      {/* Filters + view toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+        <button onClick={() => { setShowEvents(true); setShowTasks(true); setShowFollowups(true); setShowDrafts(true); }} className={`rounded-lg px-3 py-1 text-xs font-medium ${showEvents && showTasks && showFollowups && showDrafts ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-500"}`}>
           All
         </button>
-        <button onClick={() => { setShowEvents(true); setShowTasks(false); setShowFollowups(false); }} className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${showEvents && !showTasks && !showFollowups ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
+        <button onClick={() => { setShowEvents(true); setShowTasks(false); setShowFollowups(false); setShowDrafts(false); }} className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${showEvents && !showTasks && !showFollowups && !showDrafts ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
           <span className="h-2 w-2 rounded-full bg-blue-500" /> Appointments
         </button>
-        <button onClick={() => { setShowEvents(false); setShowTasks(true); setShowFollowups(false); }} className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${!showEvents && showTasks && !showFollowups ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+        <button onClick={() => { setShowEvents(false); setShowTasks(true); setShowFollowups(false); setShowDrafts(false); }} className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${!showEvents && showTasks && !showFollowups && !showDrafts ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
           <span className="h-2 w-2 rounded-full bg-green-500" /> Tasks
         </button>
-        <button onClick={() => { setShowEvents(false); setShowTasks(false); setShowFollowups(true); }} className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${!showEvents && !showTasks && showFollowups ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-500"}`}>
+        <button onClick={() => { setShowEvents(false); setShowTasks(false); setShowFollowups(true); setShowDrafts(false); }} className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${!showEvents && !showTasks && showFollowups && !showDrafts ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-500"}`}>
           <span className="h-2 w-2 rounded-full bg-amber-500" /> Follow-ups
         </button>
+        <button onClick={() => { setShowEvents(false); setShowTasks(false); setShowFollowups(false); setShowDrafts(true); }} className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium ${!showEvents && !showTasks && !showFollowups && showDrafts ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-500"}`}>
+          <span className="h-2 w-2 rounded-full bg-purple-500" /> Drafts
+        </button>
+        </div>
+        {/* Month / List view toggle. Persisted to localStorage so the
+            user's preference survives navigations. */}
+        <div className="inline-flex shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-white text-xs font-medium">
+          <button
+            onClick={() => setView("month")}
+            className={`px-3 py-1 transition ${view === "month" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"}`}
+            aria-pressed={view === "month"}
+          >
+            Month
+          </button>
+          <button
+            onClick={() => setView("list")}
+            className={`px-3 py-1 transition ${view === "list" ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"}`}
+            aria-pressed={view === "list"}
+          >
+            List
+          </button>
+        </div>
       </div>
 
-      {/* Month navigation */}
+      {/* Month grid (default) or chronological list. Both respect the
+          filter chips above and stay scoped to the navigated month. */}
+      {view === "month" ? (
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
           <button onClick={prevMonth} className="rounded-lg border border-gray-200 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50">&larr;</button>
@@ -324,6 +438,7 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
             const hasEvents = entries.some((e) => e.type === "event");
             const hasTasks = entries.some((e) => e.type === "task");
             const hasFollowups = entries.some((e) => e.type === "followup");
+            const hasDrafts = entries.some((e) => e.type === "draft");
 
             return (
               <button
@@ -347,11 +462,12 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
                       {hasEvents && <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
                       {hasTasks && <span className="h-1.5 w-1.5 rounded-full bg-green-500" />}
                       {hasFollowups && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+                      {hasDrafts && <span className="h-1.5 w-1.5 rounded-full bg-purple-500" />}
                     </div>
                     {entries.length > 0 && (
                       <div className="mt-0.5">
                         {entries.slice(0, 2).map((e, j) => (
-                          <div key={j} className={`truncate text-[9px] leading-tight ${e.type === "event" ? "text-blue-700" : e.type === "task" ? "text-green-700" : "text-amber-700"}`}>
+                          <div key={j} className={`truncate text-[9px] leading-tight ${e.type === "event" ? "text-blue-700" : e.type === "task" ? "text-green-700" : e.type === "draft" ? "text-purple-700" : "text-amber-700"}`}>
                             {e.title}
                           </div>
                         ))}
@@ -365,9 +481,22 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
           })}
         </div>
       </div>
+      ) : (
+        <ListView
+          dayMap={dayMap}
+          currentMonth={currentMonth}
+          today={today}
+          markTaskDone={markTaskDone}
+          cancelEvent={cancelEvent}
+          prevMonth={prevMonth}
+          nextMonth={nextMonth}
+          goToday={goToday}
+        />
+      )}
 
-      {/* Day detail panel */}
-      {selectedDate && (
+      {/* Day detail panel — only in month view (in list view every
+          entry is already shown inline, so the panel would be redundant). */}
+      {view === "month" && selectedDate && (
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <h3 className="text-sm font-semibold text-gray-900">
             {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
@@ -403,6 +532,120 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
               ))}
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── List view ─────────────────────────────────────────────────────
+// Flat chronological list of every entry in the current month, grouped
+// by date. Honors the same filter chips as the month grid (showEvents
+// / showTasks / showFollowups, applied upstream when dayMap is built).
+type DayEntry = { type: "event" | "task" | "followup"; id: string; title: string; leadName: string | null; time: string; priority?: string; status?: string; overdue?: boolean; };
+
+function ListView({
+  dayMap,
+  currentMonth,
+  today,
+  markTaskDone,
+  cancelEvent,
+  prevMonth,
+  nextMonth,
+  goToday,
+}: {
+  dayMap: Map<string, DayEntry[]>;
+  currentMonth: Date;
+  today: Date;
+  markTaskDone: (taskId: string) => Promise<void> | void;
+  cancelEvent: (eventId: string) => Promise<void> | void;
+  prevMonth: () => void;
+  nextMonth: () => void;
+  goToday: () => void;
+}) {
+  // Sort the date keys ascending so the oldest entries in the month
+  // come first — consistent with how a paper calendar reads.
+  const sortedKeys = Array.from(dayMap.keys()).sort();
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+        <button onClick={prevMonth} className="rounded-lg border border-gray-200 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50">&larr;</button>
+        <h2 className="text-sm font-semibold text-gray-900">
+          {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+        </h2>
+        <div className="flex gap-2">
+          <button onClick={goToday} className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">Today</button>
+          <button onClick={nextMonth} className="rounded-lg border border-gray-200 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50">&rarr;</button>
+        </div>
+      </div>
+
+      {sortedKeys.length === 0 ? (
+        <div className="px-6 py-12 text-center text-sm text-gray-400">
+          Nothing scheduled this month.
+        </div>
+      ) : (
+        <div className="divide-y divide-gray-100">
+          {sortedKeys.map((key) => {
+            const entries = (dayMap.get(key) ?? []).slice().sort((a, b) => a.time.localeCompare(b.time));
+            const date = new Date(`${key}T00:00:00`);
+            const isToday = isSameDay(date, today);
+            return (
+              <div key={key} className="grid grid-cols-[120px_1fr] gap-3 px-4 py-3">
+                <div className={`shrink-0 ${isToday ? "text-blue-700 font-semibold" : "text-gray-700"}`}>
+                  <div className="text-xs uppercase tracking-wide">
+                    {date.toLocaleDateString("en-US", { weekday: "short" })}
+                  </div>
+                  <div className="text-sm">
+                    {date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    {isToday ? " · Today" : ""}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  {entries.map((entry, i) => (
+                    <div
+                      key={`${entry.type}-${entry.id}-${i}`}
+                      className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${DOT_COLORS[entry.type]}`} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{entry.title}</p>
+                          <p className="text-xs text-gray-500">
+                            {entry.leadName && <span>{entry.leadName} &middot; </span>}
+                            {formatTime(entry.time)}
+                            {entry.priority && entry.priority !== "normal" && (
+                              <span className="ml-1 capitalize text-amber-600">{entry.priority}</span>
+                            )}
+                            {entry.overdue && <span className="ml-1 text-red-600">Overdue</span>}
+                            {entry.status === "done" && <span className="ml-1 text-green-600">Done</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 shrink-0 ml-2">
+                        {entry.type === "task" && entry.status !== "done" && (
+                          <button
+                            onClick={() => void markTaskDone(entry.id)}
+                            className="rounded-lg bg-green-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-green-700"
+                          >
+                            Done
+                          </button>
+                        )}
+                        {entry.type === "event" && (
+                          <button
+                            onClick={() => void cancelEvent(entry.id)}
+                            className="rounded-lg border border-red-200 px-2 py-1 text-[10px] font-medium text-red-600 hover:bg-red-50"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
