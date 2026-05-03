@@ -80,7 +80,12 @@ async function fetchSmsForLeads(leadIds: string[]): Promise<MsgRow[]> {
       .in("contact_id", part as unknown as number[])
       .order("created_at", { ascending: false })
       .limit(MESSAGES_PER_LEAD_CHUNK);
-    if (error) throw new Error(error.message);
+    // Defensive: a missing table or schema-cache hiccup must not kill the
+    // whole conversations view. Log and keep aggregating.
+    if (error) {
+      console.warn("[mobile/inbox] sms fetch", error.message);
+      continue;
+    }
     for (const r of data ?? []) acc.push(r as unknown as MsgRow);
   }
   return acc;
@@ -95,7 +100,12 @@ async function fetchEmailForLeads(leadIds: string[]): Promise<MsgRow[]> {
       .in("contact_id", part as unknown as number[])
       .order("created_at", { ascending: false })
       .limit(MESSAGES_PER_LEAD_CHUNK);
-    if (error) throw new Error(error.message);
+    // email_messages is currently absent in prod (migration drift). The
+    // SMS half should still render — swallow the error and keep going.
+    if (error) {
+      console.warn("[mobile/inbox] email fetch", error.message);
+      continue;
+    }
     for (const r of data ?? []) acc.push(r as unknown as MsgRow);
   }
   return acc;

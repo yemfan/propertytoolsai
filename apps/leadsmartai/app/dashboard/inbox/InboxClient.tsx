@@ -135,7 +135,7 @@ export default function InboxClient() {
 
   const unreadCount = threads.filter((t) => t.lastDirection === "inbound").length;
 
-  if (loading) return <div className="py-20 text-center text-gray-400">Loading inbox...</div>;
+  if (loading) return <div className="py-20 text-center text-gray-400">Loading conversations...</div>;
 
   return (
     <div className="flex h-[calc(100vh-140px)] min-h-[500px] rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
@@ -144,9 +144,10 @@ export default function InboxClient() {
         <div className="shrink-0 border-b border-gray-100 p-3 space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-900">
-              Inbox
+              Conversations
               {unreadCount > 0 && <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-semibold text-white">{unreadCount}</span>}
             </h2>
+            <p className="text-[11px] text-gray-500">All sent + received SMS and email, threaded by contact.</p>
           </div>
           <input
             value={search}
