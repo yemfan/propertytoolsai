@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { TransactionListItem, TransactionType } from "@/lib/transactions/types";
+import { TransactionsViewToggle } from "./TransactionsViewToggle";
 
 function daysUntil(dateIso: string | null): number | null {
   if (!dateIso) return null;
@@ -153,12 +154,15 @@ export function TransactionsListClient({
             counterparties in one place.
           </p>
         </div>
-        <Link
-          href="/dashboard/transactions/new"
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-        >
-          New transaction
-        </Link>
+        <div className="flex items-center gap-2">
+          <TransactionsViewToggle current="list" />
+          <Link
+            href="/dashboard/transactions/new"
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            New transaction
+          </Link>
+        </div>
       </header>
 
       {/* KPI strip — mirrors /dashboard/transactions/coordinator. */}
