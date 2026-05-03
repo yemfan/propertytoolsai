@@ -25,7 +25,7 @@ type StatusTab = "open" | "done" | "cancelled" | "all";
 
 const TABS: { key: StatusTab; label: string }[] = [
   { key: "open", label: "Open" },
-  { key: "done", label: "Completed" },
+  { key: "done", label: "Done" },
   { key: "cancelled", label: "Cancelled" },
   { key: "all", label: "All" },
 ];
@@ -390,7 +390,7 @@ function TaskRow({
       <div className="inline-flex shrink-0 items-center gap-1 pt-0.5">
         <IconButton
           onClick={onComplete}
-          title={complete ? "Reopen" : "Mark complete"}
+          title={complete ? "Reopen" : "Mark done"}
           ariaLabel={complete ? `Reopen "${task.title}"` : `Mark "${task.title}" complete`}
           tone="success"
           active={complete}

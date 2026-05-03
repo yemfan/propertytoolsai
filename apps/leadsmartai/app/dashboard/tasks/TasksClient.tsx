@@ -338,14 +338,14 @@ export default function TasksClient({
         <div className="grid gap-3 md:grid-cols-2">
           <MiniPie data={stats.completion} title="Task Completion (30 days)" />
           <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <h3 className="text-xs font-semibold text-gray-500 mb-2">Tasks Completed by Day (30 days) &mdash; {stats.performed} total</h3>
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">Tasks Done by Day (30 days) &mdash; {stats.performed} total</h3>
             <div className="h-[120px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats.performedByDay} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 8 }} stroke="#9ca3af" interval={4} />
                   <YAxis tick={{ fontSize: 9 }} stroke="#9ca3af" allowDecimals={false} />
-                  <Tooltip formatter={(v: number) => [v, "Completed"]} />
+                  <Tooltip formatter={(v: number) => [v, "Done"]} />
                   <Bar dataKey="count" fill="#22c55e" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -395,7 +395,7 @@ export default function TasksClient({
       <div className="flex flex-wrap items-center gap-2 border-b border-gray-200">
         {([
           { key: "open", label: "Open" },
-          { key: "done", label: "Completed" },
+          { key: "done", label: "Done" },
           { key: "cancelled", label: "Cancelled" },
           { key: "all", label: "All" },
         ] as const).map((tab) => {
@@ -544,8 +544,8 @@ export default function TasksClient({
                           <TaskIconButton
                             onClick={() => void markDone(t.id)}
                             disabled={actionLoading}
-                            title="Mark complete"
-                            ariaLabel="Mark complete"
+                            title="Mark done"
+                            ariaLabel="Mark done"
                             tone="success"
                           >
                             <Check className="h-4 w-4" strokeWidth={2.5} />
