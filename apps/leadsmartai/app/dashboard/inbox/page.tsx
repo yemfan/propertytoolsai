@@ -2,9 +2,9 @@ import InboxClient from "./InboxClient";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Inbox",
-  description: "View and respond to messages from leads and clients.",
-  keywords: ["inbox", "messages", "communication"],
+  title: "Conversations",
+  description: "Unified SMS + email conversations with leads and clients — every sent and received message threaded by contact.",
+  keywords: ["conversations", "inbox", "messages", "sms", "email", "communication"],
   robots: { index: false },
 };
 
