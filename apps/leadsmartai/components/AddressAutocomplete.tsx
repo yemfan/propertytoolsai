@@ -1,7 +1,7 @@
 "use client";
 
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type AddressAutocompleteValue = {
   formattedAddress: string;
@@ -21,22 +21,6 @@ export type AddressAutocompleteValue = {
   };
 };
 
-/**
- * Extract a value from a `google.maps.places.PlaceResult.address_components`
- * array given a target type (e.g. "locality", "postal_code"). Returns null
- * when no component of that type is present.
- */
-function pickAddressComponent(
-  components: google.maps.GeocoderAddressComponent[] | undefined,
-  type: string,
-  preferShort = false,
-): string | null {
-  const found = components?.find((c) => c.types.includes(type));
-  if (!found) return null;
-  const value = preferShort ? found.short_name : found.long_name;
-  return value?.trim() || null;
-}
-
 type Props = {
   value: string;
   onChange: (next: string) => void;
@@ -50,15 +34,9 @@ let loadPlacesPromise: Promise<google.maps.PlacesLibrary> | null = null;
 let loadPlacesKey: string | null = null;
 
 /**
- * @googlemaps/js-api-loader v2+ removed the `new Loader().load()` API
- * (which earlier versions of this file used via an `as any` cast that
- * silently failed at runtime). The v2 contract is `setOptions` +
- * `importLibrary("places")`.
- *
- * Cached per-key so a single page mounting multiple autocompletes
- * (e.g. the showings form's address picker plus a contact's
- * address-autocomplete inside ContactsClient) shares one network
- * round-trip.
+ * Loads the Places library using the @googlemaps/js-api-loader v2
+ * functional API. Cached per-key so multiple autocompletes on the same
+ * page share one network round-trip.
  */
 function loadPlacesLibrary(apiKey: string): Promise<google.maps.PlacesLibrary> {
   if (typeof window === "undefined") {
@@ -71,6 +49,51 @@ function loadPlacesLibrary(apiKey: string): Promise<google.maps.PlacesLibrary> {
   return loadPlacesPromise;
 }
 
+/**
+ * Extract a value from the new Places API's `addressComponents` array
+ * by component type (e.g. "locality", "postal_code"). The new API
+ * exposes `longText` / `shortText` (instead of legacy `long_name` /
+ * `short_name`).
+ */
+function pickComponent(
+  components: google.maps.places.AddressComponent[],
+  type: string,
+  preferShort = false,
+): string | null {
+  const found = components.find((c) => c.types.includes(type));
+  if (!found) return null;
+  const value = preferShort ? found.shortText : found.longText;
+  return value?.trim() || null;
+}
+
+/** Normalize for comparing Google vs React-controlled value. */
+function normAddr(s: string) {
+  return s.replace(/\s+/g, " ").trim();
+}
+
+type Prediction = {
+  placeId: string;
+  primary: string;
+  secondary: string;
+  description: string;
+  suggestion: google.maps.places.AutocompleteSuggestion;
+};
+
+const DEBOUNCE_MS = 180;
+
+/**
+ * Real-estate-friendly equivalent of the legacy `types: ["address"]`
+ * filter. The new Places API doesn't accept `address` as a primary
+ * type, so we explicitly include the address-y types.
+ */
+const INCLUDED_PRIMARY_TYPES = [
+  "street_address",
+  "subpremise",
+  "route",
+  "locality",
+  "postal_code",
+];
+
 export default function AddressAutocomplete({
   value,
   onChange,
@@ -80,84 +103,323 @@ export default function AddressAutocomplete({
   disabled,
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  /** When set, we just applied this normalized string from a suggestion — don't re-fetch/reopen the dropdown. Cleared when the user types. */
+  const committedSelectionRef = useRef<string | null>(null);
+  /** Block prediction fetch briefly after a pick (handles Strict Mode + async getDetails). */
+  const suppressUntilMsRef = useRef(0);
+  /** Session token for predictions+details billing pairing (Google recommendation). */
+  const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
+  /** Sequence guard so an in-flight stale request can't overwrite newer predictions. */
+  const requestSeqRef = useRef(0);
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [placesReady, setPlacesReady] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() ?? "";
   const ready = useMemo(() => Boolean(apiKey), [apiKey]);
 
   useEffect(() => {
     if (!ready) return;
-    if (!inputRef.current) return;
-
     let cancelled = false;
-
+    setPlacesReady(false);
+    setErrorMsg(null);
     (async () => {
-      const places = await loadPlacesLibrary(apiKey);
-      if (cancelled) return;
-      if (!inputRef.current) return;
-
-      if (autocompleteRef.current) return;
-
-      // v2 returns the imported library; the legacy Autocomplete class
-      // is still on `google.maps.places` (not yet migrated to the
-      // newer PlaceAutocompleteElement). Read off whichever surface
-      // the loaded library exposes — both reach the same constructor.
-      const AutocompleteCtor =
-        (places as { Autocomplete?: typeof google.maps.places.Autocomplete }).Autocomplete ??
-        google.maps.places.Autocomplete;
-
-      autocompleteRef.current = new AutocompleteCtor(inputRef.current, {
-        // Request address_components so we can split the chosen Place
-        // into city / state / zip without a second geocode round trip.
-        fields: ["formatted_address", "geometry", "address_components"],
-        types: ["address"],
-      });
-
-      autocompleteRef.current.addListener("place_changed", () => {
-        const place = autocompleteRef.current?.getPlace();
-        const formatted = place?.formatted_address ?? inputRef.current?.value ?? "";
-        const lat = place?.geometry?.location?.lat?.() ?? null;
-        const lng = place?.geometry?.location?.lng?.() ?? null;
-        const ac = place?.address_components;
-
-        const components = {
-          streetNumber: pickAddressComponent(ac, "street_number"),
-          streetName: pickAddressComponent(ac, "route"),
-          city:
-            pickAddressComponent(ac, "locality") ??
-            pickAddressComponent(ac, "sublocality_level_1") ??
-            pickAddressComponent(ac, "sublocality"),
-          // 2-letter abbreviation for US states ("CA"), short_name on the
-          // administrative_area_level_1 component.
-          state: pickAddressComponent(ac, "administrative_area_level_1", true),
-          zip: pickAddressComponent(ac, "postal_code"),
-        };
-
-        onChange(formatted);
-        onSelect?.({ formattedAddress: formatted, lat, lng, components });
-      });
-    })().catch((e) => {
-      console.error("Failed to load Google Places:", e);
-    });
-
+      try {
+        await loadPlacesLibrary(apiKey);
+        if (!cancelled) setPlacesReady(true);
+      } catch (e) {
+        console.error("Failed to load Google Places:", e);
+        if (!cancelled) {
+          setErrorMsg("Could not load Google Maps. Check API key & Maps JavaScript API.");
+        }
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [apiKey, onChange, onSelect, ready]);
+  }, [apiKey, ready]);
 
-  // If API key isn't configured, behave like a normal input.
+  useEffect(() => {
+    if (!ready || disabled || !placesReady) return;
+
+    const query = value.trim();
+    if (query.length < 2) {
+      setPredictions([]);
+      setOpen(false);
+      return;
+    }
+
+    if (Date.now() < suppressUntilMsRef.current) {
+      setPredictions([]);
+      setOpen(false);
+      setLoading(false);
+      return;
+    }
+
+    const nq = normAddr(query);
+    if (committedSelectionRef.current !== null && nq === committedSelectionRef.current) {
+      setPredictions([]);
+      setOpen(false);
+      setLoading(false);
+      return;
+    }
+
+    const t = setTimeout(() => {
+      void fetchPredictions(query);
+    }, DEBOUNCE_MS);
+
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, ready, disabled, placesReady]);
+
+  async function fetchPredictions(query: string) {
+    const token =
+      sessionTokenRef.current ?? new google.maps.places.AutocompleteSessionToken();
+    sessionTokenRef.current = token;
+
+    const seq = ++requestSeqRef.current;
+    setLoading(true);
+
+    try {
+      const { suggestions } =
+        await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+          input: query,
+          includedPrimaryTypes: INCLUDED_PRIMARY_TYPES,
+          includedRegionCodes: ["us"],
+          sessionToken: token,
+        });
+
+      if (seq !== requestSeqRef.current) return;
+
+      const items: Prediction[] = suggestions
+        .filter((s) => s.placePrediction != null)
+        .map((s) => {
+          const p = s.placePrediction!;
+          const primary = p.mainText?.text ?? p.text?.text ?? "";
+          const secondary = p.secondaryText?.text ?? "";
+          return {
+            placeId: p.placeId,
+            primary,
+            secondary,
+            description: p.text?.text ?? `${primary}${secondary ? ", " + secondary : ""}`,
+            suggestion: s,
+          };
+        });
+
+      setLoading(false);
+      setPredictions(items);
+      setActiveIndex(items.length > 0 ? 0 : -1);
+      setOpen(items.length > 0);
+    } catch (e) {
+      if (seq !== requestSeqRef.current) return;
+      setLoading(false);
+      setPredictions([]);
+      setActiveIndex(-1);
+      setOpen(false);
+
+      const message = e instanceof Error ? e.message : String(e);
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[AddressAutocomplete] fetchAutocompleteSuggestions failed:", e);
+      }
+      const lower = message.toLowerCase();
+      if (
+        lower.includes("denied") ||
+        lower.includes("api key") ||
+        lower.includes("referer") ||
+        lower.includes("not authorized")
+      ) {
+        setErrorMsg(
+          "Places request denied — check that the Maps JavaScript API + Places API (New) are enabled, billing is active, and HTTP referrers include this origin.",
+        );
+      }
+    }
+  }
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  function newSessionToken() {
+    sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+  }
+
+  async function selectPrediction(prediction: Prediction) {
+    setOpen(false);
+    setPredictions([]);
+    setActiveIndex(-1);
+
+    const optimistic = prediction.description;
+    committedSelectionRef.current = normAddr(optimistic);
+    suppressUntilMsRef.current = Date.now() + 2800;
+    onChange(optimistic);
+
+    const placePrediction = prediction.suggestion.placePrediction;
+    if (!placePrediction) {
+      newSessionToken();
+      onSelect?.({
+        formattedAddress: optimistic,
+        lat: null,
+        lng: null,
+        components: {
+          streetNumber: null,
+          streetName: null,
+          city: null,
+          state: null,
+          zip: null,
+        },
+      });
+      return;
+    }
+
+    try {
+      const place = placePrediction.toPlace();
+      await place.fetchFields({
+        fields: ["displayName", "formattedAddress", "location", "addressComponents", "id"],
+      });
+
+      newSessionToken();
+
+      const formatted = place.formattedAddress ?? optimistic;
+      const lat = place.location?.lat() ?? null;
+      const lng = place.location?.lng() ?? null;
+      const ac = place.addressComponents ?? [];
+
+      const components = {
+        streetNumber: pickComponent(ac, "street_number"),
+        streetName: pickComponent(ac, "route"),
+        city:
+          pickComponent(ac, "locality") ??
+          pickComponent(ac, "sublocality_level_1") ??
+          pickComponent(ac, "sublocality"),
+        // 2-letter abbreviation for US states ("CA")
+        state: pickComponent(ac, "administrative_area_level_1", true),
+        zip: pickComponent(ac, "postal_code"),
+      };
+
+      committedSelectionRef.current = normAddr(formatted);
+      onChange(formatted);
+      onSelect?.({ formattedAddress: formatted, lat, lng, components });
+    } catch (e) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[AddressAutocomplete] place.fetchFields failed:", e);
+      }
+      newSessionToken();
+      committedSelectionRef.current = normAddr(optimistic);
+      onSelect?.({
+        formattedAddress: optimistic,
+        lat: null,
+        lng: null,
+        components: {
+          streetNumber: null,
+          streetName: null,
+          city: null,
+          state: null,
+          zip: null,
+        },
+      });
+    }
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open || predictions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((i) => (i + 1) % predictions.length);
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((i) => (i - 1 + predictions.length) % predictions.length);
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const sel = predictions[activeIndex] ?? predictions[0];
+      if (sel) void selectPrediction(sel);
+      return;
+    }
+    if (e.key === "Escape") {
+      setOpen(false);
+    }
+  }
+
   return (
-    <input
-      ref={inputRef}
-      type="text"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className={className}
-      disabled={disabled}
-      autoComplete="street-address"
-    />
+    <div ref={containerRef} className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => {
+          committedSelectionRef.current = null;
+          suppressUntilMsRef.current = 0;
+          onChange(e.target.value);
+        }}
+        onFocus={() => {
+          if (predictions.length > 0) setOpen(true);
+        }}
+        onKeyDown={onKeyDown}
+        placeholder={placeholder}
+        className={className}
+        disabled={disabled}
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
+        data-lpignore="true"
+        data-1p-ignore="true"
+        aria-autocomplete="list"
+        aria-expanded={open}
+        role="combobox"
+      />
+
+      {errorMsg ? (
+        <p className="mt-1 text-[11px] text-red-700" role="alert">
+          {errorMsg}
+        </p>
+      ) : null}
+
+      {open && predictions.length > 0 ? (
+        <div
+          className="absolute left-0 right-0 z-[9999] mt-1 max-h-72 overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+          role="listbox"
+        >
+          {predictions.map((p, idx) => (
+            <button
+              key={p.placeId}
+              type="button"
+              role="option"
+              aria-selected={idx === activeIndex}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => void selectPrediction(p)}
+              onMouseEnter={() => setActiveIndex(idx)}
+              className={`flex w-full items-start gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                idx === activeIndex ? "bg-sky-50" : "hover:bg-slate-50"
+              }`}
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium text-slate-900">{p.primary}</span>
+                {p.secondary ? (
+                  <span className="mt-0.5 block text-[11px] text-slate-500">
+                    {p.secondary}
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          ))}
+          <div className="border-t border-slate-100 px-3 py-1 text-[10px] text-slate-400">
+            Powered by Google
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
-
