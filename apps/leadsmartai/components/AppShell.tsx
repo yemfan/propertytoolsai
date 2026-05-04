@@ -60,7 +60,6 @@ function isPlatformDashboardPath(pathname: string): boolean {
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
   const isPublicReport = pathname.startsWith("/report/");
-  const isMarketingHome = pathname === "/";
   const isEditorialLanding = pathname === "/landing-v3";
   const isPublicOpenHouse = pathname.startsWith("/oh/");
   const isAuthShell =
@@ -78,19 +77,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <SupportChatLauncher buttonClassName="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200/90 bg-white text-slate-600 shadow-lg shadow-slate-900/10 ring-1 ring-slate-900/[0.04] transition hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40" />
         </div>
         <main className="min-h-screen">{children}</main>
-      </div>
-    );
-  }
-
-  if (isMarketingHome) {
-    // Home renders its own hero chrome (PremiumSidebar + MarketingTopChrome
-    // would clash with the landing's custom top nav), but it should still
-    // share the site-wide Footer so the link set + copy stays consistent
-    // with every other public page.
-    return (
-      <div className="min-h-screen bg-white">
-        {children}
-        <Footer />
       </div>
     );
   }
@@ -134,7 +120,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       />
       <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
         <MarketingTopChrome />
-        <main className="min-w-0 flex-1 overflow-x-hidden p-4 sm:p-8">{children}</main>
+        <main id="main-content" className="min-w-0 flex-1 overflow-x-hidden p-4 sm:p-8">{children}</main>
         <Footer />
         <FloatingCTA />
       </div>

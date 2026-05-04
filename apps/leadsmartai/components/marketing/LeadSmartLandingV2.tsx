@@ -23,20 +23,11 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
 import { Button } from "@/components/ui/button";
 import { BrandCheck } from "@/components/brand/BrandCheck";
-import HeaderAuthActions from "@/components/HeaderAuthActions";
 
 const ExitIntentPopup = dynamic(
   () => import("@/components/marketing/ExitIntentPopup"),
-  { ssr: false },
-);
-const SupportChatLauncher = dynamic(
-  () =>
-    import("@/components/support/CustomerSupportChat").then((mod) => ({
-      default: mod.SupportChatLauncher,
-    })),
   { ssr: false },
 );
 
@@ -57,12 +48,15 @@ const SupportChatLauncher = dynamic(
 
 const PRIMARY_CTA_HREF = "/onboarding";
 
-const NAV_SECTIONS: { label: string; href: string }[] = [
+/**
+ * In-page anchors surfaced as a jump-link strip above the hero.
+ * `/features` and `/pricing` are real routes and live in the shared
+ * marketing topbar — they don't belong in this strip.
+ */
+const JUMP_LINKS: { label: string; href: string }[] = [
   { label: "How It Works", href: "#how" },
-  { label: "Features", href: "/features" },
   { label: "Results", href: "#results" },
   { label: "Why Us", href: "#why" },
-  { label: "Pricing", href: "/pricing" },
 ];
 
 /**
@@ -120,171 +114,32 @@ function RevealSection({
 }
 
 export default function LeadSmartLandingV2() {
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const hamburgerRef = useRef<HTMLButtonElement>(null);
-  const drawerCloseRef = useRef<HTMLButtonElement>(null);
-
-  // Mobile drawer focus + escape handling — same pattern as V1 so
-  // the keyboard / screen-reader behavior stays familiar.
-  useEffect(() => {
-    if (!mobileNavOpen) return;
-    drawerCloseRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMobileNavOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      hamburgerRef.current?.focus();
-    };
-  }, [mobileNavOpen]);
-
   return (
     <>
-      <main
-        id="main-content"
-        className="bg-white text-gray-900 dark:bg-slate-950 dark:text-slate-100"
-      >
-        {/* ── NAV ─── */}
-        <header className="sticky top-0 z-50 border-b border-gray-200/60 bg-white/85 backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-950/80">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-            <Link
-              href="/"
-              className="flex min-w-0 items-center rounded-md transition hover:opacity-90"
-            >
-              <LeadSmartLogo className="h-8 w-auto max-w-[180px] sm:h-9 sm:max-w-[280px] lg:max-w-[320px]" />
-            </Link>
-            <nav
-              className="hidden items-center gap-x-5 text-sm md:flex lg:gap-x-7"
-              aria-label="Page sections"
-            >
-              {NAV_SECTIONS.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  className="font-medium !text-gray-700 transition-colors hover:!text-[#0072ce] dark:!text-slate-300 dark:hover:!text-[#4da3e8]"
-                >
-                  {item.label}
-                </a>
-              ))}
-            </nav>
-            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-              <Button
-                size="sm"
-                href={PRIMARY_CTA_HREF}
-                className="hidden whitespace-nowrap sm:inline-flex"
+      <div className="-mx-4 bg-white text-gray-900 sm:-mx-8 dark:bg-slate-950 dark:text-slate-100">
+        {/* ── Jump-link strip ──
+            In-page anchors for the homepage's scroll sections. Real
+            routes (Features, Pricing, etc.) come from the shared
+            marketing topbar. */}
+        <nav
+          className="border-b border-gray-100 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:border-slate-800 dark:bg-slate-950/80"
+          aria-label="Page sections"
+        >
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-2 text-xs sm:px-6 sm:text-sm">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 sm:text-xs">
+              Jump to
+            </span>
+            {JUMP_LINKS.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="font-medium text-slate-600 transition-colors hover:text-[#0072ce] dark:text-slate-300 dark:hover:text-[#4da3e8]"
               >
-                Activate AI Engine
-              </Button>
-              <div className="hidden items-center gap-2 sm:gap-3 md:flex">
-                <HeaderAuthActions />
-                <SupportChatLauncher buttonClassName="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200/90 bg-white text-gray-600 shadow-sm transition hover:border-[#0072ce]/40 hover:bg-gray-50 hover:text-[#0072ce] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0072ce]/40 sm:h-10 sm:w-10 sm:rounded-xl dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:text-[#4da3e8]" />
-              </div>
-              <button
-                ref={hamburgerRef}
-                type="button"
-                onClick={() => setMobileNavOpen(true)}
-                aria-label="Open menu"
-                aria-expanded={mobileNavOpen}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200/90 bg-white text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 md:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
-              </button>
-            </div>
+                {item.label}
+              </a>
+            ))}
           </div>
-        </header>
-
-        {/* ── Mobile drawer ─── */}
-        {mobileNavOpen ? (
-          <div
-            className="fixed inset-0 z-[60] md:hidden"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Site navigation"
-          >
-            <button
-              type="button"
-              onClick={() => setMobileNavOpen(false)}
-              aria-label="Close menu"
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
-            />
-            <div
-              className="absolute right-0 top-0 bottom-0 flex w-[86%] max-w-[340px] flex-col overflow-y-auto border-l border-slate-200/80 bg-white shadow-[-8px_0_48px_-12px_rgba(15,23,42,0.25)] dark:border-slate-800 dark:bg-slate-950"
-              style={{
-                paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)",
-                minHeight: "100dvh",
-              }}
-            >
-              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                  Menu
-                </span>
-                <button
-                  ref={drawerCloseRef}
-                  type="button"
-                  onClick={() => setMobileNavOpen(false)}
-                  aria-label="Close menu"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200/90 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                >
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-              <nav className="flex flex-col px-3 py-3" aria-label="Mobile sections">
-                {NAV_SECTIONS.map((item) => (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileNavOpen(false)}
-                    className="rounded-xl px-3 py-3 text-base font-medium text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-                  >
-                    {item.label}
-                  </a>
-                ))}
-              </nav>
-              <div className="mt-auto flex flex-col gap-3 border-t border-slate-100 px-5 py-4 dark:border-slate-800">
-                <Button
-                  href={PRIMARY_CTA_HREF}
-                  className="w-full justify-center"
-                  onClick={() => setMobileNavOpen(false)}
-                >
-                  Activate AI Engine
-                </Button>
-                <div
-                  className="flex items-center justify-center gap-2"
-                  onClick={() => setMobileNavOpen(false)}
-                >
-                  <HeaderAuthActions />
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        </nav>
 
         {/* ── HERO ─── */}
         <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-white dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
@@ -868,10 +723,10 @@ export default function LeadSmartLandingV2() {
           </div>
         </section>
 
-        {/* Footer is provided by AppShell — see components/AppShell.tsx
-            (`<Footer />` rendered for every public page including the
-            marketing-home branch). */}
-      </main>
+        {/* Footer is provided by AppShell. Topbar + sidebar are too —
+            this component renders inside the shared marketing chrome
+            from `components/AppShell.tsx`. */}
+      </div>
 
       <ExitIntentPopup role="agent" />
     </>
