@@ -552,11 +552,21 @@ function Detail({
   );
 }
 
+/**
+ * Build a `mailto:` link with subject + body query parameters. We don't
+ * use URLSearchParams here because it encodes spaces as `+` (per the
+ * application/x-www-form-urlencoded form encoding it implements), and
+ * Outlook + some other mail clients render that literal `+` instead of
+ * decoding it back to a space. RFC 6068 specifies that mailto query
+ * components must percent-encode spaces as `%20`, which is what
+ * `encodeURIComponent` produces.
+ */
 function mailtoLink({ to, subject, body }: { to: string; subject: string; body: string }): string {
-  const params = new URLSearchParams();
-  if (subject) params.set("subject", subject);
-  if (body) params.set("body", body);
-  return `mailto:${encodeURIComponent(to)}?${params.toString()}`;
+  const parts: string[] = [];
+  if (subject) parts.push(`subject=${encodeURIComponent(subject)}`);
+  if (body) parts.push(`body=${encodeURIComponent(body)}`);
+  const query = parts.length ? `?${parts.join("&")}` : "";
+  return `mailto:${encodeURIComponent(to)}${query}`;
 }
 
 function buildThankYouDraft(opts: { propertyAddress: string; agentName: string | null }): string {
