@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader } from "@googlemaps/js-api-loader";
+import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { useEffect, useMemo, useRef } from "react";
 
 export type AddressAutocompleteValue = {
@@ -46,22 +46,29 @@ type Props = {
   disabled?: boolean;
 };
 
-let loaderPromise: Promise<void> | null = null;
+let loadPlacesPromise: Promise<google.maps.PlacesLibrary> | null = null;
+let loadPlacesKey: string | null = null;
 
-function loadGooglePlaces(apiKey: string): Promise<void> {
-  if (typeof window === "undefined") return Promise.resolve();
-  if (loaderPromise) return loaderPromise;
-
-  const loader = new Loader({
-    apiKey,
-    version: "weekly",
-    libraries: ["places"],
-  });
-
-  // `@googlemaps/js-api-loader` types may not always expose `.load()` correctly.
-  // Cast to `any` to keep TS happy while still calling the real method.
-  loaderPromise = (loader as any).load().then(() => undefined) as Promise<void>;
-  return loaderPromise;
+/**
+ * @googlemaps/js-api-loader v2+ removed the `new Loader().load()` API
+ * (which earlier versions of this file used via an `as any` cast that
+ * silently failed at runtime). The v2 contract is `setOptions` +
+ * `importLibrary("places")`.
+ *
+ * Cached per-key so a single page mounting multiple autocompletes
+ * (e.g. the showings form's address picker plus a contact's
+ * address-autocomplete inside ContactsClient) shares one network
+ * round-trip.
+ */
+function loadPlacesLibrary(apiKey: string): Promise<google.maps.PlacesLibrary> {
+  if (typeof window === "undefined") {
+    return Promise.resolve({} as google.maps.PlacesLibrary);
+  }
+  if (loadPlacesPromise && loadPlacesKey === apiKey) return loadPlacesPromise;
+  loadPlacesKey = apiKey;
+  setOptions({ key: apiKey, v: "weekly", libraries: ["places"] });
+  loadPlacesPromise = importLibrary("places") as Promise<google.maps.PlacesLibrary>;
+  return loadPlacesPromise;
 }
 
 export default function AddressAutocomplete({
@@ -86,13 +93,21 @@ export default function AddressAutocomplete({
     let cancelled = false;
 
     (async () => {
-      await loadGooglePlaces(apiKey);
+      const places = await loadPlacesLibrary(apiKey);
       if (cancelled) return;
       if (!inputRef.current) return;
 
       if (autocompleteRef.current) return;
 
-      autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
+      // v2 returns the imported library; the legacy Autocomplete class
+      // is still on `google.maps.places` (not yet migrated to the
+      // newer PlaceAutocompleteElement). Read off whichever surface
+      // the loaded library exposes — both reach the same constructor.
+      const AutocompleteCtor =
+        (places as { Autocomplete?: typeof google.maps.places.Autocomplete }).Autocomplete ??
+        google.maps.places.Autocomplete;
+
+      autocompleteRef.current = new AutocompleteCtor(inputRef.current, {
         // Request address_components so we can split the chosen Place
         // into city / state / zip without a second geocode round trip.
         fields: ["formatted_address", "geometry", "address_components"],
