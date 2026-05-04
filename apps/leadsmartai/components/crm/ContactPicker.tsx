@@ -182,7 +182,6 @@ export default function ContactPicker({
         <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
           <div className="min-w-0">
             <div className="truncate font-medium text-slate-900">{selected.name}</div>
-            <div className="truncate text-[11px] text-slate-500">ID: {selected.id}</div>
           </div>
           <button
             type="button"
