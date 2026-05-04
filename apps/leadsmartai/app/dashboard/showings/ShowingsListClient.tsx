@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { Check, FileText, MessageCircle, X } from "lucide-react";
 import type { ShowingListItem, ShowingStatus } from "@/lib/showings/types";
 
 type Filter = "all" | "upcoming" | "attended" | "cancelled";
@@ -18,13 +20,6 @@ const STATUS_BADGE: Record<ShowingStatus, string> = {
   attended: "bg-green-100 text-green-800",
   cancelled: "bg-gray-100 text-gray-600",
   no_show: "bg-amber-100 text-amber-800",
-};
-
-const REACTION_EMOJI: Record<string, string> = {
-  love: "❤️",
-  like: "👍",
-  maybe: "🤔",
-  pass: "👎",
 };
 
 function formatDate(iso: string): string {
@@ -49,8 +44,34 @@ export function ShowingsListClient({
   initialShowings: ShowingListItem[];
   initialContactFilter: string | null;
 }) {
+  const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
+  /**
+   * Tracks per-row pending action so an in-flight PATCH disables the
+   * row's buttons. Keyed by `${showingId}:${action}` so two rows can
+   * be acted on independently without a queue.
+   */
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+
+  /** Optimistic-PATCH the showing's status, then refresh the server
+   *  component to pick up the canonical row. Falls back gracefully on
+   *  network / 4xx errors — the agent can retry. */
+  async function patchStatus(id: string, status: ShowingStatus) {
+    const key = `${id}:${status}`;
+    setPendingAction(key);
+    try {
+      const res = await fetch(`/api/dashboard/showings/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean };
+      if (res.ok && body.ok) router.refresh();
+    } finally {
+      setPendingAction((cur) => (cur === key ? null : cur));
+    }
+  }
 
   const contactFilterName = useMemo(() => {
     if (!initialContactFilter) return null;
@@ -158,7 +179,7 @@ export function ShowingsListClient({
                 <th className="px-3 py-2 text-left font-medium">Buyer</th>
                 <th className="px-3 py-2 text-left font-medium">Listing agent</th>
                 <th className="px-3 py-2 text-left font-medium">Status</th>
-                <th className="px-3 py-2 text-left font-medium">Feedback</th>
+                <th className="px-3 py-2 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -202,21 +223,12 @@ export function ShowingsListClient({
                     </span>
                   </td>
                   <td className="px-3 py-2">
-                    {s.feedback_reaction ? (
-                      <div className="flex items-center gap-1 text-xs">
-                        <span>{REACTION_EMOJI[s.feedback_reaction]}</span>
-                        {s.feedback_rating ? (
-                          <span className="tabular-nums text-slate-600">{s.feedback_rating}/5</span>
-                        ) : null}
-                        {s.feedback_would_offer ? (
-                          <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
-                            offer
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
+                    <RowActions
+                      showing={s}
+                      pendingAction={pendingAction}
+                      onMarkAttended={(id) => void patchStatus(id, "attended")}
+                      onCancel={(id) => void patchStatus(id, "cancelled")}
+                    />
                   </td>
                 </tr>
               ))}
@@ -241,6 +253,121 @@ export function ShowingsListClient({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Per-row action cluster on the showings list. Status-aware:
+ *   • scheduled → ✓ Mark attended, ✗ Cancel, 📝 Submit offer
+ *   • attended  → 📝 Submit offer, 💬 Capture feedback
+ *   • cancelled / no_show → no inline actions; click row to detail to reschedule
+ *
+ * Icon buttons match the Tasks page convention (h-7 w-7, lucide icons,
+ * tooltip via title) so the visual vocabulary stays consistent across
+ * the app.
+ */
+function RowActions({
+  showing,
+  pendingAction,
+  onMarkAttended,
+  onCancel,
+}: {
+  showing: ShowingListItem;
+  pendingAction: string | null;
+  onMarkAttended: (id: string) => void;
+  onCancel: (id: string) => void;
+}) {
+  const offerHref = `/dashboard/offers/new?contactId=${encodeURIComponent(showing.contact_id)}&showingId=${encodeURIComponent(showing.id)}`;
+  const feedbackHref = `/dashboard/showings/${showing.id}#feedback`;
+  const status = showing.status;
+
+  const markingDone = pendingAction === `${showing.id}:attended`;
+  const cancelling = pendingAction === `${showing.id}:cancelled`;
+
+  return (
+    <div className="flex items-center justify-end gap-0.5">
+      {status === "scheduled" ? (
+        <>
+          <RowIconButton
+            onClick={() => onMarkAttended(showing.id)}
+            disabled={markingDone}
+            title="Mark attended"
+            tone="success"
+          >
+            <Check className="h-4 w-4" strokeWidth={2.5} />
+          </RowIconButton>
+          <RowIconButton
+            onClick={() => onCancel(showing.id)}
+            disabled={cancelling}
+            title="Cancel showing"
+            tone="danger"
+          >
+            <X className="h-4 w-4" strokeWidth={2.5} />
+          </RowIconButton>
+          <RowIconButton href={offerHref} title="Submit offer">
+            <FileText className="h-4 w-4" strokeWidth={2} />
+          </RowIconButton>
+        </>
+      ) : null}
+
+      {status === "attended" ? (
+        <>
+          <RowIconButton href={offerHref} title="Submit offer" tone="success">
+            <FileText className="h-4 w-4" strokeWidth={2} />
+          </RowIconButton>
+          <RowIconButton href={feedbackHref} title="Capture feedback">
+            <MessageCircle className="h-4 w-4" strokeWidth={2} />
+          </RowIconButton>
+        </>
+      ) : null}
+
+      {status === "cancelled" || status === "no_show" ? (
+        <span className="text-[11px] text-slate-400">—</span>
+      ) : null}
+    </div>
+  );
+}
+
+function RowIconButton({
+  children,
+  onClick,
+  href,
+  title,
+  disabled,
+  tone,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  href?: string;
+  title: string;
+  disabled?: boolean;
+  tone?: "success" | "danger";
+}) {
+  const toneClasses =
+    tone === "success"
+      ? "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+      : tone === "danger"
+        ? "text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900";
+  const className = `inline-flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-40 ${toneClasses}`;
+  if (href) {
+    return (
+      <Link href={href} title={title} aria-label={title} className={className}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={title}
+      className={className}
+    >
+      {children}
+    </button>
   );
 }
 
