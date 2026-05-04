@@ -86,6 +86,15 @@ function NewShowingForm() {
   const [lookupLoading, setLookupLoading] = useState(false);
 
   /**
+   * True once a Google Places pick (or a prior-address chip) has fired,
+   * meaning city/state/zip were captured from a real address rather
+   * than left at the form's default ("CA"). The chips beneath the
+   * address input only render when this is true so the agent doesn't
+   * see a misleading "CA" chip when autocomplete never fired.
+   */
+  const [addressVerified, setAddressVerified] = useState(false);
+
+  /**
    * Distinct addresses the buyer has been shown before. Populated when
    * the buyer is selected; rendered as quick-pick chips above the
    * address input so the agent doesn't have to retype an address the
@@ -143,7 +152,9 @@ function NewShowingForm() {
   }, [contact?.id]);
 
   /** Quick-pick a prior address. Skips Google but still validates the
-   *  listing status against the property service. */
+   *  listing status against the property service. `onAddressPick`
+   *  flips `addressVerified=true` for us — same path as a real Google
+   *  pick. */
   function pickPriorAddress(addr: PriorAddress) {
     void onAddressPick({
       formattedAddress: addr.property_address,
@@ -170,6 +181,7 @@ function NewShowingForm() {
     if (val.components.city) setCity(val.components.city);
     if (val.components.state) setStateValue(val.components.state);
     if (val.components.zip) setZip(val.components.zip);
+    setAddressVerified(true);
 
     setStatusBanner(null);
     setLookupLoading(true);
@@ -360,20 +372,21 @@ function NewShowingForm() {
             value={propertyAddress}
             onChange={(v) => {
               setPropertyAddress(v);
-              // Edits after a pick invalidate the verified status —
-              // clear the banner so the agent re-confirms on the next pick.
+              // Edits after a pick invalidate the verified status — clear
+              // the banner + chip rendering so the agent re-confirms on
+              // the next pick.
               if (statusBanner) setStatusBanner(null);
+              if (addressVerified) setAddressVerified(false);
             }}
             onSelect={onAddressPick}
             placeholder="Start typing — Google will autocomplete the full address"
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
           />
           {/* Parsed city/state/zip render as small chips beneath the
-              input so the agent can see what got auto-filled (and that
-              the values are populated). All three feed the submit body
-              transparently — no manual entry needed unless Google
-              missed a component. */}
-          {(city || state || zip) ? (
+              input — only when autocomplete actually fired so we don't
+              show a misleading "CA" chip from the form's default state.
+              All three feed the submit body transparently. */}
+          {addressVerified && (city || state || zip) ? (
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
               {city ? (
                 <span className="rounded-full bg-slate-100 px-2 py-0.5">{city}</span>
@@ -384,6 +397,41 @@ function NewShowingForm() {
               {zip ? (
                 <span className="rounded-full bg-slate-100 px-2 py-0.5">{zip}</span>
               ) : null}
+            </div>
+          ) : null}
+          {/* Fallback: agent typed an address but never picked a
+              suggestion (Google API key missing, slow load, or they
+              ignored the dropdown). Reveal manual city/state/zip
+              inputs so the showing can still be saved with location
+              data. */}
+          {!addressVerified && propertyAddress.trim().length > 4 ? (
+            <div className="mt-2 space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <p className="text-[11px] text-slate-600">
+                Pick from the suggestions to auto-fill, or enter address
+                parts below:
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                <input
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="City"
+                  className="col-span-2 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs"
+                />
+                <input
+                  value={state}
+                  onChange={(e) => setStateValue(e.target.value.toUpperCase())}
+                  placeholder="State"
+                  maxLength={2}
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs"
+                />
+                <input
+                  value={zip}
+                  onChange={(e) => setZip(e.target.value)}
+                  placeholder="ZIP"
+                  maxLength={10}
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs"
+                />
+              </div>
             </div>
           ) : null}
           {lookupLoading ? (
