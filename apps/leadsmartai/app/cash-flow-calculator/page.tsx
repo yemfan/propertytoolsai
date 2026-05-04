@@ -140,7 +140,7 @@ export default function CashFlowCalculator() {
             lose each month and year after you subtract realistic expenses from rental income.
             It helps you see whether a deal produces positive or negative cash flow before you move
             forward. You can pair these results with returns from our{" "}
-            <Link href="/investment-analyzer" className="text-blue-600 underline">
+            <Link href="/property-investment-analyzer" className="text-blue-600 underline">
               Property Investment Analyzer
             </Link>{" "}
             to evaluate overall performance.
@@ -174,7 +174,7 @@ export default function CashFlowCalculator() {
             each year, which can significantly lower annual cash flow.
             In this tool you can model vacancy in months per year so you can stress-test deals in
             softer markets. For longer-term projections, you can also model returns in our{" "}
-            <Link href="/investment-analyzer" className="text-blue-600 underline">
+            <Link href="/property-investment-analyzer" className="text-blue-600 underline">
               Property Investment Analyzer
             </Link>
             .
@@ -214,7 +214,7 @@ export default function CashFlowCalculator() {
               Mortgage Calculator
             </Link>{" "}
             or{" "}
-            <Link href="/loan-amortization-calculator" className="text-blue-600 underline">
+            <Link href="/mortgage-calculator" className="text-blue-600 underline">
               Loan Amortization Calculator
             </Link>{" "}
             and plug those numbers back into this cash flow tool.
@@ -230,7 +230,7 @@ export default function CashFlowCalculator() {
             <Link href="/roi-calculator" className="text-blue-600 underline">
               ROI Calculator
             </Link>
-            <Link href="/investment-analyzer" className="text-blue-600 underline">
+            <Link href="/property-investment-analyzer" className="text-blue-600 underline">
               Investment Analyzer
             </Link>
             <Link href="/mortgage-calculator" className="text-blue-600 underline">

@@ -269,7 +269,7 @@ export default function RefinanceCalculator() {
             The best choice depends on your goals, timeline, and available cash. You can
             review extra payment impact with a{" "}
             <Link
-              href="/loan-amortization-calculator"
+              href="/mortgage-calculator"
               className="text-blue-600 underline"
             >
               Loan Amortization Calculator
@@ -295,7 +295,7 @@ export default function RefinanceCalculator() {
               Mortgage Calculator
             </Link>
             <Link
-              href="/loan-amortization-calculator"
+              href="/mortgage-calculator"
               className="text-blue-600 underline"
             >
               Loan Amortization Calculator

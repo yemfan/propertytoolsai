@@ -12,11 +12,16 @@ import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
  * `/features` is the canonical destination for "what does LeadSmart
  * actually do?" — see app/features/page.tsx.
  */
+/**
+ * "Mobile App" entry was removed: it pointed to `/start-free`, which
+ * exists only as a role-gated redirect parent (`/start-free/agent`,
+ * `/start-free/loan-broker`) — the bare `/start-free` route 404s for
+ * everyone. Restore once a public Mobile App marketing page exists.
+ */
 const productLinks = [
   { label: "Features", href: "/features" },
   { label: "AI Deal Assistant", href: "/deal-assistant" },
   { label: "AI CMA Analyzer", href: "/ai-cma-analyzer" },
-  { label: "Mobile App", href: "/start-free" },
 ];
 
 const companyLinks = [

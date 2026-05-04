@@ -448,6 +448,25 @@ export function AgentSignupForm({
         >
           {loading ? "Saving…" : signedInAgentFlow ? "Save agent profile" : "Create Agent Account"}
         </button>
+
+        {/*
+         * Consent disclosure — TVR-011 / BF-031. Same pattern as
+         * /signup; suppressed for the signed-in profile-completion
+         * flow since they accepted at original signup.
+         */}
+        {signedInAgentFlow ? null : (
+          <p className="text-[11px] leading-relaxed text-slate-500 text-center">
+            By creating an agent account, you agree to our{" "}
+            <Link href="/terms" className="font-medium text-slate-700 underline hover:text-slate-900">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="font-medium text-slate-700 underline hover:text-slate-900">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+        )}
       </form>
 
       <p className="text-[11px] text-gray-500 text-center">
