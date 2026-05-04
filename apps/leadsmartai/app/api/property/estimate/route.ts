@@ -104,13 +104,29 @@ export async function POST(req: Request) {
           pricedComps.length
         : null;
 
-    const subjectSqft = Number(property.sqft ?? 0) || pricedComps[0]?.sqft || 1500;
+    /**
+     * Subject sqft must come from real data — either the property
+     * record or a comparable. The previous `|| 1500` fallback masked
+     * missing-sqft cases by quietly running the AVM as if every
+     * unknown property were a 1,500 sqft house, which produced
+     * plausible-looking but meaningless estimates.
+     */
+    const propertySqft = Number(property.sqft);
+    const compSqft = Number(pricedComps[0]?.sqft);
+    const subjectSqft: number | null =
+      Number.isFinite(propertySqft) && propertySqft > 0
+        ? propertySqft
+        : Number.isFinite(compSqft) && compSqft > 0
+          ? compSqft
+          : null;
 
     let estimatedValue: number | null = null;
     let low: number | null = null;
     let high: number | null = null;
     let summary: string =
-      "We couldn’t find enough comparable sold history for this address yet. Import an MLS CSV sold history first.";
+      subjectSqft == null
+        ? "We don’t have square footage on file for this address yet. Refresh the property record or add MLS data first."
+        : "We couldn’t find enough comparable sold history for this address yet. Import an MLS CSV sold history first.";
     let confidence: string | undefined;
     let confidenceScore: number | undefined;
     let recommendations: string[] | undefined;
@@ -120,7 +136,7 @@ export async function POST(req: Request) {
     const cityOk = Boolean(property.city?.trim());
     const stateOk = Boolean(property.state?.trim());
     const canRunEngine =
-      pricedComps.length > 0 && cityOk && stateOk && subjectSqft > 0;
+      pricedComps.length > 0 && cityOk && stateOk && subjectSqft != null && subjectSqft > 0;
 
     if (canRunEngine) {
       try {
@@ -143,7 +159,8 @@ export async function POST(req: Request) {
         supportingData = result.supportingData;
       } catch (e) {
         console.warn("home value estimate engine fallback", e);
-        if (avgPricePerSqft != null) {
+        // canRunEngine guaranteed subjectSqft != null + > 0.
+        if (avgPricePerSqft != null && subjectSqft != null) {
           estimatedValue = avgPricePerSqft * subjectSqft;
           low = estimatedValue * 0.92;
           high = estimatedValue * 1.08;
@@ -154,7 +171,7 @@ export async function POST(req: Request) {
           ).toLocaleString()} with an expected range of $${Math.round(low).toLocaleString()} to $${Math.round(high).toLocaleString()}.`;
         }
       }
-    } else if (pricedComps.length > 0 && avgPricePerSqft != null) {
+    } else if (pricedComps.length > 0 && avgPricePerSqft != null && subjectSqft != null) {
       estimatedValue = avgPricePerSqft * subjectSqft;
       low = estimatedValue * 0.92;
       high = estimatedValue * 1.08;
