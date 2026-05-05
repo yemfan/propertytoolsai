@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import ContactPicker, { type ContactPickerValue } from "@/components/crm/ContactPicker";
 import type { FinancingType } from "@/lib/offers/types";
 
@@ -31,6 +31,7 @@ type ParsedOffer = {
 };
 
 const MAX_INPUT_CHARS = 60_000;
+const MAX_PDF_BYTES = 5 * 1024 * 1024;
 
 function formatMoneyOrDash(n: number | null): string {
   if (n == null) return "—";
@@ -95,8 +96,53 @@ export function UploadOfferClient() {
   const [parsed, setParsed] = useState<ParsedOffer | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Name of the PDF the agent picked, for display only. */
+  const [pdfName, setPdfName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Step 1 → AI parse only (no save). Agent reviews + saves below.
+  /**
+   * Step 1 (PDF path) → uploads the file to /parse-pdf which runs
+   * Claude on the document directly. Returns the same ParsedOffer
+   * shape as the text-paste flow so the review UI is identical.
+   */
+  async function runParsePdf(file: File) {
+    setError(null);
+    setParsed(null);
+    if (!file.name.toLowerCase().endsWith(".pdf") && !file.type.includes("pdf")) {
+      setError("Pick a .pdf file. For other formats, paste the text into the box below instead.");
+      return;
+    }
+    if (file.size > MAX_PDF_BYTES) {
+      setError(`That PDF is ${Math.round(file.size / 1024 / 1024)} MB — max 5 MB. Trim to the offer + contingency pages.`);
+      return;
+    }
+    setPdfName(file.name);
+    setParsing(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/dashboard/offers/parse-pdf", {
+        method: "POST",
+        body: form,
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        parsed?: ParsedOffer;
+        error?: string;
+      };
+      if (!res.ok || !body.ok || !body.parsed) {
+        setError(body.error ?? "PDF parse failed.");
+        return;
+      }
+      setParsed(body.parsed);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Network error.");
+    } finally {
+      setParsing(false);
+    }
+  }
+
+  // Step 1 (text path) → AI parse only (no save). Agent reviews + saves below.
   async function runParse() {
     setError(null);
     setParsed(null);
@@ -204,8 +250,9 @@ export function UploadOfferClient() {
         </div>
         <h1 className="mt-1 text-2xl font-semibold text-slate-900">Upload offer</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Paste the offer document — price, contingencies, dates, and key
-          terms get extracted with AI. You review the result before saving.
+          Drop in the offer PDF (or paste the text) — price, contingencies,
+          dates, and key terms get extracted with AI. You review the result
+          before saving.
         </p>
       </div>
 
@@ -221,9 +268,58 @@ export function UploadOfferClient() {
           />
         </div>
 
+        {/* PDF upload — primary path. Drops the agent into the same
+            review screen as the text-paste flow once Claude returns
+            its extraction. Hidden text input + button so the styling
+            matches the rest of the form (raw <input type="file"> is
+            ugly across browsers). */}
         <div>
           <label className="block text-xs font-medium text-slate-700">
-            Offer document text *
+            Upload offer PDF
+          </label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf,.pdf"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void runParsePdf(file);
+              // Reset the input so picking the same file twice still re-fires onChange.
+              e.target.value = "";
+            }}
+          />
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={parsing}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              📄 Choose PDF
+            </button>
+            <span className="text-[11px] text-slate-500">
+              {pdfName ? (
+                <>
+                  Selected: <strong className="font-medium text-slate-700">{pdfName}</strong>
+                </>
+              ) : (
+                <>Max 5 MB. Claude reads the PDF directly — no need to paste text below.</>
+              )}
+            </span>
+          </div>
+        </div>
+
+        <div className="relative">
+          <div className="absolute inset-x-0 top-1/2 h-px bg-slate-200" aria-hidden />
+          <span className="relative inline-block bg-white px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            Or
+          </span>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Paste offer document text
           </label>
           <textarea
             value={text}
@@ -231,7 +327,7 @@ export function UploadOfferClient() {
             rows={10}
             placeholder={`Paste the full offer text here.
 
-Tip: open your PDF, Cmd+A to select all, Cmd+C to copy, then paste into this box. We work with raw text — bullet points and page breaks are fine.`}
+Tip: if you don't have a PDF, open the document, Cmd+A to select all, Cmd+C to copy, then paste into this box. Bullet points and page breaks are fine.`}
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs leading-relaxed"
           />
           <p className="mt-1 text-[11px] text-slate-500">
