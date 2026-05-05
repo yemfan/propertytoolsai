@@ -57,11 +57,32 @@ const nextConfig = {
       ["/settings/billing", "/pricing"],
       ["/settings/notifications", "/dashboard/notifications"],
     ];
-    return toDashboard.map(([source, destination]) => ({
-      source,
-      destination,
-      permanent: false,
-    }));
+    /**
+     * Canonical-slug redirects for marketing/calculator surfaces. TVR-011
+     * found stale references to non-canonical paths in calculator FAQs:
+     *   - /investment-analyzer  → /property-investment-analyzer (BF-036)
+     *   - /loan-amortization-calculator → /mortgage-calculator (BF-035;
+     *     mortgage calculator already includes the amortization schedule
+     *     view, so consolidating avoids shipping a near-duplicate page)
+     * Permanent (308) so external SEO inbound links carry through.
+     */
+    const canonicalSlug = [
+      ["/investment-analyzer", "/property-investment-analyzer"],
+      ["/loan-amortization-calculator", "/mortgage-calculator"],
+    ];
+
+    return [
+      ...toDashboard.map(([source, destination]) => ({
+        source,
+        destination,
+        permanent: false,
+      })),
+      ...canonicalSlug.map(([source, destination]) => ({
+        source,
+        destination,
+        permanent: true,
+      })),
+    ];
   },
 };
 

@@ -159,7 +159,7 @@ export default function MortgageCalculator() {
               Each payment includes both principal and interest, with interest paid first and
               principal paid down over time. For a detailed payoff schedule, try our{" "}
               <Link
-                href="/loan-amortization-calculator"
+                href="/mortgage-calculator"
                 className="text-blue-600 hover:underline"
               >
                 Loan Amortization Calculator
@@ -259,7 +259,7 @@ export default function MortgageCalculator() {
               </Link>{" "}
               and review the payoff pattern using the{" "}
               <Link
-                href="/loan-amortization-calculator"
+                href="/mortgage-calculator"
                 className="text-blue-600 hover:underline"
               >
                 Loan Amortization Calculator

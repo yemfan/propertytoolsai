@@ -167,7 +167,7 @@ export default function CapRateCalculator() {
             Lower cap rates are typical in strong, supply-constrained markets where investors are
             willing to accept lower yields for more stability. You can compare cap rates across
             deals and then analyze overall returns with our{" "}
-            <Link href="/investment-analyzer" className="text-blue-600 underline">
+            <Link href="/property-investment-analyzer" className="text-blue-600 underline">
               Property Investment Analyzer
             </Link>
             .
@@ -187,7 +187,7 @@ export default function CapRateCalculator() {
               ROI Calculator
             </Link>{" "}
             and{" "}
-            <Link href="/investment-analyzer" className="text-blue-600 underline">
+            <Link href="/property-investment-analyzer" className="text-blue-600 underline">
               Property Investment Analyzer
             </Link>
             .
@@ -220,7 +220,7 @@ export default function CapRateCalculator() {
             <Link href="/roi-calculator" className="text-blue-600 underline">
               ROI Calculator
             </Link>
-            <Link href="/investment-analyzer" className="text-blue-600 underline">
+            <Link href="/property-investment-analyzer" className="text-blue-600 underline">
               Investment Analyzer
             </Link>
             <Link href="/mortgage-calculator" className="text-blue-600 underline">

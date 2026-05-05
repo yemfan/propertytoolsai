@@ -336,6 +336,28 @@ function SignupForm() {
           >
             {loading ? (hasSession ? "Saving…" : "Creating account...") : hasSession ? "Save profile" : "Sign Up"}
           </button>
+
+          {/*
+           * Consent disclosure — TVR-011 / BF-031. Required for
+           * CCPA + GDPR + general consumer protection: users can't
+           * legally consent to terms they haven't been shown.
+           * Suppressed when the page is in profile-completion mode
+           * (already-signed-in user finishing required fields) —
+           * they accepted at original signup.
+           */}
+          {hasSession ? null : (
+            <p className="text-[11px] leading-relaxed text-slate-500 text-center">
+              By creating an account, you agree to our{" "}
+              <Link href="/terms" className="font-medium text-slate-700 underline hover:text-slate-900">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="font-medium text-slate-700 underline hover:text-slate-900">
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          )}
         </form>
 
         <p className="text-[11px] text-gray-500 text-center space-y-2">

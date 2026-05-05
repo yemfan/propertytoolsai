@@ -96,11 +96,59 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   if (isAuthShell) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="fixed top-4 right-4 z-50">
+      <div className="flex min-h-screen flex-col bg-slate-50">
+        {/*
+         * Minimal chrome for auth pages. Previously these pages
+         * rendered bare — no logo, no nav, no legal links, no way
+         * back to marketing. TVR-011 / BF-039 flagged the bare
+         * shell as a UX + compliance gap (CCPA / GDPR want legal
+         * docs reachable at point of consent). We render only:
+         *   - Logo at top, linking to home (escape hatch)
+         *   - Footer with Terms / Privacy / Contact (legal escape)
+         * No top nav — auth pages should stay focused on the form.
+         */}
+        <header className="border-b border-slate-200/80 bg-white">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+            <Link
+              href="/"
+              className="flex min-w-0 items-center rounded-md transition hover:opacity-90"
+              aria-label="LeadSmart AI home"
+            >
+              <LeadSmartLogo className="h-8 w-auto max-w-[180px] sm:h-9 sm:max-w-[260px]" />
+            </Link>
+            <Link
+              href="/"
+              className="text-xs font-medium text-slate-500 hover:text-slate-900"
+            >
+              ← Back to home
+            </Link>
+          </div>
+        </header>
+        <div className="fixed top-16 right-4 z-50 sm:top-4">
           <SupportChatLauncher buttonClassName="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200/90 bg-white text-slate-600 shadow-lg shadow-slate-900/10 ring-1 ring-slate-900/[0.04] transition hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40" />
         </div>
-        {children}
+        <main id="main-content" className="flex-1">
+          {children}
+        </main>
+        <footer className="border-t border-slate-200/80 bg-white py-4 text-center text-xs text-slate-500">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 sm:px-6">
+            <Link href="/terms" className="hover:text-slate-900">
+              Terms of Service
+            </Link>
+            <span aria-hidden>·</span>
+            <Link href="/privacy" className="hover:text-slate-900">
+              Privacy Policy
+            </Link>
+            <span aria-hidden>·</span>
+            <Link href="/contact" className="hover:text-slate-900">
+              Contact
+            </Link>
+            <span aria-hidden className="hidden sm:inline">·</span>
+            <span className="block w-full sm:inline sm:w-auto">
+              © {new Date().getFullYear()} LeadSmart AI
+            </span>
+          </div>
+        </footer>
       </div>
     );
   }

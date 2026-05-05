@@ -257,7 +257,7 @@ export default function AffordabilityCalculator() {
               Mortgage Calculator
             </Link>{" "}
             or{" "}
-            <Link href="/loan-amortization-calculator" className="text-blue-600 underline">
+            <Link href="/mortgage-calculator" className="text-blue-600 underline">
               Loan Amortization Calculator
             </Link>
             .

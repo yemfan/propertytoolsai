@@ -25,8 +25,15 @@ function isLoanBrokerPath(pathname: string) {
   return pathname === "/loan-broker" || pathname.startsWith("/loan-broker/");
 }
 
+/**
+ * `/support` itself is a public help page — FAQ + contact form (TVR-011 /
+ * BF-037 found that gating the bare `/support` route created a paradox
+ * where users who couldn't log in had no way to reach support). Keep
+ * the gate scoped to the admin/support back-office tree under
+ * `/support/dashboard/*` only.
+ */
 function isSupportPath(pathname: string) {
-  return pathname === "/support" || pathname.startsWith("/support/");
+  return pathname.startsWith("/support/dashboard");
 }
 
 function isAdminPath(pathname: string) {

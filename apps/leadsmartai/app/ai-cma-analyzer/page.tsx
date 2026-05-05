@@ -127,13 +127,13 @@ function AiCmaAnalyzerPageInner() {
 
   const handleAnalyzeProperty = () => {
     alert(
-      "CMA generated using sample comparable sales. API-driven comps and market data will be added in a future update."
+      "CMA generated using sample comparable sales. This is illustrative only — not a substitute for live MLS data."
     );
   };
 
   const handleExportPdf = () => {
     alert(
-      "PDF export coming soon. For now, use your browser's Print to PDF to save this CMA."
+      "Direct PDF export isn't available in demo mode. Use your browser's Print to PDF to save this CMA."
     );
   };
 
@@ -204,6 +204,42 @@ function AiCmaAnalyzerPageInner() {
         Back to Home
       </Link>
 
+      {/*
+       * Demo banner — TVR-011 / BF-034. The Comparable Sales table
+       * and AI Market Analysis on this page render hardcoded sample
+       * data (real backend not yet wired). Without a prominent
+       * disclosure, agents could mistake these numbers for live
+       * analysis and quote them to clients — AVM accuracy is
+       * regulated under California AB 2863.
+       *
+       * Remove this banner only when the page is connected to a
+       * real comp source (e.g., Rentcast / MLS) end-to-end.
+       */}
+      <div
+        role="status"
+        aria-label="Demo mode notice"
+        className="mb-6 flex items-start gap-3 rounded-lg border-l-4 border-amber-500 bg-amber-50 p-4 text-amber-900 shadow-sm"
+      >
+        <svg
+          className="mt-0.5 h-5 w-5 shrink-0 text-amber-600"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008zM3 16.5l9-13.5 9 13.5H3z" />
+        </svg>
+        <div className="text-sm">
+          <strong className="block font-semibold">Demo mode — sample data shown</strong>
+          <span className="mt-0.5 block text-amber-800">
+            The comparable sales and AI analysis below are illustrative
+            examples, not live MLS data. Don&apos;t share these figures with
+            clients as a real CMA. Live comp data integration is in progress.
+          </span>
+        </div>
+      </div>
+
       {/* Hero section */}
       <section className="mb-8">
         <h1 className="text-3xl font-bold text-blue-600 mb-3">
@@ -248,8 +284,8 @@ function AiCmaAnalyzerPageInner() {
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              In a future update, this field will pull live comparable sales
-              and market data via API integrations.
+              In demo mode the address only personalizes the report header —
+              comparable sales below are illustrative sample data.
             </p>
           </section>
 
@@ -328,9 +364,10 @@ function AiCmaAnalyzerPageInner() {
               CMA Report Generator
             </h2>
             <p className="text-sm text-gray-600">
-              Generate a CMA report you can share with clients or save for
-              your records. Future versions will support full branded PDFs
-              with your logo and contact information.
+              Generate a sample CMA report layout. Branded PDFs with your
+              logo and contact information will be available once live MLS
+              comp data is connected — until then this is for layout
+              preview only.
             </p>
             <button
               type="button"
@@ -350,8 +387,8 @@ function AiCmaAnalyzerPageInner() {
               <h2 className="text-lg font-semibold text-gray-900">
                 Comparable Sales
               </h2>
-              <span className="text-xs text-gray-500">
-                Sample data – API integration coming soon
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800">
+                Sample data
               </span>
             </div>
             <div className="overflow-x-auto">

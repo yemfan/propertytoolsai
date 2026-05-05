@@ -173,7 +173,7 @@ export default function DealAssistantPage() {
             <h1 className="text-3xl font-bold text-slate-900">AI Deal Closer</h1>
             <p className="mt-2 text-slate-600 max-w-2xl">
               Offer strategy, structured terms, risk flags, and negotiation scripts — powered by your inputs
-              and OpenAI when <code className="text-xs bg-slate-200 px-1 rounded">OPENAI_API_KEY</code> is set.
+              and OpenAI.
             </p>
           </div>
 

@@ -85,7 +85,9 @@ export default function ContactPage() {
               </span>
               <div>
                 <h3 className="font-semibold text-slate-900">Email us directly</h3>
-                <p className="text-sm text-slate-500">For partnerships or press</p>
+                <p className="text-sm text-slate-500">
+                  General inquiries, partnerships, and press
+                </p>
               </div>
             </div>
             <a
