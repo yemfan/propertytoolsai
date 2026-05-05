@@ -29,6 +29,33 @@ type AgentInfo = {
 type PropertyOption = { id: string; address: string | null; city?: string | null; state?: string | null };
 type SavedFlyer = { id: string; template_key: string; property_address: string; created_at: string };
 
+/**
+ * When the agent enters the flyer builder via the "Print flyer"
+ * button on an open-house detail page, the SSR resolves the open
+ * house and passes its data here. We use it to:
+ *   - Skip the property dropdown (the address is already known)
+ *   - Override the QR payload to encode `/oh/<slug>` so visitors
+ *     who scan land on the same public sign-in page they would
+ *     hit via the iPad kiosk QR
+ *   - Render an event banner with the date/time so the printed
+ *     flyer shows when the open house is
+ *
+ * Null when the agent navigated here directly from the picker.
+ */
+export type OpenHousePrefill = {
+  id: string;
+  slug: string;
+  propertyAddress: string;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  listPrice: number | null;
+  mlsNumber: string | null;
+  mlsUrl: string | null;
+  startAt: string;
+  endAt: string;
+};
+
 function labelFor(p: PropertyOption) {
   return p.address?.trim() || [p.city, p.state].filter(Boolean).join(", ") || p.id;
 }
@@ -36,13 +63,16 @@ function labelFor(p: PropertyOption) {
 export default function FlyerBuilderClient({
   agentId,
   properties: propertyOptions,
+  openHousePrefill,
 }: {
   agentId: string;
   properties: PropertyOption[];
+  openHousePrefill?: OpenHousePrefill | null;
 }) {
   const [selectedPropertyId, setSelectedPropertyId] = useState(propertyOptions[0]?.id ?? "");
   const selectedOption = propertyOptions.find((p) => p.id === selectedPropertyId) ?? propertyOptions[0];
-  const address = selectedOption ? labelFor(selectedOption) : "";
+  // Open-house prefill takes precedence over the dropdown selection.
+  const address = openHousePrefill?.propertyAddress ?? (selectedOption ? labelFor(selectedOption) : "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [templateKey, setTemplateKey] = useState("classic");
@@ -65,11 +95,27 @@ export default function FlyerBuilderClient({
   const qrRef = useRef<HTMLDivElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  const origin = useMemo(() => typeof window !== "undefined" ? window.location.origin : "", []);
+  // Origin is only known on the client. Defer to a state-driven flag
+  // so the QR doesn't render on the server with an empty value and
+  // then hydrate to a different one (the encoded SVG path data
+  // differs and React logs a hydration mismatch — see TVR-style
+  // browser logs).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  const origin = mounted && typeof window !== "undefined" ? window.location.origin : "";
   const signupUrl = useMemo(() => {
+    // When this flyer is for a specific open house, the QR encodes the
+    // public sign-in URL (`/oh/<slug>`) so visitors who scan it land on
+    // the same page they'd hit from the iPad kiosk. Otherwise fall
+    // back to the generic property-signup flow keyed by property_id.
+    if (openHousePrefill?.slug) {
+      return `${origin}/oh/${openHousePrefill.slug}`;
+    }
     if (!property?.propertyId) return "";
     return `${origin}/open-house-signup?property_id=${encodeURIComponent(property.propertyId)}&agent_id=${encodeURIComponent(agentId)}`;
-  }, [origin, property?.propertyId]);
+  }, [origin, openHousePrefill?.slug, property?.propertyId, agentId]);
 
   // Load agent info + saved flyers on mount
   useEffect(() => {
@@ -94,6 +140,21 @@ export default function FlyerBuilderClient({
         logoUrl: branding?.branding?.logoUrl || "",
       });
     });
+  }, []);
+
+  // When the page is opened via "Print flyer" from an open-house
+  // detail page, kick off the property fetch automatically so the
+  // agent doesn't have to re-pick the address. The empty-deps
+  // pattern is intentional — runs once on mount with the SSR-supplied
+  // prefill. eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (openHousePrefill?.propertyAddress) {
+      void fetchProperty();
+      if (openHousePrefill.listPrice != null) {
+        setListingPrice(`$${Math.round(openHousePrefill.listPrice).toLocaleString()}`);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchProperty() {
@@ -371,7 +432,7 @@ export default function FlyerBuilderClient({
           {selectedOption && (
             <div className="flex items-center gap-4">
               <div className="bg-white p-2 rounded-lg border border-gray-200 shrink-0">
-                <QRCode value={previewSignupUrl} size={100} />
+                {mounted ? <QRCode value={previewSignupUrl} size={100} /> : null}
               </div>
               <div className="text-xs text-gray-500">
                 <p className="font-medium text-gray-700">{labelFor(selectedOption)}</p>
@@ -598,7 +659,7 @@ export default function FlyerBuilderClient({
 
             <div className="text-center shrink-0">
               <div ref={qrRef} className="bg-white p-1 rounded-lg border border-gray-200">
-                {signupUrl && <QRCode value={signupUrl} size={100} />}
+                {mounted && signupUrl ? <QRCode value={signupUrl} size={100} /> : null}
               </div>
               <p className="text-[10px] text-gray-500 mt-1">Scan to register</p>
             </div>
