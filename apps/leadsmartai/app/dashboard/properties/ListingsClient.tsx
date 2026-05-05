@@ -107,12 +107,21 @@ export default function ListingsClient({
             property — click an address to open the deal.
           </p>
         </div>
-        <Link
-          href="/dashboard/transactions/new?type=listing_rep"
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-        >
-          + New listing
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/transactions/new?type=listing_rep&focus=upload"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            title="Drop a signed listing agreement (RLA) PDF — we'll auto-fill the address, list price, and listing dates."
+          >
+            ⬆ Upload listing agreement
+          </Link>
+          <Link
+            href="/dashboard/transactions/new?type=listing_rep"
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            + New listing
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
