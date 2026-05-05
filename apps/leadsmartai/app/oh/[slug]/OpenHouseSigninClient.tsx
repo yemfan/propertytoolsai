@@ -132,16 +132,78 @@ export function OpenHouseSigninClient({ info }: { info: PublicOpenHouseInfo }) {
               }).format(info.listPrice)}
             </div>
           ) : null}
-          {info.mlsUrl ? (
-            <a
-              href={info.mlsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 inline-block text-sm text-blue-600 hover:underline"
-            >
-              View listing →
-            </a>
+
+          {/* Quick property facts — beds / baths / sqft / year. Skipped
+              when the warehouse has no row for this address. Each chip
+              renders only when its value is present so a partial row
+              still looks intentional. */}
+          {(info.beds != null || info.baths != null || info.sqft != null ||
+            info.yearBuilt != null || info.propertyType) ? (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[12px] text-slate-700">
+              {info.beds != null ? (
+                <span className="rounded-md bg-slate-100 px-2 py-0.5">
+                  <strong className="font-semibold">{info.beds}</strong> bd
+                </span>
+              ) : null}
+              {info.baths != null ? (
+                <span className="rounded-md bg-slate-100 px-2 py-0.5">
+                  <strong className="font-semibold">{info.baths}</strong> ba
+                </span>
+              ) : null}
+              {info.sqft != null ? (
+                <span className="rounded-md bg-slate-100 px-2 py-0.5">
+                  <strong className="font-semibold">{info.sqft.toLocaleString()}</strong> sqft
+                </span>
+              ) : null}
+              {info.yearBuilt != null ? (
+                <span className="rounded-md bg-slate-100 px-2 py-0.5">
+                  Built <strong className="font-semibold">{info.yearBuilt}</strong>
+                </span>
+              ) : null}
+              {info.propertyType ? (
+                <span className="rounded-md bg-slate-100 px-2 py-0.5">
+                  {info.propertyType}
+                </span>
+              ) : null}
+            </div>
           ) : null}
+
+          {/* Two action buttons for visitors who want to learn more
+              before signing in. "See property details" opens whatever
+              listing URL the agent saved (typically Zillow / MLS
+              public link). "Search similar nearby" routes them to
+              /homes/search filtered by the open house's city/state/zip
+              so they leave with a list of comparables — useful for
+              visitors at the wrong price point or wrong location. */}
+          {(info.mlsUrl || info.city || info.zip) ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {info.mlsUrl ? (
+                <a
+                  href={info.mlsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-800 hover:bg-slate-50"
+                >
+                  See property details →
+                </a>
+              ) : null}
+              {(info.city || info.zip) ? (
+                <a
+                  href={(() => {
+                    const params = new URLSearchParams();
+                    if (info.city) params.set("city", info.city);
+                    if (info.state) params.set("state", info.state);
+                    if (info.zip) params.set("zip", info.zip);
+                    return `/homes/search?${params.toString()}`;
+                  })()}
+                  className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-800 hover:bg-slate-50"
+                >
+                  Search similar nearby →
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+
           {info.hostAgentFirstName ? (
             <p className="mt-3 text-sm text-slate-500">
               Hosted by {info.hostAgentFirstName}

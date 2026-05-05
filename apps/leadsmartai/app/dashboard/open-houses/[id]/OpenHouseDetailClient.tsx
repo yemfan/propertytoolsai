@@ -80,15 +80,6 @@ export function OpenHouseDetailClient({
     return `/oh/${oh.signin_slug}`;
   }, [oh.signin_slug]);
 
-  // External QR code generator — zero dependency cost, works on any
-  // modern printer at 250x250. If we want to avoid the external hop
-  // later, swap for the `qrcode` npm package.
-  const qrImageUrl = useMemo(
-    () =>
-      `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&data=${encodeURIComponent(publicUrl)}`,
-    [publicUrl],
-  );
-
   async function saveStatus(next: OpenHouseStatus) {
     setSavingStatus(true);
     setMsg(null);
@@ -203,23 +194,27 @@ export function OpenHouseDetailClient({
       ) : null}
 
       <div className="grid gap-5 md:grid-cols-3">
-        {/* LEFT: QR + sign-in URL (the hero for event-day setup) */}
+        {/* LEFT: visitor sign-in operations (the hero for event-day setup).
+            Layout deliberately leads with the printed-flyer affordance
+            since that's where the QR code lives at the door. The Open
+            iPad kiosk button + Copy link cover the digital paths. */}
         <div className="space-y-4 md:col-span-1">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-center">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-sm font-semibold text-slate-900">Visitor sign-in</h2>
             <p className="mt-1 text-xs text-slate-500">
-              Print this or open on an iPad at the door.
+              Print the flyer for the door, or share the link / iPad kiosk for digital sign-in.
             </p>
-            {/* Using plain img — Next/Image optimizes server-side and the
-                external qrserver URL would need a remote-pattern config. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={qrImageUrl}
-              alt="Sign-in QR code"
-              width={280}
-              height={280}
-              className="mx-auto mt-3 rounded-lg border border-slate-200"
-            />
+
+            <Link
+              href={`/dashboard/open-houses/flyer?openHouseId=${oh.id}`}
+              className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+            >
+              🖨️ Print open-house flyer
+            </Link>
+            <p className="mt-1 text-[11px] text-slate-500">
+              Includes the QR code, property details, date / time, and your contact info.
+            </p>
+
             <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-2 text-center font-mono text-[11px] text-slate-700 break-all">
               {publicUrl}
             </div>
@@ -227,7 +222,7 @@ export function OpenHouseDetailClient({
               <button
                 type="button"
                 onClick={() => void copyUrl()}
-                className="flex-1 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 {copied ? "Copied ✓" : "Copy link"}
               </button>

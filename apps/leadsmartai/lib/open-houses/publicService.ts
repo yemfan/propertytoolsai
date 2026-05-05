@@ -26,10 +26,16 @@ import type {
  *     real problem.
  *
  * Visitor → contact intake: if the visitor has email or phone AND
- * marketing_consent=true AND is_buyer_agented=false, we upsert a
- * contacts row with source='Open House'. If the visitor has their own
- * agent, we capture them for the agent's records but do NOT create a
- * CRM contact — doing so would breach Realtor® code-of-ethics.
+ * is_buyer_agented=false, we upsert a contacts row with
+ * source='Open House' so the agent has a record of every visitor
+ * who walked through the door. If the visitor has their own agent,
+ * we capture them for the agent's records but do NOT create a CRM
+ * contact — doing so would breach Realtor® code-of-ethics.
+ *
+ * marketing_consent is recorded on the visitor row but does NOT
+ * gate capture. Any auto-outreach (open-house-followups cron,
+ * instant-reply) explicitly filters marketing_consent=true before
+ * sending, so capture and marketing stay separate concerns.
  */
 
 export type PublicOpenHouseInfo = {
@@ -45,6 +51,15 @@ export type PublicOpenHouseInfo = {
   hostAgentFirstName: string | null;
   hostAgentHeadline: string | null;
   status: OpenHouseRow["status"];
+  /** Best-effort property details — pulled from the warehouse snapshot
+   *  if a row exists for this address. Visitors browsing the sign-in
+   *  page like to see beds/baths/sqft at a glance before they walk in.
+   *  Any field can be null when the warehouse doesn't have it. */
+  beds: number | null;
+  baths: number | null;
+  sqft: number | null;
+  yearBuilt: number | null;
+  propertyType: string | null;
 };
 
 export async function getPublicOpenHouseBySlug(
@@ -78,6 +93,43 @@ export async function getPublicOpenHouseBySlug(
     // non-fatal
   }
 
+  // Best-effort enrichment from the property warehouse — beds/baths/
+  // sqft/year_built/property_type. Lets the public sign-in page show
+  // a quick property card without exposing anything that would leak
+  // agent-side data. Match on the same address string the agent
+  // entered when scheduling the open house — case-insensitive so a
+  // "Los Angeles" vs "los angeles" mismatch doesn't drop the data.
+  let beds: number | null = null;
+  let baths: number | null = null;
+  let sqft: number | null = null;
+  let yearBuilt: number | null = null;
+  let propertyType: string | null = null;
+  try {
+    const { data: propertyRow } = await supabaseAdmin
+      .from("properties_warehouse")
+      .select("beds, baths, sqft, year_built, property_type")
+      .ilike("address", row.property_address)
+      .maybeSingle();
+    const p = propertyRow as
+      | {
+          beds: number | null;
+          baths: number | null;
+          sqft: number | null;
+          year_built: number | null;
+          property_type: string | null;
+        }
+      | null;
+    if (p) {
+      beds = p.beds;
+      baths = p.baths;
+      sqft = p.sqft;
+      yearBuilt = p.year_built;
+      propertyType = p.property_type;
+    }
+  } catch {
+    // non-fatal
+  }
+
   return {
     slug: row.signin_slug,
     propertyAddress: row.property_address,
@@ -91,6 +143,11 @@ export async function getPublicOpenHouseBySlug(
     hostAgentFirstName: firstName,
     hostAgentHeadline: headline,
     status: row.status,
+    beds,
+    baths,
+    sqft,
+    yearBuilt,
+    propertyType,
   };
 }
 
@@ -166,12 +223,21 @@ export async function recordPublicSignin(
   const visitor = visitorData as OpenHouseVisitorRow;
 
   // Conditionally upsert a CRM contact. Skip when:
-  //   - Visitor is already agented (ethics).
-  //   - No marketing consent (no legal basis for outreach).
+  //   - Visitor is already agented (ethics — Realtor® code-of-ethics
+  //     prohibits poaching another agent's client).
   //   - No email AND no phone (can't follow up anyway).
+  //
+  // Note: marketing_consent is NO LONGER a gate for capture — every
+  // non-agented sign-in becomes a lead in the agent's CRM so they
+  // have a record of who walked through the door. The
+  // marketing_consent flag is still recorded on the visitor row,
+  // and the open-house-followups cron respects it before sending
+  // any auto-outreach (see app/api/cron/open-house-followups). This
+  // keeps capture (always allowed for non-agented visitors with
+  // contact info) separate from marketing (gated on consent).
   let contactCreated = false;
   const hasContactReach = Boolean(visitor.email || visitor.phone);
-  if (!input.isBuyerAgented && input.marketingConsent && hasContactReach) {
+  if (!input.isBuyerAgented && hasContactReach) {
     try {
       const contactId = await upsertContactFromVisitor(oh.agent_id, visitor, oh.property_address);
       if (contactId) {
