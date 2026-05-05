@@ -46,19 +46,23 @@ export async function getPropertyData(
   const freshData = await fetchPropertyFromSource(trimmedAddress);
 
   // Ingestion flow (warehouse + snapshots + fast cache)
-  // Step 2: upsert properties master row
+  // Step 2: upsert properties master row.
+  // `|| null` (not `?? null`) on the string fields so empty-string
+  // returns from a no-data fetch (`fetchPropertyData` returns "" for
+  // city/state/zip when Rentcast has no row) collapse to NULL in the
+  // warehouse — keeps `WHERE city IS NULL` queries honest.
   const anyFresh = freshData as any;
   const propertyRow = await upsertPropertyWarehouse({
     address: trimmedAddress,
-    city: anyFresh?.city ?? null,
-    state: anyFresh?.state ?? null,
-    zip_code: anyFresh?.zip ?? anyFresh?.zip_code ?? null,
+    city: anyFresh?.city || null,
+    state: anyFresh?.state || null,
+    zip_code: anyFresh?.zip || anyFresh?.zip_code || null,
     beds: anyFresh?.beds ?? null,
     baths: anyFresh?.baths ?? null,
     sqft: anyFresh?.sqft ?? null,
     year_built: anyFresh?.year_built ?? null,
     lot_size: anyFresh?.lot_size ?? null,
-    property_type: anyFresh?.property_type ?? null,
+    property_type: anyFresh?.property_type || null,
     lat: anyFresh?.lat ?? null,
     lng: anyFresh?.lng ?? null,
   });
