@@ -7,6 +7,39 @@ import AddressAutocomplete, {
   type AddressAutocompleteValue,
 } from "@/components/AddressAutocomplete";
 
+/**
+ * Status banner colors mirror the showings/new tones — green for an
+ * active listing, amber for off-market / pending / unknown, slate for
+ * "we couldn't reach the property service" so the agent can still
+ * fill the form manually.
+ */
+type StatusBanner = { tone: "ok" | "warn" | "info"; text: string };
+
+const ACTIVE_STATUS_RE = /^(active|active_under_contract|coming_soon|new)$/i;
+
+/** Try a few common naming variants from the Rentcast snapshot blob. */
+function readBlobString(blob: unknown, ...keys: string[]): string | null {
+  if (!blob || typeof blob !== "object") return null;
+  const obj = blob as Record<string, unknown>;
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return null;
+}
+
+function readBlobNumber(blob: unknown, ...keys: string[]): number | null {
+  if (!blob || typeof blob !== "object") return null;
+  const obj = blob as Record<string, unknown>;
+  for (const k of keys) {
+    const v = obj[k];
+    if (v == null) continue;
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
 function defaultDateIso(): string {
   // Saturday of this week — open houses are usually weekend events.
   const d = new Date();
@@ -39,6 +72,8 @@ export function NewOpenHouseClient() {
   const [listPrice, setListPrice] = useState("");
   const [mlsNumber, setMlsNumber] = useState("");
   const [mlsUrl, setMlsUrl] = useState("");
+  const [statusBanner, setStatusBanner] = useState<StatusBanner | null>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
   const [date, setDate] = useState(defaultDateIso());
   const [startTime, setStartTime] = useState("14:00");
   const [endTime, setEndTime] = useState("16:00");
@@ -153,6 +188,77 @@ export function NewOpenHouseClient() {
     }
   }
 
+  /**
+   * After Google Places returns a chosen Place, copy the parsed
+   * city/state/zip into the form, then look up the listing via
+   * `/api/property/[address]` so the agent doesn't have to retype
+   * MLS#, list price, or the listing URL. Mirrors the showings/new
+   * onAddressPick contract — see NewShowingClient.tsx.
+   */
+  async function onAddressPick(val: AddressAutocompleteValue) {
+    setPropertyAddress(val.formattedAddress);
+    if (val.components.city) setCity(val.components.city);
+    if (val.components.state) setStateValue(val.components.state);
+    if (val.components.zip) setZip(val.components.zip);
+
+    setStatusBanner(null);
+    setLookupLoading(true);
+    try {
+      const res = await fetch(
+        `/api/property/${encodeURIComponent(val.formattedAddress)}`,
+      );
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        latest_snapshot?: {
+          listing_status?: string | null;
+          data?: unknown;
+        } | null;
+      };
+      if (!res.ok || !body.ok) {
+        setStatusBanner({
+          tone: "info",
+          text: "Couldn't auto-verify listing — fill in MLS # and price manually if you have them.",
+        });
+        return;
+      }
+
+      const status = body.latest_snapshot?.listing_status?.trim() || null;
+      if (status) {
+        if (ACTIVE_STATUS_RE.test(status)) {
+          setStatusBanner({ tone: "ok", text: `Listing status: ${status}` });
+        } else {
+          setStatusBanner({
+            tone: "warn",
+            text: `Heads up — this listing is ${status}, not Active. Confirm before scheduling the open house.`,
+          });
+        }
+      } else {
+        setStatusBanner({
+          tone: "info",
+          text: "No MLS status on file for this address — could be off-market or just not in our cache yet.",
+        });
+      }
+
+      // Best-effort prefill from the snapshot blob. Only fill fields
+      // the agent hasn't already typed into so we don't clobber a
+      // manual override.
+      const blob = body.latest_snapshot?.data;
+      const price = readBlobNumber(blob, "price", "listPrice", "list_price");
+      if (price != null && !listPrice) setListPrice(String(price));
+      const mls = readBlobString(blob, "mlsNumber", "mls_number", "mls", "mlsId");
+      if (mls && !mlsNumber) setMlsNumber(mls);
+      const url = readBlobString(blob, "listingUrl", "listing_url", "url");
+      if (url && !mlsUrl) setMlsUrl(url);
+    } catch {
+      setStatusBanner({
+        tone: "info",
+        text: "Couldn't reach property service — proceed manually.",
+      });
+    } finally {
+      setLookupLoading(false);
+    }
+  }
+
   const toggleWeekday = (n: number) => {
     setWeekdays((prev) =>
       prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n].sort(),
@@ -179,13 +285,15 @@ export function NewOpenHouseClient() {
           <label className="block text-xs font-medium text-slate-700">Property address *</label>
           <AddressAutocomplete
             value={propertyAddress}
-            onChange={setPropertyAddress}
-            onSelect={(val: AddressAutocompleteValue) => {
-              setPropertyAddress(val.formattedAddress);
-              if (val.components.city) setCity(val.components.city);
-              if (val.components.state) setStateValue(val.components.state);
-              if (val.components.zip) setZip(val.components.zip);
+            onChange={(next) => {
+              setPropertyAddress(next);
+              // Clear any stale auto-fill banner when the agent edits
+              // the typed address directly (re-fetch only happens on
+              // a Places pick, so we don't keep showing "status: Active"
+              // for the old address).
+              if (statusBanner) setStatusBanner(null);
             }}
+            onSelect={onAddressPick}
             placeholder="Start typing — Google will autocomplete the full address"
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
           />
@@ -194,6 +302,23 @@ export function NewOpenHouseClient() {
               {city ? <span className="rounded-full bg-slate-100 px-2 py-0.5">{city}</span> : null}
               {state ? <span className="rounded-full bg-slate-100 px-2 py-0.5">{state}</span> : null}
               {zip ? <span className="rounded-full bg-slate-100 px-2 py-0.5">{zip}</span> : null}
+            </div>
+          ) : null}
+          {lookupLoading ? (
+            <p className="mt-1.5 text-[11px] text-slate-500">Looking up listing…</p>
+          ) : null}
+          {statusBanner ? (
+            <div
+              role="status"
+              className={`mt-2 rounded-lg border px-3 py-2 text-[12px] ${
+                statusBanner.tone === "ok"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : statusBanner.tone === "warn"
+                    ? "border-amber-200 bg-amber-50 text-amber-900"
+                    : "border-slate-200 bg-slate-50 text-slate-700"
+              }`}
+            >
+              {statusBanner.text}
             </div>
           ) : null}
         </div>
