@@ -80,6 +80,27 @@ function asStr(v: unknown): string | null {
 }
 
 /**
+ * Rentcast doesn't return a direct MLS-listing URL. For active
+ * listings we fall back to a Zillow search URL — Zillow auto-redirects
+ * to the homedetails page when the address has a unique match, which
+ * is the common case.
+ *
+ * Returns null when we don't have an active listing — no point
+ * sending the agent off-platform if the property isn't currently
+ * for sale.
+ */
+function buildZillowFallbackUrl(address: string, status: string | null): string | null {
+  if (!status) return null;
+  // Only link out for on-market listings.
+  if (!/^(active|active_under_contract|coming_soon|new|pending)$/i.test(status.trim())) {
+    return null;
+  }
+  const slug = address.trim().replace(/\s+/g, "-").replace(/,/g, "");
+  if (!slug) return null;
+  return `https://www.zillow.com/homes/${encodeURIComponent(slug)}_rb/`;
+}
+
+/**
  * Rentcast returns either an array directly (`[{...}, ...]`) or an
  * envelope (`{ data: [...] }`) depending on plan/endpoint version.
  * Pull the first row regardless of shape.
@@ -158,6 +179,9 @@ export async function fetchPropertyData(address: string): Promise<PropertyFetchR
   const r = listingRow ?? propertyRow ?? {};
   const agent = (r.listingAgent ?? {}) as Record<string, unknown>;
 
+  const status = asStr(r.status);
+  const explicitUrl = asStr(r.listingUrl ?? r.url);
+
   return {
     address,
     city: asStr(r.city) ?? asStr(propertyRow?.city) ?? "",
@@ -173,10 +197,10 @@ export async function fetchPropertyData(address: string): Promise<PropertyFetchR
     // honest; presentation/flyer surfaces that need rent should call
     // the AVM separately.
     rent: null,
-    listing_status: asStr(r.status),
+    listing_status: status,
     mlsNumber: asStr(r.mlsNumber),
     mlsName: asStr(r.mlsName),
-    listingUrl: asStr(r.listingUrl ?? r.url),
+    listingUrl: explicitUrl ?? buildZillowFallbackUrl(address, status),
     listingAgentName: asStr(r.listingAgentName ?? r.agentName ?? r.listAgentName ?? agent.name),
     listingAgentEmail: asStr(r.listingAgentEmail ?? agent.email),
     listingAgentPhone: asStr(r.listingAgentPhone ?? agent.phone),
