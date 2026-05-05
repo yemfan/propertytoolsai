@@ -73,6 +73,8 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
   const [showFollowups, setShowFollowups] = useState(true);
   const [showDrafts, setShowDrafts] = useState(true);
   const [gcalStatus, setGcalStatus] = useState<{ configured: boolean; connected: boolean } | null>(null);
+  const [gmailStatus, setGmailStatus] = useState<{ configured: boolean; connected: boolean } | null>(null);
+  const [gmailDisconnecting, setGmailDisconnecting] = useState(false);
   const [gcalDisconnecting, setGcalDisconnecting] = useState(false);
   // Month grid (default) vs flat chronological list. Persisted so the
   // user's preference survives navigations.
@@ -157,6 +159,13 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
   useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
+    fetch("/api/auth/gmail/status")
+      .then((r) => r.json())
+      .then((b) => {
+        if (b.ok) setGmailStatus({ configured: b.configured, connected: b.connected });
+      })
+      .catch(() => {});
+
     fetch("/api/dashboard/calendar/google-status").then((r) => r.json()).then((b) => {
       if (b.ok) setGcalStatus({ configured: b.configured, connected: b.connected });
     }).catch(() => {});
@@ -343,6 +352,47 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
           {showAdd ? "Cancel" : "Add Event"}
         </button>
       </div>
+
+      {/* Gmail integration — sits above Calendar so the "Connect Gmail"
+          state is the more prominent CTA when the agent connects both
+          for the first time. Phase 1: connection only. Phase 2: actual
+          inbound-email parsing for offers / listing agreements /
+          showing requests will be wired separately. */}
+      {gmailStatus?.configured && (
+        <div className={`flex items-center justify-between rounded-xl border p-4 ${gmailStatus.connected ? "border-green-200 bg-green-50" : "border-blue-200 bg-blue-50"}`}>
+          <div>
+            <p className="text-sm font-semibold text-gray-900">
+              {gmailStatus.connected ? "Gmail connected" : "Connect Gmail"}
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {gmailStatus.connected
+                ? "We can read inbound mail to auto-detect offers, listing agreements, and showing requests."
+                : "Connect to let LeadSmart classify inbound mail and draft offers / listings / showings from email."}
+            </p>
+          </div>
+          {gmailStatus.connected ? (
+            <button
+              onClick={async () => {
+                setGmailDisconnecting(true);
+                await fetch("/api/auth/gmail/disconnect", { method: "POST" }).catch(() => {});
+                setGmailStatus({ configured: true, connected: false });
+                setGmailDisconnecting(false);
+              }}
+              disabled={gmailDisconnecting}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            >
+              {gmailDisconnecting ? "..." : "Disconnect"}
+            </button>
+          ) : (
+            <a
+              href="/api/auth/gmail"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+            >
+              Connect
+            </a>
+          )}
+        </div>
+      )}
 
       {/* Google Calendar integration */}
       {gcalStatus?.configured && (
