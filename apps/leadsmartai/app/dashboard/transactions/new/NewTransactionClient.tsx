@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import ContactPicker, { type ContactPickerValue } from "@/components/crm/ContactPicker";
 import { ContractUploader, type RlaUploadResult, type RpaUploadResult } from "./ContractUploader";
 
@@ -23,7 +23,17 @@ function NewTransactionForm() {
   const searchParams = useSearchParams();
   const prefilledContactId = searchParams.get("contactId") ?? "";
 
-  const [transactionType, setTransactionType] = useState<TxType>("buyer_rep");
+  // Honor `?type=listing_rep` (or `dual`) so the Listings page button
+  // — and CommandPalette deep links — open the form already on the
+  // listing-side track. Default stays buyer_rep when no type passed.
+  const typeParam = searchParams.get("type");
+  const initialType: TxType =
+    typeParam === "listing_rep" || typeParam === "dual"
+      ? typeParam
+      : "buyer_rep";
+  const focusUpload = searchParams.get("focus") === "upload";
+
+  const [transactionType, setTransactionType] = useState<TxType>(initialType);
   const [contact, setContact] = useState<ContactPickerValue | null>(null);
   const [propertyAddress, setPropertyAddress] = useState("");
   const [city, setCity] = useState("");
@@ -38,6 +48,26 @@ function NewTransactionForm() {
   const [error, setError] = useState<string | null>(null);
 
   const isListing = transactionType === "listing_rep";
+
+  /**
+   * When the agent arrives via the Listings page "Upload listing
+   * agreement" button (`?focus=upload`), scroll the contract uploader
+   * into view and briefly ring it so it's obviously the next action.
+   * Skipped if focus param is absent — keeps the default open-the-form
+   * UX intact for everyone else.
+   */
+  const uploaderRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!focusUpload) return;
+    const el = uploaderRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("ring-2", "ring-blue-400", "ring-offset-2", "rounded-2xl");
+    const timer = window.setTimeout(() => {
+      el.classList.remove("ring-2", "ring-blue-400", "ring-offset-2", "rounded-2xl");
+    }, 2400);
+    return () => window.clearTimeout(timer);
+  }, [focusUpload]);
 
   async function submit() {
     setError(null);
@@ -120,15 +150,17 @@ function NewTransactionForm() {
       </div>
 
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        {isListing ? (
-          <ContractUploader
-            kind="listing"
-            onExtracted={applyRlaExtraction}
-            disabled={submitting}
-          />
-        ) : (
-          <ContractUploader onExtracted={applyRpaExtraction} disabled={submitting} />
-        )}
+        <div ref={uploaderRef}>
+          {isListing ? (
+            <ContractUploader
+              kind="listing"
+              onExtracted={applyRlaExtraction}
+              disabled={submitting}
+            />
+          ) : (
+            <ContractUploader onExtracted={applyRpaExtraction} disabled={submitting} />
+          )}
+        </div>
 
         <div>
           <label className="block text-xs font-medium text-slate-700">Deal type</label>
