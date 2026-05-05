@@ -7,6 +7,10 @@ import AddressAutocomplete, {
   type AddressAutocompleteValue,
 } from "@/components/AddressAutocomplete";
 import ContactPicker, { type ContactPickerValue } from "@/components/crm/ContactPicker";
+import {
+  RecentAddressList,
+  type RecentAddress,
+} from "@/components/crm/RecentAddressList";
 import type { FinancingType } from "@/lib/offers/types";
 
 /**
@@ -134,6 +138,21 @@ function NewOfferForm() {
 
         <div>
           <label className="block text-xs font-medium text-slate-700">Property address *</label>
+
+          {/* Recent addresses from this buyer's showings + offers
+              history. Saves re-typing when the buyer is offering on
+              a property they toured (very common — most offers come
+              from a property the buyer just walked through). */}
+          <RecentAddressList
+            contactId={contact?.id ?? null}
+            onPick={(addr: RecentAddress) => {
+              setPropertyAddress(addr.property_address);
+              if (addr.city) setCity(addr.city);
+              if (addr.state) setStateValue(addr.state);
+              if (addr.zip) setZip(addr.zip);
+            }}
+          />
+
           <AddressAutocomplete
             value={propertyAddress}
             onChange={setPropertyAddress}

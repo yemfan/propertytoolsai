@@ -2,22 +2,16 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import AddressAutocomplete, {
   type AddressAutocompleteValue,
 } from "@/components/AddressAutocomplete";
 import ContactPicker, { type ContactPickerValue } from "@/components/crm/ContactPicker";
+import {
+  RecentAddressList,
+  type RecentAddress,
+} from "@/components/crm/RecentAddressList";
 
-/**
- * Slim shape returned by GET /api/dashboard/showings?contactId={uuid}.
- * Only the fields we need for the "prior address" quick-pick chips.
- */
-type PriorAddress = {
-  property_address: string;
-  city: string | null;
-  state: string | null;
-  zip: string | null;
-};
 
 /**
  * Listing-status check the form runs after a Google Places pick. The
@@ -94,68 +88,11 @@ function NewShowingForm() {
    */
   const [addressVerified, setAddressVerified] = useState(false);
 
-  /**
-   * Distinct addresses the buyer has been shown before. Populated when
-   * the buyer is selected; rendered as quick-pick chips above the
-   * address input so the agent doesn't have to retype an address the
-   * buyer already toured. Most-recent first, capped at 5.
-   */
-  const [priorAddresses, setPriorAddresses] = useState<PriorAddress[]>([]);
-
-  useEffect(() => {
-    if (!contact?.id) {
-      setPriorAddresses([]);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/dashboard/showings?contactId=${encodeURIComponent(contact.id)}`,
-        );
-        const body = (await res.json().catch(() => ({}))) as {
-          ok?: boolean;
-          showings?: Array<{
-            property_address: string;
-            city: string | null;
-            state: string | null;
-            zip: string | null;
-            scheduled_at: string;
-          }>;
-        };
-        if (cancelled || !body.ok) return;
-        // Dedupe by property_address (case-insensitive). Most-recent
-        // first because /api/dashboard/showings already orders by
-        // scheduled_at desc; preserving order suffices.
-        const seen = new Set<string>();
-        const out: PriorAddress[] = [];
-        for (const s of body.showings ?? []) {
-          const key = (s.property_address ?? "").trim().toLowerCase();
-          if (!key || seen.has(key)) continue;
-          seen.add(key);
-          out.push({
-            property_address: s.property_address,
-            city: s.city,
-            state: s.state,
-            zip: s.zip,
-          });
-          if (out.length >= 5) break;
-        }
-        setPriorAddresses(out);
-      } catch {
-        // Quick-pick is a nice-to-have; failures stay silent.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [contact?.id]);
-
   /** Quick-pick a prior address. Skips Google but still validates the
    *  listing status against the property service. `onAddressPick`
    *  flips `addressVerified=true` for us — same path as a real Google
    *  pick. */
-  function pickPriorAddress(addr: PriorAddress) {
+  function pickPriorAddress(addr: RecentAddress) {
     void onAddressPick({
       formattedAddress: addr.property_address,
       lat: null,
@@ -344,29 +281,12 @@ function NewShowingForm() {
         <div>
           <label className="block text-xs font-medium text-slate-700">Property address *</label>
 
-          {/* Quick-pick chips for prior showings with this buyer. Saves
-              re-typing when the buyer is touring the same property a
-              second time, or comparing a few favorites. Up to 5 most-
-              recent unique addresses, populated when the buyer is
-              selected. */}
-          {priorAddresses.length > 0 ? (
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                Recent with this buyer:
-              </span>
-              {priorAddresses.map((p) => (
-                <button
-                  key={p.property_address}
-                  type="button"
-                  onClick={() => pickPriorAddress(p)}
-                  className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                  title="Use this address"
-                >
-                  {p.property_address}
-                </button>
-              ))}
-            </div>
-          ) : null}
+          {/* Recent addresses from this buyer's showings + offers
+              history. Vertical list with source tag (Showing / Offer)
+              + relative age — easier to read than a horizontal chip
+              strip when a buyer's been to several properties. Hidden
+              entirely until a buyer is selected. */}
+          <RecentAddressList contactId={contact?.id ?? null} onPick={pickPriorAddress} />
 
           <AddressAutocomplete
             value={propertyAddress}
