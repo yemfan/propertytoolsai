@@ -73,8 +73,20 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
   const [showFollowups, setShowFollowups] = useState(true);
   const [showDrafts, setShowDrafts] = useState(true);
   const [gcalStatus, setGcalStatus] = useState<{ configured: boolean; connected: boolean } | null>(null);
-  const [gmailStatus, setGmailStatus] = useState<{ configured: boolean; connected: boolean } | null>(null);
-  const [gmailDisconnecting, setGmailDisconnecting] = useState(false);
+  /**
+   * Inbound email forwarding panel state. Populated lazily from
+   * /api/dashboard/inbound-alias which provisions the alias on first
+   * call. Replaces the Gmail OAuth flow for Phase 1 — Google's
+   * restricted-scope verification path was costing too much time
+   * without a clear unblock.
+   */
+  const [inboundAlias, setInboundAlias] = useState<{
+    address: string;
+    domain: string;
+    lastReceivedAt: string | null;
+    inboundCount: number;
+  } | null>(null);
+  const [aliasCopied, setAliasCopied] = useState(false);
   const [gcalDisconnecting, setGcalDisconnecting] = useState(false);
   // Month grid (default) vs flat chronological list. Persisted so the
   // user's preference survives navigations.
@@ -159,10 +171,17 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
   useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
-    fetch("/api/auth/gmail/status")
+    fetch("/api/dashboard/inbound-alias")
       .then((r) => r.json())
       .then((b) => {
-        if (b.ok) setGmailStatus({ configured: b.configured, connected: b.connected });
+        if (b.ok) {
+          setInboundAlias({
+            address: b.address,
+            domain: b.domain,
+            lastReceivedAt: b.lastReceivedAt ?? null,
+            inboundCount: b.inboundCount ?? 0,
+          });
+        }
       })
       .catch(() => {});
 
@@ -353,44 +372,84 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
         </button>
       </div>
 
-      {/* Gmail integration — sits above Calendar so the "Connect Gmail"
-          state is the more prominent CTA when the agent connects both
-          for the first time. Phase 1: connection only. Phase 2: actual
-          inbound-email parsing for offers / listing agreements /
-          showing requests will be wired separately. */}
-      {gmailStatus?.configured && (
-        <div className={`flex items-center justify-between rounded-xl border p-4 ${gmailStatus.connected ? "border-green-200 bg-green-50" : "border-blue-200 bg-blue-50"}`}>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">
-              {gmailStatus.connected ? "Gmail connected" : "Connect Gmail"}
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {gmailStatus.connected
-                ? "We can read inbound mail to auto-detect offers, listing agreements, and showing requests."
-                : "Connect to let LeadSmart classify inbound mail and draft offers / listings / showings from email."}
-            </p>
+      {/* Inbound email forwarding (Phase 1) — replaces the prior
+          "Connect Gmail" OAuth flow which was blocked by Google's
+          restricted-scope verification path. The agent gets a unique
+          forwarding address; they set up a Gmail filter to forward
+          listing-related emails there; SendGrid Inbound Parse posts
+          to /api/inbound/forwarded-email which classifies intent and
+          creates a "Review" task. Phase 2 will layer on AI extraction
+          + draft creation for offers / listings / showings. */}
+      {inboundAlias && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-gray-900">
+                Forward emails for auto-import
+              </p>
+              <p className="mt-0.5 text-xs text-gray-600">
+                Set up a one-time Gmail filter forwarding offers, listing
+                agreements, and showing requests to your unique address —
+                we&apos;ll classify each one and add it to your task list
+                for review.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <code className="rounded-md border border-blue-200 bg-white px-2 py-1 font-mono text-[12px] text-gray-900">
+                  {inboundAlias.address}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(inboundAlias.address);
+                    setAliasCopied(true);
+                    setTimeout(() => setAliasCopied(false), 1500);
+                  }}
+                  className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  {aliasCopied ? "Copied ✓" : "Copy"}
+                </button>
+              </div>
+              <details className="mt-3 text-xs text-gray-600">
+                <summary className="cursor-pointer font-medium text-gray-700 hover:text-gray-900">
+                  Gmail filter setup (one-time, ~30 seconds)
+                </summary>
+                <ol className="mt-2 list-decimal space-y-1 pl-5 leading-relaxed">
+                  <li>Gmail → ⚙ → <em>See all settings</em> → <em>Filters and Blocked Addresses</em></li>
+                  <li>Click <em>Create a new filter</em></li>
+                  <li>
+                    In the <em>Has the words</em> field, paste:{" "}
+                    <code className="rounded bg-white px-1 font-mono">offer OR &quot;purchase agreement&quot; OR &quot;listing agreement&quot; OR &quot;showing request&quot;</code>
+                  </li>
+                  <li>Click <em>Create filter</em> at the bottom-right</li>
+                  <li>
+                    Tick <em>Forward it to:</em> and pick (or add){" "}
+                    <code className="rounded bg-white px-1 font-mono">{inboundAlias.address}</code>
+                  </li>
+                  <li>Click <em>Create filter</em>. Done.</li>
+                </ol>
+                <p className="mt-2 text-[11px] text-gray-500">
+                  Gmail will email you a verification code the first time
+                  you forward to a new address — paste it back into the
+                  Forwarding settings to confirm. After that, every
+                  matching email auto-flows into your task list.
+                </p>
+              </details>
+            </div>
           </div>
-          {gmailStatus.connected ? (
-            <button
-              onClick={async () => {
-                setGmailDisconnecting(true);
-                await fetch("/api/auth/gmail/disconnect", { method: "POST" }).catch(() => {});
-                setGmailStatus({ configured: true, connected: false });
-                setGmailDisconnecting(false);
-              }}
-              disabled={gmailDisconnecting}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-            >
-              {gmailDisconnecting ? "..." : "Disconnect"}
-            </button>
-          ) : (
-            <a
-              href="/api/auth/gmail"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700"
-            >
-              Connect
-            </a>
-          )}
+          <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-blue-200 pt-3 text-[11px] text-gray-600">
+            <span>
+              <strong className="text-gray-900">{inboundAlias.inboundCount}</strong>{" "}
+              email{inboundAlias.inboundCount === 1 ? "" : "s"} imported
+            </span>
+            {inboundAlias.lastReceivedAt && (
+              <span>
+                · last received{" "}
+                <time dateTime={inboundAlias.lastReceivedAt}>
+                  {new Date(inboundAlias.lastReceivedAt).toLocaleString()}
+                </time>
+              </span>
+            )}
+          </div>
         </div>
       )}
 
