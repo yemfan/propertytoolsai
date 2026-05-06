@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ContactPicker, { type ContactPickerValue } from "@/components/crm/ContactPicker";
 import type { FinancingType } from "@/lib/offers/types";
 
@@ -89,6 +89,7 @@ export function UploadOfferClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledContactId = searchParams.get("contactId") ?? "";
+  const inboundId = searchParams.get("inboundId");
 
   const [contact, setContact] = useState<ContactPickerValue | null>(null);
   const [text, setText] = useState("");
@@ -98,7 +99,72 @@ export function UploadOfferClient() {
   const [error, setError] = useState<string | null>(null);
   /** Name of the PDF the agent picked, for display only. */
   const [pdfName, setPdfName] = useState<string | null>(null);
+  /** Banner shown when prefill came from a forwarded email. */
+  const [inboundSource, setInboundSource] = useState<{
+    id: string;
+    subject: string | null;
+    fromHeader: string | null;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  /**
+   * Prefill from a forwarded-email delivery. Triggered by the
+   * /dashboard/inbound/[id] page when the agent clicks "Open in offer
+   * upload". We fetch the delivery row, lift its already-extracted
+   * ParsedOffer onto the review state, and skip the parse step
+   * entirely — the agent only needs to pick the buyer and save.
+   */
+  useEffect(() => {
+    if (!inboundId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/dashboard/inbound/${inboundId}`);
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          delivery?: {
+            id: string;
+            subject: string | null;
+            from_header: string | null;
+            extraction_status: string;
+            extraction: { kind: "offer"; data: ParsedOffer } | null;
+          };
+          error?: string;
+        };
+        if (cancelled) return;
+        if (!res.ok || !body.ok || !body.delivery) {
+          setError(body.error ?? "Couldn't load forwarded email.");
+          return;
+        }
+        const d = body.delivery;
+        setInboundSource({
+          id: d.id,
+          subject: d.subject,
+          fromHeader: d.from_header,
+        });
+        if (
+          d.extraction_status === "extracted" &&
+          d.extraction &&
+          d.extraction.kind === "offer"
+        ) {
+          setParsed(d.extraction.data);
+        } else {
+          setError(
+            d.extraction_status === "failed"
+              ? "AI extraction failed for this email — go back and retry from the review page."
+              : "This forwarded email doesn't have a parsed offer yet — open the review page first.",
+          );
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Network error.");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [inboundId]);
 
   /**
    * Step 1 (PDF path) → uploads the file to /parse-pdf which runs
@@ -255,6 +321,30 @@ export function UploadOfferClient() {
           before saving.
         </p>
       </div>
+
+      {/* Banner shown when prefill arrived from a forwarded email.
+          Lets the agent know the parsed fields below came from the
+          inbound pipeline (not their own paste/upload), and gives
+          them a back-link to the review page if they want to compare
+          against the source email. */}
+      {inboundSource && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <div className="font-medium">
+            Pre-filled from a forwarded email
+          </div>
+          <div className="mt-0.5 text-xs text-emerald-700">
+            {inboundSource.subject ? `“${inboundSource.subject}”` : "(no subject)"}
+            {inboundSource.fromHeader ? ` · from ${inboundSource.fromHeader}` : ""}
+            {" · "}
+            <Link
+              href={`/dashboard/inbound/${inboundSource.id}`}
+              className="underline hover:text-emerald-900"
+            >
+              view source email
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div>

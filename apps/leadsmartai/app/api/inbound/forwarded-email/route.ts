@@ -4,11 +4,20 @@ import { findAgentByLocalPart, recordInboundDelivery } from "@/lib/inbound/alias
 import { classifyInboundEmail, intentLabel } from "@/lib/inbound/intent";
 import { createTask } from "@/lib/crm/pipeline/tasks";
 import { verifySvixSignature } from "@/lib/email-tracking/svix";
+import {
+  createInboundDelivery,
+  setInboundDeliveryTaskId,
+  type InboundAttachmentMeta,
+} from "@/lib/inbound/deliveries";
+import {
+  attemptExtraction,
+  summarizeExtraction,
+} from "@/lib/inbound/extractFromAttachments";
 
 export const runtime = "nodejs";
-// Resend can forward emails with PDF attachments (links to fetch),
-// so the call itself is fast — but allow some headroom in case
-// downstream DB writes batch up.
+// Resend gives us signed PDF URLs we fetch on demand; Claude PDF
+// extraction itself is 15-40s on dense purchase agreements. 60s
+// covers fetch + extract + DB writes with comfortable headroom.
 export const maxDuration = 60;
 
 /**
@@ -19,35 +28,18 @@ export const maxDuration = 60;
  * with a separate signing secret because Resend treats inbound and
  * outbound as separate webhooks in their dashboard).
  *
- * Payload shape (Resend Inbound):
- *   {
- *     "type": "email.received",
- *     "created_at": "...",
- *     "data": {
- *       "id": "...",
- *       "from": "Name <sender@example.com>",
- *       "to": ["agent-abc@inbox.leadsmart-ai.com"],
- *       "subject": "...",
- *       "text": "...",
- *       "html": "...",
- *       "attachments": [{ "filename": "...", "content_type": "...", "content_url": "..." }]
- *     }
- *   }
- *
- * What this endpoint does:
- *   - Verifies the Svix signature against RESEND_INBOUND_WEBHOOK_SECRET
- *   - Pulls the local_part from any `to` address that matches our
- *     INBOUND_EMAIL_DOMAIN
- *   - Looks up the alias → agent
- *   - Classifies intent (offer / listing / showing / unknown)
- *   - Creates a high-priority "Review forwarded …" task on the
- *     agent's task list with the email's preview
- *
- * What this endpoint does NOT do (Phase 2):
- *   - Download / store attachments (Resend gives us a signed URL;
- *     the extractor would fetch on demand later)
- *   - Run AI extraction → draft creation
- *   - Match `from` address against existing CRM contacts
+ * Phase 2 extension: we now ALSO
+ *   - Persist the email envelope + attachment metadata in
+ *     `inbound_email_deliveries` so the agent can review what we
+ *     parsed from a dedicated page.
+ *   - Run the matching PDF extractor inline when intent is
+ *     `offer_received` (→ ParsedOffer) or `listing_signed` (→ RLA
+ *     shape). Failure is non-fatal — the delivery is still stored
+ *     with extraction_status='failed', and the review page exposes
+ *     a "Retry extraction" button.
+ *   - Surface the extraction summary in the task title (e.g.
+ *     "Review forwarded offer: $750k @ 123 Main St") and link the
+ *     task description to /dashboard/inbound/[id].
  */
 
 type ResendInboundAttachment = {
@@ -86,6 +78,18 @@ function pickLocalPart(toList: string[] | undefined, domain: string): string | n
     }
   }
   return null;
+}
+
+/**
+ * Origin of the dashboard, used to build the review-page link in the
+ * task description. Falls back to the production domain so the link
+ * is still reachable even if NEXT_PUBLIC_APP_URL isn't configured in
+ * the inbound webhook environment.
+ */
+function getAppOrigin(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (fromEnv) return fromEnv.replace(/\/$/, "");
+  return "https://www.leadsmart-ai.com";
 }
 
 export async function POST(req: Request) {
@@ -145,8 +149,14 @@ export async function POST(req: Request) {
   const subject = (data.subject ?? "").trim() || null;
   const text = data.text ?? null;
   const fromHeader = data.from ?? null;
+  const toLine = (data.to ?? []).join(", ") || null;
 
-  const attachments = Array.isArray(data.attachments) ? data.attachments : [];
+  const rawAttachments = Array.isArray(data.attachments) ? data.attachments : [];
+  const attachments: InboundAttachmentMeta[] = rawAttachments.map((a) => ({
+    filename: a.filename ?? null,
+    content_type: a.content_type ?? null,
+    content_url: a.content_url ?? null,
+  }));
   const pdfAttachments = attachments.filter(
     (a) =>
       (a.content_type ?? "").toLowerCase().includes("pdf") ||
@@ -157,19 +167,63 @@ export async function POST(req: Request) {
   const intent = classifyInboundEmail({ subject, text, hasPdfAttachment });
   const intentText = intentLabel(intent);
 
+  // ── Run extraction inline (best-effort) ─────────────────────────
+  // Failures here don't block delivery + task creation; we just store
+  // extraction_status='failed' and the review page surfaces a retry.
+  const extractionResult = await attemptExtraction({ intent, attachments });
+
+  // ── Persist the delivery row ────────────────────────────────────
+  const textPreview = text ? text.slice(0, 2000) : null;
+  let delivery;
+  try {
+    delivery = await createInboundDelivery({
+      aliasId: alias.id,
+      agentId: alias.agent_id,
+      resendMessageId: data.id ?? null,
+      intent,
+      fromHeader,
+      toHeader: toLine,
+      subject,
+      textPreview,
+      attachments,
+      extractionStatus: extractionResult.status,
+      extraction:
+        extractionResult.status === "extracted" ? extractionResult.payload : null,
+      extractionError:
+        extractionResult.status === "failed" ? extractionResult.error : null,
+    });
+  } catch (e) {
+    console.error("[inbound] delivery insert failed:", e);
+    // 500 → Resend retries. The delivery row is the canonical record;
+    // we'd rather retry than lose the email entirely.
+    return NextResponse.json(
+      { ok: false, error: "delivery insert failed" },
+      { status: 500 },
+    );
+  }
+
+  // ── Build the task title + body ─────────────────────────────────
   const senderShort = fromHeader
     ? fromHeader.replace(/<[^>]+>/, "").trim() || fromHeader
     : "an email forward";
-  const title = subject
-    ? `Review forwarded ${intentText.toLowerCase()}: ${subject.slice(0, 80)}`
-    : `Review forwarded ${intentText.toLowerCase()} from ${senderShort.slice(0, 60)}`;
 
-  // Build description: from/to/subject + attachment list + body preview.
-  // Phase 2 will swap the "PDF attachment present" bullet for a link
-  // back to the extractor result.
+  // Prefer the extraction summary (price + address) over the raw
+  // subject — gives the agent a useful triage signal at the task list.
+  const extractionSummary =
+    extractionResult.status === "extracted"
+      ? summarizeExtraction(extractionResult.payload)
+      : null;
+
+  const titleSuffix =
+    extractionSummary ?? subject?.slice(0, 80) ?? `from ${senderShort.slice(0, 60)}`;
+  const title = `Review forwarded ${intentText.toLowerCase()}: ${titleSuffix}`;
+
+  const reviewUrl = `${getAppOrigin()}/dashboard/inbound/${delivery.id}`;
+
   const bodyParts: string[] = [];
+  bodyParts.push(`📥 Open the review page: ${reviewUrl}`);
+  bodyParts.push("");
   if (fromHeader) bodyParts.push(`From: ${fromHeader}`);
-  const toLine = (data.to ?? []).join(", ");
   if (toLine) bodyParts.push(`To: ${toLine}`);
   if (subject) bodyParts.push(`Subject: ${subject}`);
   if (pdfAttachments.length > 0) {
@@ -178,7 +232,15 @@ export async function POST(req: Request) {
         .map((a) => a.filename ?? "(unnamed)")
         .join(", ")}`,
     );
-    bodyParts.push("(Phase 2 will auto-extract these into a draft.)");
+  }
+  if (extractionResult.status === "extracted") {
+    bodyParts.push(`✅ AI extracted ${extractionResult.payload.kind} fields — review on the page above.`);
+  } else if (extractionResult.status === "failed") {
+    bodyParts.push(`⚠️ AI extraction failed: ${extractionResult.error.slice(0, 200)} (retry on review page)`);
+  } else if (extractionResult.status === "skipped" && hasPdfAttachment) {
+    bodyParts.push(
+      `ℹ️ No extractor for intent "${intentText}" — open the review page to act on it manually.`,
+    );
   }
   if (text) {
     bodyParts.push("");
@@ -187,8 +249,9 @@ export async function POST(req: Request) {
   }
   const description = bodyParts.join("\n");
 
+  // ── Create the task + back-link to the delivery row ─────────────
   try {
-    await createTask({
+    const task = await createTask({
       agentId: alias.agent_id,
       title,
       description,
@@ -198,12 +261,21 @@ export async function POST(req: Request) {
           : "normal",
       source: "automation",
     });
+    await setInboundDeliveryTaskId(delivery.id, task.id);
     await recordInboundDelivery(alias.id);
-    return NextResponse.json({ ok: true, accepted: true, intent });
+    return NextResponse.json({
+      ok: true,
+      accepted: true,
+      intent,
+      deliveryId: delivery.id,
+      taskId: task.id,
+      extractionStatus: extractionResult.status,
+    });
   } catch (e) {
     console.error("[inbound] task create failed:", e);
-    // 500 → Resend will retry. The task creation is the only side
-    // effect that matters; better to retry than drop the email.
+    // Delivery row already exists; 500 so Resend retries the whole
+    // event. If retry succeeds, the duplicate delivery row is harmless
+    // (review page lists are dated; agent sees the most recent).
     return NextResponse.json(
       { ok: false, error: "task create failed" },
       { status: 500 },
