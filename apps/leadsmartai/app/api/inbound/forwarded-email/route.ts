@@ -13,6 +13,7 @@ import {
   attemptExtraction,
   summarizeExtraction,
 } from "@/lib/inbound/extractFromAttachments";
+import { matchSenderToContact } from "@/lib/inbound/matchSenderContact";
 
 export const runtime = "nodejs";
 // Resend gives us signed PDF URLs we fetch on demand; Claude PDF
@@ -172,6 +173,14 @@ export async function POST(req: Request) {
   // extraction_status='failed' and the review page surfaces a retry.
   const extractionResult = await attemptExtraction({ intent, attachments });
 
+  // ── Suggested-contact match (Phase 2B-1) ────────────────────────
+  // Best-effort: parse the `from` header and look up the agent's
+  // contacts by email. The review page will surface the match as a
+  // suggestion the agent can confirm or override — never auto-route
+  // (forwarded offers commonly arrive `From:` a TC or assistant, so
+  // a wrong guess would mis-attribute the deal).
+  const contactMatch = await matchSenderToContact(alias.agent_id, fromHeader);
+
   // ── Persist the delivery row ────────────────────────────────────
   const textPreview = text ? text.slice(0, 2000) : null;
   let delivery;
@@ -191,6 +200,7 @@ export async function POST(req: Request) {
         extractionResult.status === "extracted" ? extractionResult.payload : null,
       extractionError:
         extractionResult.status === "failed" ? extractionResult.error : null,
+      matchedContactId: contactMatch?.id ?? null,
     });
   } catch (e) {
     console.error("[inbound] delivery insert failed:", e);
