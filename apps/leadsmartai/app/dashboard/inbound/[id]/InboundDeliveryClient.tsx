@@ -1,0 +1,332 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import type {
+  InboundDeliveryRow,
+  InboundExtractionPayload,
+} from "@/lib/inbound/deliveries";
+
+/**
+ * Review surface for one inbound (forwarded) email.
+ *
+ * This is the page the agent lands on when they click the link in the
+ * "Review forwarded …" task. Three regions:
+ *   1. Envelope — sender / subject / attachments / raw body preview
+ *      so the agent can confirm the right email was routed.
+ *   2. Extraction — the AI-parsed structured fields (offer or RLA).
+ *      When extraction is missing or failed, this region shows a
+ *      "Run / retry extraction" button instead.
+ *   3. Apply — CTA to push the parsed fields into the existing offer
+ *      or listing upload flow, where the agent picks a contact and
+ *      saves the draft. We don't auto-create drafts here because
+ *      contact matching is a real judgment call — the wrong choice
+ *      poisons the CRM.
+ */
+export default function InboundDeliveryClient({
+  delivery,
+  intentLabel,
+}: {
+  delivery: InboundDeliveryRow;
+  intentLabel: string;
+}) {
+  const [current, setCurrent] = useState<InboundDeliveryRow>(delivery);
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+
+  async function runExtraction() {
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      const res = await fetch(`/api/dashboard/inbound/${current.id}/extract`, {
+        method: "POST",
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        delivery?: InboundDeliveryRow;
+        error?: string;
+      };
+      if (!res.ok || !body.ok || !body.delivery) {
+        setRetryError(body.error ?? "Retry failed");
+        return;
+      }
+      setCurrent(body.delivery);
+    } catch (e) {
+      setRetryError(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setRetrying(false);
+    }
+  }
+
+  const attachments = current.attachments_json ?? [];
+  const pdfCount = attachments.filter(
+    (a) =>
+      (a.content_type ?? "").toLowerCase().includes("pdf") ||
+      (a.filename ?? "").toLowerCase().endsWith(".pdf"),
+  ).length;
+
+  const applyHref = applyDraftHref(current);
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div>
+        <div className="text-xs text-slate-500">
+          <Link href="/dashboard/calendar" className="hover:underline">
+            Calendar
+          </Link>
+          {" / Forwarded emails / "}
+          <span className="text-slate-700">{intentLabel}</span>
+        </div>
+        <h1 className="mt-1 text-2xl font-semibold text-slate-900">
+          {current.subject ?? "(no subject)"}
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Forwarded {new Date(current.created_at).toLocaleString()} · classified as{" "}
+          <span className="font-medium text-slate-700">{intentLabel}</span>
+        </p>
+      </div>
+
+      {/* ── Envelope ─────────────────────────────────────────────── */}
+      <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-700">Email</h2>
+        <dl className="grid gap-3 text-sm sm:grid-cols-[120px_1fr]">
+          <Field label="From" value={current.from_header} />
+          <Field label="To" value={current.to_header} />
+          <Field label="Subject" value={current.subject} />
+          <Field
+            label="Attachments"
+            value={
+              attachments.length === 0
+                ? "(none)"
+                : `${attachments.length} (${pdfCount} PDF)`
+            }
+          />
+        </dl>
+        {current.text_preview && (
+          <details className="group">
+            <summary className="cursor-pointer select-none text-xs font-medium text-slate-600 hover:text-slate-900">
+              Show body preview
+            </summary>
+            <pre className="mt-2 max-h-80 overflow-y-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-xs leading-relaxed text-slate-700">
+              {current.text_preview}
+            </pre>
+          </details>
+        )}
+      </section>
+
+      {/* ── Extraction ───────────────────────────────────────────── */}
+      <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-700">
+            AI extraction
+          </h2>
+          <ExtractionStatusPill status={current.extraction_status} />
+        </div>
+
+        {current.extraction_status === "extracted" && current.extraction ? (
+          <ExtractionView extraction={current.extraction} />
+        ) : current.extraction_status === "skipped" ? (
+          <p className="text-sm text-slate-500">
+            No structured extractor for this intent yet — review the email
+            body above and act manually.
+          </p>
+        ) : current.extraction_status === "failed" ? (
+          <div className="space-y-2">
+            <p className="text-sm text-rose-700">
+              {current.extraction_error ?? "Extraction failed."}
+            </p>
+            <button
+              type="button"
+              onClick={runExtraction}
+              disabled={retrying}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {retrying ? "Retrying…" : "🔁 Retry extraction"}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-slate-500">
+              Extraction hasn&apos;t run yet for this delivery.
+            </p>
+            <button
+              type="button"
+              onClick={runExtraction}
+              disabled={retrying}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {retrying ? "Running…" : "▶️ Run extraction"}
+            </button>
+          </div>
+        )}
+
+        {retryError && (
+          <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            {retryError}
+          </p>
+        )}
+      </section>
+
+      {/* ── Apply CTA ────────────────────────────────────────────── */}
+      {current.extraction_status === "extracted" && applyHref && (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-emerald-900">
+            Save as a draft
+          </h2>
+          <p className="mt-1 text-sm text-emerald-800">
+            Open the upload flow with these fields pre-filled. Pick the
+            buyer / seller and save when you&apos;re ready.
+          </p>
+          <Link
+            href={applyHref}
+            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
+          >
+            {applyCtaLabel(current)}
+          </Link>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string | null }) {
+  return (
+    <>
+      <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        {label}
+      </dt>
+      <dd className="text-sm text-slate-800">{value ?? "—"}</dd>
+    </>
+  );
+}
+
+function ExtractionStatusPill({ status }: { status: string }) {
+  const cls =
+    status === "extracted"
+      ? "bg-emerald-100 text-emerald-800"
+      : status === "failed"
+        ? "bg-rose-100 text-rose-800"
+        : status === "skipped"
+          ? "bg-slate-100 text-slate-600"
+          : "bg-amber-100 text-amber-800";
+  return (
+    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
+      {status}
+    </span>
+  );
+}
+
+function ExtractionView({
+  extraction,
+}: {
+  extraction: InboundExtractionPayload;
+}) {
+  if (extraction.kind === "offer") {
+    const o = extraction.data;
+    return (
+      <dl className="grid gap-3 text-sm sm:grid-cols-[180px_1fr]">
+        <Field label="Property" value={o.propertyAddress} />
+        <Field
+          label="City / State / ZIP"
+          value={[o.city, o.state, o.zip].filter(Boolean).join(", ") || null}
+        />
+        <Field label="List price" value={fmtMoney(o.listPrice)} />
+        <Field label="Offer price" value={fmtMoney(o.offerPrice)} />
+        <Field label="Earnest money" value={fmtMoney(o.earnestMoney)} />
+        <Field label="Down payment" value={fmtMoney(o.downPayment)} />
+        <Field label="Financing" value={o.financingType} />
+        <Field label="Proposed closing" value={o.closingDateProposed} />
+        <Field label="Offer expires" value={o.offerExpiresAt} />
+        <Field
+          label="Inspection contingency"
+          value={contingencyLabel(o.inspectionContingency)}
+        />
+        <Field
+          label="Appraisal contingency"
+          value={contingencyLabel(o.appraisalContingency)}
+        />
+        <Field
+          label="Loan contingency"
+          value={contingencyLabel(o.loanContingency)}
+        />
+        <Field label="Other contingencies" value={o.contingencyNotes} />
+        <Field label="Notes" value={o.notes} />
+      </dl>
+    );
+  }
+
+  // listing_agreement
+  const l = extraction.data;
+  return (
+    <dl className="grid gap-3 text-sm sm:grid-cols-[180px_1fr]">
+      <Field label="Property" value={l.propertyAddress} />
+      <Field
+        label="City / State / ZIP"
+        value={[l.city, l.state, l.zip].filter(Boolean).join(", ") || null}
+      />
+      <Field label="List price" value={fmtMoney(l.listPrice)} />
+      <Field label="Listing start" value={l.listingStartDate} />
+      <Field label="Listing expires" value={l.listingExpirationDate} />
+      <Field
+        label="Sellers"
+        value={l.sellerNames.length > 0 ? l.sellerNames.join(", ") : null}
+      />
+      <Field
+        label="Total commission"
+        value={l.commissionTotalPct != null ? `${l.commissionTotalPct}%` : null}
+      />
+      <Field
+        label="Buyer-side commission"
+        value={
+          l.commissionBuyerSidePct != null
+            ? `${l.commissionBuyerSidePct}%`
+            : null
+        }
+      />
+      <Field
+        label="Confidence"
+        value={l.confidence != null ? `${Math.round(l.confidence * 100)}%` : null}
+      />
+      {l.warnings.length > 0 && (
+        <Field label="Warnings" value={l.warnings.join("; ")} />
+      )}
+    </dl>
+  );
+}
+
+function fmtMoney(n: number | null): string | null {
+  if (n == null) return null;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+function contingencyLabel(v: boolean | null): string | null {
+  if (v == null) return null;
+  return v ? "WAIVED" : "kept";
+}
+
+function applyCtaLabel(d: InboundDeliveryRow): string {
+  if (d.intent === "offer_received") return "Open in offer upload →";
+  if (d.intent === "listing_signed") return "Open in listing upload →";
+  return "Open in upload →";
+}
+
+/**
+ * Build the upload-page URL for the "Save as a draft" CTA. The upload
+ * pages will fetch /api/dashboard/inbound/[id] themselves to pick up
+ * the parsed fields — keeps the URL short instead of base64-encoding
+ * the whole extraction.
+ */
+function applyDraftHref(d: InboundDeliveryRow): string | null {
+  if (d.intent === "offer_received") {
+    return `/dashboard/offers/upload?inboundId=${encodeURIComponent(d.id)}`;
+  }
+  // Listing-agreement upload flow doesn't exist yet (transactions/new
+  // is the manual entry surface). When it lands we can wire this up;
+  // for now return null so the CTA is hidden and the agent uses the
+  // extraction view as a copy-paste reference.
+  return null;
+}
