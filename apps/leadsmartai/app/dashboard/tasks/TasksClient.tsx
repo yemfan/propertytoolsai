@@ -2,7 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Check, X, CalendarClock, Pencil } from "lucide-react";
+import { Check, X, CalendarClock, Pencil, ExternalLink } from "lucide-react";
+
+/**
+ * Pull the first http(s) URL out of a task description so the row UI
+ * can render it as a clickable link instead of dumping it as plain
+ * text. Used by inbound-email tasks (which embed the review-page link
+ * via /dashboard/inbound/[id]) and by anything else that puts a link
+ * in the body — keeps the affordance generic.
+ */
+function firstUrlFromDescription(desc: string | null | undefined): string | null {
+  if (!desc) return null;
+  const match = desc.match(/https?:\/\/[^\s)\]]+/);
+  return match ? match[0] : null;
+}
 
 /**
  * Unified task shape merging crm_tasks (manual + briefing) with
@@ -510,11 +523,31 @@ export default function TasksClient({
                   );
                 }
                 const isPlaybookRow = t.source === "playbook" || t.source === "coaching";
+                const taskLinkUrl = firstUrlFromDescription(t.description);
                 return (
                   <tr key={t.id} className="hover:bg-gray-50/50">
                     <td className="px-4 py-2.5">
                       <div className="flex flex-col gap-0.5">
-                        <span className="font-medium text-gray-900">{t.title}</span>
+                        {taskLinkUrl ? (
+                          // When the description carries a deep-link
+                          // (e.g. inbound-email review page), make the
+                          // task title itself the primary affordance
+                          // for opening it. Saves the agent a click vs
+                          // hunting for the link inside the memo blob.
+                          <a
+                            href={taskLinkUrl}
+                            // Open in a new tab so the task list stays
+                            // open behind it — the agent often wants
+                            // to come back and tick the task done.
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-blue-700 hover:text-blue-900 hover:underline"
+                          >
+                            {t.title}
+                          </a>
+                        ) : (
+                          <span className="font-medium text-gray-900">{t.title}</span>
+                        )}
                         <SourceChip task={t} />
                       </div>
                     </td>
@@ -534,12 +567,48 @@ export default function TasksClient({
                     <td className="px-4 py-2.5">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_COLORS[t.status] ?? ""}`}>{t.status}</span>
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] truncate">{t.description ?? "\u2014"}</td>
+                    <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] truncate">
+                      {/* When the description has a URL (inbound-email
+                          review pages, etc.), render the link as a
+                          clickable anchor so the agent can jump
+                          straight there. The rest of the prose still
+                          renders alongside, just truncated to fit. */}
+                      {taskLinkUrl ? (
+                        <a
+                          href={taskLinkUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-700 hover:text-blue-900 hover:underline"
+                          title="Open the linked page"
+                        >
+                          {taskLinkUrl}
+                        </a>
+                      ) : (
+                        t.description ?? "\u2014"
+                      )}
+                    </td>
                     {/* Row actions \u2014 compact icon buttons. Complete /
                         cancel / move-to (snooze) only render when the
                         task is still open; Edit is always available. */}
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <div className="inline-flex items-center gap-0.5">
+                        {/* "Open" icon — only shown when the task body
+                            carries a URL (inbound-email review pages
+                            today). Renders before the existing action
+                            cluster so the primary affordance is the
+                            leftmost icon, not buried behind Done/Edit. */}
+                        {taskLinkUrl && (
+                          <a
+                            href={taskLinkUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Open linked page"
+                            aria-label="Open linked page"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-blue-700 hover:bg-blue-50 hover:text-blue-900"
+                          >
+                            <ExternalLink className="h-4 w-4" strokeWidth={2.5} />
+                          </a>
+                        )}
                         {t.status === "open" && (
                           <TaskIconButton
                             onClick={() => void markDone(t.id)}
