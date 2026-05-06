@@ -57,6 +57,13 @@ export type InboundDeliveryRow = {
   extraction: InboundExtractionPayload | null;
   extraction_error: string | null;
   extracted_at: string | null;
+  /**
+   * Phase 2B-1: best-guess CRM contact based on the `from` header.
+   * Suggestion only — agents confirm or override on the review page
+   * before we attribute anything. Null when the parse-and-lookup
+   * found no matching contact.
+   */
+  matched_contact_id: string | null;
   created_at: string;
 };
 
@@ -73,6 +80,8 @@ export type CreateInboundDeliveryInput = {
   extractionStatus: InboundExtractionStatus;
   extraction: InboundExtractionPayload | null;
   extractionError: string | null;
+  /** Suggested-contact match from `from`-header lookup. Optional. */
+  matchedContactId?: string | null;
 };
 
 export async function createInboundDelivery(
@@ -95,6 +104,7 @@ export async function createInboundDelivery(
       extraction: input.extraction as any,
       extraction_error: input.extractionError,
       extracted_at: input.extractionStatus === "extracted" ? nowIso : null,
+      matched_contact_id: input.matchedContactId ?? null,
     } as any)
     .select("*")
     .single();
@@ -121,10 +131,24 @@ export async function setInboundDeliveryTaskId(
     .eq("id", deliveryId as any);
 }
 
+/**
+ * Read shape that augments the raw row with the suggested-contact's
+ * display fields. The review page needs name + email to render the
+ * "Looks like Jane Doe (jane@example.com)" suggestion without
+ * issuing a separate fetch.
+ */
+export type InboundDeliveryWithMatch = InboundDeliveryRow & {
+  matched_contact: {
+    id: string;
+    name: string | null;
+    email: string | null;
+  } | null;
+};
+
 export async function getInboundDeliveryForAgent(
   agentId: string,
   id: string,
-): Promise<InboundDeliveryRow | null> {
+): Promise<InboundDeliveryWithMatch | null> {
   const { data, error } = await supabaseAdmin
     .from("inbound_email_deliveries")
     .select("*")
@@ -132,7 +156,43 @@ export async function getInboundDeliveryForAgent(
     .eq("id", id as any)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return (data as InboundDeliveryRow | null) ?? null;
+  if (!data) return null;
+  const row = data as InboundDeliveryRow;
+
+  // Hydrate the matched-contact display fields when present. We
+  // don't use a Supabase relational select (`contacts(...)`) here
+  // because the FK is `on delete set null` and the relational
+  // shorthand can return weird shapes for soft FKs. A second
+  // single-row lookup keeps the behavior obvious.
+  let matched_contact: InboundDeliveryWithMatch["matched_contact"] = null;
+  if (row.matched_contact_id) {
+    const { data: c } = await supabaseAdmin
+      .from("contacts")
+      .select("id, name, first_name, last_name, email")
+      .eq("id", row.matched_contact_id as any)
+      .maybeSingle();
+    if (c) {
+      type ContactRow = {
+        id: string;
+        name: string | null;
+        first_name: string | null;
+        last_name: string | null;
+        email: string | null;
+      };
+      const cr = c as ContactRow;
+      const fullName =
+        (cr.first_name || cr.last_name
+          ? `${cr.first_name ?? ""} ${cr.last_name ?? ""}`.trim()
+          : cr.name) ?? null;
+      matched_contact = {
+        id: cr.id,
+        name: fullName || null,
+        email: cr.email,
+      };
+    }
+  }
+
+  return { ...row, matched_contact };
 }
 
 export type UpdateInboundExtractionInput =

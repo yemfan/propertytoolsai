@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import type {
-  InboundDeliveryRow,
+  InboundDeliveryWithMatch,
   InboundExtractionPayload,
 } from "@/lib/inbound/deliveries";
 
@@ -27,10 +27,17 @@ export default function InboundDeliveryClient({
   delivery,
   intentLabel,
 }: {
-  delivery: InboundDeliveryRow;
+  delivery: InboundDeliveryWithMatch;
   intentLabel: string;
 }) {
-  const [current, setCurrent] = useState<InboundDeliveryRow>(delivery);
+  const [current, setCurrent] = useState<InboundDeliveryWithMatch>(delivery);
+  // Buyer/seller selection state. Defaults to "use match" when the
+  // webhook found one — the agent can untoggle to "different person"
+  // if the from-header was a TC or assistant rather than the actual
+  // party. Persists for the page session only; not written back.
+  const [useSuggestedContact, setUseSuggestedContact] = useState<boolean>(
+    delivery.matched_contact != null,
+  );
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
 
@@ -43,7 +50,7 @@ export default function InboundDeliveryClient({
       });
       const body = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
-        delivery?: InboundDeliveryRow;
+        delivery?: InboundDeliveryWithMatch;
         error?: string;
       };
       if (!res.ok || !body.ok || !body.delivery) {
@@ -65,7 +72,13 @@ export default function InboundDeliveryClient({
       (a.filename ?? "").toLowerCase().endsWith(".pdf"),
   ).length;
 
-  const applyHref = applyDraftHref(current);
+  // Build the apply-draft link with the suggested contact prefilled
+  // when the agent has agreed to use it. "Different person" toggle
+  // strips the contactId so they pick from scratch on the upload page.
+  const applyHref = applyDraftHref(
+    current,
+    useSuggestedContact ? current.matched_contact?.id ?? null : null,
+  );
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -167,6 +180,66 @@ export default function InboundDeliveryClient({
         )}
       </section>
 
+      {/* ── Suggested contact (Phase 2B-1) ──────────────────────────
+          Shown when the webhook found a CRM contact whose email
+          matches the `from` header. Agent picks "Use" to preselect
+          the buyer on the upload page, or "Different person" to fall
+          through to a manual pick. Hidden entirely when there's no
+          match — they'll just pick manually as before. */}
+      {current.matched_contact && (
+        <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-blue-900">
+            Suggested contact
+          </h2>
+          <p className="mt-1 text-sm text-blue-900">
+            Looks like{" "}
+            <span className="font-semibold">
+              {current.matched_contact.name ?? current.matched_contact.email ?? "—"}
+            </span>
+            {current.matched_contact.email && current.matched_contact.name ? (
+              <>
+                {" "}
+                <span className="font-mono text-xs text-blue-700">
+                  &lt;{current.matched_contact.email}&gt;
+                </span>
+              </>
+            ) : null}{" "}
+            from your CRM. Forwarded offers sometimes come from a TC or
+            assistant — confirm before applying.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => setUseSuggestedContact(true)}
+              className={`rounded-lg px-3 py-1.5 font-medium ${
+                useSuggestedContact
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
+              }`}
+            >
+              Use this contact
+            </button>
+            <button
+              type="button"
+              onClick={() => setUseSuggestedContact(false)}
+              className={`rounded-lg px-3 py-1.5 font-medium ${
+                !useSuggestedContact
+                  ? "bg-slate-700 text-white"
+                  : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+              }`}
+            >
+              Different person
+            </button>
+            <Link
+              href={`/dashboard/contacts/${current.matched_contact.id}`}
+              className="ml-auto text-blue-700 hover:underline"
+            >
+              View contact →
+            </Link>
+          </div>
+        </section>
+      )}
+
       {/* ── Apply CTA ────────────────────────────────────────────── */}
       {current.extraction_status === "extracted" && applyHref && (
         <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
@@ -174,8 +247,18 @@ export default function InboundDeliveryClient({
             Save as a draft
           </h2>
           <p className="mt-1 text-sm text-emerald-800">
-            Open the upload flow with these fields pre-filled. Pick the
-            buyer / seller and save when you&apos;re ready.
+            Open the upload flow with these fields pre-filled.{" "}
+            {useSuggestedContact && current.matched_contact ? (
+              <>
+                Buyer is set to{" "}
+                <span className="font-semibold">
+                  {current.matched_contact.name ?? current.matched_contact.email}
+                </span>
+                .
+              </>
+            ) : (
+              <>Pick the buyer / seller and save when you&apos;re ready.</>
+            )}
           </p>
           <Link
             href={applyHref}
@@ -319,10 +402,20 @@ function applyCtaLabel(d: InboundDeliveryRow): string {
  * pages will fetch /api/dashboard/inbound/[id] themselves to pick up
  * the parsed fields — keeps the URL short instead of base64-encoding
  * the whole extraction.
+ *
+ * `contactId` (Phase 2B-1) preselects the buyer/seller in the upload
+ * page's contact picker when the agent confirmed the suggested
+ * match. Null when they hit "Different person" or there was no
+ * match — picker stays empty for them to choose manually.
  */
-function applyDraftHref(d: InboundDeliveryRow): string | null {
+function applyDraftHref(
+  d: InboundDeliveryWithMatch,
+  contactId: string | null,
+): string | null {
   if (d.intent === "offer_received") {
-    return `/dashboard/offers/upload?inboundId=${encodeURIComponent(d.id)}`;
+    const params = new URLSearchParams({ inboundId: d.id });
+    if (contactId) params.set("contactId", contactId);
+    return `/dashboard/offers/upload?${params.toString()}`;
   }
   // Listing-agreement upload flow doesn't exist yet (transactions/new
   // is the manual entry surface). When it lands we can wire this up;
