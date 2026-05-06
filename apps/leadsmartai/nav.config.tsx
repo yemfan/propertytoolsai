@@ -196,6 +196,16 @@ const navConfig = {
           icon: navEmoji("💬"),
         },
         {
+          // Dedicated entry for the missed-call text-back surface.
+          // Same panel as Settings → Voice → Missed Call Text-Back, but
+          // surfaced here so agents who care about it don't have to
+          // hunt through settings tabs to find the activity log.
+          label: "Missed-call text-back",
+          href: "/dashboard/missed-call",
+          match: ["/dashboard/missed-call"],
+          icon: navEmoji("📲"),
+        },
+        {
           label: "Drafts",
           href: "/dashboard/drafts",
           match: ["/dashboard/drafts"],
