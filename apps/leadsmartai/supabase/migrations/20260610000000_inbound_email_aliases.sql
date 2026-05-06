@@ -14,7 +14,11 @@
 
 create table if not exists public.agent_inbound_aliases (
   id uuid primary key default gen_random_uuid(),
-  agent_id uuid not null references public.agents(id) on delete cascade,
+  -- agents.id is bigint in this codebase (legacy from the original
+  -- agents schema). Older sister tables — crm_tasks, contacts, etc. —
+  -- all use bigint here. Stay consistent so existing FK plumbing,
+  -- RLS policies, and the agent_id casts in app code line up.
+  agent_id bigint not null references public.agents(id) on delete cascade,
   -- The unique local_part — everything before the @ in the forwarding
   -- address. Lowercase, alphanumeric + hyphens. Provider-side filtering
   -- enforces the same shape so we never get weird incoming targets.
