@@ -14,7 +14,9 @@
 create table if not exists public.inbound_email_deliveries (
   id uuid primary key default gen_random_uuid(),
   alias_id uuid not null references public.agent_inbound_aliases(id) on delete cascade,
-  agent_id uuid not null references public.agents(id) on delete cascade,
+  -- bigint matches public.agents(id) — see note in the
+  -- agent_inbound_aliases migration.
+  agent_id bigint not null references public.agents(id) on delete cascade,
   -- Backref to the "Review forwarded …" task on `crm_tasks` (legacy
   -- name `tasks` doesn't exist in this codebase). Set on insert; null
   -- only if task creation failed (rare — webhook returns 500 +
