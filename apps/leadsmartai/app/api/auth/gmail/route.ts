@@ -32,11 +32,23 @@ export async function GET() {
       response_type: "code",
       scope: GMAIL_SCOPES,
       // `offline` so we get a refresh_token. Without it, tokens stop
-      // working an hour after the consent flow.
+      // working an hour after the consent flow. Google issues a
+      // refresh_token on the FIRST consent for a (client, scope, user)
+      // tuple — additional consents only return one when prompt=consent
+      // is set.
       access_type: "offline",
-      // `consent` forces the consent screen even if previously granted —
-      // ensures Google issues a refresh_token on every connect.
-      prompt: "consent",
+      // `prompt=select_account` lets the user pick which Google account
+      // to use without forcing re-consent. Was previously prompt=consent,
+      // which triggered Google's `secure-response-handling` policy
+      // rejection in Testing-mode + restricted-scope projects (a known
+      // documented edge case). select_account avoids the rejection but
+      // still walks the user through scope grants on first connect.
+      prompt: "select_account",
+      // `include_granted_scopes` so successive connects accumulate scopes
+      // rather than replacing — important because the same Google account
+      // may already have granted Calendar scope to a sibling client and
+      // we don't want to clobber that.
+      include_granted_scopes: "true",
       state: String(agentId),
     });
 
