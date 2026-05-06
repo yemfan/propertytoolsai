@@ -488,6 +488,14 @@ export type CallLogEntry = {
   to_phone: string | null;
   duration_seconds: number | null;
   textback_sent: boolean;
+  /** Body of the auto-text that was sent. Null when no textback fired
+   *  or the message_log has been pruned. */
+  textback_message: string | null;
+  /** Resend / SMS provider status of the textback ("sent",
+   *  "delivered", "failed", etc.). Null when no textback fired. */
+  textback_status: string | null;
+  /** When the textback was logged. Null when no textback fired. */
+  textback_sent_at: string | null;
   notes: string | null;
   created_at: string;
 };
@@ -545,17 +553,59 @@ export async function listRecentCalls(
     }
   }
 
-  return rows.map((r) => ({
-    id: r.id,
-    contact_id: r.contact_id,
-    contact_name: r.contact_id ? (nameByContactId.get(r.contact_id) ?? null) : null,
-    direction: r.direction,
-    status: r.status,
-    from_phone: r.from_phone,
-    to_phone: r.to_phone,
-    duration_seconds: r.duration_seconds,
-    textback_sent: r.textback_message_log_id != null,
-    notes: r.notes,
-    created_at: r.created_at,
-  }));
+  // Resolve textback message bodies in one batch query so the
+  // activity-first dashboard page can show what was actually sent
+  // to each missed caller (not just "text was sent").
+  const textbackLogIds = Array.from(
+    new Set(
+      rows
+        .map((r) => r.textback_message_log_id)
+        .filter((x): x is string => x != null),
+    ),
+  );
+  const textbackByLogId = new Map<
+    string,
+    { content: string | null; status: string | null; created_at: string | null }
+  >();
+  if (textbackLogIds.length > 0) {
+    const { data: logs } = await supabaseAdmin
+      .from("message_logs")
+      .select("id, content, status, created_at")
+      .in("id", textbackLogIds);
+    type LogRow = {
+      id: string;
+      content: string | null;
+      status: string | null;
+      created_at: string | null;
+    };
+    for (const l of (logs ?? []) as LogRow[]) {
+      textbackByLogId.set(l.id, {
+        content: l.content,
+        status: l.status,
+        created_at: l.created_at,
+      });
+    }
+  }
+
+  return rows.map((r) => {
+    const tb = r.textback_message_log_id
+      ? (textbackByLogId.get(r.textback_message_log_id) ?? null)
+      : null;
+    return {
+      id: r.id,
+      contact_id: r.contact_id,
+      contact_name: r.contact_id ? (nameByContactId.get(r.contact_id) ?? null) : null,
+      direction: r.direction,
+      status: r.status,
+      from_phone: r.from_phone,
+      to_phone: r.to_phone,
+      duration_seconds: r.duration_seconds,
+      textback_sent: r.textback_message_log_id != null,
+      textback_message: tb?.content ?? null,
+      textback_status: tb?.status ?? null,
+      textback_sent_at: tb?.created_at ?? null,
+      notes: r.notes,
+      created_at: r.created_at,
+    };
+  });
 }
