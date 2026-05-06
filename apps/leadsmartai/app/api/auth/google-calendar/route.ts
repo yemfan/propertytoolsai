@@ -24,7 +24,16 @@ export async function GET() {
       response_type: "code",
       scope: GOOGLE_CALENDAR_SCOPES,
       access_type: "offline",
-      prompt: "consent",
+      // prompt=consent was previously here to force re-consent on every
+      // connect (guaranteed refresh_token), but it triggers Google's
+      // generic `secure-response-handling` policy rejection once the
+      // project's consent screen has any restricted scope listed (we
+      // added gmail.readonly recently for the sibling Gmail flow).
+      // select_account keeps the account picker without the re-consent
+      // prompt; access_type=offline still gets us a refresh_token on
+      // first consent.
+      prompt: "select_account",
+      include_granted_scopes: "true",
       state: agentId, // pass agentId through state for callback
     });
 
