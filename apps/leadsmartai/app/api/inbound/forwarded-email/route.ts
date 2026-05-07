@@ -7,6 +7,7 @@ import {
   recordInboundDelivery,
 } from "@/lib/inbound/aliases";
 import { classifyInboundEmail, intentLabel } from "@/lib/inbound/intent";
+import { aiClassifyInboundEmail } from "@/lib/inbound/aiClassify";
 import { createTask } from "@/lib/crm/pipeline/tasks";
 import { verifySvixSignature } from "@/lib/email-tracking/svix";
 import {
@@ -187,8 +188,31 @@ export async function POST(req: Request) {
   );
   const hasPdfAttachment = pdfAttachments.length > 0;
 
-  const intent = classifyInboundEmail({ subject, text, hasPdfAttachment });
+  // ── Intent classification (keyword + AI overlay) ────────────────
+  // Phase 2B-3: keyword classifier runs first (deterministic, free).
+  // When it returns `unknown` AND there's signal worth burning a
+  // Claude haiku call on (PDF attached or non-trivial body), we
+  // fall through to the AI overlay. ~80% → ~95% coverage.
+  let intent = classifyInboundEmail({ subject, text, hasPdfAttachment });
+  let classifierUsed: "keyword" | "ai_overlay" = "keyword";
+  if (intent === "unknown" && (hasPdfAttachment || (text ?? "").trim().length > 50)) {
+    const aiIntent = await aiClassifyInboundEmail({
+      subject,
+      text,
+      attachmentFilenames: pdfAttachments
+        .map((a) => a.filename ?? "")
+        .filter(Boolean),
+    });
+    if (aiIntent && aiIntent !== "unknown") {
+      intent = aiIntent;
+      classifierUsed = "ai_overlay";
+      console.log(
+        `[inbound] ai-overlay upgraded intent: from=keyword:unknown → ai:${aiIntent}`,
+      );
+    }
+  }
   const intentText = intentLabel(intent);
+  console.log(`[inbound] classifier=${classifierUsed} intent=${intent}`);
 
   // ── Run extraction inline (best-effort) ─────────────────────────
   // Failures here don't block delivery + task creation; we just store

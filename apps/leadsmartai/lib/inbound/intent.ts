@@ -1,11 +1,17 @@
 /**
- * Phase 1 inbound-email intent classifier.
+ * Inbound-email intent classifier.
  *
- * Keyword + heuristic only — deliberately simple. The agent reviews
- * the resulting task before any extraction or draft creation runs,
- * so false positives just create a slightly-mistitled review task,
- * not a wrong offer. Phase 2 will layer AI classification on top
- * once we have a corpus of real forwarded emails to tune against.
+ * Two layers:
+ *   1. Keyword + heuristic (this file). Deterministic, free, ~80%
+ *      coverage on real-world emails.
+ *   2. AI overlay (`aiClassify.ts`, Phase 2B-3). Single Claude haiku
+ *      call invoked only when the keyword pass returns `unknown` AND
+ *      there's signal worth burning the call on. ~95% coverage when
+ *      both layers run.
+ *
+ * The agent always reviews the resulting task before any extraction
+ * → draft creation, so false positives at either layer just create
+ * a slightly-mistitled review task, not a wrong offer.
  */
 
 export type InboundIntent =
