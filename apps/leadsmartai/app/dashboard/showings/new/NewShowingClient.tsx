@@ -105,6 +105,12 @@ function NewShowingForm() {
             subject: string | null;
             from_header: string | null;
             extraction_status: string;
+            // Discriminated union — every branch needs a *literal*
+            // `kind`, otherwise TS can't narrow the type after a
+            // `kind === "showing_request"` check (a wider `kind: string`
+            // branch swallows the narrowing because string is wider
+            // than the literal). Listing extractor is deliberately
+            // typed loosely — we only act on showing_request here.
             extraction:
               | {
                   kind: "showing_request";
@@ -121,7 +127,8 @@ function NewShowingForm() {
                     notes: string | null;
                   };
                 }
-              | { kind: string }
+              | { kind: "offer"; data: Record<string, unknown> }
+              | { kind: "listing_agreement"; data: Record<string, unknown> }
               | null;
           };
           error?: string;
