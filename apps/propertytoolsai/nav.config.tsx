@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   Lightbulb,
+  LogOut,
   PiggyBank,
   RefreshCw,
   Scale,
@@ -149,6 +150,19 @@ const navConfig = {
           label: "Support",
           href: "/support",
           icon: <LifeBuoy size={16} strokeWidth={2} aria-hidden />,
+        },
+        {
+          // Sign-out fallback in the sidebar so users always have an
+          // obvious way to log out — independent of the top-right
+          // AccountMenu dropdown (which can get hidden on narrow
+          // viewports, auth-loading skeletons, or by users who don't
+          // realize the avatar is a click target). Routes through
+          // /logout (a thin client component that calls
+          // supabaseBrowser().auth.signOut() and redirects to /).
+          label: "Sign out",
+          href: "/logout",
+          prefetch: false,
+          icon: <LogOut size={16} strokeWidth={2} aria-hidden />,
         },
       ],
     },
