@@ -417,7 +417,7 @@ function contingencyLabel(v: boolean | null): string | null {
   return v ? "WAIVED" : "kept";
 }
 
-function applyCtaLabel(d: InboundDeliveryRow): string {
+function applyCtaLabel(d: InboundDeliveryWithMatch): string {
   if (d.intent === "offer_received") return "Open in offer upload →";
   if (d.intent === "listing_signed") return "Open in listing upload →";
   if (d.intent === "showing_requested") return "Open in showing form →";
