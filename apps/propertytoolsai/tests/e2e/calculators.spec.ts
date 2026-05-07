@@ -30,9 +30,23 @@ function pmt(principal: number, annualRatePct: number, years: number): number {
 
 async function fillByLabel(page: Page, label: string, value: number | string) {
   const input = page.getByLabel(label, { exact: true });
-  await input.fill(String(value));
-  // The calculator reacts to onChange — nudge focus out so the value commits
-  // before the next assertion. Tab is cheaper than click({ position: ... }).
+  // Programmatic `.fill()` doesn't reliably fire React's onChange on
+  // WebKit (mobile-safari project) when the input is a controlled
+  // <input type="number">. React tracks the prior value via an
+  // internal hidden field; setting `value` directly via the DOM
+  // value setter sometimes bypasses the synthetic-event dispatch,
+  // leaving stale state in the calculator.
+  //
+  // Workaround: select-all + backspace to clear, then
+  // pressSequentially to type the new value character-by-character.
+  // pressSequentially simulates real keystrokes which always fire
+  // onChange. ~50ms slower per call but eliminates the mobile-safari
+  // flake that was causing 4-of-44 calculator tests to retry.
+  await input.click({ clickCount: 3 });
+  await input.press("Backspace");
+  await input.pressSequentially(String(value));
+  // Calculator reacts to onChange — nudge focus out so the value
+  // commits before the next assertion.
   await input.blur();
 }
 
