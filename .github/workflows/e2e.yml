@@ -57,6 +57,18 @@ jobs:
         env:
           # Disable network-dependent features during tests.
           NEXT_PUBLIC_SITE_URL: http://localhost:3001
+          # Stub Supabase env so calculator pages don't 500 on the
+          # `requireSupabasePublicEnv()` throw guard during render.
+          # Calculators are pure math (client-side); the only reason
+          # these vars are needed at all is the analytics +
+          # agent-assignment API routes called from page boilerplate.
+          # Real values would let those routes succeed — stubs just
+          # let createClient() get past init; real Supabase calls
+          # would fail with a normal error response, not a thrown
+          # 500 that spams the log and slows the page enough to time
+          # out the test cap.
+          NEXT_PUBLIC_SUPABASE_URL: https://stub.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.stub.stub
         run: pnpm test:e2e
 
       - name: Upload report
