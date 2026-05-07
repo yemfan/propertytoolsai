@@ -10,6 +10,26 @@ import { ToolLeadGate } from "@/components/ToolLeadGate";
 import { SaveResultsButton } from "@/components/SaveResultsButton";
 
 /**
+ * US currency formatter that puts the minus sign BEFORE the dollar
+ * sign for negative values (`-$150.00`) instead of after (`$-150.00`).
+ * The latter is what naive `$${n.toFixed(2)}` produces and breaks
+ * downstream consumers that expect conventional currency formatting
+ * (including the calculator E2E regex `-?\$[\d,]+`).
+ */
+function fmtMoney(
+  n: number,
+  opts: { suffix?: string; decimals?: 0 | 2 } = {},
+): string {
+  const decimals = opts.decimals ?? 0;
+  const abs = Math.abs(n).toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+  const sign = n < 0 ? "-" : "";
+  return `${sign}$${abs}${opts.suffix ?? ""}`;
+}
+
+/**
  * Cash flow calculator — primary. Optionally accepts a purchase
  * price, which unlocks cap rate as a second output. This subsumes
  * the retired /property-investment-analyzer page (now 301'd here).
@@ -144,15 +164,15 @@ export default function CashFlowCalculator() {
           <div className="lg:sticky lg:top-24">
             <ResultCard
               title="Cash flow"
-              value={`$${results.monthlyCashFlow.toFixed(2)}/mo`}
+              value={fmtMoney(results.monthlyCashFlow, { suffix: "/mo", decimals: 2 })}
               details={[
-                `Annual income: $${results.annualIncome.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-                `Annual expenses: $${results.annualExpenses.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-                `Annual cash flow: $${results.annualCashFlow.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-                `Monthly cash flow: $${results.monthlyCashFlow.toFixed(2)}`,
+                `Annual income: ${fmtMoney(results.annualIncome)}`,
+                `Annual expenses: ${fmtMoney(results.annualExpenses)}`,
+                `Annual cash flow: ${fmtMoney(results.annualCashFlow)}`,
+                `Monthly cash flow: ${fmtMoney(results.monthlyCashFlow, { decimals: 2 })}`,
                 ...(results.capRate != null
                   ? [
-                      `NOI: $${results.noi.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+                      `NOI: ${fmtMoney(results.noi)}`,
                       `Cap rate: ${results.capRate.toFixed(2)}%`,
                     ]
                   : []),
