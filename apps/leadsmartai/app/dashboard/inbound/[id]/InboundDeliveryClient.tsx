@@ -338,40 +338,66 @@ function ExtractionView({
     );
   }
 
-  // listing_agreement
-  const l = extraction.data;
+  if (extraction.kind === "listing_agreement") {
+    const l = extraction.data;
+    return (
+      <dl className="grid gap-3 text-sm sm:grid-cols-[180px_1fr]">
+        <Field label="Property" value={l.propertyAddress} />
+        <Field
+          label="City / State / ZIP"
+          value={[l.city, l.state, l.zip].filter(Boolean).join(", ") || null}
+        />
+        <Field label="List price" value={fmtMoney(l.listPrice)} />
+        <Field label="Listing start" value={l.listingStartDate} />
+        <Field label="Listing expires" value={l.listingExpirationDate} />
+        <Field
+          label="Sellers"
+          value={l.sellerNames.length > 0 ? l.sellerNames.join(", ") : null}
+        />
+        <Field
+          label="Total commission"
+          value={l.commissionTotalPct != null ? `${l.commissionTotalPct}%` : null}
+        />
+        <Field
+          label="Buyer-side commission"
+          value={
+            l.commissionBuyerSidePct != null
+              ? `${l.commissionBuyerSidePct}%`
+              : null
+          }
+        />
+        <Field
+          label="Confidence"
+          value={l.confidence != null ? `${Math.round(l.confidence * 100)}%` : null}
+        />
+        {l.warnings.length > 0 && (
+          <Field label="Warnings" value={l.warnings.join("; ")} />
+        )}
+      </dl>
+    );
+  }
+
+  // showing_request (Phase 2B-2)
+  const s = extraction.data;
   return (
     <dl className="grid gap-3 text-sm sm:grid-cols-[180px_1fr]">
-      <Field label="Property" value={l.propertyAddress} />
+      <Field label="Requester" value={s.requesterName} />
+      <Field label="Phone" value={s.requesterPhone} />
+      <Field label="Email" value={s.requesterEmail} />
+      <Field label="Property" value={s.propertyAddress} />
       <Field
         label="City / State / ZIP"
-        value={[l.city, l.state, l.zip].filter(Boolean).join(", ") || null}
+        value={[s.city, s.state, s.zip].filter(Boolean).join(", ") || null}
       />
-      <Field label="List price" value={fmtMoney(l.listPrice)} />
-      <Field label="Listing start" value={l.listingStartDate} />
-      <Field label="Listing expires" value={l.listingExpirationDate} />
-      <Field
-        label="Sellers"
-        value={l.sellerNames.length > 0 ? l.sellerNames.join(", ") : null}
-      />
-      <Field
-        label="Total commission"
-        value={l.commissionTotalPct != null ? `${l.commissionTotalPct}%` : null}
-      />
-      <Field
-        label="Buyer-side commission"
-        value={
-          l.commissionBuyerSidePct != null
-            ? `${l.commissionBuyerSidePct}%`
-            : null
-        }
-      />
+      <Field label="Requested date" value={s.requestedDate} />
+      <Field label="Requested time" value={s.requestedTime} />
+      <Field label="Notes" value={s.notes} />
       <Field
         label="Confidence"
-        value={l.confidence != null ? `${Math.round(l.confidence * 100)}%` : null}
+        value={s.confidence != null ? `${Math.round(s.confidence * 100)}%` : null}
       />
-      {l.warnings.length > 0 && (
-        <Field label="Warnings" value={l.warnings.join("; ")} />
+      {s.warnings.length > 0 && (
+        <Field label="Warnings" value={s.warnings.join("; ")} />
       )}
     </dl>
   );
@@ -394,6 +420,7 @@ function contingencyLabel(v: boolean | null): string | null {
 function applyCtaLabel(d: InboundDeliveryRow): string {
   if (d.intent === "offer_received") return "Open in offer upload →";
   if (d.intent === "listing_signed") return "Open in listing upload →";
+  if (d.intent === "showing_requested") return "Open in showing form →";
   return "Open in upload →";
 }
 
@@ -416,6 +443,17 @@ function applyDraftHref(
     const params = new URLSearchParams({ inboundId: d.id });
     if (contactId) params.set("contactId", contactId);
     return `/dashboard/offers/upload?${params.toString()}`;
+  }
+  if (d.intent === "showing_requested") {
+    // /dashboard/showings/new will fetch the delivery on mount and
+    // prefill address / date / time / notes from the extraction.
+    // contactId only preselects the buyer when the matched-contact
+    // toggle is "Use this contact" — otherwise the form's Contact
+    // Picker stays open for manual selection (most likely case for
+    // showings, since the requester is often a NEW lead).
+    const params = new URLSearchParams({ inboundId: d.id });
+    if (contactId) params.set("contactId", contactId);
+    return `/dashboard/showings/new?${params.toString()}`;
   }
   // Listing-agreement upload flow doesn't exist yet (transactions/new
   // is the manual entry surface). When it lands we can wire this up;

@@ -193,7 +193,14 @@ export async function POST(req: Request) {
   // ── Run extraction inline (best-effort) ─────────────────────────
   // Failures here don't block delivery + task creation; we just store
   // extraction_status='failed' and the review page surfaces a retry.
-  const extractionResult = await attemptExtraction({ intent, attachments });
+  // Subject + text are needed for the showing-request extractor (text-
+  // based, no PDF); offer/listing extractors ignore them.
+  const extractionResult = await attemptExtraction({
+    intent,
+    attachments,
+    subject,
+    text,
+  });
 
   // ── Suggested-contact match (Phase 2B-1) ────────────────────────
   // Best-effort: parse the `from` header and look up the agent's

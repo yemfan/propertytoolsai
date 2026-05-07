@@ -52,6 +52,12 @@ export async function POST(
     const result = await attemptExtraction({
       intent: delivery.intent,
       attachments: delivery.attachments_json ?? [],
+      // Re-pass the stored subject + text-preview so retries on
+      // showing-request emails can re-run the text-based extractor.
+      // text_preview is truncated to 2000 chars at write-time (per the
+      // webhook), which is well within the 8KB the extractor reads.
+      subject: delivery.subject,
+      text: delivery.text_preview,
     });
 
     if (result.status === "extracted") {

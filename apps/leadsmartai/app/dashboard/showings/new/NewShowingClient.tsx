@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import AddressAutocomplete, {
   type AddressAutocompleteValue,
 } from "@/components/AddressAutocomplete";
@@ -54,6 +54,7 @@ function NewShowingForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledContactId = searchParams.get("contactId") ?? "";
+  const inboundId = searchParams.get("inboundId");
 
   const [contact, setContact] = useState<ContactPickerValue | null>(null);
   const [propertyAddress, setPropertyAddress] = useState("");
@@ -72,6 +73,100 @@ function NewShowingForm() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Banner shown when prefill came from a forwarded showing-request email. */
+  const [inboundSource, setInboundSource] = useState<{
+    id: string;
+    subject: string | null;
+    fromHeader: string | null;
+  } | null>(null);
+
+  /**
+   * Phase 2B-2: prefill from a forwarded showing-request email. The
+   * /dashboard/inbound/[id] review page hops to here with
+   * `?inboundId=<uuid>&contactId=<optional>`. We fetch the delivery,
+   * lift the structured ShowingRequestExtraction onto the form,
+   * and skip the agent's manual data entry.
+   *
+   * Address autocomplete + listing-status lookup *don't* fire on
+   * prefill — the agent can re-pick the address to retrigger them
+   * if they want the listing-status banner. Otherwise the form just
+   * has the parsed values and the agent reviews + saves.
+   */
+  useEffect(() => {
+    if (!inboundId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/dashboard/inbound/${inboundId}`);
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          delivery?: {
+            id: string;
+            subject: string | null;
+            from_header: string | null;
+            extraction_status: string;
+            extraction:
+              | {
+                  kind: "showing_request";
+                  data: {
+                    requesterName: string | null;
+                    requesterPhone: string | null;
+                    requesterEmail: string | null;
+                    propertyAddress: string | null;
+                    city: string | null;
+                    state: string | null;
+                    zip: string | null;
+                    requestedDate: string | null;
+                    requestedTime: string | null;
+                    notes: string | null;
+                  };
+                }
+              | { kind: string }
+              | null;
+          };
+          error?: string;
+        };
+        if (cancelled) return;
+        if (!res.ok || !body.ok || !body.delivery) {
+          setError(body.error ?? "Couldn't load forwarded email.");
+          return;
+        }
+        const d = body.delivery;
+        setInboundSource({
+          id: d.id,
+          subject: d.subject,
+          fromHeader: d.from_header,
+        });
+        if (
+          d.extraction_status === "extracted" &&
+          d.extraction &&
+          d.extraction.kind === "showing_request"
+        ) {
+          const e = d.extraction.data;
+          if (e.propertyAddress) setPropertyAddress(e.propertyAddress);
+          if (e.city) setCity(e.city);
+          if (e.state) setStateValue(e.state);
+          if (e.zip) setZip(e.zip);
+          if (e.requestedDate) setDate(e.requestedDate);
+          if (e.requestedTime) setTime(e.requestedTime);
+          if (e.notes) setNotes(e.notes);
+        } else {
+          setError(
+            d.extraction_status === "failed"
+              ? "AI extraction failed for this email — go back and retry from the review page."
+              : "This forwarded email doesn't have a parsed showing request yet — open the review page first.",
+          );
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Network error.");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [inboundId]);
 
   // Listing-status banner shown after a Google Places address pick.
   // Driven by /api/property/{address} → latest_snapshot.listing_status.
@@ -265,6 +360,29 @@ function NewShowingForm() {
           for your file + next-steps conversation.
         </p>
       </div>
+
+      {/* Banner shown when prefill arrived from a forwarded showing-
+          request email (Phase 2B-2). Tells the agent the parsed
+          fields below came from the inbound pipeline; back-link to
+          the review page so they can compare against the source. */}
+      {inboundSource && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <div className="font-medium">
+            Pre-filled from a forwarded showing request
+          </div>
+          <div className="mt-0.5 text-xs text-emerald-700">
+            {inboundSource.subject ? `“${inboundSource.subject}”` : "(no subject)"}
+            {inboundSource.fromHeader ? ` · from ${inboundSource.fromHeader}` : ""}
+            {" · "}
+            <Link
+              href={`/dashboard/inbound/${inboundSource.id}`}
+              className="underline hover:text-emerald-900"
+            >
+              view source email
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div>
