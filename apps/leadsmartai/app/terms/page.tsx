@@ -278,25 +278,20 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
           not responsible for third-party services.
         </p>
         <p>
-          <strong>Gmail sync (optional).</strong> If you connect your Google
-          account, LeadSmart reads messages from your Gmail on a periodic
-          schedule and logs conversations with your CRM contacts. Our handling
-          of Gmail data is described in detail in section 5 of the{" "}
-          <Link href="/privacy#google-user-data" className="text-[#0072ce] hover:underline">
+          <strong>Inbound email forwarding (optional).</strong> LeadSmart
+          provisions each agent a unique inbound forwarding address (e.g.{" "}
+          <code>your-name@inbox.leadsmart-ai.com</code>) on first dashboard
+          visit. If you choose to set up a Gmail / Outlook filter that
+          forwards selected messages to that address, LeadSmart processes
+          only the emails you explicitly forward — we have no access to your
+          inbox itself. Our handling of forwarded emails is described in
+          detail in section 5 of the{" "}
+          <Link href="/privacy#inbound-email" className="text-[#0072ce] hover:underline">
             Privacy Policy
           </Link>
-          , including the Google API Services User Data Policy Limited Use
-          disclosure. You can disconnect Gmail at any time from Settings, or
-          revoke access directly at{" "}
-          <a
-            href="https://myaccount.google.com/permissions"
-            className="text-[#0072ce] hover:underline"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            myaccount.google.com/permissions
-          </a>
-          .
+          . You can stop forwarding at any time by disabling the filter in
+          your email provider, or rotate / disable your alias from
+          Settings &rarr; Calendar &rarr; Email forwarding.
         </p>
       </>
     ),

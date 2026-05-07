@@ -53,10 +53,11 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
           <li>
             <strong>Information from integrations you connect</strong> — lead sources such
             as Zillow, Realtor.com, Follow Up Boss, kvCORE, Sierra Interactive, Facebook
-            Lead Ads, Google, and any IDX site you link. If you connect Gmail, we also
-            receive the content of email messages sent to or from CRM contacts — see
-            section 5 for the specific Gmail handling rules. We receive only what each
-            integration&rsquo;s OAuth scope permits.
+            Lead Ads, Google, and any IDX site you link. If you forward emails to your
+            unique LeadSmart inbound address (e.g.{" "}
+            <code>your-name@inbox.leadsmart-ai.com</code>), we process only those emails
+            you explicitly forward to us — see section 5 for inbound email handling. We
+            receive only what each integration&rsquo;s OAuth scope permits.
           </li>
         </ul>
         <p className="font-semibold text-slate-900">
@@ -218,150 +219,122 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
     ),
   },
   {
-    id: "google-user-data",
-    title: "5. Google user data — Gmail sync",
+    id: "inbound-email",
+    title: "5. Inbound email — your forwarding address",
     body: (
       <>
         <p>
-          Agents may optionally connect their Google account to enable Gmail sync.
-          When connected, LeadSmart requests the <code>gmail.readonly</code> OAuth
-          scope and reads new messages on a periodic schedule to automatically log
-          conversations with CRM contacts. Connecting is explicit and reversible —
-          the feature stays off until you click &ldquo;Connect Gmail&rdquo; in
-          Settings.
+          LeadSmart provisions each agent a unique inbound forwarding
+          address (e.g. <code>your-name@inbox.leadsmart-ai.com</code>) on
+          first dashboard visit. The address is yours alone, scoped to your
+          account, and only processes emails you explicitly forward to it —
+          typically via a Gmail / Outlook filter you configure yourself.
         </p>
 
-        <p className="font-semibold text-slate-900">What we access</p>
+        <p className="font-semibold text-slate-900">What we receive</p>
         <ul>
           <li>
-            The <code>gmail.readonly</code> scope (read-only access to Gmail
-            messages and metadata).
+            The full envelope (<strong>From</strong>, <strong>To</strong>,{" "}
+            <strong>Subject</strong>) of any email forwarded to your alias.
           </li>
           <li>
-            Your Gmail address (<code>userinfo.email</code>), used only to label
-            the connected account in the LeadSmart UI.
+            The plain-text <strong>body</strong> (first ~2,000 characters
+            stored, full body kept transiently for AI extraction).
+          </li>
+          <li>
+            <strong>Attachments</strong> (PDFs of offers, listing
+            agreements, etc.) referenced by signed URLs that expire. We
+            do not permanently store attachment binaries; we read them
+            once for extraction and discard them.
           </li>
         </ul>
 
-        <p className="font-semibold text-slate-900">How we use Gmail data</p>
+        <p className="font-semibold text-slate-900">How we use it</p>
         <ul>
           <li>
-            For each message we read, we extract the <strong>From</strong>,{" "}
-            <strong>To</strong>, <strong>Cc</strong>, <strong>Subject</strong>,
-            and plain-text <strong>body</strong>.
+            We classify the email&rsquo;s intent (offer, listing
+            agreement, showing request) using a keyword pass plus an
+            optional AI overlay.
           </li>
           <li>
-            We check whether any counterparty&rsquo;s email matches a contact
-            in <em>your</em> CRM.
+            We run an AI extractor against any PDF attachment to pull
+            structured fields (price, dates, parties, contingencies).
           </li>
           <li>
-            <strong>If matched:</strong> we store a copy of the message in
-            LeadSmart so it appears on the contact&rsquo;s timeline.
+            We create a &ldquo;Review forwarded …&rdquo; task on your
+            CRM dashboard with a link to a review page where you confirm
+            the parsed fields and apply them as a draft offer / listing /
+            showing.
           </li>
           <li>
-            <strong>If not matched:</strong> we discard the message in memory.
-            We do not store it, index it, or use it for any other purpose.
+            We attempt a best-effort match between the sender&rsquo;s
+            email and your existing CRM contacts as a <em>suggestion</em>{" "}
+            you confirm or override — never auto-routed.
           </li>
         </ul>
 
-        <p className="font-semibold text-slate-900">How we don&apos;t use Gmail data</p>
+        <p className="font-semibold text-slate-900">How we don&apos;t use it</p>
         <ul>
           <li>
-            We do <strong>not</strong> use Gmail data to serve advertising to
-            any user.
+            We do <strong>not</strong> read emails sent to other
+            addresses on your domain — only your unique LeadSmart alias.
           </li>
           <li>
-            We do <strong>not</strong> use Gmail data to train, fine-tune, or
-            otherwise develop generalized machine-learning models, including
-            large language models.
+            We do <strong>not</strong> use forwarded email content to
+            train, fine-tune, or otherwise develop generalized
+            machine-learning models, including large language models.
+            AI extraction calls run against the message in-context per
+            request and are not retained for training.
           </li>
           <li>
-            We do <strong>not</strong> sell, license, or transfer Gmail data to
-            any third party, except the sub-processors necessary to operate
-            the Service (database hosting, infrastructure) and only under
-            contractual obligations that mirror these restrictions.
+            We do <strong>not</strong> sell, license, or transfer
+            forwarded email content to any third party, except the
+            sub-processors necessary to operate the Service (Resend
+            for inbound webhook delivery, Anthropic for AI extraction,
+            Supabase for database storage) and only under contractual
+            obligations that mirror these restrictions.
           </li>
           <li>
-            Humans at LeadSmart do not read your Gmail content except when (i)
-            you give explicit written permission for specific messages, (ii)
-            it is necessary for security or to prevent abuse, (iii) it is
-            required for compliance with applicable law, or (iv) the content
-            is first aggregated and anonymized in a way that cannot be used to
-            identify you or your contacts.
+            Humans at LeadSmart do not read your forwarded email content
+            except when (i) you give explicit written permission for
+            specific messages, (ii) it is necessary for security or to
+            prevent abuse, (iii) it is required for compliance with
+            applicable law, or (iv) the content is first aggregated and
+            anonymized in a way that cannot be used to identify you or
+            your contacts.
           </li>
         </ul>
-
-        <p className="font-semibold text-slate-900">Limited use disclosure</p>
-        <p className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
-          LeadSmart AI&apos;s use and transfer to any other app of information
-          received from Google APIs will adhere to the{" "}
-          <a
-            href="https://developers.google.com/terms/api-services-user-data-policy"
-            className="text-[#0072ce] hover:underline"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Google API Services User Data Policy
-          </a>
-          , including the{" "}
-          <a
-            href="https://developers.google.com/terms/api-services-user-data-policy#limited-use"
-            className="text-[#0072ce] hover:underline"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Limited Use
-          </a>{" "}
-          requirements.
-        </p>
 
         <p className="font-semibold text-slate-900">Retention and deletion</p>
         <ul>
           <li>
-            Matched messages are retained in your LeadSmart CRM until you
-            delete them, delete the associated contact, or delete your
-            account. When your account is deleted, messages are removed or
+            Forwarded email envelopes + body previews are retained in your
+            LeadSmart CRM until you delete them, delete the associated
+            review task, or delete your account. When your account is
+            deleted, all inbound delivery records are removed or
             anonymized within 90 days, aligned with section 11 below.
           </li>
           <li>
-            <strong>Disconnecting Gmail</strong> from Settings revokes our
-            access token and stops all future sync immediately. Messages
-            already logged to your CRM remain until you delete them — they
-            are treated as part of your CRM history, not as live Google data.
+            <strong>Stop forwarding</strong> at any time by disabling or
+            deleting the Gmail / Outlook filter you set up. We have no
+            way to pull emails from your inbox; we only receive what
+            your filter sends.
+          </li>
+          <li>
+            <strong>Rotate or disable your alias</strong> — visit
+            Settings &rarr; Calendar &rarr; Email forwarding to rotate
+            to a fresh alias, or contact us to disable inbound entirely.
           </li>
         </ul>
 
-        <p className="font-semibold text-slate-900">Your controls</p>
-        <ul>
-          <li>
-            <strong>Disconnect inside LeadSmart</strong> — Settings &rarr;
-            Channels &rarr; Gmail sync &rarr; Disconnect.
-          </li>
-          <li>
-            <strong>Revoke via Google</strong> — visit{" "}
-            <a
-              href="https://myaccount.google.com/permissions"
-              className="text-[#0072ce] hover:underline"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              myaccount.google.com/permissions
-            </a>{" "}
-            and remove LeadSmart AI. Any in-flight sync is terminated at the
-            Google side.
-          </li>
-          <li>
-            <strong>Delete stored messages</strong> — remove individual
-            messages from a contact&apos;s timeline, or email{" "}
-            <a
-              href="mailto:contact@leadsmart-ai.com"
-              className="text-[#0072ce] hover:underline"
-            >
-              contact@leadsmart-ai.com
-            </a>{" "}
-            to purge all Gmail-synced content from your account.
-          </li>
-        </ul>
+        <p className="font-semibold text-slate-900">Per-alias rate limit</p>
+        <p>
+          To deter abuse, each alias caps inbound deliveries at 100 per
+          rolling 24 hours. Emails over the cap are dropped (we return
+          200 to the upstream provider and discard). Volumes above this
+          are extremely rare in normal use; raise a support request if
+          your workflow needs a higher cap.
+        </p>
       </>
     ),
   },
