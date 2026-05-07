@@ -252,16 +252,66 @@ export async function getAgentForwardingInfo(agentId: string): Promise<{
   full_name: string | null;
   user_id: string | null;
 } | null> {
+  // `agents` does NOT have a `full_name` column in this codebase
+  // (informational schema confirms only id/auth_user_id/brand_name/
+  // forwarding_phone/etc.). Selecting it errored out the entire
+  // query, which made the GET /settings endpoint return
+  // `forwarding_phone: null` even when the value was correctly
+  // stored — and the form's "set state from response" pattern
+  // promptly cleared the input on every load + save.
+  //
+  // Display name comes from auth.users metadata (best-effort, see
+  // below); fall back to brand_name when neither is available.
   const { data } = await supabaseAdmin
     .from("agents")
-    .select("forwarding_phone, full_name, auth_user_id")
+    .select("forwarding_phone, auth_user_id, brand_name")
     .eq("id", agentId)
     .maybeSingle();
   if (!data) return null;
+  const row = data as {
+    forwarding_phone?: string | null;
+    auth_user_id?: string | null;
+    brand_name?: string | null;
+  };
+
+  // Best-effort name resolution from auth.users metadata. Failures
+  // are swallowed — handleMissedCall already treats `full_name: null`
+  // as "render with empty agent_first_name token", which the
+  // template author can defend against.
+  let fullName: string | null = null;
+  if (row.auth_user_id) {
+    try {
+      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(
+        String(row.auth_user_id),
+      );
+      const meta = (userData?.user?.user_metadata ?? {}) as {
+        full_name?: unknown;
+        name?: unknown;
+        first_name?: unknown;
+        last_name?: unknown;
+      };
+      const fromMeta =
+        (typeof meta.full_name === "string" && meta.full_name) ||
+        (typeof meta.name === "string" && meta.name) ||
+        ([
+          typeof meta.first_name === "string" ? meta.first_name : "",
+          typeof meta.last_name === "string" ? meta.last_name : "",
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .trim()) ||
+        null;
+      fullName = fromMeta || null;
+    } catch {
+      // Auth admin lookup failed — leave name null.
+    }
+  }
+  if (!fullName && row.brand_name) fullName = row.brand_name;
+
   return {
-    forwarding_phone: (data as { forwarding_phone?: string | null }).forwarding_phone ?? null,
-    full_name: (data as { full_name?: string | null }).full_name ?? null,
-    user_id: (data as { auth_user_id?: string | null }).auth_user_id ?? null,
+    forwarding_phone: row.forwarding_phone ?? null,
+    full_name: fullName,
+    user_id: row.auth_user_id ?? null,
   };
 }
 
