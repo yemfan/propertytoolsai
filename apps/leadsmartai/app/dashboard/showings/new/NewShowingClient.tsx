@@ -26,6 +26,35 @@ type StatusBanner = {
 
 const ACTIVE_STATUS_RE = /^(active|active_under_contract|coming_soon|new)$/i;
 
+type ClientListingPlatform = "zillow" | "redfin" | "realtor" | "compass";
+
+/**
+ * Client-side platform detector. Mirror of the server's `detectPlatform`
+ * in `lib/listingUrl.ts` — duplicated here because that module is
+ * `server-only` and can't be imported from a client component. Keep
+ * both in sync when adding new platforms.
+ */
+function detectClientPlatform(inputUrl: string): ClientListingPlatform | null {
+  if (/zillow\.com/i.test(inputUrl)) return "zillow";
+  if (/redfin\.com/i.test(inputUrl)) return "redfin";
+  if (/realtor\.com/i.test(inputUrl)) return "realtor";
+  if (/compass\.com/i.test(inputUrl)) return "compass";
+  return null;
+}
+
+function clientPlatformLabel(platform: ClientListingPlatform): string {
+  switch (platform) {
+    case "zillow":
+      return "Zillow";
+    case "redfin":
+      return "Redfin";
+    case "realtor":
+      return "Realtor.com";
+    case "compass":
+      return "Compass";
+  }
+}
+
 /** Pick a string field from a loosely-typed property data blob, trying
  *  several common naming variants since the upstream listing source
  *  isn't strict. */
@@ -78,6 +107,16 @@ function NewShowingForm() {
     id: string;
     subject: string | null;
     fromHeader: string | null;
+  } | null>(null);
+
+  /** Listing-URL autodetect state. Set when the agent pastes a Zillow /
+   *  Redfin / Realtor / Compass URL — we show a small badge under the
+   *  input + auto-fill any empty address fields. */
+  const [listingUrlDetected, setListingUrlDetected] = useState<{
+    platform: "zillow" | "redfin" | "realtor" | "compass";
+    label: string;
+    status: "looking-up" | "filled" | "address-only" | "failed";
+    note?: string;
   } | null>(null);
 
   /**
@@ -296,6 +335,107 @@ function NewShowingForm() {
       });
     } finally {
       setLookupLoading(false);
+    }
+  }
+
+  /**
+   * Listing-URL autodetect.
+   *
+   * Triggered when the agent pastes/edits the "Listing URL" field. If
+   * the URL is from a recognized platform (Zillow, Redfin, Realtor,
+   * Compass), we hit /api/property/from-listing to extract the
+   * address + property data and auto-fill empty fields. The agent
+   * gets a small badge under the input ("Zillow detected · auto-
+   * filled") so they know what just happened.
+   *
+   * Non-fatal: a fetch failure or unrecognized URL leaves the URL
+   * value as plain text and falls through to manual entry.
+   */
+  async function detectListingUrl(rawUrl: string) {
+    const url = rawUrl.trim();
+    if (!url) {
+      setListingUrlDetected(null);
+      return;
+    }
+    const platform = detectClientPlatform(url);
+    if (!platform) {
+      setListingUrlDetected(null);
+      return;
+    }
+    const label = clientPlatformLabel(platform);
+    setListingUrlDetected({ platform, label, status: "looking-up" });
+
+    try {
+      const res = await fetch(
+        `/api/property/from-listing?url=${encodeURIComponent(url)}`,
+      );
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        platform?: string;
+        address?: string | null;
+        data?: unknown;
+        error?: string;
+      };
+      if (!res.ok || !body.ok || !body.address) {
+        setListingUrlDetected({
+          platform,
+          label,
+          status: "failed",
+          note: body.error ?? "Couldn't extract listing details.",
+        });
+        return;
+      }
+
+      // Auto-fill empty fields only — never overwrite anything the
+      // agent already typed. Address is the most useful prefill;
+      // city/state/zip come from the data blob if present.
+      let filledAnything = false;
+      if (!propertyAddress.trim()) {
+        setPropertyAddress(body.address);
+        filledAnything = true;
+      }
+      const blob = body.data;
+      const blobCity = readBlobString(blob, "city");
+      const blobState = readBlobString(blob, "state");
+      const blobZip = readBlobString(blob, "zip", "zip_code", "zipCode");
+      if (blobCity && !city) {
+        setCity(blobCity);
+        filledAnything = true;
+      }
+      if (blobState && state === "CA") {
+        // "CA" is the form's default — overwrite it only when the URL
+        // actually carries a different state.
+        setStateValue(blobState);
+        filledAnything = true;
+      }
+      if (blobZip && !zip) {
+        setZip(blobZip);
+        filledAnything = true;
+      }
+      const blobMls = readBlobString(blob, "mlsNumber", "mls_number", "mls", "mlsId");
+      if (blobMls && !mlsNumber) {
+        setMlsNumber(blobMls);
+        filledAnything = true;
+      }
+      // Mark address as verified so the chips below the input render
+      // with what we just learned, mirroring the Google-Places path.
+      if (filledAnything) setAddressVerified(true);
+
+      setListingUrlDetected({
+        platform,
+        label,
+        status: filledAnything ? "filled" : "address-only",
+        note: filledAnything
+          ? `Auto-filled from ${label}.`
+          : `Address parsed but the form is already filled — leaving values alone.`,
+      });
+    } catch (e) {
+      setListingUrlDetected({
+        platform,
+        label,
+        status: "failed",
+        note: e instanceof Error ? e.message : "Network error.",
+      });
     }
   }
 
@@ -544,10 +684,56 @@ function NewShowingForm() {
             <label className="block text-xs font-medium text-slate-700">Listing URL</label>
             <input
               value={mlsUrl}
-              onChange={(e) => setMlsUrl(e.target.value)}
-              placeholder="https://…"
+              onChange={(e) => {
+                setMlsUrl(e.target.value);
+                // Reset the detect badge when the field is being
+                // edited; we'll re-run detection on blur.
+                if (listingUrlDetected) setListingUrlDetected(null);
+              }}
+              onBlur={(e) => {
+                void detectListingUrl(e.target.value);
+              }}
+              onPaste={(e) => {
+                // Run detection immediately on paste (the most common
+                // way agents add a Zillow/Redfin link). We need a tick
+                // for React to commit the new value before our handler
+                // reads it from state.
+                const pasted = e.clipboardData.getData("text") ?? "";
+                if (pasted.trim()) {
+                  setTimeout(() => void detectListingUrl(pasted.trim()), 0);
+                }
+              }}
+              placeholder="Paste a Zillow, Redfin, Realtor.com, or Compass link…"
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             />
+            {listingUrlDetected && (
+              <div className="mt-1 text-[11px]">
+                {listingUrlDetected.status === "looking-up" && (
+                  <span className="text-slate-500">
+                    🔍 {listingUrlDetected.label} detected — looking up
+                    listing…
+                  </span>
+                )}
+                {listingUrlDetected.status === "filled" && (
+                  <span className="text-emerald-700">
+                    ✓ {listingUrlDetected.label} detected ·{" "}
+                    {listingUrlDetected.note}
+                  </span>
+                )}
+                {listingUrlDetected.status === "address-only" && (
+                  <span className="text-slate-500">
+                    {listingUrlDetected.label} detected ·{" "}
+                    {listingUrlDetected.note}
+                  </span>
+                )}
+                {listingUrlDetected.status === "failed" && (
+                  <span className="text-amber-700">
+                    {listingUrlDetected.label} detected, but{" "}
+                    {listingUrlDetected.note?.toLowerCase()}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
