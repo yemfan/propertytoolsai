@@ -11,6 +11,11 @@ import {
   RecentAddressList,
   type RecentAddress,
 } from "@/components/crm/RecentAddressList";
+import {
+  detectPlatform,
+  platformLabel,
+  type ListingPlatform,
+} from "@/lib/listingUrl";
 
 
 /**
@@ -25,35 +30,6 @@ type StatusBanner = {
 };
 
 const ACTIVE_STATUS_RE = /^(active|active_under_contract|coming_soon|new)$/i;
-
-type ClientListingPlatform = "zillow" | "redfin" | "realtor" | "compass";
-
-/**
- * Client-side platform detector. Mirror of the server's `detectPlatform`
- * in `lib/listingUrl.ts` — duplicated here because that module is
- * `server-only` and can't be imported from a client component. Keep
- * both in sync when adding new platforms.
- */
-function detectClientPlatform(inputUrl: string): ClientListingPlatform | null {
-  if (/zillow\.com/i.test(inputUrl)) return "zillow";
-  if (/redfin\.com/i.test(inputUrl)) return "redfin";
-  if (/realtor\.com/i.test(inputUrl)) return "realtor";
-  if (/compass\.com/i.test(inputUrl)) return "compass";
-  return null;
-}
-
-function clientPlatformLabel(platform: ClientListingPlatform): string {
-  switch (platform) {
-    case "zillow":
-      return "Zillow";
-    case "redfin":
-      return "Redfin";
-    case "realtor":
-      return "Realtor.com";
-    case "compass":
-      return "Compass";
-  }
-}
 
 /** Pick a string field from a loosely-typed property data blob, trying
  *  several common naming variants since the upstream listing source
@@ -113,7 +89,7 @@ function NewShowingForm() {
    *  Redfin / Realtor / Compass URL — we show a small badge under the
    *  input + auto-fill any empty address fields. */
   const [listingUrlDetected, setListingUrlDetected] = useState<{
-    platform: "zillow" | "redfin" | "realtor" | "compass";
+    platform: ListingPlatform;
     label: string;
     status: "looking-up" | "filled" | "address-only" | "failed";
     note?: string;
@@ -357,12 +333,12 @@ function NewShowingForm() {
       setListingUrlDetected(null);
       return;
     }
-    const platform = detectClientPlatform(url);
+    const platform = detectPlatform(url);
     if (!platform) {
       setListingUrlDetected(null);
       return;
     }
-    const label = clientPlatformLabel(platform);
+    const label = platformLabel(platform);
     setListingUrlDetected({ platform, label, status: "looking-up" });
 
     try {

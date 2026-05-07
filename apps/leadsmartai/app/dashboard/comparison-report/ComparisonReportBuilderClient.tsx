@@ -2,6 +2,11 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
+import {
+  detectPlatform,
+  platformLabel,
+  type ListingPlatform,
+} from "@/lib/listingUrl";
 
 type Row = {
   id: string;
@@ -12,6 +17,35 @@ type Row = {
   baths: string;
   rent: string;
 };
+
+/**
+ * Per-row autodetect state for the Address field. Tracks which row
+ * is currently looking up + the latest result so we can render a
+ * status badge under each Address input independently.
+ */
+type DetectState = {
+  platform: ListingPlatform;
+  label: string;
+  status: "looking-up" | "filled" | "address-only" | "failed";
+  note?: string;
+};
+
+/** Pick a numeric or string field from a loosely-typed property data
+ *  blob, returning null when not present. Tries multiple naming
+ *  variants because upstream listing data sources aren't strict. */
+function readBlobNumber(blob: unknown, ...keys: string[]): number | null {
+  if (!blob || typeof blob !== "object") return null;
+  const obj = blob as Record<string, unknown>;
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string" && v.trim()) {
+      const n = Number(v.replace(/[$,\s]/g, ""));
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return null;
+}
 
 function newRow(): Row {
   return {
@@ -35,12 +69,129 @@ export default function ComparisonReportBuilderClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  /** Autodetect badge state, keyed by row.id. */
+  const [detect, setDetect] = useState<Record<string, DetectState | null>>({});
 
   const isFree = planType.toLowerCase() === "free";
 
   const updateRow = useCallback((id: string, patch: Partial<Row>) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }, []);
+
+  const setRowDetect = useCallback(
+    (id: string, value: DetectState | null) => {
+      setDetect((prev) => ({ ...prev, [id]: value }));
+    },
+    [],
+  );
+
+  /**
+   * Listing-URL autodetect for the Address field. Triggered on paste +
+   * blur. When the agent pastes a Zillow / Redfin / Realtor / Compass
+   * URL, we hit /api/property/from-listing to extract address + the
+   * full property-data blob, then auto-fill the row's empty fields
+   * (address, price, sqft, beds, baths). A small badge under the
+   * Address input shows what platform was detected.
+   *
+   * Saves the agent ~5 manual lookups per row in a multi-property
+   * compare — the original ask was "better auto detect."
+   */
+  const detectAddressUrl = useCallback(
+    async (rowId: string, rawValue: string) => {
+      const value = rawValue.trim();
+      if (!value) {
+        setRowDetect(rowId, null);
+        return;
+      }
+      const platform = detectPlatform(value);
+      if (!platform) {
+        // Plain address text or unrecognized URL — no badge, no lookup.
+        setRowDetect(rowId, null);
+        return;
+      }
+      const label = platformLabel(platform);
+      setRowDetect(rowId, { platform, label, status: "looking-up" });
+
+      try {
+        const res = await fetch(
+          `/api/property/from-listing?url=${encodeURIComponent(value)}`,
+        );
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          address?: string | null;
+          data?: unknown;
+          error?: string;
+        };
+        if (!res.ok || !body.ok || !body.address) {
+          setRowDetect(rowId, {
+            platform,
+            label,
+            status: "failed",
+            note: body.error ?? "Couldn't extract listing details.",
+          });
+          return;
+        }
+
+        // Auto-fill empty fields. Price comes from the listing's sale
+        // price; sqft/beds/baths from the structured property data.
+        // Never overwrites a value the agent already typed.
+        const price = readBlobNumber(body.data, "price", "list_price", "listPrice");
+        const sqft = readBlobNumber(body.data, "sqft", "square_feet", "squareFeet");
+        const beds = readBlobNumber(body.data, "beds", "bedrooms");
+        const baths = readBlobNumber(body.data, "baths", "bathrooms");
+
+        const patch: Partial<Row> = { address: body.address };
+        let filledExtras = false;
+        setRows((prev) =>
+          prev.map((r) => {
+            if (r.id !== rowId) return r;
+            const next: Row = { ...r };
+            // Only auto-fill address if it's empty OR equals the raw
+            // pasted URL (i.e. the agent dumped a URL into the field).
+            if (!r.address.trim() || r.address.trim() === value) {
+              next.address = patch.address ?? r.address;
+            }
+            if (price != null && !r.price.trim()) {
+              next.price = String(price);
+              filledExtras = true;
+            }
+            if (sqft != null && !r.sqft.trim()) {
+              next.sqft = String(sqft);
+              filledExtras = true;
+            }
+            // Beds/baths default to "3"/"2" — only auto-fill when
+            // the URL gives us something different to learn from.
+            if (beds != null) {
+              next.beds = String(beds);
+              filledExtras = true;
+            }
+            if (baths != null) {
+              next.baths = String(baths);
+              filledExtras = true;
+            }
+            return next;
+          }),
+        );
+
+        setRowDetect(rowId, {
+          platform,
+          label,
+          status: filledExtras ? "filled" : "address-only",
+          note: filledExtras
+            ? `Auto-filled from ${label}.`
+            : `Address parsed but no listing details available.`,
+        });
+      } catch (e) {
+        setRowDetect(rowId, {
+          platform,
+          label,
+          status: "failed",
+          note: e instanceof Error ? e.message : "Network error.",
+        });
+      }
+    },
+    [setRowDetect],
+  );
 
   const addRow = useCallback(() => {
     setRows((prev) => [...prev, newRow()]);
@@ -156,10 +307,60 @@ export default function ComparisonReportBuilderClient({
                   <input
                     required
                     value={row.address}
-                    onChange={(e) => updateRow(row.id, { address: e.target.value })}
+                    onChange={(e) => {
+                      updateRow(row.id, { address: e.target.value });
+                      // Reset the autodetect badge when the agent
+                      // edits the field; we'll re-run detection on
+                      // blur or next paste.
+                      if (detect[row.id]) setRowDetect(row.id, null);
+                    }}
+                    onBlur={(e) => {
+                      void detectAddressUrl(row.id, e.target.value);
+                    }}
+                    onPaste={(e) => {
+                      // Run autodetect immediately on paste — the
+                      // most common way agents add a Zillow / Redfin
+                      // link to compare. Wait a tick for React to
+                      // commit the pasted value.
+                      const pasted = e.clipboardData.getData("text") ?? "";
+                      if (pasted.trim()) {
+                        setTimeout(
+                          () => void detectAddressUrl(row.id, pasted.trim()),
+                          0,
+                        );
+                      }
+                    }}
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                    placeholder="123 Main St, City, ST"
+                    placeholder="123 Main St, City, ST — or paste a Zillow/Redfin/Realtor.com/Compass link"
                   />
+                  {detect[row.id] && (
+                    <span className="mt-1 block text-[11px]">
+                      {detect[row.id]!.status === "looking-up" && (
+                        <span className="text-gray-500">
+                          🔍 {detect[row.id]!.label} detected — looking up
+                          listing…
+                        </span>
+                      )}
+                      {detect[row.id]!.status === "filled" && (
+                        <span className="text-emerald-700">
+                          ✓ {detect[row.id]!.label} detected ·{" "}
+                          {detect[row.id]!.note}
+                        </span>
+                      )}
+                      {detect[row.id]!.status === "address-only" && (
+                        <span className="text-gray-500">
+                          {detect[row.id]!.label} detected ·{" "}
+                          {detect[row.id]!.note}
+                        </span>
+                      )}
+                      {detect[row.id]!.status === "failed" && (
+                        <span className="text-amber-700">
+                          {detect[row.id]!.label} detected, but{" "}
+                          {detect[row.id]!.note?.toLowerCase()}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </label>
                 <label>
                   <span className="text-xs text-gray-500">Price ($)</span>
