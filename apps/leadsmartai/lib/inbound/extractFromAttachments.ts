@@ -2,6 +2,7 @@ import "server-only";
 
 import { extractOfferFromPdf } from "@/lib/offers/extractOfferFromPdf";
 import { extractListingAgreement } from "@/lib/transactions/extractContract";
+import { extractShowingRequest } from "./extractShowingRequest";
 import type { InboundIntent } from "./intent";
 import type {
   InboundAttachmentMeta,
@@ -9,15 +10,19 @@ import type {
 } from "./deliveries";
 
 /**
- * Bridge between the inbound-email pipeline and the existing PDF
+ * Bridge between the inbound-email pipeline and the per-intent
  * extractors:
- *   - offer_received       → extractOfferFromPdf (ParsedOffer)
- *   - listing_signed       → extractListingAgreement (RLA shape)
- *   - showing_requested    → no structured extractor today
+ *   - offer_received       → extractOfferFromPdf (ParsedOffer, PDF)
+ *   - listing_signed       → extractListingAgreement (RLA shape, PDF)
+ *   - showing_requested    → extractShowingRequest (text body)
  *   - unknown              → no extractor (we don't guess)
  *
  * Pulled out of the webhook so the retry endpoint can call the same
  * code path against an already-stored delivery row.
+ *
+ * Note: file is named `extractFromAttachments` for legacy reasons
+ * (it predates the showing-request text extractor). Renaming is a
+ * larger churn; the dispatch lives here either way.
  */
 
 const PDF_FETCH_TIMEOUT_MS = 30_000;
@@ -69,16 +74,42 @@ async function fetchAttachmentBytes(url: string): Promise<Uint8Array> {
 export async function attemptExtraction(input: {
   intent: InboundIntent;
   attachments: InboundAttachmentMeta[];
+  /** Email subject + body — used by the showing-request extractor,
+   *  which works against text instead of a PDF. Optional so older
+   *  callers (offer/listing only) keep compiling. */
+  subject?: string | null;
+  text?: string | null;
 }): Promise<AttemptExtractionResult> {
-  const { intent, attachments } = input;
+  const { intent, attachments, subject, text } = input;
 
-  // Showing requests + unknowns: no structured extractor. The agent
-  // reads the email body on the review page and creates the showing
-  // / clarifies the email manually.
-  if (intent === "showing_requested" || intent === "unknown") {
+  // Unknown intent → no extractor. The agent reads the email body on
+  // the review page and acts manually.
+  if (intent === "unknown") {
     return { status: "skipped", reason: `intent=${intent}` };
   }
 
+  // Showing requests use a text-only extractor. Skip when there's no
+  // body text at all (rare — most providers always include a text
+  // part), otherwise run Claude haiku against subject + first ~8KB.
+  if (intent === "showing_requested") {
+    if (!text || !text.trim()) {
+      return { status: "skipped", reason: "no email body" };
+    }
+    try {
+      const data = await extractShowingRequest({
+        subject: subject ?? null,
+        text,
+      });
+      return { status: "extracted", payload: { kind: "showing_request", data } };
+    } catch (e) {
+      return {
+        status: "failed",
+        error: e instanceof Error ? e.message : "Extractor crashed",
+      };
+    }
+  }
+
+  // Offer/listing path: needs a PDF attachment.
   const pdf = pickFirstPdfAttachment(attachments);
   if (!pdf || !pdf.content_url) {
     return { status: "skipped", reason: "no pdf attachment" };
@@ -152,6 +183,17 @@ export function summarizeExtraction(
       );
     }
     if (l.propertyAddress) parts.push(l.propertyAddress);
+    return parts.length ? parts.join(" @ ") : null;
+  }
+  if (payload.kind === "showing_request") {
+    // Showing requests don't have a price — summarize as
+    // "<requesterName> @ <address>" or, if address is missing,
+    // just the requester. Fallback to date when neither is set.
+    const s = payload.data;
+    const parts: string[] = [];
+    if (s.requesterName) parts.push(s.requesterName);
+    if (s.propertyAddress) parts.push(s.propertyAddress);
+    if (parts.length === 0 && s.requestedDate) parts.push(s.requestedDate);
     return parts.length ? parts.join(" @ ") : null;
   }
   return null;

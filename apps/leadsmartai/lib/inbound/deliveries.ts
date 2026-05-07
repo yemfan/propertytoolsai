@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { InboundIntent } from "./intent";
 import type { ParsedOffer } from "@/lib/offers/parsedShape";
 import type { ListingAgreementExtraction } from "@/lib/transactions/extractContract";
+import type { ShowingRequestExtraction } from "./extractShowingRequest";
 
 /**
  * Inbound email delivery storage layer (Phase 2).
@@ -32,14 +33,16 @@ export type InboundAttachmentMeta = {
 
 /**
  * Discriminated extraction shape — each intent that has a structured
- * extractor stores the matching payload here. `unknown` and
- * `showing_requested` deliveries store no extraction (status is
- * 'skipped' for those — we still surface the email body for the
- * agent to copy/paste).
+ * extractor stores the matching payload here. `unknown` deliveries
+ * store no extraction (status is 'skipped' — we still surface the
+ * email body for the agent to copy/paste). Showing requests added in
+ * Phase 2B-2 use a text-only extractor (no PDF) and a different
+ * shape than offers/listings.
  */
 export type InboundExtractionPayload =
   | { kind: "offer"; data: ParsedOffer }
-  | { kind: "listing_agreement"; data: ListingAgreementExtraction };
+  | { kind: "listing_agreement"; data: ListingAgreementExtraction }
+  | { kind: "showing_request"; data: ShowingRequestExtraction };
 
 export type InboundDeliveryRow = {
   id: string;
