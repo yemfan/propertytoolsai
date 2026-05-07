@@ -41,13 +41,23 @@ export default defineConfig({
   },
 
   // Start `next dev` automatically if not already running.
+  //
+  // Timeout: 300s (was 120s). Next.js 16 + Turbopack first-boot in
+  // GitHub Actions runners regularly takes 90-150s — the 120s
+  // default was clipping legitimate startup. The workflow has been
+  // failing on every commit since 2026-05-04 with:
+  //   "Error: Timed out waiting 120000ms from config.webServer."
+  // 5 minutes gives comfortable headroom; if Turbopack ever takes
+  // *longer* than that, we have a real hang to investigate (and
+  // should switch to `next start` over a pre-built bundle for
+  // faster + deterministic boot).
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
         command: "pnpm dev",
         url: BASE_URL,
         reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
+        timeout: 300_000,
         stdout: "pipe",
         stderr: "pipe",
       },
