@@ -42,20 +42,23 @@ export default defineConfig({
 
   // Start `next dev` automatically if not already running.
   //
-  // Timeout: 300s (was 120s). Next.js 16 + Turbopack first-boot in
-  // GitHub Actions runners regularly takes 90-150s — the 120s
-  // default was clipping legitimate startup. The workflow has been
-  // failing on every commit since 2026-05-04 with:
-  //   "Error: Timed out waiting 120000ms from config.webServer."
-  // 5 minutes gives comfortable headroom; if Turbopack ever takes
-  // *longer* than that, we have a real hang to investigate (and
-  // should switch to `next start` over a pre-built bundle for
-  // faster + deterministic boot).
+  // PORT propagation: this config defaults BASE_URL to localhost:3001,
+  // but `next dev` ignores anything outside its own env and defaults
+  // to 3000. Without explicitly passing PORT through `webServer.env`,
+  // the dev server boots on 3000 while Playwright's URL-readiness
+  // probe waits forever on 3001 — surfaces as a misleading
+  // "Timed out waiting Nms from config.webServer" failure even though
+  // the server booted in ~1.3s. Bug discovered after the original
+  // 120s default was bumped to 300s and the timeout still fired.
+  //
+  // Timeout: kept at 300s as comfortable headroom; the actual boot
+  // is a couple seconds once the port is right.
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
         command: "pnpm dev",
         url: BASE_URL,
+        env: { PORT: String(PORT) },
         reuseExistingServer: !process.env.CI,
         timeout: 300_000,
         stdout: "pipe",
