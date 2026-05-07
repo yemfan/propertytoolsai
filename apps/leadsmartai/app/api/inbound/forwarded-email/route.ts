@@ -1,6 +1,11 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { findAgentByLocalPart, recordInboundDelivery } from "@/lib/inbound/aliases";
+import {
+  countRecentDeliveriesForAlias,
+  DEFAULT_DAILY_DELIVERY_CAP,
+  findAgentByLocalPart,
+  recordInboundDelivery,
+} from "@/lib/inbound/aliases";
 import { classifyInboundEmail, intentLabel } from "@/lib/inbound/intent";
 import { createTask } from "@/lib/crm/pipeline/tasks";
 import { verifySvixSignature } from "@/lib/email-tracking/svix";
@@ -145,6 +150,23 @@ export async function POST(req: Request) {
   const alias = await findAgentByLocalPart(localPart);
   if (!alias) {
     return NextResponse.json({ ok: true, accepted: false, reason: "unknown-alias" });
+  }
+
+  // ── Per-alias daily rate limit ───────────────────────────────────
+  // Friendly slugs (fan.yes@…) are guessable from a public customer
+  // roster, so we cap deliveries-per-alias-per-rolling-24h to bound
+  // abuse damage. Limit hits return 200 so Resend doesn't retry.
+  const recentCount = await countRecentDeliveriesForAlias(alias.id);
+  if (recentCount >= DEFAULT_DAILY_DELIVERY_CAP) {
+    console.warn(
+      `[inbound] rate-limited alias=${alias.local_part} count=${recentCount} cap=${DEFAULT_DAILY_DELIVERY_CAP}`,
+    );
+    return NextResponse.json({
+      ok: true,
+      accepted: false,
+      reason: "rate-limited",
+      cap: DEFAULT_DAILY_DELIVERY_CAP,
+    });
   }
 
   const subject = (data.subject ?? "").trim() || null;
