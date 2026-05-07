@@ -315,6 +315,79 @@ function NewShowingForm() {
   }
 
   /**
+   * Detect when a Zillow/Redfin/Realtor/Compass URL has been pasted
+   * into the Property Address field (NOT the Listing URL field —
+   * different handler below). When detected, fetch listing data,
+   * call onAddressPick with the parsed address (which auto-fills
+   * city/state/zip), and replace the URL in the Address field with
+   * the actual address. The Listing URL field also gets populated
+   * with the original URL so the agent has the source on file.
+   *
+   * Why a separate handler from `detectListingUrl`: the Address
+   * field's autofill story is bigger (city/state/zip + downstream
+   * property-data lookup, mirroring the Google-Places onPick path)
+   * and we want to clear the URL out of the field once parsed.
+   * The Listing URL field keeps the URL visible by design.
+   */
+  async function detectAddressFieldUrl(rawValue: string) {
+    const value = rawValue.trim();
+    const platform = detectPlatform(value);
+    if (!platform) return;
+    const label = platformLabel(platform);
+    setStatusBanner({ tone: "info", text: `${label} URL detected — looking up listing details…` });
+    try {
+      const res = await fetch(
+        `/api/property/from-listing?url=${encodeURIComponent(value)}`,
+      );
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        address?: string | null;
+        data?: unknown;
+        error?: string;
+      };
+      if (!res.ok || !body.ok || !body.address) {
+        setStatusBanner({
+          tone: "info",
+          text: `${label} URL detected, but couldn't extract listing details. Type the address manually.`,
+        });
+        return;
+      }
+      // Construct an AddressAutocompleteValue-shaped object from the
+      // parsed data so we can reuse onAddressPick — same flow as a
+      // Google-Places suggestion pick. Lat/lng come back null since
+      // listing parsers don't include geo coords; the downstream
+      // property-data fetch only needs the address string anyway.
+      const blobCity = readBlobString(body.data, "city");
+      const blobState = readBlobString(body.data, "state");
+      const blobZip = readBlobString(body.data, "zip", "zip_code", "zipCode");
+      void onAddressPick({
+        formattedAddress: body.address,
+        lat: null,
+        lng: null,
+        components: {
+          streetNumber: null,
+          streetName: null,
+          city: blobCity,
+          state: blobState,
+          zip: blobZip,
+        },
+      });
+      // Park the original URL in the Listing URL field so it doesn't
+      // get lost — only when that field is empty (don't clobber a URL
+      // the agent already pasted there).
+      if (!mlsUrl.trim()) setMlsUrl(value);
+    } catch (e) {
+      setStatusBanner({
+        tone: "info",
+        text:
+          e instanceof Error
+            ? `${label} URL lookup failed: ${e.message}`
+            : `${label} URL lookup failed.`,
+      });
+    }
+  }
+
+  /**
    * Listing-URL autodetect.
    *
    * Triggered when the agent pastes/edits the "Listing URL" field. If
@@ -538,9 +611,19 @@ function NewShowingForm() {
               // the next pick.
               if (statusBanner) setStatusBanner(null);
               if (addressVerified) setAddressVerified(false);
+              // URL autodetect — when the agent pastes a Zillow / Redfin
+              // / Realtor / Compass link into the Address field, treat
+              // it the same way as a Google-Places pick: parse out the
+              // address, fill city/state/zip, and clear the URL out of
+              // the input. detectPlatform short-circuits the no-op
+              // case (plain address text returns null instantly) so
+              // there's no perf hit on normal typing.
+              if (detectPlatform(v)) {
+                void detectAddressFieldUrl(v);
+              }
             }}
             onSelect={onAddressPick}
-            placeholder="Start typing — Google will autocomplete the full address"
+            placeholder="Start typing the address — or paste a Zillow/Redfin/Realtor.com/Compass link"
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
           />
           {/* Parsed city/state/zip render as small chips beneath the
