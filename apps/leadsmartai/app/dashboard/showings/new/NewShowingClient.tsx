@@ -360,7 +360,15 @@ function NewShowingForm() {
       const blobCity = readBlobString(body.data, "city");
       const blobState = readBlobString(body.data, "state");
       const blobZip = readBlobString(body.data, "zip", "zip_code", "zipCode");
-      void onAddressPick({
+      // Pre-extract the parsed listing status (if available) so we
+      // can override the warehouse-style banner that onAddressPick
+      // sets — see the listingStatusFromUrl handling below.
+      const listingStatusFromUrl = readBlobString(body.data, "listing_status", "listingStatus", "status");
+      // Await onAddressPick so the warehouse-fetch banner has
+      // settled before we override it. Otherwise the override fires
+      // first, then the in-flight `/api/property/{address}` lookup
+      // races us and clobbers it with "No MLS status on file."
+      await onAddressPick({
         formattedAddress: body.address,
         lat: null,
         lng: null,
@@ -372,6 +380,31 @@ function NewShowingForm() {
           zip: blobZip,
         },
       });
+      // Override the banner now that onAddressPick is done. We KNOW
+      // this listing exists — the agent literally pasted the URL —
+      // so "No MLS status on file" is misleading even when our
+      // warehouse lookup didn't return anything. Re-render with a
+      // URL-aware message that matches reality:
+      //
+      //   active           → green/ok    "Listed on Zillow · Active"
+      //   pending/etc      → warn        "Listed on Zillow as pending — confirm…"
+      //   unknown status   → info        "Listed on Zillow — couldn't read live status, confirm with the listing agent."
+      if (listingStatusFromUrl && ACTIVE_STATUS_RE.test(listingStatusFromUrl)) {
+        setStatusBanner({
+          tone: "ok",
+          text: `Listed on ${label} · ${listingStatusFromUrl}`,
+        });
+      } else if (listingStatusFromUrl) {
+        setStatusBanner({
+          tone: "warn",
+          text: `Listed on ${label} as ${listingStatusFromUrl} — confirm with the listing agent before sending the buyer.`,
+        });
+      } else {
+        setStatusBanner({
+          tone: "info",
+          text: `Listed on ${label} — couldn't read live status from our side, confirm with the listing agent before sending the buyer.`,
+        });
+      }
       // Park the original URL in the Listing URL field so it doesn't
       // get lost — only when that field is empty (don't clobber a URL
       // the agent already pasted there).
