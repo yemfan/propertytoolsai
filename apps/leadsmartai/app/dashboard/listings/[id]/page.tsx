@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { getListingById } from "@/lib/listings/service";
+import { listOffersForListing } from "@/lib/listing-offers/service";
 import { ListingDetailClient } from "./ListingDetailClient";
 
 /**
@@ -35,5 +36,10 @@ export default async function ListingDetailPage({
   if (!listing) {
     notFound();
   }
-  return <ListingDetailClient listing={listing} />;
+  // Fetch offers received on this listing in parallel with the
+  // listing fetch is overkill here (the listing is required first
+  // for the not-found short-circuit); fetch sequentially so the
+  // 404 path doesn't run a wasted query.
+  const offers = await listOffersForListing(String(agentId), id);
+  return <ListingDetailClient listing={listing} offers={offers} />;
 }

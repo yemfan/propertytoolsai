@@ -43,9 +43,22 @@ async function assertListingTransactionOwned(
 
 // ── CREATE ────────────────────────────────────────────────────────────
 
+/**
+ * Listing-side offer creation accepts EITHER a transactionId
+ * (legacy + post-acceptance flow) OR a listingId (Phase 2c+ flow,
+ * listings without a back-linked transaction yet). Exactly one
+ * must be set — the migration's CHECK constraint enforces this
+ * server-side too.
+ */
 export type CreateListingOfferInput = {
   agentId: string;
-  transactionId: string;
+  /** Source transaction id — set when the listing has a back-linked
+   *  transaction (post-acceptance) OR for legacy listing-rep deals. */
+  transactionId?: string;
+  /** Source listing id — set for fresh listings created post-Phase 2c
+   *  that don't have a transaction yet. Mutually exclusive with
+   *  transactionId; pass exactly one. */
+  listingId?: string;
   offerPrice: number;
   buyerName?: string | null;
   buyerBrokerage?: string | null;
@@ -66,16 +79,43 @@ export type CreateListingOfferInput = {
   notes?: string | null;
 };
 
+/**
+ * Verify the agent owns a listing before letting them attach an
+ * offer to it. Mirrors assertListingTransactionOwned but for the
+ * listings table. Throws on mismatch.
+ */
+async function assertListingOwned(agentId: string, listingId: string): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("listings")
+    .select("id")
+    .eq("id", listingId)
+    .eq("agent_id", agentId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Listing not found");
+}
+
 export async function createListingOffer(
   input: CreateListingOfferInput,
 ): Promise<ListingOfferRow> {
-  await assertListingTransactionOwned(input.agentId, input.transactionId);
+  if (!input.transactionId && !input.listingId) {
+    throw new Error("Either transactionId or listingId is required");
+  }
+  if (input.transactionId && input.listingId) {
+    throw new Error("Pass only one of transactionId or listingId, not both");
+  }
+  if (input.transactionId) {
+    await assertListingTransactionOwned(input.agentId, input.transactionId);
+  } else if (input.listingId) {
+    await assertListingOwned(input.agentId, input.listingId);
+  }
 
   const { data, error } = await supabaseAdmin
     .from("listing_offers")
     .insert({
       agent_id: input.agentId,
-      transaction_id: input.transactionId,
+      transaction_id: input.transactionId ?? null,
+      listing_id: input.listingId ?? null,
       buyer_name: input.buyerName ?? null,
       buyer_brokerage: input.buyerBrokerage ?? null,
       buyer_agent_name: input.buyerAgentName ?? null,
@@ -109,7 +149,60 @@ export async function createListingOffer(
 /**
  * Compare-view list: all offers on a single listing, oriented for the
  * side-by-side view. Enriches with counter counts + derived fields.
+ *
+ * Two flavors mirror the dual-write window between listings and
+ * transactions (Phase 1+):
+ *   - listOffersForTransaction(): legacy + post-acceptance flow
+ *   - listOffersForListing():     Phase 2c+ — pre-acceptance listings
+ *
+ * Both return the same shape so the UI / pricing helpers can swap
+ * the source without the caller knowing.
  */
+export async function listOffersForListing(
+  agentId: string,
+  listingId: string,
+): Promise<ListingOfferCompareItem[]> {
+  // Verify ownership (mirrors the existing assertion pattern).
+  const { data: ownerRow } = await supabaseAdmin
+    .from("listings")
+    .select("id")
+    .eq("id", listingId)
+    .eq("agent_id", agentId)
+    .maybeSingle();
+  if (!ownerRow) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from("listing_offers")
+    .select("*")
+    .eq("agent_id", agentId)
+    .eq("listing_id", listingId)
+    .order("current_price", { ascending: false, nullsFirst: false });
+  if (error) throw new Error(error.message);
+  const offers = (data ?? []) as ListingOfferRow[];
+  if (!offers.length) return [];
+
+  const offerIds = offers.map((o) => o.id);
+  const { data: counterRows } = await supabaseAdmin
+    .from("listing_offer_counters")
+    .select("listing_offer_id")
+    .in("listing_offer_id", offerIds);
+  const counterCountByOffer = new Map<string, number>();
+  for (const c of (counterRows ?? []) as Array<{ listing_offer_id: string }>) {
+    counterCountByOffer.set(c.listing_offer_id, (counterCountByOffer.get(c.listing_offer_id) ?? 0) + 1);
+  }
+
+  return offers.map((o) => ({
+    ...o,
+    counter_count: counterCountByOffer.get(o.id) ?? 0,
+    contingency_count:
+      (o.inspection_contingency ? 1 : 0) +
+      (o.appraisal_contingency ? 1 : 0) +
+      (o.loan_contingency ? 1 : 0) +
+      (o.sale_of_home_contingency ? 1 : 0),
+    is_cash: o.financing_type === "cash",
+  }));
+}
+
 export async function listOffersForTransaction(
   agentId: string,
   transactionId: string,
