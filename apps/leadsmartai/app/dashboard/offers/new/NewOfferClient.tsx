@@ -40,6 +40,14 @@ function NewOfferForm() {
   const [offerPrice, setOfferPrice] = useState("");
   const [earnestMoney, setEarnestMoney] = useState("");
   const [downPayment, setDownPayment] = useState("");
+  // Percentage chips ("3%", "20%") let agents pick standard
+  // earnest/down ratios and have the dollar amounts auto-fill from
+  // the current offer price. null = "custom" (agent typed a manual
+  // dollar value, so we leave it alone). Defaults: 3% earnest is
+  // the typical CA EMD baseline; 20% down maps to a conventional
+  // 80% LTV loan, which covers most cases the agent ships.
+  const [earnestPct, setEarnestPct] = useState<number | null>(0.03);
+  const [downPct, setDownPct] = useState<number | null>(0.2);
   const [financingType, setFinancingType] = useState<FinancingType | "">("");
   const [closingDateProposed, setClosingDateProposed] = useState("");
   const [offerExpiresAt, setOfferExpiresAt] = useState("");
@@ -133,6 +141,26 @@ function NewOfferForm() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefilledShowingId]);
+
+  // Auto-compute earnest money / down payment from offer price ×
+  // selected percentage. Bails when offerPrice isn't numeric (so
+  // typing a partial number doesn't churn) or when the chip is
+  // null (= "custom", agent typed a manual dollar value).
+  //
+  // No setEarnestMoney → setEarnestPct loop here because the chip
+  // setter is the only thing that can change earnestPct, and the
+  // dollar input's onChange clears earnestPct to null.
+  useEffect(() => {
+    const n = Number(offerPrice);
+    if (!Number.isFinite(n) || n <= 0) return;
+    if (earnestPct != null) setEarnestMoney(String(Math.round(n * earnestPct)));
+  }, [offerPrice, earnestPct]);
+
+  useEffect(() => {
+    const n = Number(offerPrice);
+    if (!Number.isFinite(n) || n <= 0) return;
+    if (downPct != null) setDownPayment(String(Math.round(n * downPct)));
+  }, [offerPrice, downPct]);
 
   async function submit() {
     setError(null);
@@ -279,9 +307,19 @@ function NewOfferForm() {
             <input
               type="number"
               value={earnestMoney}
-              onChange={(e) => setEarnestMoney(e.target.value)}
-              placeholder="30000"
+              // Manual edit clears the chip selection so the
+              // auto-calc effect won't overwrite the typed value
+              // when the agent next adjusts offer price.
+              onChange={(e) => {
+                setEarnestMoney(e.target.value);
+                setEarnestPct(null);
+              }}
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            />
+            <PctChips
+              value={earnestPct}
+              options={[0.01, 0.02, 0.03, 0.05]}
+              onChange={setEarnestPct}
             />
           </div>
           <div>
@@ -289,9 +327,16 @@ function NewOfferForm() {
             <input
               type="number"
               value={downPayment}
-              onChange={(e) => setDownPayment(e.target.value)}
-              placeholder="230000"
+              onChange={(e) => {
+                setDownPayment(e.target.value);
+                setDownPct(null);
+              }}
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+            />
+            <PctChips
+              value={downPct}
+              options={[0.05, 0.1, 0.2, 0.25, 1]}
+              onChange={setDownPct}
             />
           </div>
           <div>
@@ -416,6 +461,49 @@ function NewOfferForm() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Inline % chips under the earnest-money / down-payment fields.
+ * Click a chip to set the dollar amount = offer × pct. Click the
+ * active chip again to deselect (= "custom" / manual entry).
+ *
+ * Renders compact 10px buttons so the chip row fits inside the
+ * 3-column grid on desktop without wrapping. Special-cases 100%
+ * → "Cash" since "100%" reads as redundant for the all-cash case.
+ */
+function PctChips({
+  value,
+  options,
+  onChange,
+}: {
+  value: number | null;
+  options: number[];
+  onChange: (next: number | null) => void;
+}) {
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1">
+      {options.map((pct) => {
+        const active = value === pct;
+        const label = pct === 1 ? "Cash" : `${Math.round(pct * 100)}%`;
+        return (
+          <button
+            key={pct}
+            type="button"
+            onClick={() => onChange(active ? null : pct)}
+            className={
+              active
+                ? "rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700"
+                : "rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-200"
+            }
+            aria-pressed={active}
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
