@@ -429,36 +429,44 @@ function NewTransactionForm() {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-slate-700">
-              Mutual acceptance
-            </label>
-            <input
-              type="date"
-              value={mutualAcceptanceDate}
-              onChange={(e) => setMutualAcceptanceDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            />
-            <p className="mt-1 text-[11px] text-slate-500">
-              {isListing
-                ? "Set when you accept an offer. Anchors closing deadlines."
-                : "Anchors all contingency deadlines."}
-            </p>
+        {/* Mutual acceptance + closing date are post-acceptance
+            fields — they only matter once an offer is accepted and
+            the deal is in escrow. Hidden on the new-listing path
+            (Phase 2c+) since fresh listings don't carry these
+            values; they get set on the transaction spawned via
+            "Mark under contract" on the listing detail page (Phase
+            2d). Buyer-rep + dual transactions still need them at
+            creation time so the deadlines pipeline can fire. */}
+        {!isListing && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-700">
+                Mutual acceptance
+              </label>
+              <input
+                type="date"
+                value={mutualAcceptanceDate}
+                onChange={(e) => setMutualAcceptanceDate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              />
+              <p className="mt-1 text-[11px] text-slate-500">
+                Anchors all contingency deadlines.
+              </p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-700">Closing date</label>
+              <input
+                type="date"
+                value={closingDate}
+                onChange={(e) => setClosingDate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              />
+              <p className="mt-1 text-[11px] text-slate-500">
+                Auto-fills to mutual acceptance + 30 days if left blank.
+              </p>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-700">Closing date</label>
-            <input
-              type="date"
-              value={closingDate}
-              onChange={(e) => setClosingDate(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            />
-            <p className="mt-1 text-[11px] text-slate-500">
-              Auto-fills to mutual acceptance + 30 days if left blank.
-            </p>
-          </div>
-        </div>
+        )}
 
         <div>
           <label className="block text-xs font-medium text-slate-700">Notes</label>
