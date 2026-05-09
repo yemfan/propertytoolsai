@@ -165,7 +165,7 @@ export function ListingDetailClient({
   async function acceptOffer(offerId: string, offerPrice: number) {
     if (
       !confirm(
-        `Accept this offer at ${formatMoney(offerPrice)}?\n\nThis marks the offer accepted, flips the listing to "contracted," and spawns a deal so escrow can be tracked.`,
+        `Accept this offer at ${formatMoney(offerPrice)}?\n\nThis marks the offer accepted, flips the listing to "under contract," and opens the new-transaction form prefilled with the listing + offer details.`,
       )
     ) {
       return;
@@ -187,29 +187,30 @@ export function ListingDetailClient({
         setOfferActionError(acceptBody.error ?? "Failed to accept offer.");
         return;
       }
-      // 2. Promote the listing — Phase 2d's lifecycle hand-off.
-      //    Pass the offer's price so the spawned transaction
-      //    captures the agreed price (vs original list).
-      const promoteRes = await fetch(
-        `/api/dashboard/listings/${encodeURIComponent(listing.id)}/promote`,
+      // 2. Mark the listing under contract immediately. Doing this
+      //    BEFORE the form opens means the listing reflects reality
+      //    even if the agent abandons the form mid-create. The
+      //    transaction row is created when the form is submitted
+      //    (Phase 2d's lifecycle hand-off, but split across two
+      //    user actions instead of being auto-fired).
+      const listingPatchRes = await fetch(
+        `/api/dashboard/listings/${encodeURIComponent(listing.id)}`,
         {
-          method: "POST",
+          method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ purchasePrice: offerPrice }),
+          body: JSON.stringify({ status: "contracted" }),
         },
       );
-      const promoteBody = (await promoteRes.json().catch(() => ({}))) as {
+      const listingPatchBody = (await listingPatchRes.json().catch(() => ({}))) as {
         ok?: boolean;
-        transactionId?: string;
         error?: string;
       };
-      if (!promoteRes.ok || !promoteBody.ok || !promoteBody.transactionId) {
-        // Best-effort fallback: the offer is accepted, but the
-        // promote failed. Surface the error and stay on the page;
-        // the agent can retry via the "Mark under contract" CTA.
+      if (!listingPatchRes.ok || !listingPatchBody.ok) {
+        // Offer is accepted, listing flip failed. Surface the
+        // error but optimistically reflect the offer state in UI.
         setOfferActionError(
-          promoteBody.error ??
-            "Offer accepted, but failed to spawn the deal. Use 'Mark under contract' to retry.",
+          listingPatchBody.error ??
+            "Offer accepted, but failed to mark the listing under contract.",
         );
         setOffers((prev) =>
           prev.map((o) =>
@@ -218,7 +219,13 @@ export function ListingDetailClient({
         );
         return;
       }
-      router.push(`/dashboard/transactions/${promoteBody.transactionId}`);
+      // 3. Route to the prefilled new-transaction form. The form
+      //    knows how to fetch from listingId + listingOfferId and
+      //    seed buyer/address/price/dates/contingencies for the
+      //    agent to confirm before the transaction lands.
+      router.push(
+        `/dashboard/transactions/new?listingId=${encodeURIComponent(listing.id)}&listingOfferId=${encodeURIComponent(offerId)}`,
+      );
     } catch (e) {
       setOfferActionError(e instanceof Error ? e.message : "Network error.");
     } finally {

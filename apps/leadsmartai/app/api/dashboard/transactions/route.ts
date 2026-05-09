@@ -40,7 +40,18 @@ export async function POST(req: Request) {
   try {
     const { agentId } = await getCurrentAgentContext();
     const body = (await req.json().catch(() => ({}))) as Partial<
-      CreateTransactionInput & { offerId?: string | null }
+      CreateTransactionInput & {
+        offerId?: string | null;
+        /** Source listing id when this form was opened from a listing's
+         *  accepted-offer flow. The route writes both directions of the
+         *  link: listings.transaction_id ← created.id, and
+         *  transactions.source_listing_id ← body.listingId. */
+        listingId?: string | null;
+        /** The specific accepted listing-side offer (so its
+         *  transaction_id back-link gets set too — turns the offer
+         *  into a "linked to deal" record for downstream queries). */
+        listingOfferId?: string | null;
+      }
     >;
 
     if (!body.contactId || !body.propertyAddress) {
@@ -66,10 +77,9 @@ export async function POST(req: Request) {
     });
 
     // Back-link offer → transaction when this form was opened from
-    // the ✓ Accept flow (`?offerId` in the URL). Best-effort: a
-    // failed back-link doesn't fail the transaction creation since
-    // the transaction is the user's primary intent. The agent can
-    // re-link manually via the offer detail page if it doesn't take.
+    // the buyer-side ✓ Accept flow (`?offerId` in the URL).
+    // Best-effort: a failed back-link doesn't fail the transaction
+    // creation since the transaction is the user's primary intent.
     if (body.offerId) {
       try {
         await supabaseAdmin
@@ -83,6 +93,56 @@ export async function POST(req: Request) {
       } catch (e) {
         console.warn(
           "[POST /transactions] back-link offer→transaction failed:",
+          e instanceof Error ? e.message : e,
+        );
+      }
+    }
+
+    // Back-link listing → transaction when this form was opened from
+    // the listing-side ✓ Accept flow (?listingId + ?listingOfferId).
+    // Three writes, all best-effort:
+    //
+    //   1. transactions.source_listing_id ← listingId
+    //      (forward-link from deal back to source listing)
+    //   2. listings.transaction_id ← created.id
+    //      (back-link from listing to its post-acceptance deal)
+    //   3. listing_offers.transaction_id ← created.id
+    //      (turn the accepted offer into a linked record so
+    //      downstream queries can find it from the transaction
+    //      side too)
+    if (body.listingId) {
+      try {
+        await supabaseAdmin
+          .from("transactions")
+          .update({
+            source_listing_id: body.listingId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", created.id)
+          .eq("agent_id", agentId);
+
+        await supabaseAdmin
+          .from("listings")
+          .update({
+            transaction_id: created.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", body.listingId)
+          .eq("agent_id", agentId);
+
+        if (body.listingOfferId) {
+          await supabaseAdmin
+            .from("listing_offers")
+            .update({
+              transaction_id: created.id,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", body.listingOfferId)
+            .eq("agent_id", agentId);
+        }
+      } catch (e) {
+        console.warn(
+          "[POST /transactions] back-link listing→transaction failed:",
           e instanceof Error ? e.message : e,
         );
       }
