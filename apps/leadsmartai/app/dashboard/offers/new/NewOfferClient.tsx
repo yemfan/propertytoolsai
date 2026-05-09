@@ -393,14 +393,19 @@ function NewOfferForm() {
           />
         </div>
 
-        <label className="inline-flex items-center gap-2 text-sm">
+        <label className="inline-flex items-start gap-2 text-sm">
           <input
             type="checkbox"
             checked={submitNow}
             onChange={(e) => setSubmitNow(e.target.checked)}
-            className="h-4 w-4"
+            className="mt-0.5 h-4 w-4"
           />
-          <span>Mark as submitted (stamps submitted_at = now)</span>
+          <span>
+            <span className="font-medium text-slate-800">Already submitted to listing agent</span>
+            <span className="mt-0.5 block text-[11px] text-slate-500">
+              Skips the draft state and timestamps the offer as submitted now.
+            </span>
+          </span>
         </label>
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
