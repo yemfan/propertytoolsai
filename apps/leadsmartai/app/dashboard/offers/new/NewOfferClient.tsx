@@ -7,7 +7,46 @@ import AddressAutocomplete, {
   type AddressAutocompleteValue,
 } from "@/components/AddressAutocomplete";
 import ContactPicker, { type ContactPickerValue } from "@/components/crm/ContactPicker";
+import {
+  detectPlatform,
+  platformLabel,
+  type ListingPlatform,
+} from "@/lib/listingUrl";
 import type { FinancingType } from "@/lib/offers/types";
+
+/** Pull a string field from the from-listing API's loosely-typed
+ *  `data` blob. Same helper the showings form uses — checks several
+ *  naming variants since the upstream listing source isn't strict. */
+function readBlobString(blob: unknown, ...keys: string[]): string | null {
+  if (!blob || typeof blob !== "object") return null;
+  const obj = blob as Record<string, unknown>;
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return null;
+}
+
+/** Same idea as readBlobString but for numeric fields (list_price). */
+function readBlobNumber(blob: unknown, ...keys: string[]): number | null {
+  if (!blob || typeof blob !== "object") return null;
+  const obj = blob as Record<string, unknown>;
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string" && v.trim()) {
+      const n = Number(v);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return null;
+}
+
+type ListingDetectState =
+  | { platform: ListingPlatform; label: string; status: "looking-up"; note?: string }
+  | { platform: ListingPlatform; label: string; status: "filled"; note: string }
+  | { platform: ListingPlatform; label: string; status: "address-only"; note: string }
+  | { platform: ListingPlatform; label: string; status: "failed"; note: string };
 
 /**
  * Create a new offer. Accepts:
@@ -36,6 +75,13 @@ function NewOfferForm() {
   const [city, setCity] = useState("");
   const [state, setStateValue] = useState("CA");
   const [zip, setZip] = useState("");
+  /** Pasteable listing URL — when set, triggers /api/property/from-listing
+   *  to extract address + price + MLS#. Stored on the offer as mls_url
+   *  so the offer detail page can deep-link back to the source listing. */
+  const [listingUrl, setListingUrl] = useState("");
+  const [mlsNumber, setMlsNumber] = useState("");
+  const [listingUrlDetected, setListingUrlDetected] =
+    useState<ListingDetectState | null>(null);
   const [listPrice, setListPrice] = useState("");
   const [offerPrice, setOfferPrice] = useState("");
   const [earnestMoney, setEarnestMoney] = useState("");
@@ -110,6 +156,123 @@ function NewOfferForm() {
       }
     } catch {
       // Silent — list price is a nice-to-have, not required.
+    }
+  }
+
+  /**
+   * Listing-URL autodetect.
+   *
+   * Triggered when the agent pastes/edits the "Listing URL" field. If
+   * the URL is from a recognized platform (Zillow, Redfin, Realtor,
+   * Compass), we hit /api/property/from-listing which:
+   *
+   *   - Scrapes the JSON-LD for address + price (Zillow's clean side)
+   *   - Hits Rentcast for the MLS-authoritative status + MLS#
+   *   - Merges the two and writes a property warehouse row
+   *
+   * Auto-fills empty form fields only — never overwrites a value the
+   * agent has already typed. Same conservative pattern as the
+   * showings form. The URL itself is stored as mls_url on submit so
+   * the offer detail page can deep-link back to the listing.
+   *
+   * Non-fatal: a fetch failure or unrecognized URL leaves the URL
+   * value as plain text and falls through to manual entry.
+   */
+  async function detectListingUrl(rawUrl: string) {
+    const url = rawUrl.trim();
+    if (!url) {
+      setListingUrlDetected(null);
+      return;
+    }
+    const platform = detectPlatform(url);
+    if (!platform) {
+      setListingUrlDetected(null);
+      return;
+    }
+    const label = platformLabel(platform);
+    setListingUrlDetected({ platform, label, status: "looking-up" });
+
+    try {
+      const res = await fetch(
+        `/api/property/from-listing?url=${encodeURIComponent(url)}`,
+      );
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        platform?: string;
+        address?: string | null;
+        data?: unknown;
+        error?: string;
+      };
+      if (!res.ok || !body.ok || !body.address) {
+        setListingUrlDetected({
+          platform,
+          label,
+          status: "failed",
+          note: body.error ?? "Couldn't extract listing details.",
+        });
+        return;
+      }
+
+      let filledAnything = false;
+      if (!propertyAddress.trim()) {
+        setPropertyAddress(body.address);
+        filledAnything = true;
+      }
+      const blob = body.data;
+      const blobCity = readBlobString(blob, "city");
+      const blobState = readBlobString(blob, "state");
+      const blobZip = readBlobString(blob, "zip", "zip_code", "zipCode");
+      if (blobCity && !city) {
+        setCity(blobCity);
+        filledAnything = true;
+      }
+      if (blobState && state === "CA") {
+        // "CA" is the form's default — overwrite only when the URL
+        // carries a different state, mirroring the showings form.
+        setStateValue(blobState);
+        filledAnything = true;
+      }
+      if (blobZip && !zip) {
+        setZip(blobZip);
+        filledAnything = true;
+      }
+      const blobMls = readBlobString(blob, "mlsNumber", "mls_number", "mls", "mlsId");
+      if (blobMls && !mlsNumber) {
+        setMlsNumber(blobMls);
+        filledAnything = true;
+      }
+      const blobPrice = readBlobNumber(
+        blob,
+        "list_price",
+        "listPrice",
+        "price",
+        "listing_price",
+      );
+      if (blobPrice != null) {
+        let priceFilled = false;
+        setListPrice((cur) => {
+          if (cur) return cur;
+          priceFilled = true;
+          return String(Math.round(blobPrice));
+        });
+        if (priceFilled) filledAnything = true;
+      }
+
+      setListingUrlDetected({
+        platform,
+        label,
+        status: filledAnything ? "filled" : "address-only",
+        note: filledAnything
+          ? `Auto-filled from ${label}.`
+          : `Listing parsed but the form is already filled — leaving values alone.`,
+      });
+    } catch (e) {
+      setListingUrlDetected({
+        platform,
+        label,
+        status: "failed",
+        note: e instanceof Error ? e.message : "Network error.",
+      });
     }
   }
 
@@ -234,6 +397,10 @@ function NewOfferForm() {
           city: city.trim() || null,
           state: state.trim() || null,
           zip: zip.trim() || null,
+          // Stored on the offer so the detail page can deep-link
+          // back to the source listing + show the MLS#.
+          mlsUrl: listingUrl.trim() || null,
+          mlsNumber: mlsNumber.trim() || null,
           listPrice: listPrice ? Number(listPrice) : null,
           offerPrice: priceNum,
           earnestMoney: earnestMoney ? Number(earnestMoney) : null,
@@ -292,6 +459,44 @@ function NewOfferForm() {
             helperText="Start typing the buyer's name, email, or phone."
             className="mt-1"
           />
+        </div>
+
+        {/* Listing URL — paste a Zillow / Redfin / Realtor / Compass
+            link and the form auto-fills address + city/state/zip +
+            list price + MLS #. The URL is stored as mls_url on the
+            offer so the detail page can deep-link back. Optional — a
+            blank URL just leaves the rest of the form to manual entry. */}
+        <div>
+          <label className="block text-xs font-medium text-slate-700">
+            Listing URL <span className="font-normal text-slate-400">(optional)</span>
+          </label>
+          <input
+            type="url"
+            value={listingUrl}
+            onChange={(e) => {
+              setListingUrl(e.target.value);
+              void detectListingUrl(e.target.value);
+            }}
+            placeholder="Paste Zillow / Redfin / Realtor / Compass URL"
+            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          />
+          {listingUrlDetected ? (
+            <div
+              className={
+                listingUrlDetected.status === "looking-up"
+                  ? "mt-1.5 text-[11px] text-slate-500"
+                  : listingUrlDetected.status === "filled"
+                    ? "mt-1.5 text-[11px] text-emerald-700"
+                    : listingUrlDetected.status === "address-only"
+                      ? "mt-1.5 text-[11px] text-slate-500"
+                      : "mt-1.5 text-[11px] text-amber-700"
+              }
+            >
+              {listingUrlDetected.status === "looking-up"
+                ? `${listingUrlDetected.label} detected · looking up details…`
+                : `${listingUrlDetected.label} · ${listingUrlDetected.note}`}
+            </div>
+          ) : null}
         </div>
 
         <div>
