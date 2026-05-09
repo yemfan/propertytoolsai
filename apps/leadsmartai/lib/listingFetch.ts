@@ -75,6 +75,39 @@ function toAddressLine(parts: {
   return chunks.join(", ");
 }
 
+/**
+ * Map a schema.org `availability` URL onto a real-estate listing
+ * status string. Zillow's RealEstateListing JSON-LD uses the
+ * generic Schema.org Offer pattern, so we get values like
+ * "https://schema.org/InStock" rather than MLS terminology.
+ *
+ * Mapping:
+ *   InStock / OnlineOnly        → "Active"   (listed and available)
+ *   PreOrder / BackOrder        → "Pending"  (closest to listed-but-not-bookable in real estate)
+ *   LimitedAvailability         → "Active"   (still listed, just constrained)
+ *   OutOfStock / SoldOut /      → "Sold"     (not for sale)
+ *      Discontinued
+ *   Anything else / missing     → null
+ *
+ * Returns null when input is empty so the merge in
+ * /api/property/from-listing can continue to prefer Rentcast's
+ * authoritative MLS status when both sources are present.
+ */
+function availabilityToStatus(availability: unknown): string | null {
+  if (typeof availability !== "string") return null;
+  // Schema.org URLs end in the enum value name. Strip the prefix.
+  const tail = availability.split("/").pop()?.toLowerCase() ?? "";
+  if (!tail) return null;
+  if (tail === "instock" || tail === "onlineonly" || tail === "limitedavailability") {
+    return "Active";
+  }
+  if (tail === "preorder" || tail === "backorder") return "Pending";
+  if (tail === "outofstock" || tail === "soldout" || tail === "discontinued") {
+    return "Sold";
+  }
+  return null;
+}
+
 function parseFromJsonLd(jsonlds: any[]): Partial<ListingParsedData> | null {
   for (const node of jsonlds) {
     const obj = Array.isArray(node) ? node[0] : node;
@@ -89,6 +122,11 @@ function parseFromJsonLd(jsonlds: any[]): Partial<ListingParsedData> | null {
     const state = getString(addrObj?.addressRegion);
     const zip = getString(addrObj?.postalCode);
     const address = street ? toAddressLine({ street, city, state, zip }) : null;
+    // Pull listing status from the Offer's availability field. This
+    // is the only authoritative listing-status signal in JSON-LD —
+    // Zillow doesn't expose MLS status directly, but availability:
+    // InStock/SoldOut maps cleanly to Active/Sold for real estate.
+    const availability = obj.offers?.availability ?? offered?.offers?.availability ?? null;
     return {
       address,
       city,
@@ -120,6 +158,7 @@ function parseFromJsonLd(jsonlds: any[]): Partial<ListingParsedData> | null {
         getString(obj["@type"]) ??
         getString(obj.category),
       price: num(obj.offers?.price ?? obj.price),
+      listing_status: availabilityToStatus(availability),
     };
   }
   return null;

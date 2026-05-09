@@ -343,6 +343,12 @@ function NewShowingForm() {
         ok?: boolean;
         address?: string | null;
         data?: unknown;
+        // Tells us where listing_status came from so the banner can
+        // qualify with "per MLS" vs "per <listing site>". Rentcast
+        // = MLS authority; scrape = the listing site's own
+        // availability flag (Schema.org InStock/SoldOut), which is
+        // useful but coarser than MLS.
+        listing_status_source?: "rentcast" | "scrape" | null;
         error?: string;
       };
       if (!res.ok || !body.ok || !body.address) {
@@ -364,6 +370,7 @@ function NewShowingForm() {
       // can override the warehouse-style banner that onAddressPick
       // sets — see the listingStatusFromUrl handling below.
       const listingStatusFromUrl = readBlobString(body.data, "listing_status", "listingStatus", "status");
+      const statusSource = body.listing_status_source ?? null;
       // Await onAddressPick so the warehouse-fetch banner has
       // settled before we override it. Otherwise the override fires
       // first, then the in-flight `/api/property/{address}` lookup
@@ -384,20 +391,33 @@ function NewShowingForm() {
       // this listing exists — the agent literally pasted the URL —
       // so "No MLS status on file" is misleading even when our
       // warehouse lookup didn't return anything. Re-render with a
-      // URL-aware message that matches reality:
+      // URL-aware message that matches reality, qualifying the
+      // status source ("per MLS" vs "per <site>") so the agent
+      // knows whether they're seeing authoritative data:
       //
-      //   active           → green/ok    "Listed on Zillow · Active"
-      //   pending/etc      → warn        "Listed on Zillow as pending — confirm…"
-      //   unknown status   → info        "Listed on Zillow — couldn't read live status, confirm with the listing agent."
+      //   active + MLS    → ok    "Listed on Zillow · Active (per MLS)"
+      //   active + scrape → ok    "Listed on Zillow · Active (per Zillow — verify with listing agent)"
+      //   non-active      → warn  "Listed on Zillow as Pending (per <source>)…"
+      //   no status       → info  "Listed on Zillow — couldn't read live status, confirm with the listing agent."
+      const sourceQualifier =
+        statusSource === "rentcast"
+          ? "per MLS"
+          : statusSource === "scrape"
+            ? `per ${label} — coarse signal, verify with listing agent`
+            : null;
       if (listingStatusFromUrl && ACTIVE_STATUS_RE.test(listingStatusFromUrl)) {
         setStatusBanner({
           tone: "ok",
-          text: `Listed on ${label} · ${listingStatusFromUrl}`,
+          text: sourceQualifier
+            ? `Listed on ${label} · ${listingStatusFromUrl} (${sourceQualifier})`
+            : `Listed on ${label} · ${listingStatusFromUrl}`,
         });
       } else if (listingStatusFromUrl) {
         setStatusBanner({
           tone: "warn",
-          text: `Listed on ${label} as ${listingStatusFromUrl} — confirm with the listing agent before sending the buyer.`,
+          text: sourceQualifier
+            ? `Listed on ${label} as ${listingStatusFromUrl} (${sourceQualifier}) — confirm with the listing agent before sending the buyer.`
+            : `Listed on ${label} as ${listingStatusFromUrl} — confirm with the listing agent before sending the buyer.`,
         });
       } else {
         setStatusBanner({
