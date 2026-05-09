@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import AddressAutocomplete, {
   type AddressAutocompleteValue,
 } from "@/components/AddressAutocomplete";
@@ -110,6 +110,17 @@ function NewOfferForm() {
    *  AddressAutocomplete-driven warehouse fetch ("Loaded list price from
    *  records — $749,000"). */
   const [prefillNote, setPrefillNote] = useState<string | null>(null);
+  /**
+   * AbortControllers for the in-flight warehouse + listing-URL
+   * fetches. Without these, a fast agent who pastes a Zillow URL
+   * and immediately picks a Google address (or types two URLs back
+   * to back) gets last-write-wins via response timing — which can
+   * leave stale fields populated from the earlier fetch. We abort
+   * the previous fetch when a new one starts so only the most
+   * recent intent wins.
+   */
+  const warehouseFetchRef = useRef<AbortController | null>(null);
+  const listingFetchRef = useRef<AbortController | null>(null);
 
   /**
    * Best-effort fetch of list_price (or estimated value) from the
@@ -128,34 +139,54 @@ function NewOfferForm() {
    */
   async function applyListPriceFromWarehouse(addr: string): Promise<void> {
     if (!addr) return;
+    // Abort any in-flight warehouse fetch so a stale response can't
+    // overwrite values from a newer pick.
+    warehouseFetchRef.current?.abort();
+    const controller = new AbortController();
+    warehouseFetchRef.current = controller;
     try {
       const res = await fetch(
         `/api/property/${encodeURIComponent(addr)}`,
-        { cache: "no-store" },
+        { cache: "no-store", signal: controller.signal },
       );
-      if (!res.ok) return;
+      if (controller.signal.aborted) return;
+      if (!res.ok) {
+        // Clear the "Loading…" hint we set in the AddressAutocomplete
+        // onSelect — leaving it stuck is worse than no hint at all.
+        setPrefillNote(null);
+        return;
+      }
       const body = (await res.json().catch(() => ({}))) as {
         latest_snapshot?: { estimated_value?: number | null } | null;
         property?: { last_list_price?: number | null } | null;
       };
+      if (controller.signal.aborted) return;
       const cachedPrice =
         body?.property?.last_list_price ??
         body?.latest_snapshot?.estimated_value ??
         null;
-      if (cachedPrice == null) return;
+      if (cachedPrice == null) {
+        setPrefillNote(null);
+        return;
+      }
       let updated = false;
       setListPrice((cur) => {
         if (cur) return cur;
         updated = true;
         return String(Math.round(cachedPrice));
       });
-      if (updated) {
-        setPrefillNote(
-          `Loaded list price from records — $${Math.round(cachedPrice).toLocaleString()}`,
-        );
-      }
-    } catch {
-      // Silent — list price is a nice-to-have, not required.
+      setPrefillNote(
+        updated
+          ? `Loaded list price from records — $${Math.round(cachedPrice).toLocaleString()}`
+          : null,
+      );
+    } catch (e) {
+      // AbortError is expected when a newer fetch supersedes us — no
+      // need to clear notes since the new fetch will manage them.
+      if ((e as { name?: string } | null)?.name === "AbortError") return;
+      // Silent on real network errors. Clear any "Loading…" hint so
+      // the agent isn't stuck on it.
+      setPrefillNote(null);
     }
   }
 
@@ -181,21 +212,32 @@ function NewOfferForm() {
   async function detectListingUrl(rawUrl: string) {
     const url = rawUrl.trim();
     if (!url) {
+      // Cancel any in-flight detect when the field is cleared so a
+      // late response can't repopulate after the user erased the URL.
+      listingFetchRef.current?.abort();
       setListingUrlDetected(null);
       return;
     }
     const platform = detectPlatform(url);
     if (!platform) {
+      listingFetchRef.current?.abort();
       setListingUrlDetected(null);
       return;
     }
     const label = platformLabel(platform);
     setListingUrlDetected({ platform, label, status: "looking-up" });
 
+    // Abort any in-flight listing-URL fetch so the latest URL wins.
+    listingFetchRef.current?.abort();
+    const controller = new AbortController();
+    listingFetchRef.current = controller;
+
     try {
       const res = await fetch(
         `/api/property/from-listing?url=${encodeURIComponent(url)}`,
+        { signal: controller.signal },
       );
+      if (controller.signal.aborted) return;
       const body = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         platform?: string;
@@ -203,6 +245,7 @@ function NewOfferForm() {
         data?: unknown;
         error?: string;
       };
+      if (controller.signal.aborted) return;
       if (!res.ok || !body.ok || !body.address) {
         setListingUrlDetected({
           platform,
@@ -267,6 +310,9 @@ function NewOfferForm() {
           : `Listing parsed but the form is already filled — leaving values alone.`,
       });
     } catch (e) {
+      // AbortError fires when a newer fetch supersedes us — silent
+      // because the new fetch will own the badge state.
+      if ((e as { name?: string } | null)?.name === "AbortError") return;
       setListingUrlDetected({
         platform,
         label,
@@ -398,8 +444,15 @@ function NewOfferForm() {
           state: state.trim() || null,
           zip: zip.trim() || null,
           // Stored on the offer so the detail page can deep-link
-          // back to the source listing + show the MLS#.
-          mlsUrl: listingUrl.trim() || null,
+          // back to the source listing + show the MLS#. Only persist
+          // the URL if it's a recognized real-estate listing platform
+          // — otherwise random text the agent typed (or pasted from
+          // the wrong app) ends up rendered as a broken link on the
+          // detail page.
+          mlsUrl:
+            listingUrl.trim() && detectPlatform(listingUrl.trim())
+              ? listingUrl.trim()
+              : null,
           mlsNumber: mlsNumber.trim() || null,
           listPrice: listPrice ? Number(listPrice) : null,
           offerPrice: priceNum,
