@@ -165,10 +165,10 @@ export default function ListingsClient({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map((l) => (
-                <tr key={l.transactionId} className="align-top hover:bg-slate-50">
+                <tr key={l.id} className="align-top hover:bg-slate-50">
                   <td className="px-3 py-2.5">
                     <Link
-                      href={`/dashboard/transactions/${l.transactionId}`}
+                      href={`/dashboard/listings/${l.id}`}
                       className="font-medium text-slate-900 hover:underline"
                     >
                       {l.property_address}
