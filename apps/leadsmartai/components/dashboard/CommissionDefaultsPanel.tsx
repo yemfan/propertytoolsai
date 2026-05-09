@@ -79,7 +79,7 @@ export function CommissionDefaultsPanel() {
           onBlur={(v) => void save({ commissionBuyerPct: v })}
           disabled={saving}
           max={15}
-          hint="Typically 2.5% in CA (negotiated offer of cooperation)."
+          hint="Typical buyer-side commission is 2.5–3.0%, negotiated as offer of cooperation."
         />
         <PctInput
           label="Listing-side commission"
@@ -87,7 +87,7 @@ export function CommissionDefaultsPanel() {
           onBlur={(v) => void save({ commissionListingPct: v })}
           disabled={saving}
           max={15}
-          hint="Typically 3.0% under CAR RLA."
+          hint="Typical listing commission is 2.5–3.0%."
         />
         <PctInput
           label="Brokerage split (your share)"
