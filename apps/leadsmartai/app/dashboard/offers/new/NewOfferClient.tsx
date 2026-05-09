@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import AddressAutocomplete, {
   type AddressAutocompleteValue,
 } from "@/components/AddressAutocomplete";
@@ -16,11 +16,14 @@ import type { FinancingType } from "@/lib/offers/types";
 /**
  * Create a new offer. Accepts:
  *   ?contactId=<uuid>   — deep-link prefill for the buyer
- *   ?showingId=<uuid>   — back-link to the showing that sourced it
- *                         (we store the FK; we don't fetch the showing
- *                         to prefill address because the agent may be
- *                         offering on a different property than the one
- *                         they showed.)
+ *   ?showingId=<uuid>   — back-link AND prefill source. We fetch the
+ *                         showing on mount and seed property_address /
+ *                         city / state / zip from it. Best-effort: also
+ *                         pulls list_price from the property warehouse
+ *                         when one is cached. Agent can still edit
+ *                         everything before submitting (e.g. if the
+ *                         buyer is offering on a different unit or the
+ *                         list price has changed).
  *
  * Default: creates as `draft`. The "Submit now" checkbox flips to
  * `submitted` + stamps submitted_at in the same request.
@@ -52,6 +55,88 @@ function NewOfferForm() {
   const [submitNow, setSubmitNow] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Surfaces "Loaded from showing" / "Loading…" hint under the address field
+   *  when we're prefilling from ?showingId. */
+  const [prefillNote, setPrefillNote] = useState<string | null>(null);
+
+  // Prefill property fields from the linked showing when ?showingId
+  // is present. Two-tier:
+  //
+  //   1. Showing API → address / city / state / zip (always works,
+  //      one DB row).
+  //   2. Property warehouse → list_price (best-effort; cached for
+  //      anything we've shown before, and we silently skip price
+  //      prefill if the lookup fails or returns null).
+  //
+  // Runs once per mount. Won't clobber user edits because it bails
+  // when propertyAddress is already populated.
+  useEffect(() => {
+    if (!prefilledShowingId) return;
+    let cancelled = false;
+    setPrefillNote("Loading from showing…");
+
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/dashboard/showings/${encodeURIComponent(prefilledShowingId)}`,
+          { cache: "no-store" },
+        );
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          showing?: {
+            property_address?: string | null;
+            city?: string | null;
+            state?: string | null;
+            zip?: string | null;
+          };
+        };
+        if (cancelled) return;
+        const sh = body?.showing;
+        if (!res.ok || !body.ok || !sh?.property_address) {
+          setPrefillNote(null);
+          return;
+        }
+
+        // Address fields — only seed if the user hasn't already
+        // typed something.
+        setPropertyAddress((cur) => cur || sh.property_address || "");
+        if (sh.city) setCity((cur) => cur || sh.city || "");
+        if (sh.state) setStateValue((cur) => cur || sh.state || "");
+        if (sh.zip) setZip((cur) => cur || sh.zip || "");
+        setPrefillNote(`Prefilled from showing — ${sh.property_address}`);
+
+        // Tier-2: list price from the warehouse. Non-blocking;
+        // failures are silent so the agent can still type.
+        try {
+          const propRes = await fetch(
+            `/api/property/${encodeURIComponent(sh.property_address)}`,
+            { cache: "no-store" },
+          );
+          if (!propRes.ok || cancelled) return;
+          const propBody = (await propRes.json().catch(() => ({}))) as {
+            latest_snapshot?: { estimated_value?: number | null } | null;
+            property?: { last_list_price?: number | null } | null;
+          };
+          const cachedPrice =
+            propBody?.property?.last_list_price ??
+            propBody?.latest_snapshot?.estimated_value ??
+            null;
+          if (cachedPrice && !cancelled) {
+            setListPrice((cur) => cur || String(Math.round(cachedPrice)));
+          }
+        } catch {
+          // Swallow — list price is a nice-to-have, not required.
+        }
+      } catch {
+        if (!cancelled) setPrefillNote(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefilledShowingId]);
 
   async function submit() {
     setError(null);
@@ -171,6 +256,9 @@ function NewOfferForm() {
               {state ? <span className="rounded-full bg-slate-100 px-2 py-0.5">{state}</span> : null}
               {zip ? <span className="rounded-full bg-slate-100 px-2 py-0.5">{zip}</span> : null}
             </div>
+          ) : null}
+          {prefillNote ? (
+            <div className="mt-1.5 text-[11px] text-emerald-700">{prefillNote}</div>
           ) : null}
         </div>
 
