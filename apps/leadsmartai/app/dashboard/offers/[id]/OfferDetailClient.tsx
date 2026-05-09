@@ -254,6 +254,8 @@ export function OfferDetailClient({
             </p>
           </Card>
 
+          <ActivityTimeline offer={offer} counters={counters} />
+
           <CounterTimeline
             offerId={offer.id}
             counters={counters}
@@ -501,5 +503,146 @@ function Chip({ children }: { children: React.ReactNode }) {
     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
       {children}
     </span>
+  );
+}
+
+/**
+ * Activity timeline — synthesizes lifecycle events from the offer
+ * row + its counters into a single chronological feed.
+ *
+ * Read-only on purpose. Inputs (status changes, counter records,
+ * delete) live in their own dedicated cards (Status, Counter
+ * history, Quick actions) — surfacing them here too would just
+ * duplicate the affordance and the user has to land on the source
+ * card to actually act anyway.
+ *
+ * Events synthesized:
+ *
+ *   Drafted         ← offer.created_at
+ *   Submitted       ← offer.submitted_at (skipped when status='draft')
+ *   Counter (each)  ← offer_counters[i].created_at
+ *                     direction discriminates the label:
+ *                       seller_to_buyer → "Seller countered"
+ *                       buyer_to_seller → "We countered"
+ *   Accepted        ← offer.accepted_at
+ *   Rejected        ← offer.closed_at when status='rejected'
+ *   Withdrawn       ← offer.closed_at when status='withdrawn'
+ *   Expired         ← offer.closed_at when status='expired'
+ *
+ * Sorted newest-first so the latest event is at the top — what
+ * the agent usually wants when scanning a deal in motion.
+ */
+type ActivityEvent = {
+  at: string;
+  icon: string;
+  label: string;
+  detail?: string;
+};
+
+function buildActivity(
+  offer: OfferRow,
+  counters: OfferCounterRow[],
+): ActivityEvent[] {
+  const events: ActivityEvent[] = [];
+  events.push({
+    at: offer.created_at,
+    icon: "📝",
+    label: "Drafted",
+  });
+  if (offer.submitted_at) {
+    events.push({
+      at: offer.submitted_at,
+      icon: "📤",
+      label: "Submitted to listing agent",
+      detail:
+        offer.offer_price != null
+          ? `at ${formatMoney(offer.offer_price)}`
+          : undefined,
+    });
+  }
+  for (const c of counters) {
+    const isFromSeller = c.direction === "seller_to_buyer";
+    events.push({
+      at: c.created_at,
+      icon: "🔁",
+      label: isFromSeller
+        ? `Counter #${c.counter_number} from seller`
+        : `Counter #${c.counter_number} sent to seller`,
+      detail: [
+        c.price != null ? `at ${formatMoney(c.price)}` : null,
+        c.notes ?? null,
+      ]
+        .filter(Boolean)
+        .join(" · ") || undefined,
+    });
+  }
+  if (offer.accepted_at) {
+    events.push({
+      at: offer.accepted_at,
+      icon: "✅",
+      label: "Accepted",
+      detail:
+        offer.current_price != null && offer.current_price !== offer.offer_price
+          ? `Final price ${formatMoney(offer.current_price)}`
+          : undefined,
+    });
+  }
+  if (offer.closed_at && offer.status !== "accepted") {
+    const closedLabel =
+      offer.status === "rejected"
+        ? { icon: "❌", label: "Rejected by seller" }
+        : offer.status === "withdrawn"
+          ? { icon: "↩", label: "Withdrawn" }
+          : offer.status === "expired"
+            ? { icon: "⏰", label: "Expired" }
+            : { icon: "⚪", label: "Closed" };
+    events.push({
+      at: offer.closed_at,
+      icon: closedLabel.icon,
+      label: closedLabel.label,
+    });
+  }
+  // Newest first.
+  events.sort((a, b) => b.at.localeCompare(a.at));
+  return events;
+}
+
+function ActivityTimeline({
+  offer,
+  counters,
+}: {
+  offer: OfferRow;
+  counters: OfferCounterRow[];
+}) {
+  const events = buildActivity(offer, counters);
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h2 className="text-sm font-semibold text-slate-900">Activity</h2>
+      {events.length === 0 ? (
+        <p className="mt-3 text-sm text-slate-500">No activity yet.</p>
+      ) : (
+        <ol className="mt-3 space-y-2">
+          {events.map((e, i) => (
+            <li
+              key={`${e.at}-${i}`}
+              className="flex gap-3 rounded-lg border border-slate-100 px-3 py-2"
+            >
+              <div className="shrink-0 text-base leading-snug" aria-hidden>
+                {e.icon}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium text-slate-900">{e.label}</div>
+                {e.detail ? (
+                  <div className="mt-0.5 text-[12px] text-slate-600">{e.detail}</div>
+                ) : null}
+              </div>
+              <div className="shrink-0 text-right text-[11px] text-slate-500">
+                {formatDateTime(e.at)}
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
   );
 }
