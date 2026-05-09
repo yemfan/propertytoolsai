@@ -185,6 +185,27 @@ function deepFind(obj: any, predicate: (k: string, v: any) => boolean): any[] {
   return found;
 }
 
+/**
+ * Map Zillow's `homeStatus` enum onto a real-estate status string.
+ * This is the most reliable status signal Zillow exposes — far
+ * better than schema.org `availability` which they sometimes omit.
+ *
+ * Values seen in the wild (from Zillow's __NEXT_DATA__):
+ *   FOR_SALE, FOR_RENT, PENDING, SOLD, RECENTLY_SOLD, OFF_MARKET,
+ *   COMING_SOON, AUCTION, FORECLOSURE, OTHER.
+ */
+function homeStatusToString(homeStatus: unknown): string | null {
+  if (typeof homeStatus !== "string") return null;
+  const norm = homeStatus.trim().toUpperCase();
+  if (!norm) return null;
+  if (norm === "FOR_SALE" || norm === "COMING_SOON") return "Active";
+  if (norm === "FOR_RENT") return "Active";
+  if (norm === "PENDING" || norm === "AUCTION") return "Pending";
+  if (norm === "SOLD" || norm === "RECENTLY_SOLD") return "Sold";
+  if (norm === "OFF_MARKET") return "Off Market";
+  return null;
+}
+
 function parseFromNextData(nextData: any): Partial<ListingParsedData> | null {
   if (!nextData) return null;
 
@@ -225,8 +246,18 @@ function parseFromNextData(nextData: any): Partial<ListingParsedData> | null {
   const typeCandidates = deepFind(nextData, (k) =>
     ["propertytype", "homeType", "home_type"].includes(k.toLowerCase())
   );
+  // Zillow's __NEXT_DATA__ has `homeStatus` (FOR_SALE / PENDING / SOLD)
+  // — the most reliable listing-status signal short of MLS data.
+  const statusCandidates = deepFind(nextData, (k) =>
+    ["homestatus", "home_status", "listingstatus", "listing_status", "status"].includes(
+      k.toLowerCase()
+    )
+  );
 
   const address = getString(addressCandidates.find((v) => typeof v === "string"));
+  const rawStatus = statusCandidates.find((v) => typeof v === "string") as
+    | string
+    | undefined;
 
   return {
     address: address ?? null,
@@ -242,6 +273,7 @@ function parseFromNextData(nextData: any): Partial<ListingParsedData> | null {
     lat: num(latCandidates.find((v) => v != null)),
     lng: num(lngCandidates.find((v) => v != null)),
     property_type: getString(typeCandidates.find((v) => typeof v === "string")),
+    listing_status: homeStatusToString(rawStatus),
   };
 }
 
@@ -328,31 +360,40 @@ export async function fetchAndParseListing(
 
   const jsonlds = extractJsonLd(html);
   const fromLd = parseFromJsonLd(jsonlds);
+  // Always pull __NEXT_DATA__ too — even when JSON-LD has the facts,
+  // it's often missing the listing-status signal that __NEXT_DATA__
+  // exposes via `homeStatus`. We coalesce status from whichever side
+  // has it, JSON-LD first (when present), Next-data as fallback.
+  const nextData = extractNextData(html);
+  const fromNext = parseFromNextData(nextData);
+
   if (fromLd) {
     return {
-      address: fromLd.address ?? null,
-      city: fromLd.city ?? null,
-      state: fromLd.state ?? null,
-      zip_code: fromLd.zip_code ?? null,
-      lat: fromLd.lat ?? null,
-      lng: fromLd.lng ?? null,
-      property_type: fromLd.property_type ?? null,
-      beds: fromLd.beds ?? null,
-      baths: fromLd.baths ?? null,
-      sqft: fromLd.sqft ?? null,
-      lot_size: fromLd.lot_size ?? null,
-      year_built: fromLd.year_built ?? null,
-      price: fromLd.price ?? metaPrice ?? textPrice ?? null,
+      address: fromLd.address ?? fromNext?.address ?? null,
+      city: fromLd.city ?? fromNext?.city ?? null,
+      state: fromLd.state ?? fromNext?.state ?? null,
+      zip_code: fromLd.zip_code ?? fromNext?.zip_code ?? null,
+      lat: fromLd.lat ?? fromNext?.lat ?? null,
+      lng: fromLd.lng ?? fromNext?.lng ?? null,
+      property_type: fromLd.property_type ?? fromNext?.property_type ?? null,
+      beds: fromLd.beds ?? fromNext?.beds ?? null,
+      baths: fromLd.baths ?? fromNext?.baths ?? null,
+      sqft: fromLd.sqft ?? fromNext?.sqft ?? null,
+      lot_size: fromLd.lot_size ?? fromNext?.lot_size ?? null,
+      year_built: fromLd.year_built ?? fromNext?.year_built ?? null,
+      price: fromLd.price ?? fromNext?.price ?? metaPrice ?? textPrice ?? null,
       rent_estimate: null,
-      listing_status: null,
+      // Status: JSON-LD's schema.org availability first, then
+      // Zillow-specific homeStatus from __NEXT_DATA__. Either is a
+      // valid scrape-derived signal — the route still labels them
+      // as "scrape" so the client banner stays honest.
+      listing_status: fromLd.listing_status ?? fromNext?.listing_status ?? null,
       source_url: listingUrl,
       source_platform: platform,
       raw: { jsonld: jsonlds },
     };
   }
 
-  const nextData = extractNextData(html);
-  const fromNext = parseFromNextData(nextData);
   if (fromNext) {
     return {
       address: fromNext.address ?? null,
@@ -369,7 +410,7 @@ export async function fetchAndParseListing(
       year_built: fromNext.year_built ?? null,
       price: fromNext.price ?? metaPrice ?? textPrice ?? null,
       rent_estimate: null,
-      listing_status: null,
+      listing_status: fromNext.listing_status ?? null,
       source_url: listingUrl,
       source_platform: platform,
       raw: { nextData },
