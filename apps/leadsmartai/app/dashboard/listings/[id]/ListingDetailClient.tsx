@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   LISTING_STATUS_LABEL,
   type ListingDetail,
@@ -65,8 +67,59 @@ function formatRelative(iso: string | null): string {
  * updates, etc.). For now this is read-only.
  */
 export function ListingDetailClient({ listing }: { listing: ListingDetail }) {
+  const router = useRouter();
   const cityState = [listing.city, listing.state].filter(Boolean).join(", ");
   const fullLocation = [cityState, listing.zip].filter(Boolean).join(" ");
+
+  const [promoting, setPromoting] = useState(false);
+  const [promoteError, setPromoteError] = useState<string | null>(null);
+
+  // Promote button visible only on listings that haven't been
+  // promoted yet AND aren't in a terminal state. The action moves
+  // the listing into "contracted" and spawns a transaction so the
+  // post-acceptance lifecycle (escrow, contingencies, closing)
+  // gets its own row to track against.
+  const canPromote =
+    !listing.transactionId &&
+    listing.status !== "contracted" &&
+    listing.status !== "withdrawn" &&
+    listing.status !== "expired";
+
+  async function promote() {
+    if (!confirm(
+      `Mark this listing under contract?\n\nThis spawns a deal so escrow + closing can be tracked.`,
+    )) {
+      return;
+    }
+    setPromoting(true);
+    setPromoteError(null);
+    try {
+      const res = await fetch(
+        `/api/dashboard/listings/${encodeURIComponent(listing.id)}/promote`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({}),
+        },
+      );
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        transactionId?: string;
+        error?: string;
+      };
+      if (!res.ok || !body.ok || !body.transactionId) {
+        setPromoteError(body.error ?? "Failed to promote listing.");
+        return;
+      }
+      // Land on the new transaction so the agent can keep
+      // working on the post-acceptance details immediately.
+      router.push(`/dashboard/transactions/${body.transactionId}`);
+    } catch (e) {
+      setPromoteError(e instanceof Error ? e.message : "Network error.");
+    } finally {
+      setPromoting(false);
+    }
+  }
 
   return (
     <main id="main-content" className="mx-auto max-w-5xl space-y-5 px-4 py-8">
@@ -94,10 +147,13 @@ export function ListingDetailClient({ listing }: { listing: ListingDetail }) {
           </span>
         </div>
 
-        {/* Lifecycle bridge: when the listing has a back-linked
-            transaction (offer accepted), surface a deep link so the
-            agent can open the contracted-deal view (contingencies,
-            escrow, closing) without leaving the listing page. */}
+        {/* Lifecycle area — two states:
+            (a) listing already promoted (has a back-linked
+                transaction) → blue "Open contracted deal" bridge
+                so the agent can jump to the post-acceptance view
+            (b) listing not yet promoted but eligible → emerald
+                "Mark under contract" CTA that fires the promote
+                endpoint, spawning a transaction to track escrow */}
         {listing.transactionId ? (
           <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
             <Link
@@ -109,6 +165,29 @@ export function ListingDetailClient({ listing }: { listing: ListingDetail }) {
             <span className="ml-2 text-[11px] text-blue-700">
               Closing date, contingencies, and escrow tasks live on the deal page.
             </span>
+          </div>
+        ) : canPromote ? (
+          <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-sm text-emerald-900">
+                <span className="font-medium">Offer accepted?</span>
+                <span className="ml-2 text-[11px] text-emerald-700">
+                  Mark under contract — spawns a deal so closing + contingencies
+                  get tracked separately.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => void promote()}
+                disabled={promoting}
+                className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
+              >
+                {promoting ? "Promoting…" : "Mark under contract"}
+              </button>
+            </div>
+            {promoteError ? (
+              <p className="mt-2 text-[11px] text-rose-700">{promoteError}</p>
+            ) : null}
           </div>
         ) : null}
       </div>

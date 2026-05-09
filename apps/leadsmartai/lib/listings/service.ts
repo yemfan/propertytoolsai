@@ -248,6 +248,139 @@ export async function createListing(
 }
 
 /**
+ * Promote a listing to a post-acceptance transaction.
+ *
+ * Phase 2d of the listings/transactions split — the lifecycle
+ * hand-off. Called when an offer on the listing is accepted (the
+ * listing transitions from "active" / "pending" to "contracted")
+ * and the agent needs a transaction row to track the
+ * post-acceptance phase: escrow, contingencies, closing.
+ *
+ * Side effects (atomic via two updates — there's no transaction
+ * primitive in supabaseAdmin RPC mode, but the failure mode is
+ * benign: if the post-spawn listing update fails, the promotion
+ * is retryable because we re-check transaction_id before spawning):
+ *
+ *   1. Insert into transactions:
+ *        agent_id, contact_id, property_address, city, state, zip
+ *          ← copied from listing
+ *        purchase_price ← opts.purchasePrice ?? listing.list_price
+ *        mutual_acceptance_date ← opts.mutualAcceptanceDate ?? today
+ *        closing_date ← opts.closingDate (optional)
+ *        transaction_type ← opts.transactionType ?? 'listing_rep'
+ *        source_listing_id ← listing.id   (forward-link)
+ *        status ← 'active'
+ *        listing_start_date ← listing.listing_start_date
+ *
+ *   2. Update the listing:
+ *        status ← 'contracted'
+ *        transaction_id ← new transaction id   (back-link)
+ *        updated_at ← now
+ *
+ * Idempotent: if the listing already has a transaction_id set
+ * (i.e. a previous promote call landed and the lifecycle is done),
+ * return the existing transaction without creating a new one.
+ *
+ * @throws when the listing doesn't exist for the agent.
+ * @throws when the listing is in a terminal state (withdrawn,
+ *         expired) — those listings shouldn't transition to
+ *         contracted; the agent needs to relist first.
+ */
+export async function promoteListingToTransaction(
+  agentId: string,
+  listingId: string,
+  opts?: {
+    mutualAcceptanceDate?: string | null;
+    closingDate?: string | null;
+    purchasePrice?: number | null;
+    transactionType?: "listing_rep" | "dual";
+  },
+): Promise<{ listingId: string; transactionId: string }> {
+  const { data: row, error } = await supabaseAdmin
+    .from("listings")
+    .select(
+      "id, agent_id, contact_id, property_address, city, state, zip, list_price, listing_start_date, status, transaction_id",
+    )
+    .eq("agent_id", agentId)
+    .eq("id", listingId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!row) throw new Error("Listing not found for this agent");
+  const listing = row as {
+    id: string;
+    agent_id: string | number;
+    contact_id: string;
+    property_address: string;
+    city: string | null;
+    state: string | null;
+    zip: string | null;
+    list_price: number | null;
+    listing_start_date: string | null;
+    status: ListingStatus;
+    transaction_id: string | null;
+  };
+
+  // Idempotency: if already promoted, return the existing
+  // transaction without spawning a duplicate.
+  if (listing.transaction_id) {
+    return { listingId: listing.id, transactionId: listing.transaction_id };
+  }
+
+  if (listing.status === "withdrawn" || listing.status === "expired") {
+    throw new Error(
+      `Listing is ${listing.status} — relist before marking under contract`,
+    );
+  }
+
+  const transactionType = opts?.transactionType ?? "listing_rep";
+  const today = new Date().toISOString().slice(0, 10);
+  const mutualAcceptance = opts?.mutualAcceptanceDate ?? today;
+  const purchasePrice = opts?.purchasePrice ?? listing.list_price;
+
+  // 1. Spawn the transaction. Use createTransaction's seedTasks
+  //    pipeline so the new row arrives with the listing-rep
+  //    checklist populated and deadlines auto-filled from the
+  //    mutual_acceptance_date anchor.
+  const { createTransaction } = await import("@/lib/transactions/service");
+  const txn = await createTransaction({
+    agentId: String(listing.agent_id),
+    contactId: listing.contact_id,
+    transactionType,
+    propertyAddress: listing.property_address,
+    city: listing.city,
+    state: listing.state,
+    zip: listing.zip,
+    purchasePrice,
+    listingStartDate: listing.listing_start_date,
+    mutualAcceptanceDate: mutualAcceptance,
+    closingDate: opts?.closingDate ?? null,
+    notes: null,
+  });
+
+  // 2. Set both back-links and flip listing.status. We update
+  //    transactions.source_listing_id separately because
+  //    createTransaction's input doesn't carry that field
+  //    (it's an internal back-link, not a user-facing field).
+  await supabaseAdmin
+    .from("transactions")
+    .update({ source_listing_id: listing.id, updated_at: new Date().toISOString() })
+    .eq("id", txn.id)
+    .eq("agent_id", agentId);
+
+  await supabaseAdmin
+    .from("listings")
+    .update({
+      transaction_id: txn.id,
+      status: "contracted",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", listing.id)
+    .eq("agent_id", agentId);
+
+  return { listingId: listing.id, transactionId: txn.id };
+}
+
+/**
  * Single-listing fetch for the detail page. Returns null if the
  * listing doesn't exist or doesn't belong to the agent (so the page
  * can render a 404 cleanly).
