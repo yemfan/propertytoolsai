@@ -88,16 +88,39 @@ function mergeAndDedupe(
   return out;
 }
 
+/**
+ * Calendar-day delta between two timestamps, in the local timezone.
+ *
+ * The original implementation did `Math.floor(elapsedMs / 24h)` which
+ * is wrong for a UI label: a showing scheduled at 2 PM yesterday reads
+ * as "today" the next morning because only ~20h have elapsed. Agents
+ * read this list at a glance and need yesterday-vs-today to flip
+ * exactly at midnight, not at the wall-clock-hour the previous showing
+ * was scheduled.
+ *
+ * Returns negative numbers for future dates (scheduled showings) so the
+ * caller can label those distinctly.
+ */
 function relativeAge(iso: string): string {
-  const then = Date.parse(iso);
-  if (!Number.isFinite(then)) return "";
-  const diffMs = Date.now() - then;
-  const days = Math.floor(diffMs / 86_400_000);
-  if (days < 1) return "today";
-  if (days < 7) return `${days}d ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
-  return `${Math.floor(days / 365)}y ago`;
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return "";
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfThen = new Date(then.getFullYear(), then.getMonth(), then.getDate()).getTime();
+  const dayDiff = Math.round((startOfToday - startOfThen) / 86_400_000);
+
+  if (dayDiff < 0) {
+    // Future-dated (scheduled showings).
+    if (dayDiff === -1) return "tomorrow";
+    if (dayDiff > -7) return `in ${-dayDiff}d`;
+    return then.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+  if (dayDiff === 0) return "today";
+  if (dayDiff === 1) return "yesterday";
+  if (dayDiff < 7) return `${dayDiff}d ago`;
+  if (dayDiff < 30) return `${Math.floor(dayDiff / 7)}w ago`;
+  if (dayDiff < 365) return `${Math.floor(dayDiff / 30)}mo ago`;
+  return `${Math.floor(dayDiff / 365)}y ago`;
 }
 
 export function RecentAddressList({
