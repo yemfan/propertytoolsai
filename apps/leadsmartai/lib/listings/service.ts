@@ -183,6 +183,71 @@ export async function listListingsForAgent(
 }
 
 /**
+ * Create a new listing. Phase 2c of the listings/transactions
+ * split — listings no longer get inserted into the transactions
+ * table. The transactions table only gets a row at offer-accept
+ * time (Phase 2d), so a fresh listing has no transaction_id yet.
+ *
+ * Default status is 'active' rather than 'draft' — when the agent
+ * submits the form they've typed enough fields to make this a
+ * real listing. Pass `status: 'draft'` explicitly if needed.
+ */
+export type CreateListingInput = {
+  agentId: string | number;
+  contactId: string;
+  propertyAddress: string;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  mlsNumber?: string | null;
+  mlsUrl?: string | null;
+  listPrice?: number | null;
+  listingStartDate?: string | null;
+  listingEndDate?: string | null;
+  status?: ListingStatus;
+  commissionPct?: number | null;
+  notes?: string | null;
+};
+
+export async function createListing(
+  input: CreateListingInput,
+): Promise<ListingDetail> {
+  const status: ListingStatus = input.status ?? "active";
+
+  const { data, error } = await supabaseAdmin
+    .from("listings")
+    .insert({
+      agent_id: input.agentId,
+      contact_id: input.contactId,
+      property_address: input.propertyAddress,
+      city: input.city ?? null,
+      state: input.state ?? null,
+      zip: input.zip ?? null,
+      mls_number: input.mlsNumber ?? null,
+      mls_url: input.mlsUrl ?? null,
+      list_price: input.listPrice ?? null,
+      listing_start_date: input.listingStartDate ?? null,
+      listing_end_date: input.listingEndDate ?? null,
+      status,
+      commission_pct: input.commissionPct ?? null,
+      notes: input.notes ?? null,
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(error?.message ?? "Failed to create listing");
+
+  // Re-fetch via getListingById so callers get the full ListingDetail
+  // shape with contactName + showings rollup (consistent with the
+  // detail page).
+  const detail = await getListingById(
+    String(input.agentId),
+    (data as { id: string }).id,
+  );
+  if (!detail) throw new Error("Listing was created but could not be re-fetched");
+  return detail;
+}
+
+/**
  * Single-listing fetch for the detail page. Returns null if the
  * listing doesn't exist or doesn't belong to the agent (so the page
  * can render a 404 cleanly).

@@ -162,6 +162,45 @@ function NewTransactionForm() {
     }
     setSubmitting(true);
     try {
+      // Phase 2c of the listings/transactions split: listing-rep
+      // submits go through POST /api/dashboard/listings and land
+      // on /dashboard/listings/[id]. Buyer-rep + dual still post
+      // to /api/dashboard/transactions (the dual case may also
+      // get a listing row in Phase 2d's lifecycle promotion at
+      // offer-accept, but the agent's primary intent here is the
+      // post-acceptance transaction).
+      if (transactionType === "listing_rep") {
+        const res = await fetch("/api/dashboard/listings", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            contactId: contact.id,
+            propertyAddress: propertyAddress.trim(),
+            city: city.trim() || null,
+            state: state.trim() || null,
+            zip: zip.trim() || null,
+            listPrice: purchasePrice ? Number(purchasePrice) : null,
+            listingStartDate: listingStartDate || null,
+            // closingDate and mutualAcceptanceDate intentionally
+            // dropped — listings carry no closing fields in the
+            // new model. They get set on the spawned transaction
+            // when an offer is accepted.
+            notes: notes.trim() || null,
+          }),
+        });
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          listing?: { id: string };
+          error?: string;
+        };
+        if (!res.ok || !body.ok || !body.listing) {
+          setError(body.error ?? "Failed to create listing.");
+          return;
+        }
+        router.push(`/dashboard/listings/${body.listing.id}`);
+        return;
+      }
+
       const res = await fetch("/api/dashboard/transactions", {
         method: "POST",
         headers: { "content-type": "application/json" },
