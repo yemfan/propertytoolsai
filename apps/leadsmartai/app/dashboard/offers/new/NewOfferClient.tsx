@@ -279,7 +279,6 @@ function NewOfferForm() {
               type="number"
               value={offerPrice}
               onChange={(e) => setOfferPrice(e.target.value)}
-              placeholder="1150000"
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             />
           </div>
