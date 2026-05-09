@@ -60,8 +60,58 @@ function NewOfferForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /** Surfaces "Loaded from showing" / "Loading…" hint under the address field
-   *  when we're prefilling from ?showingId. */
+   *  when we're prefilling from ?showingId. Also reused for the
+   *  AddressAutocomplete-driven warehouse fetch ("Loaded list price from
+   *  records — $749,000"). */
   const [prefillNote, setPrefillNote] = useState<string | null>(null);
+
+  /**
+   * Best-effort fetch of list_price (or estimated value) from the
+   * property warehouse for a given address. Used in two places:
+   *
+   *   1. The ?showingId prefill effect — fills list_price after
+   *      the showing's address is known.
+   *   2. The AddressAutocomplete onSelect — fills list_price the
+   *      moment an agent picks a verified address from Google
+   *      autocomplete, even without a source showing.
+   *
+   * Bails when address is empty. Skips overwriting if the agent
+   * already typed a list price. Sets a small "Loaded list price
+   * from records" hint under the address so the prefill is
+   * visible to the user.
+   */
+  async function applyListPriceFromWarehouse(addr: string): Promise<void> {
+    if (!addr) return;
+    try {
+      const res = await fetch(
+        `/api/property/${encodeURIComponent(addr)}`,
+        { cache: "no-store" },
+      );
+      if (!res.ok) return;
+      const body = (await res.json().catch(() => ({}))) as {
+        latest_snapshot?: { estimated_value?: number | null } | null;
+        property?: { last_list_price?: number | null } | null;
+      };
+      const cachedPrice =
+        body?.property?.last_list_price ??
+        body?.latest_snapshot?.estimated_value ??
+        null;
+      if (cachedPrice == null) return;
+      let updated = false;
+      setListPrice((cur) => {
+        if (cur) return cur;
+        updated = true;
+        return String(Math.round(cachedPrice));
+      });
+      if (updated) {
+        setPrefillNote(
+          `Loaded list price from records — $${Math.round(cachedPrice).toLocaleString()}`,
+        );
+      }
+    } catch {
+      // Silent — list price is a nice-to-have, not required.
+    }
+  }
 
   // Prefill property fields from the linked showing when ?showingId
   // is present. Two-tier:
@@ -109,28 +159,10 @@ function NewOfferForm() {
         if (sh.zip) setZip((cur) => cur || sh.zip || "");
         setPrefillNote(`Prefilled from showing — ${sh.property_address}`);
 
-        // Tier-2: list price from the warehouse. Non-blocking;
-        // failures are silent so the agent can still type.
-        try {
-          const propRes = await fetch(
-            `/api/property/${encodeURIComponent(sh.property_address)}`,
-            { cache: "no-store" },
-          );
-          if (!propRes.ok || cancelled) return;
-          const propBody = (await propRes.json().catch(() => ({}))) as {
-            latest_snapshot?: { estimated_value?: number | null } | null;
-            property?: { last_list_price?: number | null } | null;
-          };
-          const cachedPrice =
-            propBody?.property?.last_list_price ??
-            propBody?.latest_snapshot?.estimated_value ??
-            null;
-          if (cachedPrice && !cancelled) {
-            setListPrice((cur) => cur || String(Math.round(cachedPrice)));
-          }
-        } catch {
-          // Swallow — list price is a nice-to-have, not required.
-        }
+        // Tier-2: list price from the warehouse. Non-blocking; the
+        // helper handles its own errors and bails if the agent has
+        // already typed a list price.
+        if (!cancelled) await applyListPriceFromWarehouse(sh.property_address);
       } catch {
         if (!cancelled) setPrefillNote(null);
       }
@@ -280,6 +312,12 @@ function NewOfferForm() {
               if (val.components.city) setCity(val.components.city);
               if (val.components.state) setStateValue(val.components.state);
               if (val.components.zip) setZip(val.components.zip);
+              // Pull list price from the property warehouse for the
+              // address the agent just verified. Without this, list
+              // price stays empty and the % chips have nothing to
+              // compute against until the agent types an offer.
+              setPrefillNote("Loading list price from records…");
+              void applyListPriceFromWarehouse(val.formattedAddress);
             }}
             placeholder="Start typing — Google will autocomplete the full address"
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
@@ -303,7 +341,6 @@ function NewOfferForm() {
               type="number"
               value={listPrice}
               onChange={(e) => setListPrice(e.target.value)}
-              placeholder="1200000"
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             />
           </div>
