@@ -64,7 +64,14 @@ export function OffersListClient({
 
   /** Optimistic PATCH to /api/dashboard/offers/[id], then router.refresh()
    *  to pull the canonical row (including stamped accepted_at / closed_at).
-   *  Errors fall through silently — agent can retry. */
+   *  Errors fall through silently — agent can retry.
+   *
+   *  Special case: status === "accepted" routes the agent straight to
+   *  /dashboard/transactions/new?offerId=<id> after the PATCH succeeds.
+   *  That form prefills from the offer and includes the existing
+   *  ContractUploader so the agent can attach the signed RPA inline.
+   *  We deliberately don't auto-create the transaction in the API — the
+   *  agent should see what's about to happen and have a chance to tweak. */
   async function patchStatus(id: string, status: OfferStatus) {
     const key = `${id}:${status}`;
     setPendingAction(key);
@@ -75,7 +82,13 @@ export function OffersListClient({
         body: JSON.stringify({ status }),
       });
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean };
-      if (res.ok && body.ok) router.refresh();
+      if (res.ok && body.ok) {
+        if (status === "accepted") {
+          router.push(`/dashboard/transactions/new?offerId=${encodeURIComponent(id)}`);
+          return;
+        }
+        router.refresh();
+      }
     } finally {
       setPendingAction((cur) => (cur === key ? null : cur));
     }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
   createTransaction,
   listTransactionsForAgent,
@@ -38,7 +39,9 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const { agentId } = await getCurrentAgentContext();
-    const body = (await req.json().catch(() => ({}))) as Partial<CreateTransactionInput>;
+    const body = (await req.json().catch(() => ({}))) as Partial<
+      CreateTransactionInput & { offerId?: string | null }
+    >;
 
     if (!body.contactId || !body.propertyAddress) {
       return NextResponse.json(
@@ -61,6 +64,29 @@ export async function POST(req: Request) {
       closingDate: body.closingDate ?? null,
       notes: body.notes ?? null,
     });
+
+    // Back-link offer → transaction when this form was opened from
+    // the ✓ Accept flow (`?offerId` in the URL). Best-effort: a
+    // failed back-link doesn't fail the transaction creation since
+    // the transaction is the user's primary intent. The agent can
+    // re-link manually via the offer detail page if it doesn't take.
+    if (body.offerId) {
+      try {
+        await supabaseAdmin
+          .from("offers")
+          .update({
+            transaction_id: created.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", body.offerId)
+          .eq("agent_id", agentId);
+      } catch (e) {
+        console.warn(
+          "[POST /transactions] back-link offer→transaction failed:",
+          e instanceof Error ? e.message : e,
+        );
+      }
+    }
 
     return NextResponse.json({ ok: true, transaction: created });
   } catch (err) {

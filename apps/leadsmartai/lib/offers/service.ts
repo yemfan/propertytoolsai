@@ -241,13 +241,10 @@ export async function updateOffer(
   id: string,
   input: UpdateOfferInput,
 ): Promise<OfferRow | null> {
-  // Snapshot to stamp lifecycle timestamps on status transitions
-  // AND to know whether we should auto-convert on accept (we only
-  // do it when there's no existing back-link, otherwise we'd
-  // double-create transactions on a re-accept).
+  // Snapshot to stamp lifecycle timestamps on status transitions.
   const { data: before } = await supabaseAdmin
     .from("offers")
-    .select("status, transaction_id")
+    .select("status")
     .eq("id", id)
     .eq("agent_id", agentId)
     .maybeSingle();
@@ -263,8 +260,7 @@ export async function updateOffer(
     updated_at: new Date().toISOString(),
   };
 
-  const beforeRow = before as { status: OfferStatus; transaction_id: string | null };
-  const beforeStatus = beforeRow.status;
+  const beforeStatus = (before as { status: OfferStatus }).status;
   if (input.status && input.status !== beforeStatus) {
     const nowIso = new Date().toISOString();
     if (input.status === "submitted") patch.submitted_at = nowIso;
@@ -282,48 +278,15 @@ export async function updateOffer(
     .select("*")
     .maybeSingle();
   if (error) throw new Error(error.message);
-  const updated = (data as OfferRow | null) ?? null;
-  if (!updated) return null;
+  return (data as OfferRow | null) ?? null;
 
-  // Auto-convert to a buyer-rep transaction the first time an offer
-  // crosses into `accepted`. Without this the agent had to make a
-  // separate POST /convert call after every accept, which they kept
-  // forgetting — and "Accepted offer with no deal in /transactions"
-  // is a confusing dead-end state.
-  //
-  // Gating: only when the *transition* is into accepted (so re-saving
-  // an already-accepted offer's notes doesn't churn) AND when there's
-  // no transaction_id yet (idempotent if the agent had already used
-  // the manual /convert endpoint). Best-effort: failures log but
-  // don't block the status flip — the agent can retry via the
-  // explicit Convert button on the detail page.
-  const transitionedToAccepted =
-    input.status === "accepted" && beforeStatus !== "accepted";
-  if (transitionedToAccepted && !beforeRow.transaction_id) {
-    try {
-      await convertOfferToTransaction(agentId, id);
-      // Re-fetch the offer to surface the back-linked transaction_id
-      // to API callers (so the UI can route to /transactions/[id]
-      // without an extra round-trip).
-      const { data: afterConvert } = await supabaseAdmin
-        .from("offers")
-        .select("*")
-        .eq("id", id)
-        .eq("agent_id", agentId)
-        .maybeSingle();
-      return ((afterConvert as OfferRow | null) ?? updated);
-    } catch (e) {
-      console.warn(
-        "[updateOffer] auto-convert to transaction failed:",
-        e instanceof Error ? e.message : e,
-      );
-      // Fall through and return the offer as-is. Agent's accept
-      // status flip stays in place; transaction creation can be
-      // retried via the Convert button.
-    }
-  }
-
-  return updated;
+  // NOTE: PR #358 used to auto-call convertOfferToTransaction here
+  // when the status crossed into `accepted`. We dropped that in
+  // favor of redirecting the agent to /transactions/new?offerId=<id>
+  // — gives them a chance to upload the signed RPA via the existing
+  // ContractUploader and tweak fields before the deal lands. The
+  // back-link (offer.transaction_id) gets set when the agent
+  // submits that prefilled form (see POST /api/dashboard/transactions).
 }
 
 export async function deleteOffer(agentId: string, id: string): Promise<boolean> {
