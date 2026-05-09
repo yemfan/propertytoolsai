@@ -1,9 +1,19 @@
 # Splitting `listings` from `transactions` — Design Doc
 
-**Status:** draft, awaiting signoff
+**Status:** ✅ signed off 2026-05-09 — Phase 1 starting
 **Author:** Claude (planning), Michael (decision)
 **Date:** 2026-05-09
-**PRs that will land under this doc:** TBD after signoff
+**PRs that will land under this doc:** PR #366 (this doc), Phase 1 PR forthcoming
+
+## Locked-in decisions
+
+| # | Question | Decision |
+| --- | --- | --- |
+| 1 | Polymorphic FKs vs dual columns (crm_tasks, signature_envelopes) | **Dual columns + CHECK constraint** (Claude rec) |
+| 2 | Back-link from transaction → source listing | **Yes — `transactions.source_listing_id` nullable FK** (Claude rec) |
+| 3 | `closing_date` ownership | **Transactions only** (Claude rec). Pure listing-rep deals spawn a transaction at acceptance; listings carry no closing fields. |
+| 4 | Coordinator scope | **No listings coordinator.** Coordinator stays a transactions-only feature (user direction). |
+| 5 | Dual-rep representation | **Two rows: a listing AND a separate offer.** Listing is treated identically to any other listing. The offer tracks the dual-rep buyer-side. When accepted → transaction with `type='dual'` AND listing flips to `contracted` AND `transactions.source_listing_id` points back. (user direction) |
 
 ## TL;DR
 
