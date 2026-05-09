@@ -22,6 +22,12 @@ function NewTransactionForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledContactId = searchParams.get("contactId") ?? "";
+  /** ?offerId=<uuid> — agent clicked ✓ Accept on /dashboard/offers and
+   *  was routed here. We fetch the offer and prefill buyer + address +
+   *  price + dates so the agent only needs to confirm + upload the
+   *  signed RPA via the ContractUploader. The id is also POSTed back
+   *  with the create request so the API can set offer.transaction_id. */
+  const prefilledOfferId = searchParams.get("offerId") ?? "";
 
   // Honor `?type=listing_rep` (or `dual`) so the Listings page button
   // — and CommandPalette deep links — open the form already on the
@@ -35,6 +41,9 @@ function NewTransactionForm() {
 
   const [transactionType, setTransactionType] = useState<TxType>(initialType);
   const [contact, setContact] = useState<ContactPickerValue | null>(null);
+  const [contactInitialId, setContactInitialId] = useState<string | null>(
+    prefilledContactId || null,
+  );
   const [propertyAddress, setPropertyAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setStateValue] = useState("CA");
@@ -46,8 +55,79 @@ function NewTransactionForm() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Banner shown when this form was opened from an accepted offer.
+   *  Surfaces the source address so the agent knows where the
+   *  prefilled data came from. */
+  const [offerBanner, setOfferBanner] = useState<string | null>(null);
 
   const isListing = transactionType === "listing_rep";
+
+  /**
+   * Prefill from an accepted offer when the form was opened via
+   * /dashboard/transactions/new?offerId=<id>. Maps:
+   *   offer.contact_id   → buyer (ContactPicker.value)
+   *   offer.property_*   → address fields
+   *   offer.current_price ?? offer.offer_price → purchase price
+   *   offer.accepted_at slice → mutual acceptance date
+   *   offer.closing_date_proposed → closing date
+   *   offer.notes        → notes
+   *
+   * Forces transaction_type to buyer_rep — this flow only triggers
+   * when an agent accepts an offer they wrote on a buyer's behalf.
+   * Skips silently if the fetch fails so the empty form still works.
+   */
+  useEffect(() => {
+    if (!prefilledOfferId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/dashboard/offers/${encodeURIComponent(prefilledOfferId)}`,
+          { cache: "no-store" },
+        );
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          offer?: {
+            contact_id: string;
+            property_address: string;
+            city: string | null;
+            state: string | null;
+            zip: string | null;
+            offer_price: number;
+            current_price: number | null;
+            accepted_at: string | null;
+            closing_date_proposed: string | null;
+            notes: string | null;
+          };
+          contactName?: string | null;
+        };
+        if (cancelled || !res.ok || !body.ok || !body.offer) return;
+        const o = body.offer;
+
+        setTransactionType("buyer_rep");
+        setContact({
+          id: o.contact_id,
+          name: body.contactName ?? "Buyer",
+        });
+        setContactInitialId(o.contact_id);
+        if (o.property_address) setPropertyAddress(o.property_address);
+        if (o.city) setCity(o.city);
+        if (o.state) setStateValue(o.state);
+        if (o.zip) setZip(o.zip);
+        const price = o.current_price ?? o.offer_price;
+        if (price != null) setPurchasePrice(String(Math.round(price)));
+        if (o.accepted_at) setMutualAcceptanceDate(o.accepted_at.slice(0, 10));
+        if (o.closing_date_proposed) setClosingDate(o.closing_date_proposed);
+        if (o.notes) setNotes(o.notes);
+        setOfferBanner(`Creating transaction from accepted offer — ${o.property_address}`);
+      } catch {
+        // Empty form is a fine fallback.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [prefilledOfferId]);
 
   /**
    * When the agent arrives via the Listings page "Upload listing
@@ -92,6 +172,9 @@ function NewTransactionForm() {
           mutualAcceptanceDate: mutualAcceptanceDate || null,
           closingDate: closingDate || null,
           notes: notes.trim() || null,
+          // When this form was opened via ?offerId, send it back so
+          // the API can set offer.transaction_id for the back-link.
+          offerId: prefilledOfferId || null,
         }),
       });
       const body = (await res.json().catch(() => ({}))) as {
@@ -147,6 +230,15 @@ function NewTransactionForm() {
           Seeds a California {isListing ? "listing-rep" : "buyer-rep"} checklist and auto-fills
           deadlines from the anchor date. You can adjust anything later.
         </p>
+        {offerBanner ? (
+          <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            <div className="font-medium">{offerBanner}</div>
+            <div className="mt-0.5 text-[11px] text-emerald-700">
+              Buyer, address, price, and dates are prefilled. Upload the signed RPA below to
+              extract contingencies + closing details automatically.
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -187,9 +279,14 @@ function NewTransactionForm() {
             {isListing ? "Seller *" : "Buyer *"}
           </label>
           <ContactPicker
+            // Re-key when contactInitialId changes so the picker
+            // re-runs its name-resolve effect — important for the
+            // ?offerId path where we discover the contact id after
+            // the initial mount.
+            key={contactInitialId ?? "anonymous"}
             value={contact}
             onChange={setContact}
-            initialContactId={prefilledContactId || null}
+            initialContactId={contactInitialId}
             helperText={
               isListing
                 ? "Start typing the seller's name, email, or phone."
