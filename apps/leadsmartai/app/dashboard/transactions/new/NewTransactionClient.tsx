@@ -32,11 +32,16 @@ function NewTransactionForm() {
   // Honor `?type=listing_rep` (or `dual`) so the Listings page button
   // — and CommandPalette deep links — open the form already on the
   // listing-side track. Default stays buyer_rep when no type passed.
+  //
+  // Side effect: when the URL explicitly pins a type (i.e. the agent
+  // arrived via "+ New listing" rather than the generic "+ New
+  // transaction"), the deal-type selector is hidden — the entry
+  // point IS the deal type. Showing a Buyer side / Listing side /
+  // Dual agent toggle on a form titled "New listing" reads as a
+  // mistake — it's a listing, not a transaction-with-listing-mode.
   const typeParam = searchParams.get("type");
-  const initialType: TxType =
-    typeParam === "listing_rep" || typeParam === "dual"
-      ? typeParam
-      : "buyer_rep";
+  const typePinnedFromUrl = typeParam === "listing_rep" || typeParam === "dual";
+  const initialType: TxType = typePinnedFromUrl ? (typeParam as TxType) : "buyer_rep";
   const focusUpload = searchParams.get("focus") === "upload";
 
   const [transactionType, setTransactionType] = useState<TxType>(initialType);
@@ -265,25 +270,34 @@ function NewTransactionForm() {
           )}
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-slate-700">Deal type</label>
-          <div className="mt-1 flex gap-2">
-            {(["buyer_rep", "listing_rep", "dual"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTransactionType(t)}
-                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
-                  transactionType === t
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                {t === "buyer_rep" ? "Buyer side" : t === "listing_rep" ? "Listing side" : "Dual agent"}
-              </button>
-            ))}
+        {/* Deal-type selector hidden when the URL pinned the type
+            (e.g. arrived via "+ New listing" → ?type=listing_rep).
+            On those entry paths the form represents one specific
+            deal type and showing a toggle would muddle that. The
+            generic "+ New transaction" entry (no ?type param) still
+            shows all three tabs since the agent hasn't committed
+            to a side yet. */}
+        {!typePinnedFromUrl ? (
+          <div>
+            <label className="block text-xs font-medium text-slate-700">Deal type</label>
+            <div className="mt-1 flex gap-2">
+              {(["buyer_rep", "listing_rep", "dual"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTransactionType(t)}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
+                    transactionType === t
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {t === "buyer_rep" ? "Buyer side" : t === "listing_rep" ? "Listing side" : "Dual agent"}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div>
           <label className="block text-xs font-medium text-slate-700">
