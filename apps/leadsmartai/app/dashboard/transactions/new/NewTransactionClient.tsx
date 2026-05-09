@@ -238,8 +238,8 @@ function NewTransactionForm() {
         </div>
         <h1 className="mt-1 text-2xl font-semibold text-slate-900">{headingText}</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Seeds a California {isListing ? "listing-rep" : "buyer-rep"} checklist and auto-fills
-          deadlines from the anchor date. You can adjust anything later.
+          Seeds a {isListing ? "listing-rep" : "buyer-rep"} checklist and auto-fills deadlines
+          from the anchor date. You can adjust anything later.
         </p>
         {offerBanner ? (
           <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">

@@ -163,12 +163,16 @@ export function ContractUploader(props: Props) {
             <div className="text-slate-700">
               <div className="font-medium">
                 {kind === "listing"
-                  ? "Drop a CAR RLA here, or click to pick"
-                  : "Drop a CAR RPA here, or click to pick"}
+                  ? "Drop a signed listing agreement here, or click to pick"
+                  : "Drop a ratified purchase agreement here, or click to pick"}
               </div>
               <div className="text-[11px] text-slate-500">
                 We read the PDF with Claude and pre-fill the form. Nothing is stored — the PDF
-                is dropped as soon as the fields come back.
+                is dropped as soon as the fields come back.{" "}
+                <span className="text-slate-400">
+                  Extraction is tuned for {kind === "listing" ? "CAR RLA" : "CAR RPA"} forms;
+                  other state forms still work but may need a quick review.
+                </span>
               </div>
             </div>
           )}
