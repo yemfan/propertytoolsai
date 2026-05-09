@@ -142,25 +142,42 @@ function NewOfferForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefilledShowingId]);
 
-  // Auto-compute earnest money / down payment from offer price ×
-  // selected percentage. Bails when offerPrice isn't numeric (so
-  // typing a partial number doesn't churn) or when the chip is
-  // null (= "custom", agent typed a manual dollar value).
+  // Auto-compute earnest money / down payment from a "base price" ×
+  // selected percentage chip. Base = offerPrice when the agent has
+  // typed one, else listPrice (which prefills from the warehouse on
+  // mount). The fallback is what makes the chips feel responsive on
+  // first load — without it the chips would appear selected but the
+  // dollar fields would stay blank until the agent types an offer,
+  // and clicking a chip would seem to "do nothing."
   //
-  // No setEarnestMoney → setEarnestPct loop here because the chip
-  // setter is the only thing that can change earnestPct, and the
-  // dollar input's onChange clears earnestPct to null.
-  useEffect(() => {
-    const n = Number(offerPrice);
-    if (!Number.isFinite(n) || n <= 0) return;
-    if (earnestPct != null) setEarnestMoney(String(Math.round(n * earnestPct)));
-  }, [offerPrice, earnestPct]);
+  // Bails when neither price is numeric/positive. Bails when the
+  // chip is null (= "custom", agent typed a manual dollar value)
+  // so we don't clobber their typed amount.
+  //
+  // No setEarnestMoney → setEarnestPct loop: the chip setter is the
+  // only thing that mutates earnestPct, and the dollar input's
+  // onChange clears earnestPct to null on manual edits.
+  function pickBasePrice(): number | null {
+    const offerNum = Number(offerPrice);
+    if (Number.isFinite(offerNum) && offerNum > 0) return offerNum;
+    const listNum = Number(listPrice);
+    if (Number.isFinite(listNum) && listNum > 0) return listNum;
+    return null;
+  }
 
   useEffect(() => {
-    const n = Number(offerPrice);
-    if (!Number.isFinite(n) || n <= 0) return;
-    if (downPct != null) setDownPayment(String(Math.round(n * downPct)));
-  }, [offerPrice, downPct]);
+    const base = pickBasePrice();
+    if (base == null) return;
+    if (earnestPct != null) setEarnestMoney(String(Math.round(base * earnestPct)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offerPrice, listPrice, earnestPct]);
+
+  useEffect(() => {
+    const base = pickBasePrice();
+    if (base == null) return;
+    if (downPct != null) setDownPayment(String(Math.round(base * downPct)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offerPrice, listPrice, downPct]);
 
   async function submit() {
     setError(null);
