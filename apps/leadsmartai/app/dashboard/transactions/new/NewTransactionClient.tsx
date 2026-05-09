@@ -216,16 +216,27 @@ function NewTransactionForm() {
     if (ext.listingStartDate) setListingStartDate(ext.listingStartDate);
   }
 
+  // When the agent arrives via /dashboard/properties' "+ New listing"
+  // button, the URL carries ?type=listing_rep. The data model is the
+  // same (listings live in the transactions table) but the page
+  // identity should match the entry point — saying "Transactions /
+  // New transaction" after clicking "+ New listing" is needlessly
+  // jarring. Adapt the breadcrumb + heading + back link so the page
+  // reads as listing-rep when that's the entry path.
+  const breadcrumbHref = isListing ? "/dashboard/properties" : "/dashboard/transactions";
+  const breadcrumbLabel = isListing ? "Listings" : "Transactions";
+  const headingText = isListing ? "New listing" : "New transaction";
+
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div>
         <div className="text-xs text-slate-500">
-          <Link href="/dashboard/transactions" className="hover:underline">
-            Transactions
+          <Link href={breadcrumbHref} className="hover:underline">
+            {breadcrumbLabel}
           </Link>
           {" / New"}
         </div>
-        <h1 className="mt-1 text-2xl font-semibold text-slate-900">New transaction</h1>
+        <h1 className="mt-1 text-2xl font-semibold text-slate-900">{headingText}</h1>
         <p className="mt-1 text-sm text-slate-500">
           Seeds a California {isListing ? "listing-rep" : "buyer-rep"} checklist and auto-fills
           deadlines from the anchor date. You can adjust anything later.
@@ -410,7 +421,7 @@ function NewTransactionForm() {
 
         <div className="flex items-center justify-end gap-2 pt-1">
           <Link
-            href="/dashboard/transactions"
+            href={breadcrumbHref}
             className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             Cancel
@@ -421,7 +432,7 @@ function NewTransactionForm() {
             disabled={submitting || !contact?.id || !propertyAddress.trim()}
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
           >
-            {submitting ? "Creating…" : "Create transaction"}
+            {submitting ? "Creating…" : isListing ? "Create listing" : "Create transaction"}
           </button>
         </div>
       </div>
