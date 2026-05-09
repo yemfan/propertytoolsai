@@ -43,8 +43,22 @@ function NewTransactionForm() {
   // Dual agent toggle on a form titled "New listing" reads as a
   // mistake — it's a listing, not a transaction-with-listing-mode.
   const typeParam = searchParams.get("type");
-  const typePinnedFromUrl = typeParam === "listing_rep" || typeParam === "dual";
-  const initialType: TxType = typePinnedFromUrl ? (typeParam as TxType) : "buyer_rep";
+  /** ?listingId — when present, the agent arrived from a listing
+   *  detail page after accepting a listing-side offer. The form
+   *  prefills buyer/address/price/dates from the listing + the
+   *  accepted offer (?listingOfferId), and the submit handler
+   *  back-links the new transaction to both. Pin transactionType
+   *  to listing_rep on this path. */
+  const prefilledListingId = searchParams.get("listingId") ?? "";
+  const prefilledListingOfferId = searchParams.get("listingOfferId") ?? "";
+  const fromListing = !!prefilledListingId;
+  const typePinnedFromUrl =
+    typeParam === "listing_rep" || typeParam === "dual" || fromListing;
+  const initialType: TxType = fromListing
+    ? "listing_rep"
+    : typePinnedFromUrl
+      ? (typeParam as TxType)
+      : "buyer_rep";
   const focusUpload = searchParams.get("focus") === "upload";
 
   const [transactionType, setTransactionType] = useState<TxType>(initialType);
@@ -198,6 +212,99 @@ function NewTransactionForm() {
   }, [prefilledOfferId]);
 
   /**
+   * Listing-side prefill: when ?listingId is present (the agent
+   * accepted a listing-side offer and was routed here from the
+   * listing detail page), fetch the listing + the accepted offer
+   * and seed the form. Mirrors the ?offerId path conceptually but
+   * pulls from a different pair of tables.
+   *
+   * Maps:
+   *   listing.contact_id        → seller (ContactPicker.value)
+   *   listing.property_*        → address fields
+   *   listing.listing_start_date → listing_start_date
+   *   listingOffer.current_price ?? .offer_price → purchase_price
+   *   listingOffer.accepted_at slice → mutual_acceptance_date
+   *   listingOffer.closing_date_proposed → closing_date
+   *
+   * Both ids are POSTed back on submit so the API can write
+   * source_listing_id on the new transaction + listing.transaction_id
+   * back-link + (eventually) listing_offer.transaction_id link.
+   */
+  useEffect(() => {
+    if (!prefilledListingId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const listingRes = await fetch(
+          `/api/dashboard/listings/${encodeURIComponent(prefilledListingId)}`,
+          { cache: "no-store" },
+        );
+        const listingBody = (await listingRes.json().catch(() => ({}))) as {
+          ok?: boolean;
+          listing?: {
+            contact_id: string;
+            contactName?: string | null;
+            property_address: string;
+            city: string | null;
+            state: string | null;
+            zip: string | null;
+            list_price: number | null;
+            listing_start_date: string | null;
+          };
+        };
+        if (cancelled || !listingRes.ok || !listingBody.ok || !listingBody.listing) return;
+        const l = listingBody.listing;
+
+        setTransactionType("listing_rep");
+        setContact({
+          id: l.contact_id,
+          name: l.contactName ?? "Seller",
+        });
+        setContactInitialId(l.contact_id);
+        if (l.property_address) setPropertyAddress(l.property_address);
+        if (l.city) setCity(l.city);
+        if (l.state) setStateValue(l.state);
+        if (l.zip) setZip(l.zip);
+        if (l.list_price != null) setPurchasePrice(String(Math.round(l.list_price)));
+        if (l.listing_start_date) setListingStartDate(l.listing_start_date);
+        setOfferBanner(`Marking ${l.property_address} under contract`);
+
+        // If we have the accepted offer's id, fetch it for the
+        // negotiated price + dates (listingOffer.current_price
+        // beats listing.list_price; .closing_date_proposed beats
+        // a hand-typed default).
+        if (prefilledListingOfferId && !cancelled) {
+          const offerRes = await fetch(
+            `/api/dashboard/listing-offers/${encodeURIComponent(prefilledListingOfferId)}`,
+            { cache: "no-store" },
+          );
+          const offerBody = (await offerRes.json().catch(() => ({}))) as {
+            ok?: boolean;
+            offer?: {
+              offer_price: number;
+              current_price: number | null;
+              accepted_at: string | null;
+              closing_date_proposed: string | null;
+            };
+          };
+          if (cancelled || !offerRes.ok || !offerBody.ok || !offerBody.offer) return;
+          const o = offerBody.offer;
+          const price = o.current_price ?? o.offer_price;
+          if (price != null) setPurchasePrice(String(Math.round(price)));
+          if (o.accepted_at) setMutualAcceptanceDate(o.accepted_at.slice(0, 10));
+          if (o.closing_date_proposed) setClosingDate(o.closing_date_proposed);
+        }
+      } catch {
+        // Empty form is a fine fallback.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefilledListingId, prefilledListingOfferId]);
+
+  /**
    * When the agent arrives via the Listings page "Upload listing
    * agreement" button (`?focus=upload`), scroll the contract uploader
    * into view and briefly ring it so it's obviously the next action.
@@ -232,7 +339,13 @@ function NewTransactionForm() {
       // get a listing row in Phase 2d's lifecycle promotion at
       // offer-accept, but the agent's primary intent here is the
       // post-acceptance transaction).
-      if (transactionType === "listing_rep") {
+      // Listing-rep submit branches on whether the form was opened
+      // from an accepted offer (?listingId) or as a fresh listing.
+      // Fresh listing → POST /api/dashboard/listings (no transaction
+      // spawned). Already-contracted listing → POST /transactions
+      // with back-link params so the new transaction is properly
+      // linked to the source listing + offer.
+      if (transactionType === "listing_rep" && !prefilledListingId) {
         const res = await fetch("/api/dashboard/listings", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -282,6 +395,14 @@ function NewTransactionForm() {
           // When this form was opened via ?offerId, send it back so
           // the API can set offer.transaction_id for the back-link.
           offerId: prefilledOfferId || null,
+          // When this form was opened via ?listingId (accepted
+          // listing-side offer flow), send back so the API can
+          // set transactions.source_listing_id +
+          // listings.transaction_id (forward + back link), and
+          // optionally listing_offers.transaction_id for the
+          // accepted offer.
+          listingId: prefilledListingId || null,
+          listingOfferId: prefilledListingOfferId || null,
         }),
       });
       const body = (await res.json().catch(() => ({}))) as {
@@ -330,9 +451,37 @@ function NewTransactionForm() {
   // New transaction" after clicking "+ New listing" is needlessly
   // jarring. Adapt the breadcrumb + heading + back link so the page
   // reads as listing-rep when that's the entry path.
-  const breadcrumbHref = isListing ? "/dashboard/properties" : "/dashboard/transactions";
-  const breadcrumbLabel = isListing ? "Listings" : "Transactions";
-  const headingText = isListing ? "New listing" : "New transaction";
+  // Three entry-point shapes drive the chrome:
+  //   - fromListing  → Marking an existing listing under contract
+  //                    (offer accepted, spawning the deal)
+  //   - isListing    → Creating a fresh listing
+  //   - default      → Creating a buyer-rep / dual transaction
+  const breadcrumbHref = fromListing
+    ? `/dashboard/listings/${prefilledListingId}`
+    : isListing
+      ? "/dashboard/properties"
+      : "/dashboard/transactions";
+  const breadcrumbLabel = fromListing
+    ? "Listing"
+    : isListing
+      ? "Listings"
+      : "Transactions";
+  const headingText = fromListing
+    ? "Mark under contract"
+    : isListing
+      ? "New listing"
+      : "New transaction";
+  const submitLabel = fromListing
+    ? submitting
+      ? "Creating deal…"
+      : "Mark under contract"
+    : isListing
+      ? submitting
+        ? "Creating…"
+        : "Create listing"
+      : submitting
+        ? "Creating…"
+        : "Create transaction";
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -513,7 +662,7 @@ function NewTransactionForm() {
             "Mark under contract" on the listing detail page (Phase
             2d). Buyer-rep + dual transactions still need them at
             creation time so the deadlines pipeline can fire. */}
-        {!isListing && (
+        {(!isListing || fromListing) && (
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-700">
@@ -569,7 +718,7 @@ function NewTransactionForm() {
             disabled={submitting || !contact?.id || !propertyAddress.trim()}
             className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
           >
-            {submitting ? "Creating…" : isListing ? "Create listing" : "Create transaction"}
+            {submitLabel}
           </button>
         </div>
       </div>

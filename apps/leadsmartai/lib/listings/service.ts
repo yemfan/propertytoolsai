@@ -248,6 +248,48 @@ export async function createListing(
 }
 
 /**
+ * Generic listing field updates. Used today by the listing detail
+ * page to flip status (e.g. → 'contracted' when an offer is accepted)
+ * and may grow other field setters as the surface needs them.
+ *
+ * Returns null when the listing isn't owned by the agent (so the
+ * route can render a clean 404). Throws on DB errors.
+ */
+export type UpdateListingInput = Partial<{
+  status: ListingStatus;
+  list_price: number | null;
+  listing_start_date: string | null;
+  listing_end_date: string | null;
+  mls_number: string | null;
+  mls_url: string | null;
+  commission_pct: number | null;
+  notes: string | null;
+}>;
+
+export async function updateListing(
+  agentId: string,
+  listingId: string,
+  input: UpdateListingInput,
+): Promise<ListingDetail | null> {
+  // Confirm ownership before touching anything.
+  const { data: existing } = await supabaseAdmin
+    .from("listings")
+    .select("id")
+    .eq("id", listingId)
+    .eq("agent_id", agentId)
+    .maybeSingle();
+  if (!existing) return null;
+
+  const { error } = await supabaseAdmin
+    .from("listings")
+    .update({ ...input, updated_at: new Date().toISOString() })
+    .eq("id", listingId)
+    .eq("agent_id", agentId);
+  if (error) throw new Error(error.message);
+  return getListingById(agentId, listingId);
+}
+
+/**
  * Promote a listing to a post-acceptance transaction.
  *
  * Phase 2d of the listings/transactions split — the lifecycle
