@@ -87,6 +87,19 @@ export function OfferDetailClient({
         setMsg({ tone: "err", text: body.error ?? "Failed to save." });
         return;
       }
+      // Special case: flipping to "accepted" routes the agent to
+      // the prefilled new-transaction form so they can review +
+      // upload the signed RPA in one step (matches the offers-list
+      // ✓ Accept behavior from PR #359). Skip the redirect when
+      // the offer already has a back-linked transaction — that
+      // means the agent has already converted; re-flipping status
+      // shouldn't drag them through the form again.
+      if (next === "accepted" && !body.offer.transaction_id) {
+        router.push(
+          `/dashboard/transactions/new?offerId=${encodeURIComponent(offer.id)}`,
+        );
+        return;
+      }
       setOffer(body.offer);
       setMsg({ tone: "ok", text: "Status saved." });
     } catch (e) {
@@ -96,27 +109,16 @@ export function OfferDetailClient({
     }
   }
 
-  async function convertToTransaction() {
-    setMsg(null);
-    try {
-      const res = await fetch(`/api/dashboard/offers/${offer.id}/convert`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const body = (await res.json().catch(() => ({}))) as {
-        ok?: boolean;
-        transaction?: { id: string };
-        error?: string;
-      };
-      if (!res.ok || !body.ok || !body.transaction) {
-        setMsg({ tone: "err", text: body.error ?? "Failed to convert." });
-        return;
-      }
-      router.push(`/dashboard/transactions/${body.transaction.id}`);
-    } catch (e) {
-      setMsg({ tone: "err", text: e instanceof Error ? e.message : "Network error." });
-    }
+  function convertToTransaction() {
+    // Used to call POST /convert directly (auto-create), but that
+    // produced an inconsistent UX vs flipping status to accepted —
+    // the latter routes through the prefilled new-transaction form
+    // (PR #359), this used to skip straight to the detail page.
+    // Now both paths land on the same form so the agent always
+    // gets a chance to review fields + upload the signed RPA.
+    router.push(
+      `/dashboard/transactions/new?offerId=${encodeURIComponent(offer.id)}`,
+    );
   }
 
   async function onDelete() {
@@ -281,7 +283,7 @@ export function OfferDetailClient({
               {isAccepted && !offer.transaction_id ? (
                 <button
                   type="button"
-                  onClick={() => void convertToTransaction()}
+                  onClick={() => convertToTransaction()}
                   className="block w-full rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-left text-sm font-medium text-green-800 hover:bg-green-100"
                 >
                   ✅ Convert to transaction
