@@ -174,6 +174,19 @@ export async function GET(req: Request) {
       data = await getPropertyData(address, refresh);
     }
 
+    // Report which source the listing_status actually came from so
+    // the client can qualify the banner — "Active per MLS" reads
+    // very differently from "Active per Zillow." Schema.org
+    // availability is a coarse signal (InStock vs SoldOut) so the
+    // client should label scrape-derived status as the listing site
+    // rather than the MLS.
+    const listingStatusSource: "rentcast" | "scrape" | null =
+      rentcast?.listing_status
+        ? "rentcast"
+        : parsed?.listing_status
+          ? "scrape"
+          : null;
+
     return NextResponse.json({
       ok: true,
       platform,
@@ -185,6 +198,7 @@ export async function GET(req: Request) {
         scrape: parsed ? "ok" : "empty",
         rentcast: rentcast ? "ok" : "empty",
       },
+      listing_status_source: listingStatusSource,
       source: parsed ? "listing" : rentcast ? "rentcast" : "warehouse",
     });
   } catch (e: unknown) {
