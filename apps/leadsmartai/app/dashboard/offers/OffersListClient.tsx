@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { Check, Pencil, X } from "lucide-react";
 import type { OfferListItem, OfferStatus } from "@/lib/offers/types";
 
 type Filter = "all" | "active" | "won" | "lost";
@@ -50,8 +52,34 @@ export function OffersListClient({
   initialOffers: OfferListItem[];
   initialContactFilter: string | null;
 }) {
+  const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
+  /**
+   * Tracks per-row in-flight PATCH so we can disable buttons while
+   * a status transition is mid-flight. Keyed by `${offerId}:${status}`
+   * so two rows can be acted on independently.
+   */
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+
+  /** Optimistic PATCH to /api/dashboard/offers/[id], then router.refresh()
+   *  to pull the canonical row (including stamped accepted_at / closed_at).
+   *  Errors fall through silently — agent can retry. */
+  async function patchStatus(id: string, status: OfferStatus) {
+    const key = `${id}:${status}`;
+    setPendingAction(key);
+    try {
+      const res = await fetch(`/api/dashboard/offers/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean };
+      if (res.ok && body.ok) router.refresh();
+    } finally {
+      setPendingAction((cur) => (cur === key ? null : cur));
+    }
+  }
 
   const contactFilterName = useMemo(() => {
     if (!initialContactFilter) return null;
@@ -182,6 +210,7 @@ export function OffersListClient({
                 <th className="px-3 py-2 text-center font-medium">Counters</th>
                 <th className="px-3 py-2 text-left font-medium">Status</th>
                 <th className="px-3 py-2 text-left font-medium">Submitted</th>
+                <th className="px-3 py-2 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -232,11 +261,19 @@ export function OffersListClient({
                   <td className="whitespace-nowrap px-3 py-2 text-[11px] text-slate-500">
                     {o.submitted_at ? formatDate(o.submitted_at) : <span className="text-slate-400">—</span>}
                   </td>
+                  <td className="px-3 py-2">
+                    <RowActions
+                      offer={o}
+                      pendingAction={pendingAction}
+                      onAccept={(id) => void patchStatus(id, "accepted")}
+                      onDecline={(id) => void patchStatus(id, "rejected")}
+                    />
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-10 text-center text-sm text-slate-500">
+                  <td colSpan={8} className="px-3 py-10 text-center text-sm text-slate-500">
                     {initialOffers.length === 0 ? (
                       <>
                         <div className="font-medium">No offers yet.</div>
@@ -255,6 +292,114 @@ export function OffersListClient({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Per-row action cluster on the offers list. Status-aware:
+ *   • draft / submitted / countered → ✓ Accept, ✗ Decline, ✏ Modify
+ *   • accepted / rejected / withdrawn / expired → ✏ Modify only
+ *
+ * "Accept" and "Decline" PATCH the status directly; the API stamps
+ * accepted_at / closed_at server-side. "Modify" routes to the offer
+ * detail page where the agent can edit any field, including
+ * reversing a wrong outcome via the existing status selector.
+ *
+ * Icon buttons match the showings + tasks convention (h-7 w-7,
+ * lucide icons, tooltip via title) so the visual vocabulary stays
+ * consistent across the app.
+ */
+function RowActions({
+  offer,
+  pendingAction,
+  onAccept,
+  onDecline,
+}: {
+  offer: OfferListItem;
+  pendingAction: string | null;
+  onAccept: (id: string) => void;
+  onDecline: (id: string) => void;
+}) {
+  const editHref = `/dashboard/offers/${offer.id}`;
+  const status = offer.status;
+  const isClosed =
+    status === "accepted" ||
+    status === "rejected" ||
+    status === "withdrawn" ||
+    status === "expired";
+
+  const accepting = pendingAction === `${offer.id}:accepted`;
+  const declining = pendingAction === `${offer.id}:rejected`;
+
+  return (
+    <div className="flex items-center justify-end gap-0.5">
+      {!isClosed ? (
+        <>
+          <RowIconButton
+            onClick={() => onAccept(offer.id)}
+            disabled={accepting}
+            title="Mark accepted"
+            tone="success"
+          >
+            <Check className="h-4 w-4" strokeWidth={2.5} />
+          </RowIconButton>
+          <RowIconButton
+            onClick={() => onDecline(offer.id)}
+            disabled={declining}
+            title="Mark declined"
+            tone="danger"
+          >
+            <X className="h-4 w-4" strokeWidth={2.5} />
+          </RowIconButton>
+        </>
+      ) : null}
+      <RowIconButton href={editHref} title="Modify offer">
+        <Pencil className="h-4 w-4" strokeWidth={2} />
+      </RowIconButton>
+    </div>
+  );
+}
+
+function RowIconButton({
+  children,
+  onClick,
+  href,
+  title,
+  disabled,
+  tone,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  href?: string;
+  title: string;
+  disabled?: boolean;
+  tone?: "success" | "danger";
+}) {
+  const toneClasses =
+    tone === "success"
+      ? "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+      : tone === "danger"
+        ? "text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900";
+  const className = `inline-flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-40 ${toneClasses}`;
+  if (href) {
+    return (
+      <Link href={href} title={title} aria-label={title} className={className}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={title}
+      className={className}
+    >
+      {children}
+    </button>
   );
 }
 
