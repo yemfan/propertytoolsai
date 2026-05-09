@@ -323,16 +323,24 @@ function NewOfferForm() {
   }
 
   // Prefill property fields from the linked showing when ?showingId
-  // is present. Two-tier:
+  // is present. Three tiers, each strictly best-effort:
   //
-  //   1. Showing API → address / city / state / zip (always works,
-  //      one DB row).
-  //   2. Property warehouse → list_price (best-effort; cached for
-  //      anything we've shown before, and we silently skip price
-  //      prefill if the lookup fails or returns null).
+  //   1. Showing API → address / city / state / zip / mls_number /
+  //      mls_url (always works when the showing exists; one DB row).
   //
-  // Runs once per mount. Won't clobber user edits because it bails
-  // when propertyAddress is already populated.
+  //   2. Listing-URL autodetect: if the showing carries a recognized
+  //      mls_url (Zillow / Redfin / Realtor / Compass), kick the
+  //      detect helper so the from-listing scrape + Rentcast merge
+  //      fills price / address / MLS# from the source listing. This
+  //      is the path that makes "all property info populated" work
+  //      on the New offer form when arriving from a showing.
+  //
+  //   3. Property warehouse → list_price (cached for anything we've
+  //      shown before; quick win when the listing URL isn't a
+  //      supported platform OR the scrape returns nothing).
+  //
+  // Runs once per mount. Won't clobber user edits because every
+  // setter bails when the field is already populated.
   useEffect(() => {
     if (!prefilledShowingId) return;
     let cancelled = false;
@@ -351,6 +359,8 @@ function NewOfferForm() {
             city?: string | null;
             state?: string | null;
             zip?: string | null;
+            mls_number?: string | null;
+            mls_url?: string | null;
           };
         };
         if (cancelled) return;
@@ -360,17 +370,37 @@ function NewOfferForm() {
           return;
         }
 
-        // Address fields — only seed if the user hasn't already
-        // typed something.
+        // Address + MLS fields — only seed if the user hasn't
+        // already typed something.
         setPropertyAddress((cur) => cur || sh.property_address || "");
         if (sh.city) setCity((cur) => cur || sh.city || "");
         if (sh.state) setStateValue((cur) => cur || sh.state || "");
         if (sh.zip) setZip((cur) => cur || sh.zip || "");
+        if (sh.mls_number) setMlsNumber((cur) => cur || sh.mls_number || "");
+
+        // The Listing URL — if the showing has a recognized listing
+        // platform URL, populate the field AND trigger the detect
+        // helper. The detect helper does all the heavy lifting:
+        // hits /api/property/from-listing, merges scrape + Rentcast,
+        // fills list_price + MLS# + address normalization. That's
+        // what makes "all property info populated" actually true.
+        const showingUrl = sh.mls_url ?? null;
+        if (showingUrl && !listingUrl) {
+          setListingUrl(showingUrl);
+          if (detectPlatform(showingUrl)) {
+            // Fire detect in the background; it has its own error
+            // handling + abort controller so it can race safely
+            // with the warehouse fetch below.
+            void detectListingUrl(showingUrl);
+          }
+        }
+
         setPrefillNote(`Prefilled from showing — ${sh.property_address}`);
 
-        // Tier-2: list price from the warehouse. Non-blocking; the
+        // Tier-3: list price from the warehouse. Non-blocking; the
         // helper handles its own errors and bails if the agent has
-        // already typed a list price.
+        // already typed a list price OR the detect helper above
+        // populated it first (its setter uses cur || ...).
         if (!cancelled) await applyListPriceFromWarehouse(sh.property_address);
       } catch {
         if (!cancelled) setPrefillNote(null);
