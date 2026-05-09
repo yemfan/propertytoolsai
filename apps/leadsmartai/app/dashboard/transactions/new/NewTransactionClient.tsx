@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
+import AddressAutocomplete, {
+  type AddressAutocompleteValue,
+} from "@/components/AddressAutocomplete";
 import ContactPicker, { type ContactPickerValue } from "@/components/crm/ContactPicker";
 import { ContractUploader, type RlaUploadResult, type RpaUploadResult } from "./ContractUploader";
 
@@ -64,8 +67,68 @@ function NewTransactionForm() {
    *  Surfaces the source address so the agent knows where the
    *  prefilled data came from. */
   const [offerBanner, setOfferBanner] = useState<string | null>(null);
+  /** Small grey hint under the address field — used by the
+   *  warehouse-fetch helper to surface "Loaded list price from
+   *  records — $749,000" after the agent picks a verified address. */
+  const [addressNote, setAddressNote] = useState<string | null>(null);
+  /** AbortController for the in-flight warehouse lookup so two
+   *  rapid Google picks can't race and clobber each other's
+   *  results. Same pattern the offers form uses. */
+  const warehouseFetchRef = useRef<AbortController | null>(null);
 
   const isListing = transactionType === "listing_rep";
+
+  /**
+   * Best-effort fetch of list_price from the property warehouse for
+   * a given address. Triggered when the agent picks a verified
+   * address from Google autocomplete. Bails when address is empty;
+   * never overwrites an already-typed list price (`cur || ...`
+   * pattern); silent on warehouse misses or network errors. Same
+   * helper shape as the one in NewOfferClient.
+   */
+  async function applyListPriceFromWarehouse(addr: string): Promise<void> {
+    if (!addr) return;
+    warehouseFetchRef.current?.abort();
+    const controller = new AbortController();
+    warehouseFetchRef.current = controller;
+    try {
+      const res = await fetch(
+        `/api/property/${encodeURIComponent(addr)}`,
+        { cache: "no-store", signal: controller.signal },
+      );
+      if (controller.signal.aborted || !res.ok) {
+        if (!controller.signal.aborted) setAddressNote(null);
+        return;
+      }
+      const body = (await res.json().catch(() => ({}))) as {
+        latest_snapshot?: { estimated_value?: number | null } | null;
+        property?: { last_list_price?: number | null } | null;
+      };
+      if (controller.signal.aborted) return;
+      const cachedPrice =
+        body?.property?.last_list_price ??
+        body?.latest_snapshot?.estimated_value ??
+        null;
+      if (cachedPrice == null) {
+        setAddressNote(null);
+        return;
+      }
+      let updated = false;
+      setPurchasePrice((cur) => {
+        if (cur) return cur;
+        updated = true;
+        return String(Math.round(cachedPrice));
+      });
+      setAddressNote(
+        updated
+          ? `Loaded ${isListing ? "list price" : "purchase price"} from records — $${Math.round(cachedPrice).toLocaleString()}`
+          : null,
+      );
+    } catch (e) {
+      if ((e as { name?: string } | null)?.name === "AbortError") return;
+      setAddressNote(null);
+    }
+  }
 
   /**
    * Prefill from an accepted offer when the form was opened via
@@ -362,12 +425,26 @@ function NewTransactionForm() {
 
         <div>
           <label className="block text-xs font-medium text-slate-700">Property address *</label>
-          <input
+          <AddressAutocomplete
             value={propertyAddress}
-            onChange={(e) => setPropertyAddress(e.target.value)}
-            placeholder="123 Main St"
+            onChange={setPropertyAddress}
+            onSelect={(val: AddressAutocompleteValue) => {
+              setPropertyAddress(val.formattedAddress);
+              if (val.components.city) setCity(val.components.city);
+              if (val.components.state) setStateValue(val.components.state);
+              if (val.components.zip) setZip(val.components.zip);
+              // Same pattern as the offer form: pull list/purchase
+              // price from the warehouse for the verified address.
+              // Best-effort — silent on misses.
+              setAddressNote("Loading from records…");
+              void applyListPriceFromWarehouse(val.formattedAddress);
+            }}
+            placeholder="Start typing — Google will autocomplete the full address"
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
           />
+          {addressNote ? (
+            <div className="mt-1.5 text-[11px] text-emerald-700">{addressNote}</div>
+          ) : null}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
@@ -408,7 +485,6 @@ function NewTransactionForm() {
               type="number"
               value={purchasePrice}
               onChange={(e) => setPurchasePrice(e.target.value)}
-              placeholder="1000000"
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             />
           </div>
