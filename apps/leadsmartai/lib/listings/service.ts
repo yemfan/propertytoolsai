@@ -6,10 +6,27 @@ import type { TransactionStatus } from "@/lib/transactions/types";
 /**
  * Listings — the agent's listing-side inventory.
  *
- * Backed by `transactions` rows where `transaction_type` is
- * `listing_rep` or `dual` (dual-rep deals show up on both the buyer
- * and seller sides; we include them here so a dual agent can manage
- * the listing dimension from this surface).
+ * Phase 2a of the listings/transactions split (see
+ * apps/leadsmartai/docs/LISTINGS_TABLE_SPLIT_DESIGN.md): this
+ * service now reads from the dedicated `listings` table instead of
+ * `transactions WHERE transaction_type IN ('listing_rep','dual')`.
+ *
+ * The return shape is *almost* unchanged so /dashboard/properties
+ * and downstream consumers don't notice the cutover. Two things to
+ * be aware of:
+ *
+ *   1. `transactionId` is now the *back-link* from listings to its
+ *      source transaction. It's populated for every backfilled row
+ *      (Phase 1) but will be NULL for new listings created via
+ *      Phase 2c onward — so callers that link into
+ *      /dashboard/transactions/<id> need to handle null. Phase 2b
+ *      replaces the link target with /dashboard/listings/<id>.
+ *
+ *   2. The listings table has its own status enum (draft / active /
+ *      pending / contracted / withdrawn / expired). For backwards
+ *      compat we map those to the legacy 4-state TransactionStatus
+ *      so the existing badge UI keeps rendering. Phase 2b will land
+ *      a ListingStatus type and update the UI labels.
  *
  * Each listing carries showings activity rolled up from the
  * `showings` table by `property_address`. Match is exact — case +
@@ -22,24 +39,62 @@ import type { TransactionStatus } from "@/lib/transactions/types";
  * doesn't exist yet — flagged for follow-up rather than papered over.
  */
 
-const LISTING_TXN_TYPES = ["listing_rep", "dual"] as const;
+/** Status enum on the listings table. Six values vs TransactionStatus's four. */
+type ListingStatus =
+  | "draft"
+  | "active"
+  | "pending"
+  | "contracted"
+  | "withdrawn"
+  | "expired";
+
+/**
+ * Map listings.status → TransactionStatus to keep the existing
+ * badge UI rendering until Phase 2b ships a proper ListingStatus
+ * type. The mapping is intentionally lossy for terminal states
+ * (contracted/withdrawn/expired all collapse to closed/terminated)
+ * because the UI only knows four states. Phase 2b restores fidelity.
+ */
+function mapStatus(s: ListingStatus): TransactionStatus {
+  switch (s) {
+    case "draft":
+    case "active":
+      return "active";
+    case "pending":
+      return "pending";
+    case "contracted":
+      return "active"; // under contract — still an active deal
+    case "withdrawn":
+    case "expired":
+      return "terminated";
+  }
+}
 
 export type ListingListItem = {
-  /** Source transaction id — link to /dashboard/transactions/[id]. */
-  transactionId: string;
+  /** Listings table primary key — the new canonical identifier. */
+  id: string;
+  /**
+   * Back-link to the listing's source transaction. Populated for
+   * Phase 1-backfilled rows; null for listings created post-Phase 2c.
+   * Kept here so existing /dashboard/transactions/<id> links continue
+   * working until Phase 2b swaps them to /dashboard/listings/<id>.
+   */
+  transactionId: string | null;
   property_address: string;
   city: string | null;
   state: string | null;
   status: TransactionStatus;
-  /** Asking / agreed price. Schema stores a single `purchase_price` so
-   *  for listing-rep deals this is the list price until offer
-   *  acceptance, then the agreed price thereafter. */
+  /** Asking price from listings.list_price. */
   list_price: number | null;
-  /** RLA signed / listing active. Anchor for listing-rep seed tasks. */
+  /** RLA signed / listing active. Anchor for listing-side seed tasks. */
   listing_start_date: string | null;
-  /** Scheduled close (under contract) — null until an offer is accepted. */
+  /**
+   * Closing fields no longer live on the listing in the new model
+   * (closing belongs to the post-acceptance transaction). For the
+   * dual-write window we surface these via the back-linked
+   * transaction so the existing UI keeps working without churn.
+   */
   closing_date: string | null;
-  /** Actual close date — set on COE recording. */
   closing_date_actual: string | null;
   /** Total showings the agent has tracked for this property. */
   showings_total: number;
@@ -52,39 +107,59 @@ export type ListingListItem = {
 export async function listListingsForAgent(
   agentId: string,
 ): Promise<ListingListItem[]> {
-  // Listing-rep + dual transactions for this agent. Sort:
-  //   1. listing_start_date desc — newest listings first
-  //   2. created_at desc       — pre-RLA / draft listings (no
-  //      listing_start_date) bubble up by recency
-  const { data: txnRows, error } = await supabaseAdmin
-    .from("transactions")
+  // Listings, sorted newest-first. Listings with no
+  // listing_start_date (drafts) bubble up by created_at.
+  const { data: listingRows, error } = await supabaseAdmin
+    .from("listings")
     .select(
-      "id, property_address, city, state, transaction_type, status, purchase_price, listing_start_date, closing_date, closing_date_actual, created_at",
+      "id, transaction_id, property_address, city, state, status, list_price, listing_start_date, created_at",
     )
     .eq("agent_id", agentId)
-    .in("transaction_type", LISTING_TXN_TYPES as unknown as string[])
     .order("listing_start_date", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  if (!txnRows || txnRows.length === 0) return [];
+  if (!listingRows || listingRows.length === 0) return [];
 
-  type Txn = {
+  type Listing = {
     id: string;
+    transaction_id: string | null;
     property_address: string;
     city: string | null;
     state: string | null;
-    transaction_type: string;
-    status: TransactionStatus;
-    purchase_price: number | null;
+    status: ListingStatus;
+    list_price: number | null;
     listing_start_date: string | null;
-    closing_date: string | null;
-    closing_date_actual: string | null;
     created_at: string;
   };
-  const txns = txnRows as Txn[];
+  const listings = listingRows as Listing[];
+
+  // Closing fields still live on the back-linked transaction during
+  // dual-write. Fetch them in one batched query for any listings that
+  // have a transaction_id. Phase 3 deletes this lookup once closing
+  // moves fully onto the transaction (and the UI references it from
+  // there directly).
+  const txnIds = listings
+    .map((l) => l.transaction_id)
+    .filter((id): id is string => id != null);
+  type ClosingRow = {
+    id: string;
+    closing_date: string | null;
+    closing_date_actual: string | null;
+  };
+  let closingByTxn = new Map<string, ClosingRow>();
+  if (txnIds.length > 0) {
+    const { data: txnRows, error: txnErr } = await supabaseAdmin
+      .from("transactions")
+      .select("id, closing_date, closing_date_actual")
+      .in("id", txnIds);
+    if (txnErr) throw new Error(txnErr.message);
+    closingByTxn = new Map(
+      ((txnRows ?? []) as ClosingRow[]).map((r) => [r.id, r]),
+    );
+  }
 
   // Roll up showings for these listings in a single batched query.
-  const addresses = Array.from(new Set(txns.map((t) => t.property_address)));
+  const addresses = Array.from(new Set(listings.map((l) => l.property_address)));
   type ShowingMin = {
     property_address: string | null;
     scheduled_at: string;
@@ -112,24 +187,26 @@ export async function listListingsForAgent(
 
   const nowIso = new Date().toISOString();
 
-  return txns.map((t) => {
-    const ss = showingsByAddress.get(t.property_address) ?? [];
+  return listings.map((l) => {
+    const ss = showingsByAddress.get(l.property_address) ?? [];
     let upcoming = 0;
     let lastAt: string | null = null;
     for (const s of ss) {
       if (s.status === "scheduled" && s.scheduled_at >= nowIso) upcoming += 1;
       if (lastAt == null || s.scheduled_at > lastAt) lastAt = s.scheduled_at;
     }
+    const closing = l.transaction_id ? closingByTxn.get(l.transaction_id) : null;
     return {
-      transactionId: t.id,
-      property_address: t.property_address,
-      city: t.city,
-      state: t.state,
-      status: t.status,
-      list_price: t.purchase_price,
-      listing_start_date: t.listing_start_date,
-      closing_date: t.closing_date,
-      closing_date_actual: t.closing_date_actual,
+      id: l.id,
+      transactionId: l.transaction_id,
+      property_address: l.property_address,
+      city: l.city,
+      state: l.state,
+      status: mapStatus(l.status),
+      list_price: l.list_price,
+      listing_start_date: l.listing_start_date,
+      closing_date: closing?.closing_date ?? null,
+      closing_date_actual: closing?.closing_date_actual ?? null,
       showings_total: ss.length,
       showings_upcoming: upcoming,
       last_showing_at: lastAt,
