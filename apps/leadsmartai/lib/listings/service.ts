@@ -2,6 +2,17 @@ import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { TransactionStatus } from "@/lib/transactions/types";
+import type {
+  ListingDetail,
+  ListingListItem,
+  ListingStatus,
+} from "@/lib/listings/types";
+
+// Re-export so existing server-side imports (`@/lib/listings/service`)
+// continue to compile. Client-side consumers should import from
+// `@/lib/listings/types` directly to avoid the `server-only` guard.
+export type { ListingDetail, ListingListItem, ListingStatus };
+export { LISTING_STATUS_LABEL } from "@/lib/listings/types";
 
 /**
  * Listings — the agent's listing-side inventory.
@@ -39,21 +50,12 @@ import type { TransactionStatus } from "@/lib/transactions/types";
  * doesn't exist yet — flagged for follow-up rather than papered over.
  */
 
-/** Status enum on the listings table. Six values vs TransactionStatus's four. */
-type ListingStatus =
-  | "draft"
-  | "active"
-  | "pending"
-  | "contracted"
-  | "withdrawn"
-  | "expired";
-
 /**
  * Map listings.status → TransactionStatus to keep the existing
- * badge UI rendering until Phase 2b ships a proper ListingStatus
- * type. The mapping is intentionally lossy for terminal states
- * (contracted/withdrawn/expired all collapse to closed/terminated)
- * because the UI only knows four states. Phase 2b restores fidelity.
+ * badge UI on /dashboard/properties rendering. The mapping is
+ * intentionally lossy for terminal states (contracted/withdrawn/
+ * expired all collapse to active/terminated) because the legacy UI
+ * only knows four states. Detail page uses ListingStatus directly.
  */
 function mapStatus(s: ListingStatus): TransactionStatus {
   switch (s) {
@@ -69,40 +71,6 @@ function mapStatus(s: ListingStatus): TransactionStatus {
       return "terminated";
   }
 }
-
-export type ListingListItem = {
-  /** Listings table primary key — the new canonical identifier. */
-  id: string;
-  /**
-   * Back-link to the listing's source transaction. Populated for
-   * Phase 1-backfilled rows; null for listings created post-Phase 2c.
-   * Kept here so existing /dashboard/transactions/<id> links continue
-   * working until Phase 2b swaps them to /dashboard/listings/<id>.
-   */
-  transactionId: string | null;
-  property_address: string;
-  city: string | null;
-  state: string | null;
-  status: TransactionStatus;
-  /** Asking price from listings.list_price. */
-  list_price: number | null;
-  /** RLA signed / listing active. Anchor for listing-side seed tasks. */
-  listing_start_date: string | null;
-  /**
-   * Closing fields no longer live on the listing in the new model
-   * (closing belongs to the post-acceptance transaction). For the
-   * dual-write window we surface these via the back-linked
-   * transaction so the existing UI keeps working without churn.
-   */
-  closing_date: string | null;
-  closing_date_actual: string | null;
-  /** Total showings the agent has tracked for this property. */
-  showings_total: number;
-  /** Subset of `showings_total` with status='scheduled' and scheduled_at >= now. */
-  showings_upcoming: number;
-  /** Most recent scheduled_at (any status), null when no showings yet. */
-  last_showing_at: string | null;
-};
 
 export async function listListingsForAgent(
   agentId: string,
@@ -212,4 +180,69 @@ export async function listListingsForAgent(
       last_showing_at: lastAt,
     };
   });
+}
+
+/**
+ * Single-listing fetch for the detail page. Returns null if the
+ * listing doesn't exist or doesn't belong to the agent (so the page
+ * can render a 404 cleanly).
+ */
+export async function getListingById(
+  agentId: string,
+  id: string,
+): Promise<ListingDetail | null> {
+  const { data: row, error } = await supabaseAdmin
+    .from("listings")
+    .select("*")
+    .eq("agent_id", agentId)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!row) return null;
+
+  const r = row as Omit<ListingDetail, "contactName" | "showings_total" | "showings_upcoming" | "last_showing_at">;
+
+  // Resolve seller display name from contacts. Best-effort — falls
+  // back to null so the UI renders "—" rather than crashing on a
+  // missing/deleted contact.
+  let contactName: string | null = null;
+  if (r.contact_id) {
+    const { data: contactRow } = await supabaseAdmin
+      .from("contacts")
+      .select("name, first_name, last_name")
+      .eq("id", r.contact_id)
+      .maybeSingle();
+    const c = contactRow as
+      | { name: string | null; first_name: string | null; last_name: string | null }
+      | null;
+    if (c) {
+      contactName =
+        c.name ??
+        [c.first_name, c.last_name].filter(Boolean).join(" ").trim() ??
+        null;
+    }
+  }
+
+  // Showings activity for this property (same matching as the list page).
+  const { data: showingRows } = await supabaseAdmin
+    .from("showings")
+    .select("scheduled_at, status")
+    .eq("agent_id", agentId)
+    .eq("property_address", r.property_address);
+  const showings = (showingRows ?? []) as Array<{ scheduled_at: string; status: string }>;
+  const nowIso = new Date().toISOString();
+  let upcoming = 0;
+  let lastAt: string | null = null;
+  for (const s of showings) {
+    if (s.status === "scheduled" && s.scheduled_at >= nowIso) upcoming += 1;
+    if (lastAt == null || s.scheduled_at > lastAt) lastAt = s.scheduled_at;
+  }
+
+  return {
+    ...r,
+    contactName,
+    showings_total: showings.length,
+    showings_upcoming: upcoming,
+    last_showing_at: lastAt,
+  };
 }

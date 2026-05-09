@@ -1,0 +1,39 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { getListingById } from "@/lib/listings/service";
+import { ListingDetailClient } from "./ListingDetailClient";
+
+/**
+ * Listing detail page (Phase 2b of the listings/transactions split).
+ *
+ * Note the URL: /dashboard/listings/[id] — distinct from
+ * /dashboard/transactions/[id] which still serves post-acceptance
+ * deals. A listing's back-linked transaction (if any) is reachable
+ * from this page via the "Open contracted deal" link.
+ *
+ * Backwards compat: old /dashboard/transactions/[id] URLs that
+ * happen to point at a listing-rep transaction still work — they
+ * render the legacy TransactionDetailClient. Phase 3 deletes the
+ * pure listing-rep transactions (the ones without an accepted
+ * offer) so those URLs would 404 cleanly; until then both paths
+ * coexist.
+ */
+export const metadata: Metadata = {
+  title: "Listing details",
+  robots: { index: false },
+};
+
+export default async function ListingDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { agentId } = await getCurrentAgentContext();
+  const { id } = await params;
+  const listing = await getListingById(String(agentId), id);
+  if (!listing) {
+    notFound();
+  }
+  return <ListingDetailClient listing={listing} />;
+}
