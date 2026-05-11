@@ -35,6 +35,8 @@ type ContactTab = {
   message: string | null;
   /** Distinct error state — rendered red, not the muted blue info banner. */
   errorMessage: string | null;
+  /** Twilio docs URL surfaced when a send fails — render as a "details" link in the error pill. */
+  errorMoreInfo?: string | null;
 };
 
 type Tab = { kind: "guide" } | { kind: "contact"; tab: ContactTab };
@@ -407,8 +409,17 @@ export function AiChatPanel() {
           }),
         });
         const body = await res.json();
-        if (!body.success) throw new Error(body.error ?? "Send failed");
-        updateTab(tab.tabId, { sending: false, draft: "", prompt: "", message: "Sent." });
+        if (!body.success) {
+          // Preserve Twilio moreInfo URL if the route returned one so
+          // the error pill can render a clickable "details" link.
+          updateTab(tab.tabId, {
+            sending: false,
+            errorMessage: body.error ?? "Send failed.",
+            errorMoreInfo: body.twilioMoreInfo ?? null,
+          });
+          return;
+        }
+        updateTab(tab.tabId, { sending: false, draft: "", prompt: "", message: "Sent.", errorMoreInfo: null });
         // Refresh thread to pick up the new outbound row, then again after a short
         // delay so a Twilio status callback (queued → sent → delivered/failed) shows up.
         await loadThread(tab.tabId, tab.contact.id);
@@ -420,6 +431,7 @@ export function AiChatPanel() {
         updateTab(tab.tabId, {
           sending: false,
           errorMessage: e instanceof Error ? e.message : "Send failed.",
+          errorMoreInfo: null,
         });
       }
     },
@@ -865,6 +877,19 @@ function ContactTabBody({
             {tab.errorMessage ? (
               <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-800">
                 {tab.errorMessage}
+                {tab.errorMoreInfo ? (
+                  <>
+                    {" "}
+                    <a
+                      href={tab.errorMoreInfo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:text-rose-900"
+                    >
+                      details
+                    </a>
+                  </>
+                ) : null}
               </p>
             ) : null}
 
