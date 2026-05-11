@@ -75,6 +75,7 @@ export type CreateListingOfferInput = {
   saleOfHomeContingency?: boolean;
   contingencyNotes?: string | null;
   sellerConcessions?: number | null;
+  buyerCommissionPct?: number | null;
   offerExpiresAt?: string | null;
   notes?: string | null;
 };
@@ -133,6 +134,7 @@ export async function createListingOffer(
       sale_of_home_contingency: input.saleOfHomeContingency ?? false,
       contingency_notes: input.contingencyNotes ?? null,
       seller_concessions: input.sellerConcessions ?? null,
+      buyer_commission_pct: input.buyerCommissionPct ?? null,
       offer_expires_at: input.offerExpiresAt ?? null,
       notes: input.notes ?? null,
       status: "submitted",

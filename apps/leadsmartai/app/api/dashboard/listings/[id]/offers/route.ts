@@ -76,6 +76,7 @@ export async function POST(
       saleOfHomeContingency: body.saleOfHomeContingency,
       contingencyNotes: body.contingencyNotes ?? null,
       sellerConcessions: body.sellerConcessions ?? null,
+      buyerCommissionPct: body.buyerCommissionPct ?? null,
       offerExpiresAt: body.offerExpiresAt ?? null,
       notes: body.notes ?? null,
     });
