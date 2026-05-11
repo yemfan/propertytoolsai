@@ -39,6 +39,8 @@ export type ListingOfferRow = {
   contingency_notes: string | null;
 
   seller_concessions: number | null;
+  /** Buyer-side commission offered, percentage (e.g. 2.5 = 2.5%). */
+  buyer_commission_pct: number | null;
 
   status: ListingOfferStatus;
   offer_expires_at: string | null;

@@ -102,21 +102,11 @@ export function ListingDetailClient({
   const [promoting, setPromoting] = useState(false);
   const [promoteError, setPromoteError] = useState<string | null>(null);
 
-  // Add-offer inline form state. Compact field set: buyer + price
-  // + key terms. Status flips on the listing happen via the
-  // promote flow (Mark under contract) so the offer form here
-  // intentionally doesn't ask for status — every offer lands as
-  // 'submitted' and the agent transitions it later.
-  const [addingOffer, setAddingOffer] = useState(false);
-  const [savingOffer, setSavingOffer] = useState(false);
-  const [offerError, setOfferError] = useState<string | null>(null);
-  const [offerForm, setOfferForm] = useState({
-    buyerName: "",
-    offerPrice: "",
-    earnestMoney: "",
-    downPayment: "",
-    notes: "",
-  });
+  // Add-offer flow was inline here in an earlier iteration but
+  // grew too cramped for the field set sellers need to compare
+  // offers (contingencies, financing terms, commission, timing,
+  // PDF upload). Moved to /dashboard/listings/[id]/offers/new
+  // — the "+ Add offer" button on this page is now a Link.
 
   // Offers list — per-row action state. The list can update
   // optimistically without a full router.refresh() so the agent
@@ -288,76 +278,6 @@ export function ListingDetailClient({
     }
   }
 
-  async function submitOffer() {
-    setOfferError(null);
-    const priceNum = Number(offerForm.offerPrice);
-    if (!Number.isFinite(priceNum) || priceNum <= 0) {
-      setOfferError("Offer price is required and must be a positive number.");
-      return;
-    }
-    setSavingOffer(true);
-    try {
-      const res = await fetch(
-        `/api/dashboard/listings/${encodeURIComponent(listing.id)}/offers`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            offerPrice: priceNum,
-            buyerName: offerForm.buyerName.trim() || null,
-            earnestMoney: offerForm.earnestMoney
-              ? Number(offerForm.earnestMoney)
-              : null,
-            downPayment: offerForm.downPayment
-              ? Number(offerForm.downPayment)
-              : null,
-            notes: offerForm.notes.trim() || null,
-          }),
-        },
-      );
-      const body = (await res.json().catch(() => ({}))) as {
-        ok?: boolean;
-        offer?: { id: string };
-        error?: string;
-      };
-      if (!res.ok || !body.ok || !body.offer) {
-        setOfferError(body.error ?? "Failed to record offer.");
-        return;
-      }
-      // Insert the new offer at the top of the local list so the
-      // agent sees it immediately without router.refresh().
-      // Compute derived fields the same way listOffersForListing
-      // does (counter_count starts at 0; contingencies all default
-      // true on insert; is_cash from financing_type).
-      const created = body.offer as ListingOfferCompareItem;
-      setOffers((prev) => [
-        {
-          ...created,
-          counter_count: 0,
-          contingency_count:
-            (created.inspection_contingency ? 1 : 0) +
-            (created.appraisal_contingency ? 1 : 0) +
-            (created.loan_contingency ? 1 : 0) +
-            (created.sale_of_home_contingency ? 1 : 0),
-          is_cash: created.financing_type === "cash",
-        },
-        ...prev,
-      ]);
-      setOfferForm({
-        buyerName: "",
-        offerPrice: "",
-        earnestMoney: "",
-        downPayment: "",
-        notes: "",
-      });
-      setAddingOffer(false);
-    } catch (e) {
-      setOfferError(e instanceof Error ? e.message : "Network error.");
-    } finally {
-      setSavingOffer(false);
-    }
-  }
-
   // Promote button visible only on listings that haven't been
   // promoted yet AND aren't in a terminal state. The action moves
   // the listing into "contracted" and spawns a transaction so the
@@ -495,108 +415,13 @@ export function ListingDetailClient({
                 </span>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setOfferError(null);
-                setAddingOffer((v) => !v);
-              }}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            <Link
+              href={`/dashboard/listings/${encodeURIComponent(listing.id)}/offers/new`}
+              className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
             >
-              {addingOffer ? "Cancel" : "+ Add offer"}
-            </button>
+              + Add offer
+            </Link>
           </div>
-          {addingOffer ? (
-            <div className="mt-3 space-y-2 rounded-lg bg-slate-50 p-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700">
-                    Buyer name
-                  </label>
-                  <input
-                    value={offerForm.buyerName}
-                    onChange={(e) =>
-                      setOfferForm((f) => ({ ...f, buyerName: e.target.value }))
-                    }
-                    placeholder="John & Jane Smith"
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700">
-                    Offer price *
-                  </label>
-                  <input
-                    type="number"
-                    value={offerForm.offerPrice}
-                    onChange={(e) =>
-                      setOfferForm((f) => ({ ...f, offerPrice: e.target.value }))
-                    }
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700">
-                    Earnest money
-                  </label>
-                  <input
-                    type="number"
-                    value={offerForm.earnestMoney}
-                    onChange={(e) =>
-                      setOfferForm((f) => ({ ...f, earnestMoney: e.target.value }))
-                    }
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700">
-                    Down payment
-                  </label>
-                  <input
-                    type="number"
-                    value={offerForm.downPayment}
-                    onChange={(e) =>
-                      setOfferForm((f) => ({ ...f, downPayment: e.target.value }))
-                    }
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700">Notes</label>
-                <input
-                  value={offerForm.notes}
-                  onChange={(e) =>
-                    setOfferForm((f) => ({ ...f, notes: e.target.value }))
-                  }
-                  placeholder="30-day close, no inspection, etc."
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                />
-              </div>
-              {offerError ? (
-                <p className="text-xs text-rose-700">{offerError}</p>
-              ) : null}
-              <div className="flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setAddingOffer(false)}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void submitOffer()}
-                  disabled={savingOffer || !offerForm.offerPrice}
-                  className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-                >
-                  {savingOffer ? "Saving…" : "Record offer"}
-                </button>
-              </div>
-            </div>
-          ) : null}
         </div>
       </div>
 
