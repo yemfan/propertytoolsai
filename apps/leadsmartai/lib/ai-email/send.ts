@@ -75,5 +75,17 @@ export async function sendOutboundEmail(params: {
     // optional column
   }
 
+  // Bump last_activity_at + auto-complete any open inactive-lead
+  // follow-up tasks for this contact. The agent is doing the
+  // follow-up right now — the to-do is stale.
+  if (params.agentId) {
+    try {
+      const { markContactActivity } = await import("@/lib/contacts/activity");
+      await markContactActivity(params.agentId, params.leadId);
+    } catch {
+      // best-effort housekeeping
+    }
+  }
+
   return { success: true as const, delivered, externalMessageId: externalId };
 }

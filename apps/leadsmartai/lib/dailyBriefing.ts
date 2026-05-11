@@ -248,8 +248,49 @@ async function writeMorningTasks(
   // due_at is end-of-day local-ish (17:00 UTC, ~9-10am→10pm across US
   // timezones) so a "due today" filter still matches when the cron
   // runs in the small hours of the morning.
+  //
+  // Two upgrades vs the earlier version:
+  //   1. Carry contact_id through to each task. The AI returns lead
+  //      shapes keyed on name; we re-resolve to a contact id here
+  //      with a single bulk query over the agent's contacts so the
+  //      task row is linkable (used by the unified-tasks UI's
+  //      contact column + by markContactActivity's auto-complete).
+  //   2. Dedup before insert. Query existing open briefing tasks
+  //      for this agent and skip any (title, contact_id) combo
+  //      that would otherwise be a duplicate. Solves the "same
+  //      lead generates a new follow-up task every morning"
+  //      pile-up the agent reported.
+
   const dueAt = `${todayDate()}T17:00:00.000Z`;
-  const tasks: Array<{
+
+  // Pull all relevant lead names → contact ids in one round-trip.
+  // Briefing rows reference names from BriefingOutput which were
+  // themselves drawn from contacts.name (with email/id fallback in
+  // generateMorning). The id fallback ("Lead #<id>") can't be
+  // resolved here, so those rows get contact_id null and dedupe
+  // falls back to title-based matching.
+  const names = new Set<string>();
+  for (const l of ai.insights.topHotLeads ?? []) {
+    if (l.name) names.add(l.name);
+  }
+  for (const l of ai.insights.needsFollowUp ?? []) {
+    if (l.name) names.add(l.name);
+  }
+
+  const nameToContactId = new Map<string, string>();
+  if (names.size > 0) {
+    const { data: contactRows } = await supabaseServer
+      .from("contacts")
+      .select("id, name, email")
+      .eq("agent_id", agentId)
+      .in("name", Array.from(names));
+    for (const c of (contactRows as Array<{ id: string; name: string | null; email: string | null }> | null) ?? []) {
+      if (c.name) nameToContactId.set(c.name, c.id);
+      if (c.email) nameToContactId.set(c.email, c.id);
+    }
+  }
+
+  type TaskInsert = {
     agent_id: string;
     contact_id: string | null;
     title: string;
@@ -258,12 +299,13 @@ async function writeMorningTasks(
     source: "briefing";
     priority: "high" | "normal";
     due_at: string;
-  }> = [];
+  };
+  const tasks: TaskInsert[] = [];
 
   for (const l of ai.insights.topHotLeads ?? []) {
     tasks.push({
       agent_id: agentId,
-      contact_id: null,
+      contact_id: l.name ? nameToContactId.get(l.name) ?? null : null,
       title: `Call hot lead: ${l.name}`,
       description: `High-intent lead at ${l.address || "no address"}. Engagement score ${l.score}.`,
       task_type: "call",
@@ -273,11 +315,19 @@ async function writeMorningTasks(
     });
   }
   for (const l of ai.insights.needsFollowUp ?? []) {
+    // daysInactive can be the 999 sentinel if last_activity_at was
+    // somehow null at AI-input time (post-PR #385 this shouldn't
+    // happen, but defensive). Show a friendlier message in that
+    // case so the agent doesn't see "999 days inactive" leak.
+    const inactiveDesc =
+      l.daysInactive >= 999
+        ? `Lead hasn't been contacted yet at ${l.address || "no address"}.`
+        : `Lead has been inactive for ${l.daysInactive} days at ${l.address || "no address"}.`;
     tasks.push({
       agent_id: agentId,
-      contact_id: null,
+      contact_id: l.name ? nameToContactId.get(l.name) ?? null : null,
       title: `Follow up with inactive lead: ${l.name}`,
-      description: `Lead has been inactive for ${l.daysInactive} days at ${l.address || "no address"}.`,
+      description: inactiveDesc,
       task_type: "follow_up",
       source: "briefing",
       priority: "normal",
@@ -286,9 +336,47 @@ async function writeMorningTasks(
   }
 
   if (!tasks.length) return;
-  try {
-    await supabaseServer.from("crm_tasks").insert(tasks);
-  } catch {
-    // Ignore duplicate-constraint errors — same hot lead two days in a row.
+
+  // Dedup: skip tasks where an open briefing row already exists
+  // for the same (contact_id, title-prefix). Title-prefix match
+  // covers legacy rows where contact_id was null.
+  const { data: existingOpen } = await supabaseServer
+    .from("crm_tasks")
+    .select("id, contact_id, title")
+    .eq("agent_id", agentId)
+    .eq("source", "briefing")
+    .eq("status", "open");
+  const openByContactId = new Set<string>();
+  const openByTitle = new Set<string>();
+  for (const row of (existingOpen as Array<{ id: string; contact_id: string | null; title: string }> | null) ?? []) {
+    if (row.contact_id) {
+      openByContactId.add(`${row.contact_id}:${prefixOf(row.title)}`);
+    } else {
+      openByTitle.add(row.title);
+    }
   }
+  const fresh = tasks.filter((t) => {
+    if (t.contact_id && openByContactId.has(`${t.contact_id}:${prefixOf(t.title)}`)) return false;
+    if (openByTitle.has(t.title)) return false;
+    return true;
+  });
+
+  if (!fresh.length) return;
+  try {
+    await supabaseServer.from("crm_tasks").insert(fresh);
+  } catch {
+    // Ignore duplicate-constraint errors — defensive belt-and-suspenders.
+  }
+}
+
+/**
+ * Extract the briefing task-title prefix used for dedupe. Both
+ * "Call hot lead: <name>" and "Follow up with inactive lead: <name>"
+ * dedup on prefix + contact, so two morning briefings on the same
+ * agent + lead only ever produce one open task.
+ */
+function prefixOf(title: string): string {
+  if (title.startsWith("Call hot lead:")) return "Call hot lead";
+  if (title.startsWith("Follow up with inactive lead:")) return "Follow up with inactive lead";
+  return title;
 }

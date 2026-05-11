@@ -94,6 +94,17 @@ export async function createOffer(input: CreateOfferInput): Promise<OfferRow> {
     .select("*")
     .single();
   if (error || !data) throw new Error(error?.message ?? "Failed to create offer");
+
+  // Creating an offer IS contact activity. Bump last_activity_at
+  // and auto-complete any open "Follow up with inactive lead" tasks
+  // — the agent is actively transacting with this contact.
+  try {
+    const { markContactActivity } = await import("@/lib/contacts/activity");
+    await markContactActivity(input.agentId, input.contactId);
+  } catch {
+    // best-effort housekeeping
+  }
+
   return data as OfferRow;
 }
 
