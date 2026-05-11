@@ -12,6 +12,7 @@ import {
   Key,
   MessageCircle,
   ScanLine,
+  Sparkles,
   Upload,
   Download,
   UserPlus,
@@ -349,6 +350,15 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
               >
                 <ScanLine className="h-4 w-4 text-gray-500" />
                 Scan business card
+              </Link>
+              <Link
+                href="/dashboard/contacts/import-file"
+                role="menuitem"
+                onClick={() => setAddMenuOpen(false)}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <Sparkles className="h-4 w-4 text-gray-500" />
+                AI extract from file
               </Link>
               <button
                 type="button"
