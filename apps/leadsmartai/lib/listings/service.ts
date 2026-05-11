@@ -290,6 +290,71 @@ export async function updateListing(
 }
 
 /**
+ * Reconcile a listing's status against its current set of offers.
+ *
+ * The narrow rule: a listing on the market should reflect whether
+ * there's currently a live offer (submitted or countered) on it.
+ *
+ *   active → pending     when the first live offer arrives
+ *   pending → active     when the last live offer goes away
+ *                        (decline / withdraw / expire)
+ *
+ * Terminal states stay put:
+ *   contracted    (accepted offer — handled by acceptOffer flow)
+ *   withdrawn     (listing pulled — agent action)
+ *   expired       (RLA hit listing_end_date)
+ *   draft         (RLA being prepared — agent action)
+ *
+ * Called after any listing_offer mutation (create / update /
+ * delete) so the listing's status always reflects reality. Quiet
+ * no-op when the listing is already in the right state.
+ *
+ * @returns the new status if it changed, null otherwise.
+ */
+export async function reconcileListingStatus(
+  agentId: string,
+  listingId: string,
+): Promise<ListingStatus | null> {
+  const { data: listingRow } = await supabaseAdmin
+    .from("listings")
+    .select("id, status")
+    .eq("id", listingId)
+    .eq("agent_id", agentId)
+    .maybeSingle();
+  if (!listingRow) return null;
+  const current = (listingRow as { status: ListingStatus }).status;
+
+  // Only active ↔ pending auto-flips. Other statuses are agent-
+  // owned and shouldn't move without explicit action.
+  if (current !== "active" && current !== "pending") return null;
+
+  // "Live" = the buyer is still waiting on a response.
+  const { count: liveCount } = await supabaseAdmin
+    .from("listing_offers")
+    .select("id", { count: "exact", head: true })
+    .eq("agent_id", agentId)
+    .eq("listing_id", listingId)
+    .in("status", ["submitted", "countered"]);
+
+  const desired: ListingStatus = (liveCount ?? 0) > 0 ? "pending" : "active";
+  if (desired === current) return null;
+
+  const { error } = await supabaseAdmin
+    .from("listings")
+    .update({ status: desired, updated_at: new Date().toISOString() })
+    .eq("id", listingId)
+    .eq("agent_id", agentId);
+  if (error) {
+    console.warn(
+      "[reconcileListingStatus] update failed:",
+      error.message,
+    );
+    return null;
+  }
+  return desired;
+}
+
+/**
  * Promote a listing to a post-acceptance transaction.
  *
  * Phase 2d of the listings/transactions split — the lifecycle
