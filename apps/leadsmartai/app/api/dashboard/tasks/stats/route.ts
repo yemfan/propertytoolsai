@@ -79,27 +79,46 @@ export async function GET() {
     }
 
     const now = Date.now();
-    let ontime = 0;
-    let deferred = 0;
-    let unfinished = 0;
+    let doneOnTime = 0;
+    let doneLate = 0;
+    let overdue = 0;
+    let pending = 0;
+    let cancelled = 0;
+
+    // Why five buckets, not three: the previous "On time / Deferred /
+    // Unfinished" labels conflated two distinct things the agent cares
+    // about. Specifically, "Deferred" included BOTH (a) tasks that
+    // were done but completed past the due date AND (b) open tasks
+    // that are now overdue — visually identical in the chart, but
+    // very different mental states ("I did the work late" vs "I still
+    // owe this work"). Same problem on the other side: "Unfinished"
+    // mixed cancelled tasks with not-yet-due open tasks.
+    //
+    // Bucket choices match the Open / Done / Cancelled tab labels so
+    // an agent can mentally line up the pie with the tab numbers.
+    // Done-late stays in a green-family color so the eye reads done
+    // as done — the previous orange/Deferred slice made completed
+    // work look like missed work.
 
     for (const t of tasks) {
       if (t.status === "done") {
-        // On time: completed before or on due date (or no due date)
-        if (!t.due_at || !t.completed_at || new Date(t.completed_at).getTime() <= new Date(t.due_at).getTime()) {
-          ontime++;
+        if (
+          !t.due_at ||
+          !t.completed_at ||
+          new Date(t.completed_at).getTime() <= new Date(t.due_at).getTime()
+        ) {
+          doneOnTime++;
         } else {
-          deferred++; // Completed but after due date
+          doneLate++;
         }
       } else if (t.status === "open") {
         if (t.due_at && new Date(t.due_at).getTime() < now) {
-          deferred++; // Overdue and still open
+          overdue++;
         } else {
-          unfinished++; // Not yet due or no due date
+          pending++;
         }
       } else {
-        // cancelled
-        unfinished++;
+        cancelled++;
       }
     }
 
@@ -125,13 +144,49 @@ export async function GET() {
       count,
     }));
 
+    // Two-level shape so the UI can render a top-level pie that
+    // matches the Done / Open / Cancelled tab counts on the page,
+    // and let the agent click any slice to drill into its breakdown.
+    //
+    //   Done       → On time   /  Late
+    //   Open       → Overdue   /  Pending
+    //   Cancelled  → (no further breakdown)
+    //
+    // Zero-value rows are filtered at each level so a healthy account
+    // doesn't see "Cancelled 0" in the legend, and a Done-only agent
+    // doesn't see an empty "Late 0" slice in the drill-down.
+
+    const completion = [
+      {
+        name: "Done",
+        value: doneOnTime + doneLate,
+        color: "#16a34a", // green-600
+        breakdown: [
+          { name: "On time", value: doneOnTime, color: "#16a34a" }, // green-600
+          { name: "Late", value: doneLate, color: "#84cc16" }, // lime-500
+        ].filter((s) => s.value > 0),
+      },
+      {
+        name: "Open",
+        value: overdue + pending,
+        color: "#3b82f6", // blue-500
+        breakdown: [
+          { name: "Overdue", value: overdue, color: "#f97316" }, // orange-500
+          { name: "Pending", value: pending, color: "#94a3b8" }, // slate-400
+        ].filter((s) => s.value > 0),
+      },
+      {
+        name: "Cancelled",
+        value: cancelled,
+        color: "#e5e7eb", // gray-200
+        // No breakdown — terminal slice. Omitting the field lets the
+        // UI know not to render a click affordance.
+      },
+    ].filter((s) => s.value > 0);
+
     return NextResponse.json({
       ok: true,
-      completion: [
-        { name: "On time", value: ontime, color: "#22c55e" },
-        { name: "Deferred", value: deferred, color: "#f59e0b" },
-        { name: "Unfinished", value: unfinished, color: "#e5e7eb" },
-      ],
+      completion,
       performedByDay,
       performed,
       total: tasks.length,
