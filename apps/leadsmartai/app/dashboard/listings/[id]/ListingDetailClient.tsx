@@ -40,6 +40,92 @@ const STATUS_BADGE: Record<ListingStatus, string> = {
   expired: "bg-slate-100 text-slate-600",
 };
 
+/**
+ * Sort criteria for the offers list. Six modes a seller actually
+ * thinks in when comparing offers:
+ *
+ *   price-desc       — highest current_price first (default; this is
+ *                      what most sellers want when they open the page)
+ *   price-asc        — lowest first (rare, but useful for spotting
+ *                      lowball wedges)
+ *   closing-asc      — earliest proposed closing first (sellers in
+ *                      a hurry want the fastest close)
+ *   strength         — "cleanest" terms first. Cash beats financed;
+ *                      ties break on fewest contingencies, then on
+ *                      higher price. Captures the gut-feel ranking
+ *                      a listing agent gives a seller.
+ *   contingencies-asc — fewest contingencies first (similar to
+ *                      strength but ignores cash + price tiebreakers)
+ *   newest           — created_at desc — handy when a fresh offer
+ *                      just came in and the agent wants to see it
+ *                      at the top regardless of price
+ */
+type OfferSort =
+  | "price-desc"
+  | "price-asc"
+  | "closing-asc"
+  | "strength"
+  | "contingencies-asc"
+  | "newest";
+
+const OFFER_SORT_OPTIONS: Array<{ value: OfferSort; label: string }> = [
+  { value: "price-desc", label: "Price · high → low" },
+  { value: "price-asc", label: "Price · low → high" },
+  { value: "closing-asc", label: "Closing · soonest first" },
+  { value: "strength", label: "Strength (cash + fewest contingencies)" },
+  { value: "contingencies-asc", label: "Contingencies · fewest first" },
+  { value: "newest", label: "Newest first" },
+];
+
+/**
+ * Sort comparator factory. `current_price` is the negotiated price
+ * (counters can shift it from offer_price) — use it for price sort
+ * when present, falling back to offer_price.
+ *
+ * Null-safe: missing prices sort last in price-asc, first in
+ * price-desc (treated as +Infinity / -Infinity respectively).
+ * Same pattern for closing date.
+ */
+function sortedOffers<T extends ListingOfferCompareItem>(
+  rows: T[],
+  by: OfferSort,
+): T[] {
+  const next = [...rows];
+  const priceOf = (o: T) => o.current_price ?? o.offer_price ?? 0;
+  next.sort((a, b) => {
+    switch (by) {
+      case "price-desc":
+        return priceOf(b) - priceOf(a);
+      case "price-asc":
+        return priceOf(a) - priceOf(b);
+      case "closing-asc": {
+        const da = a.closing_date_proposed
+          ? Date.parse(a.closing_date_proposed)
+          : Number.POSITIVE_INFINITY;
+        const db = b.closing_date_proposed
+          ? Date.parse(b.closing_date_proposed)
+          : Number.POSITIVE_INFINITY;
+        return da - db;
+      }
+      case "strength": {
+        // Cash beats anything financed.
+        if (a.is_cash !== b.is_cash) return a.is_cash ? -1 : 1;
+        // Then fewer contingencies.
+        if (a.contingency_count !== b.contingency_count) {
+          return a.contingency_count - b.contingency_count;
+        }
+        // Then higher price.
+        return priceOf(b) - priceOf(a);
+      }
+      case "contingencies-asc":
+        return a.contingency_count - b.contingency_count;
+      case "newest":
+        return b.created_at.localeCompare(a.created_at);
+    }
+  });
+  return next;
+}
+
 function formatMoney(n: number | null | undefined): string {
   if (n == null) return "—";
   return new Intl.NumberFormat("en-US", {
@@ -114,6 +200,11 @@ export function ListingDetailClient({
   // Each action keys its in-flight pending state by `${offerId}:${kind}`
   // so two rows can be acted on independently.
   const [offers, setOffers] = useState<ListingOfferCompareItem[]>(initialOffers);
+  /** Sort criterion for the offers list. Sellers comparing
+   *  multiple offers want to slice this differently — by money
+   *  (price desc), by speed (closing date asc), or by "cleanest"
+   *  terms (fewest contingencies, cash first). */
+  const [sortBy, setSortBy] = useState<OfferSort>("price-desc");
   const [pendingOfferAction, setPendingOfferAction] = useState<string | null>(null);
   const [offerActionError, setOfferActionError] = useState<string | null>(null);
   // Inline counter form — keyed by offerId so only one offer's
@@ -498,16 +589,37 @@ export function ListingDetailClient({
           Offers received header above to keep this section tight. */}
       {offers.length > 0 ? (
         <section>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900">
-              Offers ({offers.length})
-            </h2>
-            {offerActionError ? (
-              <span className="text-[11px] text-rose-700">{offerActionError}</span>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-sm font-semibold text-slate-900">
+                Offers ({offers.length})
+              </h2>
+              {offerActionError ? (
+                <span className="text-[11px] text-rose-700">{offerActionError}</span>
+              ) : null}
+            </div>
+            {/* Sort selector — only useful when there's more than
+                one offer. Single-offer listings just show the
+                default order without the chrome. */}
+            {offers.length > 1 ? (
+              <label className="inline-flex items-center gap-2 text-[11px] text-slate-500">
+                Sort:
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as OfferSort)}
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                >
+                  {OFFER_SORT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             ) : null}
           </div>
           <ol className="space-y-2">
-            {offers.map((o) => {
+            {sortedOffers(offers, sortBy).map((o) => {
               const isClosed =
                 o.status === "accepted" ||
                 o.status === "rejected" ||
