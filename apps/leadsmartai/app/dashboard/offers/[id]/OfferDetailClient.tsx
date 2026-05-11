@@ -256,11 +256,10 @@ export function OfferDetailClient({
             </p>
           </Card>
 
-          <ActivityTimeline offer={offer} counters={counters} />
-
-          <CounterTimeline
-            offerId={offer.id}
+          <ActivityTimeline
+            offer={offer}
             counters={counters}
+            disabled={isClosed}
             onCounterAdded={(counter) => {
               setCounters((prev) => [...prev, counter]);
               // Refetch the offer to reflect status → "countered" + new current_price.
@@ -273,7 +272,6 @@ export function OfferDetailClient({
                 if (body.ok && body.offer) setOffer(body.offer);
               })();
             }}
-            disabled={isClosed}
           />
         </div>
 
@@ -326,153 +324,6 @@ export function OfferDetailClient({
   );
 }
 
-function CounterTimeline({
-  offerId,
-  counters,
-  onCounterAdded,
-  disabled,
-}: {
-  offerId: string;
-  counters: OfferCounterRow[];
-  onCounterAdded: (c: OfferCounterRow) => void;
-  disabled: boolean;
-}) {
-  const [adding, setAdding] = useState(false);
-  const [direction, setDirection] = useState<CounterDirection>("seller_to_buyer");
-  const [price, setPrice] = useState("");
-  const [notes, setNotes] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function submit() {
-    setErr(null);
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/dashboard/offers/${offerId}/counters`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          direction,
-          price: price ? Number(price) : null,
-          notes: notes.trim() || null,
-        }),
-      });
-      const body = (await res.json().catch(() => ({}))) as {
-        ok?: boolean;
-        counter?: OfferCounterRow;
-        error?: string;
-      };
-      if (!res.ok || !body.ok || !body.counter) {
-        setErr(body.error ?? "Failed to record counter.");
-        return;
-      }
-      onCounterAdded(body.counter);
-      setPrice("");
-      setNotes("");
-      setAdding(false);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Network error.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-900">Counter history</h2>
-        {!adding && !disabled ? (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-          >
-            + Add counter
-          </button>
-        ) : null}
-      </div>
-
-      {counters.length === 0 && !adding ? (
-        <p className="mt-3 text-sm text-slate-500">
-          {disabled ? "Offer is closed — no further counters." : "No counters yet."}
-        </p>
-      ) : null}
-
-      {counters.length > 0 ? (
-        <ol className="mt-3 space-y-2">
-          {counters.map((c) => (
-            <li key={c.id} className="rounded-lg border border-slate-100 p-3 text-sm">
-              <div className="flex items-center justify-between">
-                <div className="font-medium text-slate-900">
-                  #{c.counter_number} ·{" "}
-                  {c.direction === "seller_to_buyer" ? "Seller → Buyer" : "Buyer → Seller"}
-                </div>
-                <div className="text-[11px] text-slate-500">{formatDateTime(c.created_at)}</div>
-              </div>
-              {c.price != null ? (
-                <div className="mt-1 tabular-nums text-slate-700">Price: {formatMoney(c.price)}</div>
-              ) : null}
-              {c.notes ? <div className="mt-1 text-slate-600">{c.notes}</div> : null}
-            </li>
-          ))}
-        </ol>
-      ) : null}
-
-      {adding ? (
-        <div className="mt-3 space-y-2 rounded-lg bg-slate-50 p-3">
-          <div>
-            <label className="block text-xs font-medium text-slate-700">Direction</label>
-            <select
-              value={direction}
-              onChange={(e) => setDirection(e.target.value as CounterDirection)}
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-            >
-              <option value="seller_to_buyer">Seller → Buyer (they countered us)</option>
-              <option value="buyer_to_seller">Buyer → Seller (we countered them)</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-700">New price (optional)</label>
-            <input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="1175000"
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-700">Notes</label>
-            <input
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Closing moved to 45d, EMD bumped to 40k…"
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-            />
-          </div>
-          {err ? <p className="text-xs text-red-600">{err}</p> : null}
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setAdding(false)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => void submit()}
-              disabled={saving}
-              className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-            >
-              {saving ? "Saving…" : "Record counter"}
-            </button>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -612,16 +463,139 @@ function buildActivity(
 function ActivityTimeline({
   offer,
   counters,
+  onCounterAdded,
+  disabled,
 }: {
   offer: OfferRow;
   counters: OfferCounterRow[];
+  /** Fired after a successful counter POST. Parent updates its
+   *  counters state + refetches the offer (status → 'countered'
+   *  + new current_price). */
+  onCounterAdded: (c: OfferCounterRow) => void;
+  /** Hide the add-counter affordance on closed offers (accepted /
+   *  rejected / withdrawn / expired). */
+  disabled: boolean;
 }) {
   const events = buildActivity(offer, counters);
+
+  // Inline add-counter form state. Used to live in a separate
+  // CounterTimeline card; folded in here so the Activity card
+  // is the single surface for both reading the deal narrative
+  // and adding to it.
+  const [adding, setAdding] = useState(false);
+  const [direction, setDirection] = useState<CounterDirection>("seller_to_buyer");
+  const [price, setPrice] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit() {
+    setErr(null);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/dashboard/offers/${offer.id}/counters`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          direction,
+          price: price ? Number(price) : null,
+          notes: notes.trim() || null,
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        counter?: OfferCounterRow;
+        error?: string;
+      };
+      if (!res.ok || !body.ok || !body.counter) {
+        setErr(body.error ?? "Failed to record counter.");
+        return;
+      }
+      onCounterAdded(body.counter);
+      setPrice("");
+      setNotes("");
+      setAdding(false);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Network error.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <h2 className="text-sm font-semibold text-slate-900">Activity</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-900">Activity</h2>
+        {!adding && !disabled ? (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          >
+            + Add counter
+          </button>
+        ) : null}
+      </div>
+
+      {adding ? (
+        <div className="mt-3 space-y-2 rounded-lg bg-slate-50 p-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-700">Direction</label>
+            <select
+              value={direction}
+              onChange={(e) => setDirection(e.target.value as CounterDirection)}
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+            >
+              <option value="seller_to_buyer">Seller → Buyer (they countered us)</option>
+              <option value="buyer_to_seller">Buyer → Seller (we countered them)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-700">New price (optional)</label>
+            <input
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-700">Notes</label>
+            <input
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Closing moved to 45d, EMD bumped to 40k…"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+            />
+          </div>
+          {err ? <p className="text-xs text-red-600">{err}</p> : null}
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setAdding(false);
+                setErr(null);
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void submit()}
+              disabled={saving}
+              className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              {saving ? "Recording…" : "Record counter"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {events.length === 0 ? (
-        <p className="mt-3 text-sm text-slate-500">No activity yet.</p>
+        <p className="mt-3 text-sm text-slate-500">
+          {disabled ? "Offer is closed — no further counters." : "No activity yet."}
+        </p>
       ) : (
         <ol className="mt-3 space-y-2">
           {events.map((e, i) => (
