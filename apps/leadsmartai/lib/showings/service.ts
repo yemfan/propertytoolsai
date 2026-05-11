@@ -86,6 +86,18 @@ export async function createShowing(input: CreateShowingInput): Promise<ShowingR
     row.google_event_id = googleEventId;
   }
 
+  // Scheduling a showing IS contact activity. Bump last_activity_at
+  // and auto-complete any open "Follow up with inactive lead" tasks
+  // — the agent is actively working this contact right now.
+  try {
+    const { markContactActivity } = await import("@/lib/contacts/activity");
+    await markContactActivity(input.agentId, input.contactId, {
+      contactName,
+    });
+  } catch {
+    // best-effort housekeeping
+  }
+
   return row;
 }
 

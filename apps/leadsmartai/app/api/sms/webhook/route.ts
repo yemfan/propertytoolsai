@@ -249,6 +249,21 @@ export async function POST(req: Request) {
         .eq("id", leadId);
     } catch {}
 
+    // Inbound SMS = the lead is engaged. Bump last_activity_at and
+    // close any open "Follow up with inactive lead" tasks for them
+    // — the agent should respond, not reach out cold. Best-effort,
+    // scoped by assigned agent.
+    if (agentId) {
+      try {
+        const { markContactActivity } = await import("@/lib/contacts/activity");
+        await markContactActivity(agentId, leadId, {
+          contactName: (leadRow as { name?: string | null }).name ?? null,
+        });
+      } catch {
+        // best-effort housekeeping
+      }
+    }
+
     // Auto-detect inbound language on first CJK message. No-ops when
     // `preferred_language` is already set (explicit choice wins) or when
     // the inbound text is English (keeps NULL so "no override" stays

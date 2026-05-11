@@ -112,6 +112,14 @@ export async function sendOutboundSms(params: {
     // optional column
   }
 
+  // Bump last_activity_at + auto-complete any open inactive-lead
+  // follow-up tasks for this contact. The agent is doing the
+  // follow-up right now — the to-do is stale.
+  if (params.agentId) {
+    const { markContactActivity } = await import("@/lib/contacts/activity");
+    await markContactActivity(params.agentId, params.leadId);
+  }
+
   return {
     sid,
     status,

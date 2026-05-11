@@ -71,6 +71,19 @@ export async function POST(req: Request) {
       body: text,
     });
 
+    // Inbound email = the lead is engaged. Bump last_activity_at and
+    // close any open "Follow up with inactive lead" tasks for them
+    // — the agent should respond to the new email, not reach out
+    // cold. Best-effort, scoped by assigned agent.
+    if (lead.assignedAgentId) {
+      try {
+        const { markContactActivity } = await import("@/lib/contacts/activity");
+        await markContactActivity(lead.assignedAgentId, leadId, { contactName: lead.name });
+      } catch {
+        // best-effort housekeeping
+      }
+    }
+
     // Auto-detect language on first CJK-containing email. Same semantics
     // as the SMS webhook — NULL-only write, never overwrites an explicit
     // preference, never blocks the pipeline on failure.
