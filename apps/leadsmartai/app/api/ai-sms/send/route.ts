@@ -87,6 +87,22 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("ai-sms send error:", error);
     const msg = error instanceof Error ? error.message : "Failed to send SMS";
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+    // sendOutboundSms tags Twilio errors with structured fields; pass
+    // them through so the UI can render the moreInfo URL etc.
+    const e = error as {
+      twilioCode?: number | string | null;
+      twilioStatus?: number | null;
+      twilioMoreInfo?: string | null;
+    } | null;
+    return NextResponse.json(
+      {
+        success: false,
+        error: msg,
+        twilioCode: e?.twilioCode ?? null,
+        twilioStatus: e?.twilioStatus ?? null,
+        twilioMoreInfo: e?.twilioMoreInfo ?? null,
+      },
+      { status: 500 },
+    );
   }
 }
