@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import {
   LISTING_STATUS_LABEL,
   type ListingDetail,
@@ -41,50 +41,48 @@ const STATUS_BADGE: Record<ListingStatus, string> = {
 };
 
 /**
- * Sort criteria for the offers list. Six modes a seller actually
- * thinks in when comparing offers:
+ * Sort spec for the offers table. `field` is the column being
+ * sorted on; `dir` is the direction. Column clicks toggle dir on
+ * the active field, or switch to a new field with its default
+ * direction.
  *
- *   price-desc       — highest current_price first (default; this is
- *                      what most sellers want when they open the page)
- *   price-asc        — lowest first (rare, but useful for spotting
- *                      lowball wedges)
- *   closing-asc      — earliest proposed closing first (sellers in
- *                      a hurry want the fastest close)
- *   strength         — "cleanest" terms first. Cash beats financed;
- *                      ties break on fewest contingencies, then on
- *                      higher price. Captures the gut-feel ranking
- *                      a listing agent gives a seller.
- *   contingencies-asc — fewest contingencies first (similar to
- *                      strength but ignores cash + price tiebreakers)
- *   newest           — created_at desc — handy when a fresh offer
- *                      just came in and the agent wants to see it
- *                      at the top regardless of price
+ * The "strength" preset is non-columnar: cash beats financed, ties
+ * break on fewest contingencies, then higher price. Surfaced via a
+ * separate quick-filter button rather than a column header click.
  */
-type OfferSort =
-  | "price-desc"
-  | "price-asc"
-  | "closing-asc"
-  | "strength"
-  | "contingencies-asc"
-  | "newest";
+type SortField =
+  | "buyer"
+  | "status"
+  | "price"
+  | "financing"
+  | "closing"
+  | "contingencies"
+  | "earnest"
+  | "newest"
+  | "strength";
 
-const OFFER_SORT_OPTIONS: Array<{ value: OfferSort; label: string }> = [
-  { value: "price-desc", label: "Price · high → low" },
-  { value: "price-asc", label: "Price · low → high" },
-  { value: "closing-asc", label: "Closing · soonest first" },
-  { value: "strength", label: "Strength (cash + fewest contingencies)" },
-  { value: "contingencies-asc", label: "Contingencies · fewest first" },
-  { value: "newest", label: "Newest first" },
-];
+type SortDir = "asc" | "desc";
+
+type OfferSort = { field: SortField; dir: SortDir };
+
+/** Default direction for each column when first clicked. Money +
+ *  recency want desc; everything else asc. */
+const DEFAULT_DIR: Record<SortField, SortDir> = {
+  buyer: "asc",
+  status: "asc",
+  price: "desc",
+  financing: "asc",
+  closing: "asc",
+  contingencies: "asc",
+  earnest: "desc",
+  newest: "desc",
+  strength: "desc",
+};
 
 /**
- * Sort comparator factory. `current_price` is the negotiated price
- * (counters can shift it from offer_price) — use it for price sort
- * when present, falling back to offer_price.
- *
- * Null-safe: missing prices sort last in price-asc, first in
- * price-desc (treated as +Infinity / -Infinity respectively).
- * Same pattern for closing date.
+ * Sort an array of offers per the spec. Null-safe: missing values
+ * sort last (treated as +Infinity in asc, -Infinity in desc).
+ * `current_price` beats `offer_price` because counters shift it.
  */
 function sortedOffers<T extends ListingOfferCompareItem>(
   rows: T[],
@@ -92,35 +90,49 @@ function sortedOffers<T extends ListingOfferCompareItem>(
 ): T[] {
   const next = [...rows];
   const priceOf = (o: T) => o.current_price ?? o.offer_price ?? 0;
+  const cmpString = (a: string | null, b: string | null) =>
+    (a ?? "￿").localeCompare(b ?? "￿");
+  const sign = by.dir === "desc" ? -1 : 1;
+
   next.sort((a, b) => {
-    switch (by) {
-      case "price-desc":
-        return priceOf(b) - priceOf(a);
-      case "price-asc":
-        return priceOf(a) - priceOf(b);
-      case "closing-asc": {
+    switch (by.field) {
+      case "buyer":
+        return cmpString(a.buyer_name, b.buyer_name) * sign;
+      case "status":
+        return cmpString(a.status, b.status) * sign;
+      case "price":
+        return (priceOf(a) - priceOf(b)) * sign;
+      case "financing":
+        // Cash buyers are special — surface them first in asc, last
+        // in desc. After that, alpha by financing_type for stability.
+        if (a.is_cash !== b.is_cash) {
+          return (a.is_cash ? -1 : 1) * sign;
+        }
+        return cmpString(a.financing_type, b.financing_type) * sign;
+      case "closing": {
         const da = a.closing_date_proposed
           ? Date.parse(a.closing_date_proposed)
           : Number.POSITIVE_INFINITY;
         const db = b.closing_date_proposed
           ? Date.parse(b.closing_date_proposed)
           : Number.POSITIVE_INFINITY;
-        return da - db;
+        return (da - db) * sign;
       }
+      case "contingencies":
+        return (a.contingency_count - b.contingency_count) * sign;
+      case "earnest":
+        return ((a.earnest_money ?? 0) - (b.earnest_money ?? 0)) * sign;
+      case "newest":
+        return b.created_at.localeCompare(a.created_at);
       case "strength": {
-        // Cash beats anything financed.
+        // Cash beats financed; ties break on fewest contingencies,
+        // then higher price. Ignores dir (always strongest first).
         if (a.is_cash !== b.is_cash) return a.is_cash ? -1 : 1;
-        // Then fewer contingencies.
         if (a.contingency_count !== b.contingency_count) {
           return a.contingency_count - b.contingency_count;
         }
-        // Then higher price.
         return priceOf(b) - priceOf(a);
       }
-      case "contingencies-asc":
-        return a.contingency_count - b.contingency_count;
-      case "newest":
-        return b.created_at.localeCompare(a.created_at);
     }
   });
   return next;
@@ -200,11 +212,25 @@ export function ListingDetailClient({
   // Each action keys its in-flight pending state by `${offerId}:${kind}`
   // so two rows can be acted on independently.
   const [offers, setOffers] = useState<ListingOfferCompareItem[]>(initialOffers);
-  /** Sort criterion for the offers list. Sellers comparing
-   *  multiple offers want to slice this differently — by money
-   *  (price desc), by speed (closing date asc), or by "cleanest"
-   *  terms (fewest contingencies, cash first). */
-  const [sortBy, setSortBy] = useState<OfferSort>("price-desc");
+  /** Sort spec for the offers table. {field, dir} pair so column
+   *  headers can toggle direction on the active field, or switch
+   *  to a new field with its default direction (see DEFAULT_DIR).
+   *  Default: highest price first — what most sellers want when
+   *  they open the page. */
+  const [sortBy, setSortBy] = useState<OfferSort>({ field: "price", dir: "desc" });
+
+  /**
+   * Click a column header → either flip direction on the active
+   * field, or switch to the new field with its default direction.
+   * "strength" is set via its own button (no column).
+   */
+  function clickSort(field: SortField) {
+    setSortBy((prev) =>
+      prev.field === field
+        ? { field, dir: prev.dir === "desc" ? "asc" : "desc" }
+        : { field, dir: DEFAULT_DIR[field] },
+    );
+  }
   const [pendingOfferAction, setPendingOfferAction] = useState<string | null>(null);
   const [offerActionError, setOfferActionError] = useState<string | null>(null);
   // Inline counter form — keyed by offerId so only one offer's
@@ -486,34 +512,11 @@ export function ListingDetailClient({
           </div>
         ) : null}
 
-        {/* Add-offer surface — sits below the promote area so the
-            page reads top-to-bottom: status → mark-under-contract →
-            track incoming offers. Toggleable inline form so the
-            agent can record offers without leaving the listing
-            page. PDF upload (extractContract pipeline) is a
-            follow-up — for now manual entry only. */}
-        <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-sm">
-              <span className="font-medium text-slate-800">Offers received</span>
-              {offers.length > 0 ? (
-                <span className="ml-2 text-[11px] text-emerald-700">
-                  {offers.length} {offers.length === 1 ? "offer" : "offers"} on file
-                </span>
-              ) : (
-                <span className="ml-2 text-[11px] text-slate-500">
-                  Track offers as they come in.
-                </span>
-              )}
-            </div>
-            <Link
-              href={`/dashboard/listings/${encodeURIComponent(listing.id)}/offers/new`}
-              className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
-            >
-              + Add offer
-            </Link>
-          </div>
-        </div>
+        {/* Add-offer affordance + offers list moved to a single
+            unified section below the cards grid (the Offers
+            section). Keeping the "+ Add offer" button only in
+            that section avoids splitting the offers surface into
+            two places. */}
       </div>
 
       {/* ── Key facts ────────────────────────────────────────────── */}
@@ -587,201 +590,302 @@ export function ListingDetailClient({
           "what do I need to act on"). Only renders when there are
           offers in flight; the empty state lives up in the
           Offers received header above to keep this section tight. */}
-      {offers.length > 0 ? (
-        <section>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-baseline gap-3">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Offers ({offers.length})
-              </h2>
-              {offerActionError ? (
-                <span className="text-[11px] text-rose-700">{offerActionError}</span>
-              ) : null}
-            </div>
-            {/* Sort selector — only useful when there's more than
-                one offer. Single-offer listings just show the
-                default order without the chrome. */}
+      {/* Single unified Offers section. Header shows count +
+          "+ Add offer" button. When offers exist, render a
+          sortable table — column headers click to sort, with an
+          arrow indicator on the active column. Counter actions
+          open an expansion row inline.
+          The "Strongest first" preset button is non-columnar
+          (cash beats financed, ties on contingency count, then
+          price) since that ranking doesn't map to one column. */}
+      <section>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-baseline gap-3">
+            <h2 className="text-sm font-semibold text-slate-900">
+              Offers ({offers.length})
+            </h2>
             {offers.length > 1 ? (
-              <label className="inline-flex items-center gap-2 text-[11px] text-slate-500">
-                Sort:
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as OfferSort)}
-                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                >
-                  {OFFER_SORT_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <button
+                type="button"
+                onClick={() => setSortBy({ field: "strength", dir: "desc" })}
+                className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                  sortBy.field === "strength"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+                title="Cash beats financed; ties break on fewest contingencies + higher price"
+              >
+                Strongest first
+              </button>
+            ) : null}
+            {offerActionError ? (
+              <span className="text-[11px] text-rose-700">{offerActionError}</span>
             ) : null}
           </div>
-          <ol className="space-y-2">
-            {sortedOffers(offers, sortBy).map((o) => {
-              const isClosed =
-                o.status === "accepted" ||
-                o.status === "rejected" ||
-                o.status === "withdrawn" ||
-                o.status === "expired";
-              const isAccepting = pendingOfferAction === `${o.id}:accept`;
-              const isDeclining = pendingOfferAction === `${o.id}:decline`;
-              const isCountering = pendingOfferAction === `${o.id}:counter`;
-              const showCounterForm = counterFormForOfferId === o.id;
-              return (
-                <li
-                  key={o.id}
-                  className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-slate-900">
-                          {o.buyer_name ?? "Unnamed buyer"}
-                        </span>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${OFFER_STATUS_BADGE[o.status]}`}
-                        >
-                          {OFFER_STATUS_LABEL[o.status]}
-                        </span>
-                        {o.is_cash ? (
-                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                            Cash
-                          </span>
-                        ) : null}
-                        {o.counter_count > 0 ? (
-                          <span className="text-[11px] text-slate-500">
-                            {o.counter_count} counter{o.counter_count === 1 ? "" : "s"}
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-slate-600">
-                        <span>
-                          <span className="text-slate-400">Offer:</span>{" "}
-                          <span className="tabular-nums">{formatMoney(o.offer_price)}</span>
-                        </span>
-                        {o.current_price != null && o.current_price !== o.offer_price ? (
-                          <span>
-                            <span className="text-slate-400">Current:</span>{" "}
-                            <span className="tabular-nums font-medium text-slate-900">
-                              {formatMoney(o.current_price)}
+          <Link
+            href={`/dashboard/listings/${encodeURIComponent(listing.id)}/offers/new`}
+            className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            + Add offer
+          </Link>
+        </div>
+
+        {offers.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+            No offers yet. Click <strong>+ Add offer</strong> to record one.
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50 text-xs text-slate-600">
+                  <tr>
+                    <SortableTh field="buyer" sortBy={sortBy} onClick={clickSort}>
+                      Buyer
+                    </SortableTh>
+                    <SortableTh field="status" sortBy={sortBy} onClick={clickSort}>
+                      Status
+                    </SortableTh>
+                    <SortableTh field="price" sortBy={sortBy} onClick={clickSort} align="right">
+                      Price
+                    </SortableTh>
+                    <SortableTh field="financing" sortBy={sortBy} onClick={clickSort}>
+                      Financing
+                    </SortableTh>
+                    <SortableTh field="closing" sortBy={sortBy} onClick={clickSort}>
+                      Closing
+                    </SortableTh>
+                    <SortableTh field="contingencies" sortBy={sortBy} onClick={clickSort} align="center">
+                      Cont.
+                    </SortableTh>
+                    <SortableTh field="earnest" sortBy={sortBy} onClick={clickSort} align="right">
+                      EMD
+                    </SortableTh>
+                    <th className="px-3 py-2 text-right font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {sortedOffers(offers, sortBy).map((o) => {
+                    const isClosed =
+                      o.status === "accepted" ||
+                      o.status === "rejected" ||
+                      o.status === "withdrawn" ||
+                      o.status === "expired";
+                    const isAccepting = pendingOfferAction === `${o.id}:accept`;
+                    const isDeclining = pendingOfferAction === `${o.id}:decline`;
+                    const isCountering = pendingOfferAction === `${o.id}:counter`;
+                    const showCounterForm = counterFormForOfferId === o.id;
+                    return (
+                      <Fragment key={o.id}>
+                        <tr className="align-top hover:bg-slate-50">
+                          <td className="px-3 py-2.5">
+                            <div className="font-medium text-slate-900">
+                              {o.buyer_name ?? "Unnamed buyer"}
+                            </div>
+                            {o.counter_count > 0 ? (
+                              <div className="text-[11px] text-slate-500">
+                                {o.counter_count} counter{o.counter_count === 1 ? "" : "s"}
+                              </div>
+                            ) : null}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${OFFER_STATUS_BADGE[o.status]}`}
+                            >
+                              {OFFER_STATUS_LABEL[o.status]}
                             </span>
-                          </span>
+                          </td>
+                          <td className="px-3 py-2.5 text-right tabular-nums">
+                            <div className="font-medium text-slate-900">
+                              {formatMoney(o.current_price ?? o.offer_price)}
+                            </div>
+                            {o.current_price != null && o.current_price !== o.offer_price ? (
+                              <div className="text-[11px] text-slate-500">
+                                from {formatMoney(o.offer_price)}
+                              </div>
+                            ) : null}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex flex-wrap items-center gap-1">
+                              {o.is_cash ? (
+                                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                                  Cash
+                                </span>
+                              ) : (
+                                <span className="text-slate-700">
+                                  {o.financing_type ?? "—"}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-slate-700">
+                            {o.closing_date_proposed
+                              ? formatDate(o.closing_date_proposed)
+                              : "—"}
+                          </td>
+                          <td className="px-3 py-2.5 text-center tabular-nums">
+                            {o.contingency_count === 0 ? (
+                              <span className="text-emerald-700">0</span>
+                            ) : (
+                              <span className="text-slate-700">
+                                {o.contingency_count}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 text-right tabular-nums text-slate-700">
+                            {formatMoney(o.earnest_money)}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            {!isClosed ? (
+                              <div className="flex flex-wrap items-center justify-end gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => void acceptOffer(o.id, o.offer_price)}
+                                  disabled={isAccepting || isDeclining || isCountering}
+                                  className="rounded-lg bg-emerald-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
+                                  title="Mark this offer accepted + spawn a deal"
+                                >
+                                  {isAccepting ? "…" : "✓ Accept"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCounterFormForOfferId(showCounterForm ? null : o.id);
+                                    setCounterPrice(
+                                      o.current_price != null
+                                        ? String(o.current_price)
+                                        : "",
+                                    );
+                                    setCounterNotes("");
+                                    setOfferActionError(null);
+                                  }}
+                                  disabled={isAccepting || isDeclining}
+                                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                  title="Record a counter to the buyer"
+                                >
+                                  {showCounterForm ? "Cancel" : "🔁 Counter"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void declineOffer(o.id)}
+                                  disabled={isAccepting || isDeclining || isCountering}
+                                  className="rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                                  title="Mark this offer rejected"
+                                >
+                                  {isDeclining ? "…" : "✗ Decline"}
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="block text-right text-[11px] text-slate-400">
+                                —
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                        {showCounterForm ? (
+                          <tr className="bg-slate-50">
+                            <td colSpan={8} className="px-3 py-3">
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-xs font-medium text-slate-700">
+                                    Counter price
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={counterPrice}
+                                    onChange={(e) => setCounterPrice(e.target.value)}
+                                    placeholder={String(
+                                      o.current_price ?? o.offer_price,
+                                    )}
+                                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-slate-700">
+                                    Notes
+                                  </label>
+                                  <input
+                                    value={counterNotes}
+                                    onChange={(e) => setCounterNotes(e.target.value)}
+                                    placeholder="Closing moved, terms changed…"
+                                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                                  />
+                                </div>
+                              </div>
+                              <div className="mt-2 flex justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setCounterFormForOfferId(null)}
+                                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void recordCounter(o.id)}
+                                  disabled={isCountering}
+                                  className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+                                >
+                                  {isCountering ? "Recording…" : "Record counter"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
                         ) : null}
-                        {o.earnest_money != null ? (
-                          <span>
-                            <span className="text-slate-400">EMD:</span>{" "}
-                            <span className="tabular-nums">{formatMoney(o.earnest_money)}</span>
-                          </span>
-                        ) : null}
-                        {o.contingency_count > 0 ? (
-                          <span>
-                            <span className="text-slate-400">Contingencies:</span>{" "}
-                            {o.contingency_count}
-                          </span>
-                        ) : (
-                          <span className="text-emerald-700">No contingencies</span>
-                        )}
-                      </div>
-                      {o.notes ? (
-                        <div className="mt-1 truncate text-[12px] text-slate-500">
-                          {o.notes}
-                        </div>
-                      ) : null}
-                    </div>
-                    {!isClosed ? (
-                      <div className="flex shrink-0 flex-wrap items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => void acceptOffer(o.id, o.offer_price)}
-                          disabled={isAccepting || isDeclining || isCountering}
-                          className="rounded-lg bg-emerald-700 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-800 disabled:opacity-50"
-                          title="Mark this offer accepted + spawn a deal"
-                        >
-                          {isAccepting ? "Accepting…" : "✓ Accept"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCounterFormForOfferId(showCounterForm ? null : o.id);
-                            setCounterPrice(
-                              o.current_price != null ? String(o.current_price) : "",
-                            );
-                            setCounterNotes("");
-                            setOfferActionError(null);
-                          }}
-                          disabled={isAccepting || isDeclining}
-                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                          title="Record a counter to the buyer"
-                        >
-                          {showCounterForm ? "Cancel" : "🔁 Counter"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void declineOffer(o.id)}
-                          disabled={isAccepting || isDeclining || isCountering}
-                          className="rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50"
-                          title="Mark this offer rejected"
-                        >
-                          {isDeclining ? "Declining…" : "✗ Decline"}
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                  {showCounterForm ? (
-                    <div className="mt-3 space-y-2 rounded-lg bg-slate-50 p-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-slate-700">
-                            Counter price
-                          </label>
-                          <input
-                            type="number"
-                            value={counterPrice}
-                            onChange={(e) => setCounterPrice(e.target.value)}
-                            placeholder={String(o.current_price ?? o.offer_price)}
-                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-slate-700">
-                            Notes
-                          </label>
-                          <input
-                            value={counterNotes}
-                            onChange={(e) => setCounterNotes(e.target.value)}
-                            placeholder="Closing moved, terms changed…"
-                            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex justify-end gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setCounterFormForOfferId(null)}
-                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void recordCounter(o.id)}
-                          disabled={isCountering}
-                          className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-                        >
-                          {isCountering ? "Recording…" : "Record counter"}
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-      ) : null}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
     </main>
+  );
+}
+
+/**
+ * Sortable <th> for the offers table. Clicking the header toggles
+ * direction on the active field, or switches to this field with
+ * its default direction. Renders a tiny ▲/▼ chevron on the active
+ * column so the agent sees what's currently sorting.
+ */
+function SortableTh({
+  field,
+  sortBy,
+  onClick,
+  align,
+  children,
+}: {
+  field: SortField;
+  sortBy: OfferSort;
+  onClick: (field: SortField) => void;
+  align?: "left" | "right" | "center";
+  children: React.ReactNode;
+}) {
+  const active = sortBy.field === field;
+  const alignClass =
+    align === "right"
+      ? "text-right"
+      : align === "center"
+        ? "text-center"
+        : "text-left";
+  return (
+    <th className={`${alignClass} px-3 py-2 font-medium`}>
+      <button
+        type="button"
+        onClick={() => onClick(field)}
+        className={`inline-flex items-center gap-1 transition-colors ${
+          active ? "text-slate-900" : "text-slate-600 hover:text-slate-900"
+        }`}
+      >
+        {children}
+        <span className="text-[9px] leading-none" aria-hidden>
+          {active ? (sortBy.dir === "desc" ? "▼" : "▲") : "↕"}
+        </span>
+      </button>
+    </th>
   );
 }
 
