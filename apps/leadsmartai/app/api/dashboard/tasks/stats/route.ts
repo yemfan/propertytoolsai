@@ -79,27 +79,46 @@ export async function GET() {
     }
 
     const now = Date.now();
-    let ontime = 0;
-    let deferred = 0;
-    let unfinished = 0;
+    let doneOnTime = 0;
+    let doneLate = 0;
+    let overdue = 0;
+    let pending = 0;
+    let cancelled = 0;
+
+    // Why five buckets, not three: the previous "On time / Deferred /
+    // Unfinished" labels conflated two distinct things the agent cares
+    // about. Specifically, "Deferred" included BOTH (a) tasks that
+    // were done but completed past the due date AND (b) open tasks
+    // that are now overdue — visually identical in the chart, but
+    // very different mental states ("I did the work late" vs "I still
+    // owe this work"). Same problem on the other side: "Unfinished"
+    // mixed cancelled tasks with not-yet-due open tasks.
+    //
+    // Bucket choices match the Open / Done / Cancelled tab labels so
+    // an agent can mentally line up the pie with the tab numbers.
+    // Done-late stays in a green-family color so the eye reads done
+    // as done — the previous orange/Deferred slice made completed
+    // work look like missed work.
 
     for (const t of tasks) {
       if (t.status === "done") {
-        // On time: completed before or on due date (or no due date)
-        if (!t.due_at || !t.completed_at || new Date(t.completed_at).getTime() <= new Date(t.due_at).getTime()) {
-          ontime++;
+        if (
+          !t.due_at ||
+          !t.completed_at ||
+          new Date(t.completed_at).getTime() <= new Date(t.due_at).getTime()
+        ) {
+          doneOnTime++;
         } else {
-          deferred++; // Completed but after due date
+          doneLate++;
         }
       } else if (t.status === "open") {
         if (t.due_at && new Date(t.due_at).getTime() < now) {
-          deferred++; // Overdue and still open
+          overdue++;
         } else {
-          unfinished++; // Not yet due or no due date
+          pending++;
         }
       } else {
-        // cancelled
-        unfinished++;
+        cancelled++;
       }
     }
 
@@ -125,13 +144,19 @@ export async function GET() {
       count,
     }));
 
+    // Zero-value slices are dropped so the legend doesn't list "Cancelled 0"
+    // on every healthy account — the pie only shows what's actually there.
+    const completion = [
+      { name: "Done on time", value: doneOnTime, color: "#16a34a" }, // green-600
+      { name: "Done late", value: doneLate, color: "#84cc16" }, // lime-500 — visually still "done"
+      { name: "Overdue", value: overdue, color: "#f97316" }, // orange-500
+      { name: "Pending", value: pending, color: "#94a3b8" }, // slate-400
+      { name: "Cancelled", value: cancelled, color: "#e5e7eb" }, // gray-200
+    ].filter((s) => s.value > 0);
+
     return NextResponse.json({
       ok: true,
-      completion: [
-        { name: "On time", value: ontime, color: "#22c55e" },
-        { name: "Deferred", value: deferred, color: "#f59e0b" },
-        { name: "Unfinished", value: unfinished, color: "#e5e7eb" },
-      ],
+      completion,
       performedByDay,
       performed,
       total: tasks.length,
