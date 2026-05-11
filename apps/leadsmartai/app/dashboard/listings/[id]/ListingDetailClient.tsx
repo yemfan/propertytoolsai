@@ -460,6 +460,23 @@ export function ListingDetailClient({
             {fullLocation ? (
               <p className="mt-0.5 text-sm text-slate-500">{fullLocation}</p>
             ) : null}
+            {/* Seller name + created relative time live as a
+                subtitle here so they don't take up card slots in
+                the consolidated 3-card grid below. */}
+            <p className="mt-0.5 text-[12px] text-slate-500">
+              {listing.contactName ? (
+                <>
+                  Seller:{" "}
+                  <span className="font-medium text-slate-700">
+                    {listing.contactName}
+                  </span>
+                </>
+              ) : (
+                <span className="text-slate-400">Seller not set</span>
+              )}
+              <span className="mx-1.5 text-slate-300">·</span>
+              Created {formatRelative(listing.created_at)}
+            </p>
           </div>
           <span
             className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${STATUS_BADGE[listing.status]}`}
@@ -519,7 +536,18 @@ export function ListingDetailClient({
             two places. */}
       </div>
 
-      {/* ── Key facts ────────────────────────────────────────────── */}
+      {/* ── Key facts: 3 cards ─────────────────────────────────────
+          Consolidated from 5 → 3 per agent feedback:
+            Property  = address + ZIP + MLS# + LIST PRICE +
+                        COMMISSION (price was its own card; folded
+                        in since "what + how much" goes together)
+            Dates     = Listed + Expires (drop "Created" — moved
+                        to the page subtitle since it's less
+                        useful for selling decisions)
+            Showings  = unchanged
+          The standalone Seller card is gone — seller name is now
+          a subtitle on the page header. Notes overflow into a
+          full-width card below the 3-card row when present. */}
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card title="Property">
           <DetailRow label="Address" value={listing.property_address} />
@@ -541,10 +569,14 @@ export function ListingDetailClient({
               }
             />
           ) : null}
-        </Card>
-
-        <Card title="Pricing">
-          <DetailRow label="List price" value={formatMoney(listing.list_price)} />
+          <DetailRow
+            label="List price"
+            value={
+              <span className="font-semibold text-slate-900">
+                {formatMoney(listing.list_price)}
+              </span>
+            }
+          />
           <DetailRow
             label="Commission"
             value={listing.commission_pct != null ? `${listing.commission_pct}%` : "—"}
@@ -554,11 +586,6 @@ export function ListingDetailClient({
         <Card title="Dates">
           <DetailRow label="Listed" value={formatDate(listing.listing_start_date)} />
           <DetailRow label="Expires" value={formatDate(listing.listing_end_date)} />
-          <DetailRow label="Created" value={formatRelative(listing.created_at)} />
-        </Card>
-
-        <Card title="Seller">
-          <DetailRow label="Name" value={listing.contactName ?? "—"} />
         </Card>
 
         <Card title="Showings">
@@ -574,15 +601,17 @@ export function ListingDetailClient({
             </Link>
           </div>
         </Card>
+      </section>
 
-        {listing.notes ? (
+      {listing.notes ? (
+        <section>
           <Card title="Notes">
             <p className="whitespace-pre-wrap text-sm text-slate-700">
               {listing.notes}
             </p>
           </Card>
-        ) : null}
-      </section>
+        </section>
+      ) : null}
 
       {/* Offers received — list with per-row actions. Sits below
           the cards grid because it's the operational surface (the
