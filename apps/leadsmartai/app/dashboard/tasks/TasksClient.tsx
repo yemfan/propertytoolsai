@@ -48,7 +48,20 @@ type TaskRow = {
 };
 
 type LeadInfo = { id: string; name: string | null };
-type ChartItem = { name: string; value: number; color: string };
+type ChartItem = {
+  name: string;
+  value: number;
+  color: string;
+  /**
+   * Optional drill-down breakdown for this slice. When present, the
+   * top-level pie renders the slice as clickable; clicking swaps the
+   * chart to render `breakdown` until the user clicks "back."
+   *
+   * Example: top-level "Done" has breakdown [On time, Late]; "Open"
+   * has [Overdue, Pending]; "Cancelled" has none (terminal slice).
+   */
+  breakdown?: ChartItem[];
+};
 type DayItem = { date: string; label: string; count: number };
 type Stats = { completion: ChartItem[]; performedByDay: DayItem[]; performed: number; total: number };
 
@@ -78,31 +91,132 @@ function timeLabel(iso: string | null) {
   return `${days}d`;
 }
 
+/**
+ * Pie chart with an optional one-level drill-down.
+ *
+ * If any top-level slice has a non-empty `breakdown`, that slice is
+ * rendered as clickable; clicking swaps the chart to that slice's
+ * breakdown (and shows a "← Back" affordance). Slices without a
+ * breakdown are inert — useful for terminal categories like
+ * "Cancelled" where there's nothing more to expand into.
+ */
 function MiniPie({ data, title }: { data: ChartItem[]; title: string }) {
-  const total = data.reduce((s, d) => s + d.value, 0);
+  const [drillName, setDrillName] = useState<string | null>(null);
+  const drillSlice = drillName ? data.find((d) => d.name === drillName) : null;
+  const drillData = drillSlice?.breakdown ?? null;
+
+  const displayData: ChartItem[] = drillData ?? data;
+  const total = displayData.reduce((s, d) => s + d.value, 0);
+  const isDrilled = Boolean(drillData);
+
+  const onSliceClick = useCallback(
+    (slice: ChartItem) => {
+      if (isDrilled) return; // already inside a drill — let "back" handle exit
+      if (slice.breakdown && slice.breakdown.length > 0) {
+        setDrillName(slice.name);
+      }
+    },
+    [isDrilled],
+  );
+
+  const hasAnyDrill = data.some(
+    (d) => d.breakdown && d.breakdown.length > 0,
+  );
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <h3 className="text-xs font-semibold text-gray-500 mb-2">{title}</h3>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="text-xs font-semibold text-gray-500">
+          {isDrilled ? (
+            <span>
+              {title} <span className="text-gray-400">·</span>{" "}
+              <span className="text-gray-700">{drillName}</span>
+            </span>
+          ) : (
+            title
+          )}
+        </h3>
+        {isDrilled && (
+          <button
+            type="button"
+            onClick={() => setDrillName(null)}
+            className="text-[11px] font-medium text-blue-600 hover:text-blue-700"
+          >
+            ← Back
+          </button>
+        )}
+      </div>
       <div className="flex items-center gap-3">
         <div className="h-[120px] w-[120px] shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={data} dataKey="value" cx="50%" cy="50%" outerRadius={50} innerRadius={28} strokeWidth={1}>
-                {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+              <Pie
+                data={displayData}
+                dataKey="value"
+                cx="50%"
+                cy="50%"
+                outerRadius={50}
+                innerRadius={28}
+                strokeWidth={1}
+              >
+                {displayData.map((d, i) => {
+                  const clickable =
+                    !isDrilled && d.breakdown && d.breakdown.length > 0;
+                  return (
+                    <Cell
+                      key={i}
+                      fill={d.color}
+                      onClick={clickable ? () => onSliceClick(d) : undefined}
+                      style={clickable ? { cursor: "pointer" } : undefined}
+                    />
+                  );
+                })}
               </Pie>
               <Tooltip formatter={(v: number) => v} />
             </PieChart>
           </ResponsiveContainer>
         </div>
         <div className="space-y-1 text-xs">
-          {data.map((d) => (
-            <div key={d.name} className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-              <span className="text-gray-600">{d.name}</span>
-              <span className="font-semibold text-gray-900">{d.value}</span>
-              {total > 0 && <span className="text-gray-400">({Math.round((d.value / total) * 100)}%)</span>}
-            </div>
-          ))}
+          {displayData.map((d) => {
+            const clickable =
+              !isDrilled && d.breakdown && d.breakdown.length > 0;
+            const Row = (
+              <>
+                <span
+                  className="h-2.5 w-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: d.color }}
+                />
+                <span className="text-gray-600">{d.name}</span>
+                <span className="font-semibold text-gray-900">{d.value}</span>
+                {total > 0 && (
+                  <span className="text-gray-400">
+                    ({Math.round((d.value / total) * 100)}%)
+                  </span>
+                )}
+              </>
+            );
+            return clickable ? (
+              <button
+                key={d.name}
+                type="button"
+                onClick={() => onSliceClick(d)}
+                className="flex items-center gap-2 rounded px-1 -mx-1 hover:bg-gray-50"
+                title={`Click to see ${d.name} breakdown`}
+              >
+                {Row}
+                <span className="text-gray-300">›</span>
+              </button>
+            ) : (
+              <div key={d.name} className="flex items-center gap-2 px-1 -mx-1">
+                {Row}
+              </div>
+            );
+          })}
+          {!isDrilled && hasAnyDrill && (
+            <p className="pt-1 text-[10px] text-gray-400">
+              Click a slice for details
+            </p>
+          )}
         </div>
       </div>
     </div>

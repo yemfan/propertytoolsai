@@ -144,14 +144,44 @@ export async function GET() {
       count,
     }));
 
-    // Zero-value slices are dropped so the legend doesn't list "Cancelled 0"
-    // on every healthy account — the pie only shows what's actually there.
+    // Two-level shape so the UI can render a top-level pie that
+    // matches the Done / Open / Cancelled tab counts on the page,
+    // and let the agent click any slice to drill into its breakdown.
+    //
+    //   Done       → On time   /  Late
+    //   Open       → Overdue   /  Pending
+    //   Cancelled  → (no further breakdown)
+    //
+    // Zero-value rows are filtered at each level so a healthy account
+    // doesn't see "Cancelled 0" in the legend, and a Done-only agent
+    // doesn't see an empty "Late 0" slice in the drill-down.
+
     const completion = [
-      { name: "Done on time", value: doneOnTime, color: "#16a34a" }, // green-600
-      { name: "Done late", value: doneLate, color: "#84cc16" }, // lime-500 — visually still "done"
-      { name: "Overdue", value: overdue, color: "#f97316" }, // orange-500
-      { name: "Pending", value: pending, color: "#94a3b8" }, // slate-400
-      { name: "Cancelled", value: cancelled, color: "#e5e7eb" }, // gray-200
+      {
+        name: "Done",
+        value: doneOnTime + doneLate,
+        color: "#16a34a", // green-600
+        breakdown: [
+          { name: "On time", value: doneOnTime, color: "#16a34a" }, // green-600
+          { name: "Late", value: doneLate, color: "#84cc16" }, // lime-500
+        ].filter((s) => s.value > 0),
+      },
+      {
+        name: "Open",
+        value: overdue + pending,
+        color: "#3b82f6", // blue-500
+        breakdown: [
+          { name: "Overdue", value: overdue, color: "#f97316" }, // orange-500
+          { name: "Pending", value: pending, color: "#94a3b8" }, // slate-400
+        ].filter((s) => s.value > 0),
+      },
+      {
+        name: "Cancelled",
+        value: cancelled,
+        color: "#e5e7eb", // gray-200
+        // No breakdown — terminal slice. Omitting the field lets the
+        // UI know not to render a click affordance.
+      },
     ].filter((s) => s.value > 0);
 
     return NextResponse.json({
