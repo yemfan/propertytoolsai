@@ -143,6 +143,16 @@ export async function createListingOffer(
     .select("*")
     .single();
   if (error || !data) throw new Error(error?.message ?? "Failed to create listing offer");
+
+  // Listing-side: reflect the new offer in the parent listing's
+  // status (active → pending when first live offer arrives).
+  // Skipped for transaction-side creates (the legacy path) since
+  // those don't have a listings row to reconcile.
+  if (input.listingId) {
+    const { reconcileListingStatus } = await import("@/lib/listings/service");
+    await reconcileListingStatus(input.agentId, input.listingId);
+  }
+
   return data as ListingOfferRow;
 }
 
@@ -304,14 +314,15 @@ export async function updateListingOffer(
 ): Promise<{ offer: ListingOfferRow | null; siblingsRejected: number }> {
   const { data: before } = await supabaseAdmin
     .from("listing_offers")
-    .select("status, transaction_id")
+    .select("status, transaction_id, listing_id")
     .eq("id", listingOfferId)
     .eq("agent_id", agentId)
     .maybeSingle();
   if (!before) return { offer: null, siblingsRejected: 0 };
   const beforeRow = before as {
     status: ListingOfferStatus;
-    transaction_id: string;
+    transaction_id: string | null;
+    listing_id: string | null;
   };
 
   const patch: UpdateListingOfferInput & {
@@ -349,15 +360,33 @@ export async function updateListingOffer(
     input.status === "accepted" &&
     beforeStatus !== "accepted"
   ) {
-    const { data: updatedSiblings } = await supabaseAdmin
+    // Sibling query keyed on whichever parent is set — Phase 2c+
+    // listings have listing_id but null transaction_id; legacy +
+    // post-acceptance rows have transaction_id.
+    const siblingQuery = supabaseAdmin
       .from("listing_offers")
       .update({ status: "rejected", closed_at: nowIso, updated_at: nowIso })
-      .eq("transaction_id", beforeRow.transaction_id)
       .eq("agent_id", agentId)
       .neq("id", listingOfferId)
-      .in("status", ["submitted", "countered"])
-      .select("id");
-    siblingsRejected = (updatedSiblings as Array<{ id: string }> | null)?.length ?? 0;
+      .in("status", ["submitted", "countered"]);
+    const targeted = beforeRow.listing_id
+      ? siblingQuery.eq("listing_id", beforeRow.listing_id)
+      : beforeRow.transaction_id
+        ? siblingQuery.eq("transaction_id", beforeRow.transaction_id)
+        : null;
+    if (targeted) {
+      const { data: updatedSiblings } = await targeted.select("id");
+      siblingsRejected =
+        (updatedSiblings as Array<{ id: string }> | null)?.length ?? 0;
+    }
+  }
+
+  // Reconcile parent listing's status after any offer state change.
+  // Only fires for listing-side offers (Phase 2c+); legacy
+  // transaction-scoped offers don't have a listings row to flip.
+  if (beforeRow.listing_id && input.status && input.status !== beforeStatus) {
+    const { reconcileListingStatus } = await import("@/lib/listings/service");
+    await reconcileListingStatus(agentId, beforeRow.listing_id);
   }
 
   return { offer, siblingsRejected };
@@ -367,12 +396,27 @@ export async function deleteListingOffer(
   agentId: string,
   listingOfferId: string,
 ): Promise<boolean> {
+  // Capture the listing_id before delete so we can reconcile after.
+  const { data: before } = await supabaseAdmin
+    .from("listing_offers")
+    .select("listing_id")
+    .eq("id", listingOfferId)
+    .eq("agent_id", agentId)
+    .maybeSingle();
+
   const { error, count } = await supabaseAdmin
     .from("listing_offers")
     .delete({ count: "exact" })
     .eq("id", listingOfferId)
     .eq("agent_id", agentId);
   if (error) throw new Error(error.message);
+
+  const listingId = (before as { listing_id: string | null } | null)?.listing_id;
+  if (listingId) {
+    const { reconcileListingStatus } = await import("@/lib/listings/service");
+    await reconcileListingStatus(agentId, listingId);
+  }
+
   return (count ?? 0) > 0;
 }
 
