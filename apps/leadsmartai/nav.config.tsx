@@ -98,6 +98,16 @@ const navConfig = {
           match: ["/dashboard/lead-queue"],
           icon: navEmoji("📋"),
         },
+        {
+          // Generate Leads — AI-drafted social posts (Phase 1A) + ad
+          // campaigns on Meta/Google (Phase 2+). Sits next to Lead Queue
+          // since both are about pulling NEW inbound into the CRM rather
+          // than working existing contacts.
+          label: "Generate Leads",
+          href: "/dashboard/leads/generate",
+          match: ["/dashboard/leads/generate"],
+          icon: navEmoji("✨"),
+        },
       ],
     },
 
