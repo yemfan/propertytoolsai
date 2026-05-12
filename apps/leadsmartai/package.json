@@ -12,6 +12,7 @@
     "build": "node ./scripts/next-build.mjs",
     "start": "next start",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:integration": "vitest run && tsx scripts/smoke-contact-intake.ts && tsx scripts/integration-contact-intake-supabase.ts",
     "test:integration:supabase": "tsx scripts/integration-contact-intake-supabase.ts",
