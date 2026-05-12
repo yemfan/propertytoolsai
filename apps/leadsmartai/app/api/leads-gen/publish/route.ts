@@ -2,13 +2,21 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getDashboardAgentContext } from "@/lib/contact-intake/dashboardAgentContext";
-import { getMediaById } from "@/lib/leads-gen/media";
 import {
   publishFacebookPagePost,
   publishInstagramBusinessPost,
 } from "@/lib/leads-gen/meta-post";
 import { decryptToken } from "@/lib/leads-gen/token-enc";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+
+// lib/leads-gen/media (Phase 1C, PR #393) never made it to main when
+// the Phase 1 stack got tangled. Until it lands:
+//   - mediaItemId is accepted in the request body but rejected
+//     with a clear 503 if provided
+//   - Facebook posts work as text-only
+//   - Instagram publishes return 422 (image required)
+// When #393's rescue PR lands, this route gets a small follow-up
+// that re-introduces the image-attachment path.
 
 export const runtime = "nodejs";
 // IG container creation + publish + permalink fetch can take a few
@@ -163,35 +171,28 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. If an image is attached, load it + materialize a fresh
-    //    signed URL (the wizard's signed URL may be hours old by
-    //    publish time). For Instagram an image is mandatory.
-    let mediaItem:
-      | Awaited<ReturnType<typeof getMediaById>>
-      | null = null;
-    let imageUrl: string | null = null;
+    // 2. Image attachment. Phase 2A.2 originally supported pulling
+    //    images from the media library (Phase 1C). The media lib
+    //    never landed on main; until it does this route is text-
+    //    only. Reject any mediaItemId clearly so the wizard can
+    //    surface the right "library not ready" hint.
+    const imageUrl: string | null = null;
     if (mediaItemId) {
-      mediaItem = await getMediaById(auth.agentId, mediaItemId);
-      if (!mediaItem) {
-        return NextResponse.json(
-          { ok: false, error: "Image not found in your library." },
-          { status: 404 },
-        );
-      }
-      imageUrl = mediaItem.signedUrl;
-      if (!imageUrl) {
-        return NextResponse.json(
-          { ok: false, error: "Could not generate a temporary URL for the image." },
-          { status: 500 },
-        );
-      }
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Media library isn't deployed yet. Post text-only to Facebook for now — Instagram + image-attached posts ship with the media library.",
+        },
+        { status: 503 },
+      );
     }
     if (platform === "instagram" && !imageUrl) {
       return NextResponse.json(
         {
           ok: false,
           error:
-            "Instagram posts require an image. Attach one in the wizard, or post to Facebook only.",
+            "Instagram posts require an image — and the media library that holds your images isn't deployed yet. Use Facebook for now.",
         },
         { status: 422 },
       );
@@ -242,7 +243,9 @@ export async function POST(req: Request) {
         platform,
         caption,
         hashtags: hashtags ?? [],
-        media_library_id: mediaItem?.id ?? null,
+        // media_library_id + media_url_used set when Phase 1C lands;
+        // for now publishes are text-only so both stay null.
+        media_library_id: null,
         media_url_used: imageUrl,
         trigger_kind: trigger ?? null,
         subject_kind: subjectKind ?? null,
