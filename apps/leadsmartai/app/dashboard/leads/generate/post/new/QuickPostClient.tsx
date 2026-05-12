@@ -217,6 +217,17 @@ const TRIGGER_IDS = new Set<Trigger>([
   "custom",
 ]);
 
+type MediaItem = {
+  id: string;
+  storagePath: string;
+  signedUrl: string | null;
+  fileName: string | null;
+  contentType: string | null;
+  sizeBytes: number | null;
+  label: string | null;
+  createdAt: string;
+};
+
 export default function QuickPostClient() {
   const searchParams = useSearchParams();
   const [trigger, setTrigger] = useState<Trigger | null>(null);
@@ -232,6 +243,15 @@ export default function QuickPostClient() {
   const [drafts, setDrafts] = useState<Partial<Record<Platform, DraftState>>>({});
   const [drafting, setDrafting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Image picker state — selected media item attaches to the post.
+  // One image per draft. Persists across platform-tab switches
+  // because the same image works for FB / IG / LI / X.
+  const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+  const [library, setLibrary] = useState<MediaItem[]>([]);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const currentDraft = drafts[platform] ?? null;
   const subject = useMemo(
@@ -362,6 +382,73 @@ export default function QuickPostClient() {
       shareUrl: currentDraft.shareUrl,
     });
   }, [currentDraft, platform]);
+
+  // Lazy-load the library the first time the agent opens the picker.
+  const ensureLibraryLoaded = useCallback(async () => {
+    if (libraryLoading) return;
+    setLibraryError(null);
+    setLibraryLoading(true);
+    try {
+      const res = await fetch("/api/leads-gen/media/list");
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        items?: MediaItem[];
+        error?: string;
+      };
+      if (!res.ok || !body.ok) throw new Error(body.error ?? "Failed to load");
+      setLibrary(body.items ?? []);
+    } catch (e) {
+      setLibraryError(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setLibraryLoading(false);
+    }
+  }, [libraryLoading]);
+
+  const uploadFile = useCallback(async (file: File) => {
+    setError(null);
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/leads-gen/media/upload", {
+        method: "POST",
+        body: form,
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        item?: MediaItem;
+        error?: string;
+      };
+      if (!res.ok || !body.ok || !body.item) {
+        throw new Error(body.error ?? "Upload failed");
+      }
+      // Prepend to the library list AND auto-select the upload so
+      // the agent doesn't need an extra click to attach it.
+      setLibrary((prev) => [body.item!, ...prev.filter((m) => m.id !== body.item!.id)]);
+      setSelectedMedia(body.item);
+      setShowLibrary(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }, []);
+
+  const downloadSelectedImage = useCallback(async () => {
+    if (!selectedMedia?.signedUrl) return;
+    try {
+      const res = await fetch(selectedMedia.signedUrl);
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = selectedMedia.fileName || "post-image";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch {
+      // Fallback: open the signed URL in a new tab and let the user save manually.
+      window.open(selectedMedia.signedUrl, "_blank", "noopener,noreferrer");
+    }
+  }, [selectedMedia]);
 
   return (
     <div className="space-y-6">
@@ -590,6 +677,36 @@ export default function QuickPostClient() {
                   </div>
                 )}
 
+                {/* Image picker. Single image per draft. The image
+                    attaches to all platform tabs since the same hero
+                    works for FB / IG / LI / X. Web compose URLs
+                    don't actually let us attach images directly
+                    (FB sharer reads OG tags from the URL it shares,
+                    not from upload — Phase 2 fixes this by posting
+                    via Meta's Graph API). For now the wizard
+                    surfaces a "Save image" button on the share row
+                    so the agent has the file ready when they paste
+                    the caption into the native app / web compose. */}
+                <ImagePicker
+                  selected={selectedMedia}
+                  showLibrary={showLibrary}
+                  library={library}
+                  libraryLoading={libraryLoading}
+                  libraryError={libraryError}
+                  uploading={uploading}
+                  onOpenLibrary={async () => {
+                    setShowLibrary(true);
+                    await ensureLibraryLoaded();
+                  }}
+                  onCloseLibrary={() => setShowLibrary(false)}
+                  onSelect={(m) => {
+                    setSelectedMedia(m);
+                    setShowLibrary(false);
+                  }}
+                  onClear={() => setSelectedMedia(null)}
+                  onUpload={uploadFile}
+                />
+
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
@@ -608,6 +725,16 @@ export default function QuickPostClient() {
                   >
                     Copy caption
                   </button>
+
+                  {selectedMedia && (
+                    <button
+                      type="button"
+                      onClick={downloadSelectedImage}
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Save image
+                    </button>
+                  )}
 
                   <span className="flex-1" />
 
@@ -743,6 +870,213 @@ function BriefInput({
       )}
     </div>
   );
+}
+
+/**
+ * Image picker for the wizard's draft step. Three modes via the
+ * `showLibrary` flag:
+ *   - No selection, library closed: a compact "Add an image" prompt
+ *     with two buttons (Upload / Library) and a Skip option.
+ *   - Library open: grid of thumbnails from the media library
+ *     (newest-first) + an Upload tile, agent picks one.
+ *   - Selection made: hero preview + Change / Remove buttons.
+ *
+ * Drag-and-drop on the compact prompt is wired so a phone-snap
+ * dragged from another tab uploads in one motion.
+ */
+function ImagePicker({
+  selected,
+  showLibrary,
+  library,
+  libraryLoading,
+  libraryError,
+  uploading,
+  onOpenLibrary,
+  onCloseLibrary,
+  onSelect,
+  onClear,
+  onUpload,
+}: {
+  selected: MediaItem | null;
+  showLibrary: boolean;
+  library: MediaItem[];
+  libraryLoading: boolean;
+  libraryError: string | null;
+  uploading: boolean;
+  onOpenLibrary: () => void;
+  onCloseLibrary: () => void;
+  onSelect: (m: MediaItem) => void;
+  onClear: () => void;
+  onUpload: (file: File) => void;
+}) {
+  const inputId = "lead-media-upload";
+
+  if (selected) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3">
+        <div className="flex items-start gap-3">
+          {selected.signedUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={selected.signedUrl}
+              alt={selected.label ?? selected.fileName ?? "Selected image"}
+              className="h-20 w-20 shrink-0 rounded-lg object-cover ring-1 ring-gray-200"
+            />
+          ) : (
+            <div className="h-20 w-20 shrink-0 rounded-lg bg-gray-200" />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-gray-900 truncate">
+              {selected.label ?? selected.fileName ?? "Image attached"}
+            </div>
+            <div className="text-xs text-gray-500">
+              {selected.contentType ?? "image"}
+              {selected.sizeBytes != null
+                ? ` · ${formatBytes(selected.sizeBytes)}`
+                : ""}
+            </div>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={onOpenLibrary}
+                className="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Change
+              </button>
+              <button
+                type="button"
+                onClick={onClear}
+                className="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showLibrary) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900">Your library</h3>
+          <button
+            type="button"
+            onClick={onCloseLibrary}
+            className="text-xs text-gray-500 hover:text-gray-900"
+          >
+            Close
+          </button>
+        </div>
+        {libraryError ? (
+          <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+            {libraryError}
+          </p>
+        ) : libraryLoading ? (
+          <p className="text-xs text-gray-500">Loading…</p>
+        ) : library.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-gray-300 p-4 text-center">
+            <p className="text-xs text-gray-500">
+              Your library is empty. Upload an image to get started.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {library.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => onSelect(m)}
+                className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-100 hover:border-blue-400"
+                title={m.label ?? m.fileName ?? "Library image"}
+              >
+                {m.signedUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={m.signedUrl}
+                    alt={m.label ?? m.fileName ?? "Library image"}
+                    className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+                  />
+                ) : null}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <label
+          htmlFor={inputId}
+          className="block cursor-pointer rounded-lg border-2 border-dashed border-gray-300 bg-gray-50/60 px-3 py-3 text-center text-xs text-gray-600 hover:border-blue-400 hover:bg-blue-50/30"
+        >
+          {uploading ? "Uploading…" : "Upload a new image (JPG / PNG / WEBP, ≤ 20 MB)"}
+          <input
+            id={inputId}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/heic,image/heif"
+            className="hidden"
+            disabled={uploading}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onUpload(f);
+              e.target.value = "";
+            }}
+          />
+        </label>
+      </div>
+    );
+  }
+
+  // Compact "Add an image" prompt.
+  return (
+    <div
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        const f = e.dataTransfer.files?.[0];
+        if (f) onUpload(f);
+      }}
+      className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50/60 px-3 py-2.5 text-xs"
+    >
+      <span className="text-gray-600">
+        <span className="font-medium text-gray-900">Add an image</span> —
+        attach a photo so you have it ready when sharing. Optional.
+      </span>
+      <div className="flex shrink-0 gap-2">
+        <label
+          htmlFor={inputId}
+          className="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+        >
+          {uploading ? "Uploading…" : "Upload"}
+          <input
+            id={inputId}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/heic,image/heif"
+            className="hidden"
+            disabled={uploading}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onUpload(f);
+              e.target.value = "";
+            }}
+          />
+        </label>
+        <button
+          type="button"
+          onClick={onOpenLibrary}
+          className="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Library
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function emptyStateMessage(trigger: Trigger): string {
