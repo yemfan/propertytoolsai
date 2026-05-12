@@ -28,12 +28,20 @@ export default async function GenerateLeadsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">Generate Leads</h1>
-        <p className="text-sm text-gray-500">
-          Draft social posts in seconds, then share to Facebook, Instagram,
-          LinkedIn, or X.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">Generate Leads</h1>
+          <p className="text-sm text-gray-500">
+            Draft social posts in seconds, then share to Facebook, Instagram,
+            LinkedIn, or X.
+          </p>
+        </div>
+        <Link
+          href="/dashboard/leads/generate/connect"
+          className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Connect platforms →
+        </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

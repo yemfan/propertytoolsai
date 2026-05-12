@@ -1,0 +1,156 @@
+import { NextResponse } from "next/server";
+
+import {
+  exchangeCodeForShortLivedUserToken,
+  exchangeForLongLivedUserToken,
+  fetchPagesForUser,
+  META_OAUTH_SCOPES,
+  verifyState,
+} from "@/lib/leads-gen/meta-oauth";
+import { encryptToken } from "@/lib/leads-gen/token-enc";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+
+export const runtime = "nodejs";
+// Token exchange + Page enumeration involves several sequential
+// Graph API calls; budget conservatively.
+export const maxDuration = 60;
+
+const STATE_MAX_AGE_MS = 10 * 60 * 1000; // mirrors the cookie max-age in /start
+
+/**
+ * GET /api/leads-gen/connect/meta/callback?code=<x>&state=<y>
+ *
+ * Handles Meta's OAuth redirect. Flow:
+ *   1. Verify state (HMAC signature + cookie match + freshness)
+ *   2. Exchange the code for a short-lived user token
+ *   3. Upgrade to a long-lived user token (~60 days)
+ *   4. List Pages the user manages, with Page tokens + linked IG
+ *   5. Upsert one social_accounts row per Page
+ *   6. Redirect the agent back to the connection page with a
+ *      success / error flash query param
+ *
+ * The handler always redirects on completion — even on error —
+ * because OAuth callbacks land in the browser tab and a JSON
+ * response would be a dead end. The connection page reads the
+ * flash param to render success / failure.
+ */
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  const userError = url.searchParams.get("error");
+  const errorReason = url.searchParams.get("error_reason");
+
+  const redirectBase = "/dashboard/leads/generate/connect";
+  function back(params: Record<string, string>): NextResponse {
+    const q = new URLSearchParams(params).toString();
+    return NextResponse.redirect(
+      new URL(`${redirectBase}?${q}`, req.url),
+      { status: 302 },
+    );
+  }
+
+  // 0. User-side rejection — Meta echoes back error params if the
+  //    agent denied the dialog. Friendlier to surface that as a
+  //    cancellation than a hard error.
+  if (userError) {
+    return back({
+      status: "cancelled",
+      reason: errorReason || userError,
+    });
+  }
+
+  if (!code || !state) {
+    return back({ status: "error", reason: "Missing code or state" });
+  }
+
+  // 1. Verify state — HMAC + cookie cross-check + freshness.
+  let agentId: string;
+  try {
+    const cookieState = req.headers.get("cookie")?.match(/meta_oauth_state=([^;]+)/)?.[1];
+    if (!cookieState || decodeURIComponent(cookieState) !== state) {
+      throw new Error("State cookie mismatch");
+    }
+    const payload = verifyState(state, STATE_MAX_AGE_MS);
+    agentId = payload.agentId;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "State verification failed";
+    console.warn("[meta/callback] state verification failed:", msg);
+    return back({ status: "error", reason: "Session expired. Please try again." });
+  }
+
+  try {
+    // 2. Short-lived user token.
+    const shortLived = await exchangeCodeForShortLivedUserToken(code);
+
+    // 3. Long-lived user token. If the exchange to long-lived fails
+    //    we still have a short-lived one we could use, but a 1-2h
+    //    token is too brittle for a CRM integration — surface as
+    //    an error rather than store something that'll expire mid-
+    //    afternoon.
+    const longLived = await exchangeForLongLivedUserToken(shortLived.accessToken);
+    const userTokenExpiresAt = longLived.expiresIn
+      ? new Date(Date.now() + longLived.expiresIn * 1000).toISOString()
+      : null;
+
+    // 4. Enumerate Pages + linked IG accounts.
+    const pages = await fetchPagesForUser(longLived.accessToken);
+    if (pages.length === 0) {
+      return back({
+        status: "error",
+        reason:
+          "No Facebook Pages found on this account. Create or get added to a Page, then try again.",
+      });
+    }
+
+    // 5. Upsert one row per Page. Re-connecting an existing Page
+    //    updates the existing row (fresh tokens, refreshed scopes,
+    //    last_refreshed_at stamped) — keeps `social_accounts_meta_unique`
+    //    honest.
+    const nowIso = new Date().toISOString();
+    const userTokenEnc = encryptToken(longLived.accessToken);
+    const rows = pages.map((p) => ({
+      agent_id: agentId,
+      platform: "meta",
+      account_display_name: p.pageName,
+      account_picture_url: p.picture,
+      fb_page_id: p.pageId,
+      fb_page_name: p.pageName,
+      ig_business_user_id: p.igBusinessUserId,
+      ig_business_username: p.igBusinessUsername,
+      page_access_token_enc: encryptToken(p.pageAccessToken),
+      user_access_token_enc: userTokenEnc,
+      user_token_expires_at: userTokenExpiresAt,
+      scopes: META_OAUTH_SCOPES as unknown as string[],
+      status: "connected",
+      last_error: null,
+      last_refreshed_at: nowIso,
+      updated_at: nowIso,
+    }));
+
+    const { error: upsertErr } = await supabaseAdmin
+      .from("social_accounts")
+      .upsert(rows as never, {
+        onConflict: "agent_id,platform,fb_page_id",
+      });
+    if (upsertErr) throw upsertErr;
+
+    // Clear the state cookie — single-use, even on success.
+    const res = back({
+      status: "success",
+      count: String(pages.length),
+    });
+    res.cookies.set("meta_oauth_state", "", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      maxAge: 0,
+      path: "/",
+    });
+    return res;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "OAuth callback failed";
+    console.error("[meta/callback]", e);
+    return back({ status: "error", reason: msg.slice(0, 200) });
+  }
+}
