@@ -49,14 +49,19 @@ export async function POST(req: Request) {
       );
     }
 
+    // Count option goes on `.delete()` directly in @supabase/supabase-js v2 —
+    // chaining `.select("id", { count: "exact" })` after .delete() trips a
+    // TS overload mismatch (Vercel build caught this; local tsc didn't
+    // because of a strictness gap). Putting `{ count: 'exact' }` on
+    // .delete() gets us the count without the extra .select().
     let query = supabaseAdmin
       .from("social_accounts")
-      .delete()
+      .delete({ count: "exact" })
       .eq("agent_id", auth.agentId)
       .eq("platform", "meta");
     if (id) query = query.eq("id", id);
 
-    const { error, count } = await query.select("id", { count: "exact" });
+    const { error, count } = await query;
     if (error) throw error;
 
     return NextResponse.json({ ok: true, removed: count ?? 0 });
