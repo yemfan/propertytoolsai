@@ -87,6 +87,23 @@ const PLATFORM_TABS: { id: Platform; label: string }[] = [
   { id: "x", label: "X" },
 ];
 
+/**
+ * Connection shape returned by GET /api/leads-gen/connections. Just
+ * enough metadata to render the platform-specific "Publish to X"
+ * button + a multi-Page picker when an agent manages multiple Pages.
+ */
+type Connection = {
+  id: string;
+  platform: "meta";
+  fbPageId: string | null;
+  fbPageName: string | null;
+  igBusinessUserId: string | null;
+  igBusinessUsername: string | null;
+  pictureUrl: string | null;
+  canPublishFacebook: boolean;
+  canPublishInstagram: boolean;
+};
+
 export default function QuickPostClient() {
   const [trigger, setTrigger] = useState<Trigger | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -99,12 +116,69 @@ export default function QuickPostClient() {
   const [drafts, setDrafts] = useState<Partial<Record<Platform, DraftState>>>({});
   const [drafting, setDrafting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Connections list — loaded once on mount and reused across
+  // platform tab switches.
+  const [connections, setConnections] = useState<Connection[]>([]);
+  // Selected connection per platform (when multiple FB/IG Pages
+  // exist). Keyed by platform so switching tabs keeps the agent's
+  // earlier choice. Defaults to the first connection that supports
+  // the active platform.
+  const [selectedConnectionId, setSelectedConnectionId] = useState<
+    Partial<Record<Platform, string>>
+  >({});
+  const [publishing, setPublishing] = useState(false);
+  const [publishResult, setPublishResult] = useState<
+    | { ok: true; postId: string; externalPostUrl: string | null; platform: Platform }
+    | { ok: false; error: string }
+    | null
+  >(null);
 
   const currentDraft = drafts[platform] ?? null;
   const subject = useMemo(
     () => subjects.find((s) => s.id === subjectId) ?? null,
     [subjects, subjectId],
   );
+
+  // Connections that can publish on the currently-selected platform.
+  // Phase 2A.2 supports Facebook + Instagram only — LinkedIn / X
+  // still fall back to compose-URL share.
+  const eligibleConnections = useMemo(() => {
+    if (platform === "facebook") {
+      return connections.filter((c) => c.canPublishFacebook);
+    }
+    if (platform === "instagram") {
+      return connections.filter((c) => c.canPublishInstagram);
+    }
+    return [];
+  }, [connections, platform]);
+  const activeConnectionId =
+    selectedConnectionId[platform] ?? eligibleConnections[0]?.id ?? null;
+  const activeConnection =
+    eligibleConnections.find((c) => c.id === activeConnectionId) ?? null;
+
+  // Fetch the agent's connections once on mount. Failure here is
+  // non-fatal — wizard falls back to compose-URL share when the
+  // list is empty (same path as a no-connection state).
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/leads-gen/connections")
+      .then(async (res) => {
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          connections?: Connection[];
+        };
+        if (cancelled) return;
+        if (body.ok && Array.isArray(body.connections)) {
+          setConnections(body.connections);
+        }
+      })
+      .catch(() => {
+        // Non-fatal — show compose-URL fallback instead.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Load subjects when the trigger changes.
   useEffect(() => {
@@ -197,6 +271,68 @@ export default function QuickPostClient() {
       shareUrl: currentDraft.shareUrl,
     });
   }, [currentDraft, platform]);
+
+  // Direct publish via Meta Graph API. Only available when:
+  //   - the platform is facebook or instagram, AND
+  //   - the agent has a connected Page that supports that platform
+  // For X / LinkedIn (and unconnected accounts) the compose-URL
+  // fallback below handles it.
+  const publish = useCallback(async () => {
+    if (!currentDraft || !activeConnection) return;
+    if (platform !== "facebook" && platform !== "instagram") return;
+    setPublishResult(null);
+    setPublishing(true);
+    try {
+      const res = await fetch("/api/leads-gen/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform,
+          connectionId: activeConnection.id,
+          caption: currentDraft.caption,
+          hashtags: currentDraft.hashtags,
+          // mediaItemId intentionally omitted — wired up by the
+          // Phase 1C media library PR (#393) once it lands here.
+          trigger: trigger ?? undefined,
+          subjectKind: subject?.kind ?? undefined,
+          subjectRefId: subject?.refId ?? undefined,
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        postId?: string;
+        externalPostUrl?: string | null;
+        error?: string;
+      };
+      if (!res.ok || !body.ok) {
+        setPublishResult({
+          ok: false,
+          error: body.error ?? "Publish failed",
+        });
+        return;
+      }
+      setPublishResult({
+        ok: true,
+        postId: body.postId ?? "",
+        externalPostUrl: body.externalPostUrl ?? null,
+        platform,
+      });
+    } catch (e) {
+      setPublishResult({
+        ok: false,
+        error: e instanceof Error ? e.message : "Publish failed",
+      });
+    } finally {
+      setPublishing(false);
+    }
+  }, [currentDraft, activeConnection, platform, trigger, subject]);
+
+  // Reset publish result when the agent switches platforms or
+  // re-generates the draft — stale "Published ✓" banner on a
+  // freshly-regenerated caption would be misleading.
+  useEffect(() => {
+    setPublishResult(null);
+  }, [platform, currentDraft?.caption]);
 
   return (
     <div className="space-y-6">
@@ -390,6 +526,34 @@ export default function QuickPostClient() {
                   </div>
                 )}
 
+                {/* Connection picker — only relevant when the agent
+                    manages multiple Pages that can post on this
+                    platform. Single connection auto-selects, no
+                    picker rendered. */}
+                {eligibleConnections.length > 1 && activeConnection && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <label className="text-gray-600">Post to:</label>
+                    <select
+                      value={activeConnection.id}
+                      onChange={(e) =>
+                        setSelectedConnectionId((prev) => ({
+                          ...prev,
+                          [platform]: e.target.value,
+                        }))
+                      }
+                      className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs"
+                    >
+                      {eligibleConnections.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {platform === "instagram" && c.igBusinessUsername
+                            ? `@${c.igBusinessUsername}`
+                            : c.fbPageName ?? "Connected Page"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
@@ -411,7 +575,30 @@ export default function QuickPostClient() {
 
                   <span className="flex-1" />
 
-                  {compose && compose.composeUrl ? (
+                  {/* Three mutually-exclusive paths for the primary
+                      action button:
+                        1. Eligible connection exists → direct publish
+                        2. Compose URL available    → "Share to X" tab
+                        3. Neither                  → hint + Copy
+                  */}
+                  {activeConnection &&
+                  (platform === "facebook" || platform === "instagram") ? (
+                    <button
+                      type="button"
+                      onClick={publish}
+                      disabled={publishing || !currentDraft?.caption.trim()}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                      title={
+                        platform === "instagram" && !activeConnection.canPublishInstagram
+                          ? "This Page has no linked Instagram Business account."
+                          : undefined
+                      }
+                    >
+                      {publishing
+                        ? "Publishing…"
+                        : `Publish to ${PLATFORM_TABS.find((p) => p.id === platform)?.label}`}
+                    </button>
+                  ) : compose && compose.composeUrl ? (
                     <a
                       href={compose.composeUrl}
                       target="_blank"
@@ -436,13 +623,60 @@ export default function QuickPostClient() {
                   ) : (
                     <span className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs text-gray-600">
                       {platform === "instagram"
-                        ? "Instagram has no web compose — copy the caption above, save the image, and post from the IG app."
+                        ? "Instagram has no web compose — copy the caption, save the image, and post from the IG app. Or connect a Page to publish directly."
                         : "Direct share unavailable on this platform"}
                     </span>
                   )}
                 </div>
 
-                {compose && !compose.prefillsBody && compose.composeUrl && (
+                {/* Result banner for direct publishes. */}
+                {publishResult?.ok ? (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-900">
+                    <p className="font-semibold">
+                      Published to{" "}
+                      {PLATFORM_TABS.find((p) => p.id === publishResult.platform)?.label} ✓
+                    </p>
+                    {publishResult.externalPostUrl && (
+                      <p className="mt-0.5">
+                        <a
+                          href={publishResult.externalPostUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:text-emerald-700"
+                        >
+                          View the post →
+                        </a>
+                      </p>
+                    )}
+                  </div>
+                ) : publishResult && !publishResult.ok ? (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-900">
+                    <p className="font-semibold">Publish failed</p>
+                    <p className="mt-0.5">{publishResult.error}</p>
+                  </div>
+                ) : null}
+
+                {/* When no connections exist for this platform, nudge
+                    the agent toward the Connect page. We only show
+                    this for FB/IG since X/LinkedIn aren't in scope
+                    for direct publish yet. */}
+                {!activeConnection &&
+                  (platform === "facebook" || platform === "instagram") && (
+                    <p className="text-xs text-gray-500">
+                      Want one-click publish?{" "}
+                      <a
+                        href="/dashboard/leads/generate/connect"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-blue-600 hover:underline"
+                      >
+                        Connect a Facebook Page
+                      </a>{" "}
+                      and we&apos;ll publish directly.
+                    </p>
+                  )}
+
+                {compose && !compose.prefillsBody && compose.composeUrl && !activeConnection && (
                   <p className="text-xs text-amber-700">
                     {platform === "linkedin"
                       ? "LinkedIn's share dialog only honors the link — the body won't pre-fill. Tap Copy caption first, then paste into the LinkedIn compose."
@@ -455,12 +689,19 @@ export default function QuickPostClient() {
         </Section>
       )}
 
-      {/* Footer hint — explains the next phase so the agent knows what's coming */}
+      {/* Footer hint — explains what each path does so the agent
+          knows when to expect the compose dialog vs a direct publish. */}
       {subjectId && (
         <p className="text-xs text-gray-400">
-          Phase 1: opens the platform&apos;s compose dialog with your caption.
-          Phase 2 (in ~4 weeks) will post directly after one-time
-          authorization — no extra click required.
+          Connected Pages publish directly via Meta. Unconnected platforms
+          open the platform&apos;s compose dialog with your caption
+          pre-filled.{" "}
+          <a
+            href="/dashboard/leads/generate/connect"
+            className="font-medium text-gray-500 hover:text-gray-700"
+          >
+            Connect platforms →
+          </a>
         </p>
       )}
     </div>
