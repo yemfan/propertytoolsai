@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { getWeeklySuggestions, type Suggestion } from "@/lib/leads-gen/suggestions";
 
 export const metadata: Metadata = {
   title: "Generate Leads | LeadSmart AI",
@@ -11,20 +12,29 @@ export const metadata: Metadata = {
 };
 
 /**
- * Landing for the Generate Leads feature. Two big cards:
- *   - Quick Post: AI-drafted social post → one-click share (Phase 1A)
- *   - Run Ads: campaign wizard for Meta + Google ads (Phase 2)
+ * Landing for the Generate Leads feature. Three sections stacked:
  *
- * Phase 1A ships only Quick Post; the Run Ads card renders disabled
- * with a "Coming soon" affordance so agents see the roadmap without
- * a dead button. When Phase 2 ships we just flip the disabled flag.
+ *   1. Two big cards (Quick Post / Run Ads — the latter Coming Soon)
+ *   2. "Suggested this week" — up to 3 deep-link cards built from
+ *      the agent's CRM (newest listing, upcoming open house, recent
+ *      close). Each card pre-fills the wizard via query params.
+ *   3. Phase roadmap footer.
+ *
+ * Plan-gating happens server-side in the API routes; this page is
+ * accessible to any signed-in agent because we want free-plan users
+ * to see what they'd get if they upgraded.
  */
 export default async function GenerateLeadsPage() {
-  // Ensure the user is signed in / has an agent row — same auth shape
-  // as the rest of the dashboard. The card-level gating (Pro vs free)
-  // happens in the API route, but we surface a friendly heads-up here
-  // when applicable.
-  await getCurrentAgentContext();
+  const { agentId } = await getCurrentAgentContext();
+
+  // Suggestions are best-effort — a query failure shouldn't blank
+  // the whole page. Empty array == no suggestion strip rendered.
+  let suggestions: Suggestion[] = [];
+  try {
+    suggestions = await getWeeklySuggestions(String(agentId));
+  } catch (e) {
+    console.warn("[leads/generate] getWeeklySuggestions failed:", e);
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
@@ -119,10 +129,66 @@ export default async function GenerateLeadsPage() {
         </div>
       </div>
 
+      {suggestions.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold text-gray-900">
+            Suggested this week
+          </h2>
+          <p className="mb-3 text-xs text-gray-500">
+            Click a card to open the wizard pre-filled with this subject.
+          </p>
+          <div className="space-y-2">
+            {suggestions.map((s) => (
+              <Link
+                key={s.key}
+                href={`/dashboard/leads/generate/post/new?trigger=${s.trigger}&subjectId=${encodeURIComponent(s.subjectId)}`}
+                className="group flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition hover:border-blue-300 hover:shadow-md"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <SuggestionBadge badge={s.badge} />
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-gray-900">
+                      {s.title}
+                    </div>
+                    {s.subtitle && (
+                      <div className="truncate text-xs text-gray-500">
+                        {s.subtitle}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <span className="shrink-0 text-sm font-medium text-blue-600 group-hover:translate-x-0.5">
+                  Draft post →
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       <p className="mt-6 text-xs text-gray-400">
         Phase 1: Quick Post (today). Phase 2 (in ~4 weeks): direct Meta posting
         + Meta Lead Ads. Phase 3: Google Ads + cross-platform optimizer.
       </p>
     </div>
+  );
+}
+
+function SuggestionBadge({ badge }: { badge: Suggestion["badge"] }) {
+  const map: Record<
+    Suggestion["badge"],
+    { label: string; bg: string; fg: string }
+  > = {
+    new: { label: "New", bg: "bg-blue-100", fg: "text-blue-700" },
+    this_week: { label: "This week", bg: "bg-emerald-100", fg: "text-emerald-700" },
+    celebrate: { label: "Just closed", bg: "bg-amber-100", fg: "text-amber-800" },
+  };
+  const { label, bg, fg } = map[badge];
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${bg} ${fg}`}
+    >
+      {label}
+    </span>
   );
 }
