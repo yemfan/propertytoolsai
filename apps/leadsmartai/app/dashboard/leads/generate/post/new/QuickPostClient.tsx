@@ -629,32 +629,50 @@ export default function QuickPostClient() {
                   )}
                 </div>
 
-                {/* Result banner for direct publishes. */}
-                {publishResult?.ok ? (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-900">
-                    <p className="font-semibold">
-                      Published to{" "}
-                      {PLATFORM_TABS.find((p) => p.id === publishResult.platform)?.label} ✓
-                    </p>
-                    {publishResult.externalPostUrl && (
-                      <p className="mt-0.5">
-                        <a
-                          href={publishResult.externalPostUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline hover:text-emerald-700"
-                        >
-                          View the post →
-                        </a>
-                      </p>
-                    )}
-                  </div>
-                ) : publishResult && !publishResult.ok ? (
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-900">
-                    <p className="font-semibold">Publish failed</p>
-                    <p className="mt-0.5">{publishResult.error}</p>
-                  </div>
-                ) : null}
+                {/* Result banner for direct publishes. IIFE wraps
+                    the narrowing in early-return form so TS's flow
+                    analysis goes through correctly — the nested
+                    ternary version was tripping Vercel's stricter
+                    build (TS narrows reliably through `if` returns
+                    but not always through `cond ? a : b`). */}
+                {(() => {
+                  // Capture to a local const so TS can narrow.
+                  // `publishResult` is a closure-captured useState
+                  // value and TS doesn't narrow those reliably
+                  // through nested conditionals — the local const
+                  // is treated as immutable inside the IIFE so
+                  // narrowing works.
+                  const result = publishResult;
+                  if (!result) return null;
+                  if (result.ok === true) {
+                    return (
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-900">
+                        <p className="font-semibold">
+                          Published to{" "}
+                          {PLATFORM_TABS.find((p) => p.id === result.platform)?.label} ✓
+                        </p>
+                        {result.externalPostUrl && (
+                          <p className="mt-0.5">
+                            <a
+                              href={result.externalPostUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline hover:text-emerald-700"
+                            >
+                              View the post →
+                            </a>
+                          </p>
+                        )}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-900">
+                      <p className="font-semibold">Publish failed</p>
+                      <p className="mt-0.5">{result.error}</p>
+                    </div>
+                  );
+                })()}
 
                 {/* When no connections exist for this platform, nudge
                     the agent toward the Connect page. We only show
