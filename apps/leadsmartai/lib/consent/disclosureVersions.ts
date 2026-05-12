@@ -59,10 +59,34 @@ export const OPEN_HOUSE_SIGNIN_DISCLOSURE_VERSION = "v1.0_2026-04-27";
 export const IDX_LEAD_CAPTURE_DISCLOSURE_VERSION = "v1.0_2026-04-27";
 
 /**
+ * /open-house-signup public registration page (QR-code-driven from
+ * the property flyer at the open house).
+ *
+ * v1.0 — initial — shipped 2026-05-11 to support TCR A2P 10DLC
+ * campaign re-submission. Disclosure text:
+ *   "Yes, send me text messages from LeadSmart AI. By checking this
+ *    box and providing my phone number above, I consent to receive
+ *    text messages from LeadSmart AI for customer care and marketing
+ *    related to real-estate services, account updates, and product
+ *    information.
+ *    Message frequency varies. Message and data rates may apply.
+ *    Reply STOP to opt out at any time, or HELP for help. Consent is
+ *    not a condition of any purchase. See our Privacy Policy and
+ *    Terms of Service for details."
+ *
+ * Identical wording to /contact (v1.0_2026-04-27) by design — the
+ * TCR campaign description references the same four-element
+ * disclosure across all three opt-in surfaces. Bump the version
+ * (and snapshot prior text in this comment) on any material change.
+ */
+export const OPEN_HOUSE_SIGNUP_DISCLOSURE_VERSION = "v1.0_2026-05-11";
+
+/**
  * Stable source identifiers for the audit table. Keep them
  * machine-friendly (no spaces, no localized variations) so they group
  * cleanly when querying the table by source.
  */
 export const CONSENT_SOURCE_CONTACT_FORM = "/contact";
 export const CONSENT_SOURCE_OPEN_HOUSE_SIGNIN = "open_house_signin";
+export const CONSENT_SOURCE_OPEN_HOUSE_SIGNUP = "open_house_signup";
 export const CONSENT_SOURCE_IDX_LEAD_CAPTURE = "idx_lead_capture";

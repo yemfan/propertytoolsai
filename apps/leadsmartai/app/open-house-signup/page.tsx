@@ -6,6 +6,19 @@ import { useSignupProfilePrefill, type SignupPrefillConsumer } from "@/lib/hooks
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Default property used when the page is visited without a
+ * `property_id` query param. The real flow is: agent prints a flyer
+ * with a QR code that resolves to `/open-house-signup?property_id=...`,
+ * visitor scans it at the open house, signs up.
+ *
+ * The default exists so TCR (Twilio Campaign Registry) and other CTA
+ * verifiers landing on the bare URL still see a working opt-in
+ * surface — the page didn't render usefully before, which caused the
+ * A2P 10DLC campaign rejection we're addressing here.
+ */
+const DEFAULT_PROPERTY_ADDRESS = "123 Main St, Los Angeles, CA 90001";
+
 export default function OpenHouseSignupPage() {
   return (
     <Suspense fallback={null}>
@@ -18,6 +31,10 @@ function OpenHouseSignupPageInner() {
   const searchParams = useSearchParams();
   const propertyId = searchParams?.get("property_id") ?? "";
   const agentId = searchParams?.get("agent_id") ?? "";
+  // True when no real property_id was passed — the page shows a demo
+  // surface using the default address. Submissions still record consent
+  // + create a lead, but the report-generation step is skipped server-side.
+  const isDemo = !propertyId;
 
   const { values: prefill, loading: prefillLoading } = useSignupProfilePrefill("consumer");
   const pv = prefill as SignupPrefillConsumer;
@@ -29,6 +46,7 @@ function OpenHouseSignupPageInner() {
   const [wantMoreInfo, setWantMoreInfo] = useState(false);
   const [wantSimilar, setWantSimilar] = useState(false);
   const [wantValuation, setWantValuation] = useState(false);
+  const [smsConsent, setSmsConsent] = useState(false);
 
   useEffect(() => {
     if (prefillLoading) return;
@@ -49,20 +67,12 @@ function OpenHouseSignupPageInner() {
     }
   }, [message]);
 
-  const title = useMemo(() => {
-    return propertyId
-      ? "Sign up for Open House Updates"
-      : "Sign up for Open House Updates";
-  }, [propertyId]);
+  const title = useMemo(() => "Sign up for Open House Updates", []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage(null);
 
-    if (!propertyId) {
-      setMessage({ type: "error", text: "Missing property_id in the signup link." });
-      return;
-    }
     if (!name.trim()) {
       setMessage({ type: "error", text: "Name is required." });
       return;
@@ -79,6 +89,13 @@ function OpenHouseSignupPageInner() {
       setMessage({ type: "error", text: "Phone is required." });
       return;
     }
+    if (smsConsent && !phone.trim()) {
+      // Defensive — covered above, but keep the explicit check so the
+      // server-side audit row never lands with smsConsent=true and a
+      // null phone.
+      setMessage({ type: "error", text: "Please provide a phone number to receive SMS." });
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -90,8 +107,11 @@ function OpenHouseSignupPageInner() {
           email,
           phone,
           notes: notes.trim() ? notes : undefined,
-          property_id: propertyId,
+          // Pass property_id only when present. Server uses default
+          // address when omitted (demo / verifier path).
+          property_id: propertyId || undefined,
           agent_id: agentId || undefined,
+          smsConsent,
           preferences: {
             want_more_info: wantMoreInfo,
             want_similar_properties: wantSimilar,
@@ -121,6 +141,7 @@ function OpenHouseSignupPageInner() {
       setEmail("");
       setPhone("");
       setNotes("");
+      setSmsConsent(false);
     } catch (err) {
       console.error("Open house signup failed", err);
       setMessage({
@@ -141,6 +162,16 @@ function OpenHouseSignupPageInner() {
             <p className="text-sm text-slate-600">
               Leave your info and we will follow up with open house updates.
             </p>
+            <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-700">
+              <span className="font-semibold text-slate-900">Property:</span>{" "}
+              {isDemo ? DEFAULT_PROPERTY_ADDRESS : "Loading property…"}
+              {isDemo && (
+                <span className="ml-1 text-slate-500">
+                  (default demo property — scan a property QR code for
+                  property-specific signup)
+                </span>
+              )}
+            </div>
           </div>
 
           <form noValidate onSubmit={onSubmit} className="mt-6 space-y-4">
@@ -212,7 +243,54 @@ function OpenHouseSignupPageInner() {
               </label>
             </div>
 
-            <input type="hidden" name="property_id" value={propertyId} />
+            {/* SMS opt-in — Twilio TFV / A2P proof-of-consent surface.
+                Identical four-element disclosure to /contact (same
+                disclosure-version pin in lib/consent/disclosureVersions
+                ensures the audit row carries the same wording string).
+                Do not edit without bumping the version. */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+              <label htmlFor="oh-sms-consent" className="flex cursor-pointer items-start gap-3">
+                <input
+                  id="oh-sms-consent"
+                  type="checkbox"
+                  checked={smsConsent}
+                  onChange={(e) => setSmsConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-slate-700">
+                  <span className="font-semibold text-slate-900">
+                    Yes, send me text messages from LeadSmart AI.
+                  </span>{" "}
+                  By checking this box and providing my phone number above, I consent to
+                  receive text messages from <strong>LeadSmart AI</strong> for{" "}
+                  <strong>customer care and marketing</strong> related to real-estate
+                  services, account updates, and product information.
+                </span>
+              </label>
+              <p className="mt-3 pl-7 text-xs leading-relaxed text-slate-500">
+                Message frequency varies. Message and data rates may apply. Reply{" "}
+                <strong>STOP</strong> to opt out at any time, or <strong>HELP</strong> for
+                help. Consent is not a condition of any purchase. See our{" "}
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-blue-600 hover:underline"
+                >
+                  Privacy Policy
+                </a>{" "}
+                and{" "}
+                <a
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-blue-600 hover:underline"
+                >
+                  Terms of Service
+                </a>{" "}
+                for details.
+              </p>
+            </div>
 
             <button
               disabled={submitting}
@@ -243,4 +321,3 @@ function OpenHouseSignupPageInner() {
     </div>
   );
 }
-
