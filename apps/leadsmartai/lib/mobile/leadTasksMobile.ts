@@ -29,7 +29,12 @@ function mapRow(
     status: (String(row.status ?? "open") as MobileTaskStatus) || "open",
     priority: normalizePriority(row.priority as string),
     task_type: row.task_type != null ? String(row.task_type) : null,
-    created_by: row.created_by != null ? String(row.created_by) : null,
+    // `created_by` was once a per-task origin tag, but the schema
+    // never landed the column (the `source` column on crm_tasks now
+    // fills that role). Keep the DTO field as a forward-compat
+    // null so consumers don't break; remove from select / insert
+    // because querying it errors with `column does not exist`.
+    created_by: null,
     created_at: String(row.created_at ?? ""),
     updated_at: String(row.updated_at ?? ""),
     completed_at: row.completed_at != null ? String(row.completed_at) : null,
@@ -86,7 +91,7 @@ export async function listMobileTasksGrouped(agentId: string): Promise<MobileTas
   const { data: tasks, error: tErr } = await supabaseAdmin
     .from("crm_tasks")
     .select(
-      "id,contact_id,title,description,due_at,status,priority,task_type,created_by,created_at,updated_at,completed_at"
+      "id,contact_id,title,description,due_at,status,priority,task_type,created_at,updated_at,completed_at"
     )
     .in("contact_id", leadIds as never)
     .eq("status", "open")
@@ -147,14 +152,20 @@ export async function createMobileLeadTask(params: {
     status: "open",
     priority: params.priority ?? "medium",
     task_type: params.taskType?.trim() || null,
-    created_by: "mobile",
+    // `source` is the canonical origin column (manual / briefing /
+    // ai_followup / agent / system). Mobile-created tasks are
+    // agent-authored, so they're "manual" — same as web-wizard ones.
+    // Was previously `created_by: "mobile"` referencing a column
+    // that doesn't exist in prod; the insert was silently failing
+    // before this fix because crm_tasks.created_by isn't there.
+    source: "manual",
   };
 
   const { data, error } = await supabaseAdmin
     .from("crm_tasks")
     .insert(row as never)
     .select(
-      "id,contact_id,title,description,due_at,status,priority,task_type,created_by,created_at,updated_at,completed_at"
+      "id,contact_id,title,description,due_at,status,priority,task_type,created_at,updated_at,completed_at"
     )
     .single();
 
@@ -221,7 +232,7 @@ export async function patchMobileLeadTask(params: {
     .update(patch as never)
     .eq("id", params.taskId)
     .select(
-      "id,contact_id,title,description,due_at,status,priority,task_type,created_by,created_at,updated_at,completed_at"
+      "id,contact_id,title,description,due_at,status,priority,task_type,created_at,updated_at,completed_at"
     )
     .single();
 
@@ -247,7 +258,7 @@ export async function fetchNextOpenTaskForLead(
   const { data, error } = await supabaseAdmin
     .from("crm_tasks")
     .select(
-      "id,contact_id,title,description,due_at,status,priority,task_type,created_by,created_at,updated_at,completed_at"
+      "id,contact_id,title,description,due_at,status,priority,task_type,created_at,updated_at,completed_at"
     )
     .eq("contact_id", leadId as never)
     .eq("status", "open")
