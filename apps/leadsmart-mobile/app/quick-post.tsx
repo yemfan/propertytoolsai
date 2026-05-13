@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -13,9 +14,12 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import {
+  fetchMobileConnections,
   fetchMobileQuickPostDraft,
+  publishMobileQuickPost,
+  type MobileConnection,
   type MobileQuickPostPlatform,
   type MobileQuickPostTrigger,
 } from "../lib/leadsmartMobileApi";
@@ -28,24 +32,27 @@ import { useThemeTokens } from "../lib/useThemeTokens";
 import type { ThemeTokens } from "../lib/theme";
 
 /**
- * Mobile Quick Post — Phase 1 (draft only).
+ * Mobile Quick Post — Phase 2 (direct publish + draft).
  *
  * The agent picks a trigger ("New listing", "Open house", …),
- * picks a target platform, types a short brief (or pastes
- * listing details), and taps Generate. Claude returns a
- * platform-aware caption + hashtags that the agent can copy or
- * share into the native FB / IG / LinkedIn / X app.
+ * picks a target platform, types a short brief, and taps
+ * Generate. Claude returns a platform-aware caption + hashtags
+ * that the agent can publish directly (when a Meta Page is
+ * connected) or Share/Copy into the native app (LinkedIn / X, or
+ * any platform without a connection).
  *
- * Why draft-only on mobile (for now):
- *   - Direct publish via Meta Graph API needs a per-agent OAuth
- *     grant. On web this lives at /api/leads-gen/connect/meta;
- *     porting the OAuth deep-link round-trip to the mobile app
- *     is its own ship. Until then, copy + share into the platform
- *     app is the right path — and faster than typing on a phone
- *     keyboard from scratch.
- *   - Free agents see a 402 from the draft API and can upgrade
- *     in the web app. Mobile doesn't block at the UI level so
- *     the upsell path is the inline error.
+ * Direct publish path:
+ *   - Hits /api/mobile/leads-gen/publish via shared `publishPost`
+ *     helper. Same surface area as the web wizard's Publish
+ *     button — supports FB Page feed (text-only or text+image)
+ *     and IG Business (requires image).
+ *   - On mobile, no media picker yet → IG falls back to
+ *     Share/Copy; FB allows text-only direct publish.
+ *
+ * Connection management: a "Connect Facebook" link routes to the
+ * connect-platforms screen which runs the OAuth deep-link round
+ * trip. Once connected, the publish button replaces the
+ * Share/Copy CTA inline.
  */
 
 type TriggerOption = {
@@ -78,6 +85,7 @@ const PLATFORMS: PlatformOption[] = [
 
 export default function QuickPostScreen() {
   const tokens = useThemeTokens();
+  const router = useRouter();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
   const [trigger, setTrigger] = useState<MobileQuickPostTrigger>("new_listing");
@@ -88,6 +96,41 @@ export default function QuickPostScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generated, setGenerated] = useState(false);
+
+  // Connection state — fetched once on mount. When a Meta Page is
+  // connected, the action row shows "Publish to Facebook" (and
+  // "Publish to Instagram" if the Page has an IG Business linked).
+  // Empty list → fall back to Share/Copy.
+  const [connections, setConnections] = useState<MobileConnection[]>([]);
+  const [publishing, setPublishing] = useState(false);
+  const [publishResult, setPublishResult] = useState<
+    | { ok: true; externalPostUrl: string | null; platform: "facebook" | "instagram" }
+    | { ok: false; error: string }
+    | null
+  >(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchMobileConnections().then((res) => {
+      if (cancelled) return;
+      if (res.ok === true) setConnections(res.connections);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Which platforms the agent can publish directly to right now.
+  // Mobile Phase 2 only supports text-only Facebook posts (no media
+  // picker yet); Instagram requires an image so it falls back to
+  // Share/Copy even when connected.
+  const fbConnection = useMemo(
+    () =>
+      connections.find((c) => c.platform === "meta" && c.canPublishFacebook) ??
+      null,
+    [connections],
+  );
+  const canDirectPublish = platform === "facebook" && fbConnection !== null;
 
   const onGenerate = useCallback(async () => {
     const trimmed = brief.trim();
@@ -143,6 +186,33 @@ export default function QuickPostScreen() {
       Alert.alert("Share failed", "Couldn't open the share sheet.");
     }
   }, [caption, hashtags, platform]);
+
+  const onPublish = useCallback(async () => {
+    if (!caption || !fbConnection) return;
+    if (platform !== "facebook") return;
+    hapticButtonPress();
+    setPublishing(true);
+    setPublishResult(null);
+    const res = await publishMobileQuickPost({
+      platform: "facebook",
+      connectionId: fbConnection.id,
+      caption,
+      hashtags,
+      trigger,
+    });
+    setPublishing(false);
+    if (res.ok === false) {
+      hapticError();
+      setPublishResult({ ok: false, error: res.message });
+      return;
+    }
+    hapticSuccess();
+    setPublishResult({
+      ok: true,
+      externalPostUrl: res.externalPostUrl,
+      platform: res.platform,
+    });
+  }, [caption, hashtags, platform, fbConnection, trigger]);
 
   return (
     <KeyboardAvoidingView
@@ -290,6 +360,28 @@ export default function QuickPostScreen() {
               </View>
             )}
             <View style={styles.actionRow}>
+              {canDirectPublish && (
+                <Pressable
+                  onPress={onPublish}
+                  disabled={publishing}
+                  style={[
+                    styles.actionButton,
+                    styles.publishButton,
+                    publishing && styles.actionButtonBusy,
+                  ]}
+                >
+                  {publishing ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="send" size={16} color="#fff" />
+                      <Text style={styles.publishButtonText}>
+                        Publish to Facebook
+                      </Text>
+                    </>
+                  )}
+                </Pressable>
+              )}
               <Pressable onPress={onShare} style={styles.actionButton}>
                 <Ionicons
                   name="share-outline"
@@ -299,10 +391,85 @@ export default function QuickPostScreen() {
                 <Text style={styles.actionButtonText}>Share / Copy</Text>
               </Pressable>
             </View>
+
+            {/* Publish result banner — success links to the live post,
+                failure shows the error inline (reconnect flow lives on
+                the connect-platforms screen). */}
+            {publishResult?.ok === true ? (
+              <View style={styles.successBanner}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={18}
+                  color={tokens.success}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.successBannerTitle}>
+                    Published to{" "}
+                    {publishResult.platform === "facebook"
+                      ? "Facebook"
+                      : "Instagram"}{" "}
+                    ✓
+                  </Text>
+                  {publishResult.externalPostUrl && (
+                    <Pressable
+                      onPress={() =>
+                        publishResult.externalPostUrl &&
+                        Linking.openURL(publishResult.externalPostUrl)
+                      }
+                    >
+                      <Text style={styles.successBannerLink}>
+                        View the post →
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            ) : publishResult?.ok === false ? (
+              <View style={styles.errorBox}>
+                <Ionicons
+                  name="alert-circle"
+                  size={16}
+                  color={tokens.danger}
+                />
+                <Text style={styles.errorText}>{publishResult.error}</Text>
+              </View>
+            ) : null}
+
             <Text style={styles.helperText}>
-              Direct publish from the mobile app is coming soon. For now,
-              share into the {labelFor(platform)} app or use Copy from the
-              share sheet.
+              {platform === "facebook" && !canDirectPublish ? (
+                <>
+                  Want one-tap publish?{" "}
+                  <Text
+                    style={styles.linkText}
+                    onPress={() => router.push("/connect-platforms" as never)}
+                  >
+                    Connect your Facebook Page
+                  </Text>
+                  .
+                </>
+              ) : platform === "instagram" ? (
+                <>
+                  Instagram requires an image — use Share / Copy and post from
+                  the IG app for now. Image upload on mobile is coming soon.
+                </>
+              ) : platform === "facebook" ? (
+                <>
+                  Posts go straight to your connected Facebook Page. Manage
+                  connections from{" "}
+                  <Text
+                    style={styles.linkText}
+                    onPress={() => router.push("/connect-platforms" as never)}
+                  >
+                    Connect Platforms
+                  </Text>
+                  .
+                </>
+              ) : (
+                <>
+                  Share / Copy into the {labelFor(platform)} app. Direct
+                  publish for {labelFor(platform)} is coming soon.
+                </>
+              )}
             </Text>
           </View>
         )}
@@ -505,10 +672,47 @@ function createStyles(tokens: ThemeTokens) {
       borderRadius: 10,
       backgroundColor: tokens.accentLight,
     },
+    actionButtonBusy: { opacity: 0.7 },
+    publishButton: {
+      backgroundColor: "#1877F2", // Facebook blue
+    },
+    publishButtonText: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: "#fff",
+    },
     actionButtonText: {
       fontSize: 13,
       fontWeight: "700",
       color: tokens.accent,
+    },
+    successBanner: {
+      marginTop: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      padding: 12,
+      borderRadius: 10,
+      backgroundColor: tokens.successBg,
+      borderWidth: 1,
+      borderColor: tokens.successBorder,
+    },
+    successBannerTitle: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: tokens.successText,
+    },
+    successBannerLink: {
+      marginTop: 2,
+      fontSize: 12,
+      fontWeight: "600",
+      color: tokens.successText,
+      textDecorationLine: "underline",
+    },
+    linkText: {
+      fontWeight: "700",
+      color: tokens.accent,
+      textDecorationLine: "underline",
     },
     helperText: {
       marginTop: 10,
