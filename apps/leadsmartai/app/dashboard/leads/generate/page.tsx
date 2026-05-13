@@ -46,12 +46,20 @@ export default async function GenerateLeadsPage() {
             LinkedIn, or X.
           </p>
         </div>
-        <Link
-          href="/dashboard/leads/generate/connect"
-          className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Connect platforms →
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/dashboard/leads/generate/scheduled"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Scheduled →
+          </Link>
+          <Link
+            href="/dashboard/leads/generate/connect"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Connect platforms →
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

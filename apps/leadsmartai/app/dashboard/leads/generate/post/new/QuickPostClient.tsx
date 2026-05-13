@@ -285,6 +285,29 @@ export default function QuickPostClient() {
     | null
   >(null);
 
+  // Phase 2C — Schedule-for-later: an alternate path to /publish that
+  // queues the post for the cron to publish at the agent's chosen
+  // datetime. Toggled per-platform tab so an agent could (in theory)
+  // publish to FB now AND schedule the same caption to IG for the
+  // morning. In practice they'll use one path at a time.
+  const [scheduleMode, setScheduleMode] = useState(false);
+  const [scheduledFor, setScheduledFor] = useState(() => {
+    // Default = tomorrow at 9am local — sensible for "share this
+    // listing tomorrow morning" use case. Agent overrides anytime.
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+    // datetime-local input wants `YYYY-MM-DDTHH:mm` with no Z.
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduleResult, setScheduleResult] = useState<
+    | { ok: true; scheduledPostId: string; scheduledFor: string; platform: Platform }
+    | { ok: false; error: string }
+    | null
+  >(null);
+
   const currentDraft = drafts[platform] ?? null;
   const subject = useMemo(
     () => subjects.find((s) => s.id === subjectId) ?? null,
@@ -515,7 +538,77 @@ export default function QuickPostClient() {
   // freshly-regenerated caption would be misleading.
   useEffect(() => {
     setPublishResult(null);
+    setScheduleResult(null);
   }, [platform, currentDraft?.caption]);
+
+  // Schedule for later — POSTs to /api/leads-gen/schedule instead of
+  // /publish. The cron at /api/cron/publish-scheduled picks it up at
+  // fire time and runs through the same publish helper. We don't
+  // validate token freshness here — the cron does that just-in-time
+  // since tokens can expire/rotate between schedule and fire.
+  const schedule = useCallback(async () => {
+    if (!currentDraft || !activeConnection) return;
+    if (platform !== "facebook" && platform !== "instagram") return;
+    setScheduleResult(null);
+    setScheduling(true);
+    try {
+      // Convert datetime-local (no timezone) to ISO with the
+      // browser's local offset, then to ISO UTC for the API.
+      const localMs = new Date(scheduledFor).getTime();
+      if (!Number.isFinite(localMs)) {
+        throw new Error("Invalid date/time");
+      }
+      const scheduledForIso = new Date(localMs).toISOString();
+      const res = await fetch("/api/leads-gen/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform,
+          connectionId: activeConnection.id,
+          caption: currentDraft.caption,
+          hashtags: currentDraft.hashtags,
+          mediaItemId: selectedMedia?.id ?? undefined,
+          scheduledFor: scheduledForIso,
+          trigger: trigger ?? undefined,
+          subjectKind: subject?.kind ?? undefined,
+          subjectRefId: subject?.refId ?? undefined,
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        scheduledPostId?: string;
+        scheduledFor?: string;
+        error?: string;
+      };
+      if (!res.ok || !body.ok || !body.scheduledPostId || !body.scheduledFor) {
+        setScheduleResult({ ok: false, error: body.error ?? "Schedule failed" });
+        return;
+      }
+      setScheduleResult({
+        ok: true,
+        scheduledPostId: body.scheduledPostId,
+        scheduledFor: body.scheduledFor,
+        platform,
+      });
+      // Reset the toggle so the agent isn't tempted to double-schedule.
+      setScheduleMode(false);
+    } catch (e) {
+      setScheduleResult({
+        ok: false,
+        error: e instanceof Error ? e.message : "Schedule failed",
+      });
+    } finally {
+      setScheduling(false);
+    }
+  }, [
+    currentDraft,
+    activeConnection,
+    platform,
+    scheduledFor,
+    selectedMedia,
+    trigger,
+    subject,
+  ]);
 
   // Lazy-load the library the first time the agent opens the picker.
   const ensureLibraryLoaded = useCallback(async () => {
@@ -901,22 +994,33 @@ export default function QuickPostClient() {
 
                   {/* Three mutually-exclusive paths for the primary
                       action button:
-                        1. Eligible connection exists → direct publish via Meta Graph API
+                        1. Eligible connection exists → direct publish OR schedule via Meta Graph API
                         2. Compose URL available    → opens platform's native compose
                         3. Neither                  → hint
                   */}
                   {activeConnection &&
                   (platform === "facebook" || platform === "instagram") ? (
-                    <button
-                      type="button"
-                      onClick={publish}
-                      disabled={publishing || !currentDraft?.caption.trim()}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {publishing
-                        ? "Publishing…"
-                        : `Publish to ${PLATFORM_TABS.find((p) => p.id === platform)?.label}`}
-                    </button>
+                    scheduleMode ? (
+                      <button
+                        type="button"
+                        onClick={schedule}
+                        disabled={scheduling || !currentDraft?.caption.trim()}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                      >
+                        {scheduling ? "Scheduling…" : "Schedule"}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={publish}
+                        disabled={publishing || !currentDraft?.caption.trim()}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {publishing
+                          ? "Publishing…"
+                          : `Publish to ${PLATFORM_TABS.find((p) => p.id === platform)?.label}`}
+                      </button>
+                    )
                   ) : compose && compose.composeUrl ? (
                     <a
                       href={compose.composeUrl}
@@ -947,6 +1051,95 @@ export default function QuickPostClient() {
                     </span>
                   )}
                 </div>
+
+                {/* Schedule-for-later affordance — only relevant when
+                    an active connection exists (the only path the
+                    cron can publish on). Renders as a small toggle
+                    that expands into a datetime input + Schedule
+                    button. The Publish button above swaps to a
+                    Schedule button when scheduleMode is on (see
+                    the action row). */}
+                {activeConnection &&
+                  (platform === "facebook" || platform === "instagram") && (
+                    <div className="rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-2.5 text-sm">
+                      {!scheduleMode ? (
+                        <button
+                          type="button"
+                          onClick={() => setScheduleMode(true)}
+                          className="text-xs font-medium text-indigo-700 hover:text-indigo-900"
+                        >
+                          ⏰ Schedule for later instead
+                        </button>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label
+                              htmlFor="schedule-datetime"
+                              className="text-xs font-semibold text-gray-900"
+                            >
+                              Publish at (your local time)
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setScheduleMode(false)}
+                              className="text-xs text-gray-500 hover:text-gray-900"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                          <input
+                            id="schedule-datetime"
+                            type="datetime-local"
+                            value={scheduledFor}
+                            onChange={(e) => setScheduledFor(e.target.value)}
+                            min={(() => {
+                              // Disallow scheduling in the past at the input level.
+                              const d = new Date(Date.now() + 60 * 1000);
+                              const pad = (n: number) => String(n).padStart(2, "0");
+                              return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                            })()}
+                            className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-sm"
+                          />
+                          <p className="text-[11px] text-gray-500">
+                            Cron picks it up every 5 minutes. Actual publish
+                            may land up to 5 min after your chosen time.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                {/* Schedule result banner — separate from publishResult
+                    so a successful schedule doesn't clear the publish
+                    banner (the two are independent actions). */}
+                {(() => {
+                  const result = scheduleResult;
+                  if (!result) return null;
+                  if (result.ok === true) {
+                    const when = new Date(result.scheduledFor);
+                    return (
+                      <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-sm text-indigo-900">
+                        <p className="font-semibold">
+                          Scheduled for {when.toLocaleString()}
+                        </p>
+                        <p className="mt-0.5">
+                          <a
+                            href="/dashboard/leads/generate/scheduled"
+                            className="underline hover:text-indigo-700"
+                          >
+                            View scheduled posts →
+                          </a>
+                        </p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-900">
+                      <p className="font-semibold">Schedule failed</p>
+                      <p className="mt-0.5">{result.error}</p>
+                    </div>
+                  );
+                })()}
 
                 {/* Result banner for direct publishes. IIFE wraps the
                     narrowing in early-return form so TS narrows the
