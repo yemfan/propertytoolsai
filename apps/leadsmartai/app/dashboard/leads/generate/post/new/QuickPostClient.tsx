@@ -38,7 +38,8 @@ type Trigger =
   | "just_sold"
   | "market_update"
   | "testimonial"
-  | "custom";
+  | "custom"
+  | "by_address";
 
 type SubjectKind =
   | "listing"
@@ -123,6 +124,12 @@ const TRIGGER_OPTIONS: { id: Trigger; label: string; icon: string; hint: string 
     icon: "✨",
     hint: "Write your own brief, AI drafts the post",
   },
+  {
+    id: "by_address",
+    label: "By address / URL",
+    icon: "🔗",
+    hint: "Paste a listing link or address — we pull the details",
+  },
 ];
 
 /**
@@ -145,8 +152,12 @@ const BRIEF_CONFIG: Record<
     placeholder: string;
     /** Help text shown under the field. */
     help: string;
-    /** Step-2 panel: should the picker render or just a brief field? */
-    step2Mode: "picker" | "brief";
+    /** Step-2 panel mode:
+     *    "picker"  — CRM-anchored listing list (with optional flavor brief)
+     *    "brief"   — free-form textarea only (custom / testimonial / market update)
+     *    "lookup"  — paste-address-or-URL input that auto-fills the brief
+     *               from properties_warehouse (by_address). */
+    step2Mode: "picker" | "brief" | "lookup";
   }
 > = {
   new_listing: {
@@ -198,6 +209,13 @@ const BRIEF_CONFIG: Record<
     help: "Be specific — names, neighborhoods, numbers, and angles help AI write a post that doesn't sound generic.",
     step2Mode: "brief",
   },
+  by_address: {
+    required: true,
+    placeholder:
+      "Paste a listing URL (Zillow, Redfin, MLS, etc.) or just type an address.",
+    help: "We'll look up the property and pre-fill the brief with what we find — you can edit before generating.",
+    step2Mode: "lookup",
+  },
 };
 
 const PLATFORM_TABS: { id: Platform; label: string }[] = [
@@ -215,6 +233,7 @@ const TRIGGER_IDS = new Set<Trigger>([
   "market_update",
   "testimonial",
   "custom",
+  "by_address",
 ]);
 
 type MediaItem = {
@@ -262,6 +281,27 @@ export default function QuickPostClient() {
   /** Set true once we've consumed `?trigger=...&subjectId=...` so the trigger-change effect doesn't blow away the pre-selected subject. */
   const [hydratedFromQuery, setHydratedFromQuery] = useState(false);
   const [brief, setBrief] = useState("");
+
+  // "By address / URL" trigger state. Agent pastes an address or
+  // listing URL; we hit /api/leads-gen/lookup-property which calls
+  // properties_warehouse + snapshots and returns a pre-stitched
+  // brief. The brief textarea then pre-fills with that string and
+  // the agent can edit before generating.
+  const [lookupInput, setLookupInput] = useState("");
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [lookupResult, setLookupResult] = useState<{
+    address: string;
+    found: boolean;
+    city: string | null;
+    state: string | null;
+    beds: number | null;
+    baths: number | null;
+    sqft: number | null;
+    estimatedValue: number | null;
+    listingStatus: string | null;
+    brief: string;
+  } | null>(null);
   const [platform, setPlatform] = useState<Platform>("facebook");
   // Drafts keyed by platform so switching tabs doesn't drop work.
   const [drafts, setDrafts] = useState<Partial<Record<Platform, DraftState>>>({});
@@ -441,6 +481,47 @@ export default function QuickPostClient() {
     // we don't want subsequent param mutations to retrigger the fetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trigger]);
+
+  /**
+   * Look up a property by address or URL. Pre-fills the brief with
+   * the stitched description so the agent can edit before
+   * generating. Also commits the synthetic subjectId so step 3
+   * unlocks.
+   */
+  const runLookup = useCallback(async () => {
+    const input = lookupInput.trim();
+    if (!input || input.length < 3) {
+      setLookupError("Paste an address or listing URL first.");
+      return;
+    }
+    setLookupBusy(true);
+    setLookupError(null);
+    try {
+      const res = await fetch("/api/leads-gen/lookup-property", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        result?: typeof lookupResult;
+        error?: string;
+      };
+      if (!res.ok || !body.ok || !body.result) {
+        throw new Error(body.error ?? "Lookup failed");
+      }
+      setLookupResult(body.result);
+      setBrief(body.result.brief);
+      // Commit the synthetic subject so step 3 unlocks. Use
+      // "by_address" as the id; subject_kind on the wire is "custom"
+      // since we don't have a CRM record id to attach.
+      setSubjectId("by_address");
+    } catch (e) {
+      setLookupError(e instanceof Error ? e.message : "Lookup failed");
+    } finally {
+      setLookupBusy(false);
+    }
+  }, [lookupInput, lookupResult]);
 
   const generate = useCallback(async () => {
     if (!trigger || !subjectId) return;
@@ -854,6 +935,12 @@ export default function QuickPostClient() {
                 // placeholder text + required-ness changes per trigger;
                 // a stale brief from a prior trigger is rarely useful.
                 setBrief("");
+                // Also reset the address-lookup state so swapping
+                // to "By address" doesn't surface a previous run's
+                // result.
+                setLookupInput("");
+                setLookupResult(null);
+                setLookupError(null);
               }}
               className={`group rounded-xl border p-4 text-left transition ${
                 trigger === t.id
@@ -880,20 +967,110 @@ export default function QuickPostClient() {
       {trigger && briefConfig && (
         <Section
           n={2}
-          title={briefConfig.step2Mode === "brief" ? "What's the brief?" : "Which one?"}
+          title={
+            briefConfig.step2Mode === "lookup"
+              ? "Paste the address or URL"
+              : briefConfig.step2Mode === "brief"
+                ? "What's the brief?"
+                : "Which one?"
+          }
           subtitle={
-            briefConfig.step2Mode === "brief"
-              ? "AI writes the post directly from your brief."
-              : trigger === "new_listing"
-                ? "Pick a listing from the last 60 days."
-                : trigger === "open_house"
-                  ? "Pick an upcoming open house."
-                  : trigger === "price_drop"
-                    ? "Pick the listing you're re-pricing."
-                    : "Pick a recent closing to celebrate."
+            briefConfig.step2Mode === "lookup"
+              ? "We'll pull the property details and seed the brief."
+              : briefConfig.step2Mode === "brief"
+                ? "AI writes the post directly from your brief."
+                : trigger === "new_listing"
+                  ? "Pick a listing from the last 60 days."
+                  : trigger === "open_house"
+                    ? "Pick an upcoming open house."
+                    : trigger === "price_drop"
+                      ? "Pick the listing you're re-pricing."
+                      : "Pick a recent closing to celebrate."
           }
         >
-          {briefConfig.step2Mode === "brief" ? (
+          {briefConfig.step2Mode === "lookup" ? (
+            <div className="space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="text"
+                  value={lookupInput}
+                  onChange={(e) => setLookupInput(e.target.value)}
+                  placeholder="123 Main St, Pasadena CA — or paste a Zillow / Redfin / MLS URL"
+                  className="flex-1 rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !lookupBusy) {
+                      e.preventDefault();
+                      void runLookup();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => void runLookup()}
+                  disabled={lookupBusy || lookupInput.trim().length < 3}
+                  className="shrink-0 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
+                >
+                  {lookupBusy ? "Looking up…" : "Look up"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">{briefConfig.help}</p>
+              {lookupError && (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                  {lookupError}
+                </p>
+              )}
+              {lookupResult && (
+                <div
+                  className={`rounded-xl border px-3 py-3 text-xs ${
+                    lookupResult.found
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                      : "border-amber-200 bg-amber-50 text-amber-900"
+                  }`}
+                >
+                  <p className="font-semibold">
+                    {lookupResult.found
+                      ? "Property found"
+                      : "Property not in our database — using what you typed"}
+                  </p>
+                  {lookupResult.found && (
+                    <p className="mt-0.5">
+                      {[
+                        lookupResult.beds != null && `${lookupResult.beds}bd`,
+                        lookupResult.baths != null && `${lookupResult.baths}ba`,
+                        lookupResult.sqft != null &&
+                          `${lookupResult.sqft.toLocaleString()} sqft`,
+                        lookupResult.estimatedValue != null &&
+                          `~$${lookupResult.estimatedValue.toLocaleString()}`,
+                        lookupResult.listingStatus,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
+                </div>
+              )}
+              {/* Once a lookup happens (success or not), expose the
+                  brief textarea so the agent can tweak before
+                  generating. */}
+              {subjectId === "by_address" && (
+                <div className="space-y-2 pt-2">
+                  <label className="block text-xs font-semibold text-gray-700">
+                    Brief (editable)
+                  </label>
+                  <textarea
+                    value={brief}
+                    onChange={(e) => setBrief(e.target.value)}
+                    rows={6}
+                    className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                  <p className="text-[11px] text-gray-500">
+                    AI never invents details — edit to add anything else you
+                    want mentioned (open-house time, standout features, etc.).
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : briefConfig.step2Mode === "brief" ? (
             <BriefInput
               value={brief}
               onChange={setBrief}

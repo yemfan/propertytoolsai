@@ -29,7 +29,11 @@ export type Trigger =
   | "price_drop"
   | "just_sold"
   | "market_update"
-  | "testimonial";
+  | "testimonial"
+  // Paste-an-address-or-URL trigger. Synthetic subject (no CRM
+  // lookup); the lookup-property endpoint stitches a brief from
+  // properties_warehouse + property_snapshots_warehouse.
+  | "by_address";
 
 export type SubjectKind =
   | "listing"
@@ -65,6 +69,7 @@ export const SUPPORTED_TRIGGERS: Trigger[] = [
   "market_update",
   "testimonial",
   "custom",
+  "by_address",
 ];
 
 export function isSupportedTrigger(t: string): t is Trigger {
@@ -342,6 +347,17 @@ export async function getSubjectsForTrigger(
       },
     ];
   }
+  if (trigger === "by_address") {
+    return [
+      {
+        id: "by_address",
+        kind: "custom",
+        refId: null,
+        label: "Paste an address or URL",
+        sub: "Pull details from a listing on the MLS, Zillow, Redfin, etc.",
+      },
+    ];
+  }
   // Defensive fallback — unknown trigger should have been rejected upstream.
   return [];
 }
@@ -411,7 +427,11 @@ export async function loadSubjectDetail(
   subjectId: string,
   agentId: string,
 ): Promise<SubjectDetail | null> {
-  if (subjectId === "custom") {
+  if (subjectId === "custom" || subjectId === "by_address") {
+    // by_address routes through the same "custom" subject shape
+    // because the brief carries the property details inline (no
+    // CRM record id to attach to). The trigger value on the
+    // request distinguishes for the AI tone prompt.
     return {
       kind: "custom",
       refId: null,

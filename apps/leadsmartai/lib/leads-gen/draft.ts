@@ -115,6 +115,8 @@ const TRIGGER_TONE: Record<Trigger, string> = {
   testimonial:
     "Sharing a client testimonial — quote the testimonial verbatim from the brief (use quotation marks), add 1-2 sentences of agent gratitude, end with a soft CTA. Never edit the client's words.",
   custom: "Follow the agent's brief — match the tone and intent they describe.",
+  by_address:
+    "Showcasing a property — the brief has structured details (address, beds/baths, price, key features) pulled from a listing source. Lead with the address + price; highlight 1-2 standout specs. Default to a 'just listed' / 'check this out' framing unless the brief explicitly says otherwise (sold, open house, etc.).",
 };
 
 function buildUserPrompt(input: DraftInput): string {
@@ -209,6 +211,8 @@ function triggerLabel(t: Trigger): string {
       return "Share a market update";
     case "testimonial":
       return "Share a client testimonial";
+    case "by_address":
+      return "Share a property by address / URL";
   }
 }
 
