@@ -40,11 +40,28 @@ export async function GET(req: Request) {
   const userError = url.searchParams.get("error");
   const errorDescription = url.searchParams.get("error_description");
 
-  const redirectBase = "/dashboard/leads/generate/connect";
+  // Mobile callers pass `returnTo: leadsmart://...` in the state;
+  // the callback redirects to that deep link instead of the web
+  // connect page. Same pattern as meta-oauth — we resolve after
+  // state verification so a forged state can't trick us into
+  // redirecting somewhere bad.
+  let mobileReturnTo: string | null = null;
+  const webRedirectBase = "/dashboard/leads/generate/connect";
+
   function back(params: Record<string, string>): NextResponse {
+    if (mobileReturnTo) {
+      const q = new URLSearchParams({
+        ...params,
+        network: "linkedin",
+      }).toString();
+      const sep = mobileReturnTo.includes("?") ? "&" : "?";
+      return NextResponse.redirect(`${mobileReturnTo}${sep}${q}`, {
+        status: 302,
+      });
+    }
     const q = new URLSearchParams({ ...params, network: "linkedin" }).toString();
     return NextResponse.redirect(
-      new URL(`${redirectBase}?${q}`, req.url),
+      new URL(`${webRedirectBase}?${q}`, req.url),
       { status: 302 },
     );
   }
@@ -62,17 +79,27 @@ export async function GET(req: Request) {
     return back({ status: "error", reason: "Missing code or state" });
   }
 
-  // 1. Verify state — HMAC + cookie cross-check + freshness.
+  // 1. Verify state — HMAC + freshness. Web flow also requires the
+  //    cookie cross-check; mobile flow skips the cookie because the
+  //    in-app browser doesn't carry it (state is bound via HMAC +
+  //    agentId + the verified leadsmart:// scheme instead).
   let agentId: string;
   try {
-    const cookieState = req.headers
-      .get("cookie")
-      ?.match(/linkedin_oauth_state=([^;]+)/)?.[1];
-    if (!cookieState || decodeURIComponent(cookieState) !== state) {
-      throw new Error("State cookie mismatch");
-    }
     const payload = verifyState(state, STATE_MAX_AGE_MS);
     agentId = payload.agentId;
+    if (payload.returnTo) {
+      if (!/^leadsmart:\/\//i.test(payload.returnTo)) {
+        throw new Error("Invalid returnTo scheme");
+      }
+      mobileReturnTo = payload.returnTo;
+    } else {
+      const cookieState = req.headers
+        .get("cookie")
+        ?.match(/linkedin_oauth_state=([^;]+)/)?.[1];
+      if (!cookieState || decodeURIComponent(cookieState) !== state) {
+        throw new Error("State cookie mismatch");
+      }
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "State verification failed";
     console.warn("[linkedin/callback] state verification failed:", msg);

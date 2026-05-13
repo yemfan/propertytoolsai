@@ -44,4 +44,7 @@ export const MOBILE_API_PATHS = {
   leadsGenPublish: "/api/mobile/leads-gen/publish",
   leadsGenConnectMetaInit: "/api/mobile/leads-gen/connect/meta/init",
   leadsGenConnectMetaDisconnect: "/api/mobile/leads-gen/connect/meta/disconnect",
+  leadsGenConnectLinkedInInit: "/api/mobile/leads-gen/connect/linkedin/init",
+  leadsGenConnectLinkedInDisconnect:
+    "/api/mobile/leads-gen/connect/linkedin/disconnect",
 } as const;

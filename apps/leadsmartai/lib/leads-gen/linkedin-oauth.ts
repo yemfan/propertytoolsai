@@ -77,6 +77,12 @@ export type StatePayload = {
   nonce: string;
   agentId: string;
   issuedAt: number;
+  /** Mobile deep-link the callback should redirect to. Must start
+   *  with `leadsmart://`. When set, the callback skips the cookie
+   *  cross-check (in-app browsers don't carry the /start cookie
+   *  because mobile uses POST /api/mobile/.../init instead of GET
+   *  /start). Same pattern as meta-oauth. */
+  returnTo?: string;
 };
 
 export function signState(payload: StatePayload): string {

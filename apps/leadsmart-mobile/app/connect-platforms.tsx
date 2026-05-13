@@ -14,8 +14,10 @@ import {
 } from "react-native";
 
 import {
+  disconnectMobileLinkedIn,
   disconnectMobileMeta,
   fetchMobileConnections,
+  initMobileLinkedInConnect,
   initMobileMetaConnect,
   type MobileConnection,
 } from "../lib/leadsmartMobileApi";
@@ -29,21 +31,23 @@ import type { ThemeTokens } from "../lib/theme";
 
 /**
  * Mobile equivalent of the web /dashboard/leads/generate/connect
- * page. Currently surfaces Meta only — same scope as the LinkedIn
- * branch on web hasn't merged yet, so mobile only sees Meta until
- * that branch lands and we ship a Phase 3 mobile addition.
+ * page. Currently surfaces Meta + LinkedIn. The OAuth round-trip
+ * works the same for both:
  *
- * Connect flow uses a mobile-specific OAuth init endpoint
- * (POST /api/mobile/leads-gen/connect/meta/init) that returns a
- * signed Meta OAuth URL with the agent's id + the mobile deep-link
- * baked into the state token. We open the URL via
- * `WebBrowser.openAuthSessionAsync` with the same deep-link as the
- * resolve URL — when Meta's OAuth completes and our /callback
- * route redirects to the deep link, the in-app browser closes and
- * we re-fetch the connections list.
+ *   1. Call /api/mobile/leads-gen/connect/<network>/init with
+ *      Bearer auth to mint a signed OAuth URL (state token
+ *      includes the agent's id + the mobile deep-link).
+ *   2. Open the URL via `WebBrowser.openAuthSessionAsync` with
+ *      the deep-link as the resolve URL.
+ *   3. The web /api/leads-gen/connect/<network>/callback redirects
+ *      to the deep link with `?status=...&count=...&network=...`.
+ *   4. The in-app browser closes; we parse the status, show a
+ *      flash, and refresh the connections list.
  */
 
 const RETURN_TO_DEEP_LINK = "leadsmart://leads-gen/connect/callback";
+
+type Network = "meta" | "linkedin";
 
 export default function ConnectPlatformsScreen() {
   const tokens = useThemeTokens();
@@ -76,72 +80,84 @@ export default function ConnectPlatformsScreen() {
     }, [load]),
   );
 
-  const onConnect = useCallback(async () => {
-    hapticButtonPress();
-    setError(null);
-    setConnecting(true);
-    try {
-      const init = await initMobileMetaConnect(RETURN_TO_DEEP_LINK);
-      if (init.ok === false) {
-        throw new Error(init.message);
-      }
-      // openAuthSessionAsync intercepts the deep-link redirect so the
-      // in-app browser closes automatically when /callback redirects
-      // to leadsmart://leads-gen/connect/callback?status=...
-      const result = await WebBrowser.openAuthSessionAsync(
-        init.url,
-        RETURN_TO_DEEP_LINK,
-      );
-      if (result.type === "cancel" || result.type === "dismiss") {
-        setFlash("Connection cancelled.");
-        hapticError();
-      } else if (result.type === "success" && result.url) {
-        // Parse the status param from the deep-link query.
-        const status = (() => {
-          try {
-            const u = new URL(result.url);
-            return u.searchParams.get("status");
-          } catch {
-            return null;
-          }
-        })();
-        const count = (() => {
-          try {
-            return new URL(result.url).searchParams.get("count");
-          } catch {
-            return null;
-          }
-        })();
-        const reason = (() => {
-          try {
-            return new URL(result.url).searchParams.get("reason");
-          } catch {
-            return null;
-          }
-        })();
-        if (status === "success") {
-          hapticSuccess();
-          const n = Number(count) || 1;
-          setFlash(`Linked ${n} Facebook ${n === 1 ? "Page" : "Pages"}.`);
-        } else {
-          hapticError();
-          setFlash(reason ?? "Connection failed.");
+  const [connectingNetwork, setConnectingNetwork] = useState<Network | null>(
+    null,
+  );
+
+  const onConnect = useCallback(
+    async (network: Network) => {
+      hapticButtonPress();
+      setError(null);
+      setConnectingNetwork(network);
+      setConnecting(true);
+      try {
+        const init =
+          network === "linkedin"
+            ? await initMobileLinkedInConnect(RETURN_TO_DEEP_LINK)
+            : await initMobileMetaConnect(RETURN_TO_DEEP_LINK);
+        if (init.ok === false) {
+          throw new Error(init.message);
         }
-        await load();
+        // openAuthSessionAsync intercepts the deep-link redirect so
+        // the in-app browser closes automatically when /callback
+        // redirects to leadsmart://leads-gen/connect/callback?status=...
+        const result = await WebBrowser.openAuthSessionAsync(
+          init.url,
+          RETURN_TO_DEEP_LINK,
+        );
+        if (result.type === "cancel" || result.type === "dismiss") {
+          setFlash("Connection cancelled.");
+          hapticError();
+        } else if (result.type === "success" && result.url) {
+          const parsed = (() => {
+            try {
+              const u = new URL(result.url);
+              return {
+                status: u.searchParams.get("status"),
+                count: u.searchParams.get("count"),
+                reason: u.searchParams.get("reason"),
+                network: u.searchParams.get("network"),
+              };
+            } catch {
+              return { status: null, count: null, reason: null, network: null };
+            }
+          })();
+          if (parsed.status === "success") {
+            hapticSuccess();
+            const inferredNetwork = (parsed.network ?? network) as Network;
+            if (inferredNetwork === "linkedin") {
+              setFlash("LinkedIn connected.");
+            } else {
+              const n = Number(parsed.count) || 1;
+              setFlash(`Linked ${n} Facebook ${n === 1 ? "Page" : "Pages"}.`);
+            }
+          } else {
+            hapticError();
+            setFlash(parsed.reason ?? "Connection failed.");
+          }
+          await load();
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to start OAuth");
+        hapticError();
+      } finally {
+        setConnecting(false);
+        setConnectingNetwork(null);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start OAuth");
-      hapticError();
-    } finally {
-      setConnecting(false);
-    }
-  }, [load]);
+    },
+    [load],
+  );
 
   const onDisconnect = useCallback(
     async (conn: MobileConnection) => {
+      const networkLabel = conn.platform === "linkedin" ? "LinkedIn" : "Facebook";
+      const label =
+        conn.platform === "linkedin"
+          ? conn.displayName ?? "your LinkedIn"
+          : conn.fbPageName ?? "this Page";
       Alert.alert(
-        "Disconnect Page",
-        `Disconnect ${conn.fbPageName ?? "this Page"}? Posts already published will stay live on Facebook.`,
+        `Disconnect ${networkLabel}`,
+        `Disconnect ${label}? Posts already published will stay live on ${networkLabel}.`,
         [
           { text: "Cancel", style: "cancel" },
           {
@@ -150,7 +166,10 @@ export default function ConnectPlatformsScreen() {
             onPress: async () => {
               hapticButtonPress();
               setDisconnectingId(conn.id);
-              const res = await disconnectMobileMeta({ id: conn.id });
+              const res =
+                conn.platform === "linkedin"
+                  ? await disconnectMobileLinkedIn({ id: conn.id })
+                  : await disconnectMobileMeta({ id: conn.id });
               setDisconnectingId(null);
               if (res.ok === false) {
                 hapticError();
@@ -165,6 +184,15 @@ export default function ConnectPlatformsScreen() {
       );
     },
     [load],
+  );
+
+  const metaConnections = useMemo(
+    () => (connections ?? []).filter((c) => c.platform === "meta"),
+    [connections],
+  );
+  const linkedinConnections = useMemo(
+    () => (connections ?? []).filter((c) => c.platform === "linkedin"),
+    [connections],
   );
 
   return (
@@ -206,17 +234,20 @@ export default function ConnectPlatformsScreen() {
         </View>
 
         <Pressable
-          onPress={onConnect}
+          onPress={() => onConnect("meta")}
           disabled={connecting}
-          style={[styles.connectButton, connecting && styles.connectButtonBusy]}
+          style={[
+            styles.connectButton,
+            connecting && styles.connectButtonBusy,
+          ]}
         >
-          {connecting ? (
+          {connecting && connectingNetwork === "meta" ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <>
               <Ionicons name="logo-facebook" size={16} color="#fff" />
               <Text style={styles.connectButtonText}>
-                {connections && connections.length > 0
+                {metaConnections.length > 0
                   ? "Connect another"
                   : "Connect Facebook"}
               </Text>
@@ -228,7 +259,7 @@ export default function ConnectPlatformsScreen() {
           <View style={styles.loadingBlock}>
             <ActivityIndicator color={tokens.accent} />
           </View>
-        ) : connections.length === 0 ? (
+        ) : metaConnections.length === 0 ? (
           <View style={styles.emptyBlock}>
             <Text style={styles.emptyText}>
               No Pages connected yet. Tap connect to start publishing directly
@@ -237,7 +268,7 @@ export default function ConnectPlatformsScreen() {
           </View>
         ) : (
           <View style={styles.connectionsList}>
-            {connections.map((c) => (
+            {metaConnections.map((c) => (
               <View key={c.id} style={styles.connectionRow}>
                 <View style={styles.connectionLeft}>
                   {c.pictureUrl ? (
@@ -288,6 +319,103 @@ export default function ConnectPlatformsScreen() {
           Tokens are stored encrypted; disconnect any time. To fully revoke
           the OAuth grant from Facebook&apos;s side too, visit your Facebook
           account&apos;s Apps and Websites and remove LeadSmart AI.
+        </Text>
+      </View>
+
+      {/* LinkedIn card */}
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardHeaderText}>
+            <Text style={styles.cardTitle}>LinkedIn</Text>
+            <Text style={styles.cardSubtitle}>
+              Post to your personal LinkedIn feed. Real-estate professionals
+              see strong engagement here — listings, market updates, and
+              client wins all do well.
+            </Text>
+          </View>
+        </View>
+
+        <Pressable
+          onPress={() => onConnect("linkedin")}
+          disabled={connecting}
+          style={[
+            styles.connectButton,
+            styles.connectButtonLinkedIn,
+            connecting && styles.connectButtonBusy,
+          ]}
+        >
+          {connecting && connectingNetwork === "linkedin" ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="logo-linkedin" size={16} color="#fff" />
+              <Text style={styles.connectButtonText}>
+                {linkedinConnections.length > 0
+                  ? "Reconnect"
+                  : "Connect LinkedIn"}
+              </Text>
+            </>
+          )}
+        </Pressable>
+
+        {connections === null ? null : linkedinConnections.length === 0 ? (
+          <View style={styles.emptyBlock}>
+            <Text style={styles.emptyText}>
+              Not connected. Sign in with LinkedIn to publish to your personal
+              feed.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.connectionsList}>
+            {linkedinConnections.map((c) => (
+              <View key={c.id} style={styles.connectionRow}>
+                <View style={styles.connectionLeft}>
+                  {c.pictureUrl ? (
+                    <Image
+                      source={{ uri: c.pictureUrl }}
+                      style={styles.connectionAvatar}
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.connectionAvatar,
+                        styles.connectionAvatarLinkedInFallback,
+                      ]}
+                    >
+                      <Text style={styles.connectionAvatarFallbackText}>
+                        {(c.displayName ?? "?").slice(0, 1).toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.connectionInfo}>
+                    <Text style={styles.connectionName} numberOfLines={1}>
+                      {c.displayName ?? "LinkedIn member"}
+                    </Text>
+                    {c.linkedinMemberEmail && (
+                      <Text style={styles.connectionSubtext} numberOfLines={1}>
+                        {c.linkedinMemberEmail}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <Pressable
+                  onPress={() => onDisconnect(c)}
+                  disabled={disconnectingId === c.id}
+                  style={styles.disconnectButton}
+                >
+                  <Text style={styles.disconnectButtonText}>
+                    {disconnectingId === c.id ? "…" : "Disconnect"}
+                  </Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <Text style={styles.helperText}>
+          Posts go to your personal LinkedIn feed. To revoke from
+          LinkedIn&apos;s side, visit Settings → Data privacy → Permitted
+          services and remove LeadSmart AI.
         </Text>
       </View>
     </ScrollView>
@@ -366,6 +494,9 @@ function createStyles(tokens: ThemeTokens) {
       borderRadius: 10,
       backgroundColor: "#1877F2", // Facebook blue
     },
+    connectButtonLinkedIn: {
+      backgroundColor: "#0A66C2", // LinkedIn blue
+    },
     connectButtonBusy: {
       opacity: 0.7,
     },
@@ -423,6 +554,11 @@ function createStyles(tokens: ThemeTokens) {
       justifyContent: "center",
       backgroundColor: tokens.accentLight,
     },
+    connectionAvatarLinkedInFallback: {
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#E0F2FE", // sky-100
+    },
     connectionAvatarFallbackText: {
       fontWeight: "700",
       color: tokens.accent,
@@ -432,6 +568,11 @@ function createStyles(tokens: ThemeTokens) {
       fontSize: 14,
       fontWeight: "700",
       color: tokens.text,
+    },
+    connectionSubtext: {
+      fontSize: 12,
+      color: tokens.textSubtle,
+      marginTop: 2,
     },
     igBadge: {
       alignSelf: "flex-start",
