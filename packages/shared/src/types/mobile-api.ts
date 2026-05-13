@@ -213,7 +213,15 @@ export type MobilePushNotificationKind =
   | "reminder_digest";
 
 /** In-app / push routing target (strings for Expo `data`). */
-export type MobileNotificationDeepScreen = "lead" | "call_log" | "task" | "notifications" | "lead_queue";
+export type MobileNotificationDeepScreen =
+  | "lead"
+  | "call_log"
+  | "task"
+  | "notifications"
+  | "lead_queue"
+  /** Briefing-ready pushes (morning / evening) deep-link home where
+   *  BriefingsCard renders the new briefing inline. */
+  | "home";
 
 /**
  * Contract for `notification.request.content.data` on LeadSmart AI-originated pushes.

@@ -4,6 +4,7 @@ import {
   type BriefingKind,
   type BriefingOutput,
 } from "@/lib/dailyBriefingAI";
+import { dispatchMobileBriefingPush } from "@/lib/mobile/pushDispatch";
 
 type LeadRow = {
   id: number;
@@ -96,6 +97,25 @@ export async function createDailyBriefingForAgent(
 
   if (kind === "morning") {
     await writeMorningTasks(agentId, ai);
+  }
+
+  // Fire-and-forget mobile push so the agent's phone gets a
+  // notification when their briefing is ready. Wrapped in a
+  // try/catch so a push failure (no tokens, Expo outage, etc)
+  // never bubbles up and breaks the briefing insert.
+  try {
+    await dispatchMobileBriefingPush({
+      agentId,
+      kind,
+      headline: ai.headline,
+      summary: ai.summary,
+    });
+  } catch (e) {
+    console.warn("[briefings] mobile push dispatch failed", {
+      agentId,
+      kind,
+      err: e instanceof Error ? e.message : e,
+    });
   }
 
   return { skipped: false, briefing: inserted };

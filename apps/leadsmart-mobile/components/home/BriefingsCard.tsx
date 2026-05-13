@@ -1,5 +1,8 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+
 import { Skeleton } from "../Skeleton";
 import { FadeIn } from "../Reveal";
 import {
@@ -10,25 +13,66 @@ import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
 
 /**
- * Mobile mirror of the web BriefingsCard. Renders the latest morning
- * (☀️) and evening (🌙) briefings stacked at the top of the home
- * screen — no history pager, per product direction (small screen
- * stays focused on what matters now).
+ * Mobile briefings card.
  *
- * Empty states are intentional: when the agent has no briefing yet
- * for a kind (cron hasn't fired their tz today), we show a soft
- * "your first briefing arrives soon" placeholder rather than hiding
- * the card. Hiding would be confusing — agents would wonder whether
- * the feature is broken or just hasn't run.
+ * Product direction: on the small screen the home feed shows only
+ * the LATEST briefing (whichever is newer between morning + evening
+ * — typically just-fired). Once the agent has seen it, the big card
+ * collapses into a compact "View past briefings →" tile that links
+ * to the full history at /briefings.
+ *
+ * Read state is local-device via AsyncStorage. We mark the latest
+ * briefing read 2 seconds after the card mounts, which roughly
+ * corresponds to "the agent looked at the screen long enough to
+ * register what's there." Two seconds is short enough that an
+ * intentional dismiss doesn't feel premature, and long enough that
+ * a casual scroll past the card does NOT mark it read.
+ *
+ * Why local-only (vs server-side read_at):
+ *   - Synced multi-device read state is genuinely nice but requires
+ *     a schema migration + per-briefing PATCH endpoint. Local state
+ *     ships immediately.
+ *   - The worst-case multi-device drift is "I saw it on my phone,
+ *     my tablet still shows the big card." That's mildly annoying
+ *     but not broken. If agents start asking for sync, we add a
+ *     read_at column then.
+ *
+ * Push notifications: the daily-briefing cron fires
+ * `dispatchMobileBriefingPush` right after the insert, so the
+ * agent's phone pings when a new briefing lands. Tap → opens the
+ * mobile Home → BriefingsCard re-fetches + shows the new briefing
+ * inline.
  */
+
+const READ_STORAGE_KEY = "briefings:lastReadId";
+const READ_DELAY_MS = 2000;
+
 export function BriefingsCard() {
   const tokens = useThemeTokens();
+  const router = useRouter();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
-  const [morning, setMorning] = useState<MobileBriefing | null>(null);
-  const [evening, setEvening] = useState<MobileBriefing | null>(null);
+  const [latest, setLatest] = useState<MobileBriefing | null>(null);
+  const [hasOthers, setHasOthers] = useState(false);
+  const [lastReadId, setLastReadId] = useState<string | null>(null);
+  const [readHydrated, setReadHydrated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Hydrate the last-read id from AsyncStorage once on mount. We
+  // gate the render decision on this so a "read" briefing doesn't
+  // momentarily flash as the big card before collapsing.
+  useEffect(() => {
+    let cancelled = false;
+    void AsyncStorage.getItem(READ_STORAGE_KEY).then((v) => {
+      if (cancelled) return;
+      setLastReadId(v);
+      setReadHydrated(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -39,8 +83,21 @@ export function BriefingsCard() {
       setLoading(false);
       return;
     }
-    setMorning(res.morning[0] ?? null);
-    setEvening(res.evening[0] ?? null);
+    // Latest = whichever of {morning[0], evening[0]} has the most
+    // recent created_at. Both buckets come back newest-first.
+    const candidates = [res.morning[0], res.evening[0]].filter(
+      (b): b is MobileBriefing => Boolean(b),
+    );
+    candidates.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
+    setLatest(candidates[0] ?? null);
+    // Any other briefing besides the latest = there's a history
+    // worth surfacing via the past-briefings tile.
+    setHasOthers(
+      res.morning.length + res.evening.length > (candidates[0] ? 1 : 0),
+    );
     setLoading(false);
   }, []);
 
@@ -48,16 +105,71 @@ export function BriefingsCard() {
     void load();
   }, [load]);
 
-  if (loading) {
+  // Mark the latest briefing as read after a short dwell. Only fires
+  // when there's actually a latest briefing AND it's unread; pure
+  // function of `latest.id` so re-mounting re-arms the timer when a
+  // new briefing arrives.
+  useEffect(() => {
+    if (!latest || !readHydrated) return;
+    if (lastReadId === latest.id) return;
+    const t = setTimeout(() => {
+      void AsyncStorage.setItem(READ_STORAGE_KEY, latest.id);
+      setLastReadId(latest.id);
+    }, READ_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [latest, lastReadId, readHydrated]);
+
+  if (loading || !readHydrated) {
     return (
       <View style={styles.wrap}>
         <Skeleton width="100%" height={120} borderRadius={12} />
-        <Skeleton
-          width="100%"
-          height={120}
-          borderRadius={12}
-          style={{ marginTop: 12 }}
-        />
+      </View>
+    );
+  }
+
+  // No briefing yet (agent's first day, or cron hasn't fired for
+  // their tz). Show the empty placeholder so the agent doesn't
+  // wonder whether the feature is broken.
+  if (!latest) {
+    return (
+      <View style={styles.wrap}>
+        <View style={[styles.card, styles.cardEmpty]}>
+          <Text style={styles.headline}>Your first briefing arrives soon.</Text>
+          <Text style={styles.summary}>
+            Morning plans land at your scheduled time; evening summaries land
+            after the day winds down. You can change times in Settings →
+            Daily Briefings.
+          </Text>
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        </View>
+      </View>
+    );
+  }
+
+  const isRead = lastReadId === latest.id;
+
+  // Collapsed tile when the agent's already read the latest. Single
+  // pressable that routes to the full history page.
+  if (isRead) {
+    return (
+      <View style={styles.wrap}>
+        <Pressable
+          onPress={() => router.push("/briefings" as never)}
+          style={styles.compactTile}
+        >
+          <Text style={styles.compactEmoji}>
+            {latest.kind === "morning" ? "☀️" : "🌙"}
+          </Text>
+          <View style={styles.compactBody}>
+            <Text style={styles.compactTitle}>
+              {hasOthers ? "View past briefings" : "Latest briefing seen"}
+            </Text>
+            <Text style={styles.compactSub}>
+              Last: {formatRelative(latest.created_at)}
+            </Text>
+          </View>
+          <Text style={styles.compactChevron}>›</Text>
+        </Pressable>
       </View>
     );
   }
@@ -65,54 +177,30 @@ export function BriefingsCard() {
   return (
     <View style={styles.wrap}>
       <FadeIn>
-        <BriefingPane
-          kind="morning"
-          row={morning}
-          error={error}
-          styles={styles}
-        />
-      </FadeIn>
-      <FadeIn delay={80}>
-        <BriefingPane
-          kind="evening"
-          row={evening}
-          error={error}
-          styles={styles}
-        />
+        <BriefingPane row={latest} styles={styles} />
       </FadeIn>
     </View>
   );
 }
 
 function BriefingPane({
-  kind,
   row,
-  error,
   styles,
 }: {
-  kind: "morning" | "evening";
-  row: MobileBriefing | null;
-  error: string | null;
+  row: MobileBriefing;
   styles: ReturnType<typeof createStyles>;
 }) {
-  const isMorning = kind === "morning";
+  const isMorning = row.kind === "morning";
   const emojiBadge = isMorning ? "☀️" : "🌙";
   const title = isMorning ? "Morning Briefing" : "Evening Summary";
   const cardStyle = isMorning ? styles.cardMorning : styles.cardEvening;
   const titleStyle = isMorning ? styles.titleMorning : styles.titleEvening;
 
   const headline =
-    row?.headline?.trim() ||
-    row?.summary?.split(/[.!?]\s/)[0] ||
-    (error
-      ? "Briefings unavailable"
-      : isMorning
-        ? "Your first morning plan arrives at your scheduled time."
-        : "Your first evening recap arrives after the day winds down.");
-
-  const summary = row?.summary ?? null;
-  const highlights = row ? pickHighlights(row) : [];
-  const opp = row?.insights.topOpportunity ?? null;
+    row.headline?.trim() || row.summary?.split(/[.!?]\s/)[0] || title;
+  const summary = row.summary ?? null;
+  const highlights = pickHighlights(row);
+  const opp = row.insights?.topOpportunity ?? null;
 
   return (
     <View style={[styles.card, cardStyle]}>
@@ -120,9 +208,7 @@ function BriefingPane({
         <Text style={styles.emoji}>{emojiBadge}</Text>
         <View style={styles.headerText}>
           <Text style={[styles.title, titleStyle]}>{title}</Text>
-          <Text style={styles.timestamp}>
-            {row ? formatRelative(row.created_at) : "Awaiting first run"}
-          </Text>
+          <Text style={styles.timestamp}>{formatRelative(row.created_at)}</Text>
         </View>
       </View>
 
@@ -230,6 +316,11 @@ function createStyles(t: ThemeTokens) {
       backgroundColor: t.infoBg,
       borderColor: t.infoText,
     },
+    cardEmpty: {
+      backgroundColor: t.surface,
+      borderColor: t.border,
+      borderStyle: "dashed",
+    },
 
     header: {
       flexDirection: "row",
@@ -263,6 +354,11 @@ function createStyles(t: ThemeTokens) {
       fontSize: 14,
       lineHeight: 20,
       color: t.text,
+    },
+    errorText: {
+      marginTop: 10,
+      fontSize: 12,
+      color: t.danger,
     },
 
     highlights: { marginTop: 10, gap: 6 },
@@ -307,6 +403,34 @@ function createStyles(t: ThemeTokens) {
       fontSize: 13,
       lineHeight: 18,
       color: t.text,
+    },
+
+    compactTile: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: t.border,
+      backgroundColor: t.surface,
+    },
+    compactEmoji: { fontSize: 20 },
+    compactBody: { flex: 1 },
+    compactTitle: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: t.text,
+    },
+    compactSub: {
+      marginTop: 2,
+      fontSize: 11,
+      color: t.textMuted,
+    },
+    compactChevron: {
+      fontSize: 22,
+      color: t.textMuted,
+      lineHeight: 22,
     },
   });
 }

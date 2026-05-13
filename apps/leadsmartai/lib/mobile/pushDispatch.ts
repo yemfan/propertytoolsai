@@ -371,3 +371,86 @@ export async function dispatchMobileMissedCallPush(params: {
   await updateInboxNotificationPushSentAt(inboxId, now);
   return true;
 }
+
+/**
+ * Briefing-ready push. Fires once after the daily briefing insert
+ * (morning + evening) so the agent's phone gets a "your morning
+ * plan is ready" / "your evening summary is in" ping.
+ *
+ * Idempotency: the briefing insert in createDailyBriefingForAgent
+ * already guards via the per-day existing-briefing check, so each
+ * (agent, day, kind) tuple generates at most one push.
+ *
+ * No per-pref opt-out yet — when an agent has push tokens AND the
+ * global MOBILE_PUSH_ENABLED is on, we send. A `push_briefing`
+ * preference is a fast follow-up if agents start asking to mute
+ * briefings specifically.
+ *
+ * Deep link: opens the mobile Home (where BriefingsCard renders).
+ * Marking-as-read happens locally when the agent views Home; the
+ * push doesn't carry a "read" bit because the device fires that
+ * itself.
+ */
+export async function dispatchMobileBriefingPush(params: {
+  agentId: string;
+  kind: "morning" | "evening";
+  headline: string | null;
+  summary: string;
+}): Promise<boolean> {
+  if (mobilePushGloballyDisabled()) return false;
+
+  const isMorning = params.kind === "morning";
+  const title = isMorning ? "☀️ Morning Briefing" : "🌙 Evening Summary";
+  const body =
+    params.headline?.trim() ||
+    // Trim to the first sentence so the push body stays under iOS'
+    // ~120-char display window. Fallback to a generic line.
+    params.summary?.split(/[.!?]\s/)[0]?.slice(0, 140) ||
+    (isMorning
+      ? "Your morning plan is ready in LeadSmart."
+      : "Your evening summary is ready in LeadSmart.");
+
+  const now = new Date().toISOString();
+  // `agent_inbox_notifications.type` is a check-constrained text
+  // column allowing hot_lead / missed_call / reminder / new_lead;
+  // briefings classify cleanly as "reminder" (a scheduled prompt
+  // to look at something). Widening the enum to a dedicated
+  // `briefing_*` value is a fast follow-up if filtering-by-type
+  // becomes valuable.
+  const inboxId = await insertAgentInboxNotification({
+    agentId: params.agentId,
+    type: "reminder",
+    priority: "medium",
+    title,
+    body,
+    deepLink: { screen: "home" },
+    pushSentAt: null,
+  });
+
+  const userId = await getAuthUserIdForAgent(params.agentId);
+  if (!userId) {
+    await updateInboxNotificationPushSentAt(inboxId, now);
+    return false;
+  }
+
+  const tokens = await listExpoPushTokensForUser(userId);
+  if (!tokens.length) {
+    await updateInboxNotificationPushSentAt(inboxId, now);
+    return false;
+  }
+
+  await sendExpoPushMessages(
+    buildMessages(
+      tokens,
+      title,
+      body,
+      {
+        kind: isMorning ? "briefing_morning" : "briefing_evening",
+        screen: "home",
+      },
+      "default",
+    ),
+  );
+  await updateInboxNotificationPushSentAt(inboxId, now);
+  return true;
+}

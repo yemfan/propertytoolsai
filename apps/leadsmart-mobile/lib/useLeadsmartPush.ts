@@ -39,6 +39,17 @@ function navigateFromPushData(
     return;
   }
 
+  // Briefing pushes (morning/evening) — route home where the
+  // BriefingsCard re-fetches + shows the freshly-arrived briefing.
+  if (
+    screen === "home" ||
+    kind === "briefing_morning" ||
+    kind === "briefing_evening"
+  ) {
+    router.push("/(tabs)/home" as never);
+    return;
+  }
+
   if (screen === "task" && taskId) {
     router.push({ pathname: "/tasks", params: { focusTaskId: taskId } });
     return;
