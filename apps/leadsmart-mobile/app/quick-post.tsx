@@ -14,13 +14,16 @@ import {
   TextInput,
   View,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import {
+  createMobileRecurringPost,
   fetchMobileConnections,
   fetchMobileQuickPostDraft,
   publishMobileQuickPost,
+  scheduleMobileQuickPost,
   uploadMobileMedia,
   type MobileConnection,
   type MobileMediaItem,
@@ -124,6 +127,59 @@ export default function QuickPostScreen() {
   const [media, setMedia] = useState<MobileMediaItem | null>(null);
   const [uploading, setUploading] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
+
+  // Publish mode — three mutually-exclusive paths for the action
+  // button: post now / queue for later / make recurring. Mode picker
+  // lives above the image section once a draft exists.
+  type Mode = "now" | "schedule" | "recurring";
+  const [mode, setMode] = useState<Mode>("now");
+
+  // Schedule state — datetime defaults to tomorrow 9am local. The
+  // picker mutates `scheduledAt` in place; we send the resulting ISO
+  // to /api/mobile/leads-gen/schedule.
+  const [scheduledAt, setScheduledAt] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+    return d;
+  });
+  const [showSchedulePicker, setShowSchedulePicker] = useState<
+    "date" | "time" | null
+  >(null);
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduleResult, setScheduleResult] = useState<
+    | { ok: true; scheduledFor: string }
+    | { ok: false; error: string }
+    | null
+  >(null);
+
+  // Recurring config. Same shape as the web wizard — cadence (daily
+  // or weekly), HH:MM, optional day-of-week (for weekly), optional
+  // max occurrences. Timezone auto-detected from the device.
+  const [recurringCadence, setRecurringCadence] = useState<
+    "daily" | "weekly"
+  >("weekly");
+  const [recurringWeekday, setRecurringWeekday] = useState(1); // Monday
+  const [recurringTime, setRecurringTime] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(9, 0, 0, 0);
+    return d;
+  });
+  const [showRecurringTimePicker, setShowRecurringTimePicker] = useState(false);
+  const [recurringMax, setRecurringMax] = useState<string>("12");
+  const recurringTimezone = useMemo(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    } catch {
+      return "UTC";
+    }
+  }, []);
+  const [creatingRecurring, setCreatingRecurring] = useState(false);
+  const [recurringResult, setRecurringResult] = useState<
+    | { ok: true; recurringScheduleId: string; nextOccurrenceAt: string }
+    | { ok: false; error: string }
+    | null
+  >(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -295,6 +351,128 @@ export default function QuickPostScreen() {
     setMedia(null);
     setImageError(null);
   }, []);
+
+  const onSchedule = useCallback(async () => {
+    if (!caption) return;
+    if (
+      platform !== "facebook" &&
+      platform !== "linkedin" &&
+      platform !== "instagram"
+    )
+      return;
+    const conn = activeDirectPublishConnection;
+    if (!conn) return;
+    if (platform === "instagram" && !media) {
+      setScheduleResult({
+        ok: false,
+        error: "Instagram requires an image. Attach one above.",
+      });
+      hapticError();
+      return;
+    }
+    // The schedule endpoint requires ≥ 1 minute lead time. Clamp
+    // here so the agent doesn't see a confusing 422 if they picked
+    // a near-now time.
+    if (scheduledAt.getTime() - Date.now() < 60_000) {
+      setScheduleResult({
+        ok: false,
+        error: "Pick a time at least 1 minute from now.",
+      });
+      hapticError();
+      return;
+    }
+    hapticButtonPress();
+    setScheduling(true);
+    setScheduleResult(null);
+    const res = await scheduleMobileQuickPost({
+      platform,
+      connectionId: conn.id,
+      caption,
+      hashtags,
+      mediaItemId: media?.id,
+      scheduledFor: scheduledAt.toISOString(),
+      trigger,
+    });
+    setScheduling(false);
+    if (res.ok === false) {
+      hapticError();
+      setScheduleResult({ ok: false, error: res.message });
+      return;
+    }
+    hapticSuccess();
+    setScheduleResult({ ok: true, scheduledFor: res.scheduledFor });
+  }, [
+    caption,
+    hashtags,
+    platform,
+    activeDirectPublishConnection,
+    trigger,
+    media,
+    scheduledAt,
+  ]);
+
+  const onCreateRecurring = useCallback(async () => {
+    if (!caption) return;
+    if (
+      platform !== "facebook" &&
+      platform !== "linkedin" &&
+      platform !== "instagram"
+    )
+      return;
+    const conn = activeDirectPublishConnection;
+    if (!conn) return;
+    if (platform === "instagram" && !media) {
+      setRecurringResult({
+        ok: false,
+        error: "Instagram recurring posts require an image. Attach one above.",
+      });
+      hapticError();
+      return;
+    }
+    hapticButtonPress();
+    setCreatingRecurring(true);
+    setRecurringResult(null);
+    const maxN = parseInt(recurringMax, 10);
+    const res = await createMobileRecurringPost({
+      platform,
+      connectionId: conn.id,
+      caption,
+      hashtags,
+      mediaItemId: media?.id,
+      trigger,
+      cadence: recurringCadence,
+      weeklyDayOfWeek:
+        recurringCadence === "weekly" ? recurringWeekday : undefined,
+      timeOfDayHour: recurringTime.getHours(),
+      timeOfDayMinute: recurringTime.getMinutes(),
+      timezone: recurringTimezone,
+      maxOccurrences: Number.isFinite(maxN) && maxN > 0 ? maxN : undefined,
+    });
+    setCreatingRecurring(false);
+    if (res.ok === false) {
+      hapticError();
+      setRecurringResult({ ok: false, error: res.message });
+      return;
+    }
+    hapticSuccess();
+    setRecurringResult({
+      ok: true,
+      recurringScheduleId: res.recurringScheduleId,
+      nextOccurrenceAt: res.nextOccurrenceAt,
+    });
+  }, [
+    caption,
+    hashtags,
+    platform,
+    activeDirectPublishConnection,
+    trigger,
+    media,
+    recurringCadence,
+    recurringWeekday,
+    recurringTime,
+    recurringTimezone,
+    recurringMax,
+  ]);
 
   const onPublish = useCallback(async () => {
     if (!caption) return;
@@ -571,26 +749,270 @@ export default function QuickPostScreen() {
                 ))}
               </View>
             )}
+            {/* Mode picker — only available when the agent can
+                actually direct-publish. Without a connection the
+                only path is Share/Copy. */}
+            {canDirectPublish && (
+              <View style={styles.modeRow}>
+                {(["now", "schedule", "recurring"] as Mode[]).map((m) => {
+                  const active = mode === m;
+                  const label =
+                    m === "now"
+                      ? "Now"
+                      : m === "schedule"
+                        ? "Schedule"
+                        : "Recurring";
+                  return (
+                    <Pressable
+                      key={m}
+                      onPress={() => {
+                        setMode(m);
+                        hapticButtonPress();
+                      }}
+                      style={[
+                        styles.modeTab,
+                        active && styles.modeTabActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.modeTabText,
+                          active && styles.modeTabTextActive,
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+
+            {canDirectPublish && mode === "schedule" && (
+              <View style={styles.scheduleBox}>
+                <Text style={styles.scheduleLabel}>
+                  Publish at ({recurringTimezone})
+                </Text>
+                <View style={styles.schedulePickerRow}>
+                  <Pressable
+                    onPress={() => setShowSchedulePicker("date")}
+                    style={styles.schedulePickerButton}
+                  >
+                    <Ionicons
+                      name="calendar-outline"
+                      size={16}
+                      color={tokens.text}
+                    />
+                    <Text style={styles.schedulePickerText}>
+                      {scheduledAt.toLocaleDateString([], {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setShowSchedulePicker("time")}
+                    style={styles.schedulePickerButton}
+                  >
+                    <Ionicons
+                      name="time-outline"
+                      size={16}
+                      color={tokens.text}
+                    />
+                    <Text style={styles.schedulePickerText}>
+                      {scheduledAt.toLocaleTimeString([], {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </Text>
+                  </Pressable>
+                </View>
+                {showSchedulePicker && (
+                  <DateTimePicker
+                    value={scheduledAt}
+                    mode={showSchedulePicker === "date" ? "date" : "time"}
+                    minimumDate={new Date(Date.now() + 60_000)}
+                    onChange={(_e, d) => {
+                      // Android dismisses on outside-tap; iOS keeps the
+                      // wheel up until user taps Done. Either way, the
+                      // event carries the selected date (or no date on
+                      // dismiss).
+                      setShowSchedulePicker(null);
+                      if (d) setScheduledAt(d);
+                    }}
+                  />
+                )}
+                <Text style={styles.scheduleHint}>
+                  Cron picks up due posts every 5 minutes. Actual publish
+                  may land up to 5 min after your chosen time.
+                </Text>
+              </View>
+            )}
+
+            {canDirectPublish && mode === "recurring" && (
+              <View style={styles.recurringBox}>
+                <Text style={styles.scheduleLabel}>Cadence</Text>
+                <View style={styles.modeRow}>
+                  {(["daily", "weekly"] as const).map((c) => {
+                    const active = recurringCadence === c;
+                    return (
+                      <Pressable
+                        key={c}
+                        onPress={() => {
+                          setRecurringCadence(c);
+                          hapticButtonPress();
+                        }}
+                        style={[
+                          styles.modeTab,
+                          active && styles.modeTabActive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.modeTabText,
+                            active && styles.modeTabTextActive,
+                          ]}
+                        >
+                          {c === "daily" ? "Daily" : "Weekly"}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                {recurringCadence === "weekly" && (
+                  <>
+                    <Text style={[styles.scheduleLabel, { marginTop: 12 }]}>
+                      Day of week
+                    </Text>
+                    <View style={styles.weekdayRow}>
+                      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+                        (label, i) => {
+                          const active = recurringWeekday === i;
+                          return (
+                            <Pressable
+                              key={label}
+                              onPress={() => {
+                                setRecurringWeekday(i);
+                                hapticButtonPress();
+                              }}
+                              style={[
+                                styles.weekdayChip,
+                                active && styles.weekdayChipActive,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.weekdayChipText,
+                                  active && styles.weekdayChipTextActive,
+                                ]}
+                              >
+                                {label}
+                              </Text>
+                            </Pressable>
+                          );
+                        },
+                      )}
+                    </View>
+                  </>
+                )}
+
+                <Text style={[styles.scheduleLabel, { marginTop: 12 }]}>
+                  Time of day ({recurringTimezone})
+                </Text>
+                <Pressable
+                  onPress={() => setShowRecurringTimePicker(true)}
+                  style={styles.schedulePickerButton}
+                >
+                  <Ionicons
+                    name="time-outline"
+                    size={16}
+                    color={tokens.text}
+                  />
+                  <Text style={styles.schedulePickerText}>
+                    {recurringTime.toLocaleTimeString([], {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </Text>
+                </Pressable>
+                {showRecurringTimePicker && (
+                  <DateTimePicker
+                    value={recurringTime}
+                    mode="time"
+                    onChange={(_e, d) => {
+                      setShowRecurringTimePicker(false);
+                      if (d) setRecurringTime(d);
+                    }}
+                  />
+                )}
+
+                <Text style={[styles.scheduleLabel, { marginTop: 12 }]}>
+                  Stop after (occurrences)
+                </Text>
+                <TextInput
+                  value={recurringMax}
+                  onChangeText={setRecurringMax}
+                  keyboardType="number-pad"
+                  placeholder="(unlimited)"
+                  placeholderTextColor={tokens.textSubtle}
+                  style={styles.maxOccurrencesInput}
+                />
+
+                <Text style={styles.scheduleHint}>
+                  Materialize cron creates a scheduled post about an hour
+                  before each fire time. Pause or cancel anytime from the
+                  Recurring screen.
+                </Text>
+              </View>
+            )}
+
             <View style={styles.actionRow}>
               {canDirectPublish && (
                 <Pressable
-                  onPress={onPublish}
-                  disabled={publishing}
+                  onPress={
+                    mode === "schedule"
+                      ? onSchedule
+                      : mode === "recurring"
+                        ? onCreateRecurring
+                        : onPublish
+                  }
+                  disabled={publishing || scheduling || creatingRecurring}
                   style={[
                     styles.actionButton,
-                    platform === "linkedin"
+                    mode === "now" && platform === "linkedin"
                       ? styles.publishButtonLinkedIn
-                      : styles.publishButton,
-                    publishing && styles.actionButtonBusy,
+                      : mode === "now"
+                        ? styles.publishButton
+                        : mode === "schedule"
+                          ? styles.scheduleButton
+                          : styles.recurringButton,
+                    (publishing || scheduling || creatingRecurring) &&
+                      styles.actionButtonBusy,
                   ]}
                 >
-                  {publishing ? (
+                  {publishing || scheduling || creatingRecurring ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
                     <>
-                      <Ionicons name="send" size={16} color="#fff" />
+                      <Ionicons
+                        name={
+                          mode === "schedule"
+                            ? "calendar-outline"
+                            : mode === "recurring"
+                              ? "repeat-outline"
+                              : "send"
+                        }
+                        size={16}
+                        color="#fff"
+                      />
                       <Text style={styles.publishButtonText}>
-                        Publish to {platform === "linkedin" ? "LinkedIn" : "Facebook"}
+                        {mode === "schedule"
+                          ? "Schedule"
+                          : mode === "recurring"
+                            ? "Create recurring"
+                            : `Publish to ${platform === "linkedin" ? "LinkedIn" : "Facebook"}`}
                       </Text>
                     </>
                   )}
@@ -605,6 +1027,68 @@ export default function QuickPostScreen() {
                 <Text style={styles.actionButtonText}>Share / Copy</Text>
               </Pressable>
             </View>
+
+            {scheduleResult?.ok === true ? (
+              <View style={styles.successBanner}>
+                <Ionicons
+                  name="calendar"
+                  size={18}
+                  color={tokens.success}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.successBannerTitle}>
+                    Scheduled for{" "}
+                    {new Date(scheduleResult.scheduledFor).toLocaleString()}
+                  </Text>
+                  <Pressable
+                    onPress={() => router.push("/scheduled" as never)}
+                  >
+                    <Text style={styles.successBannerLink}>
+                      View scheduled posts →
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : scheduleResult?.ok === false ? (
+              <View style={styles.errorBox}>
+                <Ionicons
+                  name="alert-circle"
+                  size={16}
+                  color={tokens.danger}
+                />
+                <Text style={styles.errorText}>{scheduleResult.error}</Text>
+              </View>
+            ) : null}
+
+            {recurringResult?.ok === true ? (
+              <View style={styles.successBanner}>
+                <Ionicons name="repeat" size={18} color={tokens.success} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.successBannerTitle}>
+                    Recurring post created — next fires{" "}
+                    {new Date(
+                      recurringResult.nextOccurrenceAt,
+                    ).toLocaleString()}
+                  </Text>
+                  <Pressable
+                    onPress={() => router.push("/recurring" as never)}
+                  >
+                    <Text style={styles.successBannerLink}>
+                      Manage recurring posts →
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : recurringResult?.ok === false ? (
+              <View style={styles.errorBox}>
+                <Ionicons
+                  name="alert-circle"
+                  size={16}
+                  color={tokens.danger}
+                />
+                <Text style={styles.errorText}>{recurringResult.error}</Text>
+              </View>
+            ) : null}
 
             {/* Publish result banner — success links to the live post,
                 failure shows the error inline (reconnect flow lives on
@@ -934,6 +1418,126 @@ function createStyles(tokens: ThemeTokens) {
     },
     publishButtonLinkedIn: {
       backgroundColor: "#0A66C2", // LinkedIn blue
+    },
+    scheduleButton: {
+      backgroundColor: "#6366F1", // indigo
+    },
+    recurringButton: {
+      backgroundColor: "#9333EA", // purple
+    },
+    modeRow: {
+      flexDirection: "row",
+      gap: 6,
+      marginTop: 12,
+    },
+    modeTab: {
+      flex: 1,
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: tokens.border,
+      backgroundColor: tokens.surface,
+      alignItems: "center",
+    },
+    modeTabActive: {
+      backgroundColor: tokens.accentLight,
+      borderColor: tokens.accent,
+    },
+    modeTabText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: tokens.text,
+    },
+    modeTabTextActive: {
+      color: tokens.accent,
+    },
+    scheduleBox: {
+      marginTop: 10,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: tokens.border,
+      backgroundColor: tokens.surface,
+      gap: 8,
+    },
+    recurringBox: {
+      marginTop: 10,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: tokens.border,
+      backgroundColor: tokens.surface,
+    },
+    scheduleLabel: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: tokens.textSubtle,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    schedulePickerRow: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    schedulePickerButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: tokens.border,
+      backgroundColor: tokens.bg,
+    },
+    schedulePickerText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: tokens.text,
+    },
+    scheduleHint: {
+      fontSize: 11,
+      color: tokens.textSubtle,
+      lineHeight: 16,
+    },
+    weekdayRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 6,
+      marginTop: 4,
+    },
+    weekdayChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: tokens.border,
+      backgroundColor: tokens.bg,
+    },
+    weekdayChipActive: {
+      backgroundColor: tokens.accentLight,
+      borderColor: tokens.accent,
+    },
+    weekdayChipText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: tokens.text,
+    },
+    weekdayChipTextActive: {
+      color: tokens.accent,
+    },
+    maxOccurrencesInput: {
+      marginTop: 4,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: tokens.border,
+      backgroundColor: tokens.bg,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      fontSize: 14,
+      color: tokens.text,
     },
     publishButtonText: {
       fontSize: 13,
