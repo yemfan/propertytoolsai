@@ -1,10 +1,15 @@
-import type { MobileAgentInboxNotificationDto, MobileNotificationDeepScreen } from "@leadsmart/shared";
+import type {
+  MobileAgentInboxNotificationDto,
+  MobileNotificationDeepScreen,
+} from "@leadsmart/shared";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -20,36 +25,120 @@ import type { MobileApiFailure } from "../lib/leadsmartMobileApi";
 import { useThemeTokens } from "../lib/useThemeTokens";
 import type { ThemeTokens } from "../lib/theme";
 
+/**
+ * Notifications inbox.
+ *
+ * The DB-stored `type` column is constrained to a small enum
+ * (hot_lead / missed_call / reminder / new_lead). After Phase 2D
+ * + the briefing / publish-failure pushes shipped this session we
+ * have several distinct "reminder" sub-kinds — briefings, publish
+ * failures — that the agent benefits from filtering separately.
+ * Rather than widening the DB enum + migrating, this screen
+ * classifies display-side via title-prefix sniffing + the
+ * `data.deep_link.screen` hint. Filter chips let the agent narrow
+ * by classified bucket.
+ */
+
+type ClassifiedKind =
+  | "hot_lead"
+  | "missed_call"
+  | "briefing"
+  | "publish_failure"
+  | "reminder";
+
+const FILTERS: Array<{ id: "all" | ClassifiedKind; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "hot_lead", label: "Hot leads" },
+  { id: "briefing", label: "Briefings" },
+  { id: "publish_failure", label: "Post failures" },
+  { id: "missed_call", label: "Calls" },
+  { id: "reminder", label: "Other" },
+];
+
+function classify(
+  n: MobileAgentInboxNotificationDto,
+): ClassifiedKind {
+  if (n.type === "hot_lead") return "hot_lead";
+  if (n.type === "missed_call") return "missed_call";
+  // `type === "reminder"` covers briefings + publish failures + raw
+  // reminders. Discriminate by title prefix (emoji) — both pushes
+  // emit a distinctive emoji that we control server-side.
+  const title = n.title ?? "";
+  if (title.startsWith("☀️") || title.startsWith("🌙")) return "briefing";
+  if (title.startsWith("⚠️")) return "publish_failure";
+  // Some failure pushes might carry a `screen: "scheduled"` deep link
+  // even without the emoji — catch those too.
+  const screen = n.data?.deep_link?.screen as MobileNotificationDeepScreen | undefined;
+  if (screen === "scheduled") return "publish_failure";
+  return "reminder";
+}
+
 function priorityLabel(p: MobileAgentInboxNotificationDto["priority"]): string {
   if (p === "high") return "High";
   if (p === "medium") return "Medium";
   return "Low";
 }
 
-function typeLabel(t: MobileAgentInboxNotificationDto["type"]): string {
-  if (t === "hot_lead") return "Hot lead";
-  if (t === "missed_call") return "Missed call";
+function kindLabel(k: ClassifiedKind): string {
+  if (k === "hot_lead") return "Hot lead";
+  if (k === "missed_call") return "Missed call";
+  if (k === "briefing") return "Briefing";
+  if (k === "publish_failure") return "Post failed";
   return "Reminder";
+}
+
+function kindIcon(k: ClassifiedKind): keyof typeof Ionicons.glyphMap {
+  if (k === "hot_lead") return "flame-outline";
+  if (k === "missed_call") return "call-outline";
+  if (k === "briefing") return "sunny-outline";
+  if (k === "publish_failure") return "alert-circle-outline";
+  return "notifications-outline";
+}
+
+function kindColor(
+  k: ClassifiedKind,
+  tokens: ThemeTokens,
+): { bg: string; fg: string } {
+  if (k === "hot_lead") return { bg: "#FEE2E2", fg: "#DC2626" };
+  if (k === "missed_call") return { bg: "#FEF3C7", fg: "#D97706" };
+  if (k === "briefing") return { bg: "#FEF3C7", fg: "#92400E" };
+  if (k === "publish_failure") return { bg: "#FEE2E2", fg: "#B91C1C" };
+  return { bg: tokens.accentLight, fg: tokens.accent };
 }
 
 function navigateForDeepLink(
   router: ReturnType<typeof useRouter>,
-  dl: MobileAgentInboxNotificationDto["data"]
+  n: MobileAgentInboxNotificationDto,
 ) {
-  const screen = dl?.deep_link?.screen as MobileNotificationDeepScreen | undefined;
-  const leadId = dl?.deep_link?.lead_id;
-  const taskId = dl?.deep_link?.task_id;
+  const dl = n.data?.deep_link;
+  const screen = dl?.screen as MobileNotificationDeepScreen | undefined;
+  // The shared DTO uses `contact_id` (per the type def). Previous
+  // code here read `lead_id` which is never present — so deep-link
+  // taps for hot leads never routed correctly. Fix included.
+  const contactId =
+    (dl as { contact_id?: string } | undefined)?.contact_id ??
+    (dl as unknown as { lead_id?: string } | undefined)?.lead_id;
+  const taskId = dl?.task_id;
+  const kind = classify(n);
 
   if (screen === "task" && taskId) {
     router.push({ pathname: "/tasks", params: { focusTaskId: taskId } });
     return;
   }
-  if (screen === "call_log" && leadId) {
-    router.push({ pathname: "/lead/[id]", params: { id: leadId } });
+  if (screen === "call_log" && contactId) {
+    router.push({ pathname: "/lead/[id]", params: { id: contactId } });
     return;
   }
-  if (leadId) {
-    router.push({ pathname: "/lead/[id]", params: { id: leadId } });
+  if (kind === "publish_failure" || screen === "scheduled") {
+    router.push("/scheduled" as never);
+    return;
+  }
+  if (kind === "briefing" || screen === "home") {
+    router.push("/(tabs)/home" as never);
+    return;
+  }
+  if (contactId) {
+    router.push({ pathname: "/lead/[id]", params: { id: contactId } });
   }
 }
 
@@ -61,6 +150,7 @@ export default function NotificationsCenterScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<MobileApiFailure | null>(null);
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
 
   const load = useCallback(async (mode: "full" | "refresh") => {
     if (mode === "full") {
@@ -94,10 +184,12 @@ export default function NotificationsCenterScreen() {
       if (!n.read) {
         const res = await postMobileNotificationRead({ notificationId: n.id });
         if (res.ok) {
-          setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+          setItems((prev) =>
+            prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)),
+          );
         }
       }
-      navigateForDeepLink(router, n.data);
+      navigateForDeepLink(router, n);
     },
     [router]
   );
@@ -108,6 +200,26 @@ export default function NotificationsCenterScreen() {
       setItems((prev) => prev.map((x) => ({ ...x, read: true })));
     }
   }, []);
+
+  // Counts per classified kind for the chip badges.
+  const counts = useMemo(() => {
+    const c: Record<ClassifiedKind, number> = {
+      hot_lead: 0,
+      missed_call: 0,
+      briefing: 0,
+      publish_failure: 0,
+      reminder: 0,
+    };
+    for (const n of items) {
+      if (!n.read) c[classify(n)] += 1;
+    }
+    return c;
+  }, [items]);
+
+  const filteredItems = useMemo(() => {
+    if (filter === "all") return items;
+    return items.filter((n) => classify(n) === filter);
+  }, [items, filter]);
 
   if (loading) {
     return <ScreenLoading message="Loading notifications…" />;
@@ -127,36 +239,106 @@ export default function NotificationsCenterScreen() {
         </Pressable>
       </View>
 
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+      >
+        {FILTERS.map((f) => {
+          const active = filter === f.id;
+          const badge =
+            f.id === "all"
+              ? items.filter((n) => !n.read).length
+              : counts[f.id];
+          return (
+            <Pressable
+              key={f.id}
+              onPress={() => setFilter(f.id)}
+              style={[
+                styles.filterChip,
+                active && styles.filterChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  active && styles.filterChipTextActive,
+                ]}
+              >
+                {f.label}
+              </Text>
+              {badge > 0 && (
+                <View style={styles.filterChipBadge}>
+                  <Text style={styles.filterChipBadgeText}>{badge}</Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
       {error ? (
-        <ErrorBanner title="Could not load notifications" message={error.message} onRetry={() => void load("full")} />
+        <ErrorBanner
+          title="Could not load notifications"
+          message={error.message}
+          onRetry={() => void load("full")}
+        />
       ) : null}
 
       <FlatList
-        data={items}
+        data={filteredItems}
         keyExtractor={(n) => n.id}
-        refreshControl={<BrandRefreshControl refreshing={refreshing} onRefresh={() => void load("refresh")} />}
+        refreshControl={
+          <BrandRefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void load("refresh")}
+          />
+        }
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <Text style={styles.empty}>You’re all caught up. Hot leads and reminders will show here.</Text>
+          <Text style={styles.empty}>
+            {filter === "all"
+              ? "You're all caught up. Hot leads and reminders will show here."
+              : `No ${kindLabel(filter as ClassifiedKind).toLowerCase()} notifications yet.`}
+          </Text>
         }
-        renderItem={({ item: n }) => (
-          <Pressable
-            onPress={() => void onOpen(n)}
-            style={({ pressed }) => [styles.card, !n.read && styles.cardUnread, pressed && styles.cardPressed]}
-          >
-            <View style={styles.cardTop}>
-              <Text style={styles.typeTag}>
-                {typeLabel(n.type)} · {priorityLabel(n.priority)}
+        renderItem={({ item: n }) => {
+          const kind = classify(n);
+          const colors = kindColor(kind, tokens);
+          return (
+            <Pressable
+              onPress={() => void onOpen(n)}
+              style={({ pressed }) => [
+                styles.card,
+                !n.read && styles.cardUnread,
+                pressed && styles.cardPressed,
+              ]}
+            >
+              <View style={styles.cardTop}>
+                <View
+                  style={[styles.kindPill, { backgroundColor: colors.bg }]}
+                >
+                  <Ionicons
+                    name={kindIcon(kind)}
+                    size={11}
+                    color={colors.fg}
+                  />
+                  <Text style={[styles.kindPillText, { color: colors.fg }]}>
+                    {kindLabel(kind)} · {priorityLabel(n.priority)}
+                  </Text>
+                </View>
+                <Text style={styles.time}>
+                  {new Date(n.created_at).toLocaleString()}
+                </Text>
+              </View>
+              <Text style={styles.title}>{n.title}</Text>
+              <Text style={styles.body} numberOfLines={3}>
+                {n.body}
               </Text>
-              <Text style={styles.time}>{new Date(n.created_at).toLocaleString()}</Text>
-            </View>
-            <Text style={styles.title}>{n.title}</Text>
-            <Text style={styles.body} numberOfLines={3}>
-              {n.body}
-            </Text>
-            <Text style={styles.cta}>Open</Text>
-          </Pressable>
-        )}
+              <Text style={styles.cta}>Open</Text>
+            </Pressable>
+          );
+        }}
       />
     </View>
   );
@@ -165,41 +347,117 @@ export default function NotificationsCenterScreen() {
 const createStyles = (theme: ThemeTokens) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: theme.bg },
-  toolbar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.border,
-  },
-  toolbarHint: { flex: 1, fontSize: 13, color: theme.textMuted, marginRight: 12 },
-  markAll: { paddingVertical: 6, paddingHorizontal: 10 },
-  markAllPressed: { opacity: 0.75 },
-  markAllText: { fontSize: 14, fontWeight: "700", color: theme.accent },
-  listContent: { padding: 16, paddingBottom: 32, flexGrow: 1 },
-  empty: { fontSize: 15, color: theme.textMuted, textAlign: "center", marginTop: 32, paddingHorizontal: 24 },
-  card: {
-    backgroundColor: theme.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: theme.border,
-    padding: 14,
-    marginBottom: 12,
-  },
-  /**
-   * Unread card — tinted surface with an info-blue border to
-   * pull attention. Uses `surfaceMuted` so the tint direction
-   * is correct in both modes (slightly darker than `surface`
-   * on light, slightly lifted from `bg` on dark).
-   */
-  cardUnread: { borderColor: theme.infoBorder, backgroundColor: theme.surfaceMuted },
-  cardPressed: { opacity: 0.92 },
-  cardTop: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  typeTag: { fontSize: 11, fontWeight: "800", color: theme.textSubtle, letterSpacing: 0.4 },
-  time: { fontSize: 11, color: theme.textSubtle },
-  title: { fontSize: 17, fontWeight: "700", color: theme.text, marginBottom: 6 },
-  body: { fontSize: 15, color: theme.textMuted, lineHeight: 22 },
-  cta: { marginTop: 10, fontSize: 14, fontWeight: "700", color: theme.accent },
-});
+    toolbar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.border,
+    },
+    toolbarHint: { flex: 1, fontSize: 13, color: theme.textMuted, marginRight: 12 },
+    markAll: { paddingVertical: 6, paddingHorizontal: 10 },
+    markAllPressed: { opacity: 0.75 },
+    markAllText: { fontSize: 14, fontWeight: "700", color: theme.accent },
+    filterRow: {
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      gap: 8,
+    },
+    filterChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: theme.surface,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    filterChipActive: {
+      backgroundColor: theme.accentLight,
+      borderColor: theme.accent,
+    },
+    filterChipText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: theme.text,
+    },
+    filterChipTextActive: {
+      color: theme.accent,
+    },
+    filterChipBadge: {
+      minWidth: 16,
+      height: 16,
+      paddingHorizontal: 4,
+      borderRadius: 8,
+      backgroundColor: theme.danger,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    filterChipBadgeText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: "#fff",
+    },
+    listContent: { padding: 16, paddingBottom: 32, flexGrow: 1 },
+    empty: {
+      fontSize: 15,
+      color: theme.textMuted,
+      textAlign: "center",
+      marginTop: 32,
+      paddingHorizontal: 24,
+    },
+    card: {
+      backgroundColor: theme.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      padding: 14,
+      marginBottom: 12,
+    },
+    cardUnread: {
+      borderColor: theme.infoBorder,
+      backgroundColor: theme.surfaceMuted,
+    },
+    cardPressed: { opacity: 0.92 },
+    cardTop: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    kindPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
+    },
+    kindPillText: {
+      fontSize: 10,
+      fontWeight: "800",
+      letterSpacing: 0.4,
+    },
+    time: { fontSize: 11, color: theme.textSubtle },
+    title: {
+      fontSize: 17,
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 6,
+    },
+    body: {
+      fontSize: 15,
+      color: theme.textMuted,
+      lineHeight: 22,
+    },
+    cta: {
+      marginTop: 10,
+      fontSize: 14,
+      fontWeight: "700",
+      color: theme.accent,
+    },
+  });
