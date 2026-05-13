@@ -14,7 +14,7 @@ type Props = {
 export function ReminderCard({ reminder, onPress }: Props) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
-  const title = reminder.lead_name ?? `Lead ${reminder.lead_id}`;
+  const title = reminder.lead_name ?? `Lead ${reminder.contact_id}`;
   const status = reminder.overdue ? "Overdue follow-up" : "Follow-up scheduled";
 
   const body = (
