@@ -56,4 +56,6 @@ export const MOBILE_API_PATHS = {
   leadsGenRecurringList: "/api/mobile/leads-gen/recurring/list",
   leadsGenRecurringAction: (id: string) =>
     `/api/mobile/leads-gen/recurring/${encodeURIComponent(id)}`,
+  leadsGenSubjects: (trigger: string) =>
+    `/api/mobile/leads-gen/subjects?trigger=${encodeURIComponent(trigger)}`,
 } as const;
