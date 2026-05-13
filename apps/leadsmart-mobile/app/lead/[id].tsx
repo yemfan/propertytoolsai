@@ -92,6 +92,147 @@ function mergeConversation(
   return rows;
 }
 
+/**
+ * AI Insights card — surfaces the lead-scoring AI breakdown
+ * (`contact_scores` joined into the mobile DTO). Hidden entirely
+ * when there's no score yet — the row is created the first time
+ * the agent opens a lead detail post-#419's leadScoring fix, so
+ * older leads may not have one until the next rescore tick.
+ *
+ * Score band → color:
+ *   ≥ 70: hot (red)
+ *   40-69: warm (amber)
+ *   < 40: cold (slate)
+ *
+ * Reasons are shown inline (up to 3) with a "+N more" link if
+ * there's more, expanding inline. Keeps the card compact by
+ * default since lead detail already has a lot below it.
+ */
+function AiInsightsCard({
+  lead,
+  styles,
+}: {
+  lead: MobileLeadRecordDto;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const rawScore = (lead as { ai_lead_score?: number | null }).ai_lead_score;
+  const score = typeof rawScore === "number" ? Math.round(rawScore) : null;
+  const intent = (lead as { ai_intent?: string | null }).ai_intent ?? null;
+  const timeline = (lead as { ai_timeline?: string | null }).ai_timeline ?? null;
+  const confidence = (lead as { ai_confidence?: number | null }).ai_confidence ?? null;
+  const explanation =
+    ((lead as { ai_explanation?: string[] }).ai_explanation ?? []).filter(
+      (s) => typeof s === "string" && s.trim().length > 0,
+    );
+
+  // Bail entirely when there's nothing meaningful to show. Avoid
+  // surfacing a fake "0 / 100" for leads that simply haven't been
+  // scored yet.
+  if (score === null && !intent && !timeline && explanation.length === 0) {
+    return null;
+  }
+
+  const band =
+    score == null
+      ? "unknown"
+      : score >= 70
+        ? "hot"
+        : score >= 40
+          ? "warm"
+          : "cold";
+
+  const bandColor = (() => {
+    if (band === "hot") return { bg: "#FEE2E2", fg: "#B91C1C" };
+    if (band === "warm") return { bg: "#FEF3C7", fg: "#92400E" };
+    if (band === "cold") return { bg: "#E5E7EB", fg: "#374151" };
+    return { bg: "#F3F4F6", fg: "#6B7280" };
+  })();
+
+  const bandLabel =
+    band === "hot"
+      ? "Hot"
+      : band === "warm"
+        ? "Warm"
+        : band === "cold"
+          ? "Cold"
+          : "Pending";
+
+  const visibleReasons = expanded ? explanation : explanation.slice(0, 3);
+
+  return (
+    <View style={styles.aiCard}>
+      <View style={styles.aiHeader}>
+        <Text style={styles.aiHeaderLabel}>✨ AI INSIGHTS</Text>
+        <View
+          style={[styles.aiBandPill, { backgroundColor: bandColor.bg }]}
+        >
+          <Text style={[styles.aiBandPillText, { color: bandColor.fg }]}>
+            {bandLabel}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.aiScoreRow}>
+        {score !== null ? (
+          <View style={styles.aiScoreBlock}>
+            <Text style={styles.aiScoreNumber}>{score}</Text>
+            <Text style={styles.aiScoreMax}>/ 100</Text>
+          </View>
+        ) : (
+          <Text style={styles.aiScorePending}>Score pending</Text>
+        )}
+
+        <View style={styles.aiFactsBlock}>
+          {intent ? (
+            <Text style={styles.aiFact}>
+              <Text style={styles.aiFactLabel}>Intent: </Text>
+              <Text style={styles.aiFactValue}>{intent}</Text>
+            </Text>
+          ) : null}
+          {timeline ? (
+            <Text style={styles.aiFact}>
+              <Text style={styles.aiFactLabel}>Timeline: </Text>
+              <Text style={styles.aiFactValue}>{timeline}</Text>
+            </Text>
+          ) : null}
+          {confidence !== null ? (
+            <Text style={styles.aiFact}>
+              <Text style={styles.aiFactLabel}>Confidence: </Text>
+              <Text style={styles.aiFactValue}>
+                {Math.round(confidence * 100)}%
+              </Text>
+            </Text>
+          ) : null}
+        </View>
+      </View>
+
+      {explanation.length > 0 ? (
+        <View style={styles.aiReasons}>
+          {visibleReasons.map((r, i) => (
+            <View key={i} style={styles.aiReasonRow}>
+              <Text style={styles.aiReasonBullet}>·</Text>
+              <Text style={styles.aiReasonText}>{r}</Text>
+            </View>
+          ))}
+          {explanation.length > 3 ? (
+            <Pressable
+              onPress={() => setExpanded((v) => !v)}
+              style={styles.aiMoreLink}
+            >
+              <Text style={styles.aiMoreLinkText}>
+                {expanded
+                  ? "Show less"
+                  : `+${explanation.length - 3} more reason${explanation.length - 3 === 1 ? "" : "s"}`}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 function MessageBubble({
   m,
   kind,
@@ -381,6 +522,8 @@ export default function LeadDetailScreen() {
 
         <SectionRule />
 
+        <AiInsightsCard lead={lead} styles={styles} />
+
         <LeadQuickActionsRow
           toolbar
           leadId={lead.id}
@@ -566,6 +709,110 @@ const createStyles = (theme: ThemeTokens) => StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 10,
+  },
+  aiCard: {
+    backgroundColor: theme.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.border,
+    padding: 14,
+    marginBottom: 16,
+  },
+  aiHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  aiHeaderLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    color: theme.textSubtle,
+  },
+  aiBandPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  aiBandPillText: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+  },
+  aiScoreRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  aiScoreBlock: {
+    flexDirection: "row",
+    alignItems: "baseline",
+  },
+  aiScoreNumber: {
+    fontSize: 36,
+    fontWeight: "800",
+    color: theme.text,
+    lineHeight: 38,
+  },
+  aiScoreMax: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.textSubtle,
+    marginLeft: 4,
+  },
+  aiScorePending: {
+    fontSize: 14,
+    fontStyle: "italic",
+    color: theme.textSubtle,
+  },
+  aiFactsBlock: {
+    flex: 1,
+    gap: 2,
+  },
+  aiFact: {
+    fontSize: 13,
+    color: theme.text,
+    lineHeight: 18,
+  },
+  aiFactLabel: {
+    fontWeight: "700",
+    color: theme.textSubtle,
+  },
+  aiFactValue: {
+    fontWeight: "600",
+    color: theme.text,
+  },
+  aiReasons: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.border,
+    gap: 4,
+  },
+  aiReasonRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+  },
+  aiReasonBullet: {
+    fontSize: 13,
+    color: theme.textSubtle,
+    lineHeight: 18,
+  },
+  aiReasonText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: theme.text,
+  },
+  aiMoreLink: {
+    marginTop: 4,
+  },
+  aiMoreLinkText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.accent,
   },
   inlineError: {
     fontSize: 13,

@@ -221,7 +221,11 @@ export type MobileNotificationDeepScreen =
   | "lead_queue"
   /** Briefing-ready pushes (morning / evening) deep-link home where
    *  BriefingsCard renders the new briefing inline. */
-  | "home";
+  | "home"
+  /** Publish-failure pushes (cron-failed scheduled posts) deep-link
+   *  to the scheduled-posts management screen so the agent can see
+   *  the last_error context + decide next steps. */
+  | "scheduled";
 
 /**
  * Contract for `notification.request.content.data` on LeadSmart AI-originated pushes.
