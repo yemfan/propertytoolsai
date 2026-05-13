@@ -348,6 +348,12 @@ export default function HomeScreen() {
             <Text style={styles.chipText}>Postcards</Text>
           </Pressable>
           <Pressable
+            onPress={() => router.push("/quick-post" as never)}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>Quick Post</Text>
+          </Pressable>
+          <Pressable
             onPress={() => router.push("/showings" as never)}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
