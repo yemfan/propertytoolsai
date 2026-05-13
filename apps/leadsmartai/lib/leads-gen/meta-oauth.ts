@@ -88,13 +88,21 @@ export function generateAuthorizeUrl(state: string): string {
 /**
  * Cryptographically signed state token. We don't have sessions to
  * stash state in, so we make state self-verifying: base64 of
- * `{nonce, agentId, issuedAt}` + HMAC over it. Callback verifies
- * the HMAC + checks issuedAt is recent.
+ * `{nonce, agentId, issuedAt, returnTo?}` + HMAC over it. Callback
+ * verifies the HMAC + checks issuedAt is recent.
+ *
+ * `returnTo` is used for mobile OAuth: the mobile app passes a
+ * deep-link URL (e.g. `leadsmart://leads-gen/connect/callback`)
+ * which the callback redirects to instead of the web connect page.
+ * The callback validates the scheme is mobile-only so a malicious
+ * actor can't redirect to an arbitrary external URL.
  */
 export type StatePayload = {
   nonce: string;
   agentId: string;
   issuedAt: number;
+  /** Mobile deep-link the callback should redirect to. Must start with `leadsmart://`. */
+  returnTo?: string;
 };
 
 export function signState(payload: StatePayload): string {
