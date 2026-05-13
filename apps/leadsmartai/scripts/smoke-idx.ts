@@ -56,10 +56,11 @@ async function main() {
 
   // Probe 1 — search returns a non-empty page for a known market.
   const searchUrl = `${baseUrl}/api/idx/listings?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&pageSize=5`;
-  let searchBody: { ok?: boolean; listings?: unknown[]; provider?: string; error?: string } | null = null;
+  type SearchBody = { ok?: boolean; listings?: unknown[]; provider?: string; error?: string };
+  let searchBody: SearchBody | null = null;
   try {
     const { status, body } = await fetchJson(searchUrl);
-    searchBody = body as typeof searchBody;
+    searchBody = body as SearchBody | null;
     record(
       outcomes,
       status === 200 && searchBody?.ok === true,

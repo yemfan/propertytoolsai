@@ -205,7 +205,7 @@ export default function CalendarClient({ leads }: { leads: Array<{ id: string; n
     if (showTasks) for (const t of tasks) {
       if (!t.due_at) continue;
       const k = dateKey(new Date(t.due_at));
-      add(k, { type: "task", id: t.id, title: t.title, leadName: t.lead_name, time: t.due_at, priority: t.priority, status: t.status });
+      add(k, { type: "task", id: t.id, title: t.title, leadName: t.lead_name, time: t.due_at, priority: t.priority ?? undefined, status: t.status });
     }
     if (showFollowups) for (const f of followups) {
       const k = dateKey(new Date(f.next_contact_at));

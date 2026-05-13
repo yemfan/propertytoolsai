@@ -108,7 +108,6 @@ export async function getEffectiveForAgent(
     });
     return {
       agentId,
-      enabled: resolution.enabled,
       notes: null,
       updatedAt: null,
       ...resolution,
@@ -130,7 +129,6 @@ export async function getEffectiveForAgent(
 
   return {
     agentId,
-    enabled: resolution.enabled,
     notes: row?.notes ?? null,
     updatedAt: row?.updated_at ?? null,
     ...resolution,
