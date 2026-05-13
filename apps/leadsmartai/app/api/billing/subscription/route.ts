@@ -64,7 +64,7 @@ export async function GET(req: Request) {
         ]);
 
         invoices = invoiceList.data.map((inv) => ({
-          id: inv.id,
+          id: inv.id ?? "",
           date: new Date((inv.created ?? 0) * 1000).toISOString(),
           amount: (inv.amount_paid ?? 0) / 100,
           currency: (inv.currency ?? "usd").toUpperCase(),

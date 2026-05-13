@@ -106,7 +106,7 @@ export async function POST(req: Request) {
       void dispatchMobileInboundEmailPush({
         agentId: lead.assignedAgentId,
         leadId,
-        leadName: lead.name,
+        leadName: lead.name ?? null,
         subject,
         preview: text,
       }).catch(() => {});
@@ -139,7 +139,7 @@ export async function POST(req: Request) {
       void dispatchMobileNeedsHumanPush({
         agentId,
         leadId,
-        leadName: lead.name,
+        leadName: lead.name ?? null,
         channel: "email",
         reason: `Email · ${reply.inferredIntent}`,
       }).catch(() => {});

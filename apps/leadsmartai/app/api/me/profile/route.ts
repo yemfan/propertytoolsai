@@ -48,7 +48,7 @@ export async function PATCH(req: Request) {
   const lsUpdates: Record<string, string | boolean> = {};
   const hadSignupOriginRequest = typeof body.signup_origin_app === "string";
 
-  if (hadSignupOriginRequest) {
+  if (hadSignupOriginRequest && typeof body.signup_origin_app === "string") {
     const v = body.signup_origin_app.trim().toLowerCase();
     if (!isAllowedSignupOriginApp(v)) {
       return NextResponse.json({ ok: false, error: "Invalid signup_origin_app" }, { status: 400 });

@@ -415,7 +415,7 @@ export async function handleInboundWebhookStart(params: {
   if (display) {
     try {
       snapshot = await createLeadIfMissingForInbound(fromPhone);
-      leadId = snapshot.leadId;
+      leadId = snapshot.leadId ?? null;
       if (leadId && agentId) await ensureLeadAgent(leadId, agentId);
     } catch {
       leadId = null;
