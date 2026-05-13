@@ -773,7 +773,11 @@ export async function patchMobileNotificationPreferences(
   patch: Partial<
     Pick<
       MobileNotificationPreferencesDto,
-      "push_hot_lead" | "push_missed_call" | "push_reminder" | "reminder_digest_minutes"
+      | "push_hot_lead"
+      | "push_missed_call"
+      | "push_reminder"
+      | "push_post_milestone"
+      | "reminder_digest_minutes"
     >
   >
 ): Promise<({ ok: true } & { preferences: MobileNotificationPreferencesDto }) | MobileApiFailure> {

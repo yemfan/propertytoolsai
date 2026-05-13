@@ -49,6 +49,15 @@ function navigateFromPushData(
     return;
   }
 
+  // Engagement-milestone pushes — route to /post-history where the
+  // row renders with the just-refreshed metrics. The triggering
+  // post is usually top-of-list (newest published) so no per-row
+  // anchor is needed.
+  if (screen === "post_history") {
+    router.push("/post-history" as never);
+    return;
+  }
+
   // Briefing pushes (morning/evening) — route home where the
   // BriefingsCard re-fetches + shows the freshly-arrived briefing.
   if (

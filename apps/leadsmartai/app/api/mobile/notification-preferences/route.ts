@@ -31,6 +31,10 @@ export async function PATCH(req: Request) {
       push_hot_lead: typeof body.push_hot_lead === "boolean" ? body.push_hot_lead : undefined,
       push_missed_call: typeof body.push_missed_call === "boolean" ? body.push_missed_call : undefined,
       push_reminder: typeof body.push_reminder === "boolean" ? body.push_reminder : undefined,
+      push_post_milestone:
+        typeof body.push_post_milestone === "boolean"
+          ? body.push_post_milestone
+          : undefined,
       reminder_digest_minutes:
         typeof body.reminder_digest_minutes === "number"
           ? Math.min(120, Math.max(5, Math.floor(body.reminder_digest_minutes)))

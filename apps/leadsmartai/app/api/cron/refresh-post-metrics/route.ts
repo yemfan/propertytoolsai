@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 
 import { fetchPostInsights } from "@/lib/leads-gen/meta-post";
 import { decryptToken } from "@/lib/leads-gen/token-enc";
+import {
+  dispatchMobilePostMilestonePush,
+  highestCrossedMilestone,
+} from "@/lib/mobile/pushDispatch";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -61,6 +65,8 @@ type StaleRow = {
   social_account_id: string;
   platform: "facebook" | "instagram";
   external_post_id: string;
+  caption: string;
+  last_milestone_pushed: number;
 };
 
 async function selectStalePosts(): Promise<StaleRow[]> {
@@ -72,12 +78,15 @@ async function selectStalePosts(): Promise<StaleRow[]> {
     now - MIN_REFRESH_INTERVAL_MINUTES * 60 * 1000,
   ).toISOString();
 
+  const selectCols =
+    "id, agent_id, social_account_id, platform, external_post_id, caption, last_milestone_pushed";
+
   // Never-refreshed rows first (highest signal — they're brand-new posts
   // the agent just published and is most likely watching). Then
   // stale-refresh rows ordered by oldest refresh first.
   const { data: neverRefreshed } = await supabaseAdmin
     .from("lead_posts")
-    .select("id, agent_id, social_account_id, platform, external_post_id")
+    .select(selectCols)
     .eq("status", "published")
     .in("platform", ["facebook", "instagram"])
     .not("external_post_id", "is", null)
@@ -92,7 +101,7 @@ async function selectStalePosts(): Promise<StaleRow[]> {
 
   const { data: stale } = await supabaseAdmin
     .from("lead_posts")
-    .select("id, agent_id, social_account_id, platform, external_post_id")
+    .select(selectCols)
     .eq("status", "published")
     .in("platform", ["facebook", "instagram"])
     .not("external_post_id", "is", null)
@@ -103,6 +112,20 @@ async function selectStalePosts(): Promise<StaleRow[]> {
 
   rows.push(...((stale as StaleRow[] | null) ?? []));
   return rows;
+}
+
+function engagementScore(m: {
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+  saves: number | null;
+}): number {
+  return (
+    (m.likes ?? 0) +
+    (m.comments ?? 0) +
+    (m.shares ?? 0) +
+    (m.saves ?? 0)
+  );
 }
 
 export async function POST(req: Request) {
@@ -144,6 +167,7 @@ export async function POST(req: Request) {
     let skippedNoConn = 0;
     let skippedTokenFail = 0;
     let metaErrors = 0;
+    let milestonePushes = 0;
 
     for (const row of stale) {
       const conn = connById.get(row.social_account_id);
@@ -188,11 +212,55 @@ export async function POST(req: Request) {
           updated_at: nowIso,
         };
         if (insights) update.metrics = insights;
+
+        // Milestone detection — only when we actually got fresh metrics
+        // back. Skip-ahead crossings (0 → 130) collapse to the highest
+        // threshold so we don't spam the lower ones.
+        let crossed: number | null = null;
+        if (insights) {
+          const score = engagementScore(insights);
+          crossed = highestCrossedMilestone(
+            row.last_milestone_pushed,
+            score,
+          );
+          if (crossed !== null) {
+            update.last_milestone_pushed = crossed;
+          }
+        }
+
         await supabaseAdmin
           .from("lead_posts")
           .update(update)
           .eq("id", row.id);
         refreshed += 1;
+
+        if (crossed !== null) {
+          // Best-effort push — failure here shouldn't bubble up and
+          // disrupt the cron's bookkeeping. The lead_posts column was
+          // already bumped above so we won't re-fire on the next run.
+          try {
+            await dispatchMobilePostMilestonePush({
+              agentId: row.agent_id,
+              leadPostId: row.id,
+              threshold: crossed,
+              platform: row.platform,
+              caption: row.caption,
+            });
+            milestonePushes += 1;
+          } catch (pushErr) {
+            console.warn(
+              "[cron/refresh-post-metrics] milestone push dispatch failed",
+              {
+                leadPostId: row.id,
+                threshold: crossed,
+                err:
+                  pushErr instanceof Error
+                    ? pushErr.message.slice(0, 200)
+                    : String(pushErr),
+              },
+            );
+          }
+        }
       } catch (e) {
         // Meta API failure for this post (e.g. post deleted, rate
         // limit, transient 5xx). Stamp the refresh timestamp so we
@@ -218,6 +286,7 @@ export async function POST(req: Request) {
       skippedNoConn,
       skippedTokenFail,
       metaErrors,
+      milestonePushes,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Cron failed";
