@@ -40,4 +40,8 @@ export const MOBILE_API_PATHS = {
     `/api/mobile/showings/${encodeURIComponent(id)}/feedback`,
   clickToCall: "/api/mobile/voice/click-to-call",
   leadsGenDraft: "/api/mobile/leads-gen/draft",
+  leadsGenConnections: "/api/mobile/leads-gen/connections",
+  leadsGenPublish: "/api/mobile/leads-gen/publish",
+  leadsGenConnectMetaInit: "/api/mobile/leads-gen/connect/meta/init",
+  leadsGenConnectMetaDisconnect: "/api/mobile/leads-gen/connect/meta/disconnect",
 } as const;
