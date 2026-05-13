@@ -1335,3 +1335,120 @@ export async function fetchMobileQuickPostDraft(input: {
   };
 }
 
+
+
+// ── Generate Leads (mobile Meta connect + publish) ───────────────
+
+export type MobileConnection = {
+  id: string;
+  platform: "meta";
+  fbPageId: string | null;
+  fbPageName: string | null;
+  igBusinessUserId: string | null;
+  igBusinessUsername: string | null;
+  pictureUrl: string | null;
+  canPublishFacebook: boolean;
+  canPublishInstagram: boolean;
+};
+
+type MobileConnectionsJson = MobileJsonError & {
+  connections?: MobileConnection[];
+};
+
+/** List the agent's social connections (no tokens). */
+export async function fetchMobileConnections(): Promise<
+  | { ok: true; connections: MobileConnection[] }
+  | MobileApiFailure
+> {
+  const res = await mobileGet<MobileConnectionsJson>(
+    MOBILE_API_PATHS.leadsGenConnections,
+  );
+  if (res.ok === false) return res;
+  return { ok: true, connections: res.data.connections ?? [] };
+}
+
+type MobileMetaInitJson = MobileJsonError & {
+  url?: string;
+};
+
+/**
+ * Mint a Meta OAuth URL for the mobile in-app browser. The mobile
+ * `returnTo` deep link is encoded into the state token; after the
+ * OAuth dance, /api/leads-gen/connect/meta/callback redirects to
+ * the deep link with status + count query params.
+ */
+export async function initMobileMetaConnect(returnTo: string): Promise<
+  | { ok: true; url: string }
+  | MobileApiFailure
+> {
+  const res = await mobilePost<MobileMetaInitJson>(
+    MOBILE_API_PATHS.leadsGenConnectMetaInit,
+    { returnTo },
+  );
+  if (res.ok === false) return res;
+  if (!res.data.url) {
+    return { ok: false, status: 500, message: "No URL returned" };
+  }
+  return { ok: true, url: res.data.url };
+}
+
+type MobileDisconnectJson = MobileJsonError & { removed?: number };
+
+export async function disconnectMobileMeta(input: { id?: string; all?: boolean }): Promise<
+  | { ok: true; removed: number }
+  | MobileApiFailure
+> {
+  const res = await mobilePost<MobileDisconnectJson>(
+    MOBILE_API_PATHS.leadsGenConnectMetaDisconnect,
+    input,
+  );
+  if (res.ok === false) return res;
+  return { ok: true, removed: res.data.removed ?? 0 };
+}
+
+type MobilePublishJson = MobileJsonError & {
+  postId?: string;
+  externalPostId?: string;
+  externalPostUrl?: string | null;
+  platform?: "facebook" | "instagram";
+};
+
+export type MobilePublishSuccess = {
+  ok: true;
+  postId: string;
+  externalPostId: string;
+  externalPostUrl: string | null;
+  platform: "facebook" | "instagram";
+};
+
+/**
+ * Direct publish via the shared `publishPost` helper. Returns the
+ * Meta-side post id + permalink on success; the QuickPost screen
+ * surfaces the link as "View on Facebook →".
+ */
+export async function publishMobileQuickPost(input: {
+  platform: "facebook" | "instagram";
+  connectionId: string;
+  caption: string;
+  hashtags?: string[];
+  mediaItemId?: string;
+  trigger?: string;
+  subjectKind?: string;
+  subjectRefId?: string;
+}): Promise<MobilePublishSuccess | MobileApiFailure> {
+  const res = await mobilePost<MobilePublishJson>(
+    MOBILE_API_PATHS.leadsGenPublish,
+    input as unknown as Record<string, unknown>,
+  );
+  if (res.ok === false) return res;
+  if (!res.data.postId || !res.data.externalPostId || !res.data.platform) {
+    return { ok: false, status: 500, message: "Publish returned no ids" };
+  }
+  return {
+    ok: true,
+    postId: res.data.postId,
+    externalPostId: res.data.externalPostId,
+    externalPostUrl: res.data.externalPostUrl ?? null,
+    platform: res.data.platform,
+  };
+}

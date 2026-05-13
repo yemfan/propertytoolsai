@@ -41,11 +41,27 @@ export async function GET(req: Request) {
   const userError = url.searchParams.get("error");
   const errorReason = url.searchParams.get("error_reason");
 
-  const redirectBase = "/dashboard/leads/generate/connect";
+  // Mobile callers pass `returnTo: leadsmart://...` in the state; the
+  // callback redirects to that deep link instead of the web connect
+  // page. We resolve the destination after state verification so a
+  // malicious state can't trick us into redirecting somewhere bad.
+  let mobileReturnTo: string | null = null;
+  const webRedirectBase = "/dashboard/leads/generate/connect";
+
   function back(params: Record<string, string>): NextResponse {
     const q = new URLSearchParams(params).toString();
+    // Mobile path: redirect to the verified deep link with the same
+    // status params. The mobile app's WebBrowser.openAuthSessionAsync
+    // intercepts the leadsmart:// scheme and resolves the OAuth dance.
+    if (mobileReturnTo) {
+      const sep = mobileReturnTo.includes("?") ? "&" : "?";
+      return NextResponse.redirect(
+        `${mobileReturnTo}${sep}${q}`,
+        { status: 302 },
+      );
+    }
     return NextResponse.redirect(
-      new URL(`${redirectBase}?${q}`, req.url),
+      new URL(`${webRedirectBase}?${q}`, req.url),
       { status: 302 },
     );
   }
@@ -65,14 +81,28 @@ export async function GET(req: Request) {
   }
 
   // 1. Verify state — HMAC + cookie cross-check + freshness.
+  //    Mobile flows skip the cookie check (in-app browsers don't
+  //    carry the cookie set on /start because /start isn't called).
+  //    The HMAC + freshness + agentId binding is the same defense.
   let agentId: string;
   try {
-    const cookieState = req.headers.get("cookie")?.match(/meta_oauth_state=([^;]+)/)?.[1];
-    if (!cookieState || decodeURIComponent(cookieState) !== state) {
-      throw new Error("State cookie mismatch");
-    }
     const payload = verifyState(state, STATE_MAX_AGE_MS);
     agentId = payload.agentId;
+    // Validate the returnTo strictly — only allow the leadsmart://
+    // mobile scheme. Prevents the OAuth callback from being abused
+    // as an open redirect by a malicious state forger.
+    if (payload.returnTo) {
+      if (!/^leadsmart:\/\//i.test(payload.returnTo)) {
+        throw new Error("Invalid returnTo scheme");
+      }
+      mobileReturnTo = payload.returnTo;
+    } else {
+      // Web flow: also require the cookie match.
+      const cookieState = req.headers.get("cookie")?.match(/meta_oauth_state=([^;]+)/)?.[1];
+      if (!cookieState || decodeURIComponent(cookieState) !== state) {
+        throw new Error("State cookie mismatch");
+      }
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "State verification failed";
     console.warn("[meta/callback] state verification failed:", msg);
