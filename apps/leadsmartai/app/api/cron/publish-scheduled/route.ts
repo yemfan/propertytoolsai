@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { publishPost } from "@/lib/leads-gen/publish";
+import { dispatchMobilePublishFailurePush } from "@/lib/mobile/pushDispatch";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -221,6 +222,23 @@ export async function POST(req: Request) {
           } as Record<string, unknown>)
           .eq("id", row.id);
         permanentlyFailed += 1;
+
+        // Push the failure to the agent's phone so they see it
+        // promptly. Wrapped in try/catch so push delivery problems
+        // never bubble up and disrupt the cron's bookkeeping.
+        try {
+          await dispatchMobilePublishFailurePush({
+            agentId: row.agent_id,
+            scheduledPostId: row.id,
+            platform: row.platform,
+            errorMessage: result.error,
+          });
+        } catch (e) {
+          console.warn(
+            "[cron/publish-scheduled] failure push dispatch failed",
+            { id: row.id, err: e instanceof Error ? e.message : e },
+          );
+        }
       }
     }
 

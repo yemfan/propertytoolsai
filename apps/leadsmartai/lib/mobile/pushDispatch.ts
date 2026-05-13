@@ -373,6 +373,81 @@ export async function dispatchMobileMissedCallPush(params: {
 }
 
 /**
+ * Scheduled-post publish-failure push. Fires when the
+ * publish-scheduled cron exhausts its retry budget on a scheduled
+ * post and stamps the row as `failed`. Mobile gets a notification
+ * so the agent can open /scheduled, see the last_error, and either
+ * reconnect / try a new post or accept the failure.
+ *
+ * No dedup needed — each scheduled_posts row reaches `failed` at
+ * most once, and the cron only stamps the transition once. Caller
+ * (the cron's permanent-fail branch) only invokes here.
+ *
+ * Deep link: `screen: "scheduled"` so the mobile app routes to the
+ * scheduled-posts management screen.
+ */
+export async function dispatchMobilePublishFailurePush(params: {
+  agentId: string;
+  scheduledPostId: string;
+  platform: "facebook" | "instagram" | "linkedin";
+  errorMessage: string;
+}): Promise<boolean> {
+  if (mobilePushGloballyDisabled()) return false;
+
+  const platformLabel =
+    params.platform === "linkedin"
+      ? "LinkedIn"
+      : params.platform === "instagram"
+        ? "Instagram"
+        : "Facebook";
+  const title = `⚠️ ${platformLabel} post failed`;
+  const body =
+    params.errorMessage.slice(0, 140) ||
+    "Your scheduled post couldn't publish after multiple retries. Tap to review.";
+
+  const now = new Date().toISOString();
+  const inboxId = await insertAgentInboxNotification({
+    agentId: params.agentId,
+    type: "reminder",
+    priority: "high",
+    title,
+    body,
+    // Reuse the `home` deep-link slot — the mobile handler routes
+    // by `kind` (`publish_failure`) into /scheduled. Avoids adding
+    // another value to MobileNotificationDeepScreen.
+    deepLink: { screen: "home" },
+    pushSentAt: null,
+  });
+
+  const userId = await getAuthUserIdForAgent(params.agentId);
+  if (!userId) {
+    await updateInboxNotificationPushSentAt(inboxId, now);
+    return false;
+  }
+  const tokens = await listExpoPushTokensForUser(userId);
+  if (!tokens.length) {
+    await updateInboxNotificationPushSentAt(inboxId, now);
+    return false;
+  }
+
+  await sendExpoPushMessages(
+    buildMessages(
+      tokens,
+      title,
+      body,
+      {
+        kind: "publish_failure",
+        screen: "scheduled",
+        scheduledPostId: params.scheduledPostId,
+      },
+      "high",
+    ),
+  );
+  await updateInboxNotificationPushSentAt(inboxId, now);
+  return true;
+}
+
+/**
  * Briefing-ready push. Fires once after the daily briefing insert
  * (morning + evening) so the agent's phone gets a "your morning
  * plan is ready" / "your evening summary is in" ping.

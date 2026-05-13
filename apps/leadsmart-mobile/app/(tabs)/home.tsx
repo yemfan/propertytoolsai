@@ -25,6 +25,7 @@ import {
   fetchMobileDailyAgenda,
   fetchMobileDashboard,
   fetchLeadQueue,
+  fetchMobileScheduledPosts,
 } from "../../lib/leadsmartMobileApi";
 import type { MobileApiFailure } from "../../lib/leadsmartMobileApi";
 import { getSupabaseAuthClient } from "../../lib/supabaseAuthClient";
@@ -65,6 +66,14 @@ export default function HomeScreen() {
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [firstName, setFirstName] = useState<string | null>(null);
   const [queueCount, setQueueCount] = useState(0);
+  /** Counts for the Home chip row. `scheduledUpcoming` = posts
+   *  awaiting cron pickup; `scheduledFailed` = terminal failures
+   *  the agent should know about. Both surface as badges on the
+   *  respective chips. */
+  const [scheduledCounts, setScheduledCounts] = useState<{
+    upcoming: number;
+    failed: number;
+  }>({ upcoming: 0, failed: 0 });
 
   // ── Cached fetches for dashboard + agenda ──────────────────────
   type DashboardPayload = {
@@ -128,11 +137,23 @@ export default function HomeScreen() {
     });
   }, []);
 
-  // Queue count stays as a focus-effect fetch (low-value for caching)
+  // Queue count + scheduled-posts count stay as focus-effect
+  // fetches (low-value for caching; agent expects fresh numbers
+  // each time they swing back to Home).
   useFocusEffect(
     useCallback(() => {
       void fetchLeadQueue().then((qRes) => {
         if (qRes.ok) setQueueCount(qRes.total);
+      });
+      void fetchMobileScheduledPosts().then((sRes) => {
+        if (sRes.ok === false) return;
+        const upcoming = sRes.scheduled.filter(
+          (s) => s.status === "scheduled" || s.status === "posting",
+        ).length;
+        const failed = sRes.scheduled.filter(
+          (s) => s.status === "failed",
+        ).length;
+        setScheduledCounts({ upcoming, failed });
       });
     }, [])
   );
@@ -357,7 +378,19 @@ export default function HomeScreen() {
             onPress={() => router.push("/scheduled" as never)}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
-            <Text style={styles.chipText}>Scheduled</Text>
+            <Text style={styles.chipText}>
+              Scheduled
+              {scheduledCounts.upcoming > 0
+                ? ` · ${scheduledCounts.upcoming}`
+                : ""}
+            </Text>
+            {scheduledCounts.failed > 0 ? (
+              <View style={styles.chipBadge}>
+                <Text style={styles.chipBadgeText}>
+                  {scheduledCounts.failed}
+                </Text>
+              </View>
+            ) : null}
           </Pressable>
           <Pressable
             onPress={() => router.push("/recurring" as never)}
@@ -543,6 +576,9 @@ const createStyles = (theme: ThemeTokens) => StyleSheet.create({
     gap: 8,
   },
   chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 999,
@@ -552,6 +588,20 @@ const createStyles = (theme: ThemeTokens) => StyleSheet.create({
   },
   chipPressed: { backgroundColor: theme.accentPressed, borderColor: theme.infoBorder },
   chipText: { fontSize: 13, fontWeight: "700", color: theme.text },
+  chipBadge: {
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    backgroundColor: theme.danger,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chipBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#fff",
+  },
   sectionHeading: {
     fontSize: 12,
     fontWeight: "800",
