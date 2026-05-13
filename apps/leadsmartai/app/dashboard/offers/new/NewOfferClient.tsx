@@ -67,8 +67,8 @@ type ListingDetectState =
 function NewOfferForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const prefilledContactId = searchParams.get("contactId") ?? "";
-  const prefilledShowingId = searchParams.get("showingId") ?? "";
+  const prefilledContactId = searchParams?.get("contactId") ?? "";
+  const prefilledShowingId = searchParams?.get("showingId") ?? "";
 
   const [contact, setContact] = useState<ContactPickerValue | null>(null);
   const [propertyAddress, setPropertyAddress] = useState("");

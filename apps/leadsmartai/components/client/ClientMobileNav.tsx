@@ -18,7 +18,7 @@ export default function ClientMobileNav() {
     <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-md safe-area-pb">
       <div className="max-w-lg mx-auto flex justify-around items-stretch px-1 pt-1 pb-2">
         {tabs.map((t) => {
-          const active = path === t.href || path.startsWith(t.href + "/");
+          const active = path === t.href || (path?.startsWith(t.href + "/") ?? false);
           return (
             <Link
               key={t.href}

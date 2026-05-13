@@ -24,13 +24,13 @@ type TxType = "buyer_rep" | "listing_rep" | "dual";
 function NewTransactionForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const prefilledContactId = searchParams.get("contactId") ?? "";
+  const prefilledContactId = searchParams?.get("contactId") ?? "";
   /** ?offerId=<uuid> — agent clicked ✓ Accept on /dashboard/offers and
    *  was routed here. We fetch the offer and prefill buyer + address +
    *  price + dates so the agent only needs to confirm + upload the
    *  signed RPA via the ContractUploader. The id is also POSTed back
    *  with the create request so the API can set offer.transaction_id. */
-  const prefilledOfferId = searchParams.get("offerId") ?? "";
+  const prefilledOfferId = searchParams?.get("offerId") ?? "";
 
   // Honor `?type=listing_rep` (or `dual`) so the Listings page button
   // — and CommandPalette deep links — open the form already on the
@@ -42,15 +42,15 @@ function NewTransactionForm() {
   // point IS the deal type. Showing a Buyer side / Listing side /
   // Dual agent toggle on a form titled "New listing" reads as a
   // mistake — it's a listing, not a transaction-with-listing-mode.
-  const typeParam = searchParams.get("type");
+  const typeParam = searchParams?.get("type") ?? null;
   /** ?listingId — when present, the agent arrived from a listing
    *  detail page after accepting a listing-side offer. The form
    *  prefills buyer/address/price/dates from the listing + the
    *  accepted offer (?listingOfferId), and the submit handler
    *  back-links the new transaction to both. Pin transactionType
    *  to listing_rep on this path. */
-  const prefilledListingId = searchParams.get("listingId") ?? "";
-  const prefilledListingOfferId = searchParams.get("listingOfferId") ?? "";
+  const prefilledListingId = searchParams?.get("listingId") ?? "";
+  const prefilledListingOfferId = searchParams?.get("listingOfferId") ?? "";
   const fromListing = !!prefilledListingId;
   const typePinnedFromUrl =
     typeParam === "listing_rep" || typeParam === "dual" || fromListing;
@@ -59,7 +59,7 @@ function NewTransactionForm() {
     : typePinnedFromUrl
       ? (typeParam as TxType)
       : "buyer_rep";
-  const focusUpload = searchParams.get("focus") === "upload";
+  const focusUpload = searchParams?.get("focus") === "upload";
 
   const [transactionType, setTransactionType] = useState<TxType>(initialType);
   const [contact, setContact] = useState<ContactPickerValue | null>(null);

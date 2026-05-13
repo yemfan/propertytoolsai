@@ -24,16 +24,16 @@ type FilterState = {
   propertyType: string;
 };
 
-function readFromSearchParams(sp: URLSearchParams): FilterState {
+function readFromSearchParams(sp: URLSearchParams | null): FilterState {
   return {
-    city: sp.get("city") ?? "",
-    state: sp.get("state") ?? "",
-    zip: sp.get("zip") ?? "",
-    priceMin: sp.get("priceMin") ?? "",
-    priceMax: sp.get("priceMax") ?? "",
-    bedsMin: sp.get("bedsMin") ?? "",
-    bathsMin: sp.get("bathsMin") ?? "",
-    propertyType: sp.get("propertyType") ?? "",
+    city: sp?.get("city") ?? "",
+    state: sp?.get("state") ?? "",
+    zip: sp?.get("zip") ?? "",
+    priceMin: sp?.get("priceMin") ?? "",
+    priceMax: sp?.get("priceMax") ?? "",
+    bedsMin: sp?.get("bedsMin") ?? "",
+    bathsMin: sp?.get("bathsMin") ?? "",
+    propertyType: sp?.get("propertyType") ?? "",
   };
 }
 

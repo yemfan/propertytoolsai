@@ -58,8 +58,8 @@ function readBlobString(blob: unknown, ...keys: string[]): string | null {
 function NewShowingForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const prefilledContactId = searchParams.get("contactId") ?? "";
-  const inboundId = searchParams.get("inboundId");
+  const prefilledContactId = searchParams?.get("contactId") ?? "";
+  const inboundId = searchParams?.get("inboundId") ?? null;
 
   const [contact, setContact] = useState<ContactPickerValue | null>(null);
   const [propertyAddress, setPropertyAddress] = useState("");

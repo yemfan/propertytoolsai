@@ -88,8 +88,8 @@ function summarize(parsed: ParsedOffer): { label: string; value: string }[] {
 export function UploadOfferClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const prefilledContactId = searchParams.get("contactId") ?? "";
-  const inboundId = searchParams.get("inboundId");
+  const prefilledContactId = searchParams?.get("contactId") ?? "";
+  const inboundId = searchParams?.get("inboundId") ?? null;
 
   const [contact, setContact] = useState<ContactPickerValue | null>(null);
   const [text, setText] = useState("");
