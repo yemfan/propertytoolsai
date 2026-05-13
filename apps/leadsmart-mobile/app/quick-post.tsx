@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -15,11 +16,14 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import {
   fetchMobileConnections,
   fetchMobileQuickPostDraft,
   publishMobileQuickPost,
+  uploadMobileMedia,
   type MobileConnection,
+  type MobileMediaItem,
   type MobileQuickPostPlatform,
   type MobileQuickPostTrigger,
 } from "../lib/leadsmartMobileApi";
@@ -113,6 +117,14 @@ export default function QuickPostScreen() {
     | null
   >(null);
 
+  // Image attachment state. The agent picks from camera or library,
+  // we upload to media_library on selection, and pass the resulting
+  // media id to publishMobileQuickPost. Persists across platform-tab
+  // switches because the same image works for FB / IG / LinkedIn / X.
+  const [media, setMedia] = useState<MobileMediaItem | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     void fetchMobileConnections().then((res) => {
@@ -125,13 +137,21 @@ export default function QuickPostScreen() {
   }, []);
 
   // Which platforms the agent can publish directly to right now.
-  // Mobile supports text-only Facebook + LinkedIn posts (no media
-  // picker yet); Instagram requires an image (Meta API) so it falls
-  // back to Share/Copy even when connected.
+  //   - Facebook  : Meta connection (image optional)
+  //   - Instagram : Meta connection + IG Business + image attached
+  //   - LinkedIn  : LinkedIn connection (image optional)
+  //   - X         : no direct publish path; Share/Copy only
   const fbConnection = useMemo(
     () =>
       connections.find((c) => c.platform === "meta" && c.canPublishFacebook) ??
       null,
+    [connections],
+  );
+  const igConnection = useMemo(
+    () =>
+      connections.find(
+        (c) => c.platform === "meta" && c.canPublishInstagram,
+      ) ?? null,
     [connections],
   );
   const linkedinConnection = useMemo(
@@ -144,10 +164,17 @@ export default function QuickPostScreen() {
   const activeDirectPublishConnection =
     platform === "facebook"
       ? fbConnection
-      : platform === "linkedin"
-        ? linkedinConnection
-        : null;
-  const canDirectPublish = activeDirectPublishConnection !== null;
+      : platform === "instagram"
+        ? igConnection
+        : platform === "linkedin"
+          ? linkedinConnection
+          : null;
+  // IG also requires an attached image — if the connection's there
+  // but no image is set, hide the button and the helper text below
+  // nudges the agent to attach one.
+  const canDirectPublish =
+    activeDirectPublishConnection !== null &&
+    (platform !== "instagram" || media !== null);
 
   const onGenerate = useCallback(async () => {
     const trimmed = brief.trim();
@@ -204,11 +231,91 @@ export default function QuickPostScreen() {
     }
   }, [caption, hashtags, platform]);
 
+  /**
+   * Upload a picked image to the media library. Shared by both
+   * camera and library pickers. The MediaItem stays in state so
+   * the publish path can reference it by id, and the UI hero
+   * preview reads `signedUrl`.
+   */
+  const handlePicked = useCallback(async (result: ImagePicker.ImagePickerResult) => {
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    if (!asset) return;
+    setImageError(null);
+    setUploading(true);
+    const res = await uploadMobileMedia({
+      uri: asset.uri,
+      fileName: asset.fileName ?? undefined,
+      contentType: asset.mimeType ?? "image/jpeg",
+    });
+    setUploading(false);
+    if (res.ok === false) {
+      hapticError();
+      setImageError(res.message);
+      return;
+    }
+    hapticSuccess();
+    setMedia(res.item);
+  }, []);
+
+  const onPickFromLibrary = useCallback(async () => {
+    hapticButtonPress();
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      setImageError(
+        "Photo library access denied. Enable it in Settings → LeadSmart.",
+      );
+      hapticError();
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      // Quality 0.9 — good enough for FB / IG feed, ~3-5x smaller than raw.
+      quality: 0.9,
+    });
+    await handlePicked(result);
+  }, [handlePicked]);
+
+  const onPickFromCamera = useCallback(async () => {
+    hapticButtonPress();
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      setImageError(
+        "Camera access denied. Enable it in Settings → LeadSmart.",
+      );
+      hapticError();
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.9 });
+    await handlePicked(result);
+  }, [handlePicked]);
+
+  const onClearImage = useCallback(() => {
+    hapticButtonPress();
+    setMedia(null);
+    setImageError(null);
+  }, []);
+
   const onPublish = useCallback(async () => {
     if (!caption) return;
-    if (platform !== "facebook" && platform !== "linkedin") return;
+    if (
+      platform !== "facebook" &&
+      platform !== "linkedin" &&
+      platform !== "instagram"
+    )
+      return;
     const conn = activeDirectPublishConnection;
     if (!conn) return;
+    // Instagram requires an image. Block the publish before we
+    // round-trip to the server.
+    if (platform === "instagram" && !media) {
+      setPublishResult({
+        ok: false,
+        error: "Instagram posts require an image. Attach one above.",
+      });
+      hapticError();
+      return;
+    }
     hapticButtonPress();
     setPublishing(true);
     setPublishResult(null);
@@ -217,6 +324,7 @@ export default function QuickPostScreen() {
       connectionId: conn.id,
       caption,
       hashtags,
+      mediaItemId: media?.id,
       trigger,
     });
     setPublishing(false);
@@ -231,7 +339,14 @@ export default function QuickPostScreen() {
       externalPostUrl: res.externalPostUrl,
       platform: res.platform,
     });
-  }, [caption, hashtags, platform, activeDirectPublishConnection, trigger]);
+  }, [
+    caption,
+    hashtags,
+    platform,
+    activeDirectPublishConnection,
+    trigger,
+    media,
+  ]);
 
   return (
     <KeyboardAvoidingView
@@ -297,6 +412,84 @@ export default function QuickPostScreen() {
           onChangeText={setBrief}
           textAlignVertical="top"
         />
+
+        {/* Image attachment — optional for FB / LinkedIn, required
+            for IG. Snap a fresh photo or pick from the library; the
+            chosen image uploads to media_library and is referenced
+            by id in the publish payload. */}
+        <Text style={[styles.sectionLabel, { marginTop: 18 }]}>
+          Image (optional)
+        </Text>
+        {media ? (
+          <View style={styles.imagePreview}>
+            {media.signedUrl ? (
+              <Image
+                source={{ uri: media.signedUrl }}
+                style={styles.imagePreviewThumb}
+              />
+            ) : (
+              <View style={[styles.imagePreviewThumb, styles.imageFallback]} />
+            )}
+            <View style={styles.imagePreviewMeta}>
+              <Text style={styles.imagePreviewName} numberOfLines={1}>
+                {media.fileName ?? "Attached image"}
+              </Text>
+              <Text style={styles.imagePreviewSub}>
+                {media.contentType ?? "image"}
+                {media.sizeBytes != null
+                  ? ` · ${formatBytes(media.sizeBytes)}`
+                  : ""}
+              </Text>
+              <View style={styles.imageActions}>
+                <Pressable
+                  onPress={onPickFromLibrary}
+                  disabled={uploading}
+                  style={styles.imageActionLink}
+                >
+                  <Text style={styles.imageActionLinkText}>Change</Text>
+                </Pressable>
+                <Pressable
+                  onPress={onClearImage}
+                  disabled={uploading}
+                  style={styles.imageActionLink}
+                >
+                  <Text style={styles.imageActionLinkText}>Remove</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.imagePickerRow}>
+            <Pressable
+              onPress={onPickFromCamera}
+              disabled={uploading}
+              style={[styles.imagePickerButton, uploading && styles.imagePickerBusy]}
+            >
+              <Ionicons name="camera-outline" size={18} color={tokens.text} />
+              <Text style={styles.imagePickerText}>Camera</Text>
+            </Pressable>
+            <Pressable
+              onPress={onPickFromLibrary}
+              disabled={uploading}
+              style={[styles.imagePickerButton, uploading && styles.imagePickerBusy]}
+            >
+              {uploading ? (
+                <ActivityIndicator size="small" color={tokens.accent} />
+              ) : (
+                <>
+                  <Ionicons name="image-outline" size={18} color={tokens.text} />
+                  <Text style={styles.imagePickerText}>Library</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
+        )}
+        {imageError && (
+          <View style={[styles.errorBox, { marginTop: 8 }]}>
+            <Ionicons name="alert-circle" size={16} color={tokens.danger} />
+            <Text style={styles.errorText}>{imageError}</Text>
+          </View>
+        )}
 
         {/* Platform tabs */}
         <Text style={[styles.sectionLabel, { marginTop: 18 }]}>
@@ -475,10 +668,27 @@ export default function QuickPostScreen() {
                   </Text>{" "}
                   and we&apos;ll post to your personal feed.
                 </>
+              ) : platform === "instagram" && !igConnection ? (
+                <>
+                  Want one-tap publish?{" "}
+                  <Text
+                    style={styles.linkText}
+                    onPress={() => router.push("/connect-platforms" as never)}
+                  >
+                    Connect your Facebook Page
+                  </Text>{" "}
+                  with a linked Instagram Business account.
+                </>
+              ) : platform === "instagram" && !media ? (
+                <>
+                  Instagram requires an image — attach one above to enable
+                  direct publish.
+                </>
               ) : platform === "instagram" ? (
                 <>
-                  Instagram requires an image — use Share / Copy and post from
-                  the IG app for now. Image upload on mobile is coming soon.
+                  Posts go to your linked Instagram Business account. Make sure
+                  you&apos;re happy with the caption + image before tapping
+                  Publish.
                 </>
               ) : platform === "facebook" ? (
                 <>
@@ -535,6 +745,12 @@ function placeholderFor(t: MobileQuickPostTrigger): string {
     case "custom":
       return "Describe the post — angle, tone, anything specific to include.";
   }
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function labelFor(p: MobileQuickPostPlatform): string {
@@ -762,6 +978,70 @@ function createStyles(tokens: ThemeTokens) {
       fontSize: 11,
       color: tokens.textSubtle,
       lineHeight: 16,
+    },
+    imagePickerRow: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    imagePickerButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: tokens.border,
+      backgroundColor: tokens.surface,
+      borderStyle: "dashed",
+    },
+    imagePickerBusy: { opacity: 0.6 },
+    imagePickerText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: tokens.text,
+    },
+    imagePreview: {
+      flexDirection: "row",
+      gap: 12,
+      padding: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: tokens.border,
+      backgroundColor: tokens.surface,
+    },
+    imagePreviewThumb: {
+      width: 72,
+      height: 72,
+      borderRadius: 8,
+      backgroundColor: tokens.bg,
+    },
+    imageFallback: {
+      borderWidth: 1,
+      borderColor: tokens.border,
+    },
+    imagePreviewMeta: { flex: 1, minWidth: 0 },
+    imagePreviewName: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: tokens.text,
+    },
+    imagePreviewSub: {
+      marginTop: 2,
+      fontSize: 11,
+      color: tokens.textSubtle,
+    },
+    imageActions: {
+      flexDirection: "row",
+      gap: 14,
+      marginTop: 8,
+    },
+    imageActionLink: { paddingVertical: 2 },
+    imageActionLinkText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: tokens.accent,
     },
   });
 }
