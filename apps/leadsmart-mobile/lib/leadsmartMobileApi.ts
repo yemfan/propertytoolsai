@@ -1278,3 +1278,60 @@ export async function fetchMobileBriefings(): Promise<
     evening: res.data.evening ?? [],
   };
 }
+
+
+// ── Generate Leads (mobile Quick Post) ───────────────────────────
+
+export type MobileQuickPostTrigger =
+  | "new_listing"
+  | "open_house"
+  | "price_drop"
+  | "just_sold"
+  | "market_update"
+  | "testimonial"
+  | "custom";
+
+export type MobileQuickPostPlatform =
+  | "facebook"
+  | "instagram"
+  | "linkedin"
+  | "x";
+
+type MobileQuickPostDraftJson = MobileJsonError & {
+  caption?: string;
+  hashtags?: string[];
+};
+
+export type MobileQuickPostDraftSuccess = {
+  ok: true;
+  caption: string;
+  hashtags: string[];
+};
+
+/**
+ * Generate a Quick Post draft on mobile. Single Claude call;
+ * caller is responsible for surfacing copy-to-clipboard or share-
+ * sheet affordances on the returned caption. Direct publish to
+ * Meta is a follow-up feature once mobile OAuth deep-link lands.
+ */
+export async function fetchMobileQuickPostDraft(input: {
+  trigger: MobileQuickPostTrigger;
+  platform: MobileQuickPostPlatform;
+  brief: string;
+}): Promise<MobileQuickPostDraftSuccess | MobileApiFailure> {
+  const res = await mobilePost<MobileQuickPostDraftJson>(
+    MOBILE_API_PATHS.leadsGenDraft,
+    {
+      trigger: input.trigger,
+      platform: input.platform,
+      brief: input.brief,
+    },
+  );
+  if (res.ok === false) return res;
+  return {
+    ok: true,
+    caption: res.data.caption ?? "",
+    hashtags: res.data.hashtags ?? [],
+  };
+}
+
