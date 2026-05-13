@@ -1,4 +1,8 @@
 import { supabaseServer } from "@/lib/supabaseServer";
+import {
+  CONTACT_SCORES_SELECT,
+  unpackScoreRow,
+} from "@/lib/contactScores";
 import type { User } from "@supabase/supabase-js";
 
 export type ClientPortalLead = {
@@ -56,19 +60,19 @@ export async function findLeadsForPortalUser(
   const rows = (data ?? []) as LeadRow[];
 
   const leadIds = rows.map((r) => r.id).filter(Boolean);
-  const scoreMap: Record<string, Record<string, unknown>> = {};
+  const scoreMap: Record<string, ReturnType<typeof unpackScoreRow>> = {};
   if (leadIds.length) {
     const { data: scoreRows, error: scoresErr } = await supabaseServer
       .from("contact_scores")
-      .select("contact_id,score,intent,timeline,confidence,updated_at")
+      .select(CONTACT_SCORES_SELECT)
       .in("contact_id", leadIds as string[])
-      .order("updated_at", { ascending: false })
+      .order("computed_at", { ascending: false })
       .limit(5000);
     if (!scoresErr) {
       for (const row of scoreRows ?? []) {
         const key = String((row as { contact_id?: string }).contact_id ?? "");
         if (!key || scoreMap[key]) continue;
-        scoreMap[key] = row as Record<string, unknown>;
+        scoreMap[key] = unpackScoreRow(row as Record<string, unknown>);
       }
     }
   }
@@ -77,10 +81,10 @@ export async function findLeadsForPortalUser(
     const s = scoreMap[String(l.id)];
     return {
       ...l,
-      ai_lead_score: s ? Number(s.score ?? 0) : null,
-      ai_intent: (s?.intent as string) ?? null,
-      ai_timeline: (s?.timeline as string) ?? null,
-      ai_confidence: s ? Number(s.confidence ?? 0) : null,
+      ai_lead_score: s ? s.score : null,
+      ai_intent: s?.intent ?? null,
+      ai_timeline: s?.timeline ?? null,
+      ai_confidence: s?.confidence ?? null,
     };
   });
   if (preferredLeadId) {

@@ -1,4 +1,8 @@
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
+import {
+  CONTACT_SCORES_SELECT,
+  unpackScoreRow,
+} from "@/lib/contactScores";
 import { getLeadLimit } from "@/lib/planLimits";
 import { throwIfSupabaseError } from "@/lib/supabaseThrow";
 import { ERROR_DASHBOARD_NO_AGENT_ROW } from "@leadsmart/shared";
@@ -139,30 +143,30 @@ export async function getLeads(params?: {
   throwIfSupabaseError(error, "Could not load leads");
   const leads = (data as CrmLeadRow[]) ?? [];
   const leadIds = leads.map((l) => l.id).filter(Boolean);
-  let scoreMap: Record<string, any> = {};
+  let scoreMap: Record<string, ReturnType<typeof unpackScoreRow>> = {};
   if (leadIds.length) {
     const { data: scoreRows } = await supabase
       .from("contact_scores")
-      .select("contact_id,score,intent,timeline,confidence,explanation,updated_at")
+      .select(CONTACT_SCORES_SELECT)
       .in("contact_id", leadIds as any)
-      .order("updated_at", { ascending: false })
+      .order("computed_at", { ascending: false })
       .limit(5000);
     for (const row of scoreRows ?? []) {
       const key = String((row as any).contact_id ?? "");
       if (!key || scoreMap[key]) continue;
-      scoreMap[key] = row;
+      scoreMap[key] = unpackScoreRow(row as Record<string, unknown>);
     }
   }
 
   const hydrated = leads.map((l) => {
-    const s = scoreMap[String(l.id)] as any;
+    const s = scoreMap[String(l.id)];
     return {
       ...l,
-      ai_lead_score: s ? Number(s.score ?? 0) : null,
+      ai_lead_score: s ? s.score : null,
       ai_intent: s?.intent ?? null,
       ai_timeline: s?.timeline ?? null,
-      ai_confidence: s ? Number(s.confidence ?? 0) : null,
-      ai_explanation: Array.isArray(s?.explanation) ? s.explanation : [],
+      ai_confidence: s?.confidence ?? null,
+      ai_explanation: s?.explanation ?? [],
     } as CrmLeadRow;
   });
 
