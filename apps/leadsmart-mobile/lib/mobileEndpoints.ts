@@ -61,4 +61,7 @@ export const MOBILE_API_PATHS = {
   sphereBuyers: "/api/mobile/sphere/buyers",
   sphereSellers: "/api/mobile/sphere/sellers",
   leadsGenLookupProperty: "/api/mobile/leads-gen/lookup-property",
+  leadsGenPostsList: "/api/mobile/leads-gen/posts/list",
+  leadsGenPostRefresh: (id: string) =>
+    `/api/mobile/leads-gen/posts/${encodeURIComponent(id)}/refresh`,
 } as const;

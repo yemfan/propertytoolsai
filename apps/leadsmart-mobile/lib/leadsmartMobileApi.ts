@@ -1919,3 +1919,96 @@ export async function lookupMobileProperty(
   }
   return { ok: true, result: res.data.result };
 }
+
+
+// ── Published post history + metrics refresh ─────────────────────
+
+/**
+ * Per-platform engagement counts. Whichever fields a platform
+ * doesn't expose come back as null so the UI renders "—" rather
+ * than misleading zero. Empty object for never-refreshed posts.
+ */
+export type MobilePostMetrics = {
+  likes?: number | null;
+  comments?: number | null;
+  shares?: number | null;
+  saves?: number | null;
+  impressions?: number | null;
+  reach?: number | null;
+  clicks?: number | null;
+  reactionsTotal?: number | null;
+};
+
+/** Shape returned by /api/mobile/leads-gen/posts/list. */
+export type MobilePublishedPost = {
+  id: string;
+  platform: "facebook" | "instagram" | "linkedin" | string;
+  caption: string;
+  hashtags: string[];
+  mediaLibraryId: string | null;
+  thumbnailUrl: string | null;
+  externalPostId: string | null;
+  externalPostUrl: string | null;
+  triggerKind: string | null;
+  subjectKind: string | null;
+  subjectRefId: string | null;
+  status: "published" | "failed" | string;
+  errorMessage: string | null;
+  metrics: MobilePostMetrics;
+  metricsRefreshedAt: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  pageName: string | null;
+  igBusinessUsername: string | null;
+  linkedinDisplayName: string | null;
+};
+
+type MobilePostsListJson = MobileJsonError & {
+  posts?: MobilePublishedPost[];
+};
+
+/**
+ * List the agent's published (and failed) lead_posts, newest first.
+ * Includes a thumbnail signed URL for any attached image.
+ */
+export async function fetchMobilePosts(opts?: {
+  limit?: number;
+}): Promise<{ ok: true; posts: MobilePublishedPost[] } | MobileApiFailure> {
+  const params = new URLSearchParams();
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const q = params.toString();
+  const path = q
+    ? `${MOBILE_API_PATHS.leadsGenPostsList}?${q}`
+    : MOBILE_API_PATHS.leadsGenPostsList;
+  const res = await mobileGet<MobilePostsListJson>(path);
+  if (res.ok === false) return res;
+  return { ok: true, posts: res.data.posts ?? [] };
+}
+
+type MobilePostRefreshJson = MobileJsonError & {
+  metrics?: MobilePostMetrics | null;
+  refreshedAt?: string;
+};
+
+/**
+ * Refresh a single post's engagement metrics by hitting Meta's
+ * Graph API server-side. LinkedIn posts return ok:false with a
+ * clear message — the consumer scope doesn't expose post analytics.
+ */
+export async function refreshMobilePostMetrics(
+  postId: string,
+): Promise<
+  | { ok: true; metrics: MobilePostMetrics | null; refreshedAt: string }
+  | MobileApiFailure
+> {
+  const res = await mobilePost<MobilePostRefreshJson>(
+    MOBILE_API_PATHS.leadsGenPostRefresh(postId),
+    {},
+  );
+  if (res.ok === false) return res;
+  return {
+    ok: true,
+    metrics: res.data.metrics ?? null,
+    refreshedAt: res.data.refreshedAt ?? new Date().toISOString(),
+  };
+}
