@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getDashboardAgentContext } from "@/lib/contact-intake/dashboardAgentContext";
 import { generateDraftCaption } from "@/lib/leads-gen/draft";
 import {
-  isPhase1aTrigger,
+  isSupportedTrigger,
   loadSubjectDetail,
   type Trigger,
 } from "@/lib/leads-gen/subjects";
@@ -63,9 +63,9 @@ export async function POST(req: Request) {
     }
     const { trigger, subjectId, platform, brief } = parsed.data;
 
-    if (!isPhase1aTrigger(trigger)) {
+    if (!isSupportedTrigger(trigger)) {
       return NextResponse.json(
-        { ok: false, error: "Unsupported trigger for this phase." },
+        { ok: false, error: "Unsupported trigger." },
         { status: 400 },
       );
     }
@@ -78,15 +78,22 @@ export async function POST(req: Request) {
       );
     }
 
-    // "custom" trigger needs a brief — the model has no listing
-    // context to fall back on. Catch this before paying for a
-    // round-trip to Claude.
-    if (trigger === "custom" && !brief?.trim()) {
+    // Brief-required triggers — these have no CRM record to anchor
+    // the post on, so an empty brief would leave Claude nothing to
+    // work with. Catch before paying for a round-trip.
+    const briefRequired: string[] = ["custom", "market_update", "testimonial"];
+    if (briefRequired.includes(trigger) && !brief?.trim()) {
+      const friendly: Record<string, string> = {
+        custom: "Custom posts need a brief — describe what the post should be about.",
+        market_update:
+          "Market-update posts need a brief — share the angle, data points, or trend you want to highlight.",
+        testimonial:
+          "Testimonial posts need a brief — paste the client's verbatim quote (and optionally their first name).",
+      };
       return NextResponse.json(
         {
           ok: false,
-          error:
-            "Custom posts need a brief — describe what the post should be about.",
+          error: friendly[trigger] ?? "This trigger needs a brief.",
         },
         { status: 400 },
       );
@@ -130,6 +137,17 @@ export async function POST(req: Request) {
       shareUrl,
     });
 
+    // Phase 1B made SubjectDetail a discriminated union — transaction
+    // variants have `purchase_price` instead of `list_price`, and the
+    // synthetic kinds (market_update / testimonial / custom) have
+    // neither. Pick whichever monetary field exists per variant so
+    // the client always gets a single `list_price` shape.
+    const subjectMonetary =
+      subject.kind === "listing" || subject.kind === "open_house"
+        ? subject.list_price
+        : subject.kind === "transaction"
+          ? subject.purchase_price
+          : null;
     return NextResponse.json({
       ok: true,
       caption: draft.caption,
@@ -139,7 +157,7 @@ export async function POST(req: Request) {
         kind: subject.kind,
         refId: subject.refId,
         property_address: subject.property_address,
-        list_price: subject.list_price,
+        list_price: subjectMonetary,
       },
     });
   } catch (e) {

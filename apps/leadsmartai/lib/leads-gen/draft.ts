@@ -95,21 +95,44 @@ Output format — return ONLY a JSON object, no commentary, no markdown fences:
 For Instagram, include hashtags at the end of the "caption" field on a separate paragraph AND in the "hashtags" array. For other platforms, omit hashtags from the caption body and only return them in the "hashtags" array.`;
 }
 
+/**
+ * Per-trigger tone hint injected at the top of the user prompt so
+ * the model writes with the right register for each post type.
+ * Keeping these terse + concrete — Claude follows specifics better
+ * than vague adjectives ("gratitude-first" beats "celebratory").
+ */
+const TRIGGER_TONE: Record<Trigger, string> = {
+  new_listing:
+    "Announcing a new listing — confident, inviting, leads with the address + 1-2 key features. Ends with a CTA to DM / call for a private showing.",
+  open_house:
+    "Promoting an upcoming open house — clear date / time / address up front, casual welcoming tone, invites neighbors and curious buyers. CTA: come by.",
+  price_drop:
+    "Announcing a price drop — frames the new price as opportunity (never desperate). Emphasizes value at the new number. If the agent provides the old price in the brief you may reference it (e.g. 'down from $X'); never invent numbers.",
+  just_sold:
+    "Celebrating a just-closed deal — gratitude-first, congratulates the client (no client names unless given in the brief), positions the agent as someone who gets deals done. CTA: reach out for a similar outcome.",
+  market_update:
+    "Sharing a market update / observation — positioned as expertise, not as a sales pitch. Use concrete data points the agent supplied in the brief (rates, inventory, days-on-market, etc) over generic statements. Soft CTA: 'happy to chat'.",
+  testimonial:
+    "Sharing a client testimonial — quote the testimonial verbatim from the brief (use quotation marks), add 1-2 sentences of agent gratitude, end with a soft CTA. Never edit the client's words.",
+  custom: "Follow the agent's brief — match the tone and intent they describe.",
+};
+
 function buildUserPrompt(input: DraftInput): string {
   const { trigger, subject, brief, agentName } = input;
   const lines: string[] = [];
 
   lines.push(`Trigger: ${triggerLabel(trigger)}`);
+  lines.push(`Tone: ${TRIGGER_TONE[trigger]}`);
   if (agentName) lines.push(`Agent name: ${agentName}`);
 
   if (subject.kind === "listing") {
-    lines.push("Subject: new listing");
+    lines.push("Subject: listing");
     lines.push(`  Property: ${subject.property_address}`);
     if (subject.city || subject.state) {
       lines.push(`  Location: ${[subject.city, subject.state].filter(Boolean).join(", ")}`);
     }
     if (subject.list_price != null) {
-      lines.push(`  List price: $${Number(subject.list_price).toLocaleString()}`);
+      lines.push(`  Current list price: $${Number(subject.list_price).toLocaleString()}`);
     }
     if (subject.listing_start_date) {
       lines.push(`  Listed: ${subject.listing_start_date}`);
@@ -131,6 +154,30 @@ function buildUserPrompt(input: DraftInput): string {
     if (subject.mls_url) {
       lines.push(`  MLS link: ${subject.mls_url}`);
     }
+  } else if (subject.kind === "transaction") {
+    lines.push("Subject: closed transaction (just-sold post)");
+    lines.push(`  Property: ${subject.property_address}`);
+    if (subject.city || subject.state) {
+      lines.push(`  Location: ${[subject.city, subject.state].filter(Boolean).join(", ")}`);
+    }
+    if (subject.purchase_price != null) {
+      lines.push(
+        `  Sale price: $${Number(subject.purchase_price).toLocaleString()}`,
+      );
+    }
+    const closedOn = subject.closing_date_actual ?? subject.closing_date;
+    if (closedOn) lines.push(`  Closed on: ${closedOn}`);
+    lines.push(`  Agent's side: ${subject.transaction_type}`);
+  } else if (subject.kind === "market_update") {
+    lines.push("Subject: market update (no listing anchor)");
+    lines.push(
+      "  The agent's brief carries the specific data points or angle. Lean on those — don't invent statistics.",
+    );
+  } else if (subject.kind === "testimonial") {
+    lines.push("Subject: client testimonial (no listing anchor)");
+    lines.push(
+      "  The agent's brief contains the verbatim client quote and optionally the client's first name. Use quotes verbatim, do not paraphrase.",
+    );
   } else {
     lines.push("Subject: custom (no listing reference)");
   }
