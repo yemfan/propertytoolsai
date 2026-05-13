@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -40,8 +40,41 @@ import type { ThemeTokens } from "../lib/theme";
  *
  * Mirrors /dashboard/leads/generate/posts on web.
  */
+/**
+ * Reconstruct the Quick Post deep-link params from a lead_post row.
+ * Only CRM-anchored triggers (new_listing / open_house / price_drop
+ * / just_sold) yield a useful follow-up — synthetic triggers
+ * (custom / market_update / testimonial / by_address) have no
+ * subject to carry forward.
+ *
+ * Subjects.ts emits wire ids like `listing:<uuid>` /
+ * `open_house:<uuid>` / `transaction:<uuid>` — we reconstruct that
+ * format from the row's denormalized columns.
+ */
+function reconstructFollowUpLink(post: {
+  triggerKind: string | null;
+  subjectKind: string | null;
+  subjectRefId: string | null;
+}): { trigger: string; subjectId: string } | null {
+  const trigger = post.triggerKind;
+  if (
+    trigger !== "new_listing" &&
+    trigger !== "open_house" &&
+    trigger !== "price_drop" &&
+    trigger !== "just_sold"
+  ) {
+    return null;
+  }
+  if (!post.subjectKind || !post.subjectRefId) return null;
+  return {
+    trigger,
+    subjectId: `${post.subjectKind}:${post.subjectRefId}`,
+  };
+}
+
 export default function PostHistoryScreen() {
   const tokens = useThemeTokens();
+  const router = useRouter();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
   const [rows, setRows] = useState<MobilePublishedPost[] | null>(null);
@@ -172,6 +205,16 @@ export default function PostHistoryScreen() {
               post={p}
               state={rowState[p.id]}
               onRefresh={() => void onRefreshMetrics(p.id)}
+              onFollowUp={(link) => {
+                hapticButtonPress();
+                router.push({
+                  pathname: "/quick-post",
+                  params: {
+                    trigger: link.trigger,
+                    subjectId: link.subjectId,
+                  },
+                } as never);
+              }}
               tokens={tokens}
               styles={styles}
             />
@@ -190,6 +233,16 @@ export default function PostHistoryScreen() {
               post={p}
               state={rowState[p.id]}
               onRefresh={() => void onRefreshMetrics(p.id)}
+              onFollowUp={(link) => {
+                hapticButtonPress();
+                router.push({
+                  pathname: "/quick-post",
+                  params: {
+                    trigger: link.trigger,
+                    subjectId: link.subjectId,
+                  },
+                } as never);
+              }}
               tokens={tokens}
               styles={styles}
             />
@@ -204,6 +257,7 @@ function PostCard({
   post,
   state,
   onRefresh,
+  onFollowUp,
   tokens,
   styles,
 }: {
@@ -217,9 +271,11 @@ function PostCard({
       }
     | undefined;
   onRefresh: () => void;
+  onFollowUp: (link: { trigger: string; subjectId: string }) => void;
   tokens: ThemeTokens;
   styles: ReturnType<typeof createStyles>;
 }) {
+  const followUpLink = reconstructFollowUpLink(post);
   const metrics = state?.metrics ?? post.metrics ?? {};
   const refreshing = state?.refreshing ?? false;
   const refreshedAt = state?.metricsRefreshedAt ?? post.metricsRefreshedAt;
@@ -331,6 +387,19 @@ function PostCard({
                 <Text style={styles.actionButtonText}>Refresh</Text>
               </>
             )}
+          </Pressable>
+        )}
+        {followUpLink && (
+          <Pressable
+            onPress={() => onFollowUp(followUpLink)}
+            style={styles.actionButton}
+          >
+            <Ionicons
+              name="add-circle-outline"
+              size={14}
+              color={tokens.accent}
+            />
+            <Text style={styles.actionButtonText}>Follow-up</Text>
           </Pressable>
         )}
       </View>

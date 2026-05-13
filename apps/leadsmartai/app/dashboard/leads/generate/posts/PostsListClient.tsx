@@ -1,6 +1,39 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
+
+/**
+ * Reconstruct the Quick Post deep-link params from a lead_post row.
+ * Only CRM-anchored triggers (new_listing / open_house / price_drop
+ * / just_sold) yield a useful follow-up — synthetic triggers
+ * (custom / market_update / testimonial / by_address) have no
+ * subject to carry forward.
+ *
+ * Subjects.ts emits wire ids like `listing:<uuid>` /
+ * `open_house:<uuid>` / `transaction:<uuid>` — we reconstruct that
+ * format from the row's denormalized columns so /post/new picks
+ * up `?trigger=…&subjectId=…` and auto-selects the subject in step 2.
+ */
+function reconstructFollowUpHref(post: {
+  triggerKind: string | null;
+  subjectKind: string | null;
+  subjectRefId: string | null;
+}): string | null {
+  const t = post.triggerKind;
+  if (
+    t !== "new_listing" &&
+    t !== "open_house" &&
+    t !== "price_drop" &&
+    t !== "just_sold"
+  ) {
+    return null;
+  }
+  if (!post.subjectKind || !post.subjectRefId) return null;
+  const subjectId = `${post.subjectKind}:${post.subjectRefId}`;
+  const params = new URLSearchParams({ trigger: t, subjectId });
+  return `/dashboard/leads/generate/post/new?${params.toString()}`;
+}
 
 /**
  * Published-posts list — client interactions:
@@ -285,6 +318,18 @@ function PostCard({
                 {state.refreshing ? "Refreshing…" : "Refresh metrics"}
               </button>
             )}
+            {(() => {
+              const followUpHref = reconstructFollowUpHref(post);
+              if (!followUpHref) return null;
+              return (
+                <Link
+                  href={followUpHref}
+                  className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  + Post follow-up
+                </Link>
+              );
+            })()}
             <span className="text-gray-400">
               {state.metricsRefreshedAt
                 ? `Last refresh: ${new Date(state.metricsRefreshedAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
