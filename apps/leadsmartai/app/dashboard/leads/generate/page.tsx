@@ -54,6 +54,12 @@ export default async function GenerateLeadsPage() {
             Scheduled →
           </Link>
           <Link
+            href="/dashboard/leads/generate/recurring"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Recurring →
+          </Link>
+          <Link
             href="/dashboard/leads/generate/connect"
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >

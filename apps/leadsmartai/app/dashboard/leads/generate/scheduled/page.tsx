@@ -144,6 +144,12 @@ export default async function ScheduledPostsPage() {
             &larr; Generate Leads
           </Link>
           <Link
+            href="/dashboard/leads/generate/recurring"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            🔁 Recurring
+          </Link>
+          <Link
             href="/dashboard/leads/generate/post/new"
             className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
           >
