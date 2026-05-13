@@ -172,7 +172,7 @@ function MiniPie({ data, title }: { data: ChartItem[]; title: string }) {
                   );
                 })}
               </Pie>
-              <Tooltip formatter={(v: number) => v} />
+              <Tooltip formatter={((v: number) => v) as never} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -472,7 +472,7 @@ export default function TasksClient({
                   <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 8 }} stroke="#9ca3af" interval={4} />
                   <YAxis tick={{ fontSize: 9 }} stroke="#9ca3af" allowDecimals={false} />
-                  <Tooltip formatter={(v: number) => [v, "Done"]} />
+                  <Tooltip formatter={((v: number) => [v, "Done"]) as never} />
                   <Bar dataKey="count" fill="#22c55e" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

@@ -103,7 +103,7 @@ function MiniPie({ data, title }: { data: ChartItem[]; title: string }) {
               <Pie data={data} dataKey="value" cx="50%" cy="50%" outerRadius={50} innerRadius={28} strokeWidth={1}>
                 {data.map((d, i) => <Cell key={i} fill={d.color} />)}
               </Pie>
-              <Tooltip formatter={(v: number) => v} />
+              <Tooltip formatter={((v: number) => v) as never} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -296,7 +296,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                   <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 9 }} stroke="#9ca3af" interval={1} />
                   <YAxis tick={{ fontSize: 9 }} stroke="#9ca3af" allowDecimals={false} />
-                  <Tooltip formatter={(v: number) => [v, "Contacts"]} />
+                  <Tooltip formatter={((v: number) => [v, "Contacts"]) as never} />
                   <Bar dataKey="count" fill="#3b82f6" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

@@ -250,7 +250,7 @@ export default function MarketingPlansClient() {
                     <Pie data={stats.performance} dataKey="value" cx="50%" cy="50%" outerRadius={50} innerRadius={28} strokeWidth={1}>
                       {stats.performance.map((d, i) => <Cell key={i} fill={d.color} />)}
                     </Pie>
-                    <Tooltip formatter={(v: number) => v} />
+                    <Tooltip formatter={((v: number) => v) as never} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
