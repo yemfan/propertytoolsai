@@ -405,6 +405,12 @@ export default function HomeScreen() {
             <Text style={styles.chipText}>Recurring</Text>
           </Pressable>
           <Pressable
+            onPress={() => router.push("/post-history" as never)}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>Posts</Text>
+          </Pressable>
+          <Pressable
             onPress={() => router.push("/showings" as never)}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
