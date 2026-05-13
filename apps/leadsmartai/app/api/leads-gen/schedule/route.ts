@@ -7,7 +7,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
-  platform: z.enum(["facebook", "instagram"]),
+  platform: z.enum(["facebook", "instagram", "linkedin"]),
   connectionId: z.string().uuid(),
   caption: z.string().min(1).max(5_000),
   hashtags: z.array(z.string()).max(40).optional(),
@@ -70,7 +70,9 @@ export async function POST(req: Request) {
     // scheduling posts against connections they don't own.
     const { data: connRow, error: connErr } = await supabaseAdmin
       .from("social_accounts")
-      .select("id, platform, fb_page_id, ig_business_user_id, status")
+      .select(
+        "id, platform, fb_page_id, ig_business_user_id, linkedin_member_urn, status",
+      )
       .eq("id", parsed.data.connectionId)
       .eq("agent_id", auth.agentId)
       .maybeSingle();
@@ -85,11 +87,25 @@ export async function POST(req: Request) {
       platform: string;
       fb_page_id: string | null;
       ig_business_user_id: string | null;
+      linkedin_member_urn: string | null;
       status: string;
     };
-    if (conn.platform !== "meta") {
+
+    // Platform alignment — the wizard's platform must match the
+    // connection's platform. (FB / IG both live on a 'meta' row;
+    // LinkedIn rows are 'linkedin'.)
+    const wantsMeta =
+      parsed.data.platform === "facebook" ||
+      parsed.data.platform === "instagram";
+    if (wantsMeta && conn.platform !== "meta") {
       return NextResponse.json(
         { ok: false, error: "Connection is not a Meta connection." },
+        { status: 422 },
+      );
+    }
+    if (parsed.data.platform === "linkedin" && conn.platform !== "linkedin") {
+      return NextResponse.json(
+        { ok: false, error: "Connection is not a LinkedIn connection." },
         { status: 422 },
       );
     }
@@ -111,6 +127,16 @@ export async function POST(req: Request) {
         {
           ok: false,
           error: "Instagram posts require an image. Attach one in the wizard first.",
+        },
+        { status: 422 },
+      );
+    }
+    if (parsed.data.platform === "linkedin" && !conn.linkedin_member_urn) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "LinkedIn connection is missing member info. Reconnect to refresh.",
         },
         { status: 422 },
       );
