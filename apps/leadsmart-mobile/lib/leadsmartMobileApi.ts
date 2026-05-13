@@ -1289,7 +1289,8 @@ export type MobileQuickPostTrigger =
   | "just_sold"
   | "market_update"
   | "testimonial"
-  | "custom";
+  | "custom"
+  | "by_address";
 
 export type MobileQuickPostPlatform =
   | "facebook"
@@ -1874,4 +1875,47 @@ export async function fetchMobileLikelySellers(
   const res = await mobileGet<MobileSphereSellersJson>(path);
   if (res.ok === false) return res;
   return { ok: true, sellers: res.data.sellers ?? [] };
+}
+
+
+// ── Property lookup for the "by_address" Quick Post trigger ──────
+
+export type MobilePropertyLookupResult = {
+  address: string;
+  found: boolean;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  beds: number | null;
+  baths: number | null;
+  sqft: number | null;
+  yearBuilt: number | null;
+  estimatedValue: number | null;
+  listingStatus: string | null;
+  brief: string;
+};
+
+type MobilePropertyLookupJson = MobileJsonError & {
+  result?: MobilePropertyLookupResult;
+};
+
+/**
+ * Resolve a raw address or listing URL into property metadata +
+ * a pre-stitched brief. Used by the mobile Quick Post screen's
+ * "By address / URL" trigger pill.
+ */
+export async function lookupMobileProperty(
+  input: string,
+): Promise<
+  { ok: true; result: MobilePropertyLookupResult } | MobileApiFailure
+> {
+  const res = await mobilePost<MobilePropertyLookupJson>(
+    MOBILE_API_PATHS.leadsGenLookupProperty,
+    { input },
+  );
+  if (res.ok === false) return res;
+  if (!res.data.result) {
+    return { ok: false, status: 500, message: "Lookup returned no result" };
+  }
+  return { ok: true, result: res.data.result };
 }

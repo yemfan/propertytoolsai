@@ -23,11 +23,13 @@ import {
   fetchMobileConnections,
   fetchMobileQuickPostDraft,
   fetchMobileSubjects,
+  lookupMobileProperty,
   publishMobileQuickPost,
   scheduleMobileQuickPost,
   uploadMobileMedia,
   type MobileConnection,
   type MobileMediaItem,
+  type MobilePropertyLookupResult,
   type MobileQuickPostPlatform,
   type MobileQuickPostTrigger,
   type MobileSubject,
@@ -78,6 +80,7 @@ const TRIGGERS: TriggerOption[] = [
   { id: "market_update", label: "Market update", icon: "stats-chart-outline" },
   { id: "testimonial", label: "Testimonial", icon: "chatbox-ellipses-outline" },
   { id: "custom", label: "Custom", icon: "sparkles-outline" },
+  { id: "by_address", label: "By address / URL", icon: "link-outline" },
 ];
 
 type PlatformOption = {
@@ -142,6 +145,17 @@ export default function QuickPostScreen() {
   const [media, setMedia] = useState<MobileMediaItem | null>(null);
   const [uploading, setUploading] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
+
+  // by_address trigger — the agent pastes an address or a listing
+  // URL (Zillow / Redfin / MLS / Compass), we hit
+  // /api/mobile/leads-gen/lookup-property, and pre-fill the brief
+  // with a stitched-together property summary the AI can use. The
+  // brief textarea remains editable after the lookup lands.
+  const [lookupInput, setLookupInput] = useState("");
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [lookupResult, setLookupResult] =
+    useState<MobilePropertyLookupResult | null>(null);
 
   // Publish mode — three mutually-exclusive paths for the action
   // button: post now / queue for later / make recurring. Mode picker
@@ -293,24 +307,61 @@ export default function QuickPostScreen() {
     setGenerated(false);
   }, []);
 
+  /**
+   * by_address — resolve a raw address or listing URL into a brief
+   * the AI can ground on. On hit, replaces the brief textarea with
+   * a stitched-together "Property: … / Specs: … / Estimated value:
+   * …" string. On miss, still writes a normalized address brief so
+   * the agent can edit + generate without losing what they typed.
+   */
+  const onLookupAddress = useCallback(async () => {
+    const input = lookupInput.trim();
+    if (input.length < 3) {
+      setLookupError("Paste an address or a listing URL first.");
+      hapticError();
+      return;
+    }
+    hapticButtonPress();
+    setLookupBusy(true);
+    setLookupError(null);
+    const res = await lookupMobileProperty(input);
+    setLookupBusy(false);
+    if (res.ok === false) {
+      hapticError();
+      setLookupError(res.message);
+      return;
+    }
+    hapticSuccess();
+    setLookupResult(res.result);
+    setBrief(res.result.brief);
+    setGenerated(false);
+  }, [lookupInput]);
+
   // Reset the picker state when the agent flips triggers — the
   // listing-anchored subjects don't make sense for a different
-  // trigger.
+  // trigger. Also drop any cached by_address lookup result so the
+  // brief textarea doesn't keep stale property details after the
+  // agent switches away from "By address / URL".
   useEffect(() => {
     setSubjects([]);
     setPickedSubjectId(null);
     setSubjectsError(null);
+    setLookupInput("");
+    setLookupError(null);
+    setLookupResult(null);
   }, [trigger]);
 
   const onGenerate = useCallback(async () => {
     const trimmed = brief.trim();
     if (!trimmed) {
       setError(
-        trigger === "custom" ||
-          trigger === "market_update" ||
-          trigger === "testimonial"
-          ? "Tell me what the post should be about."
-          : "Add a brief — what's the address, the angle, anything special?",
+        trigger === "by_address"
+          ? "Paste an address or URL above and tap Look up first, or type a brief below."
+          : trigger === "custom" ||
+              trigger === "market_update" ||
+              trigger === "testimonial"
+            ? "Tell me what the post should be about."
+            : "Add a brief — what's the address, the angle, anything special?",
       );
       hapticError();
       return;
@@ -655,11 +706,13 @@ export default function QuickPostScreen() {
         {/* Brief */}
         <View style={[styles.briefHeaderRow, { marginTop: 18 }]}>
           <Text style={styles.sectionLabel}>
-            {trigger === "custom" ||
-            trigger === "market_update" ||
-            trigger === "testimonial"
-              ? "Brief"
-              : "Details (address, price, angle)"}
+            {trigger === "by_address"
+              ? "Address or listing URL"
+              : trigger === "custom" ||
+                  trigger === "market_update" ||
+                  trigger === "testimonial"
+                ? "Brief"
+                : "Details (address, price, angle)"}
           </Text>
           {triggerAllowsSubjects && (
             <Pressable
@@ -673,8 +726,103 @@ export default function QuickPostScreen() {
             </Pressable>
           )}
         </View>
+
+        {/* by_address — show the lookup row first; on hit, the brief
+            textarea below pre-fills with the stitched property
+            details. */}
+        {trigger === "by_address" && (
+          <View style={styles.lookupBox}>
+            <TextInput
+              style={styles.lookupInput}
+              placeholder="123 Main St, Pasadena CA — or paste a Zillow / Redfin / MLS URL"
+              placeholderTextColor={tokens.textSubtle}
+              value={lookupInput}
+              onChangeText={setLookupInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="search"
+              onSubmitEditing={() => {
+                if (!lookupBusy) void onLookupAddress();
+              }}
+            />
+            <Pressable
+              onPress={() => void onLookupAddress()}
+              disabled={lookupBusy || lookupInput.trim().length < 3}
+              style={[
+                styles.lookupButton,
+                (lookupBusy || lookupInput.trim().length < 3) &&
+                  styles.lookupButtonBusy,
+              ]}
+            >
+              {lookupBusy ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="search" size={14} color="#fff" />
+                  <Text style={styles.lookupButtonText}>Look up</Text>
+                </>
+              )}
+            </Pressable>
+            {lookupError && (
+              <View style={styles.errorBox}>
+                <Ionicons
+                  name="alert-circle"
+                  size={16}
+                  color={tokens.danger}
+                />
+                <Text style={styles.errorText}>{lookupError}</Text>
+              </View>
+            )}
+            {lookupResult && (
+              <View
+                style={[
+                  styles.lookupResultCard,
+                  lookupResult.found
+                    ? styles.lookupResultFound
+                    : styles.lookupResultMissing,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.lookupResultTitle,
+                    lookupResult.found
+                      ? styles.lookupResultTitleFound
+                      : styles.lookupResultTitleMissing,
+                  ]}
+                >
+                  {lookupResult.found
+                    ? "Property found"
+                    : "Not in our database — using what you typed"}
+                </Text>
+                {lookupResult.found && (
+                  <Text style={styles.lookupResultDetail}>
+                    {[
+                      lookupResult.beds != null && `${lookupResult.beds}bd`,
+                      lookupResult.baths != null && `${lookupResult.baths}ba`,
+                      lookupResult.sqft != null &&
+                        `${lookupResult.sqft.toLocaleString()} sqft`,
+                      lookupResult.estimatedValue != null &&
+                        `~$${lookupResult.estimatedValue.toLocaleString()}`,
+                      lookupResult.listingStatus,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </Text>
+                )}
+                <Text style={styles.lookupResultHint}>
+                  Edit the brief below before generating — the AI grounds the
+                  caption on whatever you leave there.
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
         <TextInput
-          style={styles.briefInput}
+          style={[
+            styles.briefInput,
+            trigger === "by_address" && { marginTop: 10 },
+          ]}
           placeholder={placeholderFor(trigger)}
           placeholderTextColor={tokens.textSubtle}
           multiline
@@ -1432,6 +1580,8 @@ function placeholderFor(t: MobileQuickPostTrigger): string {
       return 'e.g. Sarah said "Mike made the whole process easy — closed in under 30 days, $15k off asking."';
     case "custom":
       return "Describe the post — angle, tone, anything specific to include.";
+    case "by_address":
+      return "Paste a listing URL (Zillow / Redfin / MLS) or just type an address.";
   }
 }
 
@@ -1495,6 +1645,68 @@ function createStyles(tokens: ThemeTokens) {
       padding: 12,
       fontSize: 14,
       color: tokens.text,
+    },
+    lookupBox: {
+      gap: 8,
+    },
+    lookupInput: {
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: tokens.border,
+      backgroundColor: tokens.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 14,
+      color: tokens.text,
+    },
+    lookupButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 10,
+      borderRadius: 10,
+      backgroundColor: tokens.text,
+    },
+    lookupButtonBusy: { opacity: 0.5 },
+    lookupButtonText: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: "#fff",
+    },
+    lookupResultCard: {
+      padding: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+    },
+    lookupResultFound: {
+      backgroundColor: tokens.successBg,
+      borderColor: tokens.successBorder,
+    },
+    lookupResultMissing: {
+      backgroundColor: tokens.surface,
+      borderColor: tokens.border,
+    },
+    lookupResultTitle: {
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    lookupResultTitleFound: {
+      color: tokens.successText,
+    },
+    lookupResultTitleMissing: {
+      color: tokens.text,
+    },
+    lookupResultDetail: {
+      marginTop: 4,
+      fontSize: 12,
+      color: tokens.text,
+    },
+    lookupResultHint: {
+      marginTop: 6,
+      fontSize: 11,
+      color: tokens.textSubtle,
+      lineHeight: 16,
     },
     briefHeaderRow: {
       flexDirection: "row",

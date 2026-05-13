@@ -40,6 +40,7 @@ const triggerSchema = z.enum([
   "market_update",
   "testimonial",
   "custom",
+  "by_address",
 ]);
 
 const bodySchema = z.object({

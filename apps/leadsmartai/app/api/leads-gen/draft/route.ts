@@ -81,7 +81,12 @@ export async function POST(req: Request) {
     // Brief-required triggers — these have no CRM record to anchor
     // the post on, so an empty brief would leave Claude nothing to
     // work with. Catch before paying for a round-trip.
-    const briefRequired: string[] = ["custom", "market_update", "testimonial"];
+    const briefRequired: string[] = [
+      "custom",
+      "market_update",
+      "testimonial",
+      "by_address",
+    ];
     if (briefRequired.includes(trigger) && !brief?.trim()) {
       const friendly: Record<string, string> = {
         custom: "Custom posts need a brief — describe what the post should be about.",
@@ -89,6 +94,8 @@ export async function POST(req: Request) {
           "Market-update posts need a brief — share the angle, data points, or trend you want to highlight.",
         testimonial:
           "Testimonial posts need a brief — paste the client's verbatim quote (and optionally their first name).",
+        by_address:
+          "Paste an address or URL first — we'll pre-fill the brief from the lookup.",
       };
       return NextResponse.json(
         {
