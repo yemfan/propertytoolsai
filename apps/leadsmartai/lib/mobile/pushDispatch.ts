@@ -51,7 +51,12 @@ async function logLeadEventBestEffort(params: {
       contact_id: params.leadId,
       agent_id: params.agentId ?? null,
       event_type: params.eventType,
-      metadata: params.metadata ?? {},
+      // `payload` is the canonical JSONB column on contact_events;
+      // an earlier draft of this file used `metadata` (a column that
+      // doesn't exist), so the INSERT silently 500'd inside the
+      // try/catch on every call. Dedup logic in `wasRecentLeadEvent`
+      // was effectively disabled because no rows were ever written.
+      payload: params.metadata ?? {},
     } as Record<string, unknown>);
   } catch {
     // ignore
