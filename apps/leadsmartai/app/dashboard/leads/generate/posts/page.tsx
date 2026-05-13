@@ -6,9 +6,11 @@ import {
   LEAD_MEDIA_BUCKET,
   SIGNED_URL_TTL_SECONDS,
 } from "@/lib/leads-gen/media";
+import { getTopPosts } from "@/lib/leads-gen/top-posts";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 import PostsListClient, { type PublishedPostRow } from "./PostsListClient";
+import TopPerformersStrip from "./TopPerformersStrip";
 
 export const metadata: Metadata = {
   title: "Published Posts | LeadSmart AI",
@@ -29,6 +31,16 @@ export const metadata: Metadata = {
  */
 export default async function PublishedPostsPage() {
   const { agentId } = await getCurrentAgentContext();
+
+  // Top performers — separate query so it shares the page's data
+  // budget but stays decoupled from the main list rendering.
+  // Hides itself entirely when no metrics are populated yet
+  // (see TopPerformersStrip + getTopPosts.hasMetrics).
+  const top = await getTopPosts({
+    agentId: String(agentId),
+    limit: 3,
+    windowDays: 14,
+  }).catch(() => ({ items: [], windowDays: 14, hasMetrics: false }));
 
   const { data, error } = await supabaseAdmin
     .from("lead_posts")
@@ -210,6 +222,10 @@ export default async function PublishedPostsPage() {
           </Link>
         </div>
       </div>
+
+      {top.hasMetrics && top.items.length > 0 && (
+        <TopPerformersStrip items={top.items} windowDays={top.windowDays} />
+      )}
 
       <PostsListClient posts={posts} />
     </div>

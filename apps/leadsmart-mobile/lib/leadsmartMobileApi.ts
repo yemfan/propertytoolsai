@@ -2012,3 +2012,71 @@ export async function refreshMobilePostMetrics(
     refreshedAt: res.data.refreshedAt ?? new Date().toISOString(),
   };
 }
+
+
+// ── Top-performing posts (Home "Engagement" surface) ─────────────
+
+/** Single row in the top-posts list — what Home's Engagement card renders. */
+export type MobileTopPost = {
+  id: string;
+  platform: "facebook" | "instagram" | "linkedin" | string;
+  caption: string;
+  thumbnailUrl: string | null;
+  externalPostUrl: string | null;
+  publishedAt: string | null;
+  pageName: string | null;
+  igBusinessUsername: string | null;
+  linkedinDisplayName: string | null;
+  engagementScore: number;
+  metrics: {
+    likes: number | null;
+    comments: number | null;
+    shares: number | null;
+    saves: number | null;
+    reach: number | null;
+    impressions: number | null;
+  };
+};
+
+type MobileTopPostsJson = MobileJsonError & {
+  items?: MobileTopPost[];
+  windowDays?: number;
+  hasMetrics?: boolean;
+};
+
+/**
+ * Fetch the agent's top-engagement posts for the last N days. Used
+ * by the Home screen's Engagement card to surface what's working
+ * without making the agent navigate to /post-history.
+ *
+ * `hasMetrics: false` is the explicit "nothing to show yet" signal —
+ * render the empty state instead of an empty list.
+ */
+export async function fetchMobileTopPosts(opts?: {
+  limit?: number;
+  windowDays?: number;
+}): Promise<
+  | {
+      ok: true;
+      items: MobileTopPost[];
+      windowDays: number;
+      hasMetrics: boolean;
+    }
+  | MobileApiFailure
+> {
+  const params = new URLSearchParams();
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  if (opts?.windowDays) params.set("windowDays", String(opts.windowDays));
+  const q = params.toString();
+  const path = q
+    ? `${MOBILE_API_PATHS.leadsGenInsightsTopPosts}?${q}`
+    : MOBILE_API_PATHS.leadsGenInsightsTopPosts;
+  const res = await mobileGet<MobileTopPostsJson>(path);
+  if (res.ok === false) return res;
+  return {
+    ok: true,
+    items: res.data.items ?? [],
+    windowDays: res.data.windowDays ?? 14,
+    hasMetrics: res.data.hasMetrics ?? false,
+  };
+}
