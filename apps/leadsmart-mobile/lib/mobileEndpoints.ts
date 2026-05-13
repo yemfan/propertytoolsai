@@ -64,4 +64,5 @@ export const MOBILE_API_PATHS = {
   leadsGenPostsList: "/api/mobile/leads-gen/posts/list",
   leadsGenPostRefresh: (id: string) =>
     `/api/mobile/leads-gen/posts/${encodeURIComponent(id)}/refresh`,
+  leadsGenInsightsTopPosts: "/api/mobile/leads-gen/insights/top-posts",
 } as const;
