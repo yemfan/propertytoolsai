@@ -213,7 +213,7 @@ export function FounderDashboardClient() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                     <XAxis dataKey="period" tick={{ fontSize: 11 }} stroke="#9ca3af" />
                     <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" tickFormatter={(v) => `$${v}`} />
-                    <Tooltip formatter={(v: number | string) => fmtMoney(Number(v))} />
+                    <Tooltip formatter={((v: number | string) => fmtMoney(Number(v))) as never} />
                     <Line type="monotone" dataKey="mrr" stroke="#111827" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>

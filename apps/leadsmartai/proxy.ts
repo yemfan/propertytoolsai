@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { supabaseAuthCookieOptions } from "@/lib/authCookieOptions";
 import { PRODUCT_LEADSMART_AGENT } from "@/lib/entitlements/product";
 import { getPropertyToolsConsumerPostLoginUrl } from "@/lib/propertyToolsConsumerUrl";
@@ -100,7 +100,7 @@ export async function proxy(req: NextRequest) {
       getAll() {
         return req.cookies.getAll();
       },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
         cookiesToSet.forEach(({ name, value, options }) => {
           res.cookies.set(name, value, options);
         });

@@ -6,7 +6,10 @@ const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 export function generateReferralCode(length = 8): string {
   let out = "";
-  const bytes = typeof crypto !== "undefined" && crypto.getRandomValues ? new Uint8Array(length) : null;
+  const bytes =
+    typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function"
+      ? new Uint8Array(length)
+      : null;
   if (bytes) {
     crypto.getRandomValues(bytes);
     for (let i = 0; i < length; i++) {

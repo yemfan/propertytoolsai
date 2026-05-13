@@ -192,7 +192,7 @@ function ForecastByMonthChart({ buckets }: { buckets: MonthlyBucket[] }) {
               />
               <Tooltip
                 contentStyle={{ fontSize: 12 }}
-                formatter={(v: number, name: string) => [formatMoney(v), name]}
+                formatter={((v: number, name: string) => [formatMoney(v), name]) as never}
                 labelClassName="font-semibold"
               />
               <Bar dataKey="grossCommission" name="Gross (unweighted)" fill="#cbd5e1" />

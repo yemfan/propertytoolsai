@@ -120,7 +120,7 @@ function SignupForm() {
           }).catch(() => {});
         }
 
-        const after = safeInternalRedirect(searchParams.get("redirect"));
+        const after = safeInternalRedirect(searchParams?.get("redirect") ?? null);
         openAgentSignup({ fullName: fullName.trim(), email: email.trim() });
         router.push(after ?? "/");
       } catch (err: unknown) {

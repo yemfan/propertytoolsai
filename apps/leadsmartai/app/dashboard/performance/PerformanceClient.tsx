@@ -41,7 +41,7 @@ function MiniPie({ data, title }: { data: Array<{ name: string; value: number; c
               <Pie data={data} dataKey="value" cx="50%" cy="50%" outerRadius={45} innerRadius={25} strokeWidth={1}>
                 {data.map((d, i) => <Cell key={i} fill={d.color} />)}
               </Pie>
-              <Tooltip formatter={(v: number) => v} />
+              <Tooltip formatter={((v: number) => v) as never} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -200,7 +200,7 @@ export default function PerformanceClient() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="label" tick={{ fontSize: 9 }} stroke="#9ca3af" interval={2} />
                 <YAxis tick={{ fontSize: 9 }} stroke="#9ca3af" allowDecimals={false} />
-                <Tooltip formatter={(v: number) => [v, "Events"]} />
+                <Tooltip formatter={((v: number) => [v, "Events"]) as never} />
                 <Line type="monotone" dataKey="engagement_events" stroke="#3b82f6" strokeWidth={2} dot={{ r: 2 }} />
               </LineChart>
             </ResponsiveContainer>

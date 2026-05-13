@@ -33,7 +33,7 @@ export default function CompleteProfilePage() {
 function CompleteProfileInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextRaw = searchParams.get("next") ?? "/";
+  const nextRaw = searchParams?.get("next") ?? "/";
   const next =
     nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : "/";
 

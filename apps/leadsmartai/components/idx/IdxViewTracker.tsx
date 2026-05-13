@@ -28,9 +28,9 @@ export default function IdxViewTracker(props: {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return undefined;
     try {
-      if (window.localStorage.getItem(TRIGGER_KEY) === "1") return;
+      if (window.localStorage.getItem(TRIGGER_KEY) === "1") return undefined;
       const raw = window.localStorage.getItem(STORAGE_KEY);
       const seen: string[] = raw ? JSON.parse(raw) : [];
       if (!seen.includes(props.listingId)) {
@@ -43,9 +43,11 @@ export default function IdxViewTracker(props: {
         const t = window.setTimeout(() => setOpen(true), 1200);
         return () => window.clearTimeout(t);
       }
+      return undefined;
     } catch {
       // localStorage unavailable (private mode, etc.) — silently no-op. Threshold gate
       // is a nice-to-have, not a correctness path.
+      return undefined;
     }
   }, [props.listingId]);
 

@@ -22,7 +22,7 @@ const parsed = Papa.parse<Record<string, string>>(csv, { header: true, skipEmpty
 assert((parsed.data?.length ?? 0) >= 1, "csv parse");
 
 const card = extractBusinessCardFieldsFromText("John Smith\njohn@example.com\n415-555-1212");
-assert(card.email?.includes("@"), "card email");
+assert(card.email?.includes("@") ?? false, "card email");
 
 const score = incomingDuplicateScore(
   { id: "1", email: "a@b.com", phone: "(415) 555-1212", phone_number: "(415) 555-1212" },

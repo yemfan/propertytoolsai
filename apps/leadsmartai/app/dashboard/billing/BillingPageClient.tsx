@@ -119,9 +119,9 @@ function CardBrandIcon({ brand }: { brand: string }) {
 
 export default function BillingPageClient() {
   const searchParams = useSearchParams();
-  const canceled = searchParams.get("canceled") === "1";
-  const checkoutOk = searchParams.get("checkout") === "success";
-  const checkoutErr = searchParams.get("checkout_error");
+  const canceled = searchParams?.get("canceled") === "1";
+  const checkoutOk = searchParams?.get("checkout") === "success";
+  const checkoutErr = searchParams?.get("checkout_error") ?? null;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

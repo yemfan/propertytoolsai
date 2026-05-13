@@ -55,10 +55,10 @@ export default function SmartCmaBuilderPage() {
 
 function SmartCmaBuilderPageInner() {
   const searchParams = useSearchParams();
-  const initialAddress = searchParams.get("address") ?? "";
-  const queryLeadId = searchParams.get("contact_id");
+  const initialAddress = searchParams?.get("address") ?? "";
+  const queryLeadId = searchParams?.get("contact_id") ?? null;
   const autoSave =
-    searchParams.get("save") === "1" || searchParams.get("save") === "true";
+    searchParams?.get("save") === "1" || searchParams?.get("save") === "true";
 
   const [address, setAddress] = useState<string>(initialAddress);
   const [beds, setBeds] = useState<number | undefined>(3);

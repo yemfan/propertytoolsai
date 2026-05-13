@@ -57,8 +57,8 @@ export function useSignupProfilePrefill(
     let cancelled = false;
 
     (async () => {
-      const qEmail = searchParams.get("email");
-      const qName = searchParams.get("fullName");
+      const qEmail = searchParams?.get("email") ?? null;
+      const qName = searchParams?.get("fullName") ?? null;
       const overlayEmail = overlayPrefill?.email?.trim() ?? "";
       const overlayName = overlayPrefill?.fullName?.trim() ?? "";
       const urlEmail =

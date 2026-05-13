@@ -86,9 +86,15 @@ export async function POST(req: Request) {
     // through to the AI receptionist when missed-call is disabled
     // preserves the existing behavior for agents who haven't opted
     // in yet.
-    const missedCallSettings = await getMissedCallSettings(start.agentId);
+    // `start.agentId` is typed `string | null` but in practice is
+    // populated for every inbound call routed through Twilio. Coerce
+    // to empty string at the boundary so the downstream services
+    // can lookup-by-id (and return their default empty-row shapes
+    // when nothing matches), preserving the previous behavior.
+    const startAgentId = start.agentId ?? "";
+    const missedCallSettings = await getMissedCallSettings(startAgentId);
     if (missedCallSettings.enabled) {
-      const agentInfo = await getAgentForwardingInfo(start.agentId);
+      const agentInfo = await getAgentForwardingInfo(startAgentId);
       const forwardingE164 = toE164(agentInfo?.forwarding_phone ?? null);
       const inboundCallerE164 = toE164(formParams.From || "");
       const twilioNumberE164 = toE164(formParams.To || "");
@@ -96,7 +102,7 @@ export async function POST(req: Request) {
       if (forwardingE164) {
         const base = (process.env.APP_BASE_URL || "").replace(/\/$/, "");
         const dialResultUrl = `${base}/api/twilio/voice/dial-result?agentId=${encodeURIComponent(
-          start.agentId,
+          startAgentId,
         )}`;
         return xmlResponse(
           buildDialForwardingTwiml({

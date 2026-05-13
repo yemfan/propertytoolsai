@@ -78,7 +78,7 @@ export default function SphereSignalsList({ signals: initial }: { signals: Signa
                   background: avatarColorFor(s.contact.firstName + (s.contact.lastName ?? "")),
                 }}
               >
-                {(s.contact.firstName[0] ?? "") + (s.contact.lastName?.[0] ?? "")}
+                {(s.contact.firstName?.[0] ?? "") + (s.contact.lastName?.[0] ?? "")}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
