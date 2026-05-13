@@ -58,4 +58,6 @@ export const MOBILE_API_PATHS = {
     `/api/mobile/leads-gen/recurring/${encodeURIComponent(id)}`,
   leadsGenSubjects: (trigger: string) =>
     `/api/mobile/leads-gen/subjects?trigger=${encodeURIComponent(trigger)}`,
+  sphereBuyers: "/api/mobile/sphere/buyers",
+  sphereSellers: "/api/mobile/sphere/sellers",
 } as const;

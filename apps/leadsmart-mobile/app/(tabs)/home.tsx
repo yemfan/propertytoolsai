@@ -375,6 +375,12 @@ export default function HomeScreen() {
             <Text style={styles.chipText}>Quick Post</Text>
           </Pressable>
           <Pressable
+            onPress={() => router.push("/sphere" as never)}
+            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+          >
+            <Text style={styles.chipText}>Sphere</Text>
+          </Pressable>
+          <Pressable
             onPress={() => router.push("/scheduled" as never)}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >

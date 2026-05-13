@@ -1813,3 +1813,65 @@ export async function fetchMobileSubjects(
   if (res.ok === false) return res;
   return { ok: true, subjects: res.data.subjects ?? [] };
 }
+
+
+// ── Sphere (likely buyers + likely sellers) ──────────────────────
+
+/**
+ * Shared shape between buyers + sellers — both prediction services
+ * return the same `contactId / fullName / score / label / topReason`
+ * tuple. Mobile only needs the display-side fields.
+ */
+export type MobileSphereRow = {
+  contactId: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  lifecycleStage: "past_client" | "sphere";
+  closingAddress: string | null;
+  closingDate: string | null;
+  score: number;
+  /** 'high' / 'medium' / 'low' — drives badge color in the UI. */
+  label: "high" | "medium" | "low";
+  /** One-line "why" from the prediction's top scoring factor. */
+  topReason: string;
+};
+
+type MobileSphereBuyersJson = MobileJsonError & {
+  buyers?: MobileSphereRow[];
+};
+type MobileSphereSellersJson = MobileJsonError & {
+  sellers?: MobileSphereRow[];
+};
+
+export async function fetchMobileLikelyBuyers(
+  opts?: { limit?: number; minScore?: number; label?: "high" | "medium" | "low" },
+): Promise<{ ok: true; buyers: MobileSphereRow[] } | MobileApiFailure> {
+  const params = new URLSearchParams();
+  if (opts?.limit != null) params.set("limit", String(opts.limit));
+  if (opts?.minScore != null) params.set("minScore", String(opts.minScore));
+  if (opts?.label) params.set("label", opts.label);
+  const q = params.toString();
+  const path = q
+    ? `${MOBILE_API_PATHS.sphereBuyers}?${q}`
+    : MOBILE_API_PATHS.sphereBuyers;
+  const res = await mobileGet<MobileSphereBuyersJson>(path);
+  if (res.ok === false) return res;
+  return { ok: true, buyers: res.data.buyers ?? [] };
+}
+
+export async function fetchMobileLikelySellers(
+  opts?: { limit?: number; minScore?: number; label?: "high" | "medium" | "low" },
+): Promise<{ ok: true; sellers: MobileSphereRow[] } | MobileApiFailure> {
+  const params = new URLSearchParams();
+  if (opts?.limit != null) params.set("limit", String(opts.limit));
+  if (opts?.minScore != null) params.set("minScore", String(opts.minScore));
+  if (opts?.label) params.set("label", opts.label);
+  const q = params.toString();
+  const path = q
+    ? `${MOBILE_API_PATHS.sphereSellers}?${q}`
+    : MOBILE_API_PATHS.sphereSellers;
+  const res = await mobileGet<MobileSphereSellersJson>(path);
+  if (res.ok === false) return res;
+  return { ok: true, sellers: res.data.sellers ?? [] };
+}
