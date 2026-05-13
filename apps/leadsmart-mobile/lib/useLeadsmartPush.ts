@@ -23,6 +23,9 @@ const KINDS = new Set<string>([
   "reminder",
   "missed_call",
   "reminder_digest",
+  "publish_failure",
+  "briefing_morning",
+  "briefing_evening",
 ]);
 
 function navigateFromPushData(
@@ -36,6 +39,13 @@ function navigateFromPushData(
 
   if (screen === "notifications" || kind === "reminder_digest") {
     router.push("/notifications");
+    return;
+  }
+
+  // Publish-failure pushes — route to /scheduled where the agent
+  // can see last_error context + decide whether to retry.
+  if (screen === "scheduled" || kind === "publish_failure") {
+    router.push("/scheduled" as never);
     return;
   }
 
