@@ -19,6 +19,7 @@ import { BrandRefreshControl } from "../../components/BrandRefreshControl";
 import { BriefingsCard } from "../../components/home/BriefingsCard";
 import { DailyAgendaList } from "../../components/home/DailyAgendaList";
 import { EngagementCard } from "../../components/home/EngagementCard";
+import { NextPostSuggestionCard } from "../../components/home/NextPostSuggestionCard";
 import { PriorityAlertCard } from "../../components/home/PriorityAlertCard";
 import { Skeleton } from "../../components/Skeleton";
 import { FadeIn } from "../../components/Reveal";
@@ -329,6 +330,8 @@ export default function HomeScreen() {
         </View>
 
         <BriefingsCard />
+
+        <NextPostSuggestionCard />
 
         <EngagementCard />
 

@@ -2080,3 +2080,42 @@ export async function fetchMobileTopPosts(opts?: {
     hasMetrics: res.data.hasMetrics ?? false,
   };
 }
+
+
+// ── Suggested next post (Home "What to post next" surface) ───────
+
+/** A single AI-free, CRM-driven post suggestion. */
+export type MobileNextPostSuggestion = {
+  trigger: "new_listing" | "open_house" | "just_sold";
+  subjectId: string;
+  label: string;
+  sub: string | null;
+  reason: string;
+  urgency: number;
+};
+
+type MobileNextPostSuggestionsJson = MobileJsonError & {
+  suggestions?: MobileNextPostSuggestion[];
+};
+
+/**
+ * Fetch up to N suggestions for what the agent should post next.
+ * Deterministic — cross-references the CRM (new listings, open
+ * houses, just-solds) against the last 30 days of published posts.
+ * Empty array when nothing's worth surfacing.
+ */
+export async function fetchMobileNextPostSuggestions(opts?: {
+  limit?: number;
+}): Promise<
+  { ok: true; suggestions: MobileNextPostSuggestion[] } | MobileApiFailure
+> {
+  const params = new URLSearchParams();
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const q = params.toString();
+  const path = q
+    ? `${MOBILE_API_PATHS.leadsGenSuggestionsNextPost}?${q}`
+    : MOBILE_API_PATHS.leadsGenSuggestionsNextPost;
+  const res = await mobileGet<MobileNextPostSuggestionsJson>(path);
+  if (res.ok === false) return res;
+  return { ok: true, suggestions: res.data.suggestions ?? [] };
+}
