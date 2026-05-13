@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import {
   createMobileRecurringPost,
@@ -100,7 +100,32 @@ export default function QuickPostScreen() {
   const router = useRouter();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
-  const [trigger, setTrigger] = useState<MobileQuickPostTrigger>("new_listing");
+  // Optional deep-link params from the Home "Suggested next post"
+  // card. When present, we pre-select the trigger + auto-pick the
+  // CRM subject so the agent lands on a ready-to-edit brief.
+  const params = useLocalSearchParams<{
+    trigger?: string;
+    subjectId?: string;
+  }>();
+  const initialTrigger: MobileQuickPostTrigger = (() => {
+    const t = params.trigger;
+    if (
+      t === "new_listing" ||
+      t === "open_house" ||
+      t === "price_drop" ||
+      t === "just_sold" ||
+      t === "market_update" ||
+      t === "testimonial" ||
+      t === "custom" ||
+      t === "by_address"
+    ) {
+      return t;
+    }
+    return "new_listing";
+  })();
+
+  const [trigger, setTrigger] =
+    useState<MobileQuickPostTrigger>(initialTrigger);
   const [platform, setPlatform] = useState<MobileQuickPostPlatform>("facebook");
   const [brief, setBrief] = useState("");
   const [caption, setCaption] = useState("");
@@ -305,6 +330,40 @@ export default function QuickPostScreen() {
     if (s.sub?.trim()) lines.push(s.sub.trim());
     setBrief(lines.join(" · "));
     setGenerated(false);
+  }, []);
+
+  // Deep-link auto-pick. When the Home "Suggested next post" card
+  // navigates here with ?trigger=…&subjectId=…, fetch the matching
+  // subject from the CRM and pre-fill the brief. Runs once on mount.
+  // We do NOT re-trigger when the agent manually changes triggers —
+  // the deep-link's intent is honored exactly once.
+  useEffect(() => {
+    const linkedSubjectId = params.subjectId;
+    if (!linkedSubjectId) return;
+    const linkedTrigger = params.trigger;
+    if (
+      linkedTrigger !== "new_listing" &&
+      linkedTrigger !== "open_house" &&
+      linkedTrigger !== "price_drop" &&
+      linkedTrigger !== "just_sold"
+    ) {
+      // Synthetic triggers don't anchor on a CRM subject — nothing to auto-pick.
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const res = await fetchMobileSubjects(linkedTrigger);
+      if (cancelled || res.ok === false) return;
+      const match = res.subjects.find((s) => s.id === linkedSubjectId);
+      if (!match) return;
+      setSubjects(res.subjects);
+      onPickSubject(match);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally omit deps — this is a deep-link initializer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
