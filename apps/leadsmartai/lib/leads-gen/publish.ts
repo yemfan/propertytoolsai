@@ -1,5 +1,6 @@
 import "server-only";
 
+import { publishLinkedInPost } from "./linkedin-post";
 import { getMediaById } from "./media";
 import {
   publishFacebookPagePost,
@@ -16,32 +17,38 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
  * declarative (they decide HTTP status / retry behavior based on
  * the result shape, this helper just publishes).
  *
+ * Supports three platform values:
+ *   - 'facebook'  → Page feed post via Graph API
+ *   - 'instagram' → IG Business two-step publish (requires image)
+ *   - 'linkedin'  → LinkedIn personal feed via Share API
+ *
  * Flow:
  *   1. Load + ownership-check the social_accounts row
- *   2. Optional image: load from media library + signed URL
- *   3. Decrypt the Page token
+ *   2. Optional image: load from media library + signed URL (+ bytes for LinkedIn)
+ *   3. Decrypt the access token
  *   4. Insert a lead_posts row in 'pending' status (forensic audit)
- *   5. Call the appropriate Meta helper (FB feed or IG two-step)
+ *   5. Call the appropriate publisher (FB feed / IG two-step / LinkedIn /rest/posts)
  *   6. Promote lead_posts to 'published' or 'failed' based on outcome
  *   7. Return { ok, leadPostId, externalPostId, externalPostUrl }
- *      or { ok: false, status, error, metaCode? } on failure
+ *      or { ok: false, status, error, retryable } on failure
  *
  * Note on plan-gating: this helper trusts the caller did the plan
  * check. Both the sync route and the cron job verify plan before
- * dispatching here (cron checks each row's agent's plan in case
- * an agent downgraded between scheduling and firing).
+ * dispatching here.
  */
+
+export type PublishPlatform = "facebook" | "instagram" | "linkedin";
 
 export type PublishInput = {
   agentId: string;
-  platform: "facebook" | "instagram";
+  platform: PublishPlatform;
   /** social_accounts.id */
   connectionId: string;
   /** Post body. Caller has already done platform-specific formatting. */
   caption: string;
-  /** Hashtag tokens (no leading #). For IG, helper appends inline; for FB stays separate. */
+  /** Hashtag tokens (no leading #). For IG / LinkedIn, helper inlines; for FB stays separate. */
   hashtags?: string[];
-  /** media_library.id of an attached image. Required for Instagram. */
+  /** media_library.id of an attached image. Required for Instagram; optional elsewhere. */
   mediaItemId?: string | null;
   /** Attribution context — recorded on the lead_posts row. */
   trigger?: string | null;
@@ -54,7 +61,7 @@ export type PublishSuccess = {
   leadPostId: string;
   externalPostId: string;
   externalPostUrl: string | null;
-  platform: "facebook" | "instagram";
+  platform: PublishPlatform;
 };
 
 export type PublishFailure = {
@@ -65,9 +72,11 @@ export type PublishFailure = {
   metaCode?: number | null;
   metaUserMessage?: string | null;
   metaTraceId?: string | null;
+  linkedinCode?: string | null;
+  linkedinServiceErrorCode?: number | null;
   /** When the lead_posts row was created before failure (post-DB-write failures). */
   leadPostId?: string | null;
-  /** Hint for the cron: true means the error is transient (Meta side glitch)
+  /** Hint for the cron: true means the error is transient (platform-side glitch)
    *  and worth retrying; false means it's a permanent error (token revoked,
    *  Page deleted, etc) so the cron should not retry. */
   retryable: boolean;
@@ -88,12 +97,14 @@ export async function publishPost(input: PublishInput): Promise<PublishResult> {
     subjectRefId,
   } = input;
 
-  // Caption assembly — for IG, append hashtags inline (Meta IG posts
-  // expect hashtags in the body, not as a separate field). For FB,
-  // hashtags stay separate on the lead_posts row but aren't inlined.
+  // Caption assembly. For IG + LinkedIn, hashtags are part of the
+  // post body (LinkedIn supports clickable hashtags inline; IG
+  // expects them in the caption). FB keeps hashtags separate so
+  // they're rendered as plain text (no benefit to inlining).
   let caption = rawCaption.trim();
+  const inlineHashtags = platform === "instagram" || platform === "linkedin";
   if (
-    platform === "instagram" &&
+    inlineHashtags &&
     hashtags &&
     hashtags.length > 0 &&
     !caption.includes("#")
@@ -104,11 +115,12 @@ export async function publishPost(input: PublishInput): Promise<PublishResult> {
     caption = `${caption}\n\n${tagLine}`;
   }
 
-  // 1. Connection + ownership.
+  // 1. Connection + ownership. Select enough columns to satisfy
+  //    both Meta and LinkedIn branches — the unused ones are null.
   const { data: connRow, error: connErr } = await supabaseAdmin
     .from("social_accounts")
     .select(
-      "id, agent_id, platform, fb_page_id, ig_business_user_id, page_access_token_enc, status",
+      "id, agent_id, platform, fb_page_id, ig_business_user_id, page_access_token_enc, user_access_token_enc, linkedin_member_urn, status",
     )
     .eq("id", connectionId)
     .eq("agent_id", agentId)
@@ -136,14 +148,26 @@ export async function publishPost(input: PublishInput): Promise<PublishResult> {
     fb_page_id: string | null;
     ig_business_user_id: string | null;
     page_access_token_enc: string | null;
+    user_access_token_enc: string | null;
+    linkedin_member_urn: string | null;
     status: string;
   };
 
-  if (conn.platform !== "meta") {
+  // Validate platform / connection alignment.
+  const requiresMeta = platform === "facebook" || platform === "instagram";
+  if (requiresMeta && conn.platform !== "meta") {
     return {
       ok: false,
       status: 422,
       error: "Connection platform is not Meta.",
+      retryable: false,
+    };
+  }
+  if (platform === "linkedin" && conn.platform !== "linkedin") {
+    return {
+      ok: false,
+      status: 422,
+      error: "Connection platform is not LinkedIn.",
       retryable: false,
     };
   }
@@ -155,12 +179,13 @@ export async function publishPost(input: PublishInput): Promise<PublishResult> {
       retryable: false,
     };
   }
-  if (!conn.fb_page_id || !conn.page_access_token_enc) {
+
+  // Platform-specific shape checks before we touch any tokens.
+  if (requiresMeta && (!conn.fb_page_id || !conn.page_access_token_enc)) {
     return {
       ok: false,
       status: 422,
-      error:
-        "Connection is missing the Facebook Page token. Reconnect to refresh.",
+      error: "Connection is missing the Facebook Page token. Reconnect to refresh.",
       retryable: false,
     };
   }
@@ -173,10 +198,23 @@ export async function publishPost(input: PublishInput): Promise<PublishResult> {
       retryable: false,
     };
   }
+  if (
+    platform === "linkedin" &&
+    (!conn.linkedin_member_urn || !conn.user_access_token_enc)
+  ) {
+    return {
+      ok: false,
+      status: 422,
+      error: "Connection is missing LinkedIn credentials. Reconnect to refresh.",
+      retryable: false,
+    };
+  }
 
-  // 2. Image — required for IG, optional for FB.
+  // 2. Image — required for IG, optional for FB / LinkedIn.
   let mediaLibraryId: string | null = null;
   let imageUrl: string | null = null;
+  let imageBytes: Uint8Array | null = null;
+  let imageContentType: string | null = null;
   if (mediaItemId) {
     const media = await getMediaById(agentId, mediaItemId);
     if (!media) {
@@ -197,6 +235,29 @@ export async function publishPost(input: PublishInput): Promise<PublishResult> {
     }
     mediaLibraryId = media.id;
     imageUrl = media.signedUrl;
+    imageContentType = media.contentType ?? "image/jpeg";
+
+    // LinkedIn's upload endpoint won't pull from arbitrary URLs the
+    // way Meta does — we have to PUT the bytes ourselves. Fetch
+    // them here once via the signed URL.
+    if (platform === "linkedin") {
+      try {
+        const imgRes = await fetch(media.signedUrl);
+        if (!imgRes.ok) {
+          throw new Error(`HTTP ${imgRes.status}`);
+        }
+        const buf = await imgRes.arrayBuffer();
+        imageBytes = new Uint8Array(buf);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Image fetch failed";
+        return {
+          ok: false,
+          status: 500,
+          error: `Could not fetch image bytes for LinkedIn upload: ${msg}`,
+          retryable: true,
+        };
+      }
+    }
   }
   if (platform === "instagram" && !imageUrl) {
     return {
@@ -208,10 +269,15 @@ export async function publishPost(input: PublishInput): Promise<PublishResult> {
     };
   }
 
-  // 3. Decrypt page token at the point of use.
-  let pageAccessToken: string;
+  // 3. Decrypt access token at the point of use. Each platform
+  //    uses a different stored token column.
+  let accessToken: string;
   try {
-    pageAccessToken = decryptToken(conn.page_access_token_enc);
+    const encrypted =
+      platform === "linkedin"
+        ? conn.user_access_token_enc!
+        : conn.page_access_token_enc!;
+    accessToken = decryptToken(encrypted);
   } catch (e) {
     // Token decryption failure usually means SOCIAL_TOKEN_ENC_KEY was
     // rotated without re-encrypting rows. Mark the connection errored
@@ -231,16 +297,18 @@ export async function publishPost(input: PublishInput): Promise<PublishResult> {
     }
     const msg = e instanceof Error ? e.message : "Token decryption failed";
     console.error("[leads-gen/publish] token decrypt failed:", msg);
+    const platformLabel = platform === "linkedin" ? "LinkedIn" : "Facebook";
     return {
       ok: false,
       status: 422,
-      error: "Connection token is invalid. Reconnect Facebook to publish.",
+      error: `Connection token is invalid. Reconnect ${platformLabel} to publish.`,
       retryable: false,
     };
   }
 
-  // 4. Insert a pending lead_posts row up-front so even on a Meta-
-  //    side timeout or a mid-publish crash we have an audit row.
+  // 4. Insert a pending lead_posts row up-front so even on a
+  //    platform-side timeout or a mid-publish crash we have an
+  //    audit row.
   const { data: pendingRow, error: pendingErr } = await supabaseAdmin
     .from("lead_posts")
     .insert({
@@ -268,30 +336,48 @@ export async function publishPost(input: PublishInput): Promise<PublishResult> {
   }
   const leadPostId = (pendingRow as { id: string }).id;
 
-  // 5. Call Meta.
+  // 5. Dispatch to the platform-specific publisher.
   try {
-    const result =
-      platform === "facebook"
-        ? await publishFacebookPagePost({
-            pageId: conn.fb_page_id,
-            pageAccessToken,
-            caption,
-            imageUrl,
-          })
-        : await publishInstagramBusinessPost({
-            igUserId: conn.ig_business_user_id!,
-            pageAccessToken,
-            caption,
-            imageUrl: imageUrl!,
-          });
+    let externalPostId: string;
+    let externalPostUrl: string | null;
+    if (platform === "facebook") {
+      const result = await publishFacebookPagePost({
+        pageId: conn.fb_page_id!,
+        pageAccessToken: accessToken,
+        caption,
+        imageUrl,
+      });
+      externalPostId = result.externalPostId;
+      externalPostUrl = result.externalPostUrl;
+    } else if (platform === "instagram") {
+      const result = await publishInstagramBusinessPost({
+        igUserId: conn.ig_business_user_id!,
+        pageAccessToken: accessToken,
+        caption,
+        imageUrl: imageUrl!,
+      });
+      externalPostId = result.externalPostId;
+      externalPostUrl = result.externalPostUrl;
+    } else {
+      // linkedin
+      const result = await publishLinkedInPost({
+        memberUrn: conn.linkedin_member_urn!,
+        accessToken,
+        caption,
+        imageBytes,
+        imageContentType,
+      });
+      externalPostId = result.externalPostId;
+      externalPostUrl = result.externalPostUrl;
+    }
 
     const nowIso = new Date().toISOString();
     await supabaseAdmin
       .from("lead_posts")
       .update({
         status: "published",
-        external_post_id: result.externalPostId,
-        external_post_url: result.externalPostUrl,
+        external_post_id: externalPostId,
+        external_post_url: externalPostUrl,
         published_at: nowIso,
         updated_at: nowIso,
       } as Record<string, unknown>)
@@ -300,17 +386,22 @@ export async function publishPost(input: PublishInput): Promise<PublishResult> {
     return {
       ok: true,
       leadPostId,
-      externalPostId: result.externalPostId,
-      externalPostUrl: result.externalPostUrl,
+      externalPostId,
+      externalPostUrl,
       platform,
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Publish failed";
     const tagged = e as {
+      // Meta-tagged error fields
       metaCode?: number | null;
       metaSubcode?: number | null;
       metaUserMessage?: string | null;
       metaTraceId?: string | null;
+      // LinkedIn-tagged error fields
+      linkedinCode?: string | null;
+      linkedinServiceErrorCode?: number | null;
+      linkedinMessage?: string | null;
     } | null;
 
     await supabaseAdmin
@@ -322,28 +413,62 @@ export async function publishPost(input: PublishInput): Promise<PublishResult> {
       } as Record<string, unknown>)
       .eq("id", leadPostId);
 
-    console.error("[leads-gen/publish] meta publish error:", msg, {
+    console.error(`[leads-gen/publish] ${platform} publish error:`, msg, {
       metaCode: tagged?.metaCode,
       metaTraceId: tagged?.metaTraceId,
+      linkedinCode: tagged?.linkedinCode,
+      linkedinServiceErrorCode: tagged?.linkedinServiceErrorCode,
     });
 
-    // Distinguishing retryable from permanent: code-based heuristic.
-    //   - 100/190/200 family (auth) → permanent, agent needs to reconnect
-    //   - 4/17/32 (rate limit) → retryable
-    //   - 1/2 (general API / unexpected) → retryable
-    //   - Everything else → retryable by default (transient)
-    const PERMANENT_CODES = new Set([100, 190, 200, 803, 506]);
-    const retryable = tagged?.metaCode
-      ? !PERMANENT_CODES.has(tagged.metaCode)
-      : true;
+    // Distinguishing retryable from permanent: code-based heuristic
+    // per platform.
+    //
+    // Meta — auth-class codes (100/190/200/506/803) → permanent;
+    // others retryable.
+    //
+    // LinkedIn — uses string codes. Common permanent ones:
+    //   - UNAUTHORIZED, REVOKED_ACCESS_TOKEN, EXPIRED_ACCESS_TOKEN
+    //   - INVALID_REQUEST (malformed payload — retry won't help)
+    //   - FORBIDDEN_PERMISSIONS
+    // Service error codes: 65600/65601 (token), 100 (invalid request).
+    let retryable = true;
+    if (platform === "linkedin") {
+      const permanentLinkedInCodes = new Set([
+        "UNAUTHORIZED",
+        "REVOKED_ACCESS_TOKEN",
+        "EXPIRED_ACCESS_TOKEN",
+        "INVALID_REQUEST",
+        "FORBIDDEN_PERMISSIONS",
+      ]);
+      const permanentLinkedInServiceCodes = new Set([65600, 65601, 100]);
+      if (tagged?.linkedinCode && permanentLinkedInCodes.has(tagged.linkedinCode)) {
+        retryable = false;
+      }
+      if (
+        tagged?.linkedinServiceErrorCode &&
+        permanentLinkedInServiceCodes.has(tagged.linkedinServiceErrorCode)
+      ) {
+        retryable = false;
+      }
+    } else {
+      const PERMANENT_META_CODES = new Set([100, 190, 200, 803, 506]);
+      retryable = tagged?.metaCode
+        ? !PERMANENT_META_CODES.has(tagged.metaCode)
+        : true;
+    }
 
     return {
       ok: false,
       status: 502,
-      error: tagged?.metaUserMessage || msg,
+      error:
+        tagged?.metaUserMessage ||
+        tagged?.linkedinMessage ||
+        msg,
       metaCode: tagged?.metaCode ?? null,
       metaUserMessage: tagged?.metaUserMessage ?? null,
       metaTraceId: tagged?.metaTraceId ?? null,
+      linkedinCode: tagged?.linkedinCode ?? null,
+      linkedinServiceErrorCode: tagged?.linkedinServiceErrorCode ?? null,
       leadPostId,
       retryable,
     };

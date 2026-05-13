@@ -71,7 +71,10 @@ type DuePost = {
   id: string;
   agent_id: string;
   social_account_id: string;
-  platform: "facebook" | "instagram";
+  // 'linkedin' added when LinkedIn organic posting landed — the
+  // scheduled_posts.platform check constraint widens to match.
+  // publishPost dispatches by platform; same retry rules apply.
+  platform: "facebook" | "instagram" | "linkedin";
   caption: string;
   hashtags: string[];
   media_library_id: string | null;

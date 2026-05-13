@@ -229,21 +229,27 @@ type MediaItem = {
 };
 
 /**
- * Connection shape from GET /api/leads-gen/connections (Phase 2A.2).
- * Renders the "Publish to Facebook/Instagram" button + multi-Page
- * picker when an agent manages several Pages. When the agent has no
- * connections, the wizard falls back to the compose-URL share.
+ * Connection shape from GET /api/leads-gen/connections. Phase 2A
+ * added Meta; Phase 2D added LinkedIn (personal feed via Share API).
+ * Renders the "Publish to <Platform>" button + multi-account picker
+ * when an agent manages several connections for the same platform.
+ * When the agent has no connections, the wizard falls back to the
+ * compose-URL share where available.
  */
 type Connection = {
   id: string;
-  platform: "meta";
+  platform: "meta" | "linkedin";
   fbPageId: string | null;
   fbPageName: string | null;
   igBusinessUserId: string | null;
   igBusinessUsername: string | null;
+  linkedinMemberUrn: string | null;
+  linkedinMemberEmail: string | null;
+  displayName: string | null;
   pictureUrl: string | null;
   canPublishFacebook: boolean;
   canPublishInstagram: boolean;
+  canPublishLinkedIn: boolean;
 };
 
 export default function QuickPostClient() {
@@ -316,14 +322,18 @@ export default function QuickPostClient() {
   const briefConfig = trigger ? BRIEF_CONFIG[trigger] : null;
 
   // Connections that can publish on the currently-selected platform.
-  // Phase 2A.2 supports Facebook + Instagram only — LinkedIn / X
-  // still fall back to compose-URL share.
+  // Phase 2A added Facebook + Instagram (Meta connections); Phase 2D
+  // added LinkedIn (personal feed via Share API). X still falls back
+  // to compose-URL share.
   const eligibleConnections = useMemo(() => {
     if (platform === "facebook") {
       return connections.filter((c) => c.canPublishFacebook);
     }
     if (platform === "instagram") {
       return connections.filter((c) => c.canPublishInstagram);
+    }
+    if (platform === "linkedin") {
+      return connections.filter((c) => c.canPublishLinkedIn);
     }
     return [];
   }, [connections, platform]);
@@ -479,14 +489,20 @@ export default function QuickPostClient() {
     };
   }, []);
 
-  // Direct publish via Meta Graph API. Only available when:
-  //   - the platform is facebook or instagram, AND
-  //   - the agent has a connected Page that supports that platform
-  // For X / LinkedIn (and unconnected accounts) the compose-URL
-  // fallback below handles it.
+  // Direct publish via the platform's official API:
+  //   - facebook / instagram → Meta Graph API
+  //   - linkedin             → LinkedIn Share API (/rest/posts)
+  // Available when the platform is one of those AND the agent has
+  // a connected account that supports that platform. X still falls
+  // back to the compose-URL share.
   const publish = useCallback(async () => {
     if (!currentDraft || !activeConnection) return;
-    if (platform !== "facebook" && platform !== "instagram") return;
+    if (
+      platform !== "facebook" &&
+      platform !== "instagram" &&
+      platform !== "linkedin"
+    )
+      return;
     setPublishResult(null);
     setPublishing(true);
     try {
@@ -548,7 +564,12 @@ export default function QuickPostClient() {
   // since tokens can expire/rotate between schedule and fire.
   const schedule = useCallback(async () => {
     if (!currentDraft || !activeConnection) return;
-    if (platform !== "facebook" && platform !== "instagram") return;
+    if (
+      platform !== "facebook" &&
+      platform !== "instagram" &&
+      platform !== "linkedin"
+    )
+      return;
     setScheduleResult(null);
     setScheduling(true);
     try {
@@ -934,8 +955,8 @@ export default function QuickPostClient() {
                   onUpload={uploadFile}
                 />
 
-                {/* Multi-Page picker — only renders when the agent
-                    manages several Pages that can post on this
+                {/* Multi-account picker — only renders when the agent
+                    has several accounts that can post on this
                     platform. Single connection auto-selects. */}
                 {eligibleConnections.length > 1 && activeConnection && (
                   <div className="flex items-center gap-2 text-xs">
@@ -954,7 +975,9 @@ export default function QuickPostClient() {
                         <option key={c.id} value={c.id}>
                           {platform === "instagram" && c.igBusinessUsername
                             ? `@${c.igBusinessUsername}`
-                            : c.fbPageName ?? "Connected Page"}
+                            : platform === "linkedin"
+                              ? c.displayName ?? "LinkedIn member"
+                              : c.fbPageName ?? "Connected Page"}
                         </option>
                       ))}
                     </select>
@@ -999,7 +1022,9 @@ export default function QuickPostClient() {
                         3. Neither                  → hint
                   */}
                   {activeConnection &&
-                  (platform === "facebook" || platform === "instagram") ? (
+                  (platform === "facebook" ||
+                    platform === "instagram" ||
+                    platform === "linkedin") ? (
                     scheduleMode ? (
                       <button
                         type="button"
@@ -1060,7 +1085,9 @@ export default function QuickPostClient() {
                     Schedule button when scheduleMode is on (see
                     the action row). */}
                 {activeConnection &&
-                  (platform === "facebook" || platform === "instagram") && (
+                  (platform === "facebook" ||
+                    platform === "instagram" ||
+                    platform === "linkedin") && (
                     <div className="rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-2.5 text-sm">
                       {!scheduleMode ? (
                         <button
@@ -1196,6 +1223,20 @@ export default function QuickPostClient() {
                       and we&apos;ll publish directly.
                     </p>
                   )}
+                {!activeConnection && platform === "linkedin" && (
+                  <p className="text-xs text-gray-500">
+                    Want one-click publish?{" "}
+                    <a
+                      href="/dashboard/leads/generate/connect"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-sky-700 hover:underline"
+                    >
+                      Connect LinkedIn
+                    </a>{" "}
+                    and we&apos;ll post to your personal feed directly.
+                  </p>
+                )}
 
                 {compose && !compose.prefillsBody && compose.composeUrl && !activeConnection && (
                   <p className="text-xs text-amber-700">

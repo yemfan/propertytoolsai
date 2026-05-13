@@ -5,17 +5,18 @@ import { useRouter } from "next/navigation";
 
 /**
  * Client-side bits of the connect page:
- *   - One-shot flash message reading `?status=…&reason=…&count=…`
+ *   - One-shot flash message reading `?status=…&reason=…&count=…&network=…`
  *     from the OAuth callback. Dismisses on close OR after we've
  *     read it once into local state.
- *   - "Connect Facebook" link that just hits the start route.
+ *   - "Connect Facebook" / "Connect LinkedIn" links that just hit
+ *     the start route.
  *   - Per-connection Disconnect button with a confirm prompt.
  *
  * The list of connections is server-rendered above by the page —
  * after a disconnect we router.refresh() to re-fetch.
  */
 
-type ConnectedAccountRow = {
+type MetaAccountRow = {
   id: string;
   fb_page_id: string | null;
   fb_page_name: string | null;
@@ -28,19 +29,47 @@ type ConnectedAccountRow = {
   connected_at: string;
 };
 
+type LinkedInAccountRow = {
+  id: string;
+  linkedin_member_urn: string | null;
+  linkedin_member_email: string | null;
+  account_display_name: string | null;
+  account_picture_url: string | null;
+  status: string;
+  last_error: string | null;
+  user_token_expires_at: string | null;
+  connected_at: string;
+};
+
+type Network = "facebook" | "linkedin";
+
 type Flash =
   | { kind: "success"; title: string; body: string }
   | { kind: "cancelled"; title: string; body: string }
   | { kind: "error"; title: string; body: string };
 
+function networkLabel(network: string | null): string {
+  if (network === "linkedin") return "LinkedIn";
+  return "Facebook";
+}
+
 function buildFlash(
   status: string | null,
   reason: string | null,
   count: string | null,
+  network: string | null,
 ): Flash | null {
   if (!status) return null;
+  const label = networkLabel(network);
   if (status === "success") {
     const n = Number(count) || 1;
+    if (network === "linkedin") {
+      return {
+        kind: "success",
+        title: "LinkedIn connected",
+        body: "Your LinkedIn profile is linked. You can now publish posts directly from the Quick Post wizard.",
+      };
+    }
     return {
       kind: "success",
       title: "Facebook connected",
@@ -52,14 +81,14 @@ function buildFlash(
       kind: "cancelled",
       title: "Connection cancelled",
       body: reason
-        ? `You exited the Facebook dialog before granting access (${reason}).`
-        : "You exited the Facebook dialog before granting access.",
+        ? `You exited the ${label} dialog before granting access (${reason}).`
+        : `You exited the ${label} dialog before granting access.`,
     };
   }
   return {
     kind: "error",
     title: "Connection failed",
-    body: reason ?? "Something went wrong during the Facebook connection.",
+    body: reason ?? `Something went wrong during the ${label} connection.`,
   };
 }
 
@@ -67,48 +96,62 @@ export default function ConnectClient({
   initialStatus,
   initialReason,
   initialCount,
-  connections,
+  initialNetwork,
+  metaConnections,
+  linkedinConnections,
 }: {
   initialStatus: string | null;
   initialReason: string | null;
   initialCount: string | null;
-  connections: ConnectedAccountRow[];
+  initialNetwork: string | null;
+  metaConnections: MetaAccountRow[];
+  linkedinConnections: LinkedInAccountRow[];
 }) {
   const router = useRouter();
   const [flash, setFlash] = useState<Flash | null>(() =>
-    buildFlash(initialStatus, initialReason, initialCount),
+    buildFlash(initialStatus, initialReason, initialCount, initialNetwork),
   );
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Strip status/reason/count from the URL after first render so a
-  // refresh doesn't re-show the flash. We do this client-side to
-  // avoid a server round-trip.
+  // Strip status/reason/count/network from the URL after first
+  // render so a refresh doesn't re-show the flash. We do this
+  // client-side to avoid a server round-trip.
   useEffect(() => {
     if (!initialStatus) return;
     const url = new URL(window.location.href);
     url.searchParams.delete("status");
     url.searchParams.delete("reason");
     url.searchParams.delete("count");
+    url.searchParams.delete("network");
     window.history.replaceState(null, "", url.toString());
   }, [initialStatus]);
 
   const onDisconnect = useCallback(
-    async (id: string, label: string) => {
-      if (!confirm(`Disconnect ${label}? Posts already published will stay live on Facebook.`)) return;
+    async (network: Network, id: string, label: string) => {
+      if (
+        !confirm(
+          `Disconnect ${label}? Posts already published will stay live on ${networkLabel(network)}.`,
+        )
+      )
+        return;
       setActionError(null);
       setDisconnectingId(id);
       try {
-        const res = await fetch("/api/leads-gen/connect/meta/disconnect", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id }),
-        });
+        const res = await fetch(
+          `/api/leads-gen/connect/${network === "linkedin" ? "linkedin" : "meta"}/disconnect`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id }),
+          },
+        );
         const body = (await res.json().catch(() => ({}))) as {
           ok?: boolean;
           error?: string;
         };
-        if (!res.ok || !body.ok) throw new Error(body.error ?? "Disconnect failed");
+        if (!res.ok || !body.ok)
+          throw new Error(body.error ?? "Disconnect failed");
         // Refresh so the server-rendered list updates.
         router.refresh();
       } catch (e) {
@@ -175,13 +218,13 @@ export default function ConnectClient({
             href="/api/leads-gen/connect/meta/start"
             className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
           >
-            {connections.length > 0 ? "Connect another" : "Connect Facebook"}
+            {metaConnections.length > 0 ? "Connect another" : "Connect Facebook"}
           </a>
         </div>
 
-        {connections.length > 0 ? (
+        {metaConnections.length > 0 ? (
           <ul className="mt-5 space-y-2">
-            {connections.map((c) => (
+            {metaConnections.map((c) => (
               <li
                 key={c.id}
                 className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50/40 px-3 py-2.5"
@@ -231,7 +274,9 @@ export default function ConnectClient({
                   )}
                   <button
                     type="button"
-                    onClick={() => onDisconnect(c.id, c.fb_page_name ?? "this Page")}
+                    onClick={() =>
+                      onDisconnect("facebook", c.id, c.fb_page_name ?? "this Page")
+                    }
                     disabled={disconnectingId === c.id}
                     className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-white disabled:opacity-50"
                   >
@@ -255,26 +300,110 @@ export default function ConnectClient({
         </p>
       </section>
 
-      {/* Phase 3 placeholders */}
-      <section className="rounded-2xl border border-dashed border-gray-300 bg-gray-50/40 p-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-2xl">
-            💼
+      {/* LinkedIn card */}
+      <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-2xl">
+              💼
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">LinkedIn</h2>
+              <p className="text-sm text-gray-600">
+                Post to your personal LinkedIn feed. Real-estate professionals
+                see strong engagement here — listings, market updates, and
+                client wins all do well.
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-base font-semibold text-gray-700">
-              LinkedIn{" "}
-              <span className="ml-1 rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600">
-                Phase 3
-              </span>
-            </h2>
-            <p className="text-sm text-gray-500">
-              LinkedIn personal + Company Page posting coming after Meta launch.
-            </p>
-          </div>
+          <a
+            href="/api/leads-gen/connect/linkedin/start"
+            className="shrink-0 rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
+          >
+            {linkedinConnections.length > 0 ? "Reconnect" : "Connect LinkedIn"}
+          </a>
         </div>
+
+        {linkedinConnections.length > 0 ? (
+          <ul className="mt-5 space-y-2">
+            {linkedinConnections.map((c) => (
+              <li
+                key={c.id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50/40 px-3 py-2.5"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  {c.account_picture_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={c.account_picture_url}
+                      alt={c.account_display_name ?? ""}
+                      className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-gray-200"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-semibold">
+                      {(c.account_display_name ?? "?").slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-gray-900">
+                      {c.account_display_name ?? "LinkedIn member"}
+                    </p>
+                    <p className="truncate text-xs text-gray-500">
+                      {c.linkedin_member_email ? (
+                        <>{c.linkedin_member_email}</>
+                      ) : (
+                        <>Personal feed</>
+                      )}
+                      {c.user_token_expires_at && (
+                        <>
+                          {" · "}
+                          Token expires{" "}
+                          {new Date(c.user_token_expires_at).toLocaleDateString()}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {c.status !== "connected" && (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                      {c.status}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onDisconnect(
+                        "linkedin",
+                        c.id,
+                        c.account_display_name ?? "your LinkedIn",
+                      )
+                    }
+                    disabled={disconnectingId === c.id}
+                    className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-white disabled:opacity-50"
+                  >
+                    {disconnectingId === c.id ? "Disconnecting…" : "Disconnect"}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 rounded-lg border border-dashed border-gray-300 bg-gray-50/60 px-3 py-3 text-sm text-gray-500">
+            Not connected. Sign in with LinkedIn to enable posting.
+          </p>
+        )}
+
+        <p className="mt-4 text-xs text-gray-400">
+          Posts go to your personal LinkedIn feed. Company Page posting needs
+          LinkedIn&apos;s Marketing API (partner-program-gated) and isn&apos;t
+          in scope yet. To revoke from LinkedIn&apos;s side, go to your
+          LinkedIn Settings → Data privacy →{" "}
+          <em>Permitted services</em> and remove LeadSmart AI.
+        </p>
       </section>
 
+      {/* Phase 3 placeholders */}
       <section className="rounded-2xl border border-dashed border-gray-300 bg-gray-50/40 p-5">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-2xl">

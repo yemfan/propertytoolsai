@@ -9,7 +9,7 @@ import ConnectClient from "./ConnectClient";
 export const metadata: Metadata = {
   title: "Connect Platforms | LeadSmart AI",
   description:
-    "Connect your Facebook Pages and Instagram Business accounts so Generate Leads can publish directly.",
+    "Connect your Facebook Pages, Instagram Business accounts, and LinkedIn profile so Generate Leads can publish directly.",
   robots: { index: false },
 };
 
@@ -18,10 +18,12 @@ type PageProps = {
     status?: string;
     reason?: string;
     count?: string;
+    /** Which network the flash refers to (set by the callback). */
+    network?: string;
   }>;
 };
 
-type ConnectedAccountRow = {
+type MetaAccountRow = {
   id: string;
   fb_page_id: string | null;
   fb_page_name: string | null;
@@ -34,32 +36,56 @@ type ConnectedAccountRow = {
   connected_at: string;
 };
 
+type LinkedInAccountRow = {
+  id: string;
+  linkedin_member_urn: string | null;
+  linkedin_member_email: string | null;
+  account_display_name: string | null;
+  account_picture_url: string | null;
+  status: string;
+  last_error: string | null;
+  user_token_expires_at: string | null;
+  connected_at: string;
+};
+
 /**
- * Connection management for the Generate Leads feature. Phase 2A
- * surfaces only Meta — LinkedIn / X / Google land in Phase 3 and
- * will be cards alongside the Meta one.
+ * Connection management for the Generate Leads feature. Surfaces
+ * Meta (Phase 2A) and LinkedIn (Phase 2D — personal feed via Share
+ * API, no Marketing API approval needed).
  *
- * The flash message at the top reads from `?status=…&reason=…` set
- * by the OAuth callback; rendered once then dropped via a Link
+ * The flash message at the top reads from `?status=…&reason=…&network=…`
+ * set by the OAuth callback; rendered once then dropped via a Link
  * back to the same URL without params (handled in ConnectClient).
  */
 export default async function ConnectPage({ searchParams }: PageProps) {
   const { agentId } = await getCurrentAgentContext();
-  const { status, reason, count } = await searchParams;
+  const { status, reason, count, network } = await searchParams;
 
-  // Pull this agent's existing connections. Service-role read; the
-  // token columns are intentionally OMITTED from the SELECT — they
-  // never need to leave the server.
-  const { data: rows } = await supabaseAdmin
-    .from("social_accounts")
-    .select(
-      "id, fb_page_id, fb_page_name, ig_business_user_id, ig_business_username, account_picture_url, status, last_error, user_token_expires_at, connected_at",
-    )
-    .eq("agent_id", String(agentId))
-    .eq("platform", "meta")
-    .order("connected_at", { ascending: false });
+  // Pull this agent's existing connections in parallel. Service-role
+  // reads; the token columns are intentionally OMITTED from the
+  // SELECT — they never need to leave the server.
+  const [metaResult, linkedinResult] = await Promise.all([
+    supabaseAdmin
+      .from("social_accounts")
+      .select(
+        "id, fb_page_id, fb_page_name, ig_business_user_id, ig_business_username, account_picture_url, status, last_error, user_token_expires_at, connected_at",
+      )
+      .eq("agent_id", String(agentId))
+      .eq("platform", "meta")
+      .order("connected_at", { ascending: false }),
+    supabaseAdmin
+      .from("social_accounts")
+      .select(
+        "id, linkedin_member_urn, linkedin_member_email, account_display_name, account_picture_url, status, last_error, user_token_expires_at, connected_at",
+      )
+      .eq("agent_id", String(agentId))
+      .eq("platform", "linkedin")
+      .order("connected_at", { ascending: false }),
+  ]);
 
-  const connections = (rows as ConnectedAccountRow[] | null) ?? [];
+  const metaConnections = (metaResult.data as MetaAccountRow[] | null) ?? [];
+  const linkedinConnections =
+    (linkedinResult.data as LinkedInAccountRow[] | null) ?? [];
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
@@ -69,8 +95,8 @@ export default async function ConnectPage({ searchParams }: PageProps) {
             Connect platforms
           </h1>
           <p className="text-sm text-gray-500">
-            Connect your Facebook Pages and Instagram Business accounts so
-            Generate Leads can publish posts directly.
+            Connect your social accounts so Generate Leads can publish posts
+            directly.
           </p>
         </div>
         <Link
@@ -85,7 +111,9 @@ export default async function ConnectPage({ searchParams }: PageProps) {
         initialStatus={status ?? null}
         initialReason={reason ?? null}
         initialCount={count ?? null}
-        connections={connections}
+        initialNetwork={network ?? null}
+        metaConnections={metaConnections}
+        linkedinConnections={linkedinConnections}
       />
     </div>
   );

@@ -10,8 +10,11 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const bodySchema = z.object({
-  platform: z.enum(["facebook", "instagram"]),
+  platform: z.enum(["facebook", "instagram", "linkedin"]),
   connectionId: z.string().uuid(),
+  // LinkedIn's hard cap is 3000 chars; Meta is far higher. 5000 fits
+  // both. LinkedIn truncates with a "…see more" past ~150 chars in
+  // the feed preview but accepts the full body.
   caption: z.string().min(1).max(5_000),
   hashtags: z.array(z.string()).max(40).optional(),
   mediaItemId: z.string().uuid().optional(),
@@ -84,6 +87,8 @@ export async function POST(req: Request) {
         error: result.error,
         metaCode: result.metaCode ?? null,
         metaTraceId: result.metaTraceId ?? null,
+        linkedinCode: result.linkedinCode ?? null,
+        linkedinServiceErrorCode: result.linkedinServiceErrorCode ?? null,
         postId: result.leadPostId ?? null,
       },
       { status: result.status },
