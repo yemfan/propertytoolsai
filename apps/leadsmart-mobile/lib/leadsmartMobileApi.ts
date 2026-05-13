@@ -1582,3 +1582,188 @@ export async function uploadMobileMedia(input: {
     return { ok: false, status: 0, message: msg };
   }
 }
+
+
+// ── Generate Leads (mobile schedule + recurring) ─────────────────
+
+export type MobileScheduledPost = {
+  id: string;
+  platform: "facebook" | "instagram" | "linkedin";
+  caption: string;
+  hashtags: string[];
+  mediaLibraryId: string | null;
+  scheduledFor: string;
+  status: "scheduled" | "posting" | "posted" | "failed" | "cancelled";
+  attemptCount: number;
+  nextAttemptAt: string | null;
+  lastError: string | null;
+  publishedLeadPostId: string | null;
+  publishedAt: string | null;
+  publishedUrl: string | null;
+  pageName: string | null;
+  igBusinessUsername: string | null;
+  linkedinDisplayName: string | null;
+  createdAt: string;
+};
+
+type MobileScheduleListJson = MobileJsonError & {
+  scheduled?: MobileScheduledPost[];
+};
+
+type MobileScheduleCreateJson = MobileJsonError & {
+  scheduledPostId?: string;
+  scheduledFor?: string;
+  status?: string;
+};
+
+export async function scheduleMobileQuickPost(input: {
+  platform: "facebook" | "instagram" | "linkedin";
+  connectionId: string;
+  caption: string;
+  hashtags?: string[];
+  mediaItemId?: string;
+  scheduledFor: string;
+  trigger?: string;
+  subjectKind?: string;
+  subjectRefId?: string;
+}): Promise<
+  | { ok: true; scheduledPostId: string; scheduledFor: string; status: string }
+  | MobileApiFailure
+> {
+  const res = await mobilePost<MobileScheduleCreateJson>(
+    MOBILE_API_PATHS.leadsGenSchedule,
+    input as unknown as Record<string, unknown>,
+  );
+  if (res.ok === false) return res;
+  if (!res.data.scheduledPostId || !res.data.scheduledFor || !res.data.status) {
+    return { ok: false, status: 500, message: "Schedule returned no id" };
+  }
+  return {
+    ok: true,
+    scheduledPostId: res.data.scheduledPostId,
+    scheduledFor: res.data.scheduledFor,
+    status: res.data.status,
+  };
+}
+
+export async function fetchMobileScheduledPosts(): Promise<
+  | { ok: true; scheduled: MobileScheduledPost[] }
+  | MobileApiFailure
+> {
+  const res = await mobileGet<MobileScheduleListJson>(
+    MOBILE_API_PATHS.leadsGenScheduleList,
+  );
+  if (res.ok === false) return res;
+  return { ok: true, scheduled: res.data.scheduled ?? [] };
+}
+
+export async function cancelMobileScheduledPost(
+  id: string,
+): Promise<{ ok: true; status: string } | MobileApiFailure> {
+  const res = await mobilePost<MobileJsonError & { status?: string }>(
+    MOBILE_API_PATHS.leadsGenScheduleCancel(id),
+    {},
+  );
+  if (res.ok === false) return res;
+  return { ok: true, status: res.data.status ?? "cancelled" };
+}
+
+export type MobileRecurrence = {
+  id: string;
+  platform: "facebook" | "instagram" | "linkedin";
+  caption: string;
+  cadence: "daily" | "weekly";
+  weeklyDayOfWeek: number | null;
+  timeOfDayHour: number;
+  timeOfDayMinute: number;
+  timezone: string;
+  startsAt: string;
+  endsAt: string | null;
+  maxOccurrences: number | null;
+  occurrenceCount: number;
+  nextOccurrenceAt: string;
+  lastMaterializedAt: string | null;
+  status: "active" | "paused" | "completed" | "cancelled";
+  lastError: string | null;
+  socialAccountId: string;
+  socialAccountDisplay: string | null;
+  createdAt: string;
+};
+
+type MobileRecurringCreateJson = MobileJsonError & {
+  recurringScheduleId?: string;
+  nextOccurrenceAt?: string;
+  status?: string;
+};
+type MobileRecurringListJson = MobileJsonError & {
+  recurrences?: MobileRecurrence[];
+};
+
+export async function createMobileRecurringPost(input: {
+  platform: "facebook" | "instagram" | "linkedin";
+  connectionId: string;
+  caption: string;
+  hashtags?: string[];
+  mediaItemId?: string;
+  trigger?: string;
+  subjectKind?: string;
+  subjectRefId?: string;
+  cadence: "daily" | "weekly";
+  weeklyDayOfWeek?: number;
+  timeOfDayHour: number;
+  timeOfDayMinute: number;
+  timezone: string;
+  startsAt?: string;
+  endsAt?: string;
+  maxOccurrences?: number;
+}): Promise<
+  | {
+      ok: true;
+      recurringScheduleId: string;
+      nextOccurrenceAt: string;
+      status: string;
+    }
+  | MobileApiFailure
+> {
+  const res = await mobilePost<MobileRecurringCreateJson>(
+    MOBILE_API_PATHS.leadsGenRecurring,
+    input as unknown as Record<string, unknown>,
+  );
+  if (res.ok === false) return res;
+  if (
+    !res.data.recurringScheduleId ||
+    !res.data.nextOccurrenceAt ||
+    !res.data.status
+  ) {
+    return { ok: false, status: 500, message: "Recurring returned no id" };
+  }
+  return {
+    ok: true,
+    recurringScheduleId: res.data.recurringScheduleId,
+    nextOccurrenceAt: res.data.nextOccurrenceAt,
+    status: res.data.status,
+  };
+}
+
+export async function fetchMobileRecurrences(): Promise<
+  | { ok: true; recurrences: MobileRecurrence[] }
+  | MobileApiFailure
+> {
+  const res = await mobileGet<MobileRecurringListJson>(
+    MOBILE_API_PATHS.leadsGenRecurringList,
+  );
+  if (res.ok === false) return res;
+  return { ok: true, recurrences: res.data.recurrences ?? [] };
+}
+
+export async function updateMobileRecurrence(
+  id: string,
+  action: "pause" | "resume" | "cancel",
+): Promise<{ ok: true; status: string } | MobileApiFailure> {
+  const res = await mobilePatch<MobileJsonError & { status?: string }>(
+    MOBILE_API_PATHS.leadsGenRecurringAction(id),
+    { action },
+  );
+  if (res.ok === false) return res;
+  return { ok: true, status: res.data.status ?? action };
+}

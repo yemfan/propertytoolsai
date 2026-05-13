@@ -48,4 +48,12 @@ export const MOBILE_API_PATHS = {
   leadsGenConnectLinkedInDisconnect:
     "/api/mobile/leads-gen/connect/linkedin/disconnect",
   leadsGenMediaUpload: "/api/mobile/leads-gen/media/upload",
+  leadsGenSchedule: "/api/mobile/leads-gen/schedule",
+  leadsGenScheduleList: "/api/mobile/leads-gen/schedule/list",
+  leadsGenScheduleCancel: (id: string) =>
+    `/api/mobile/leads-gen/schedule/${encodeURIComponent(id)}/cancel`,
+  leadsGenRecurring: "/api/mobile/leads-gen/recurring",
+  leadsGenRecurringList: "/api/mobile/leads-gen/recurring/list",
+  leadsGenRecurringAction: (id: string) =>
+    `/api/mobile/leads-gen/recurring/${encodeURIComponent(id)}`,
 } as const;
