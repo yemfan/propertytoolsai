@@ -314,6 +314,38 @@ export default function QuickPostClient() {
     | null
   >(null);
 
+  // Phase 2D — Recurring posts. The schedule-mode toggle expands a
+  // "Make this recurring" toggle inside it; turning recurring on
+  // POSTs to /api/leads-gen/recurring instead of /schedule and
+  // creates a template that the materialize-cron expands on a
+  // daily / weekly cadence.
+  const [recurringMode, setRecurringMode] = useState(false);
+  const [recurringCadence, setRecurringCadence] = useState<"daily" | "weekly">(
+    "weekly",
+  );
+  const [recurringWeekday, setRecurringWeekday] = useState(1); // Monday default
+  const [recurringHour, setRecurringHour] = useState(9);
+  const [recurringMinute, setRecurringMinute] = useState(0);
+  // Default to the browser's IANA tz so the agent doesn't have to
+  // pick — usually "the post fires at 9am in MY time" is what they
+  // want.
+  const [recurringTimezone] = useState(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    } catch {
+      return "UTC";
+    }
+  });
+  const [recurringMaxOccurrences, setRecurringMaxOccurrences] = useState<
+    number | ""
+  >(12); // 12 weeks of "Monday mornings" by default
+  const [creatingRecurring, setCreatingRecurring] = useState(false);
+  const [recurringResult, setRecurringResult] = useState<
+    | { ok: true; recurringScheduleId: string; nextOccurrenceAt: string }
+    | { ok: false; error: string }
+    | null
+  >(null);
+
   const currentDraft = drafts[platform] ?? null;
   const subject = useMemo(
     () => subjects.find((s) => s.id === subjectId) ?? null,
@@ -555,6 +587,7 @@ export default function QuickPostClient() {
   useEffect(() => {
     setPublishResult(null);
     setScheduleResult(null);
+    setRecurringResult(null);
   }, [platform, currentDraft?.caption]);
 
   // Schedule for later — POSTs to /api/leads-gen/schedule instead of
@@ -629,6 +662,89 @@ export default function QuickPostClient() {
     selectedMedia,
     trigger,
     subject,
+  ]);
+
+  // Make this recurring — POSTs to /api/leads-gen/recurring. Creates
+  // a template that the materialize-cron expands on a daily/weekly
+  // cadence. Mirrors `schedule()` in shape but adds the cadence
+  // config.
+  const createRecurring = useCallback(async () => {
+    if (!currentDraft || !activeConnection) return;
+    if (platform !== "facebook" && platform !== "instagram") return;
+    setRecurringResult(null);
+    setCreatingRecurring(true);
+    try {
+      const res = await fetch("/api/leads-gen/recurring", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform,
+          connectionId: activeConnection.id,
+          caption: currentDraft.caption,
+          hashtags: currentDraft.hashtags,
+          mediaItemId: selectedMedia?.id ?? undefined,
+          trigger: trigger ?? undefined,
+          subjectKind: subject?.kind ?? undefined,
+          subjectRefId: subject?.refId ?? undefined,
+          cadence: recurringCadence,
+          weeklyDayOfWeek:
+            recurringCadence === "weekly" ? recurringWeekday : undefined,
+          timeOfDayHour: recurringHour,
+          timeOfDayMinute: recurringMinute,
+          timezone: recurringTimezone,
+          maxOccurrences:
+            typeof recurringMaxOccurrences === "number"
+              ? recurringMaxOccurrences
+              : undefined,
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        recurringScheduleId?: string;
+        nextOccurrenceAt?: string;
+        error?: string;
+      };
+      if (
+        !res.ok ||
+        !body.ok ||
+        !body.recurringScheduleId ||
+        !body.nextOccurrenceAt
+      ) {
+        setRecurringResult({
+          ok: false,
+          error: body.error ?? "Recurring create failed",
+        });
+        return;
+      }
+      setRecurringResult({
+        ok: true,
+        recurringScheduleId: body.recurringScheduleId,
+        nextOccurrenceAt: body.nextOccurrenceAt,
+      });
+      // Reset the toggles so the agent isn't tempted to re-submit.
+      setRecurringMode(false);
+      setScheduleMode(false);
+    } catch (e) {
+      setRecurringResult({
+        ok: false,
+        error: e instanceof Error ? e.message : "Recurring create failed",
+      });
+    } finally {
+      setCreatingRecurring(false);
+    }
+  }, [
+    currentDraft,
+    activeConnection,
+    platform,
+    selectedMedia,
+    trigger,
+    subject,
+    recurringCadence,
+    recurringWeekday,
+    recurringHour,
+    recurringMinute,
+    recurringTimezone,
+    recurringMaxOccurrences,
   ]);
 
   // Lazy-load the library the first time the agent opens the picker.
@@ -1025,7 +1141,16 @@ export default function QuickPostClient() {
                   (platform === "facebook" ||
                     platform === "instagram" ||
                     platform === "linkedin") ? (
-                    scheduleMode ? (
+                    recurringMode ? (
+                      <button
+                        type="button"
+                        onClick={createRecurring}
+                        disabled={creatingRecurring || !currentDraft?.caption.trim()}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-50"
+                      >
+                        {creatingRecurring ? "Creating…" : "Create recurring"}
+                      </button>
+                    ) : scheduleMode ? (
                       <button
                         type="button"
                         onClick={schedule}
@@ -1087,16 +1212,30 @@ export default function QuickPostClient() {
                 {activeConnection &&
                   (platform === "facebook" ||
                     platform === "instagram" ||
-                    platform === "linkedin") && (
+                    platform === "linkedin") &&
+                  !recurringMode && (
                     <div className="rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-2.5 text-sm">
                       {!scheduleMode ? (
-                        <button
-                          type="button"
-                          onClick={() => setScheduleMode(true)}
-                          className="text-xs font-medium text-indigo-700 hover:text-indigo-900"
-                        >
-                          ⏰ Schedule for later instead
-                        </button>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setScheduleMode(true)}
+                            className="text-xs font-medium text-indigo-700 hover:text-indigo-900"
+                          >
+                            ⏰ Schedule for later instead
+                          </button>
+                          <span className="text-gray-300">·</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRecurringMode(true);
+                              setScheduleMode(false);
+                            }}
+                            className="text-xs font-medium text-purple-700 hover:text-purple-900"
+                          >
+                            🔁 Make this recurring
+                          </button>
+                        </div>
                       ) : (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
@@ -1135,6 +1274,165 @@ export default function QuickPostClient() {
                       )}
                     </div>
                   )}
+
+                {/* Recurring-post config — only relevant when an active
+                    connection exists. Toggle on the prior section flips
+                    recurringMode; this section renders the cadence /
+                    day-of-week / time-of-day / max-occurrences inputs.
+                    The Publish button up top swaps to "Create recurring"
+                    when recurringMode is on. */}
+                {activeConnection &&
+                  (platform === "facebook" ||
+                    platform === "instagram" ||
+                    platform === "linkedin") &&
+                  recurringMode && (
+                    <div className="rounded-xl border border-purple-200 bg-purple-50/60 px-3 py-2.5 text-sm space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold text-purple-900">
+                          🔁 Make this recurring
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setRecurringMode(false)}
+                          className="text-xs text-gray-500 hover:text-gray-900"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="text-xs">
+                          <span className="mb-1 block font-medium text-gray-700">
+                            Cadence
+                          </span>
+                          <select
+                            value={recurringCadence}
+                            onChange={(e) =>
+                              setRecurringCadence(
+                                e.target.value as "daily" | "weekly",
+                              )
+                            }
+                            className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-xs"
+                          >
+                            <option value="weekly">Weekly</option>
+                            <option value="daily">Daily</option>
+                          </select>
+                        </label>
+
+                        {recurringCadence === "weekly" && (
+                          <label className="text-xs">
+                            <span className="mb-1 block font-medium text-gray-700">
+                              Day of week
+                            </span>
+                            <select
+                              value={recurringWeekday}
+                              onChange={(e) =>
+                                setRecurringWeekday(Number(e.target.value))
+                              }
+                              className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-xs"
+                            >
+                              <option value={0}>Sunday</option>
+                              <option value={1}>Monday</option>
+                              <option value={2}>Tuesday</option>
+                              <option value={3}>Wednesday</option>
+                              <option value={4}>Thursday</option>
+                              <option value={5}>Friday</option>
+                              <option value={6}>Saturday</option>
+                            </select>
+                          </label>
+                        )}
+
+                        <label className="text-xs">
+                          <span className="mb-1 block font-medium text-gray-700">
+                            Time of day ({recurringTimezone})
+                          </span>
+                          <input
+                            type="time"
+                            value={`${String(recurringHour).padStart(2, "0")}:${String(recurringMinute).padStart(2, "0")}`}
+                            onChange={(e) => {
+                              const [hStr, mStr] = e.target.value.split(":");
+                              const h = parseInt(hStr ?? "0", 10);
+                              const m = parseInt(mStr ?? "0", 10);
+                              if (Number.isFinite(h)) setRecurringHour(h);
+                              if (Number.isFinite(m)) setRecurringMinute(m);
+                            }}
+                            className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-xs"
+                          />
+                        </label>
+
+                        <label className="text-xs">
+                          <span className="mb-1 block font-medium text-gray-700">
+                            Stop after (occurrences)
+                          </span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={365}
+                            value={recurringMaxOccurrences}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v === "") {
+                                setRecurringMaxOccurrences("");
+                              } else {
+                                const n = parseInt(v, 10);
+                                if (Number.isFinite(n) && n > 0) {
+                                  setRecurringMaxOccurrences(n);
+                                }
+                              }
+                            }}
+                            placeholder="(unlimited)"
+                            className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-xs"
+                          />
+                        </label>
+                      </div>
+
+                      <p className="text-[11px] text-gray-600">
+                        The materialize cron creates a scheduled post for each
+                        occurrence about an hour before fire time. You can
+                        pause or cancel anytime from the{" "}
+                        <a
+                          href="/dashboard/leads/generate/recurring"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-purple-700 hover:underline"
+                        >
+                          recurring posts page
+                        </a>
+                        .
+                      </p>
+                    </div>
+                  )}
+
+                {/* Recurring result banner */}
+                {(() => {
+                  const result = recurringResult;
+                  if (!result) return null;
+                  if (result.ok === true) {
+                    const when = new Date(result.nextOccurrenceAt);
+                    return (
+                      <div className="rounded-xl border border-purple-200 bg-purple-50 px-3 py-2.5 text-sm text-purple-900">
+                        <p className="font-semibold">
+                          Recurring post created — first occurrence{" "}
+                          {when.toLocaleString()}
+                        </p>
+                        <p className="mt-0.5">
+                          <a
+                            href="/dashboard/leads/generate/recurring"
+                            className="underline hover:text-purple-700"
+                          >
+                            Manage recurring posts →
+                          </a>
+                        </p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-900">
+                      <p className="font-semibold">Recurring create failed</p>
+                      <p className="mt-0.5">{result.error}</p>
+                    </div>
+                  );
+                })()}
 
                 {/* Schedule result banner — separate from publishResult
                     so a successful schedule doesn't clear the publish
