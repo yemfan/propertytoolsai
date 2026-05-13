@@ -59,9 +59,17 @@ export async function listMobileLeads(params: {
   if (leadIds.length) {
     const { data: scoreRows } = await supabaseAdmin
       .from("contact_scores")
-      .select("contact_id,score,intent,timeline,confidence,explanation,updated_at")
+      // `contact_scores` carries score + a flexible `factors` JSONB
+      // (intent / timeline / confidence / explanation live inside).
+      // The columns the original mobile code listed (intent, timeline,
+      // confidence, explanation, updated_at) never existed in prod —
+      // the SELECT silently returned `{data: null, error: 'column does
+      // not exist'}` because the destructure ignored `error`. Effect:
+      // the AI fields below were always null. We now read what's
+      // actually there + unpack `factors`.
+      .select("contact_id,score,factors,computed_at")
       .in("contact_id", leadIds as unknown as string[])
-      .order("updated_at", { ascending: false })
+      .order("computed_at", { ascending: false })
       .limit(3000);
 
     for (const row of scoreRows ?? []) {
@@ -75,15 +83,16 @@ export async function listMobileLeads(params: {
     const row = l as Record<string, unknown>;
     const id = String(row.id ?? "");
     const s = scoreMap[id];
+    const f = pickFactors(s);
     return {
       ...row,
       id,
       display_phone: String(row.phone_number || row.phone || "").trim() || null,
       ai_lead_score: s ? Number(s.score ?? 0) : null,
-      ai_intent: (s?.intent as string) ?? null,
-      ai_timeline: (s?.timeline as string) ?? null,
-      ai_confidence: s ? Number(s.confidence ?? 0) : null,
-      ai_explanation: Array.isArray(s?.explanation) ? (s.explanation as string[]) : [],
+      ai_intent: f.intent,
+      ai_timeline: f.timeline,
+      ai_confidence: f.confidence,
+      ai_explanation: f.explanation,
     };
   });
 
@@ -114,23 +123,58 @@ export async function hydrateMobileLeadRecord(
 
   const { data: scoreRow } = await supabaseAdmin
     .from("contact_scores")
-    .select("contact_id,score,intent,timeline,confidence,explanation,updated_at")
+    // See the matching block in listMobileLeads above for why these
+    // columns differ from what the original code referenced.
+    .select("contact_id,score,factors,computed_at")
     .eq("contact_id", leadId)
-    .order("updated_at", { ascending: false })
+    .order("computed_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   const s = scoreRow as Record<string, unknown> | null;
+  const f = pickFactors(s);
 
   return {
     ...row,
     id: String(row.id ?? leadId),
     display_phone: String(row.phone_number || row.phone || "").trim() || null,
     ai_lead_score: s ? Number(s.score ?? 0) : null,
-    ai_intent: (s?.intent as string) ?? null,
-    ai_timeline: (s?.timeline as string) ?? null,
-    ai_confidence: s ? Number(s.confidence ?? 0) : null,
-    ai_explanation: Array.isArray(s?.explanation) ? (s.explanation as string[]) : [],
+    ai_intent: f.intent,
+    ai_timeline: f.timeline,
+    ai_confidence: f.confidence,
+    ai_explanation: f.explanation,
+  };
+}
+
+/**
+ * Unpack the AI-score-detail fields out of `contact_scores.factors`
+ * JSONB. The web-side scorer writes these as top-level keys inside
+ * `factors` (see lib/leadScoring.ts); the row column itself is just
+ * the score numeric. Returns nulls / empty array when the row or any
+ * key is missing.
+ */
+function pickFactors(row: Record<string, unknown> | null | undefined): {
+  intent: string | null;
+  timeline: string | null;
+  confidence: number | null;
+  explanation: string[];
+} {
+  if (!row) {
+    return { intent: null, timeline: null, confidence: null, explanation: [] };
+  }
+  const factors = (row.factors as Record<string, unknown> | null | undefined) ?? {};
+  return {
+    intent: typeof factors.intent === "string" ? factors.intent : null,
+    timeline: typeof factors.timeline === "string" ? factors.timeline : null,
+    confidence:
+      factors.confidence != null && Number.isFinite(Number(factors.confidence))
+        ? Number(factors.confidence)
+        : null,
+    explanation: Array.isArray(factors.explanation)
+      ? (factors.explanation as unknown[]).filter(
+          (e): e is string => typeof e === "string",
+        )
+      : [],
   };
 }
 
