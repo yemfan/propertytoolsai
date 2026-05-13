@@ -97,11 +97,11 @@ export default async function GenerateLeadsPage() {
           </span>
         </Link>
 
-        <div
-          aria-disabled
-          className="block cursor-not-allowed rounded-2xl border border-dashed border-gray-300 bg-gray-50/60 p-5 shadow-sm opacity-80"
+        <Link
+          href="/dashboard/leads/generate/ads"
+          className="group block rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-purple-300 hover:shadow-md"
         >
-          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-500">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
             <svg
               className="h-5 w-5"
               fill="none"
@@ -112,29 +112,40 @@ export default async function GenerateLeadsPage() {
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M9 5l7 7-7 7"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5.25 9.75a2.25 2.25 0 014.5 0v4.5a2.25 2.25 0 01-4.5 0v-4.5z"
+                d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312"
               />
             </svg>
           </div>
           <div className="mb-1 flex items-center gap-2">
             <h2 className="text-base font-semibold text-gray-900">Run Ads</h2>
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
-              Coming soon
+            <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-800">
+              Premium
             </span>
           </div>
           <p className="text-sm text-gray-600">
-            Boost a listing or run a lead-gen campaign on Facebook / Instagram
-            via Meta, and Google Search ads. Leads land directly in your CRM.
+            Launch a Meta Lead Ad campaign — your leads land directly in the
+            CRM tagged with the source campaign.
           </p>
-          <p className="mt-4 text-xs text-gray-500">
-            Premium only · Meta + Google ad billing stays with you
+          <p className="mt-3 text-xs text-gray-500">
+            Meta ad billing stays with you · Google Ads in Phase 3
           </p>
-        </div>
+          <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-purple-600 group-hover:gap-1.5">
+            View campaigns
+            <svg
+              className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M13.5 4.5l7.5 7.5-7.5 7.5M3 12h18"
+              />
+            </svg>
+          </span>
+        </Link>
       </div>
 
       {suggestions.length > 0 && (

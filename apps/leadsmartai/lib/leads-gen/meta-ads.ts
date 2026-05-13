@@ -260,3 +260,617 @@ export function mapLeadFieldsToContactInput(fields: LeadFieldData[]): {
 function prettify(snake: string): string {
   return snake.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// Campaign creation — Phase 2B.2
+// ══════════════════════════════════════════════════════════════════════
+//
+// Six Meta API calls per launch:
+//   1. POST /act_<id>/campaigns         — campaign with objective
+//   2. POST /act_<id>/adsets            — ad set: targeting + budget
+//   3. POST /act_<id>/adimages          — upload creative image
+//   4. POST /<page-id>/leadgen_forms    — lead form questions + privacy
+//   5. POST /act_<id>/adcreatives       — creative with image_hash + form
+//   6. POST /act_<id>/ads               — the ad linking creative + adset
+//
+// Each helper does ONE call and rethrows tagged errors. The orchestrator
+// (`createLeadAdCampaign`) calls them in order and the caller (the
+// /create route) saves a `lead_ad_campaigns` row up-front so a mid-
+// orchestration failure still has an audit trail.
+//
+// Real-estate-specific notes:
+//   - special_ad_categories MUST include 'HOUSING' on the campaign.
+//     Meta restricts the targeting that's allowed in HOUSING ads —
+//     no detailed demographic/interest targeting, broad geo/age only.
+//   - destination_type 'ON_AD' keeps the lead form inline so the
+//     visitor never leaves Facebook.
+
+// ── Helpers ──────────────────────────────────────────────────────────
+
+type CreatedId = { id: string };
+
+async function postGraph<T = CreatedId>(
+  url: string,
+  body: URLSearchParams,
+): Promise<T> {
+  const res = await fetch(url, { method: "POST", body });
+  const json = (await res.json().catch(() => ({}))) as T & { error?: GraphError };
+  if (!res.ok || (json as { id?: string }).id === undefined) {
+    const msg = json.error?.message || `HTTP ${res.status}`;
+    throw tagError(new Error(msg), json.error);
+  }
+  return json;
+}
+
+// ── 1. Campaign ──────────────────────────────────────────────────────
+
+export type CampaignParams = {
+  adAccountId: string; // 'act_<digits>'
+  userAccessToken: string;
+  name: string;
+  /** Phase 2B.2 only ships LEAD_GENERATION. Reserved name kept for forward-compat. */
+  objective?: "LEAD_GENERATION" | "OUTCOME_LEADS";
+  /** 'PAUSED' (default) lets us tweak before going live; 'ACTIVE' launches immediately. */
+  status?: "PAUSED" | "ACTIVE";
+  /**
+   * Required for real-estate ads by Meta policy. Always set to ['HOUSING'].
+   * Passing this also automatically narrows what targeting Meta accepts
+   * (no age/gender, broad geo only, etc).
+   */
+  specialAdCategories?: string[];
+};
+
+export async function createCampaign(
+  p: CampaignParams,
+): Promise<{ campaignId: string }> {
+  const body = new URLSearchParams();
+  body.set("name", p.name);
+  body.set("objective", p.objective ?? "OUTCOME_LEADS");
+  body.set("status", p.status ?? "PAUSED");
+  body.set("buying_type", "AUCTION");
+  body.set(
+    "special_ad_categories",
+    JSON.stringify(p.specialAdCategories ?? ["HOUSING"]),
+  );
+  body.set("access_token", p.userAccessToken);
+
+  const out = await postGraph(`${META_GRAPH_BASE}/${p.adAccountId}/campaigns`, body);
+  return { campaignId: out.id };
+}
+
+// ── 2. Ad Set ────────────────────────────────────────────────────────
+
+export type AdSetTargeting = {
+  /** ISO country codes. Defaults to ['US']. */
+  countries?: string[];
+  /** Up to 50 zip codes. Each gets the same radius. */
+  zipCodes?: string[];
+  /** Radius in miles around each zip. Default 10. */
+  radiusMiles?: number;
+  /** Defaults to 25. HOUSING ads have a minimum of 18 enforced by Meta. */
+  ageMin?: number;
+  ageMax?: number;
+};
+
+export type AdSetParams = {
+  adAccountId: string;
+  userAccessToken: string;
+  campaignId: string;
+  pageId: string;
+  name: string;
+  /** Daily budget in cents (Meta wants cents as integer). */
+  dailyBudgetCents: number;
+  /** ISO start time. Default: now. */
+  startTime?: string;
+  /** ISO end time. Optional but recommended so campaigns don't run forever. */
+  endTime?: string;
+  targeting: AdSetTargeting;
+  status?: "PAUSED" | "ACTIVE";
+};
+
+export async function createAdSet(
+  p: AdSetParams,
+): Promise<{ adSetId: string }> {
+  const t = p.targeting;
+  const targeting: Record<string, unknown> = {
+    geo_locations: {
+      countries: t.countries ?? ["US"],
+      ...(t.zipCodes && t.zipCodes.length > 0
+        ? {
+            zips: t.zipCodes.map((z) => ({
+              key: `US:${z}`,
+              radius: t.radiusMiles ?? 10,
+              distance_unit: "mile",
+            })),
+          }
+        : {}),
+    },
+    age_min: t.ageMin ?? 25,
+    age_max: t.ageMax ?? 65,
+  };
+
+  const body = new URLSearchParams();
+  body.set("name", p.name);
+  body.set("campaign_id", p.campaignId);
+  body.set("daily_budget", String(p.dailyBudgetCents));
+  body.set("billing_event", "IMPRESSIONS");
+  body.set("optimization_goal", "LEAD_GENERATION");
+  body.set("destination_type", "ON_AD");
+  body.set("status", p.status ?? "PAUSED");
+  body.set("start_time", p.startTime ?? new Date().toISOString());
+  if (p.endTime) body.set("end_time", p.endTime);
+  body.set("targeting", JSON.stringify(targeting));
+  body.set("promoted_object", JSON.stringify({ page_id: p.pageId }));
+  body.set("access_token", p.userAccessToken);
+
+  const out = await postGraph(
+    `${META_GRAPH_BASE}/${p.adAccountId}/adsets`,
+    body,
+  );
+  return { adSetId: out.id };
+}
+
+// ── 3. Ad Image upload ───────────────────────────────────────────────
+
+/**
+ * Upload an image to the ad account's image library. Returns the
+ * `image_hash` Meta assigns; the creative references this hash.
+ *
+ * Two ways to upload:
+ *   - multipart binary (what we use)
+ *   - `url` param pointing at a publicly fetchable URL
+ *
+ * Multipart is more reliable for our signed-URL-from-storage case
+ * since Meta sometimes fails to fetch the `url` variant when the
+ * signed URL has unusual query params.
+ */
+export async function uploadAdImage(params: {
+  adAccountId: string;
+  userAccessToken: string;
+  imageBytes: Uint8Array;
+  fileName: string;
+  contentType: string;
+}): Promise<{ imageHash: string; imageUrl: string }> {
+  const form = new FormData();
+  form.set(
+    params.fileName,
+    new Blob([params.imageBytes as BlobPart], { type: params.contentType }),
+    params.fileName,
+  );
+  form.set("access_token", params.userAccessToken);
+
+  const res = await fetch(
+    `${META_GRAPH_BASE}/${params.adAccountId}/adimages`,
+    { method: "POST", body: form },
+  );
+  type UploadResp = {
+    images?: Record<string, { hash?: string; url?: string }>;
+    error?: GraphError;
+  };
+  const json = (await res.json().catch(() => ({}))) as UploadResp;
+  if (!res.ok) {
+    throw tagError(
+      new Error(json.error?.message || `HTTP ${res.status}`),
+      json.error,
+    );
+  }
+  const first = json.images && Object.values(json.images)[0];
+  if (!first?.hash || !first?.url) {
+    throw new Error("Meta /adimages returned no image_hash");
+  }
+  return { imageHash: first.hash, imageUrl: first.url };
+}
+
+// ── 4. Lead Form ─────────────────────────────────────────────────────
+
+export type LeadFormQuestionType =
+  | "FULL_NAME"
+  | "FIRST_NAME"
+  | "LAST_NAME"
+  | "EMAIL"
+  | "PHONE"
+  | "STREET_ADDRESS"
+  | "CITY"
+  | "STATE"
+  | "ZIP_CODE";
+
+export type LeadFormParams = {
+  pageId: string;
+  pageAccessToken: string;
+  name: string;
+  /** Standard form fields to ask for. Order matches what Meta shows. */
+  questions: LeadFormQuestionType[];
+  privacyPolicyUrl: string;
+  /** Optional URL the user is sent to after submitting. */
+  followUpActionUrl?: string;
+  locale?: string;
+};
+
+export async function createLeadForm(
+  p: LeadFormParams,
+): Promise<{ formId: string }> {
+  const body = new URLSearchParams();
+  body.set("name", p.name);
+  body.set(
+    "questions",
+    JSON.stringify(p.questions.map((q) => ({ type: q }))),
+  );
+  body.set(
+    "privacy_policy",
+    JSON.stringify({ url: p.privacyPolicyUrl }),
+  );
+  if (p.followUpActionUrl) {
+    body.set("follow_up_action_url", p.followUpActionUrl);
+  }
+  body.set("locale", p.locale ?? "EN_US");
+  body.set("access_token", p.pageAccessToken);
+
+  const out = await postGraph(
+    `${META_GRAPH_BASE}/${p.pageId}/leadgen_forms`,
+    body,
+  );
+  return { formId: out.id };
+}
+
+// ── 5. Ad Creative ───────────────────────────────────────────────────
+
+export type AdCreativeParams = {
+  adAccountId: string;
+  userAccessToken: string;
+  name: string;
+  pageId: string;
+  /** Instagram Business User ID — required for IG placement. Optional. */
+  instagramActorId?: string;
+  body: string;
+  /** Headline (40-char max recommended for desktop). */
+  headline?: string;
+  imageHash: string;
+  leadFormId: string;
+  /** Landing URL — required by Meta even though the lead form is on-ad. We use the agent's site. */
+  link: string;
+};
+
+export async function createAdCreative(
+  p: AdCreativeParams,
+): Promise<{ creativeId: string }> {
+  const linkData: Record<string, unknown> = {
+    message: p.body,
+    link: p.link,
+    image_hash: p.imageHash,
+    call_to_action: {
+      type: "SIGN_UP",
+      value: { lead_gen_form_id: p.leadFormId },
+    },
+  };
+  if (p.headline) linkData.name = p.headline;
+
+  const objectStorySpec: Record<string, unknown> = {
+    page_id: p.pageId,
+    link_data: linkData,
+  };
+  if (p.instagramActorId) {
+    objectStorySpec.instagram_actor_id = p.instagramActorId;
+  }
+
+  const body = new URLSearchParams();
+  body.set("name", p.name);
+  body.set("object_story_spec", JSON.stringify(objectStorySpec));
+  body.set("access_token", p.userAccessToken);
+
+  const out = await postGraph(
+    `${META_GRAPH_BASE}/${p.adAccountId}/adcreatives`,
+    body,
+  );
+  return { creativeId: out.id };
+}
+
+// ── 6. Ad ────────────────────────────────────────────────────────────
+
+export type AdParams = {
+  adAccountId: string;
+  userAccessToken: string;
+  name: string;
+  adSetId: string;
+  creativeId: string;
+  status?: "PAUSED" | "ACTIVE";
+};
+
+export async function createAd(p: AdParams): Promise<{ adId: string }> {
+  const body = new URLSearchParams();
+  body.set("name", p.name);
+  body.set("adset_id", p.adSetId);
+  body.set("creative", JSON.stringify({ creative_id: p.creativeId }));
+  body.set("status", p.status ?? "PAUSED");
+  body.set("access_token", p.userAccessToken);
+
+  const out = await postGraph(`${META_GRAPH_BASE}/${p.adAccountId}/ads`, body);
+  return { adId: out.id };
+}
+
+// ── Orchestrator ─────────────────────────────────────────────────────
+
+export type CreateLeadAdInput = {
+  adAccountId: string;
+  userAccessToken: string;
+  pageId: string;
+  pageAccessToken: string;
+  instagramActorId?: string;
+  campaignName: string;
+  body: string;
+  headline?: string;
+  imageBytes: Uint8Array;
+  imageFileName: string;
+  imageContentType: string;
+  formQuestions: LeadFormQuestionType[];
+  privacyPolicyUrl: string;
+  landingUrl: string;
+  targeting: AdSetTargeting;
+  dailyBudgetCents: number;
+  startTime?: string;
+  endTime?: string;
+  /** PAUSED first by default so the agent can review in Ads Manager
+   *  before flipping to ACTIVE. The wizard exposes a "launch immediately"
+   *  toggle that sets this to 'ACTIVE'. */
+  launchStatus?: "PAUSED" | "ACTIVE";
+};
+
+export type CreateLeadAdResult = {
+  campaignId: string;
+  adSetId: string;
+  adImageHash: string;
+  adImageUrl: string;
+  formId: string;
+  creativeId: string;
+  adId: string;
+};
+
+/**
+ * Orchestrate the 6 Meta calls in order. Returns all the new ids
+ * so the caller can persist them onto the lead_ad_campaigns row.
+ *
+ * Idempotency note: this function is NOT idempotent on retry — a
+ * partial failure leaves orphan campaign/adset/etc rows in Meta.
+ * The caller (the API route) writes the lead_ad_campaigns row with
+ * status='creating' BEFORE calling, then flips to 'active' on
+ * success or 'failed' on error with the partial-create ids saved
+ * where applicable. Manual cleanup in Ads Manager is the fallback
+ * for orphans — automatic rollback is a Phase 2B.3 deliverable.
+ */
+export async function createLeadAdCampaign(
+  input: CreateLeadAdInput,
+): Promise<CreateLeadAdResult> {
+  const launchStatus = input.launchStatus ?? "PAUSED";
+
+  const { campaignId } = await createCampaign({
+    adAccountId: input.adAccountId,
+    userAccessToken: input.userAccessToken,
+    name: input.campaignName,
+    status: launchStatus,
+  });
+
+  const { adSetId } = await createAdSet({
+    adAccountId: input.adAccountId,
+    userAccessToken: input.userAccessToken,
+    campaignId,
+    pageId: input.pageId,
+    name: `${input.campaignName} — ad set`,
+    dailyBudgetCents: input.dailyBudgetCents,
+    startTime: input.startTime,
+    endTime: input.endTime,
+    targeting: input.targeting,
+    status: launchStatus,
+  });
+
+  const { imageHash, imageUrl } = await uploadAdImage({
+    adAccountId: input.adAccountId,
+    userAccessToken: input.userAccessToken,
+    imageBytes: input.imageBytes,
+    fileName: input.imageFileName,
+    contentType: input.imageContentType,
+  });
+
+  const { formId } = await createLeadForm({
+    pageId: input.pageId,
+    pageAccessToken: input.pageAccessToken,
+    name: `${input.campaignName} — lead form`,
+    questions: input.formQuestions,
+    privacyPolicyUrl: input.privacyPolicyUrl,
+  });
+
+  const { creativeId } = await createAdCreative({
+    adAccountId: input.adAccountId,
+    userAccessToken: input.userAccessToken,
+    name: `${input.campaignName} — creative`,
+    pageId: input.pageId,
+    instagramActorId: input.instagramActorId,
+    body: input.body,
+    headline: input.headline,
+    imageHash,
+    leadFormId: formId,
+    link: input.landingUrl,
+  });
+
+  const { adId } = await createAd({
+    adAccountId: input.adAccountId,
+    userAccessToken: input.userAccessToken,
+    name: `${input.campaignName} — ad`,
+    adSetId,
+    creativeId,
+    status: launchStatus,
+  });
+
+  return {
+    campaignId,
+    adSetId,
+    adImageHash: imageHash,
+    adImageUrl: imageUrl,
+    formId,
+    creativeId,
+    adId,
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Campaign management — Phase 2B.3
+// ══════════════════════════════════════════════════════════════════════
+//
+// Lifecycle operations on a launched campaign:
+//   - updateCampaignStatus: pause / resume / archive
+//   - fetchCampaignInsights: pull impressions / spend / leads from
+//                            Meta's /insights endpoint
+//
+// Both are called from the management UI's row actions. Pause/resume
+// happen at the CAMPAIGN level — Meta cascades to ad set + ad. We
+// don't expose per-ad-set or per-ad controls in Phase 2B.3 since
+// every Phase-2B.2-created campaign has exactly one ad set + one ad.
+
+export type MetaCampaignStatus =
+  | "ACTIVE"
+  | "PAUSED"
+  | "DELETED"
+  | "ARCHIVED";
+
+/**
+ * Update a campaign's status. Meta cascades:
+ *   - PAUSED on the campaign pauses the ad set + ad too
+ *   - ACTIVE on the campaign reactivates them
+ * (When ad sets / ads were paused independently of the campaign,
+ * setting the campaign ACTIVE doesn't unpause them. Phase 2B.2
+ * always launches with all three at the same status so this is
+ * a clean toggle today.)
+ *
+ * Returns true on success, throws with metaCode tagged on failure.
+ */
+export async function updateCampaignStatus(params: {
+  metaCampaignId: string;
+  status: MetaCampaignStatus;
+  userAccessToken: string;
+}): Promise<{ id: string }> {
+  const { metaCampaignId, status, userAccessToken } = params;
+  const body = new URLSearchParams();
+  body.set("status", status);
+  body.set("access_token", userAccessToken);
+
+  // Meta's status update is a POST to /<campaign-id> with the new
+  // status as a body param. Response is just { success: true } or
+  // an error object. We re-fetch the id to return a consistent
+  // shape with the create helpers above.
+  const res = await fetch(`${META_GRAPH_BASE}/${metaCampaignId}`, {
+    method: "POST",
+    body,
+  });
+  type Resp = { success?: boolean; error?: GraphError };
+  const json = (await res.json().catch(() => ({}))) as Resp;
+  if (!res.ok || json.success === false) {
+    const msg = json.error?.message || `HTTP ${res.status}`;
+    throw tagError(new Error(msg), json.error);
+  }
+  return { id: metaCampaignId };
+}
+
+// ── Insights ─────────────────────────────────────────────────────────
+
+export type CampaignInsights = {
+  impressions: number;
+  reach: number;
+  clicks: number;
+  inlineLinkClicks: number;
+  leads: number;
+  spendCents: number;
+  cpmCents: number | null;
+  cpcCents: number | null;
+  cplCents: number | null;
+  /** When Meta last computed these numbers (Meta clock, UTC). Null when no data yet. */
+  metaUpdatedAt: string | null;
+};
+
+type InsightsRow = {
+  impressions?: string;
+  reach?: string;
+  clicks?: string;
+  inline_link_clicks?: string;
+  spend?: string;
+  cpm?: string;
+  cpc?: string;
+  cost_per_action_type?: Array<{ action_type?: string; value?: string }>;
+  actions?: Array<{ action_type?: string; value?: string }>;
+  date_start?: string;
+  date_stop?: string;
+};
+
+type InsightsResp = {
+  data?: InsightsRow[];
+  error?: GraphError;
+};
+
+/**
+ * Pull insights for a single campaign. Aggregated over the
+ * campaign's full lifetime (no date range passed). Returns a
+ * normalized CampaignInsights shape — Meta's API returns spend
+ * as a string representing a decimal in the ad account's currency
+ * (e.g. "12.34" for $12.34); we convert to integer cents to match
+ * our DB columns.
+ *
+ * Leads come from the `actions` array with action_type='leadgen.other'
+ * (Meta's internal naming for Lead Ad form submissions). Note: the
+ * webhook-driven `leads_received_count` on lead_ad_campaigns is the
+ * canonical count we trust for the "Leads" column on the dashboard
+ * — Meta's insights number sometimes lags by hours.
+ */
+export async function fetchCampaignInsights(params: {
+  metaCampaignId: string;
+  userAccessToken: string;
+}): Promise<CampaignInsights | null> {
+  const fields =
+    "impressions,reach,clicks,inline_link_clicks,spend,cpm,cpc,cost_per_action_type,actions,date_start,date_stop";
+  const url = `${META_GRAPH_BASE}/${params.metaCampaignId}/insights?fields=${fields}&access_token=${encodeURIComponent(params.userAccessToken)}`;
+
+  const res = await fetch(url);
+  const body = (await res.json().catch(() => ({}))) as InsightsResp;
+  if (!res.ok) {
+    const msg = body.error?.message || `HTTP ${res.status}`;
+    throw tagError(new Error(msg), body.error);
+  }
+  const row = body.data?.[0];
+  if (!row) {
+    // No data yet — campaign just launched and hasn't accrued any
+    // impressions. Return null so the caller can leave previous
+    // metrics in place (or set sensible zeros) rather than write
+    // an empty-but-non-null record.
+    return null;
+  }
+
+  const num = (s: string | undefined): number => {
+    if (!s) return 0;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const cents = (s: string | undefined): number => Math.round(num(s) * 100);
+  const findActionValue = (
+    arr: Array<{ action_type?: string; value?: string }> | undefined,
+    type: string,
+  ): number => {
+    if (!arr) return 0;
+    const match = arr.find((a) => a.action_type === type);
+    return match ? num(match.value) : 0;
+  };
+  const leadCostValue = findActionValue(
+    row.cost_per_action_type,
+    "leadgen.other",
+  );
+
+  return {
+    impressions: num(row.impressions),
+    reach: num(row.reach),
+    clicks: num(row.clicks),
+    inlineLinkClicks: num(row.inline_link_clicks),
+    leads: findActionValue(row.actions, "leadgen.other"),
+    spendCents: cents(row.spend),
+    cpmCents: row.cpm ? cents(row.cpm) : null,
+    cpcCents: row.cpc ? cents(row.cpc) : null,
+    // CPL is already in dollars in the cost_per_action_type response,
+    // not as a separate string field. Round to cents here.
+    cplCents: leadCostValue > 0 ? Math.round(leadCostValue * 100) : null,
+    metaUpdatedAt: row.date_stop ?? null,
+  };
+}
