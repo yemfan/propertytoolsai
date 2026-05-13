@@ -68,7 +68,19 @@ const bodySchema = z.object({
   trigger: z.string().max(64).optional(),
   subjectKind: z.string().max(64).optional(),
   subjectRefId: z.string().max(255).optional(),
+  /** Optional per-campaign privacy policy URL override. When unset,
+   *  falls back to agents.lead_ad_privacy_policy_url, then to the
+   *  LeadSmart default. Meta requires HTTPS for the form privacy URL. */
+  privacyPolicyUrl: z
+    .string()
+    .url()
+    .refine((u) => /^https:/i.test(u), {
+      message: "Privacy policy URL must use HTTPS.",
+    })
+    .optional(),
 });
+
+const DEFAULT_PRIVACY_POLICY_URL = "https://www.leadsmart-ai.com/privacy";
 
 /**
  * POST /api/leads-gen/ads/create
@@ -169,6 +181,34 @@ export async function POST(req: Request) {
         },
         { status: 422 },
       );
+    }
+
+    // 1b. Resolve the privacy policy URL with the precedence:
+    //   1. Per-campaign override on the request body
+    //   2. Per-broker default stored on the agent row
+    //   3. LeadSmart's bundled fallback
+    let privacyPolicyUrl = DEFAULT_PRIVACY_POLICY_URL;
+    if (input.privacyPolicyUrl) {
+      privacyPolicyUrl = input.privacyPolicyUrl;
+    } else {
+      try {
+        const { data: agentRow } = await supabaseAdmin
+          .from("agents")
+          .select("lead_ad_privacy_policy_url")
+          .eq("id", auth.agentId)
+          .maybeSingle();
+        const stored = (agentRow as { lead_ad_privacy_policy_url: string | null } | null)
+          ?.lead_ad_privacy_policy_url;
+        if (stored && /^https:/i.test(stored)) {
+          privacyPolicyUrl = stored;
+        }
+      } catch (e) {
+        // Non-fatal: stick with the default.
+        console.warn(
+          "[leads-gen/ads/create] privacy URL lookup failed, using default:",
+          e instanceof Error ? e.message : e,
+        );
+      }
     }
 
     // 2. Load the media item + download bytes.
@@ -275,9 +315,7 @@ export async function POST(req: Request) {
         imageFileName: media.fileName ?? `${campaignRowId}.jpg`,
         imageContentType: media.contentType ?? "image/jpeg",
         formQuestions: input.formQuestions,
-        // Hardcoded for now — privacy policy URL is identical for all
-        // LeadSmart agents. Phase 3 may allow per-broker override.
-        privacyPolicyUrl: "https://www.leadsmart-ai.com/privacy",
+        privacyPolicyUrl,
         landingUrl: input.landingUrl,
         targeting: input.targeting,
         dailyBudgetCents,
