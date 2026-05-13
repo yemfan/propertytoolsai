@@ -1490,3 +1490,95 @@ export async function publishMobileQuickPost(input: {
     platform: res.data.platform,
   };
 }
+
+
+// ── Media upload (mobile Quick Post image attach) ────────────────
+
+export type MobileMediaItem = {
+  id: string;
+  storagePath: string;
+  signedUrl: string | null;
+  fileName: string | null;
+  contentType: string | null;
+  sizeBytes: number | null;
+  label: string | null;
+};
+
+type MobileMediaUploadJson = MobileJsonError & {
+  item?: MobileMediaItem;
+};
+
+/**
+ * Upload an image to the media_library. Multipart POST — bypasses
+ * the JSON-based mobilePost helper since FormData needs the
+ * platform fetch to set the multipart boundary itself.
+ *
+ * Returns the created MediaItem (with a 1-hour signed URL). The
+ * caller stashes `item.id` and passes it to publishMobileQuickPost
+ * as `mediaItemId`.
+ */
+export async function uploadMobileMedia(input: {
+  /** Local file URI from expo-image-picker. */
+  uri: string;
+  /** Filename hint (used when the source doesn't carry one). */
+  fileName?: string;
+  /** MIME from the picker. */
+  contentType?: string;
+  /** Optional agent-supplied caption. */
+  label?: string;
+}): Promise<{ ok: true; item: MobileMediaItem } | MobileApiFailure> {
+  const cfg = requireConfig();
+  if (!isMobileConfig(cfg)) return cfg;
+  const { base, token } = cfg;
+
+  const fileName =
+    input.fileName ||
+    input.uri.split("/").pop() ||
+    `mobile-upload-${Date.now()}.jpg`;
+  const mime = (input.contentType ?? "image/jpeg").toLowerCase();
+
+  // React Native FormData accepts a `{ uri, name, type }` shape for
+  // file fields — when fetch sees this it streams the file from
+  // disk. No need to base64 the bytes through JS memory.
+  const form = new FormData();
+  // The unusual cast is because RN's FormData typing doesn't expose
+  // the { uri, name, type } file-descriptor shape that the platform
+  // actually accepts at runtime.
+  form.append(
+    "file",
+    {
+      uri: input.uri,
+      name: fileName,
+      type: mime,
+    } as unknown as Blob,
+  );
+  if (input.label) form.append("label", input.label.slice(0, 240));
+
+  try {
+    const res = await fetch(`${base}${MOBILE_API_PATHS.leadsGenMediaUpload}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        // NB: do NOT set Content-Type — the platform sets it with
+        // the multipart boundary when FormData has file entries.
+      },
+      body: form,
+    });
+    const body = (await res.json().catch(() => ({}))) as MobileMediaUploadJson;
+    if (!res.ok || body.ok === false || body.success === false) {
+      return parseMobileFailure(
+        res.status,
+        body,
+        body.error ?? "Upload failed",
+      );
+    }
+    if (!body.item || typeof body.item.id !== "string") {
+      return { ok: false, status: 500, message: "Upload returned no item" };
+    }
+    return { ok: true, item: body.item };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Upload failed";
+    return { ok: false, status: 0, message: msg };
+  }
+}

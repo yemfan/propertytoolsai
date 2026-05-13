@@ -16,7 +16,9 @@
       "infoPlist": {
         "CFBundleDisplayName": "LeadSmart",
         "ITSAppUsesNonExemptEncryption": false,
-        "LSApplicationQueriesSchemes": ["tel", "sms", "mailto"]
+        "LSApplicationQueriesSchemes": ["tel", "sms", "mailto"],
+        "NSPhotoLibraryUsageDescription": "LeadSmart needs access to your photo library to attach images to Quick Post drafts.",
+        "NSCameraUsageDescription": "LeadSmart needs access to the camera so you can snap a listing photo for a Quick Post."
       }
     },
     "android": {
@@ -27,7 +29,19 @@
         "backgroundColor": "#0f172a"
       }
     },
-    "plugins": ["expo-dev-client", "expo-router", "expo-notifications", "expo-apple-authentication"],
+    "plugins": [
+      "expo-dev-client",
+      "expo-router",
+      "expo-notifications",
+      "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "LeadSmart needs access to your photo library to attach images to Quick Post drafts.",
+          "cameraPermission": "LeadSmart needs access to the camera so you can snap a listing photo for a Quick Post."
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     }
