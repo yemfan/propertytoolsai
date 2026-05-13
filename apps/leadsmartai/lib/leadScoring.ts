@@ -1,4 +1,9 @@
 import { supabaseServer } from "@/lib/supabaseServer";
+import {
+  CONTACT_SCORES_SELECT,
+  serializeScoreRow,
+  unpackScoreRow,
+} from "@/lib/contactScores";
 
 type LeadSignals = {
   visits: number;
@@ -202,43 +207,74 @@ function computeFromSignals(signals: LeadSignals): ScoreResult {
 
 export async function scoreLead(leadId: string, force = false): Promise<ScoreResult> {
   if (!force) {
+    // Read the most recent score for cache lookup. Score detail lives
+    // in `factors` JSONB — pulled out via unpackScoreRow.
     const { data: cached } = await supabaseServer
       .from("contact_scores")
-      .select("score,intent,timeline,confidence,explanation,updated_at")
+      .select(CONTACT_SCORES_SELECT)
       .eq("contact_id", leadId)
-      .order("updated_at", { ascending: false })
+      .order("computed_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (cached) {
-      const age = Date.now() - new Date(String((cached as any).updated_at)).getTime();
+    const unpacked = unpackScoreRow(cached as Record<string, unknown> | null);
+    if (unpacked && unpacked.computedAt) {
+      const age = Date.now() - new Date(unpacked.computedAt).getTime();
       if (age <= SCORE_CACHE_MS) {
         return {
-          lead_score: Number((cached as any).score ?? 0),
-          intent: String((cached as any).intent ?? "low") as any,
-          intent_level: String((cached as any).intent ?? "low") as any,
-          timeline: String((cached as any).timeline ?? "6+ months") as any,
-          confidence: Number((cached as any).confidence ?? 0.2),
-          explanation: Array.isArray((cached as any).explanation)
-            ? ((cached as any).explanation as string[])
-            : [],
+          lead_score: unpacked.score,
+          intent: (unpacked.intent ?? "low") as ScoreResult["intent"],
+          intent_level: (unpacked.intent ?? "low") as ScoreResult["intent_level"],
+          timeline: (unpacked.timeline ?? "6+ months") as ScoreResult["timeline"],
+          confidence: unpacked.confidence ?? 0.2,
+          explanation: unpacked.explanation,
         };
       }
     }
   }
 
+  // Need the agent_id to satisfy the NOT NULL constraint on
+  // contact_scores. Look it up off the contact row.
+  const { data: contactRow } = await supabaseServer
+    .from("contacts")
+    .select("agent_id")
+    .eq("id", leadId)
+    .maybeSingle();
+  const agentId = Number(
+    (contactRow as { agent_id?: number | string } | null)?.agent_id ?? 0,
+  );
+  if (!Number.isFinite(agentId) || agentId <= 0) {
+    throw new Error(
+      `scoreLead: cannot resolve agent_id for contact ${leadId} (contact may be deleted)`,
+    );
+  }
+
   const signals = await getLeadSignals(leadId);
   const result = computeFromSignals(signals);
-  const nowIso = new Date().toISOString();
-  await supabaseServer.from("contact_scores").insert({
-    contact_id: leadId as any,
+
+  // Pack the AI breakdown into `factors`; the persisted shape is
+  // what dashboardService / clientPortalContext / mobile/leads all
+  // read back via unpackScoreRow.
+  const row = serializeScoreRow({
+    contactId: leadId,
+    agentId,
     score: result.lead_score,
     intent: result.intent,
     timeline: result.timeline,
     confidence: result.confidence,
     explanation: result.explanation,
-    updated_at: nowIso,
-  } as any);
+    label: result.intent, // mirror intent as the categorical label
+  });
+
+  const { error: insertErr } = await supabaseServer
+    .from("contact_scores")
+    .insert(row as never);
+  if (insertErr) {
+    // Don't fail the whole compute path on a persistence error —
+    // the caller still gets the freshly-computed score back. Log
+    // so we notice in prod.
+    console.warn("[leadScoring] contact_scores insert failed:", insertErr.message);
+  }
   return result;
 }
 
