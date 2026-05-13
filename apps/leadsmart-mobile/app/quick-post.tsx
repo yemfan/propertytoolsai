@@ -22,6 +22,7 @@ import {
   createMobileRecurringPost,
   fetchMobileConnections,
   fetchMobileQuickPostDraft,
+  fetchMobileSubjects,
   publishMobileQuickPost,
   scheduleMobileQuickPost,
   uploadMobileMedia,
@@ -29,6 +30,7 @@ import {
   type MobileMediaItem,
   type MobileQuickPostPlatform,
   type MobileQuickPostTrigger,
+  type MobileSubject,
 } from "../lib/leadsmartMobileApi";
 import {
   hapticButtonPress,
@@ -103,6 +105,19 @@ export default function QuickPostScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generated, setGenerated] = useState(false);
+
+  // CRM subject picker. Fetched on-demand the first time the agent
+  // taps "Pick from your <listings | open houses | …>". Tapping a
+  // subject pre-fills the brief with the subject's address + sub-
+  // label so the agent doesn't have to retype it on a phone
+  // keyboard. Synthetic triggers (custom / market_update /
+  // testimonial) skip the picker entirely — their "subject" is
+  // always the brief itself.
+  const [subjects, setSubjects] = useState<MobileSubject[]>([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
+  const [subjectsError, setSubjectsError] = useState<string | null>(null);
+  const [showSubjectPicker, setShowSubjectPicker] = useState(false);
+  const [pickedSubjectId, setPickedSubjectId] = useState<string | null>(null);
 
   // Connection state — fetched once on mount. When a Meta Page is
   // connected, the action row shows "Publish to Facebook"; when a
@@ -231,6 +246,61 @@ export default function QuickPostScreen() {
   const canDirectPublish =
     activeDirectPublishConnection !== null &&
     (platform !== "instagram" || media !== null);
+
+  // Which triggers benefit from the CRM subject picker. Custom +
+  // market_update + testimonial don't anchor on a listing — the
+  // brief IS the subject — so we hide the picker for those.
+  const triggerAllowsSubjects =
+    trigger === "new_listing" ||
+    trigger === "open_house" ||
+    trigger === "price_drop" ||
+    trigger === "just_sold";
+
+  // Picked subject — derive its kind + refId for attribution. The
+  // publish / schedule / recurring payloads carry these so the
+  // lead_posts row links back to the originating CRM record.
+  const pickedSubject = useMemo(
+    () => subjects.find((s) => s.id === pickedSubjectId) ?? null,
+    [subjects, pickedSubjectId],
+  );
+
+  const openSubjectPicker = useCallback(async () => {
+    hapticButtonPress();
+    setShowSubjectPicker(true);
+    if (subjects.length > 0) return; // already loaded for this trigger
+    setSubjectsLoading(true);
+    setSubjectsError(null);
+    const res = await fetchMobileSubjects(trigger);
+    setSubjectsLoading(false);
+    if (res.ok === false) {
+      setSubjectsError(res.message);
+      return;
+    }
+    setSubjects(res.subjects);
+  }, [trigger, subjects.length]);
+
+  const onPickSubject = useCallback((s: MobileSubject) => {
+    hapticButtonPress();
+    setPickedSubjectId(s.id);
+    setShowSubjectPicker(false);
+    // Pre-fill the brief with the subject's label + sub-label. The
+    // model has been told to never invent facts, so concrete details
+    // here translate into a much better caption than the agent
+    // typing them from memory.
+    const lines = [s.label.trim()];
+    if (s.sub?.trim()) lines.push(s.sub.trim());
+    setBrief(lines.join(" · "));
+    setGenerated(false);
+  }, []);
+
+  // Reset the picker state when the agent flips triggers — the
+  // listing-anchored subjects don't make sense for a different
+  // trigger.
+  useEffect(() => {
+    setSubjects([]);
+    setPickedSubjectId(null);
+    setSubjectsError(null);
+  }, [trigger]);
 
   const onGenerate = useCallback(async () => {
     const trimmed = brief.trim();
@@ -392,6 +462,8 @@ export default function QuickPostScreen() {
       mediaItemId: media?.id,
       scheduledFor: scheduledAt.toISOString(),
       trigger,
+      subjectKind: pickedSubject?.kind,
+      subjectRefId: pickedSubject?.refId ?? undefined,
     });
     setScheduling(false);
     if (res.ok === false) {
@@ -409,6 +481,7 @@ export default function QuickPostScreen() {
     trigger,
     media,
     scheduledAt,
+    pickedSubject,
   ]);
 
   const onCreateRecurring = useCallback(async () => {
@@ -440,6 +513,8 @@ export default function QuickPostScreen() {
       hashtags,
       mediaItemId: media?.id,
       trigger,
+      subjectKind: pickedSubject?.kind,
+      subjectRefId: pickedSubject?.refId ?? undefined,
       cadence: recurringCadence,
       weeklyDayOfWeek:
         recurringCadence === "weekly" ? recurringWeekday : undefined,
@@ -467,6 +542,7 @@ export default function QuickPostScreen() {
     activeDirectPublishConnection,
     trigger,
     media,
+    pickedSubject,
     recurringCadence,
     recurringWeekday,
     recurringTime,
@@ -504,6 +580,8 @@ export default function QuickPostScreen() {
       hashtags,
       mediaItemId: media?.id,
       trigger,
+      subjectKind: pickedSubject?.kind,
+      subjectRefId: pickedSubject?.refId ?? undefined,
     });
     setPublishing(false);
     if (res.ok === false) {
@@ -524,6 +602,7 @@ export default function QuickPostScreen() {
     activeDirectPublishConnection,
     trigger,
     media,
+    pickedSubject,
   ]);
 
   return (
@@ -574,13 +653,26 @@ export default function QuickPostScreen() {
         </View>
 
         {/* Brief */}
-        <Text style={[styles.sectionLabel, { marginTop: 18 }]}>
-          {trigger === "custom" ||
-          trigger === "market_update" ||
-          trigger === "testimonial"
-            ? "Brief"
-            : "Details (address, price, angle)"}
-        </Text>
+        <View style={[styles.briefHeaderRow, { marginTop: 18 }]}>
+          <Text style={styles.sectionLabel}>
+            {trigger === "custom" ||
+            trigger === "market_update" ||
+            trigger === "testimonial"
+              ? "Brief"
+              : "Details (address, price, angle)"}
+          </Text>
+          {triggerAllowsSubjects && (
+            <Pressable
+              onPress={openSubjectPicker}
+              style={styles.subjectPickButton}
+            >
+              <Ionicons name="list-outline" size={14} color={tokens.accent} />
+              <Text style={styles.subjectPickButtonText}>
+                {subjectPickerCtaLabel(trigger)}
+              </Text>
+            </Pressable>
+          )}
+        </View>
         <TextInput
           style={styles.briefInput}
           placeholder={placeholderFor(trigger)}
@@ -590,6 +682,73 @@ export default function QuickPostScreen() {
           onChangeText={setBrief}
           textAlignVertical="top"
         />
+        {pickedSubjectId && (
+          <View style={styles.pickedSubjectBadge}>
+            <Ionicons
+              name="checkmark-circle"
+              size={14}
+              color={tokens.success}
+            />
+            <Text style={styles.pickedSubjectText}>
+              Anchored to a CRM record. AI will only use facts you typed —
+              edit above if you want different ones.
+            </Text>
+          </View>
+        )}
+
+        {/* Subject picker modal-style list. Lives inline rather than
+            as a true modal so it scrolls naturally inside the
+            KeyboardAvoidingView. */}
+        {showSubjectPicker && (
+          <View style={styles.subjectPickerCard}>
+            <View style={styles.subjectPickerHeader}>
+              <Text style={styles.subjectPickerTitle}>
+                {subjectPickerHeaderLabel(trigger)}
+              </Text>
+              <Pressable
+                onPress={() => setShowSubjectPicker(false)}
+                hitSlop={10}
+              >
+                <Ionicons name="close" size={18} color={tokens.textSubtle} />
+              </Pressable>
+            </View>
+            {subjectsLoading ? (
+              <View style={styles.subjectLoadingBlock}>
+                <ActivityIndicator color={tokens.accent} />
+              </View>
+            ) : subjectsError ? (
+              <Text style={styles.subjectErrorText}>{subjectsError}</Text>
+            ) : subjects.length === 0 ? (
+              <Text style={styles.subjectEmptyText}>
+                {subjectEmptyLabel(trigger)}
+              </Text>
+            ) : (
+              subjects.map((s) => (
+                <Pressable
+                  key={s.id}
+                  onPress={() => onPickSubject(s)}
+                  style={styles.subjectRow}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.subjectLabel} numberOfLines={1}>
+                      {s.label}
+                    </Text>
+                    {s.sub ? (
+                      <Text style={styles.subjectSub} numberOfLines={1}>
+                        {s.sub}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color={tokens.textSubtle}
+                  />
+                </Pressable>
+              ))
+            )}
+          </View>
+        )}
 
         {/* Image attachment — optional for FB / LinkedIn, required
             for IG. Snap a fresh photo or pick from the library; the
@@ -1212,6 +1371,51 @@ export default function QuickPostScreen() {
   );
 }
 
+function subjectPickerCtaLabel(t: MobileQuickPostTrigger): string {
+  switch (t) {
+    case "new_listing":
+      return "Pick from listings";
+    case "open_house":
+      return "Pick an open house";
+    case "price_drop":
+      return "Pick a listing";
+    case "just_sold":
+      return "Pick a closing";
+    default:
+      return "Pick a record";
+  }
+}
+
+function subjectPickerHeaderLabel(t: MobileQuickPostTrigger): string {
+  switch (t) {
+    case "new_listing":
+      return "Your recent listings";
+    case "open_house":
+      return "Upcoming open houses";
+    case "price_drop":
+      return "Active listings";
+    case "just_sold":
+      return "Recent closings";
+    default:
+      return "Pick a record";
+  }
+}
+
+function subjectEmptyLabel(t: MobileQuickPostTrigger): string {
+  switch (t) {
+    case "new_listing":
+      return "No listings from the last 60 days. Try the Custom trigger.";
+    case "open_house":
+      return "No open houses in the next 21 days. Schedule one first.";
+    case "price_drop":
+      return "No active listings to re-price. Add or activate a listing.";
+    case "just_sold":
+      return "No closings in the last 60 days.";
+    default:
+      return "Nothing to pick — type your brief directly.";
+  }
+}
+
 function placeholderFor(t: MobileQuickPostTrigger): string {
   switch (t) {
     case "new_listing":
@@ -1291,6 +1495,100 @@ function createStyles(tokens: ThemeTokens) {
       padding: 12,
       fontSize: 14,
       color: tokens.text,
+    },
+    briefHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    subjectPickButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      backgroundColor: tokens.accentLight,
+    },
+    subjectPickButtonText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: tokens.accent,
+    },
+    pickedSubjectBadge: {
+      marginTop: 6,
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: tokens.successBg,
+      borderWidth: 1,
+      borderColor: tokens.successBorder,
+    },
+    pickedSubjectText: {
+      flex: 1,
+      fontSize: 11,
+      lineHeight: 16,
+      color: tokens.successText,
+    },
+    subjectPickerCard: {
+      marginTop: 8,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: tokens.border,
+      backgroundColor: tokens.surface,
+      overflow: "hidden",
+    },
+    subjectPickerHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: tokens.borderSubtle,
+    },
+    subjectPickerTitle: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: tokens.text,
+    },
+    subjectLoadingBlock: {
+      paddingVertical: 24,
+      alignItems: "center",
+    },
+    subjectErrorText: {
+      padding: 12,
+      fontSize: 13,
+      color: tokens.danger,
+    },
+    subjectEmptyText: {
+      padding: 12,
+      fontSize: 13,
+      lineHeight: 19,
+      color: tokens.textSubtle,
+    },
+    subjectRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderTopWidth: 1,
+      borderTopColor: tokens.borderSubtle,
+    },
+    subjectLabel: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: tokens.text,
+    },
+    subjectSub: {
+      marginTop: 2,
+      fontSize: 11,
+      color: tokens.textSubtle,
     },
     platformRow: {
       flexDirection: "row",

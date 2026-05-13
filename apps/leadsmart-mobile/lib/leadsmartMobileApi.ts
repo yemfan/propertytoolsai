@@ -1767,3 +1767,49 @@ export async function updateMobileRecurrence(
   if (res.ok === false) return res;
   return { ok: true, status: res.data.status ?? action };
 }
+
+
+// ── Generate Leads (mobile subject picker) ───────────────────────
+
+/**
+ * Subject picker option from /api/mobile/leads-gen/subjects.
+ *
+ * Mirrors `lib/leads-gen/subjects.ts:Subject` on the web. The mobile
+ * Quick Post screen renders these as a tappable list under each
+ * trigger; picking one auto-fills the brief with a description
+ * stitched from label + sub.
+ */
+export type MobileSubject = {
+  id: string;
+  label: string;
+  sub: string | null;
+  kind:
+    | "listing"
+    | "open_house"
+    | "transaction"
+    | "market_update"
+    | "testimonial"
+    | "custom";
+  refId: string | null;
+};
+
+type MobileSubjectsJson = MobileJsonError & {
+  subjects?: MobileSubject[];
+};
+
+/**
+ * List the picker options for a Quick Post trigger. Only meaningful
+ * for the listing-anchored triggers (new_listing, open_house,
+ * price_drop, just_sold); the synthetic triggers (market_update,
+ * testimonial, custom) return a single canned "subject" with
+ * no refId.
+ */
+export async function fetchMobileSubjects(
+  trigger: MobileQuickPostTrigger,
+): Promise<{ ok: true; subjects: MobileSubject[] } | MobileApiFailure> {
+  const res = await mobileGet<MobileSubjectsJson>(
+    MOBILE_API_PATHS.leadsGenSubjects(trigger),
+  );
+  if (res.ok === false) return res;
+  return { ok: true, subjects: res.data.subjects ?? [] };
+}
