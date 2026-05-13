@@ -18,6 +18,13 @@ type Branding = {
    * a backfill copies those URLs into avatar_url.
    */
   agentPhotoUrl: string;
+  /**
+   * Per-broker default for the Meta Lead Ad form's privacy policy URL.
+   * Empty string = use the LeadSmart bundled default. Brokerages with
+   * their own privacy policy should set this so all Lead Ads they
+   * launch via Generate Leads point to their compliance page.
+   */
+  leadAdPrivacyPolicyUrl: string;
 };
 
 const empty: Branding = {
@@ -25,6 +32,7 @@ const empty: Branding = {
   signatureHtml: "",
   logoUrl: "",
   agentPhotoUrl: "",
+  leadAdPrivacyPolicyUrl: "",
 };
 
 type PreviewState =
@@ -49,7 +57,8 @@ export default function BrandingSettingsPanel() {
     branding.brandName !== saved.brandName ||
     branding.signatureHtml !== saved.signatureHtml ||
     branding.logoUrl !== saved.logoUrl ||
-    branding.agentPhotoUrl !== saved.agentPhotoUrl;
+    branding.agentPhotoUrl !== saved.agentPhotoUrl ||
+    branding.leadAdPrivacyPolicyUrl !== saved.leadAdPrivacyPolicyUrl;
 
   const load = useCallback(async () => {
     try {
@@ -392,6 +401,34 @@ export default function BrandingSettingsPanel() {
             {preview.msg}
           </div>
         )}
+      </div>
+
+      {/* Lead Ad — privacy policy URL override */}
+      <div className="space-y-2">
+        <label className="block text-[11px] font-medium text-gray-500">
+          Lead Ad Privacy Policy URL{" "}
+          <span className="ml-1 rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-800">
+            Premium
+          </span>
+        </label>
+        <input
+          type="url"
+          value={branding.leadAdPrivacyPolicyUrl}
+          onChange={(e) =>
+            setBranding((b) => ({
+              ...b,
+              leadAdPrivacyPolicyUrl: e.target.value,
+            }))
+          }
+          placeholder="https://yourbrokerage.com/privacy"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+        />
+        <p className="text-[11px] text-gray-500">
+          Default privacy policy URL for Meta Lead Ad forms launched from
+          Generate Leads → Run Ads. Must be HTTPS. Leave blank to use
+          LeadSmart&apos;s bundled URL. You can also override this per-
+          campaign in the ad wizard.
+        </p>
       </div>
 
       {/* Save */}

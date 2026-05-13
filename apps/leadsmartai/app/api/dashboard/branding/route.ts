@@ -11,7 +11,9 @@ export async function GET() {
     const [agentRes, profileRes] = await Promise.all([
       supabase
         .from("agents")
-        .select("id, brand_name, signature_html, logo_url, agent_photo_url, brokerage, phone")
+        .select(
+          "id, brand_name, signature_html, logo_url, agent_photo_url, brokerage, phone, lead_ad_privacy_policy_url",
+        )
         .eq("auth_user_id", userData.user.id)
         .maybeSingle(),
       supabaseAdmin
@@ -33,6 +35,10 @@ export async function GET() {
         signatureHtml: (agent as Record<string, unknown>).signature_html ?? "",
         logoUrl: (agent as Record<string, unknown>).logo_url ?? "",
         agentPhotoUrl: (agent as Record<string, unknown>).agent_photo_url ?? "",
+        // Per-broker override for Meta Lead Ad form's privacy policy
+        // URL. Null = use LeadSmart's default.
+        leadAdPrivacyPolicyUrl:
+          (agent as Record<string, unknown>).lead_ad_privacy_policy_url ?? "",
       },
       profile: {
         fullName: profile?.full_name ?? "",
@@ -65,6 +71,7 @@ export async function PATCH(req: Request) {
       signatureHtml?: string;
       logoUrl?: string;
       agentPhotoUrl?: string;
+      leadAdPrivacyPolicyUrl?: string;
     };
 
     const update: Record<string, unknown> = {};
@@ -72,6 +79,27 @@ export async function PATCH(req: Request) {
     if (body.signatureHtml !== undefined) update.signature_html = String(body.signatureHtml).slice(0, 2000);
     if (body.logoUrl !== undefined) update.logo_url = String(body.logoUrl).slice(0, 500);
     if (body.agentPhotoUrl !== undefined) update.agent_photo_url = String(body.agentPhotoUrl).slice(0, 500);
+    if (body.leadAdPrivacyPolicyUrl !== undefined) {
+      // Empty string from the UI = clear back to default (null).
+      // Lightweight URL sanity check — Meta will reject non-https
+      // anyway, surface the issue earlier with a clearer error.
+      const raw = String(body.leadAdPrivacyPolicyUrl).trim().slice(0, 500);
+      if (raw === "") {
+        update.lead_ad_privacy_policy_url = null;
+      } else {
+        if (!/^https?:\/\//i.test(raw)) {
+          return NextResponse.json(
+            {
+              ok: false,
+              error:
+                "Privacy policy URL must start with http:// or https://",
+            },
+            { status: 400 },
+          );
+        }
+        update.lead_ad_privacy_policy_url = raw;
+      }
+    }
 
     if (!Object.keys(update).length) {
       return NextResponse.json({ ok: false, error: "No fields to update" }, { status: 400 });

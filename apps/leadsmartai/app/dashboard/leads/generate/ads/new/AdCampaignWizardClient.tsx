@@ -118,6 +118,34 @@ export default function AdCampaignWizardClient() {
   const [libraryLoading, setLibraryLoading] = useState(false);
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<FormQuestion[]>(DEFAULT_QUESTIONS);
+  // Per-campaign privacy policy URL override. Starts from the agent's
+  // stored default (loaded via /api/dashboard/branding) but the agent
+  // can override per-campaign in the UI.
+  const [privacyPolicyUrl, setPrivacyPolicyUrl] = useState("");
+  const [privacyDefaultLoaded, setPrivacyDefaultLoaded] = useState(false);
+
+  // AI-suggest state — wraps /api/leads-gen/ads/suggest. Stores variants
+  // so the agent can cycle "try a different angle".
+  const [suggestBrief, setSuggestBrief] = useState("");
+  const [showSuggest, setShowSuggest] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
+  const [suggestVariants, setSuggestVariants] = useState<
+    Array<{ body: string; headline: string }>
+  >([]);
+  const [suggestVariantIndex, setSuggestVariantIndex] = useState(0);
+
+  // Audience-estimate state — calls /api/leads-gen/ads/audience-estimate
+  // whenever ad account + targeting change. Debounced lightly via the
+  // useEffect dependencies; explicit refresh button is also available.
+  const [audienceEstimate, setAudienceEstimate] = useState<
+    | { lower: number | null; upper: number | null; ready: boolean }
+    | null
+  >(null);
+  const [audienceEstimateLoading, setAudienceEstimateLoading] = useState(false);
+  const [audienceEstimateError, setAudienceEstimateError] = useState<
+    string | null
+  >(null);
 
   // ── Budget + schedule ────────────────────────────────────────────
   const [dailyBudget, setDailyBudget] = useState(20);
@@ -282,6 +310,7 @@ export default function AdCampaignWizardClient() {
           startTime,
           endTime,
           launchImmediately,
+          privacyPolicyUrl: privacyPolicyUrl.trim() || undefined,
         }),
       });
       const body = (await res.json().catch(() => ({}))) as {
@@ -317,7 +346,149 @@ export default function AdCampaignWizardClient() {
     ageMax,
     dailyBudget,
     launchImmediately,
+    privacyPolicyUrl,
   ]);
+
+  // Load the agent's stored default privacy URL so the wizard
+  // pre-fills it. Empty default is fine — /ads/create falls back
+  // to LeadSmart's bundled URL if both wizard + agent column are
+  // empty.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/dashboard/branding")
+      .then(async (res) => {
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          branding?: { leadAdPrivacyPolicyUrl?: string };
+        };
+        if (cancelled) return;
+        if (body.ok && body.branding?.leadAdPrivacyPolicyUrl) {
+          setPrivacyPolicyUrl(body.branding.leadAdPrivacyPolicyUrl);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setPrivacyDefaultLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // AI-suggest: POST the brief, populate body + headline + variants.
+  const runSuggest = useCallback(async () => {
+    if (!suggestBrief.trim()) return;
+    setSuggestError(null);
+    setSuggesting(true);
+    try {
+      const subjectIdFromQuery = (searchParams?.get("subjectId") ?? "").trim();
+      const triggerFromQuery = (searchParams?.get("trigger") ?? "").trim();
+      const res = await fetch("/api/leads-gen/ads/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brief: suggestBrief.trim(),
+          subjectId: subjectIdFromQuery || undefined,
+          trigger: triggerFromQuery || undefined,
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        body?: string;
+        headline?: string;
+        variants?: Array<{ body: string; headline: string }>;
+        error?: string;
+      };
+      if (!res.ok || !body.ok || !body.body || !body.headline) {
+        throw new Error(body.error ?? "AI suggest failed");
+      }
+      const primary = { body: body.body, headline: body.headline };
+      const variants = [primary, ...(body.variants ?? [])];
+      setSuggestVariants(variants);
+      setSuggestVariantIndex(0);
+      setAdBody(primary.body);
+      setAdHeadline(primary.headline);
+    } catch (e) {
+      setSuggestError(
+        e instanceof Error ? e.message : "AI suggest failed",
+      );
+    } finally {
+      setSuggesting(false);
+    }
+  }, [suggestBrief, searchParams]);
+
+  const cycleSuggestVariant = useCallback(() => {
+    if (suggestVariants.length <= 1) return;
+    const next = (suggestVariantIndex + 1) % suggestVariants.length;
+    setSuggestVariantIndex(next);
+    const v = suggestVariants[next]!;
+    setAdBody(v.body);
+    setAdHeadline(v.headline);
+  }, [suggestVariants, suggestVariantIndex]);
+
+  // Audience-estimate: fire once we have ad account + targeting basics.
+  // Debounced via a 600ms timer so live zip-code editing doesn't spam
+  // Meta. Skipped entirely when ad account isn't picked yet.
+  useEffect(() => {
+    if (!connection || !adAccount) {
+      setAudienceEstimate(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setAudienceEstimateLoading(true);
+      setAudienceEstimateError(null);
+      try {
+        const zips = zipCodes
+          .split(/[,\s]+/)
+          .map((z) => z.trim())
+          .filter((z) => /^\d{5}$/.test(z));
+        const res = await fetch("/api/leads-gen/ads/audience-estimate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            connectionId: connection.id,
+            adAccountId: adAccount.id,
+            targeting: {
+              countries: ["US"],
+              zipCodes: zips.length > 0 ? zips : undefined,
+              radiusMiles: zips.length > 0 ? radiusMiles : undefined,
+              ageMin,
+              ageMax,
+            },
+          }),
+        });
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          mauLower?: number | null;
+          mauUpper?: number | null;
+          estimateReady?: boolean;
+          error?: string;
+        };
+        if (cancelled) return;
+        if (!res.ok || !body.ok) {
+          throw new Error(body.error ?? "Audience estimate failed");
+        }
+        setAudienceEstimate({
+          lower: body.mauLower ?? null,
+          upper: body.mauUpper ?? null,
+          ready: body.estimateReady ?? false,
+        });
+      } catch (e) {
+        if (!cancelled) {
+          setAudienceEstimateError(
+            e instanceof Error ? e.message : "Audience estimate failed",
+          );
+        }
+      } finally {
+        if (!cancelled) setAudienceEstimateLoading(false);
+      }
+    }, 600);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [connection, adAccount, zipCodes, radiusMiles, ageMin, ageMax]);
 
   // Step gating
   const step1Complete = Boolean(connection && adAccount);
@@ -519,6 +690,48 @@ export default function AdCampaignWizardClient() {
               />
             </div>
           </div>
+
+          {/* Audience reach preview — live calls Meta's delivery_estimate
+              endpoint as the agent edits zips/age. HOUSING category
+              restricts targeting, so this is a meaningful gut-check. */}
+          <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50/60 px-3 py-2.5 text-xs text-blue-900">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold">Estimated audience size</p>
+              {audienceEstimateLoading && (
+                <span className="text-[10px] uppercase tracking-wide text-blue-700">
+                  Estimating…
+                </span>
+              )}
+            </div>
+            {audienceEstimateError ? (
+              <p className="mt-1 text-red-800">{audienceEstimateError}</p>
+            ) : audienceEstimate ? (
+              audienceEstimate.lower != null && audienceEstimate.upper != null ? (
+                <p className="mt-1">
+                  Approximately{" "}
+                  <span className="font-semibold">
+                    {formatRangeShort(audienceEstimate.lower)} –{" "}
+                    {formatRangeShort(audienceEstimate.upper)}
+                  </span>{" "}
+                  people match these targeting filters.{" "}
+                  {!audienceEstimate.ready && (
+                    <span className="text-blue-700">
+                      (Initial estimate — Meta refines this as the campaign runs.)
+                    </span>
+                  )}
+                </p>
+              ) : (
+                <p className="mt-1 text-blue-700">
+                  No estimate available — usually means the filters are too
+                  narrow. Try expanding the radius or adding ZIPs.
+                </p>
+              )
+            ) : (
+              <p className="mt-1 text-blue-700">
+                Pick a connection + ad account above to see an estimate.
+              </p>
+            )}
+          </div>
         </Section>
       )}
 
@@ -543,9 +756,58 @@ export default function AdCampaignWizardClient() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-700">
-                Ad body
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-medium text-gray-700">
+                  Ad body
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSuggest((v) => !v);
+                    setSuggestError(null);
+                  }}
+                  className="text-xs font-medium text-purple-700 hover:text-purple-900"
+                >
+                  ✨ {showSuggest ? "Hide" : "Suggest with AI"}
+                </button>
+              </div>
+              {showSuggest && (
+                <div className="mt-1 rounded-lg border border-purple-200 bg-purple-50/60 p-3 space-y-2">
+                  <label className="block text-[11px] font-medium text-purple-900">
+                    Brief — what's the campaign promoting?
+                  </label>
+                  <textarea
+                    value={suggestBrief}
+                    onChange={(e) => setSuggestBrief(e.target.value)}
+                    rows={2}
+                    placeholder='e.g. "New listing at 123 Main St, Pasadena CA. 3bd 2ba, $1.2M, modern reno, walk to Old Town."'
+                    className="w-full rounded-md border border-purple-200 px-2 py-1 text-xs focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={runSuggest}
+                      disabled={suggesting || !suggestBrief.trim()}
+                      className="rounded-md bg-purple-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-purple-700 disabled:opacity-50"
+                    >
+                      {suggesting ? "Generating…" : "Generate"}
+                    </button>
+                    {suggestVariants.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={cycleSuggestVariant}
+                        className="rounded-md border border-purple-300 bg-white px-2.5 py-1 text-xs font-medium text-purple-700 hover:bg-purple-50"
+                      >
+                        Try a different angle ({suggestVariantIndex + 1}/
+                        {suggestVariants.length})
+                      </button>
+                    )}
+                  </div>
+                  {suggestError && (
+                    <p className="text-[11px] text-red-700">{suggestError}</p>
+                  )}
+                </div>
+              )}
               <textarea
                 value={adBody}
                 onChange={(e) => setAdBody(e.target.value)}
@@ -578,6 +840,37 @@ export default function AdCampaignWizardClient() {
                 placeholder="https://yoursite.com"
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700">
+                Privacy policy URL{" "}
+                <span className="text-gray-400">
+                  (Meta requires one — leave blank to use LeadSmart&apos;s default)
+                </span>
+              </label>
+              <input
+                type="url"
+                value={privacyPolicyUrl}
+                onChange={(e) => setPrivacyPolicyUrl(e.target.value)}
+                placeholder="https://yourbrokerage.com/privacy"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+              <p className="mt-1 text-[11px] text-gray-500">
+                Must be HTTPS. Set a default for all your campaigns in{" "}
+                <a
+                  href="/dashboard/settings"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-blue-600 hover:underline"
+                >
+                  Settings → Branding
+                </a>
+                .
+                {privacyDefaultLoaded &&
+                  !privacyPolicyUrl.trim() &&
+                  " Using LeadSmart's bundled URL."}
+              </p>
             </div>
 
             <div>
@@ -863,4 +1156,19 @@ function DoneState({
       </div>
     </div>
   );
+}
+
+/**
+ * Short integer formatter for audience-size ranges. Meta returns
+ * values like 38600 which we want to render as "38.6k". Above 1M
+ * we step to "1.2M". Below 1k we keep the raw integer.
+ */
+function formatRangeShort(n: number): string {
+  if (n >= 1_000_000) {
+    return `${(n / 1_000_000).toFixed(1)}M`;
+  }
+  if (n >= 1_000) {
+    return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}k`;
+  }
+  return String(Math.round(n));
 }
