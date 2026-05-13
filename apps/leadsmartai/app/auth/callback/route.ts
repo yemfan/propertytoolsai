@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { ensureSharedUserTablesAfterOAuth } from "@/lib/auth/bootstrapSharedUserTables";
 import { oauthBackfillFullName } from "@/lib/auth/canonicalUserContact";
 import { supabaseAuthCookieOptions } from "@/lib/authCookieOptions";
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);
           });
