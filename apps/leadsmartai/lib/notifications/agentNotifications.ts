@@ -9,6 +9,7 @@ const DEFAULT_PREFS: MobileNotificationPreferencesDto = {
   push_hot_lead: true,
   push_missed_call: true,
   push_reminder: true,
+  push_post_milestone: true,
   reminder_digest_minutes: 15,
 };
 
@@ -18,7 +19,7 @@ export async function getAgentNotificationPreferences(
   const { data, error } = await supabaseAdmin
     .from("agent_notification_preferences")
     .select(
-      "push_hot_lead, push_missed_call, push_reminder, reminder_digest_minutes"
+      "push_hot_lead, push_missed_call, push_reminder, push_post_milestone, reminder_digest_minutes"
     )
     .eq("agent_id", agentId as unknown as number)
     .maybeSingle();
@@ -31,6 +32,7 @@ export async function getAgentNotificationPreferences(
     push_hot_lead?: boolean;
     push_missed_call?: boolean;
     push_reminder?: boolean;
+    push_post_milestone?: boolean;
     reminder_digest_minutes?: number;
   };
 
@@ -38,6 +40,7 @@ export async function getAgentNotificationPreferences(
     push_hot_lead: row.push_hot_lead ?? true,
     push_missed_call: row.push_missed_call ?? true,
     push_reminder: row.push_reminder ?? true,
+    push_post_milestone: row.push_post_milestone ?? true,
     reminder_digest_minutes:
       typeof row.reminder_digest_minutes === "number"
         ? row.reminder_digest_minutes
@@ -50,7 +53,11 @@ export async function upsertAgentNotificationPreferences(
   patch: Partial<
     Pick<
       MobileNotificationPreferencesDto,
-      "push_hot_lead" | "push_missed_call" | "push_reminder" | "reminder_digest_minutes"
+      | "push_hot_lead"
+      | "push_missed_call"
+      | "push_reminder"
+      | "push_post_milestone"
+      | "reminder_digest_minutes"
     >
   >
 ): Promise<MobileNotificationPreferencesDto> {
@@ -59,6 +66,8 @@ export async function upsertAgentNotificationPreferences(
     push_hot_lead: patch.push_hot_lead ?? current.push_hot_lead,
     push_missed_call: patch.push_missed_call ?? current.push_missed_call,
     push_reminder: patch.push_reminder ?? current.push_reminder,
+    push_post_milestone:
+      patch.push_post_milestone ?? current.push_post_milestone,
     reminder_digest_minutes:
       patch.reminder_digest_minutes ?? current.reminder_digest_minutes,
   };
@@ -69,6 +78,7 @@ export async function upsertAgentNotificationPreferences(
       push_hot_lead: next.push_hot_lead,
       push_missed_call: next.push_missed_call,
       push_reminder: next.push_reminder,
+      push_post_milestone: next.push_post_milestone,
       reminder_digest_minutes: next.reminder_digest_minutes,
       updated_at: new Date().toISOString(),
     },

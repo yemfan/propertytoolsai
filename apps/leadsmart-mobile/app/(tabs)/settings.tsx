@@ -37,6 +37,7 @@ export default function SettingsScreen() {
   const [pushHot, setPushHot] = useState(true);
   const [pushMissed, setPushMissed] = useState(true);
   const [pushReminder, setPushReminder] = useState(true);
+  const [pushMilestone, setPushMilestone] = useState(true);
   const [digestMin, setDigestMin] = useState(15);
 
   useEffect(() => {
@@ -56,6 +57,7 @@ export default function SettingsScreen() {
       setPushHot(res.preferences.push_hot_lead);
       setPushMissed(res.preferences.push_missed_call);
       setPushReminder(res.preferences.push_reminder);
+      setPushMilestone(res.preferences.push_post_milestone);
       setDigestMin(res.preferences.reminder_digest_minutes);
     })();
   }, []);
@@ -65,6 +67,7 @@ export default function SettingsScreen() {
       push_hot_lead?: boolean;
       push_missed_call?: boolean;
       push_reminder?: boolean;
+      push_post_milestone?: boolean;
       reminder_digest_minutes?: number;
     }) => {
       // Lightweight "selection changed" tick when toggling any
@@ -81,6 +84,7 @@ export default function SettingsScreen() {
       setPushHot(res.preferences.push_hot_lead);
       setPushMissed(res.preferences.push_missed_call);
       setPushReminder(res.preferences.push_reminder);
+      setPushMilestone(res.preferences.push_post_milestone);
       setDigestMin(res.preferences.reminder_digest_minutes);
     },
     []
@@ -153,6 +157,17 @@ export default function SettingsScreen() {
                 onValueChange={(v) => {
                   setPushReminder(v);
                   void savePrefs({ push_reminder: v });
+                }}
+                disabled={prefsSaving}
+              />
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Post engagement milestones</Text>
+              <Switch
+                value={pushMilestone}
+                onValueChange={(v) => {
+                  setPushMilestone(v);
+                  void savePrefs({ push_post_milestone: v });
                 }}
                 disabled={prefsSaving}
               />

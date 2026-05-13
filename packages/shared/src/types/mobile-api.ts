@@ -225,7 +225,11 @@ export type MobileNotificationDeepScreen =
   /** Publish-failure pushes (cron-failed scheduled posts) deep-link
    *  to the scheduled-posts management screen so the agent can see
    *  the last_error context + decide next steps. */
-  | "scheduled";
+  | "scheduled"
+  /** Engagement-milestone pushes (post crossed 10/50/100/etc.) deep-
+   *  link to the post-history screen where the row renders with the
+   *  refreshed metrics. */
+  | "post_history";
 
 /**
  * Contract for `notification.request.content.data` on LeadSmart AI-originated pushes.
@@ -274,6 +278,8 @@ export type MobileNotificationPreferencesDto = {
   push_hot_lead: boolean;
   push_missed_call: boolean;
   push_reminder: boolean;
+  /** Generate Leads post-engagement-milestone pings (1/10/50/100/250/500/1000). */
+  push_post_milestone: boolean;
   reminder_digest_minutes: number;
 };
 

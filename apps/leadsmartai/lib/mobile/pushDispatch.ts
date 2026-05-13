@@ -529,3 +529,127 @@ export async function dispatchMobileBriefingPush(params: {
   await updateInboxNotificationPushSentAt(inboxId, now);
   return true;
 }
+
+// ── Post-engagement milestone pushes ─────────────────────────────
+
+export const POST_MILESTONE_THRESHOLDS: readonly number[] = [
+  1, 10, 50, 100, 250, 500, 1000,
+] as const;
+
+/**
+ * Given an old high-water mark and a new engagement total, return
+ * the highest threshold that was crossed (>0), or null when no
+ * new milestone applies.
+ *
+ * Examples:
+ *   highestCrossed(0,   1)   → 1
+ *   highestCrossed(1,  12)   → 10  (we jumped over 1, but 1 was already pushed; surface 10)
+ *   highestCrossed(0, 130)   → 100 (skip-ahead: brand-new viral post; only push the biggest)
+ *   highestCrossed(100, 110) → null (no new threshold crossed since 100)
+ */
+export function highestCrossedMilestone(
+  oldThreshold: number,
+  newScore: number,
+): number | null {
+  let crossed: number | null = null;
+  for (const t of POST_MILESTONE_THRESHOLDS) {
+    if (t > oldThreshold && t <= newScore) crossed = t;
+  }
+  return crossed;
+}
+
+/**
+ * Engagement-milestone push. Fires when a post's total engagement
+ * (likes + comments + shares + saves) crosses one of the
+ * POST_MILESTONE_THRESHOLDS. The refresh cron is the only caller —
+ * it computes the score after a metrics refresh, compares against
+ * `lead_posts.last_milestone_pushed`, and dispatches when crossed.
+ *
+ * Sparse cadence by design: across a post's whole lifetime, the
+ * agent sees at most one push per threshold (7 max). For most
+ * posts they'll see 1-2. Skip-ahead (a viral post going from 0 →
+ * 130 between cron runs) collapses to a single push at the highest
+ * threshold instead of spamming the lower ones.
+ *
+ * Inbox: row written regardless of push delivery so the in-app
+ * notifications surface still shows the milestone even when push
+ * is muted.
+ *
+ * Deep link: `post_history` opens the Posts screen where the row
+ * renders with the fresh metrics. No per-row anchor needed —
+ * milestone posts are usually top-of-list anyway.
+ */
+export async function dispatchMobilePostMilestonePush(params: {
+  agentId: string;
+  leadPostId: string;
+  threshold: number;
+  platform: "facebook" | "instagram" | "linkedin";
+  caption: string;
+}): Promise<boolean> {
+  if (mobilePushGloballyDisabled()) return false;
+
+  const prefs = await getAgentNotificationPreferences(params.agentId);
+  const skipPush = !prefs.push_post_milestone;
+
+  const platformLabel =
+    params.platform === "linkedin"
+      ? "LinkedIn"
+      : params.platform === "instagram"
+        ? "Instagram"
+        : "Facebook";
+  // First-engagement push reads differently from the bigger ones —
+  // "someone engaged" is the celebration moment; the milestones
+  // beyond that are progress-tracking.
+  const title =
+    params.threshold === 1
+      ? `🎉 First engagement on ${platformLabel}`
+      : `🚀 ${params.threshold.toLocaleString()} engagements on ${platformLabel}`;
+  const captionSnippet = params.caption.replace(/\s+/g, " ").slice(0, 100);
+  const body =
+    params.threshold === 1
+      ? `Someone reacted to your post: "${captionSnippet}${params.caption.length > 100 ? "…" : ""}"`
+      : `Your post hit ${params.threshold.toLocaleString()} total engagement: "${captionSnippet}${params.caption.length > 100 ? "…" : ""}"`;
+
+  const now = new Date().toISOString();
+  const inboxId = await insertAgentInboxNotification({
+    agentId: params.agentId,
+    type: "reminder",
+    priority: "medium",
+    title,
+    body,
+    deepLink: { screen: "post_history" },
+    pushSentAt: skipPush ? now : null,
+  });
+
+  if (skipPush) {
+    return false;
+  }
+
+  const userId = await getAuthUserIdForAgent(params.agentId);
+  if (!userId) {
+    await updateInboxNotificationPushSentAt(inboxId, now);
+    return false;
+  }
+  const tokens = await listExpoPushTokensForUser(userId);
+  if (!tokens.length) {
+    await updateInboxNotificationPushSentAt(inboxId, now);
+    return false;
+  }
+
+  await sendExpoPushMessages(
+    buildMessages(
+      tokens,
+      title,
+      body,
+      {
+        kind: "reminder",
+        screen: "post_history",
+        leadPostId: params.leadPostId,
+        threshold: String(params.threshold),
+      },
+      "default",
+    ),
+  );
+  await updateInboxNotificationPushSentAt(inboxId, now);
+  return true;
+}
