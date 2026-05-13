@@ -1337,18 +1337,22 @@ export async function fetchMobileQuickPostDraft(input: {
 
 
 
-// ── Generate Leads (mobile Meta connect + publish) ───────────────
+// ── Generate Leads (mobile Meta + LinkedIn connect + publish) ────
 
 export type MobileConnection = {
   id: string;
-  platform: "meta";
+  platform: "meta" | "linkedin";
   fbPageId: string | null;
   fbPageName: string | null;
   igBusinessUserId: string | null;
   igBusinessUsername: string | null;
+  linkedinMemberUrn: string | null;
+  linkedinMemberEmail: string | null;
+  displayName: string | null;
   pictureUrl: string | null;
   canPublishFacebook: boolean;
   canPublishInstagram: boolean;
+  canPublishLinkedIn: boolean;
 };
 
 type MobileConnectionsJson = MobileJsonError & {
@@ -1406,11 +1410,45 @@ export async function disconnectMobileMeta(input: { id?: string; all?: boolean }
   return { ok: true, removed: res.data.removed ?? 0 };
 }
 
+/**
+ * Mint a LinkedIn OAuth URL for the mobile in-app browser. Same
+ * `returnTo` deep-link pattern as initMobileMetaConnect — see that
+ * function's doc comment for the full rationale.
+ */
+export async function initMobileLinkedInConnect(returnTo: string): Promise<
+  | { ok: true; url: string }
+  | MobileApiFailure
+> {
+  const res = await mobilePost<MobileMetaInitJson>(
+    MOBILE_API_PATHS.leadsGenConnectLinkedInInit,
+    { returnTo },
+  );
+  if (res.ok === false) return res;
+  if (!res.data.url) {
+    return { ok: false, status: 500, message: "No URL returned" };
+  }
+  return { ok: true, url: res.data.url };
+}
+
+export async function disconnectMobileLinkedIn(input: {
+  id?: string;
+  all?: boolean;
+}): Promise<{ ok: true; removed: number } | MobileApiFailure> {
+  const res = await mobilePost<MobileDisconnectJson>(
+    MOBILE_API_PATHS.leadsGenConnectLinkedInDisconnect,
+    input,
+  );
+  if (res.ok === false) return res;
+  return { ok: true, removed: res.data.removed ?? 0 };
+}
+
+export type MobilePublishPlatform = "facebook" | "instagram" | "linkedin";
+
 type MobilePublishJson = MobileJsonError & {
   postId?: string;
   externalPostId?: string;
   externalPostUrl?: string | null;
-  platform?: "facebook" | "instagram";
+  platform?: MobilePublishPlatform;
 };
 
 export type MobilePublishSuccess = {
@@ -1418,16 +1456,16 @@ export type MobilePublishSuccess = {
   postId: string;
   externalPostId: string;
   externalPostUrl: string | null;
-  platform: "facebook" | "instagram";
+  platform: MobilePublishPlatform;
 };
 
 /**
  * Direct publish via the shared `publishPost` helper. Returns the
- * Meta-side post id + permalink on success; the QuickPost screen
- * surfaces the link as "View on Facebook →".
+ * platform-side post id + permalink on success; the QuickPost
+ * screen surfaces the link as "View the post →".
  */
 export async function publishMobileQuickPost(input: {
-  platform: "facebook" | "instagram";
+  platform: MobilePublishPlatform;
   connectionId: string;
   caption: string;
   hashtags?: string[];

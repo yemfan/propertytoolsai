@@ -98,13 +98,17 @@ export default function QuickPostScreen() {
   const [generated, setGenerated] = useState(false);
 
   // Connection state — fetched once on mount. When a Meta Page is
-  // connected, the action row shows "Publish to Facebook" (and
-  // "Publish to Instagram" if the Page has an IG Business linked).
-  // Empty list → fall back to Share/Copy.
+  // connected, the action row shows "Publish to Facebook"; when a
+  // LinkedIn member is connected, "Publish to LinkedIn". Empty list
+  // → fall back to Share/Copy.
   const [connections, setConnections] = useState<MobileConnection[]>([]);
   const [publishing, setPublishing] = useState(false);
   const [publishResult, setPublishResult] = useState<
-    | { ok: true; externalPostUrl: string | null; platform: "facebook" | "instagram" }
+    | {
+        ok: true;
+        externalPostUrl: string | null;
+        platform: "facebook" | "instagram" | "linkedin";
+      }
     | { ok: false; error: string }
     | null
   >(null);
@@ -121,16 +125,29 @@ export default function QuickPostScreen() {
   }, []);
 
   // Which platforms the agent can publish directly to right now.
-  // Mobile Phase 2 only supports text-only Facebook posts (no media
-  // picker yet); Instagram requires an image so it falls back to
-  // Share/Copy even when connected.
+  // Mobile supports text-only Facebook + LinkedIn posts (no media
+  // picker yet); Instagram requires an image (Meta API) so it falls
+  // back to Share/Copy even when connected.
   const fbConnection = useMemo(
     () =>
       connections.find((c) => c.platform === "meta" && c.canPublishFacebook) ??
       null,
     [connections],
   );
-  const canDirectPublish = platform === "facebook" && fbConnection !== null;
+  const linkedinConnection = useMemo(
+    () =>
+      connections.find(
+        (c) => c.platform === "linkedin" && c.canPublishLinkedIn,
+      ) ?? null,
+    [connections],
+  );
+  const activeDirectPublishConnection =
+    platform === "facebook"
+      ? fbConnection
+      : platform === "linkedin"
+        ? linkedinConnection
+        : null;
+  const canDirectPublish = activeDirectPublishConnection !== null;
 
   const onGenerate = useCallback(async () => {
     const trimmed = brief.trim();
@@ -188,14 +205,16 @@ export default function QuickPostScreen() {
   }, [caption, hashtags, platform]);
 
   const onPublish = useCallback(async () => {
-    if (!caption || !fbConnection) return;
-    if (platform !== "facebook") return;
+    if (!caption) return;
+    if (platform !== "facebook" && platform !== "linkedin") return;
+    const conn = activeDirectPublishConnection;
+    if (!conn) return;
     hapticButtonPress();
     setPublishing(true);
     setPublishResult(null);
     const res = await publishMobileQuickPost({
-      platform: "facebook",
-      connectionId: fbConnection.id,
+      platform,
+      connectionId: conn.id,
       caption,
       hashtags,
       trigger,
@@ -212,7 +231,7 @@ export default function QuickPostScreen() {
       externalPostUrl: res.externalPostUrl,
       platform: res.platform,
     });
-  }, [caption, hashtags, platform, fbConnection, trigger]);
+  }, [caption, hashtags, platform, activeDirectPublishConnection, trigger]);
 
   return (
     <KeyboardAvoidingView
@@ -366,7 +385,9 @@ export default function QuickPostScreen() {
                   disabled={publishing}
                   style={[
                     styles.actionButton,
-                    styles.publishButton,
+                    platform === "linkedin"
+                      ? styles.publishButtonLinkedIn
+                      : styles.publishButton,
                     publishing && styles.actionButtonBusy,
                   ]}
                 >
@@ -376,7 +397,7 @@ export default function QuickPostScreen() {
                     <>
                       <Ionicons name="send" size={16} color="#fff" />
                       <Text style={styles.publishButtonText}>
-                        Publish to Facebook
+                        Publish to {platform === "linkedin" ? "LinkedIn" : "Facebook"}
                       </Text>
                     </>
                   )}
@@ -404,11 +425,7 @@ export default function QuickPostScreen() {
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.successBannerTitle}>
-                    Published to{" "}
-                    {publishResult.platform === "facebook"
-                      ? "Facebook"
-                      : "Instagram"}{" "}
-                    ✓
+                    Published to {labelFor(publishResult.platform)} ✓
                   </Text>
                   {publishResult.externalPostUrl && (
                     <Pressable
@@ -447,6 +464,17 @@ export default function QuickPostScreen() {
                   </Text>
                   .
                 </>
+              ) : platform === "linkedin" && !canDirectPublish ? (
+                <>
+                  Want one-tap publish?{" "}
+                  <Text
+                    style={styles.linkText}
+                    onPress={() => router.push("/connect-platforms" as never)}
+                  >
+                    Connect LinkedIn
+                  </Text>{" "}
+                  and we&apos;ll post to your personal feed.
+                </>
               ) : platform === "instagram" ? (
                 <>
                   Instagram requires an image — use Share / Copy and post from
@@ -456,6 +484,18 @@ export default function QuickPostScreen() {
                 <>
                   Posts go straight to your connected Facebook Page. Manage
                   connections from{" "}
+                  <Text
+                    style={styles.linkText}
+                    onPress={() => router.push("/connect-platforms" as never)}
+                  >
+                    Connect Platforms
+                  </Text>
+                  .
+                </>
+              ) : platform === "linkedin" ? (
+                <>
+                  Posts go to your personal LinkedIn feed. Manage connections
+                  from{" "}
                   <Text
                     style={styles.linkText}
                     onPress={() => router.push("/connect-platforms" as never)}
@@ -675,6 +715,9 @@ function createStyles(tokens: ThemeTokens) {
     actionButtonBusy: { opacity: 0.7 },
     publishButton: {
       backgroundColor: "#1877F2", // Facebook blue
+    },
+    publishButtonLinkedIn: {
+      backgroundColor: "#0A66C2", // LinkedIn blue
     },
     publishButtonText: {
       fontSize: 13,

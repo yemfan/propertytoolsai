@@ -11,15 +11,16 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const bodySchema = z.object({
-  platform: z.enum(["facebook", "instagram"]),
+  platform: z.enum(["facebook", "instagram", "linkedin"]),
   connectionId: z.string().uuid(),
   caption: z.string().min(1).max(5_000),
   hashtags: z.array(z.string()).max(40).optional(),
-  /** Optional media_library.id. Required for Instagram; optional for Facebook.
-   *  Mobile Phase 2 doesn't include a media-upload flow yet, so this is
-   *  typically omitted — agents post text-only to Facebook from the phone
-   *  and use the Share sheet for IG. The field stays open for forward-
-   *  compat with the upcoming mobile media picker. */
+  /** Optional media_library.id. Required for Instagram (Meta API),
+   *  optional for Facebook and LinkedIn. Mobile doesn't include a
+   *  media-upload flow yet, so this is typically omitted — agents
+   *  post text-only to FB / LinkedIn from the phone and use the
+   *  Share sheet for IG. The field stays open for forward-compat
+   *  with the upcoming mobile media picker. */
   mediaItemId: z.string().uuid().optional(),
   trigger: z.string().max(64).optional(),
   subjectKind: z.string().max(64).optional(),
@@ -102,6 +103,8 @@ export async function POST(req: Request) {
         error: result.error,
         metaCode: result.metaCode ?? null,
         metaTraceId: result.metaTraceId ?? null,
+        linkedinCode: result.linkedinCode ?? null,
+        linkedinServiceErrorCode: result.linkedinServiceErrorCode ?? null,
         postId: result.leadPostId ?? null,
       },
       { status: result.status },
