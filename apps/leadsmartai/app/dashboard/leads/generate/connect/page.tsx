@@ -2,16 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { getServerT } from "@/lib/i18n/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 import ConnectClient from "./ConnectClient";
 
-export const metadata: Metadata = {
-  title: "Connect Platforms | LeadSmart AI",
-  description:
-    "Connect your Facebook Pages, Instagram Business accounts, and LinkedIn profile so Generate Leads can publish directly.",
-  robots: { index: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t("connect.metadata.title", { ns: "web_generate_leads" }),
+    description: t("connect.metadata.description", { ns: "web_generate_leads" }),
+    robots: { index: false },
+  };
+}
 
 type PageProps = {
   searchParams: Promise<{
@@ -60,6 +63,7 @@ type LinkedInAccountRow = {
 export default async function ConnectPage({ searchParams }: PageProps) {
   const { agentId } = await getCurrentAgentContext();
   const { status, reason, count, network } = await searchParams;
+  const t = await getServerT();
 
   // Pull this agent's existing connections in parallel. Service-role
   // reads; the token columns are intentionally OMITTED from the
@@ -92,18 +96,17 @@ export default async function ConnectPage({ searchParams }: PageProps) {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">
-            Connect platforms
+            {t("connect.title", { ns: "web_generate_leads" })}
           </h1>
           <p className="text-sm text-gray-500">
-            Connect your social accounts so Generate Leads can publish posts
-            directly.
+            {t("connect.subtitle", { ns: "web_generate_leads" })}
           </p>
         </div>
         <Link
           href="/dashboard/leads/generate"
           className="text-sm text-gray-500 hover:text-gray-900"
         >
-          &larr; Back
+          {t("connect.back", { ns: "web_generate_leads" })}
         </Link>
       </div>
 

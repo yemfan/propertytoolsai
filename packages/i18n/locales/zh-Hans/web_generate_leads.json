@@ -1,0 +1,84 @@
+{
+  "landing": {
+    "metadata": {
+      "title": "获取客户 | LeadSmart AI",
+      "description": "生成社交媒体帖子并投放广告，将新客户带入 LeadSmart AI。"
+    },
+    "title": "获取客户",
+    "subtitle": "几秒钟内即可起草社交媒体帖子，然后分享到 Facebook、Instagram、LinkedIn 或 X。",
+    "nav": {
+      "posts": "已发布 →",
+      "scheduled": "定时 →",
+      "recurring": "周期 →",
+      "connect": "连接平台 →"
+    },
+    "quick_post": {
+      "title": "快速发布",
+      "body": "点击为房源或看房日起草社交媒体帖子。AI 帮您撰写，您来发布 — Facebook、Instagram、LinkedIn、X。",
+      "cta": "新建帖子"
+    },
+    "ads": {
+      "title": "投放广告",
+      "premium_badge": "高级版",
+      "body": "投放 Meta Lead 广告 — 您的客户将直接进入 CRM，并自动标记来源活动。",
+      "billing_note": "Meta 广告由您自行付费 · Google 广告将在第三阶段推出",
+      "cta": "查看活动"
+    },
+    "suggestions": {
+      "heading": "本周建议",
+      "hint": "点击卡片打开向导，并自动填入该主题。",
+      "draft_cta": "起草帖子 →",
+      "badges": {
+        "new": "新",
+        "this_week": "本周",
+        "celebrate": "已成交"
+      }
+    },
+    "roadmap_footer": "第一阶段：快速发布（当前）。第二阶段（约 4 周后）：直接发布到 Meta + Meta Lead 广告。第三阶段：Google 广告 + 跨平台优化。"
+  },
+  "connect": {
+    "metadata": {
+      "title": "连接平台 | LeadSmart AI",
+      "description": "连接您的 Facebook 主页、Instagram 商业账户和 LinkedIn 资料，让获取客户可以直接发布内容。"
+    },
+    "title": "连接平台",
+    "subtitle": "连接您的社交账户，让获取客户可以直接发布帖子。",
+    "back": "← 返回"
+  },
+  "scheduled": {
+    "metadata": {
+      "title": "定时发布 | LeadSmart AI",
+      "description": "等待发布的社交媒体帖子队列，以及最近的结果。"
+    },
+    "title": "定时发布",
+    "subtitle": "等待稍后发布的帖子，以及最近的结果。",
+    "error_prefix": "无法加载定时发布：{{message}}",
+    "nav": {
+      "back_to_generate": "← 获取客户",
+      "recurring": "🔁 周期",
+      "new_post": "+ 新建帖子"
+    }
+  },
+  "recurring": {
+    "metadata": {
+      "title": "周期发布 | LeadSmart AI",
+      "description": "管理您的每日和每周周期社交媒体帖子。"
+    },
+    "title": "周期发布",
+    "subtitle": "每日和每周模板将由任务自动生成定时帖子。",
+    "back": "← 返回"
+  },
+  "ads": {
+    "metadata": {
+      "title": "Lead 广告活动 | LeadSmart AI",
+      "description": "管理您的 Meta Lead 广告活动 — 暂停 / 恢复、刷新数据、查看获取的客户。"
+    },
+    "title": "Lead 广告活动",
+    "subtitle": "您的 Meta Lead 广告历史。可暂停、恢复或刷新任意进行中活动的数据。",
+    "error_prefix": "无法加载活动：{{message}}",
+    "nav": {
+      "back_to_generate": "← 获取客户",
+      "new_campaign": "+ 新建活动"
+    }
+  }
+}

@@ -2,18 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { getServerT } from "@/lib/i18n/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 import CampaignListClient, {
   type CampaignRow,
 } from "./CampaignListClient";
 
-export const metadata: Metadata = {
-  title: "Lead Ad Campaigns | LeadSmart AI",
-  description:
-    "Manage your Meta Lead Ad campaigns — pause / resume, refresh metrics, view captured leads.",
-  robots: { index: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t("ads.metadata.title", { ns: "web_generate_leads" }),
+    description: t("ads.metadata.description", { ns: "web_generate_leads" }),
+    robots: { index: false },
+  };
+}
 
 /**
  * Lead Ad campaigns dashboard. Server-renders the list (token-free
@@ -25,6 +28,7 @@ export const metadata: Metadata = {
  */
 export default async function AdCampaignsPage() {
   const { agentId } = await getCurrentAgentContext();
+  const t = await getServerT();
 
   const { data, error } = await supabaseAdmin
     .from("lead_ad_campaigns")
@@ -39,7 +43,7 @@ export default async function AdCampaignsPage() {
     return (
       <div className="mx-auto max-w-5xl px-4 py-6">
         <p className="text-sm text-red-700">
-          Couldn&apos;t load campaigns: {error.message}
+          {t("ads.error_prefix", { ns: "web_generate_leads", message: error.message })}
         </p>
       </div>
     );
@@ -119,11 +123,10 @@ export default async function AdCampaignsPage() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">
-            Lead Ad Campaigns
+            {t("ads.title", { ns: "web_generate_leads" })}
           </h1>
           <p className="text-sm text-gray-500">
-            Your Meta Lead Ad history. Pause, resume, or refresh metrics on
-            any active campaign.
+            {t("ads.subtitle", { ns: "web_generate_leads" })}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -131,13 +134,13 @@ export default async function AdCampaignsPage() {
             href="/dashboard/leads/generate"
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            &larr; Generate Leads
+            {t("ads.nav.back_to_generate", { ns: "web_generate_leads" })}
           </Link>
           <Link
             href="/dashboard/leads/generate/ads/new"
             className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
           >
-            + New campaign
+            {t("ads.nav.new_campaign", { ns: "web_generate_leads" })}
           </Link>
         </div>
       </div>
