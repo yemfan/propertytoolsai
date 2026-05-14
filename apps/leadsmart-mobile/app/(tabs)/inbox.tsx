@@ -1,5 +1,6 @@
 import type { MobileInboxThreadDto } from "@leadsmart/shared";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FlatList,
   Pressable,
@@ -48,15 +49,18 @@ function ThreadRowInner({
 }) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
-  const channel = item.channel === "sms" ? "SMS" : "Email";
+  const { t } = useTranslation("inbox");
+  const channel = item.channel === "sms" ? t("channel.sms") : t("channel.email");
   const hot = item.isHotLead;
+  const leadName = item.leadName?.trim() || t("row.lead_fallback", { id: item.leadId });
+  const directionLabel = item.lastDirection === "inbound" ? t("direction.inbound") : t("direction.outbound");
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${hot ? "Hot lead. " : ""}${channel} thread for ${item.leadName ?? item.leadId}`}
-      accessibilityHint="Opens the conversation"
+      accessibilityLabel={`${hot ? t("row.a11y.hot_prefix") : ""}${t("row.a11y.label", { channel, name: leadName })}`}
+      accessibilityHint={t("row.a11y.hint")}
       style={({ pressed }) => [
         styles.row,
         hot && styles.rowHot,
@@ -65,7 +69,7 @@ function ThreadRowInner({
     >
       {hot ? (
         <View style={styles.hotStripe}>
-          <Text style={styles.hotStripeText}>HOT LEAD</Text>
+          <Text style={styles.hotStripeText}>{t("row.hot_stripe")}</Text>
         </View>
       ) : null}
       <View style={styles.rowInner}>
@@ -73,20 +77,20 @@ function ThreadRowInner({
           <Text style={styles.channel}>{channel}</Text>
           {hot ? (
             <View style={styles.hotPill}>
-              <Text style={styles.hotPillText}>Priority</Text>
+              <Text style={styles.hotPillText}>{t("row.hot_pill")}</Text>
             </View>
           ) : null}
           <Text style={styles.time}>{formatShortDateTime(item.lastMessageAt)}</Text>
         </View>
         <Text style={[styles.name, hot && styles.nameHot]} numberOfLines={1}>
-          {item.leadName?.trim() || `Lead ${item.leadId}`}
+          {leadName}
         </Text>
         <Text style={styles.preview} numberOfLines={2}>
-          {item.preview || "—"}
+          {item.preview || t("row.preview_empty")}
         </Text>
         <Text style={styles.meta}>
-          {item.leadId === DEMO_LEAD_ID ? "Sample · " : ""}
-          {item.lastDirection === "inbound" ? "Inbound" : "Outbound"}
+          {item.leadId === DEMO_LEAD_ID ? t("row.sample_prefix") : ""}
+          {directionLabel}
         </Text>
       </View>
     </Pressable>
@@ -99,6 +103,7 @@ export default function InboxScreen() {
   const router = useRouter();
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("inbox");
   const [threads, setThreads] = useState<MobileInboxThreadDto[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -188,7 +193,7 @@ export default function InboxScreen() {
   );
 
   const keyExtractor = useCallback(
-    (t: MobileInboxThreadDto) => `${t.leadId}-${t.channel}-${t.messageId}`,
+    (thread: MobileInboxThreadDto) => `${thread.leadId}-${thread.channel}-${thread.messageId}`,
     []
   );
 
@@ -196,11 +201,11 @@ export default function InboxScreen() {
     if (error) return null;
     return (
       <EmptyState
-        title="No conversations yet"
-        subtitle="When leads text or email, their threads will show up here."
+        title={t("empty.title")}
+        subtitle={t("empty.subtitle")}
       />
     );
-  }, [error]);
+  }, [error, t]);
 
   /*
    * First-load skeleton state. Matches the shape of a real inbox
@@ -221,7 +226,7 @@ export default function InboxScreen() {
     <FadeIn style={styles.container}>
       {error ? (
         <ErrorBanner
-          title="Could not load inbox"
+          title={t("error.title")}
           message={error.message}
           onRetry={cacheRefresh}
         />

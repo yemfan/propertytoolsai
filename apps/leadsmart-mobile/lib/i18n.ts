@@ -31,6 +31,7 @@ import {
 
 import enCommon from "@leadsmart/i18n/locale/en/common";
 import enHome from "@leadsmart/i18n/locale/en/home";
+import enInbox from "@leadsmart/i18n/locale/en/inbox";
 import enLeadComponents from "@leadsmart/i18n/locale/en/lead_components";
 import enLeadDetail from "@leadsmart/i18n/locale/en/lead_detail";
 import enLeads from "@leadsmart/i18n/locale/en/leads";
@@ -41,6 +42,7 @@ import enSettings from "@leadsmart/i18n/locale/en/settings";
 import enTaskCalendarComponents from "@leadsmart/i18n/locale/en/task_calendar_components";
 import zhCommon from "@leadsmart/i18n/locale/zh-Hans/common";
 import zhHome from "@leadsmart/i18n/locale/zh-Hans/home";
+import zhInbox from "@leadsmart/i18n/locale/zh-Hans/inbox";
 import zhLeadComponents from "@leadsmart/i18n/locale/zh-Hans/lead_components";
 import zhLeadDetail from "@leadsmart/i18n/locale/zh-Hans/lead_detail";
 import zhLeads from "@leadsmart/i18n/locale/zh-Hans/leads";
@@ -64,6 +66,7 @@ const resources = {
     lead_components: enLeadComponents,
     task_calendar_components: enTaskCalendarComponents,
     reply_composer: enReplyComposer,
+    inbox: enInbox,
   },
   "zh-Hans": {
     common: zhCommon,
@@ -76,6 +79,7 @@ const resources = {
     lead_components: zhLeadComponents,
     task_calendar_components: zhTaskCalendarComponents,
     reply_composer: zhReplyComposer,
+    inbox: zhInbox,
   },
 } as const;
 
@@ -152,6 +156,7 @@ export function initI18n(): Promise<typeof i18n> {
         "lead_components",
         "task_calendar_components",
         "reply_composer",
+        "inbox",
       ],
       interpolation: {
         // React Native handles escaping; double-escaping breaks

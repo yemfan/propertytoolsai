@@ -1,0 +1,29 @@
+{
+  "channel": {
+    "sms": "短信",
+    "email": "邮件"
+  },
+  "direction": {
+    "inbound": "收件",
+    "outbound": "发件"
+  },
+  "row": {
+    "hot_stripe": "热门客户",
+    "hot_pill": "优先",
+    "lead_fallback": "客户 {{id}}",
+    "preview_empty": "—",
+    "sample_prefix": "示例 · ",
+    "a11y": {
+      "label": "{{name}} 的{{channel}}对话",
+      "hot_prefix": "热门客户。",
+      "hint": "打开对话"
+    }
+  },
+  "empty": {
+    "title": "暂无对话",
+    "subtitle": "当客户通过短信或邮件联系时，对话将显示在这里。"
+  },
+  "error": {
+    "title": "无法加载收件箱"
+  }
+}
