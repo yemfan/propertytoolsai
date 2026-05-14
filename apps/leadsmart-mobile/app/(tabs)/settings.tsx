@@ -1,6 +1,8 @@
+import { SUPPORTED_LOCALES, type SupportedLocale } from "@leadsmart/i18n";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Pressable,
@@ -16,6 +18,7 @@ import {
   patchMobileNotificationPreferences,
 } from "../../lib/leadsmartMobileApi";
 import { getSupabaseAuthClient } from "../../lib/supabaseAuthClient";
+import { setStoredLocale } from "../../lib/i18n";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
 import {
@@ -25,11 +28,17 @@ import {
   hapticWarning,
 } from "../../lib/haptics";
 
+const LANGUAGE_LABEL_KEY: Record<SupportedLocale, string> = {
+  en: "language.english",
+  "zh-Hans": "language.chinese_simplified",
+};
+
 export default function SettingsScreen() {
   const router = useRouter();
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const { signOut } = useLeadsmartSession();
+  const { t, i18n } = useTranslation(["settings", "common"]);
   const [email, setEmail] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [prefsLoading, setPrefsLoading] = useState(true);
@@ -38,6 +47,17 @@ export default function SettingsScreen() {
   const [pushMissed, setPushMissed] = useState(true);
   const [pushReminder, setPushReminder] = useState(true);
   const [pushMilestone, setPushMilestone] = useState(true);
+  const currentLocale = (i18n.language as SupportedLocale) ?? "en";
+
+  const onPickLocale = useCallback(async (loc: SupportedLocale) => {
+    if (loc === currentLocale) return;
+    hapticSelectionChange();
+    try {
+      await setStoredLocale(loc);
+    } catch {
+      hapticError();
+    }
+  }, [currentLocale]);
   const [digestMin, setDigestMin] = useState(15);
 
   useEffect(() => {
@@ -111,25 +131,49 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-      <Text style={styles.h1}>Settings</Text>
-      <Text style={styles.sub}>Account and preferences</Text>
+      <Text style={styles.h1}>{t("title")}</Text>
+      <Text style={styles.sub}>{t("subtitle")}</Text>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Signed in as</Text>
+        <Text style={styles.label}>{t("signed_in_as")}</Text>
         <Text style={styles.email}>{email ?? "—"}</Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Push notifications</Text>
-        <Text style={styles.hint}>
-          Hot leads send immediately. Reminders are batched on the server to reduce noise.
-        </Text>
+        <Text style={styles.label}>{t("language.title")}</Text>
+        <Text style={styles.hint}>{t("language.description")}</Text>
+        {SUPPORTED_LOCALES.map((loc) => {
+          const active = loc === currentLocale;
+          return (
+            <Pressable
+              key={loc}
+              onPress={() => void onPickLocale(loc)}
+              style={({ pressed }) => [
+                styles.localeRow,
+                active && styles.localeRowActive,
+                pressed && styles.localeRowPressed,
+              ]}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
+            >
+              <Text style={[styles.localeLabel, active && styles.localeLabelActive]}>
+                {t(LANGUAGE_LABEL_KEY[loc], { ns: "common" })}
+              </Text>
+              {active && <Text style={styles.localeCheck}>✓</Text>}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>{t("push.title")}</Text>
+        <Text style={styles.hint}>{t("push.description")}</Text>
         {prefsLoading ? (
           <ActivityIndicator style={styles.prefsSpinner} color={tokens.accent} />
         ) : (
           <>
             <View style={styles.row}>
-              <Text style={styles.rowLabel}>Hot leads (high priority)</Text>
+              <Text style={styles.rowLabel}>{t("push.hot_leads")}</Text>
               <Switch
                 value={pushHot}
                 onValueChange={(v) => {
@@ -140,7 +184,7 @@ export default function SettingsScreen() {
               />
             </View>
             <View style={styles.row}>
-              <Text style={styles.rowLabel}>Missed calls</Text>
+              <Text style={styles.rowLabel}>{t("push.missed_calls")}</Text>
               <Switch
                 value={pushMissed}
                 onValueChange={(v) => {
@@ -151,7 +195,7 @@ export default function SettingsScreen() {
               />
             </View>
             <View style={styles.row}>
-              <Text style={styles.rowLabel}>Follow-up reminders (batched)</Text>
+              <Text style={styles.rowLabel}>{t("push.follow_ups")}</Text>
               <Switch
                 value={pushReminder}
                 onValueChange={(v) => {
@@ -162,7 +206,7 @@ export default function SettingsScreen() {
               />
             </View>
             <View style={styles.row}>
-              <Text style={styles.rowLabel}>Post engagement milestones</Text>
+              <Text style={styles.rowLabel}>{t("push.post_milestones")}</Text>
               <Switch
                 value={pushMilestone}
                 onValueChange={(v) => {
@@ -173,7 +217,7 @@ export default function SettingsScreen() {
               />
             </View>
             <Text style={styles.digestNote}>
-              Digest window: {digestMin} min (server-side; contact support to tune).
+              {t("push.digest_window", { minutes: digestMin })}
             </Text>
           </>
         )}
@@ -186,9 +230,9 @@ export default function SettingsScreen() {
         }}
         style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
         accessibilityRole="button"
-        accessibilityLabel="Open notification center"
+        accessibilityLabel={t("links.notification_center")}
       >
-        <Text style={styles.secondaryBtnText}>Notification center</Text>
+        <Text style={styles.secondaryBtnText}>{t("links.notification_center")}</Text>
       </Pressable>
 
       {/*
@@ -207,15 +251,14 @@ export default function SettingsScreen() {
         }}
         style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
         accessibilityRole="button"
-        accessibilityLabel="Replay onboarding walkthrough"
-        accessibilityHint="Shows the app intro and notification setup again"
+        accessibilityLabel={t("links.replay_onboarding")}
       >
-        <Text style={styles.secondaryBtnText}>Replay onboarding</Text>
+        <Text style={styles.secondaryBtnText}>{t("links.replay_onboarding")}</Text>
       </Pressable>
 
       <View style={styles.card}>
-        <Text style={styles.label}>App</Text>
-        <Text style={styles.meta}>LeadSmart AI · v{version}</Text>
+        <Text style={styles.label}>{t("app_section.title")}</Text>
+        <Text style={styles.meta}>{t("app_section.version", { version })}</Text>
       </View>
 
       <Pressable
@@ -223,12 +266,12 @@ export default function SettingsScreen() {
         disabled={signingOut}
         style={({ pressed }) => [styles.signOut, pressed && styles.signOutPressed]}
         accessibilityRole="button"
-        accessibilityLabel="Sign out"
+        accessibilityLabel={t("sign_out_a11y")}
       >
         {signingOut ? (
           <ActivityIndicator color={tokens.textOnAccent} />
         ) : (
-          <Text style={styles.signOutText}>Sign out</Text>
+          <Text style={styles.signOutText}>{t("actions.sign_out", { ns: "common" })}</Text>
         )}
       </Pressable>
     </ScrollView>
@@ -273,6 +316,26 @@ const createStyles = (theme: ThemeTokens) => StyleSheet.create({
   },
   rowLabel: { flex: 1, fontSize: 15, color: theme.text, fontWeight: "600" },
   digestNote: { fontSize: 12, color: theme.textSubtle, marginTop: 4 },
+  localeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.bg,
+    marginTop: 8,
+  },
+  localeRowActive: {
+    backgroundColor: theme.accentLight,
+    borderColor: theme.accent,
+  },
+  localeRowPressed: { opacity: 0.85 },
+  localeLabel: { fontSize: 15, fontWeight: "600", color: theme.text },
+  localeLabelActive: { color: theme.accent },
+  localeCheck: { fontSize: 17, fontWeight: "800", color: theme.accent },
   secondaryBtn: {
     marginTop: 16,
     paddingVertical: 14,

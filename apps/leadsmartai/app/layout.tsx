@@ -5,6 +5,8 @@ import AuthProvider from "@/components/AuthProvider";
 import AppShell from "@/components/AppShell";
 import { CookieConsentProvider } from "@/components/cookie-consent/CookieConsent";
 import { ReferralCodeCapture } from "@/components/referrals/ReferralCodeCapture";
+import { I18nProvider } from "@/lib/i18n/I18nProvider";
+import { getServerLocale } from "@/lib/i18n/server";
 import { getSiteUrl } from "@/lib/siteUrl";
 
 const fontHeading = Montserrat({
@@ -151,9 +153,17 @@ const jsonLd = [
   },
 ];
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // Resolve the agent's locale on the server (cookie → Accept-
+  // Language → English) so SSR + the first client render match
+  // and we avoid a hydration flicker.
+  const locale = await getServerLocale();
+  // BCP-47 → HTML lang attribute. "zh-Hans" is valid HTML so we
+  // pass it through unchanged.
+  const htmlLang = locale === "zh-Hans" ? "zh-Hans" : "en";
+
   return (
-    <html lang="en">
+    <html lang={htmlLang}>
       <head>
         {jsonLd.map((schema, i) => (
           <script
@@ -179,12 +189,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         >
           Skip to content
         </a>
-        <AuthProvider>
-          <CookieConsentProvider>
-            <ReferralCodeCapture />
-            <AppShell>{children}</AppShell>
-          </CookieConsentProvider>
-        </AuthProvider>
+        <I18nProvider locale={locale}>
+          <AuthProvider>
+            <CookieConsentProvider>
+              <ReferralCodeCapture />
+              <AppShell>{children}</AppShell>
+            </CookieConsentProvider>
+          </AuthProvider>
+        </I18nProvider>
       </body>
     </html>
   );
