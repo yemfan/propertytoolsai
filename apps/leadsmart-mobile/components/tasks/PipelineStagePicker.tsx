@@ -1,5 +1,4 @@
 import type { MobilePipelineSlug, MobilePipelineStageOptionDto } from "@leadsmart/shared";
-import { MOBILE_PIPELINE_LABELS } from "@leadsmart/shared";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -14,10 +13,6 @@ type Props = {
   onSelect: (slug: MobilePipelineSlug) => void;
 };
 
-function labelFor(stage: MobilePipelineStageOptionDto): string {
-  return MOBILE_PIPELINE_LABELS[stage.mobile_slug] ?? stage.name;
-}
-
 export function PipelineStagePicker({
   stages,
   selectedSlug,
@@ -28,6 +23,10 @@ export function PipelineStagePicker({
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const { t } = useTranslation("lead_components");
+  // Custom pipelines (slugs outside the canonical six) fall back to
+  // `stage.name` so workspaces with bespoke stages keep working.
+  const labelFor = (stage: MobilePipelineStageOptionDto): string =>
+    t(`pipeline.slug.${stage.mobile_slug}`, { defaultValue: stage.name });
 
   if (!stages.length) {
     return (

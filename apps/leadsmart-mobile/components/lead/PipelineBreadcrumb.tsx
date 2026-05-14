@@ -1,5 +1,4 @@
 import type { MobilePipelineSlug, MobilePipelineStageOptionDto } from "@leadsmart/shared";
-import { MOBILE_PIPELINE_LABELS } from "@leadsmart/shared";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
@@ -11,14 +10,16 @@ type Props = {
   selectedSlug: MobilePipelineSlug | null;
 };
 
-function labelFor(stage: MobilePipelineStageOptionDto): string {
-  return MOBILE_PIPELINE_LABELS[stage.mobile_slug] ?? stage.name;
-}
-
 export function PipelineBreadcrumb({ stages, selectedSlug }: Props) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const { t } = useTranslation("lead_components");
+  // `stage.name` (server) is the user-visible fallback when a slug
+  // we don't yet have a translation key for shows up — keeps custom
+  // pipelines working without forcing a release.
+  const labelFor = (stage: MobilePipelineStageOptionDto): string =>
+    t(`pipeline.slug.${stage.mobile_slug}`, { defaultValue: stage.name });
+
   if (!stages.length) {
     return (
       <Text style={styles.fallback}>{t("pipeline.breadcrumb_not_configured")}</Text>

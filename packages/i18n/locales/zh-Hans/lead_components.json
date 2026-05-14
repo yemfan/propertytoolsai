@@ -53,6 +53,14 @@
   },
   "pipeline": {
     "breadcrumb_not_configured": "未配置客户阶段",
-    "picker_unavailable": "该账户暂无可用的客户阶段。"
+    "picker_unavailable": "该账户暂无可用的客户阶段。",
+    "slug": {
+      "new": "新客户",
+      "contacted": "已联系",
+      "qualified": "已资格审核",
+      "showing": "看房",
+      "offer": "出价",
+      "closed": "已成交"
+    }
   }
 }
