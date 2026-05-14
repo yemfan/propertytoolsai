@@ -59,6 +59,8 @@
  *   - web_about         /about page body
  *   - web_pricing       /pricing page body
  *                        (ConsumerPricingClientPage)
+ *   - web_quick_post    Quick Post wizard
+ *                        (/dashboard/leads/generate/post/new)
  *
  * Future namespaces follow the same pattern — add a JSON file pair
  * (en + zh-Hans) and reference it from the app's resources map.
@@ -102,5 +104,6 @@ export const NAMESPACES = [
   "web_landing",
   "web_about",
   "web_pricing",
+  "web_quick_post",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];

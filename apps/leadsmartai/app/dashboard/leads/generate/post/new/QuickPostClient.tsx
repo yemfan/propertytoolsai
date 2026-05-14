@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { buildComposeInstruction, type ComposeInstruction } from "@/lib/leads-gen/share";
+
+type QuickPostT = (key: string, options?: Record<string, unknown>) => string;
 
 /**
  * Quick Post wizard — three steps on a single page so the agent can
@@ -81,55 +84,19 @@ type DraftState = {
   shareUrl: string | null;
 };
 
-const TRIGGER_OPTIONS: { id: Trigger; label: string; icon: string; hint: string }[] = [
-  {
-    id: "new_listing",
-    label: "New listing",
-    icon: "🏠",
-    hint: "Announce a property you just listed",
-  },
-  {
-    id: "open_house",
-    label: "Open house",
-    icon: "📅",
-    hint: "Promote an upcoming open house",
-  },
-  {
-    id: "price_drop",
-    label: "Price drop",
-    icon: "📉",
-    hint: "Re-introduce a listing at a new price",
-  },
-  {
-    id: "just_sold",
-    label: "Just sold",
-    icon: "🎉",
-    hint: "Celebrate a deal you just closed",
-  },
-  {
-    id: "market_update",
-    label: "Market update",
-    icon: "📊",
-    hint: "Share an observation about your local market",
-  },
-  {
-    id: "testimonial",
-    label: "Testimonial",
-    icon: "💬",
-    hint: "Style a client quote into a polished post",
-  },
-  {
-    id: "custom",
-    label: "Custom",
-    icon: "✨",
-    hint: "Write your own brief, AI drafts the post",
-  },
-  {
-    id: "by_address",
-    label: "By address / URL",
-    icon: "🔗",
-    hint: "Paste a listing link or address — we pull the details",
-  },
+/**
+ * Trigger ids + icons. Labels and hints resolve per-render via
+ * `t(\`triggers.${id}.label\`)` and `t(\`triggers.${id}.hint\`)`.
+ */
+const TRIGGER_OPTIONS: { id: Trigger; icon: string }[] = [
+  { id: "new_listing", icon: "🏠" },
+  { id: "open_house", icon: "📅" },
+  { id: "price_drop", icon: "📉" },
+  { id: "just_sold", icon: "🎉" },
+  { id: "market_update", icon: "📊" },
+  { id: "testimonial", icon: "💬" },
+  { id: "custom", icon: "✨" },
+  { id: "by_address", icon: "🔗" },
 ];
 
 /**
@@ -143,15 +110,22 @@ const TRIGGER_OPTIONS: { id: Trigger; label: string; icon: string; hint: string 
  * advancing to step 3); for the listing triggers it shows up under
  * the subject picker as an optional "Add an angle" disclosure.
  */
+/**
+ * Per-trigger brief field config. The brief field's role changes by
+ * trigger — for listing-anchored triggers it's optional flavor; for
+ * the synthetic triggers (custom / market_update / testimonial) it's
+ * the only context the model has.
+ *
+ * Placeholder / help strings resolve per-render via
+ * `t(\`brief.${trigger}.placeholder\`)` and `_.help` so they follow the
+ * active locale. Only `required` and `step2Mode` stay in code since
+ * they're behavior, not copy.
+ */
 const BRIEF_CONFIG: Record<
   Trigger,
   {
     /** Brief is required to generate a draft. */
     required: boolean;
-    /** Placeholder text in the textarea. */
-    placeholder: string;
-    /** Help text shown under the field. */
-    help: string;
     /** Step-2 panel mode:
      *    "picker"  — CRM-anchored listing list (with optional flavor brief)
      *    "brief"   — free-form textarea only (custom / testimonial / market update)
@@ -160,64 +134,22 @@ const BRIEF_CONFIG: Record<
     step2Mode: "picker" | "brief" | "lookup";
   }
 > = {
-  new_listing: {
-    required: false,
-    placeholder:
-      "Optional — what's the standout feature? (e.g. 'beautifully updated kitchen, sun-drenched backyard, walk to the village')",
-    help: "Optional. Specific details make the post sound less generic.",
-    step2Mode: "picker",
-  },
-  open_house: {
-    required: false,
-    placeholder:
-      "Optional — anything special about the home or the open house (e.g. 'brand-new bathroom, light bites & coffee provided')",
-    help: "Optional. Mention staging, refreshments, or unique features if any.",
-    step2Mode: "picker",
-  },
-  price_drop: {
-    required: false,
-    placeholder:
-      "Optional — old price + reason (e.g. 'Down from $1.45M to $1.39M — motivated seller, fast close possible')",
-    help: "Mention the previous price if you want it referenced. AI will not invent numbers.",
-    step2Mode: "picker",
-  },
-  just_sold: {
-    required: false,
-    placeholder:
-      "Optional — anything special (e.g. 'closed in 14 days, multiple offers, repeat client')",
-    help: "Optional. Skip client names unless they've explicitly OK'd a public mention.",
-    step2Mode: "picker",
-  },
-  market_update: {
-    required: true,
-    placeholder:
-      "What's the angle? (e.g. 'Inventory in Pasadena is up 18% MoM, rates have eased below 6.5% — buyers who paused are back')",
-    help: "Specific data points produce better posts than generic 'the market is changing'.",
-    step2Mode: "brief",
-  },
-  testimonial: {
-    required: true,
-    placeholder:
-      "Paste the client quote verbatim, plus their first name if you have it (e.g. 'Sarah: \"Mike made the whole process feel easy — we closed in under 30 days and he negotiated $15k off the asking.\"')",
-    help: "AI will use the quote verbatim. Add the client's first name if they've consented to public mention.",
-    step2Mode: "brief",
-  },
-  custom: {
-    required: true,
-    placeholder:
-      "Describe what the post should say — angle, tone, any specifics worth including.",
-    help: "Be specific — names, neighborhoods, numbers, and angles help AI write a post that doesn't sound generic.",
-    step2Mode: "brief",
-  },
-  by_address: {
-    required: true,
-    placeholder:
-      "Paste a listing URL (Zillow, Redfin, MLS, etc.) or just type an address.",
-    help: "We'll look up the property and pre-fill the brief with what we find — you can edit before generating.",
-    step2Mode: "lookup",
-  },
+  new_listing: { required: false, step2Mode: "picker" },
+  open_house: { required: false, step2Mode: "picker" },
+  price_drop: { required: false, step2Mode: "picker" },
+  just_sold: { required: false, step2Mode: "picker" },
+  market_update: { required: true, step2Mode: "brief" },
+  testimonial: { required: true, step2Mode: "brief" },
+  custom: { required: true, step2Mode: "brief" },
+  by_address: { required: true, step2Mode: "lookup" },
 };
 
+/**
+ * Platform tabs — brand names are kept as-is (Facebook, Instagram, etc.)
+ * since the i18n product decision is to render social-network names
+ * untranslated. We expose them via the `id` so the JSX can render
+ * `PLATFORM_TABS.find(...).id`-derived label directly.
+ */
 const PLATFORM_TABS: { id: Platform; label: string }[] = [
   { id: "facebook", label: "Facebook" },
   { id: "instagram", label: "Instagram" },
@@ -272,6 +204,7 @@ type Connection = {
 };
 
 export default function QuickPostClient() {
+  const { t } = useTranslation("web_quick_post");
   const searchParams = useSearchParams();
   const [trigger, setTrigger] = useState<Trigger | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -450,7 +383,7 @@ export default function QuickPostClient() {
         };
         if (cancelled) return;
         if (!res.ok || !body.ok) {
-          throw new Error(body.error ?? "Failed to load subjects");
+          throw new Error(body.error ?? t("errors.subjects_load_failed"));
         }
         const list = body.subjects ?? [];
         setSubjects(list);
@@ -469,7 +402,7 @@ export default function QuickPostClient() {
         }
       })
       .catch((e) => {
-        if (!cancelled) setSubjectsError(e instanceof Error ? e.message : "Failed to load");
+        if (!cancelled) setSubjectsError(e instanceof Error ? e.message : t("errors.subjects_load_short"));
       })
       .finally(() => {
         if (!cancelled) setSubjectsLoading(false);
@@ -479,6 +412,8 @@ export default function QuickPostClient() {
     };
     // searchParams intentionally captured at trigger-change time —
     // we don't want subsequent param mutations to retrigger the fetch.
+    // searchParams + t intentionally not in deps — captured at trigger-change
+    // time so locale flips mid-flight don't refetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trigger]);
 
@@ -491,7 +426,7 @@ export default function QuickPostClient() {
   const runLookup = useCallback(async () => {
     const input = lookupInput.trim();
     if (!input || input.length < 3) {
-      setLookupError("Paste an address or listing URL first.");
+      setLookupError(t("errors.lookup_input_required"));
       return;
     }
     setLookupBusy(true);
@@ -508,7 +443,7 @@ export default function QuickPostClient() {
         error?: string;
       };
       if (!res.ok || !body.ok || !body.result) {
-        throw new Error(body.error ?? "Lookup failed");
+        throw new Error(body.error ?? t("errors.lookup_failed"));
       }
       setLookupResult(body.result);
       setBrief(body.result.brief);
@@ -517,11 +452,11 @@ export default function QuickPostClient() {
       // since we don't have a CRM record id to attach.
       setSubjectId("by_address");
     } catch (e) {
-      setLookupError(e instanceof Error ? e.message : "Lookup failed");
+      setLookupError(e instanceof Error ? e.message : t("errors.lookup_failed"));
     } finally {
       setLookupBusy(false);
     }
-  }, [lookupInput, lookupResult]);
+  }, [lookupInput, lookupResult, t]);
 
   const generate = useCallback(async () => {
     if (!trigger || !subjectId) return;
@@ -539,7 +474,7 @@ export default function QuickPostClient() {
         }),
       });
       const body = (await res.json().catch(() => ({}))) as DraftResponse;
-      if (!res.ok || !body.ok) throw new Error(body.error ?? "Draft failed");
+      if (!res.ok || !body.ok) throw new Error(body.error ?? t("errors.draft_failed"));
       setDrafts((prev) => ({
         ...prev,
         [platform]: {
@@ -550,11 +485,11 @@ export default function QuickPostClient() {
         },
       }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Draft failed");
+      setError(e instanceof Error ? e.message : t("errors.draft_failed"));
     } finally {
       setDrafting(false);
     }
-  }, [trigger, subjectId, platform, brief]);
+  }, [trigger, subjectId, platform, brief, t]);
 
   const updateCaption = useCallback(
     (next: string) => {
@@ -642,7 +577,7 @@ export default function QuickPostClient() {
       if (!res.ok || !body.ok) {
         setPublishResult({
           ok: false,
-          error: body.error ?? "Publish failed",
+          error: body.error ?? t("errors.publish_failed"),
         });
         return;
       }
@@ -655,12 +590,12 @@ export default function QuickPostClient() {
     } catch (e) {
       setPublishResult({
         ok: false,
-        error: e instanceof Error ? e.message : "Publish failed",
+        error: e instanceof Error ? e.message : t("errors.publish_failed"),
       });
     } finally {
       setPublishing(false);
     }
-  }, [currentDraft, activeConnection, platform, selectedMedia, trigger, subject]);
+  }, [currentDraft, activeConnection, platform, selectedMedia, trigger, subject, t]);
 
   // Reset publish result when the agent switches platforms or
   // re-generates the draft — stale "Published ✓" banner on a
@@ -691,7 +626,7 @@ export default function QuickPostClient() {
       // browser's local offset, then to ISO UTC for the API.
       const localMs = new Date(scheduledFor).getTime();
       if (!Number.isFinite(localMs)) {
-        throw new Error("Invalid date/time");
+        throw new Error(t("errors.invalid_datetime"));
       }
       const scheduledForIso = new Date(localMs).toISOString();
       const res = await fetch("/api/leads-gen/schedule", {
@@ -716,7 +651,7 @@ export default function QuickPostClient() {
         error?: string;
       };
       if (!res.ok || !body.ok || !body.scheduledPostId || !body.scheduledFor) {
-        setScheduleResult({ ok: false, error: body.error ?? "Schedule failed" });
+        setScheduleResult({ ok: false, error: body.error ?? t("errors.schedule_failed") });
         return;
       }
       setScheduleResult({
@@ -730,7 +665,7 @@ export default function QuickPostClient() {
     } catch (e) {
       setScheduleResult({
         ok: false,
-        error: e instanceof Error ? e.message : "Schedule failed",
+        error: e instanceof Error ? e.message : t("errors.schedule_failed"),
       });
     } finally {
       setScheduling(false);
@@ -743,6 +678,7 @@ export default function QuickPostClient() {
     selectedMedia,
     trigger,
     subject,
+    t,
   ]);
 
   // Make this recurring — POSTs to /api/leads-gen/recurring. Creates
@@ -793,7 +729,7 @@ export default function QuickPostClient() {
       ) {
         setRecurringResult({
           ok: false,
-          error: body.error ?? "Recurring create failed",
+          error: body.error ?? t("errors.recurring_failed"),
         });
         return;
       }
@@ -808,7 +744,7 @@ export default function QuickPostClient() {
     } catch (e) {
       setRecurringResult({
         ok: false,
-        error: e instanceof Error ? e.message : "Recurring create failed",
+        error: e instanceof Error ? e.message : t("errors.recurring_failed"),
       });
     } finally {
       setCreatingRecurring(false);
@@ -826,6 +762,7 @@ export default function QuickPostClient() {
     recurringMinute,
     recurringTimezone,
     recurringMaxOccurrences,
+    t,
   ]);
 
   // Lazy-load the library the first time the agent opens the picker.
@@ -840,14 +777,14 @@ export default function QuickPostClient() {
         items?: MediaItem[];
         error?: string;
       };
-      if (!res.ok || !body.ok) throw new Error(body.error ?? "Failed to load");
+      if (!res.ok || !body.ok) throw new Error(body.error ?? t("errors.library_load_failed"));
       setLibrary(body.items ?? []);
     } catch (e) {
-      setLibraryError(e instanceof Error ? e.message : "Failed to load");
+      setLibraryError(e instanceof Error ? e.message : t("errors.library_load_failed"));
     } finally {
       setLibraryLoading(false);
     }
-  }, [libraryLoading]);
+  }, [libraryLoading, t]);
 
   const uploadFile = useCallback(async (file: File) => {
     setError(null);
@@ -865,7 +802,7 @@ export default function QuickPostClient() {
         error?: string;
       };
       if (!res.ok || !body.ok || !body.item) {
-        throw new Error(body.error ?? "Upload failed");
+        throw new Error(body.error ?? t("errors.upload_failed"));
       }
       // Prepend to the library list AND auto-select the upload so
       // the agent doesn't need an extra click to attach it.
@@ -873,11 +810,11 @@ export default function QuickPostClient() {
       setSelectedMedia(body.item);
       setShowLibrary(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed");
+      setError(e instanceof Error ? e.message : t("errors.upload_failed"));
     } finally {
       setUploading(false);
     }
-  }, []);
+  }, [t]);
 
   const downloadSelectedImage = useCallback(async () => {
     if (!selectedMedia?.signedUrl) return;
@@ -899,16 +836,14 @@ export default function QuickPostClient() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Quick Post</h1>
-          <p className="text-sm text-gray-500">
-            AI drafts a social post in seconds. Edit, then share.
-          </p>
+          <h1 className="text-xl font-semibold text-gray-900">{t("header.title")}</h1>
+          <p className="text-sm text-gray-500">{t("header.subtitle")}</p>
         </div>
         <Link
           href="/dashboard/leads/generate"
           className="text-sm text-gray-500 hover:text-gray-900"
         >
-          &larr; Back
+          {t("header.back")}
         </Link>
       </div>
 
@@ -921,16 +856,16 @@ export default function QuickPostClient() {
       {/* Step 1 — Trigger */}
       <Section
         n={1}
-        title="What's this about?"
-        subtitle="Pick the angle of your post."
+        title={t("step1.title")}
+        subtitle={t("step1.subtitle")}
       >
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {TRIGGER_OPTIONS.map((t) => (
+          {TRIGGER_OPTIONS.map((opt) => (
             <button
-              key={t.id}
+              key={opt.id}
               type="button"
               onClick={() => {
-                setTrigger(t.id);
+                setTrigger(opt.id);
                 // Reset brief when switching triggers since the
                 // placeholder text + required-ness changes per trigger;
                 // a stale brief from a prior trigger is rarely useful.
@@ -943,14 +878,14 @@ export default function QuickPostClient() {
                 setLookupError(null);
               }}
               className={`group rounded-xl border p-4 text-left transition ${
-                trigger === t.id
+                trigger === opt.id
                   ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
                   : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/30"
               }`}
             >
-              <div className="text-2xl">{t.icon}</div>
-              <div className="mt-2 text-sm font-semibold text-gray-900">{t.label}</div>
-              <div className="mt-0.5 text-xs text-gray-500">{t.hint}</div>
+              <div className="text-2xl">{opt.icon}</div>
+              <div className="mt-2 text-sm font-semibold text-gray-900">{t(`triggers.${opt.id}.label`)}</div>
+              <div className="mt-0.5 text-xs text-gray-500">{t(`triggers.${opt.id}.hint`)}</div>
             </button>
           ))}
         </div>
@@ -969,23 +904,23 @@ export default function QuickPostClient() {
           n={2}
           title={
             briefConfig.step2Mode === "lookup"
-              ? "Paste the address or URL"
+              ? t("step2.title_lookup")
               : briefConfig.step2Mode === "brief"
-                ? "What's the brief?"
-                : "Which one?"
+                ? t("step2.title_brief")
+                : t("step2.title_picker")
           }
           subtitle={
             briefConfig.step2Mode === "lookup"
-              ? "We'll pull the property details and seed the brief."
+              ? t("step2.subtitle_lookup")
               : briefConfig.step2Mode === "brief"
-                ? "AI writes the post directly from your brief."
+                ? t("step2.subtitle_brief")
                 : trigger === "new_listing"
-                  ? "Pick a listing from the last 60 days."
+                  ? t("step2.subtitle_picker_new_listing")
                   : trigger === "open_house"
-                    ? "Pick an upcoming open house."
+                    ? t("step2.subtitle_picker_open_house")
                     : trigger === "price_drop"
-                      ? "Pick the listing you're re-pricing."
-                      : "Pick a recent closing to celebrate."
+                      ? t("step2.subtitle_picker_price_drop")
+                      : t("step2.subtitle_picker_just_sold")
           }
         >
           {briefConfig.step2Mode === "lookup" ? (
@@ -995,7 +930,7 @@ export default function QuickPostClient() {
                   type="text"
                   value={lookupInput}
                   onChange={(e) => setLookupInput(e.target.value)}
-                  placeholder="123 Main St, Pasadena CA — or paste a Zillow / Redfin / MLS URL"
+                  placeholder={t("step2.lookup.input_placeholder")}
                   className="flex-1 rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !lookupBusy) {
@@ -1010,10 +945,10 @@ export default function QuickPostClient() {
                   disabled={lookupBusy || lookupInput.trim().length < 3}
                   className="shrink-0 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
                 >
-                  {lookupBusy ? "Looking up…" : "Look up"}
+                  {lookupBusy ? t("step2.lookup.looking_up_busy") : t("step2.lookup.look_up")}
                 </button>
               </div>
-              <p className="text-xs text-gray-500">{briefConfig.help}</p>
+              <p className="text-xs text-gray-500">{t(`brief.${trigger}.help`)}</p>
               {lookupError && (
                 <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
                   {lookupError}
@@ -1029,8 +964,8 @@ export default function QuickPostClient() {
                 >
                   <p className="font-semibold">
                     {lookupResult.found
-                      ? "Property found"
-                      : "Property not in our database — using what you typed"}
+                      ? t("step2.lookup.result_found")
+                      : t("step2.lookup.result_not_found")}
                   </p>
                   {lookupResult.found && (
                     <p className="mt-0.5">
@@ -1055,7 +990,7 @@ export default function QuickPostClient() {
               {subjectId === "by_address" && (
                 <div className="space-y-2 pt-2">
                   <label className="block text-xs font-semibold text-gray-700">
-                    Brief (editable)
+                    {t("step2.lookup.brief_label")}
                   </label>
                   <textarea
                     value={brief}
@@ -1064,8 +999,7 @@ export default function QuickPostClient() {
                     className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   />
                   <p className="text-[11px] text-gray-500">
-                    AI never invents details — edit to add anything else you
-                    want mentioned (open-house time, standout features, etc.).
+                    {t("step2.lookup.brief_help")}
                   </p>
                 </div>
               )}
@@ -1074,8 +1008,8 @@ export default function QuickPostClient() {
             <BriefInput
               value={brief}
               onChange={setBrief}
-              placeholder={briefConfig.placeholder}
-              help={briefConfig.help}
+              placeholder={t(`brief.${trigger}.placeholder`)}
+              help={t(`brief.${trigger}.help`)}
               required={briefConfig.required}
               onCommit={() => {
                 // Sync the synthetic subject id once a brief is typed.
@@ -1084,11 +1018,12 @@ export default function QuickPostClient() {
                 else if (trigger === "testimonial") setSubjectId("testimonial");
               }}
               committed={subjectId !== null}
+              t={t}
             />
           ) : subjectsLoading ? (
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900" />
-              Loading…
+              {t("step2.loading")}
             </div>
           ) : subjectsError ? (
             <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
@@ -1096,7 +1031,7 @@ export default function QuickPostClient() {
             </p>
           ) : subjects.length === 0 ? (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
-              {emptyStateMessage(trigger)}
+              {emptyStateMessage(trigger, t)}
             </div>
           ) : (
             <>
@@ -1133,18 +1068,19 @@ export default function QuickPostClient() {
               {subjectId && (
                 <details className="mt-4 rounded-lg border border-gray-200 bg-gray-50/60">
                   <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-gray-700 hover:text-gray-900">
-                    Add an angle (optional)
+                    {t("step2.add_angle")}
                   </summary>
                   <div className="border-t border-gray-200 px-3 py-3">
                     <BriefInput
                       value={brief}
                       onChange={setBrief}
-                      placeholder={briefConfig.placeholder}
-                      help={briefConfig.help}
+                      placeholder={t(`brief.${trigger}.placeholder`)}
+                      help={t(`brief.${trigger}.help`)}
                       required={false}
                       onCommit={() => {}}
                       committed={false}
                       inline
+                      t={t}
                     />
                   </div>
                 </details>
@@ -1158,8 +1094,8 @@ export default function QuickPostClient() {
       {subjectId && (
         <Section
           n={3}
-          title="Draft + share"
-          subtitle="AI writes a platform-specific caption. Edit anything before sharing."
+          title={t("step3.title")}
+          subtitle={t("step3.subtitle")}
         >
           <div className="space-y-3">
             <div className="flex items-center gap-1 border-b border-gray-200">
@@ -1182,11 +1118,7 @@ export default function QuickPostClient() {
             {!currentDraft ? (
               <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/60 p-6 text-center">
                 <p className="text-sm text-gray-600">
-                  No draft yet for{" "}
-                  <span className="font-medium text-gray-900">
-                    {PLATFORM_TABS.find((p) => p.id === platform)?.label}
-                  </span>
-                  .
+                  {t("step3.no_draft", { platform: PLATFORM_TABS.find((p) => p.id === platform)?.label })}
                 </p>
                 <button
                   type="button"
@@ -1194,7 +1126,7 @@ export default function QuickPostClient() {
                   disabled={drafting}
                   className="mt-3 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
                 >
-                  {drafting ? "Drafting..." : "Generate draft"}
+                  {drafting ? t("step3.drafting") : t("step3.generate")}
                 </button>
               </div>
             ) : (
@@ -1246,6 +1178,7 @@ export default function QuickPostClient() {
                   }}
                   onClear={() => setSelectedMedia(null)}
                   onUpload={uploadFile}
+                  t={t}
                 />
 
                 {/* Multi-account picker — only renders when the agent
@@ -1253,7 +1186,7 @@ export default function QuickPostClient() {
                     platform. Single connection auto-selects. */}
                 {eligibleConnections.length > 1 && activeConnection && (
                   <div className="flex items-center gap-2 text-xs">
-                    <label className="text-gray-600">Post to:</label>
+                    <label className="text-gray-600">{t("step3.post_to")}</label>
                     <select
                       value={activeConnection.id}
                       onChange={(e) =>
@@ -1269,8 +1202,8 @@ export default function QuickPostClient() {
                           {platform === "instagram" && c.igBusinessUsername
                             ? `@${c.igBusinessUsername}`
                             : platform === "linkedin"
-                              ? c.displayName ?? "LinkedIn member"
-                              : c.fbPageName ?? "Connected Page"}
+                              ? c.displayName ?? t("step3.linkedin_member_fallback")
+                              : c.fbPageName ?? t("step3.page_fallback")}
                         </option>
                       ))}
                     </select>
@@ -1284,7 +1217,7 @@ export default function QuickPostClient() {
                     disabled={drafting}
                     className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
-                    {drafting ? "Regenerating..." : "↻ Regenerate"}
+                    {drafting ? t("step3.regenerating") : t("step3.regenerate")}
                   </button>
                   <button
                     type="button"
@@ -1293,7 +1226,7 @@ export default function QuickPostClient() {
                     }
                     className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
-                    Copy caption
+                    {t("step3.copy_caption")}
                   </button>
 
                   {selectedMedia && (
@@ -1302,7 +1235,7 @@ export default function QuickPostClient() {
                       onClick={downloadSelectedImage}
                       className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                     >
-                      Save image
+                      {t("step3.save_image")}
                     </button>
                   )}
 
@@ -1325,7 +1258,7 @@ export default function QuickPostClient() {
                         disabled={creatingRecurring || !currentDraft?.caption.trim()}
                         className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-50"
                       >
-                        {creatingRecurring ? "Creating…" : "Create recurring"}
+                        {creatingRecurring ? t("actions.creating_recurring") : t("actions.create_recurring")}
                       </button>
                     ) : scheduleMode ? (
                       <button
@@ -1334,7 +1267,7 @@ export default function QuickPostClient() {
                         disabled={scheduling || !currentDraft?.caption.trim()}
                         className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
                       >
-                        {scheduling ? "Scheduling…" : "Schedule"}
+                        {scheduling ? t("actions.scheduling") : t("actions.schedule")}
                       </button>
                     ) : (
                       <button
@@ -1344,8 +1277,8 @@ export default function QuickPostClient() {
                         className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
                       >
                         {publishing
-                          ? "Publishing…"
-                          : `Publish to ${PLATFORM_TABS.find((p) => p.id === platform)?.label}`}
+                          ? t("actions.publishing")
+                          : t("actions.publish_to", { platform: PLATFORM_TABS.find((p) => p.id === platform)?.label })}
                       </button>
                     )
                   ) : compose && compose.composeUrl ? (
@@ -1355,7 +1288,7 @@ export default function QuickPostClient() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
                     >
-                      Share to {PLATFORM_TABS.find((p) => p.id === platform)?.label}
+                      {t("actions.share_to", { platform: PLATFORM_TABS.find((p) => p.id === platform)?.label })}
                       <svg
                         className="h-4 w-4"
                         fill="none"
@@ -1373,8 +1306,8 @@ export default function QuickPostClient() {
                   ) : (
                     <span className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs text-gray-600">
                       {platform === "instagram"
-                        ? "Instagram has no web compose — copy the caption, save the image, and post from the IG app. Or connect a Page to publish directly."
-                        : "Direct share unavailable on this platform"}
+                        ? t("actions.ig_no_compose")
+                        : t("actions.no_share")}
                     </span>
                   )}
                 </div>
@@ -1399,7 +1332,7 @@ export default function QuickPostClient() {
                             onClick={() => setScheduleMode(true)}
                             className="text-xs font-medium text-indigo-700 hover:text-indigo-900"
                           >
-                            ⏰ Schedule for later instead
+                            {t("schedule.later_cta")}
                           </button>
                           <span className="text-gray-300">·</span>
                           <button
@@ -1410,7 +1343,7 @@ export default function QuickPostClient() {
                             }}
                             className="text-xs font-medium text-purple-700 hover:text-purple-900"
                           >
-                            🔁 Make this recurring
+                            {t("schedule.recurring_cta")}
                           </button>
                         </div>
                       ) : (
@@ -1420,14 +1353,14 @@ export default function QuickPostClient() {
                               htmlFor="schedule-datetime"
                               className="text-xs font-semibold text-gray-900"
                             >
-                              Publish at (your local time)
+                              {t("schedule.label")}
                             </label>
                             <button
                               type="button"
                               onClick={() => setScheduleMode(false)}
                               className="text-xs text-gray-500 hover:text-gray-900"
                             >
-                              Cancel
+                              {t("schedule.cancel")}
                             </button>
                           </div>
                           <input
@@ -1444,8 +1377,7 @@ export default function QuickPostClient() {
                             className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-sm"
                           />
                           <p className="text-[11px] text-gray-500">
-                            Cron picks it up every 5 minutes. Actual publish
-                            may land up to 5 min after your chosen time.
+                            {t("schedule.cron_hint")}
                           </p>
                         </div>
                       )}
@@ -1466,21 +1398,21 @@ export default function QuickPostClient() {
                     <div className="rounded-xl border border-purple-200 bg-purple-50/60 px-3 py-2.5 text-sm space-y-3">
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-semibold text-purple-900">
-                          🔁 Make this recurring
+                          {t("recurring.header")}
                         </p>
                         <button
                           type="button"
                           onClick={() => setRecurringMode(false)}
                           className="text-xs text-gray-500 hover:text-gray-900"
                         >
-                          Cancel
+                          {t("recurring.cancel")}
                         </button>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
                         <label className="text-xs">
                           <span className="mb-1 block font-medium text-gray-700">
-                            Cadence
+                            {t("recurring.cadence_label")}
                           </span>
                           <select
                             value={recurringCadence}
@@ -1491,15 +1423,15 @@ export default function QuickPostClient() {
                             }
                             className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-xs"
                           >
-                            <option value="weekly">Weekly</option>
-                            <option value="daily">Daily</option>
+                            <option value="weekly">{t("recurring.cadence_weekly")}</option>
+                            <option value="daily">{t("recurring.cadence_daily")}</option>
                           </select>
                         </label>
 
                         {recurringCadence === "weekly" && (
                           <label className="text-xs">
                             <span className="mb-1 block font-medium text-gray-700">
-                              Day of week
+                              {t("recurring.weekday_label")}
                             </span>
                             <select
                               value={recurringWeekday}
@@ -1508,20 +1440,20 @@ export default function QuickPostClient() {
                               }
                               className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-xs"
                             >
-                              <option value={0}>Sunday</option>
-                              <option value={1}>Monday</option>
-                              <option value={2}>Tuesday</option>
-                              <option value={3}>Wednesday</option>
-                              <option value={4}>Thursday</option>
-                              <option value={5}>Friday</option>
-                              <option value={6}>Saturday</option>
+                              <option value={0}>{t("recurring.weekdays.sun")}</option>
+                              <option value={1}>{t("recurring.weekdays.mon")}</option>
+                              <option value={2}>{t("recurring.weekdays.tue")}</option>
+                              <option value={3}>{t("recurring.weekdays.wed")}</option>
+                              <option value={4}>{t("recurring.weekdays.thu")}</option>
+                              <option value={5}>{t("recurring.weekdays.fri")}</option>
+                              <option value={6}>{t("recurring.weekdays.sat")}</option>
                             </select>
                           </label>
                         )}
 
                         <label className="text-xs">
                           <span className="mb-1 block font-medium text-gray-700">
-                            Time of day ({recurringTimezone})
+                            {t("recurring.time_label", { tz: recurringTimezone })}
                           </span>
                           <input
                             type="time"
@@ -1539,7 +1471,7 @@ export default function QuickPostClient() {
 
                         <label className="text-xs">
                           <span className="mb-1 block font-medium text-gray-700">
-                            Stop after (occurrences)
+                            {t("recurring.max_label")}
                           </span>
                           <input
                             type="number"
@@ -1557,25 +1489,23 @@ export default function QuickPostClient() {
                                 }
                               }
                             }}
-                            placeholder="(unlimited)"
+                            placeholder={t("recurring.max_placeholder")}
                             className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-xs"
                           />
                         </label>
                       </div>
 
                       <p className="text-[11px] text-gray-600">
-                        The materialize cron creates a scheduled post for each
-                        occurrence about an hour before fire time. You can
-                        pause or cancel anytime from the{" "}
+                        {t("recurring.hint_prefix")}
                         <a
                           href="/dashboard/leads/generate/recurring"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="font-medium text-purple-700 hover:underline"
                         >
-                          recurring posts page
+                          {t("recurring.hint_link")}
                         </a>
-                        .
+                        {t("recurring.hint_suffix")}
                       </p>
                     </div>
                   )}
@@ -1589,15 +1519,14 @@ export default function QuickPostClient() {
                     return (
                       <div className="rounded-xl border border-purple-200 bg-purple-50 px-3 py-2.5 text-sm text-purple-900">
                         <p className="font-semibold">
-                          Recurring post created — first occurrence{" "}
-                          {when.toLocaleString()}
+                          {t("banners.recurring_created", { when: when.toLocaleString() })}
                         </p>
                         <p className="mt-0.5">
                           <a
                             href="/dashboard/leads/generate/recurring"
                             className="underline hover:text-purple-700"
                           >
-                            Manage recurring posts →
+                            {t("banners.recurring_manage")}
                           </a>
                         </p>
                       </div>
@@ -1605,7 +1534,7 @@ export default function QuickPostClient() {
                   }
                   return (
                     <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-900">
-                      <p className="font-semibold">Recurring create failed</p>
+                      <p className="font-semibold">{t("banners.recurring_failed")}</p>
                       <p className="mt-0.5">{result.error}</p>
                     </div>
                   );
@@ -1622,14 +1551,14 @@ export default function QuickPostClient() {
                     return (
                       <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-sm text-indigo-900">
                         <p className="font-semibold">
-                          Scheduled for {when.toLocaleString()}
+                          {t("banners.scheduled_for", { when: when.toLocaleString() })}
                         </p>
                         <p className="mt-0.5">
                           <a
                             href="/dashboard/leads/generate/scheduled"
                             className="underline hover:text-indigo-700"
                           >
-                            View scheduled posts →
+                            {t("banners.view_scheduled")}
                           </a>
                         </p>
                       </div>
@@ -1637,7 +1566,7 @@ export default function QuickPostClient() {
                   }
                   return (
                     <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-900">
-                      <p className="font-semibold">Schedule failed</p>
+                      <p className="font-semibold">{t("banners.schedule_failed")}</p>
                       <p className="mt-0.5">{result.error}</p>
                     </div>
                   );
@@ -1655,8 +1584,7 @@ export default function QuickPostClient() {
                     return (
                       <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-900">
                         <p className="font-semibold">
-                          Published to{" "}
-                          {PLATFORM_TABS.find((p) => p.id === result.platform)?.label} ✓
+                          {t("banners.published_to", { platform: PLATFORM_TABS.find((p) => p.id === result.platform)?.label })}
                         </p>
                         {result.externalPostUrl && (
                           <p className="mt-0.5">
@@ -1666,7 +1594,7 @@ export default function QuickPostClient() {
                               rel="noopener noreferrer"
                               className="underline hover:text-emerald-700"
                             >
-                              View the post →
+                              {t("banners.view_post")}
                             </a>
                           </p>
                         )}
@@ -1675,7 +1603,7 @@ export default function QuickPostClient() {
                   }
                   return (
                     <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-900">
-                      <p className="font-semibold">Publish failed</p>
+                      <p className="font-semibold">{t("banners.publish_failed")}</p>
                       <p className="mt-0.5">{result.error}</p>
                     </div>
                   );
@@ -1686,38 +1614,38 @@ export default function QuickPostClient() {
                 {!activeConnection &&
                   (platform === "facebook" || platform === "instagram") && (
                     <p className="text-xs text-gray-500">
-                      Want one-click publish?{" "}
+                      {t("connect_nudge.meta_prefix")}
                       <a
                         href="/dashboard/leads/generate/connect"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="font-medium text-blue-600 hover:underline"
                       >
-                        Connect a Facebook Page
-                      </a>{" "}
-                      and we&apos;ll publish directly.
+                        {t("connect_nudge.meta_link")}
+                      </a>
+                      {t("connect_nudge.meta_suffix")}
                     </p>
                   )}
                 {!activeConnection && platform === "linkedin" && (
                   <p className="text-xs text-gray-500">
-                    Want one-click publish?{" "}
+                    {t("connect_nudge.linkedin_prefix")}
                     <a
                       href="/dashboard/leads/generate/connect"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-medium text-sky-700 hover:underline"
                     >
-                      Connect LinkedIn
-                    </a>{" "}
-                    and we&apos;ll post to your personal feed directly.
+                      {t("connect_nudge.linkedin_link")}
+                    </a>
+                    {t("connect_nudge.linkedin_suffix")}
                   </p>
                 )}
 
                 {compose && !compose.prefillsBody && compose.composeUrl && !activeConnection && (
                   <p className="text-xs text-amber-700">
                     {platform === "linkedin"
-                      ? "LinkedIn's share dialog only honors the link — the body won't pre-fill. Tap Copy caption first, then paste into the LinkedIn compose."
-                      : "Caption won't pre-fill — copy it first."}
+                      ? t("compose_hint.linkedin")
+                      : t("compose_hint.default")}
                   </p>
                 )}
               </>
@@ -1729,9 +1657,7 @@ export default function QuickPostClient() {
       {/* Footer hint — explains the next phase so the agent knows what's coming */}
       {subjectId && (
         <p className="text-xs text-gray-400">
-          Phase 1: opens the platform&apos;s compose dialog with your caption.
-          Phase 2 (in ~4 weeks) will post directly after one-time
-          authorization — no extra click required.
+          {t("footer")}
         </p>
       )}
     </div>
@@ -1782,6 +1708,7 @@ function BriefInput({
   onCommit,
   committed,
   inline,
+  t,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -1791,6 +1718,7 @@ function BriefInput({
   onCommit: () => void;
   committed: boolean;
   inline?: boolean;
+  t: QuickPostT;
 }) {
   return (
     <div className="space-y-2">
@@ -1809,7 +1737,7 @@ function BriefInput({
           disabled={(required && !value.trim()) || committed}
           className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
         >
-          {committed ? "Brief saved" : "Use this brief"}
+          {committed ? t("brief_input.saved") : t("brief_input.use_this")}
         </button>
       )}
     </div>
@@ -1840,6 +1768,7 @@ function ImagePicker({
   onSelect,
   onClear,
   onUpload,
+  t,
 }: {
   selected: MediaItem | null;
   showLibrary: boolean;
@@ -1852,6 +1781,7 @@ function ImagePicker({
   onSelect: (m: MediaItem) => void;
   onClear: () => void;
   onUpload: (file: File) => void;
+  t: QuickPostT;
 }) {
   const inputId = "lead-media-upload";
 
@@ -1863,7 +1793,7 @@ function ImagePicker({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={selected.signedUrl}
-              alt={selected.label ?? selected.fileName ?? "Selected image"}
+              alt={selected.label ?? selected.fileName ?? t("image.selected_fallback_alt")}
               className="h-20 w-20 shrink-0 rounded-lg object-cover ring-1 ring-gray-200"
             />
           ) : (
@@ -1871,10 +1801,10 @@ function ImagePicker({
           )}
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-gray-900 truncate">
-              {selected.label ?? selected.fileName ?? "Image attached"}
+              {selected.label ?? selected.fileName ?? t("image.attached_fallback")}
             </div>
             <div className="text-xs text-gray-500">
-              {selected.contentType ?? "image"}
+              {selected.contentType ?? t("image.image_label_fallback")}
               {selected.sizeBytes != null
                 ? ` · ${formatBytes(selected.sizeBytes)}`
                 : ""}
@@ -1885,14 +1815,14 @@ function ImagePicker({
                 onClick={onOpenLibrary}
                 className="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
               >
-                Change
+                {t("image.change")}
               </button>
               <button
                 type="button"
                 onClick={onClear}
                 className="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
               >
-                Remove
+                {t("image.remove")}
               </button>
             </div>
           </div>
@@ -1905,13 +1835,13 @@ function ImagePicker({
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">Your library</h3>
+          <h3 className="text-sm font-semibold text-gray-900">{t("image.your_library")}</h3>
           <button
             type="button"
             onClick={onCloseLibrary}
             className="text-xs text-gray-500 hover:text-gray-900"
           >
-            Close
+            {t("image.library_close")}
           </button>
         </div>
         {libraryError ? (
@@ -1919,12 +1849,10 @@ function ImagePicker({
             {libraryError}
           </p>
         ) : libraryLoading ? (
-          <p className="text-xs text-gray-500">Loading…</p>
+          <p className="text-xs text-gray-500">{t("image.library_loading")}</p>
         ) : library.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-300 p-4 text-center">
-            <p className="text-xs text-gray-500">
-              Your library is empty. Upload an image to get started.
-            </p>
+            <p className="text-xs text-gray-500">{t("image.library_empty")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -1934,13 +1862,13 @@ function ImagePicker({
                 type="button"
                 onClick={() => onSelect(m)}
                 className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-100 hover:border-blue-400"
-                title={m.label ?? m.fileName ?? "Library image"}
+                title={m.label ?? m.fileName ?? t("image.library_image_alt_fallback")}
               >
                 {m.signedUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={m.signedUrl}
-                    alt={m.label ?? m.fileName ?? "Library image"}
+                    alt={m.label ?? m.fileName ?? t("image.library_image_alt_fallback")}
                     className="h-full w-full object-cover transition group-hover:scale-[1.02]"
                   />
                 ) : null}
@@ -1953,7 +1881,7 @@ function ImagePicker({
           htmlFor={inputId}
           className="block cursor-pointer rounded-lg border-2 border-dashed border-gray-300 bg-gray-50/60 px-3 py-3 text-center text-xs text-gray-600 hover:border-blue-400 hover:bg-blue-50/30"
         >
-          {uploading ? "Uploading…" : "Upload a new image (JPG / PNG / WEBP, ≤ 20 MB)"}
+          {uploading ? t("image.upload_busy") : t("image.upload_label")}
           <input
             id={inputId}
             type="file"
@@ -1983,15 +1911,14 @@ function ImagePicker({
       className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50/60 px-3 py-2.5 text-xs"
     >
       <span className="text-gray-600">
-        <span className="font-medium text-gray-900">Add an image</span> —
-        attach a photo so you have it ready when sharing. Optional.
+        <span className="font-medium text-gray-900">{t("image.prompt_prefix_emphasis")}</span>{t("image.prompt_suffix")}
       </span>
       <div className="flex shrink-0 gap-2">
         <label
           htmlFor={inputId}
           className="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
         >
-          {uploading ? "Uploading…" : "Upload"}
+          {uploading ? t("image.upload_busy") : t("image.upload_short")}
           <input
             id={inputId}
             type="file"
@@ -2010,7 +1937,7 @@ function ImagePicker({
           onClick={onOpenLibrary}
           className="rounded border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
         >
-          Library
+          {t("image.open_library")}
         </button>
       </div>
     </div>
@@ -2023,17 +1950,17 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function emptyStateMessage(trigger: Trigger): string {
+function emptyStateMessage(trigger: Trigger, t: QuickPostT): string {
   switch (trigger) {
     case "new_listing":
-      return "No listings from the last 60 days. Create a listing first, or use the Custom option.";
+      return t("empty_subjects.new_listing");
     case "open_house":
-      return "No upcoming open houses in the next 21 days. Schedule one, or use the Custom option.";
+      return t("empty_subjects.open_house");
     case "price_drop":
-      return "No active listings to re-price. Add or activate a listing first.";
+      return t("empty_subjects.price_drop");
     case "just_sold":
-      return "No transactions closed in the last 60 days. Use the Custom option to draft a general celebration post.";
+      return t("empty_subjects.just_sold");
     default:
-      return "Nothing to pick here — use the Custom option.";
+      return t("empty_subjects.default");
   }
 }

@@ -21,6 +21,7 @@ import enWebLanding from "@leadsmart/i18n/locale/en/web_landing";
 import enWebMarketing from "@leadsmart/i18n/locale/en/web_marketing";
 import enWebPosts from "@leadsmart/i18n/locale/en/web_posts";
 import enWebPricing from "@leadsmart/i18n/locale/en/web_pricing";
+import enWebQuickPost from "@leadsmart/i18n/locale/en/web_quick_post";
 import zhCommon from "@leadsmart/i18n/locale/zh-Hans/common";
 import zhSettings from "@leadsmart/i18n/locale/zh-Hans/settings";
 import zhWebAbout from "@leadsmart/i18n/locale/zh-Hans/web_about";
@@ -32,6 +33,7 @@ import zhWebLanding from "@leadsmart/i18n/locale/zh-Hans/web_landing";
 import zhWebMarketing from "@leadsmart/i18n/locale/zh-Hans/web_marketing";
 import zhWebPosts from "@leadsmart/i18n/locale/zh-Hans/web_posts";
 import zhWebPricing from "@leadsmart/i18n/locale/zh-Hans/web_pricing";
+import zhWebQuickPost from "@leadsmart/i18n/locale/zh-Hans/web_quick_post";
 
 export const I18N_COOKIE_NAME = "leadsmart_locale";
 
@@ -50,6 +52,7 @@ export const namespaces = [
   "web_landing",
   "web_about",
   "web_pricing",
+  "web_quick_post",
 ] as const;
 export type WebNamespace = (typeof namespaces)[number];
 
@@ -69,6 +72,7 @@ export const resources: Record<
     web_landing: enWebLanding,
     web_about: enWebAbout,
     web_pricing: enWebPricing,
+    web_quick_post: enWebQuickPost,
   },
   "zh-Hans": {
     common: zhCommon,
@@ -82,6 +86,7 @@ export const resources: Record<
     web_landing: zhWebLanding,
     web_about: zhWebAbout,
     web_pricing: zhWebPricing,
+    web_quick_post: zhWebQuickPost,
   },
 };
 
