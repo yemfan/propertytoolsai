@@ -1,0 +1,71 @@
+{
+  "actions": {
+    "done": "Done",
+    "cancel": "Cancel",
+    "save": "Save",
+    "save_link": "Save link",
+    "open": "Open",
+    "share": "Share",
+    "dismiss_a11y": "Dismiss"
+  },
+  "task_card": {
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    }
+  },
+  "task_composer": {
+    "title": "New task",
+    "placeholder_title": "Title",
+    "placeholder_notes": "Notes (optional)",
+    "label_priority": "Priority",
+    "label_due": "Due",
+    "due_none": "None",
+    "due_today": "Today",
+    "errors": {
+      "title_required": "Add a title."
+    }
+  },
+  "appointment_card": {
+    "provider_local": "Local",
+    "status": {
+      "scheduled": "Scheduled",
+      "cancelled": "Cancelled",
+      "completed": "Completed"
+    }
+  },
+  "appointment_composer": {
+    "title": "New appointment",
+    "placeholder_lead_id": "Lead ID",
+    "placeholder_title": "Title (e.g. Showing · 123 Main St)",
+    "placeholder_notes": "Notes (optional)",
+    "label_starts_in": "Starts in",
+    "offsets": {
+      "1h": "1h",
+      "4h": "4h",
+      "24h": "24h",
+      "3d": "3d",
+      "1wk": "1wk"
+    },
+    "errors": {
+      "lead_id_required": "Lead ID is required.",
+      "title_required": "Add a title."
+    }
+  },
+  "booking_link_card": {
+    "fallback_label": "Booking link",
+    "saved_at": "Saved {{date}}"
+  },
+  "booking_link_composer": {
+    "title": "Send booking link",
+    "hint": "Saved on the lead for the CRM timeline and bumps last activity. Share opens the system share sheet.",
+    "placeholder_url": "https://…",
+    "placeholder_label": "Label (optional)",
+    "placeholder_share_message": "Message for SMS/email when sharing (optional)",
+    "errors": {
+      "url_required": "Paste your scheduling URL (Calendly, Google Appointment, etc.)."
+    }
+  }
+}

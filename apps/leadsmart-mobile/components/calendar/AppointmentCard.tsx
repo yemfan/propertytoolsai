@@ -1,5 +1,6 @@
 import type { MobileCalendarEventDto } from "@leadsmart/shared";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { formatShortDateTime } from "../../lib/format";
 import { useThemeTokens } from "../../lib/useThemeTokens";
@@ -22,10 +23,21 @@ export function AppointmentCard({
 }: Props) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("task_calendar_components");
   const compact = variant === "compact";
-  const prov = event.calendar_provider
-    ? event.calendar_provider.charAt(0).toUpperCase() + event.calendar_provider.slice(1)
-    : "Local";
+  // Provider label: "local" → translated; "google"/"outlook" stay as
+  // brand names (just title-cased). Falls back to "Local" / 本地 when
+  // calendar_provider is null.
+  const prov = (() => {
+    if (!event.calendar_provider || event.calendar_provider === "local") {
+      return t("appointment_card.provider_local");
+    }
+    return event.calendar_provider.charAt(0).toUpperCase() + event.calendar_provider.slice(1);
+  })();
+  const statusLabel =
+    event.status !== "scheduled"
+      ? t(`appointment_card.status.${event.status}`, { defaultValue: event.status })
+      : null;
 
   const inner = (
     <>
@@ -40,7 +52,7 @@ export function AppointmentCard({
       <Text style={styles.time}>{formatShortDateTime(event.starts_at)}</Text>
       <Text style={styles.meta}>
         {prov}
-        {event.status !== "scheduled" ? ` · ${event.status}` : ""}
+        {statusLabel ? ` · ${statusLabel}` : ""}
       </Text>
       {event.status === "scheduled" && onCancel ? (
         <Pressable
@@ -51,7 +63,7 @@ export function AppointmentCard({
           {cancelling ? (
             <ActivityIndicator size="small" color={tokens.errorTitle} />
           ) : (
-            <Text style={styles.cancelText}>Cancel</Text>
+            <Text style={styles.cancelText}>{t("actions.cancel")}</Text>
           )}
         </Pressable>
       ) : null}

@@ -19,6 +19,10 @@
  *   - lead_detail       Mobile Lead detail screen (/lead/[id])
  *   - lead_components   Embedded lead detail components
  *                        (QuickActionsRow, ReplySection, Pipeline*)
+ *   - task_calendar_components
+ *                       Task + Calendar + BookingLink cards and
+ *                       composer modals (used on Lead detail, Tasks
+ *                       tab, and Calendar tab)
  *
  * Future namespaces follow the same pattern — add a JSON file pair
  * (en + zh-Hans) and reference it from the app's resources map.
@@ -46,5 +50,6 @@ export const NAMESPACES = [
   "leads",
   "lead_detail",
   "lead_components",
+  "task_calendar_components",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];
