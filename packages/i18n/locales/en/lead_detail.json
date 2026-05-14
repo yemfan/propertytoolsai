@@ -1,0 +1,60 @@
+{
+  "loading": "Loading lead…",
+  "error": {
+    "title": "Unable to load lead",
+    "not_found": "Not found."
+  },
+  "demo_banner": "Sample lead — not synced to your CRM. Real conversations appear here after you connect leads.",
+  "subtitle": {
+    "tier_hot": "Hot lead",
+    "tier_normal": "Lead",
+    "role_buyer": "Buyer",
+    "stage_new": "New"
+  },
+  "last_activity": "Last activity {{date}}",
+  "lead_fallback": "Lead {{id}}",
+  "ai_insights": {
+    "title": "✨ AI INSIGHTS",
+    "score_max": "/ 100",
+    "score_pending": "Score pending",
+    "band": {
+      "hot": "Hot",
+      "warm": "Warm",
+      "cold": "Cold",
+      "pending": "Pending"
+    },
+    "intent": "Intent: ",
+    "timeline": "Timeline: ",
+    "confidence": "Confidence: ",
+    "show_less": "Show less",
+    "more_reasons_one": "+{{count}} more reason",
+    "more_reasons_other": "+{{count}} more reasons"
+  },
+  "sections": {
+    "next_task": "Next Task",
+    "pipeline_stage": "Pipeline Stage",
+    "conversation": "Conversation"
+  },
+  "next_task": {
+    "no_open_task": "No open task for this lead.",
+    "demo_task": "Call back within 1 hour",
+    "add_task": "Add task",
+    "schedule": "Schedule",
+    "booking_link": "Booking link",
+    "booking_links_label": "Booking links"
+  },
+  "pipeline": {
+    "demo_breadcrumb": "New > Contacted > Qualified > Showing"
+  },
+  "conversation": {
+    "empty_title": "No messages yet",
+    "empty_sub": "Start with Text, Email, or a reply below."
+  },
+  "bubble": {
+    "channel_sms": "SMS",
+    "channel_email": "Email",
+    "inbound": "Inbound",
+    "outbound": "Outbound",
+    "empty_body": "—"
+  }
+}

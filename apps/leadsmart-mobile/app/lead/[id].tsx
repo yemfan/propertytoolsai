@@ -10,6 +10,7 @@ import type {
   MobileSmsMessageDto,
 } from "@leadsmart/shared";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -64,16 +65,34 @@ const emptyPipeline: MobileLeadPipelineDto = {
   name: null,
 };
 
-function buildLeadSubtitle(lead: MobileLeadRecordDto, pipeline: MobileLeadPipelineDto): string {
+/**
+ * Builds the hero subtitle: `{tier} • {role} • {stage}` (or the
+ * locale's equivalent ordering — i18next can rewrite the format
+ * later if word order needs to flip).
+ *
+ * `t` is the caller's `useTranslation("lead_detail")` t function.
+ * Static fallbacks (Lead / Buyer / New) come from JSON so they
+ * translate alongside the rest of the screen.
+ */
+type LeadDetailT = (key: string, options?: Record<string, unknown>) => string;
+
+function buildLeadSubtitle(
+  lead: MobileLeadRecordDto,
+  pipeline: MobileLeadPipelineDto,
+  t: LeadDetailT,
+): string {
   const rating = leadField(lead, "rating");
   const hot = rating.toLowerCase() === "hot";
-  const tier = hot ? "Hot lead" : "Lead";
+  const tier = hot ? t("subtitle.tier_hot") : t("subtitle.tier_normal");
   const rawIntent = typeof lead.ai_intent === "string" ? lead.ai_intent.trim() : "";
   const role =
     (rawIntent ? rawIntent.split(/[—–-]/)[0]?.trim() : "") ||
     leadField(lead, "buyer_seller")?.trim() ||
-    "Buyer";
-  const stage = pipeline.name?.trim() || leadField(lead, "lead_status")?.trim() || "New";
+    t("subtitle.role_buyer");
+  const stage =
+    pipeline.name?.trim() ||
+    leadField(lead, "lead_status")?.trim() ||
+    t("subtitle.stage_new");
   return `${tier} • ${role} • ${stage}`;
 }
 
@@ -115,6 +134,7 @@ function AiInsightsCard({
   lead: MobileLeadRecordDto;
   styles: ReturnType<typeof createStyles>;
 }) {
+  const { t } = useTranslation("lead_detail");
   const [expanded, setExpanded] = useState(false);
   const rawScore = (lead as { ai_lead_score?: number | null }).ai_lead_score;
   const score = typeof rawScore === "number" ? Math.round(rawScore) : null;
@@ -149,21 +169,14 @@ function AiInsightsCard({
     return { bg: "#F3F4F6", fg: "#6B7280" };
   })();
 
-  const bandLabel =
-    band === "hot"
-      ? "Hot"
-      : band === "warm"
-        ? "Warm"
-        : band === "cold"
-          ? "Cold"
-          : "Pending";
+  const bandLabel = t(`ai_insights.band.${band}`);
 
   const visibleReasons = expanded ? explanation : explanation.slice(0, 3);
 
   return (
     <View style={styles.aiCard}>
       <View style={styles.aiHeader}>
-        <Text style={styles.aiHeaderLabel}>✨ AI INSIGHTS</Text>
+        <Text style={styles.aiHeaderLabel}>{t("ai_insights.title")}</Text>
         <View
           style={[styles.aiBandPill, { backgroundColor: bandColor.bg }]}
         >
@@ -177,28 +190,28 @@ function AiInsightsCard({
         {score !== null ? (
           <View style={styles.aiScoreBlock}>
             <Text style={styles.aiScoreNumber}>{score}</Text>
-            <Text style={styles.aiScoreMax}>/ 100</Text>
+            <Text style={styles.aiScoreMax}>{t("ai_insights.score_max")}</Text>
           </View>
         ) : (
-          <Text style={styles.aiScorePending}>Score pending</Text>
+          <Text style={styles.aiScorePending}>{t("ai_insights.score_pending")}</Text>
         )}
 
         <View style={styles.aiFactsBlock}>
           {intent ? (
             <Text style={styles.aiFact}>
-              <Text style={styles.aiFactLabel}>Intent: </Text>
+              <Text style={styles.aiFactLabel}>{t("ai_insights.intent")}</Text>
               <Text style={styles.aiFactValue}>{intent}</Text>
             </Text>
           ) : null}
           {timeline ? (
             <Text style={styles.aiFact}>
-              <Text style={styles.aiFactLabel}>Timeline: </Text>
+              <Text style={styles.aiFactLabel}>{t("ai_insights.timeline")}</Text>
               <Text style={styles.aiFactValue}>{timeline}</Text>
             </Text>
           ) : null}
           {confidence !== null ? (
             <Text style={styles.aiFact}>
-              <Text style={styles.aiFactLabel}>Confidence: </Text>
+              <Text style={styles.aiFactLabel}>{t("ai_insights.confidence")}</Text>
               <Text style={styles.aiFactValue}>
                 {Math.round(confidence * 100)}%
               </Text>
@@ -222,8 +235,10 @@ function AiInsightsCard({
             >
               <Text style={styles.aiMoreLinkText}>
                 {expanded
-                  ? "Show less"
-                  : `+${explanation.length - 3} more reason${explanation.length - 3 === 1 ? "" : "s"}`}
+                  ? t("ai_insights.show_less")
+                  : t("ai_insights.more_reasons", {
+                      count: explanation.length - 3,
+                    })}
               </Text>
             </Pressable>
           ) : null}
@@ -242,16 +257,18 @@ function MessageBubble({
   kind: "sms" | "email";
   styles: ReturnType<typeof createStyles>;
 }) {
+  const { t } = useTranslation("lead_detail");
   const inbound = m.direction === "inbound";
   const subject = kind === "email" && "subject" in m && m.subject ? m.subject : null;
-  const channel = kind === "sms" ? "SMS" : "Email";
+  const channel =
+    kind === "sms" ? t("bubble.channel_sms") : t("bubble.channel_email");
   return (
     <View style={[styles.bubbleWrap, inbound ? styles.bubbleInbound : styles.bubbleOutbound]}>
       <Text style={styles.bubbleChannel}>{channel}</Text>
       {subject ? <Text style={styles.bubbleSubject}>{subject}</Text> : null}
-      <Text style={styles.bubbleBody}>{m.message || "—"}</Text>
+      <Text style={styles.bubbleBody}>{m.message || t("bubble.empty_body")}</Text>
       <Text style={styles.bubbleMeta}>
-        {inbound ? "Inbound" : "Outbound"} · {formatShortDateTime(m.created_at)}
+        {inbound ? t("bubble.inbound") : t("bubble.outbound")} · {formatShortDateTime(m.created_at)}
       </Text>
     </View>
   );
@@ -262,6 +279,7 @@ export default function LeadDetailScreen() {
   const navigation = useNavigation();
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("lead_detail");
   const SectionRule = () => <View style={styles.sectionRule} />;
   const leadId = typeof id === "string" ? id : Array.isArray(id) ? id[0] : "";
 
@@ -383,9 +401,9 @@ export default function LeadDetailScreen() {
 
   useLayoutEffect(() => {
     if (!lead) return;
-    const title = leadField(lead, "name") || `Lead ${lead.id}`;
+    const title = leadField(lead, "name") || t("lead_fallback", { id: lead.id });
     navigation.setOptions({ title });
-  }, [lead, navigation]);
+  }, [lead, navigation, t]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -465,23 +483,23 @@ export default function LeadDetailScreen() {
   }, [nextAppointment, leadId, silentRefresh]);
 
   if (loading) {
-    return <ScreenLoading message="Loading lead…" />;
+    return <ScreenLoading message={t("loading")} />;
   }
 
   if (error || !lead) {
     return (
       <View style={styles.centered}>
         <ErrorBanner
-          title="Unable to load lead"
-          message={error?.message ?? "Not found."}
+          title={t("error.title")}
+          message={error?.message ?? t("error.not_found")}
           onRetry={cacheRefresh}
         />
       </View>
     );
   }
 
-  const name = leadField(lead, "name") || `Lead ${lead.id}`;
-  const subtitle = buildLeadSubtitle(lead, pipeline);
+  const name = leadField(lead, "name") || t("lead_fallback", { id: lead.id });
+  const subtitle = buildLeadSubtitle(lead, pipeline, t);
   const lastActivity = leadField(lead, "last_activity_at");
   const mergedThread = mergeConversation(sms, email);
 
@@ -500,9 +518,7 @@ export default function LeadDetailScreen() {
       >
         {isDemoLeadId(lead.id) ? (
           <View style={styles.demoBanner}>
-            <Text style={styles.demoBannerText}>
-              Sample lead — not synced to your CRM. Real conversations appear here after you connect leads.
-            </Text>
+            <Text style={styles.demoBannerText}>{t("demo_banner")}</Text>
           </View>
         ) : null}
 
@@ -510,7 +526,9 @@ export default function LeadDetailScreen() {
           <Text style={styles.heroName}>{name}</Text>
           <Text style={styles.heroSubtitle}>{subtitle}</Text>
           {!isDemoLeadId(lead.id) && lastActivity ? (
-            <Text style={styles.heroMeta}>Last activity {formatShortDateTime(lastActivity)}</Text>
+            <Text style={styles.heroMeta}>
+              {t("last_activity", { date: formatShortDateTime(lastActivity) })}
+            </Text>
           ) : null}
           {!isDemoLeadId(lead.id) && lead.display_phone ? (
             <Text style={styles.heroLine}>{lead.display_phone}</Text>
@@ -533,7 +551,7 @@ export default function LeadDetailScreen() {
 
         <SectionRule />
 
-        <Text style={styles.blockHeading}>Next Task</Text>
+        <Text style={styles.blockHeading}>{t("sections.next_task")}</Text>
         {!isDemoLeadId(lead.id) ? (
           <>
             {pipelineActionError ? <Text style={styles.inlineError}>{pipelineActionError}</Text> : null}
@@ -548,26 +566,26 @@ export default function LeadDetailScreen() {
                 />
               </View>
             ) : (
-              <Text style={styles.mutedBlock}>No open task for this lead.</Text>
+              <Text style={styles.mutedBlock}>{t("next_task.no_open_task")}</Text>
             )}
             <View style={styles.inlineActions}>
               <Pressable
                 onPress={() => setTaskModalOpen(true)}
                 style={({ pressed }) => [styles.linkBtn, pressed && styles.linkBtnPressed]}
               >
-                <Text style={styles.linkBtnText}>Add task</Text>
+                <Text style={styles.linkBtnText}>{t("next_task.add_task")}</Text>
               </Pressable>
               <Pressable
                 onPress={() => setAppointmentModalOpen(true)}
                 style={({ pressed }) => [styles.linkBtn, pressed && styles.linkBtnPressed]}
               >
-                <Text style={styles.linkBtnText}>Schedule</Text>
+                <Text style={styles.linkBtnText}>{t("next_task.schedule")}</Text>
               </Pressable>
               <Pressable
                 onPress={() => setBookingLinkModalOpen(true)}
                 style={({ pressed }) => [styles.linkBtn, pressed && styles.linkBtnPressed]}
               >
-                <Text style={styles.linkBtnText}>Booking link</Text>
+                <Text style={styles.linkBtnText}>{t("next_task.booking_link")}</Text>
               </Pressable>
             </View>
             {scheduleError ? <Text style={styles.inlineError}>{scheduleError}</Text> : null}
@@ -583,7 +601,7 @@ export default function LeadDetailScreen() {
             ) : null}
             {bookingLinks.length > 0 ? (
               <View style={styles.bookingBlock}>
-                <Text style={styles.bookingLinksLabel}>Booking links</Text>
+                <Text style={styles.bookingLinksLabel}>{t("next_task.booking_links_label")}</Text>
                 {bookingLinks.map((link) => (
                   <BookingLinkCard key={link.id} link={link} compact />
                 ))}
@@ -592,13 +610,13 @@ export default function LeadDetailScreen() {
           </>
         ) : (
           <View style={styles.nextTaskCard}>
-            <Text style={styles.nextTaskPrimary}>Call back within 1 hour</Text>
+            <Text style={styles.nextTaskPrimary}>{t("next_task.demo_task")}</Text>
           </View>
         )}
 
         <SectionRule />
 
-        <Text style={styles.blockHeading}>Pipeline Stage</Text>
+        <Text style={styles.blockHeading}>{t("sections.pipeline_stage")}</Text>
         {!isDemoLeadId(lead.id) ? (
           <>
             {pipelineActionError ? <Text style={styles.inlineError}>{pipelineActionError}</Text> : null}
@@ -613,15 +631,18 @@ export default function LeadDetailScreen() {
             </View>
           </>
         ) : (
-          <Text style={styles.breadcrumbDemo}>New {'>'} Contacted {'>'} Qualified {'>'} Showing</Text>
+          <Text style={styles.breadcrumbDemo}>{t("pipeline.demo_breadcrumb")}</Text>
         )}
 
         <SectionRule />
 
-        <Text style={styles.blockHeading}>Conversation</Text>
+        <Text style={styles.blockHeading}>{t("sections.conversation")}</Text>
         {mergedThread.length === 0 ? (
           <View style={styles.sectionEmpty}>
-            <EmptyState title="No messages yet" subtitle="Start with Text, Email, or a reply below." />
+            <EmptyState
+              title={t("conversation.empty_title")}
+              subtitle={t("conversation.empty_sub")}
+            />
           </View>
         ) : (
           mergedThread.map((row) => (
