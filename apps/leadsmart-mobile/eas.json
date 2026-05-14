@@ -8,7 +8,7 @@
       "corepack": false,
       "node": "20.18.3",
       "ios": {
-        "image": "latest"
+        "image": "sdk-55"
       },
       "env": {
         "EAS_VERBOSE": "1",
@@ -32,7 +32,7 @@
       "distribution": "store",
       "developmentClient": false,
       "ios": {
-        "image": "latest",
+        "image": "sdk-55",
         "autoIncrement": true
       }
     }
