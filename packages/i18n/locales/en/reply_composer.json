@@ -1,0 +1,54 @@
+{
+  "sms": {
+    "label": "SMS reply",
+    "placeholder": "Type a reply…",
+    "sent": "Message sent",
+    "send": "Send",
+    "ai_label": "AI",
+    "a11y": {
+      "input": "Reply message",
+      "send": "Send message"
+    }
+  },
+  "email": {
+    "title": "Email reply",
+    "field_subject": "Subject",
+    "field_body": "Body",
+    "placeholder_subject": "Subject",
+    "placeholder_body": "Write your reply…",
+    "default_subject": "Message from your agent",
+    "subject_prefix": "Re: ",
+    "hint_empty_thread": "No email thread yet — you can still send a first message.",
+    "send": "Send",
+    "cancel": "Cancel",
+    "errors": {
+      "subject_body_required": "Subject and body are required.",
+      "ai_draft_failed": "AI draft failed",
+      "send_failed": "Send failed"
+    },
+    "a11y": {
+      "close": "Close modal",
+      "subject": "Email subject",
+      "body": "Email body",
+      "send": "Send email",
+      "cancel": "Cancel"
+    }
+  },
+  "ai_button": {
+    "label_default": "AI draft"
+  },
+  "ai_gate": {
+    "limit": {
+      "title": "You've hit your AI limit for this period",
+      "body": "Your current plan caps how many AI drafts run each month. Upgrade for a higher limit, or wait until next period.",
+      "cta": "View plans & upgrade",
+      "cta_a11y": "View plans and upgrade"
+    },
+    "not_on_plan": {
+      "title": "AI actions aren't on your plan yet",
+      "body": "AI-drafted replies run on a paid plan. Pick a plan to turn this on for your workspace.",
+      "cta": "Choose a plan",
+      "cta_a11y": "Choose a plan"
+    }
+  }
+}

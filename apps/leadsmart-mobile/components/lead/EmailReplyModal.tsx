@@ -1,5 +1,6 @@
 import type { MobileEmailMessageDto } from "@leadsmart/shared";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -19,11 +20,22 @@ import { AiReplyButton } from "./AiReplyButton";
 import { AiActionGateBanner } from "../AiActionGateBanner";
 import type { AiActionGate } from "../../lib/aiActionGate";
 
-export function defaultEmailReplySubject(thread: MobileEmailMessageDto[]): string {
+type EmailReplyT = (key: string) => string;
+
+/**
+ * `t` should be the function returned by `useTranslation("reply_composer")`
+ * — callers (e.g. LeadReplySection) own the hook and pass it down so the
+ * "Re:" prefix and "Message from your agent" fallback match the active
+ * locale.
+ */
+export function defaultEmailReplySubject(
+  thread: MobileEmailMessageDto[],
+  t: EmailReplyT,
+): string {
   const lastIn = [...thread].reverse().find((m) => m.direction === "inbound");
   const s = lastIn?.subject?.trim();
-  if (!s) return "Message from your agent";
-  return s.toLowerCase().startsWith("re:") ? s : `Re: ${s}`;
+  if (!s) return t("email.default_subject");
+  return s.toLowerCase().startsWith("re:") ? s : `${t("email.subject_prefix")}${s}`;
 }
 
 /**
@@ -59,6 +71,7 @@ export function EmailReplyModal({
   const insets = useSafeAreaInsets();
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("reply_composer");
   const [subject, setSubject] = useState(initialSubject);
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
@@ -95,7 +108,7 @@ export function EmailReplyModal({
       // Defensive: parent contract returns failure shapes, but a thrown
       // error (network blow-up before it can be caught upstream) still
       // shouldn't crash the modal.
-      setError(e instanceof Error ? e.message : "AI draft failed");
+      setError(e instanceof Error ? e.message : t("email.errors.ai_draft_failed"));
     } finally {
       setAiLoading(false);
     }
@@ -106,7 +119,7 @@ export function EmailReplyModal({
     const sub = subject.trim();
     const txt = body.trim();
     if (!sub || !txt) {
-      setError("Subject and body are required.");
+      setError(t("email.errors.subject_body_required"));
       return;
     }
     setSending(true);
@@ -116,7 +129,7 @@ export function EmailReplyModal({
       onClose();
     } catch (e) {
       hapticError();
-      setError(e instanceof Error ? e.message : "Send failed");
+      setError(e instanceof Error ? e.message : t("email.errors.send_failed"));
     } finally {
       setSending(false);
     }
@@ -128,39 +141,43 @@ export function EmailReplyModal({
         style={styles.backdrop}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close modal" />
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityLabel={t("email.a11y.close")}
+        />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <View style={styles.handle} />
-          <Text style={styles.title}>Email reply</Text>
+          <Text style={styles.title}>{t("email.title")}</Text>
           {emailThread.length === 0 ? (
-            <Text style={styles.hint}>No email thread yet — you can still send a first message.</Text>
+            <Text style={styles.hint}>{t("email.hint_empty_thread")}</Text>
           ) : null}
           {gate ? <AiActionGateBanner reason={gate.reason} /> : null}
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          <Text style={styles.fieldLabel}>Subject</Text>
+          <Text style={styles.fieldLabel}>{t("email.field_subject")}</Text>
           <TextInput
             style={styles.input}
             value={subject}
             onChangeText={setSubject}
-            placeholder="Subject"
+            placeholder={t("email.placeholder_subject")}
             placeholderTextColor={tokens.textSubtle}
             editable={!sending}
-            accessibilityLabel="Email subject"
+            accessibilityLabel={t("email.a11y.subject")}
           />
           <View style={styles.aiRow}>
-            <Text style={styles.fieldLabel}>Body</Text>
+            <Text style={styles.fieldLabel}>{t("email.field_body")}</Text>
             <AiReplyButton onPress={() => void onAi()} loading={aiLoading} disabled={sending} />
           </View>
           <TextInput
             style={[styles.input, styles.bodyInput]}
             value={body}
             onChangeText={setBody}
-            placeholder="Write your reply…"
+            placeholder={t("email.placeholder_body")}
             placeholderTextColor={tokens.textSubtle}
             multiline
             textAlignVertical="top"
             editable={!sending}
-            accessibilityLabel="Email body"
+            accessibilityLabel={t("email.a11y.body")}
           />
           <View style={styles.actions}>
             <Pressable
@@ -168,21 +185,21 @@ export function EmailReplyModal({
               onPress={onClose}
               disabled={sending}
               accessibilityRole="button"
-              accessibilityLabel="Cancel"
+              accessibilityLabel={t("email.a11y.cancel")}
             >
-              <Text style={styles.secondaryText}>Cancel</Text>
+              <Text style={styles.secondaryText}>{t("email.cancel")}</Text>
             </Pressable>
             <Pressable
               style={[styles.primary, sending && styles.primaryDisabled]}
               onPress={() => void submit()}
               disabled={sending}
               accessibilityRole="button"
-              accessibilityLabel="Send email"
+              accessibilityLabel={t("email.a11y.send")}
             >
               {sending ? (
                 <ActivityIndicator color={tokens.textOnAccent} />
               ) : (
-                <Text style={styles.primaryText}>Send</Text>
+                <Text style={styles.primaryText}>{t("email.send")}</Text>
               )}
             </Pressable>
           </View>

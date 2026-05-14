@@ -23,6 +23,8 @@
  *                       Task + Calendar + BookingLink cards and
  *                       composer modals (used on Lead detail, Tasks
  *                       tab, and Calendar tab)
+ *   - reply_composer    SMS ReplyComposer, EmailReplyModal, AI draft
+ *                       button, and the AI-action upgrade banner
  *
  * Future namespaces follow the same pattern — add a JSON file pair
  * (en + zh-Hans) and reference it from the app's resources map.
@@ -51,5 +53,6 @@ export const NAMESPACES = [
   "lead_detail",
   "lead_components",
   "task_calendar_components",
+  "reply_composer",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];

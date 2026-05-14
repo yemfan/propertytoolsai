@@ -49,6 +49,9 @@ export function LeadReplySection({
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const { t } = useTranslation("lead_components");
+  // `defaultEmailReplySubject` needs the reply_composer namespace (its
+  // "Re:" prefix and "Message from your agent" fallback live there).
+  const { t: tReply } = useTranslation("reply_composer");
   const { isConnected } = useNetwork();
   const { queueWrite } = useWriteQueue();
   const [smsText, setSmsText] = useState("");
@@ -202,7 +205,7 @@ export function LeadReplySection({
       <EmailReplyModal
         visible={emailOpen}
         onClose={() => setEmailOpen(false)}
-        initialSubject={defaultEmailReplySubject(email)}
+        initialSubject={defaultEmailReplySubject(email, tReply)}
         emailThread={email}
         onSend={onEmailSend}
         onRequestAiDraft={onEmailAi}

@@ -1,0 +1,54 @@
+{
+  "sms": {
+    "label": "短信回复",
+    "placeholder": "输入回复……",
+    "sent": "消息已发送",
+    "send": "发送",
+    "ai_label": "AI",
+    "a11y": {
+      "input": "回复消息",
+      "send": "发送消息"
+    }
+  },
+  "email": {
+    "title": "邮件回复",
+    "field_subject": "主题",
+    "field_body": "正文",
+    "placeholder_subject": "主题",
+    "placeholder_body": "撰写回复……",
+    "default_subject": "来自经纪人的消息",
+    "subject_prefix": "回复：",
+    "hint_empty_thread": "尚无邮件往来——您仍可以发送第一条消息。",
+    "send": "发送",
+    "cancel": "取消",
+    "errors": {
+      "subject_body_required": "主题和正文均为必填项。",
+      "ai_draft_failed": "AI 草稿生成失败",
+      "send_failed": "发送失败"
+    },
+    "a11y": {
+      "close": "关闭弹窗",
+      "subject": "邮件主题",
+      "body": "邮件正文",
+      "send": "发送邮件",
+      "cancel": "取消"
+    }
+  },
+  "ai_button": {
+    "label_default": "AI 草稿"
+  },
+  "ai_gate": {
+    "limit": {
+      "title": "您本期的 AI 用量已用完",
+      "body": "当前套餐限制了每月可生成的 AI 草稿数量。升级以获得更高额度，或等待下个周期。",
+      "cta": "查看套餐并升级",
+      "cta_a11y": "查看套餐并升级"
+    },
+    "not_on_plan": {
+      "title": "您的套餐尚不包含 AI 功能",
+      "body": "AI 草稿回复需要付费套餐。请选择套餐为工作区启用此功能。",
+      "cta": "选择套餐",
+      "cta_a11y": "选择套餐"
+    }
+  }
+}
