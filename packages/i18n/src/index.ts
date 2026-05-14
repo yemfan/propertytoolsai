@@ -50,6 +50,10 @@
  *                       Web ContactsClient — the full contacts list,
  *                        add menu, search/filter, table rows, bulk
  *                        actions, edit form
+ *   - web_generate_leads_clients
+ *                       Web Generate Leads list clients:
+ *                        ConnectClient, CampaignListClient,
+ *                        ScheduledListClient, RecurringListClient
  *
  * Future namespaces follow the same pattern — add a JSON file pair
  * (en + zh-Hans) and reference it from the app's resources map.
@@ -89,5 +93,6 @@ export const NAMESPACES = [
   "web_contacts",
   "web_marketing",
   "web_contacts_client",
+  "web_generate_leads_clients",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Lead Ad campaigns dashboard — client interactions:
@@ -49,23 +50,26 @@ type Metrics = {
   metaUpdatedAt?: string | null;
 };
 
+type CampaignsT = (key: string, options?: Record<string, unknown>) => string;
+
 export default function CampaignListClient({
   campaigns,
 }: {
   campaigns: CampaignRow[];
 }) {
   const router = useRouter();
+  const { t, i18n } = useTranslation("web_generate_leads_clients");
   const [actingId, setActingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const onStatusChange = useCallback(
     async (id: string, action: "pause" | "resume" | "archive") => {
-      const verbs: Record<typeof action, string> = {
-        pause: "pause",
-        resume: "resume",
-        archive: "archive",
+      const failKeys: Record<typeof action, string> = {
+        pause: "campaigns.errors.failed_to_pause",
+        resume: "campaigns.errors.failed_to_resume",
+        archive: "campaigns.errors.failed_to_archive",
       };
-      if (action === "archive" && !confirm("Archive this campaign? It stays in Meta but can't be edited afterward.")) {
+      if (action === "archive" && !confirm(t("campaigns.archive_confirm"))) {
         return;
       }
       setActionError(null);
@@ -81,16 +85,16 @@ export default function CampaignListClient({
           error?: string;
         };
         if (!res.ok || !body.ok) {
-          throw new Error(body.error ?? `Failed to ${verbs[action]}`);
+          throw new Error(body.error ?? t(failKeys[action]));
         }
         router.refresh();
       } catch (e) {
-        setActionError(e instanceof Error ? e.message : "Action failed");
+        setActionError(e instanceof Error ? e.message : t("campaigns.errors.action_failed"));
       } finally {
         setActingId(null);
       }
     },
-    [router],
+    [router, t],
   );
 
   const onRefresh = useCallback(
@@ -106,20 +110,20 @@ export default function CampaignListClient({
           error?: string;
         };
         if (!res.ok || !body.ok) {
-          throw new Error(body.error ?? "Refresh failed");
+          throw new Error(body.error ?? t("campaigns.errors.refresh_failed"));
         }
         router.refresh();
       } catch (e) {
-        setActionError(e instanceof Error ? e.message : "Refresh failed");
+        setActionError(e instanceof Error ? e.message : t("campaigns.errors.refresh_failed"));
       } finally {
         setActingId(null);
       }
     },
-    [router],
+    [router, t],
   );
 
   if (campaigns.length === 0) {
-    return <EmptyState />;
+    return <EmptyState t={t} />;
   }
 
   return (
@@ -134,14 +138,14 @@ export default function CampaignListClient({
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50/60 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
             <tr>
-              <th className="px-4 py-3">Campaign</th>
-              <th className="px-3 py-3">Status</th>
-              <th className="px-3 py-3">Budget</th>
-              <th className="px-3 py-3">Spend</th>
-              <th className="px-3 py-3">Impressions</th>
-              <th className="px-3 py-3">Leads</th>
-              <th className="px-3 py-3">CPL</th>
-              <th className="px-3 py-3">Refreshed</th>
+              <th className="px-4 py-3">{t("campaigns.columns.campaign")}</th>
+              <th className="px-3 py-3">{t("campaigns.columns.status")}</th>
+              <th className="px-3 py-3">{t("campaigns.columns.budget")}</th>
+              <th className="px-3 py-3">{t("campaigns.columns.spend")}</th>
+              <th className="px-3 py-3">{t("campaigns.columns.impressions")}</th>
+              <th className="px-3 py-3">{t("campaigns.columns.leads")}</th>
+              <th className="px-3 py-3">{t("campaigns.columns.cpl")}</th>
+              <th className="px-3 py-3">{t("campaigns.columns.refreshed")}</th>
               <th className="px-3 py-3 w-1" />
             </tr>
           </thead>
@@ -153,17 +157,15 @@ export default function CampaignListClient({
                 onStatusChange={onStatusChange}
                 onRefresh={onRefresh}
                 busy={actingId === c.id}
+                t={t}
+                locale={i18n.language}
               />
             ))}
           </tbody>
         </table>
       </div>
 
-      <p className="text-xs text-gray-400">
-        Leads count comes from real-time webhooks (canonical). The Meta
-        Insights leads number can lag a few hours; we show the webhook
-        count to avoid undercount.
-      </p>
+      <p className="text-xs text-gray-400">{t("campaigns.leads_footer")}</p>
     </div>
   );
 }
@@ -175,11 +177,15 @@ function CampaignRowView({
   onStatusChange,
   onRefresh,
   busy,
+  t,
+  locale,
 }: {
   campaign: CampaignRow;
   onStatusChange: (id: string, action: "pause" | "resume" | "archive") => void;
   onRefresh: (id: string) => void;
   busy: boolean;
+  t: CampaignsT;
+  locale: string;
 }) {
   const metrics = c.metrics as Metrics;
   const adsManagerUrl = c.metaCampaignId
@@ -191,8 +197,8 @@ function CampaignRowView({
       <td className="px-4 py-3 align-top">
         <div className="font-medium text-gray-900">{c.name}</div>
         <div className="text-xs text-gray-500">
-          {c.pageName ?? "—"}
-          {c.igBusinessUsername ? ` · IG @${c.igBusinessUsername}` : ""}
+          {c.pageName ?? t("campaigns.row.empty_value")}
+          {c.igBusinessUsername ? t("campaigns.row.ig_handle", { user: c.igBusinessUsername }) : ""}
         </div>
         {c.lastError && (
           <div className="mt-1 truncate text-xs text-red-700" title={c.lastError}>
@@ -202,28 +208,28 @@ function CampaignRowView({
       </td>
 
       <td className="px-3 py-3 align-top">
-        <StatusBadge status={c.status} />
+        <StatusBadge status={c.status} t={t} />
       </td>
 
       <td className="px-3 py-3 align-top text-gray-700">
         {c.dailyBudgetCents != null
-          ? `$${(c.dailyBudgetCents / 100).toFixed(0)}/day`
-          : "—"}
+          ? t("campaigns.row.budget_daily", { amount: (c.dailyBudgetCents / 100).toFixed(0) })
+          : t("campaigns.row.empty_value")}
         <div className="text-xs text-gray-500">
-          {compactDateRange(c.startTime, c.endTime)}
+          {compactDateRange(c.startTime, c.endTime, t, locale)}
         </div>
       </td>
 
       <td className="px-3 py-3 align-top text-gray-700">
         {metrics.spendCents != null
           ? `$${(metrics.spendCents / 100).toFixed(2)}`
-          : "—"}
+          : t("campaigns.row.empty_value")}
       </td>
 
       <td className="px-3 py-3 align-top text-gray-700">
         {metrics.impressions != null
-          ? metrics.impressions.toLocaleString()
-          : "—"}
+          ? metrics.impressions.toLocaleString(locale)
+          : t("campaigns.row.empty_value")}
       </td>
 
       <td className="px-3 py-3 align-top">
@@ -233,9 +239,9 @@ function CampaignRowView({
         {metrics.leads && metrics.leads > c.leadsReceivedCount ? (
           <span
             className="ml-1 text-xs text-amber-700"
-            title={`Meta Insights reports ${metrics.leads} — webhook count is canonical`}
+            title={t("campaigns.row.meta_leads_extra_tooltip", { count: metrics.leads })}
           >
-            (Meta: {metrics.leads})
+            {t("campaigns.row.meta_leads_extra", { count: metrics.leads })}
           </span>
         ) : null}
       </td>
@@ -243,13 +249,13 @@ function CampaignRowView({
       <td className="px-3 py-3 align-top text-gray-700">
         {metrics.cplCents != null
           ? `$${(metrics.cplCents / 100).toFixed(2)}`
-          : "—"}
+          : t("campaigns.row.empty_value")}
       </td>
 
       <td className="px-3 py-3 align-top text-xs text-gray-500">
         {c.metricsRefreshedAt
-          ? friendlyAgo(c.metricsRefreshedAt)
-          : "Never"}
+          ? friendlyAgo(c.metricsRefreshedAt, t)
+          : t("campaigns.row.never")}
       </td>
 
       <td className="px-3 py-3 align-top text-right">
@@ -259,6 +265,7 @@ function CampaignRowView({
           onRefresh={onRefresh}
           adsManagerUrl={adsManagerUrl}
           busy={busy}
+          t={t}
         />
       </td>
     </tr>
@@ -273,12 +280,14 @@ function RowActions({
   onRefresh,
   adsManagerUrl,
   busy,
+  t,
 }: {
   campaign: CampaignRow;
   onStatusChange: (id: string, action: "pause" | "resume" | "archive") => void;
   onRefresh: (id: string) => void;
   adsManagerUrl: string | null;
   busy: boolean;
+  t: CampaignsT;
 }) {
   // Per-state action affordances:
   //   - paused / draft  → Resume (when Meta-side exists), Archive
@@ -299,9 +308,9 @@ function RowActions({
           onClick={() => onRefresh(c.id)}
           disabled={busy}
           className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-          title="Pull fresh insights from Meta"
+          title={t("campaigns.actions.refresh_tooltip")}
         >
-          {busy ? "…" : "↻ Refresh"}
+          {busy ? t("campaigns.actions.busy") : t("campaigns.actions.refresh")}
         </button>
       )}
       {canResume && (
@@ -311,7 +320,7 @@ function RowActions({
           disabled={busy}
           className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
         >
-          Resume
+          {t("campaigns.actions.resume")}
         </button>
       )}
       {canPause && (
@@ -321,7 +330,7 @@ function RowActions({
           disabled={busy}
           className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-50"
         >
-          Pause
+          {t("campaigns.actions.pause")}
         </button>
       )}
       {canArchive && (
@@ -330,9 +339,9 @@ function RowActions({
           onClick={() => onStatusChange(c.id, "archive")}
           disabled={busy}
           className="rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-          title="Archive in Meta (stays for history, can't be edited)"
+          title={t("campaigns.actions.archive_tooltip")}
         >
-          Archive
+          {t("campaigns.actions.archive")}
         </button>
       )}
       {adsManagerUrl && (
@@ -341,9 +350,9 @@ function RowActions({
           target="_blank"
           rel="noopener noreferrer"
           className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-          title="Open in Meta Ads Manager"
+          title={t("campaigns.actions.ads_manager_tooltip")}
         >
-          ↗ Meta
+          {t("campaigns.actions.ads_manager")}
         </a>
       )}
     </div>
@@ -352,56 +361,58 @@ function RowActions({
 
 // ── Display helpers ──────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; bg: string; fg: string }> = {
-    draft: { label: "Draft", bg: "bg-gray-100", fg: "text-gray-700" },
-    creating: { label: "Creating…", bg: "bg-blue-100", fg: "text-blue-700" },
-    active: { label: "Active", bg: "bg-emerald-100", fg: "text-emerald-800" },
-    paused: { label: "Paused", bg: "bg-amber-100", fg: "text-amber-900" },
-    completed: { label: "Completed", bg: "bg-gray-100", fg: "text-gray-600" },
-    failed: { label: "Failed", bg: "bg-red-100", fg: "text-red-700" },
+function StatusBadge({ status, t }: { status: string; t: CampaignsT }) {
+  const tones: Record<string, { bg: string; fg: string }> = {
+    draft: { bg: "bg-gray-100", fg: "text-gray-700" },
+    creating: { bg: "bg-blue-100", fg: "text-blue-700" },
+    active: { bg: "bg-emerald-100", fg: "text-emerald-800" },
+    paused: { bg: "bg-amber-100", fg: "text-amber-900" },
+    completed: { bg: "bg-gray-100", fg: "text-gray-600" },
+    failed: { bg: "bg-red-100", fg: "text-red-700" },
   };
-  const m = map[status] ?? {
-    label: status,
-    bg: "bg-gray-100",
-    fg: "text-gray-700",
-  };
+  const tone = tones[status] ?? { bg: "bg-gray-100", fg: "text-gray-700" };
+  const label = t(`campaigns.status.${status}`, { defaultValue: status });
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${m.bg} ${m.fg}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${tone.bg} ${tone.fg}`}
     >
-      {m.label}
+      {label}
     </span>
   );
 }
 
-function compactDateRange(start: string | null, end: string | null): string {
+function compactDateRange(
+  start: string | null,
+  end: string | null,
+  t: CampaignsT,
+  locale: string,
+): string {
   if (!start && !end) return "";
   const fmt = (iso: string) =>
-    new Date(iso).toLocaleDateString("en-US", {
+    new Date(iso).toLocaleDateString(locale, {
       month: "short",
       day: "numeric",
     });
-  if (start && end) return `${fmt(start)} → ${fmt(end)}`;
-  if (start) return `from ${fmt(start)}`;
-  if (end) return `until ${fmt(end!)}`;
+  if (start && end) return t("campaigns.row.date_range_both", { from: fmt(start), to: fmt(end) });
+  if (start) return t("campaigns.row.date_range_from", { from: fmt(start) });
+  if (end) return t("campaigns.row.date_range_until", { to: fmt(end) });
   return "";
 }
 
-function friendlyAgo(iso: string): string {
+function friendlyAgo(iso: string, t: CampaignsT): string {
   const ms = Date.now() - new Date(iso).getTime();
   const min = Math.floor(ms / 60_000);
-  if (min < 1) return "Just now";
-  if (min < 60) return `${min}m ago`;
+  if (min < 1) return t("campaigns.ago.just_now");
+  if (min < 60) return t("campaigns.ago.minutes", { count: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return t("campaigns.ago.hours", { count: hr });
   const day = Math.floor(hr / 24);
-  return `${day}d ago`;
+  return t("campaigns.ago.days", { count: day });
 }
 
 // ── Empty state ──────────────────────────────────────────────────────
 
-function EmptyState() {
+function EmptyState({ t }: { t: CampaignsT }) {
   return (
     <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50/40 p-8 text-center">
       <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
@@ -420,17 +431,14 @@ function EmptyState() {
         </svg>
       </div>
       <h2 className="text-base font-semibold text-gray-900">
-        No campaigns yet
+        {t("campaigns.empty.title")}
       </h2>
-      <p className="mt-1 text-sm text-gray-500">
-        Launch your first Lead Ad campaign to pull warm leads straight into
-        your CRM.
-      </p>
+      <p className="mt-1 text-sm text-gray-500">{t("campaigns.empty.body")}</p>
       <Link
         href="/dashboard/leads/generate/ads/new"
         className="mt-4 inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
       >
-        + New campaign
+        {t("campaigns.empty.cta")}
       </Link>
     </div>
   );

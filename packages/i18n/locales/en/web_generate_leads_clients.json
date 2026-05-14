@@ -1,0 +1,220 @@
+{
+  "connect": {
+    "dismiss_a11y": "Dismiss",
+    "flash": {
+      "success_facebook_title": "Facebook connected",
+      "success_linkedin_title": "LinkedIn connected",
+      "success_linkedin_body": "Your LinkedIn profile is linked. You can now publish posts directly from the Quick Post wizard.",
+      "success_meta_body_one": "Linked {{count}} Page. You can now publish posts directly from the Quick Post wizard.",
+      "success_meta_body_other": "Linked {{count}} Pages. You can now publish posts directly from the Quick Post wizard.",
+      "cancelled_title": "Connection cancelled",
+      "cancelled_body": "You exited the {{network}} dialog before granting access.",
+      "cancelled_body_with_reason": "You exited the {{network}} dialog before granting access ({{reason}}).",
+      "error_title": "Connection failed",
+      "error_body_default": "Something went wrong during the {{network}} connection."
+    },
+    "disconnect_confirm": "Disconnect {{label}}? Posts already published will stay live on {{network}}.",
+    "disconnect_failed": "Disconnect failed",
+    "meta": {
+      "title": "Facebook & Instagram",
+      "body": "Connect a Facebook Page. If it's linked to an Instagram Business account, that's connected automatically — one grant covers both.",
+      "cta_connect": "Connect Facebook",
+      "cta_connect_another": "Connect another",
+      "page_fallback": "Facebook Page",
+      "ig_prefix": "IG @{{user}}",
+      "page_id": "Page ID {{id}}",
+      "token_expires": "Token expires {{date}}",
+      "disconnect_busy": "Disconnecting…",
+      "disconnect": "Disconnect",
+      "this_page_fallback": "this Page",
+      "empty": "No Pages connected yet. Connect one to start publishing.",
+      "revoke_hint_prefix": "Granted scopes are stored encrypted; disconnect any time. To fully revoke the OAuth grant from Facebook's side too, visit your Facebook account's ",
+      "revoke_hint_link": "Apps and Websites",
+      "revoke_hint_suffix": " and remove LeadSmart AI."
+    },
+    "linkedin": {
+      "title": "LinkedIn",
+      "body": "Post to your personal LinkedIn feed. Real-estate professionals see strong engagement here — listings, market updates, and client wins all do well.",
+      "cta_connect": "Connect LinkedIn",
+      "cta_reconnect": "Reconnect",
+      "member_fallback": "LinkedIn member",
+      "personal_feed": "Personal feed",
+      "your_linkedin_fallback": "your LinkedIn",
+      "empty": "Not connected. Sign in with LinkedIn to enable posting.",
+      "revoke_hint_prefix": "Posts go to your personal LinkedIn feed. Company Page posting needs LinkedIn's Marketing API (partner-program-gated) and isn't in scope yet. To revoke from LinkedIn's side, go to your LinkedIn Settings → Data privacy → ",
+      "revoke_hint_link": "Permitted services",
+      "revoke_hint_suffix": " and remove LeadSmart AI."
+    },
+    "google_ads": {
+      "title": "Google Ads",
+      "phase_badge": "Phase 3",
+      "body": "Search + Performance Max campaigns from inside Generate Leads."
+    }
+  },
+  "campaigns": {
+    "errors": {
+      "action_failed": "Action failed",
+      "refresh_failed": "Refresh failed",
+      "failed_to_pause": "Failed to pause",
+      "failed_to_resume": "Failed to resume",
+      "failed_to_archive": "Failed to archive"
+    },
+    "archive_confirm": "Archive this campaign? It stays in Meta but can't be edited afterward.",
+    "columns": {
+      "campaign": "Campaign",
+      "status": "Status",
+      "budget": "Budget",
+      "spend": "Spend",
+      "impressions": "Impressions",
+      "leads": "Leads",
+      "cpl": "CPL",
+      "refreshed": "Refreshed"
+    },
+    "row": {
+      "empty_value": "—",
+      "ig_handle": " · IG @{{user}}",
+      "budget_daily": "${{amount}}/day",
+      "date_range_both": "{{from}} → {{to}}",
+      "date_range_from": "from {{from}}",
+      "date_range_until": "until {{to}}",
+      "meta_leads_extra": "(Meta: {{count}})",
+      "meta_leads_extra_tooltip": "Meta Insights reports {{count}} — webhook count is canonical",
+      "never": "Never"
+    },
+    "ago": {
+      "just_now": "Just now",
+      "minutes": "{{count}}m ago",
+      "hours": "{{count}}h ago",
+      "days": "{{count}}d ago"
+    },
+    "actions": {
+      "refresh": "↻ Refresh",
+      "refresh_tooltip": "Pull fresh insights from Meta",
+      "busy": "…",
+      "resume": "Resume",
+      "pause": "Pause",
+      "archive": "Archive",
+      "archive_tooltip": "Archive in Meta (stays for history, can't be edited)",
+      "ads_manager": "↗ Meta",
+      "ads_manager_tooltip": "Open in Meta Ads Manager"
+    },
+    "status": {
+      "draft": "Draft",
+      "creating": "Creating…",
+      "active": "Active",
+      "paused": "Paused",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "leads_footer": "Leads count comes from real-time webhooks (canonical). The Meta Insights leads number can lag a few hours; we show the webhook count to avoid undercount.",
+    "empty": {
+      "title": "No campaigns yet",
+      "body": "Launch your first Lead Ad campaign to pull warm leads straight into your CRM.",
+      "cta": "+ New campaign"
+    }
+  },
+  "scheduled": {
+    "cancel_confirm": "Cancel this scheduled post? The draft isn't deleted — you can re-schedule from the wizard.",
+    "cancel_failed": "Cancel failed",
+    "sections": {
+      "upcoming": "Upcoming",
+      "failed": "Failed",
+      "recent": "Recent"
+    },
+    "columns": {
+      "caption": "Caption",
+      "platform_page": "Platform / Page",
+      "scheduled_for": "Scheduled for",
+      "published": "Published",
+      "status": "Status"
+    },
+    "row": {
+      "empty_value": "—",
+      "retry": "Retry {{count}}/3",
+      "view": "↗ View",
+      "view_tooltip": "View the published post on the platform",
+      "cancel": "Cancel",
+      "busy": "…"
+    },
+    "platform": {
+      "facebook": "Facebook",
+      "instagram": "Instagram"
+    },
+    "status": {
+      "scheduled": "Scheduled",
+      "posting": "Posting…",
+      "posted": "Posted",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "empty": {
+      "title": "Nothing scheduled",
+      "body": "Draft a Quick Post and choose \"Schedule for later\" to queue it up — handy for Saturday open-house reminders and Sunday recaps.",
+      "cta": "Draft a post"
+    }
+  },
+  "recurring": {
+    "loading": "Loading…",
+    "errors": {
+      "load_failed": "Failed to load",
+      "pause_failed": "pause failed",
+      "resume_failed": "resume failed",
+      "cancel_failed": "cancel failed"
+    },
+    "cancel_confirm": "Cancel this recurrence? This is permanent.",
+    "empty": {
+      "title": "No recurring posts yet.",
+      "body_prefix": "Create one from the Quick Post wizard — toggle ",
+      "body_highlight": "Make this recurring",
+      "body_suffix": " when you have a draft ready.",
+      "cta": "Open Quick Post"
+    },
+    "sections": {
+      "active_title": "Active",
+      "active_subtitle": "The cron is materializing posts for these.",
+      "paused_title": "Paused",
+      "paused_subtitle": "Materialize cron is skipping these. Resume to re-enable.",
+      "done_title": "Recent (completed / cancelled)",
+      "done_subtitle": "Read-only."
+    },
+    "platform": {
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "linkedin": "LinkedIn"
+    },
+    "weekday": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "unknown": "?"
+    },
+    "cadence_daily": "Every day at {{time}} {{tz}}",
+    "cadence_weekly": "Every {{day}} at {{time}} {{tz}}",
+    "card": {
+      "next_active": "Next: {{date}} · ",
+      "next_paused": "Paused — next would have been {{date}} · ",
+      "posted_one": "Posted {{count}} time",
+      "posted_other": "Posted {{count}} times",
+      "posted_with_max_one": "Posted {{count}} of {{max}} time",
+      "posted_with_max_other": "Posted {{count}} of {{max}} times",
+      "ends_suffix": " · Ends {{date}}",
+      "last_error": "Last error: {{message}}"
+    },
+    "status": {
+      "active": "active",
+      "paused": "paused",
+      "completed": "completed",
+      "cancelled": "cancelled"
+    },
+    "actions": {
+      "pause": "Pause",
+      "resume": "Resume",
+      "cancel": "Cancel",
+      "busy": "…"
+    }
+  }
+}

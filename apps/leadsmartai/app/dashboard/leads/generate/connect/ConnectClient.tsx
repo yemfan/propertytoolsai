@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 
 /**
  * Client-side bits of the connect page:
@@ -48,6 +49,8 @@ type Flash =
   | { kind: "cancelled"; title: string; body: string }
   | { kind: "error"; title: string; body: string };
 
+type ConnectT = (key: string, options?: Record<string, unknown>) => string;
+
 function networkLabel(network: string | null): string {
   if (network === "linkedin") return "LinkedIn";
   return "Facebook";
@@ -58,6 +61,7 @@ function buildFlash(
   reason: string | null,
   count: string | null,
   network: string | null,
+  t: ConnectT,
 ): Flash | null {
   if (!status) return null;
   const label = networkLabel(network);
@@ -66,29 +70,29 @@ function buildFlash(
     if (network === "linkedin") {
       return {
         kind: "success",
-        title: "LinkedIn connected",
-        body: "Your LinkedIn profile is linked. You can now publish posts directly from the Quick Post wizard.",
+        title: t("connect.flash.success_linkedin_title"),
+        body: t("connect.flash.success_linkedin_body"),
       };
     }
     return {
       kind: "success",
-      title: "Facebook connected",
-      body: `Linked ${n} ${n === 1 ? "Page" : "Pages"}. You can now publish posts directly from the Quick Post wizard.`,
+      title: t("connect.flash.success_facebook_title"),
+      body: t("connect.flash.success_meta_body", { count: n }),
     };
   }
   if (status === "cancelled") {
     return {
       kind: "cancelled",
-      title: "Connection cancelled",
+      title: t("connect.flash.cancelled_title"),
       body: reason
-        ? `You exited the ${label} dialog before granting access (${reason}).`
-        : `You exited the ${label} dialog before granting access.`,
+        ? t("connect.flash.cancelled_body_with_reason", { network: label, reason })
+        : t("connect.flash.cancelled_body", { network: label }),
     };
   }
   return {
     kind: "error",
-    title: "Connection failed",
-    body: reason ?? `Something went wrong during the ${label} connection.`,
+    title: t("connect.flash.error_title"),
+    body: reason ?? t("connect.flash.error_body_default", { network: label }),
   };
 }
 
@@ -108,8 +112,9 @@ export default function ConnectClient({
   linkedinConnections: LinkedInAccountRow[];
 }) {
   const router = useRouter();
+  const { t } = useTranslation("web_generate_leads_clients");
   const [flash, setFlash] = useState<Flash | null>(() =>
-    buildFlash(initialStatus, initialReason, initialCount, initialNetwork),
+    buildFlash(initialStatus, initialReason, initialCount, initialNetwork, t),
   );
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -131,7 +136,7 @@ export default function ConnectClient({
     async (network: Network, id: string, label: string) => {
       if (
         !confirm(
-          `Disconnect ${label}? Posts already published will stay live on ${networkLabel(network)}.`,
+          t("connect.disconnect_confirm", { label, network: networkLabel(network) }),
         )
       )
         return;
@@ -151,16 +156,16 @@ export default function ConnectClient({
           error?: string;
         };
         if (!res.ok || !body.ok)
-          throw new Error(body.error ?? "Disconnect failed");
+          throw new Error(body.error ?? t("connect.disconnect_failed"));
         // Refresh so the server-rendered list updates.
         router.refresh();
       } catch (e) {
-        setActionError(e instanceof Error ? e.message : "Disconnect failed");
+        setActionError(e instanceof Error ? e.message : t("connect.disconnect_failed"));
       } finally {
         setDisconnectingId(null);
       }
     },
-    [router],
+    [router, t],
   );
 
   return (
@@ -182,7 +187,7 @@ export default function ConnectClient({
           <button
             type="button"
             onClick={() => setFlash(null)}
-            aria-label="Dismiss"
+            aria-label={t("connect.dismiss_a11y")}
             className="text-xs opacity-60 hover:opacity-100"
           >
             ✕
@@ -205,12 +210,10 @@ export default function ConnectClient({
             </div>
             <div>
               <h2 className="text-base font-semibold text-gray-900">
-                Facebook &amp; Instagram
+                {t("connect.meta.title")}
               </h2>
               <p className="text-sm text-gray-600">
-                Connect a Facebook Page. If it&apos;s linked to an Instagram
-                Business account, that&apos;s connected automatically — one
-                grant covers both.
+                {t("connect.meta.body")}
               </p>
             </div>
           </div>
@@ -218,7 +221,9 @@ export default function ConnectClient({
             href="/api/leads-gen/connect/meta/start"
             className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
           >
-            {metaConnections.length > 0 ? "Connect another" : "Connect Facebook"}
+            {metaConnections.length > 0
+              ? t("connect.meta.cta_connect_another")
+              : t("connect.meta.cta_connect")}
           </a>
         </div>
 
@@ -244,23 +249,24 @@ export default function ConnectClient({
                   )}
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-gray-900">
-                      {c.fb_page_name ?? "Facebook Page"}
+                      {c.fb_page_name ?? t("connect.meta.page_fallback")}
                     </p>
                     <p className="truncate text-xs text-gray-500">
                       {c.ig_business_username ? (
                         <>
                           <span className="rounded-full bg-pink-100 px-1.5 py-0.5 font-medium text-pink-700">
-                            IG @{c.ig_business_username}
+                            {t("connect.meta.ig_prefix", { user: c.ig_business_username })}
                           </span>{" "}
                           ·{" "}
                         </>
                       ) : null}
-                      Page ID {c.fb_page_id}
+                      {t("connect.meta.page_id", { id: c.fb_page_id })}
                       {c.user_token_expires_at && (
                         <>
                           {" · "}
-                          Token expires{" "}
-                          {new Date(c.user_token_expires_at).toLocaleDateString()}
+                          {t("connect.meta.token_expires", {
+                            date: new Date(c.user_token_expires_at).toLocaleDateString(),
+                          })}
                         </>
                       )}
                     </p>
@@ -275,12 +281,18 @@ export default function ConnectClient({
                   <button
                     type="button"
                     onClick={() =>
-                      onDisconnect("facebook", c.id, c.fb_page_name ?? "this Page")
+                      onDisconnect(
+                        "facebook",
+                        c.id,
+                        c.fb_page_name ?? t("connect.meta.this_page_fallback"),
+                      )
                     }
                     disabled={disconnectingId === c.id}
                     className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-white disabled:opacity-50"
                   >
-                    {disconnectingId === c.id ? "Disconnecting…" : "Disconnect"}
+                    {disconnectingId === c.id
+                      ? t("connect.meta.disconnect_busy")
+                      : t("connect.meta.disconnect")}
                   </button>
                 </div>
               </li>
@@ -288,15 +300,14 @@ export default function ConnectClient({
           </ul>
         ) : (
           <p className="mt-4 rounded-lg border border-dashed border-gray-300 bg-gray-50/60 px-3 py-3 text-sm text-gray-500">
-            No Pages connected yet. Connect one to start publishing.
+            {t("connect.meta.empty")}
           </p>
         )}
 
         <p className="mt-4 text-xs text-gray-400">
-          Granted scopes are stored encrypted; disconnect any time. To fully
-          revoke the OAuth grant from Facebook&apos;s side too, visit your
-          Facebook account&apos;s <em>Apps and Websites</em> and remove
-          LeadSmart AI.
+          {t("connect.meta.revoke_hint_prefix")}
+          <em>{t("connect.meta.revoke_hint_link")}</em>
+          {t("connect.meta.revoke_hint_suffix")}
         </p>
       </section>
 
@@ -308,11 +319,11 @@ export default function ConnectClient({
               💼
             </div>
             <div>
-              <h2 className="text-base font-semibold text-gray-900">LinkedIn</h2>
+              <h2 className="text-base font-semibold text-gray-900">
+                {t("connect.linkedin.title")}
+              </h2>
               <p className="text-sm text-gray-600">
-                Post to your personal LinkedIn feed. Real-estate professionals
-                see strong engagement here — listings, market updates, and
-                client wins all do well.
+                {t("connect.linkedin.body")}
               </p>
             </div>
           </div>
@@ -320,7 +331,9 @@ export default function ConnectClient({
             href="/api/leads-gen/connect/linkedin/start"
             className="shrink-0 rounded-lg bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800"
           >
-            {linkedinConnections.length > 0 ? "Reconnect" : "Connect LinkedIn"}
+            {linkedinConnections.length > 0
+              ? t("connect.linkedin.cta_reconnect")
+              : t("connect.linkedin.cta_connect")}
           </a>
         </div>
 
@@ -346,19 +359,20 @@ export default function ConnectClient({
                   )}
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-gray-900">
-                      {c.account_display_name ?? "LinkedIn member"}
+                      {c.account_display_name ?? t("connect.linkedin.member_fallback")}
                     </p>
                     <p className="truncate text-xs text-gray-500">
                       {c.linkedin_member_email ? (
                         <>{c.linkedin_member_email}</>
                       ) : (
-                        <>Personal feed</>
+                        <>{t("connect.linkedin.personal_feed")}</>
                       )}
                       {c.user_token_expires_at && (
                         <>
                           {" · "}
-                          Token expires{" "}
-                          {new Date(c.user_token_expires_at).toLocaleDateString()}
+                          {t("connect.meta.token_expires", {
+                            date: new Date(c.user_token_expires_at).toLocaleDateString(),
+                          })}
                         </>
                       )}
                     </p>
@@ -376,13 +390,15 @@ export default function ConnectClient({
                       onDisconnect(
                         "linkedin",
                         c.id,
-                        c.account_display_name ?? "your LinkedIn",
+                        c.account_display_name ?? t("connect.linkedin.your_linkedin_fallback"),
                       )
                     }
                     disabled={disconnectingId === c.id}
                     className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-white disabled:opacity-50"
                   >
-                    {disconnectingId === c.id ? "Disconnecting…" : "Disconnect"}
+                    {disconnectingId === c.id
+                      ? t("connect.meta.disconnect_busy")
+                      : t("connect.meta.disconnect")}
                   </button>
                 </div>
               </li>
@@ -390,16 +406,14 @@ export default function ConnectClient({
           </ul>
         ) : (
           <p className="mt-4 rounded-lg border border-dashed border-gray-300 bg-gray-50/60 px-3 py-3 text-sm text-gray-500">
-            Not connected. Sign in with LinkedIn to enable posting.
+            {t("connect.linkedin.empty")}
           </p>
         )}
 
         <p className="mt-4 text-xs text-gray-400">
-          Posts go to your personal LinkedIn feed. Company Page posting needs
-          LinkedIn&apos;s Marketing API (partner-program-gated) and isn&apos;t
-          in scope yet. To revoke from LinkedIn&apos;s side, go to your
-          LinkedIn Settings → Data privacy →{" "}
-          <em>Permitted services</em> and remove LeadSmart AI.
+          {t("connect.linkedin.revoke_hint_prefix")}
+          <em>{t("connect.linkedin.revoke_hint_link")}</em>
+          {t("connect.linkedin.revoke_hint_suffix")}
         </p>
       </section>
 
@@ -411,13 +425,13 @@ export default function ConnectClient({
           </div>
           <div>
             <h2 className="text-base font-semibold text-gray-700">
-              Google Ads{" "}
+              {t("connect.google_ads.title")}{" "}
               <span className="ml-1 rounded-full bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600">
-                Phase 3
+                {t("connect.google_ads.phase_badge")}
               </span>
             </h2>
             <p className="text-sm text-gray-500">
-              Search + Performance Max campaigns from inside Generate Leads.
+              {t("connect.google_ads.body")}
             </p>
           </div>
         </div>

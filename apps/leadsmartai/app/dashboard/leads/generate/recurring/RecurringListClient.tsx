@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+type RecurringT = (key: string, options?: Record<string, unknown>) => string;
 
 /**
  * Client-side list + lifecycle controls for recurring post
@@ -36,29 +39,25 @@ type Recurrence = {
   createdAt: string;
 };
 
-const PLATFORM_LABEL: Record<Recurrence["platform"], string> = {
-  facebook: "Facebook",
-  instagram: "Instagram",
-  linkedin: "LinkedIn",
-};
+const WEEKDAY_IDS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 
-const WEEKDAY_LABEL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function describeCadence(r: Recurrence): string {
+function describeCadence(r: Recurrence, t: RecurringT): string {
   const hh = String(r.timeOfDayHour).padStart(2, "0");
   const mm = String(r.timeOfDayMinute).padStart(2, "0");
-  const tz = r.timezone;
+  const time = `${hh}:${mm}`;
   if (r.cadence === "daily") {
-    return `Every day at ${hh}:${mm} ${tz}`;
+    return t("recurring.cadence_daily", { time, tz: r.timezone });
   }
-  const day =
-    r.weeklyDayOfWeek !== null
-      ? WEEKDAY_LABEL[r.weeklyDayOfWeek]
-      : "?";
-  return `Every ${day} at ${hh}:${mm} ${tz}`;
+  const dayKey =
+    r.weeklyDayOfWeek !== null && r.weeklyDayOfWeek >= 0 && r.weeklyDayOfWeek < 7
+      ? WEEKDAY_IDS[r.weeklyDayOfWeek]
+      : "unknown";
+  const day = t(`recurring.weekday.${dayKey}`);
+  return t("recurring.cadence_weekly", { day, time, tz: r.timezone });
 }
 
 export default function RecurringListClient() {
+  const { t, i18n } = useTranslation("web_generate_leads_clients");
   const [recurrences, setRecurrences] = useState<Recurrence[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
@@ -74,13 +73,13 @@ export default function RecurringListClient() {
         error?: string;
       };
       if (!res.ok || !body.ok)
-        throw new Error(body.error ?? "Failed to load");
+        throw new Error(body.error ?? t("recurring.errors.load_failed"));
       setRecurrences(body.recurrences ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : t("recurring.errors.load_failed"));
       setRecurrences([]);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -88,7 +87,7 @@ export default function RecurringListClient() {
 
   const act = useCallback(
     async (id: string, action: "pause" | "resume" | "cancel") => {
-      if (action === "cancel" && !confirm("Cancel this recurrence? This is permanent.")) {
+      if (action === "cancel" && !confirm(t("recurring.cancel_confirm"))) {
         return;
       }
       setActionError(null);
@@ -103,21 +102,27 @@ export default function RecurringListClient() {
           ok?: boolean;
           error?: string;
         };
-        if (!res.ok || !body.ok) throw new Error(body.error ?? `${action} failed`);
+        const failKey =
+          action === "pause"
+            ? "recurring.errors.pause_failed"
+            : action === "resume"
+              ? "recurring.errors.resume_failed"
+              : "recurring.errors.cancel_failed";
+        if (!res.ok || !body.ok) throw new Error(body.error ?? t(failKey));
         await load();
       } catch (e) {
-        setActionError(e instanceof Error ? e.message : `${action} failed`);
+        setActionError(e instanceof Error ? e.message : t(`recurring.errors.${action}_failed`));
       } finally {
         setActionId(null);
       }
     },
-    [load],
+    [load, t],
   );
 
   if (recurrences === null) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
-        Loading…
+        {t("recurring.loading")}
       </div>
     );
   }
@@ -131,17 +136,17 @@ export default function RecurringListClient() {
           </div>
         )}
         <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50/60 p-10 text-center">
-          <p className="text-sm text-gray-600">No recurring posts yet.</p>
+          <p className="text-sm text-gray-600">{t("recurring.empty.title")}</p>
           <p className="mt-1 text-xs text-gray-500">
-            Create one from the Quick Post wizard — toggle{" "}
-            <span className="font-medium">Make this recurring</span> when
-            you have a draft ready.
+            {t("recurring.empty.body_prefix")}
+            <span className="font-medium">{t("recurring.empty.body_highlight")}</span>
+            {t("recurring.empty.body_suffix")}
           </p>
           <a
             href="/dashboard/leads/generate/post/new"
             className="mt-4 inline-block rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"
           >
-            Open Quick Post
+            {t("recurring.empty.cta")}
           </a>
         </div>
       </div>
@@ -163,16 +168,25 @@ export default function RecurringListClient() {
       )}
 
       {active.length > 0 && (
-        <Section title="Active" subtitle="The cron is materializing posts for these.">
+        <Section
+          title={t("recurring.sections.active_title")}
+          subtitle={t("recurring.sections.active_subtitle")}
+        >
           {active.map((r) => (
             <Card
               key={r.id}
               recurrence={r}
               busy={actionId === r.id}
               actions={[
-                { label: "Pause", onClick: () => act(r.id, "pause") },
-                { label: "Cancel", onClick: () => act(r.id, "cancel"), variant: "danger" },
+                { label: t("recurring.actions.pause"), onClick: () => act(r.id, "pause") },
+                {
+                  label: t("recurring.actions.cancel"),
+                  onClick: () => act(r.id, "cancel"),
+                  variant: "danger",
+                },
               ]}
+              t={t}
+              locale={i18n.language}
             />
           ))}
         </Section>
@@ -180,8 +194,8 @@ export default function RecurringListClient() {
 
       {paused.length > 0 && (
         <Section
-          title="Paused"
-          subtitle="Materialize cron is skipping these. Resume to re-enable."
+          title={t("recurring.sections.paused_title")}
+          subtitle={t("recurring.sections.paused_subtitle")}
         >
           {paused.map((r) => (
             <Card
@@ -189,18 +203,34 @@ export default function RecurringListClient() {
               recurrence={r}
               busy={actionId === r.id}
               actions={[
-                { label: "Resume", onClick: () => act(r.id, "resume") },
-                { label: "Cancel", onClick: () => act(r.id, "cancel"), variant: "danger" },
+                { label: t("recurring.actions.resume"), onClick: () => act(r.id, "resume") },
+                {
+                  label: t("recurring.actions.cancel"),
+                  onClick: () => act(r.id, "cancel"),
+                  variant: "danger",
+                },
               ]}
+              t={t}
+              locale={i18n.language}
             />
           ))}
         </Section>
       )}
 
       {completedOrCancelled.length > 0 && (
-        <Section title="Recent (completed / cancelled)" subtitle="Read-only.">
+        <Section
+          title={t("recurring.sections.done_title")}
+          subtitle={t("recurring.sections.done_subtitle")}
+        >
           {completedOrCancelled.slice(0, 20).map((r) => (
-            <Card key={r.id} recurrence={r} busy={false} actions={[]} />
+            <Card
+              key={r.id}
+              recurrence={r}
+              busy={false}
+              actions={[]}
+              t={t}
+              locale={i18n.language}
+            />
           ))}
         </Section>
       )}
@@ -232,14 +262,27 @@ function Card({
   recurrence,
   busy,
   actions,
+  t,
+  locale,
 }: {
   recurrence: Recurrence;
   busy: boolean;
   actions: Array<{ label: string; onClick: () => void; variant?: "danger" }>;
+  t: RecurringT;
+  locale: string;
 }) {
   const r = recurrence;
   const next = new Date(r.nextOccurrenceAt);
   const ends = r.endsAt ? new Date(r.endsAt) : null;
+  // i18next pluralization: pass count and the chosen key auto-resolves
+  // _one or _other based on locale rules. We branch on maxOccurrences
+  // to pick the with-max variant.
+  const postedLine = r.maxOccurrences
+    ? t("recurring.card.posted_with_max", {
+        count: r.occurrenceCount,
+        max: r.maxOccurrences,
+      })
+    : t("recurring.card.posted", { count: r.occurrenceCount });
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -247,38 +290,30 @@ function Card({
         <div className="min-w-0">
           <div className="mb-1 flex items-center gap-2 text-xs">
             <span className="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-700">
-              {PLATFORM_LABEL[r.platform]}
+              {t(`recurring.platform.${r.platform}`, { defaultValue: r.platform })}
             </span>
             {r.socialAccountDisplay && (
               <span className="truncate text-gray-500">
                 {r.socialAccountDisplay}
               </span>
             )}
-            <StatusBadge status={r.status} />
+            <StatusBadge status={r.status} t={t} />
           </div>
           <p className="text-sm font-semibold text-gray-900">
-            {describeCadence(r)}
+            {describeCadence(r, t)}
           </p>
           <p className="mt-0.5 line-clamp-2 text-xs text-gray-600">
             {r.caption}
           </p>
           <p className="mt-2 text-[11px] text-gray-500">
-            {r.status === "active" && (
-              <>Next: {next.toLocaleString()} · </>
-            )}
-            {r.status === "paused" && (
-              <>
-                Paused — next would have been {next.toLocaleString()} ·{" "}
-              </>
-            )}
-            Posted {r.occurrenceCount}
-            {r.maxOccurrences ? ` of ${r.maxOccurrences}` : ""} time
-            {r.occurrenceCount === 1 ? "" : "s"}
-            {ends && <> · Ends {ends.toLocaleDateString()}</>}
+            {r.status === "active" && t("recurring.card.next_active", { date: next.toLocaleString(locale) })}
+            {r.status === "paused" && t("recurring.card.next_paused", { date: next.toLocaleString(locale) })}
+            {postedLine}
+            {ends && t("recurring.card.ends_suffix", { date: ends.toLocaleDateString(locale) })}
           </p>
           {r.lastError && (
             <p className="mt-1 line-clamp-2 text-[11px] text-red-700">
-              Last error: {r.lastError}
+              {t("recurring.card.last_error", { message: r.lastError })}
             </p>
           )}
         </div>
@@ -296,7 +331,7 @@ function Card({
                     : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                 }`}
               >
-                {busy ? "…" : a.label}
+                {busy ? t("recurring.actions.busy") : a.label}
               </button>
             ))}
           </div>
@@ -306,7 +341,7 @@ function Card({
   );
 }
 
-function StatusBadge({ status }: { status: Recurrence["status"] }) {
+function StatusBadge({ status, t }: { status: Recurrence["status"]; t: RecurringT }) {
   const cls =
     status === "active"
       ? "bg-emerald-100 text-emerald-800"
@@ -317,7 +352,7 @@ function StatusBadge({ status }: { status: Recurrence["status"] }) {
           : "bg-red-100 text-red-800";
   return (
     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>
-      {status}
+      {t(`recurring.status.${status}`, { defaultValue: status })}
     </span>
   );
 }

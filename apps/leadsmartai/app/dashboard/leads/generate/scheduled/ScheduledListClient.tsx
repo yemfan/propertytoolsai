@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+type ScheduledT = (key: string, options?: Record<string, unknown>) => string;
 
 /**
  * Scheduled posts list — client interactions:
@@ -45,6 +48,7 @@ export default function ScheduledListClient({
   scheduled: ScheduledRow[];
 }) {
   const router = useRouter();
+  const { t, i18n } = useTranslation("web_generate_leads_clients");
   const [actingId, setActingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -66,7 +70,7 @@ export default function ScheduledListClient({
 
   const onCancel = useCallback(
     async (id: string) => {
-      if (!confirm("Cancel this scheduled post? The draft isn't deleted — you can re-schedule from the wizard.")) {
+      if (!confirm(t("scheduled.cancel_confirm"))) {
         return;
       }
       setActionError(null);
@@ -80,20 +84,20 @@ export default function ScheduledListClient({
           error?: string;
         };
         if (!res.ok || !body.ok) {
-          throw new Error(body.error ?? "Cancel failed");
+          throw new Error(body.error ?? t("scheduled.cancel_failed"));
         }
         router.refresh();
       } catch (e) {
-        setActionError(e instanceof Error ? e.message : "Cancel failed");
+        setActionError(e instanceof Error ? e.message : t("scheduled.cancel_failed"));
       } finally {
         setActingId(null);
       }
     },
-    [router],
+    [router, t],
   );
 
   if (scheduled.length === 0) {
-    return <EmptyState />;
+    return <EmptyState t={t} />;
   }
 
   return (
@@ -105,20 +109,41 @@ export default function ScheduledListClient({
       )}
 
       {upcoming.length > 0 && (
-        <Section title="Upcoming" count={upcoming.length}>
-          <RowTable rows={upcoming} variant="upcoming" onCancel={onCancel} actingId={actingId} />
+        <Section title={t("scheduled.sections.upcoming")} count={upcoming.length}>
+          <RowTable
+            rows={upcoming}
+            variant="upcoming"
+            onCancel={onCancel}
+            actingId={actingId}
+            t={t}
+            locale={i18n.language}
+          />
         </Section>
       )}
 
       {failed.length > 0 && (
-        <Section title="Failed" count={failed.length} accent="red">
-          <RowTable rows={failed} variant="failed" onCancel={onCancel} actingId={actingId} />
+        <Section title={t("scheduled.sections.failed")} count={failed.length} accent="red">
+          <RowTable
+            rows={failed}
+            variant="failed"
+            onCancel={onCancel}
+            actingId={actingId}
+            t={t}
+            locale={i18n.language}
+          />
         </Section>
       )}
 
       {recent.length > 0 && (
-        <Section title="Recent" count={recent.length}>
-          <RowTable rows={recent} variant="recent" onCancel={onCancel} actingId={actingId} />
+        <Section title={t("scheduled.sections.recent")} count={recent.length}>
+          <RowTable
+            rows={recent}
+            variant="recent"
+            onCancel={onCancel}
+            actingId={actingId}
+            t={t}
+            locale={i18n.language}
+          />
         </Section>
       )}
     </div>
@@ -155,23 +180,27 @@ function RowTable({
   variant,
   onCancel,
   actingId,
+  t,
+  locale,
 }: {
   rows: ScheduledRow[];
   variant: "upcoming" | "failed" | "recent";
   onCancel: (id: string) => void;
   actingId: string | null;
+  t: ScheduledT;
+  locale: string;
 }) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50/60 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
           <tr>
-            <th className="px-4 py-3">Caption</th>
-            <th className="px-3 py-3">Platform / Page</th>
+            <th className="px-4 py-3">{t("scheduled.columns.caption")}</th>
+            <th className="px-3 py-3">{t("scheduled.columns.platform_page")}</th>
             <th className="px-3 py-3">
-              {variant === "recent" ? "Published" : "Scheduled for"}
+              {variant === "recent" ? t("scheduled.columns.published") : t("scheduled.columns.scheduled_for")}
             </th>
-            <th className="px-3 py-3">Status</th>
+            <th className="px-3 py-3">{t("scheduled.columns.status")}</th>
             <th className="px-3 py-3 w-1" />
           </tr>
         </thead>
@@ -184,7 +213,7 @@ function RowTable({
                 </div>
                 {r.hashtags.length > 0 && (
                   <div className="mt-1 truncate text-xs text-gray-500">
-                    {r.hashtags.map((t) => `#${t}`).join(" ")}
+                    {r.hashtags.map((tag) => `#${tag}`).join(" ")}
                   </div>
                 )}
                 {r.lastError && variant === "failed" && (
@@ -192,25 +221,25 @@ function RowTable({
                 )}
               </td>
               <td className="px-3 py-3 text-gray-700">
-                <PlatformBadge platform={r.platform} />
+                <PlatformBadge platform={r.platform} t={t} />
                 <div className="mt-0.5 text-xs text-gray-500">
                   {r.platform === "instagram" && r.igBusinessUsername
                     ? `@${r.igBusinessUsername}`
-                    : r.pageName ?? "—"}
+                    : r.pageName ?? t("scheduled.row.empty_value")}
                 </div>
               </td>
               <td className="px-3 py-3 text-gray-700">
                 {variant === "recent" && r.publishedAt
-                  ? new Date(r.publishedAt).toLocaleString()
-                  : new Date(r.scheduledFor).toLocaleString()}
+                  ? new Date(r.publishedAt).toLocaleString(locale)
+                  : new Date(r.scheduledFor).toLocaleString(locale)}
                 {variant === "upcoming" && r.attemptCount > 0 && (
                   <div className="text-xs text-amber-700">
-                    Retry {r.attemptCount}/3
+                    {t("scheduled.row.retry", { count: r.attemptCount })}
                   </div>
                 )}
               </td>
               <td className="px-3 py-3">
-                <StatusBadge status={r.status} />
+                <StatusBadge status={r.status} t={t} />
               </td>
               <td className="px-3 py-3 text-right">
                 <RowActions
@@ -218,6 +247,7 @@ function RowTable({
                   variant={variant}
                   onCancel={onCancel}
                   busy={actingId === r.id}
+                  t={t}
                 />
               </td>
             </tr>
@@ -233,11 +263,13 @@ function RowActions({
   variant,
   onCancel,
   busy,
+  t,
 }: {
   row: ScheduledRow;
   variant: "upcoming" | "failed" | "recent";
   onCancel: (id: string) => void;
   busy: boolean;
+  t: ScheduledT;
 }) {
   return (
     <div className="flex shrink-0 items-center justify-end gap-1.5">
@@ -247,9 +279,9 @@ function RowActions({
           target="_blank"
           rel="noopener noreferrer"
           className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-          title="View the published post on the platform"
+          title={t("scheduled.row.view_tooltip")}
         >
-          ↗ View
+          {t("scheduled.row.view")}
         </a>
       )}
       {(variant === "upcoming" || variant === "failed") && (
@@ -259,47 +291,49 @@ function RowActions({
           disabled={busy}
           className="rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
         >
-          {busy ? "…" : "Cancel"}
+          {busy ? t("scheduled.row.busy") : t("scheduled.row.cancel")}
         </button>
       )}
     </div>
   );
 }
 
-function PlatformBadge({ platform }: { platform: string }) {
-  const map: Record<string, { label: string; bg: string; fg: string }> = {
-    facebook: { label: "Facebook", bg: "bg-blue-100", fg: "text-blue-700" },
-    instagram: { label: "Instagram", bg: "bg-pink-100", fg: "text-pink-700" },
+function PlatformBadge({ platform, t }: { platform: string; t: ScheduledT }) {
+  const tones: Record<string, { bg: string; fg: string }> = {
+    facebook: { bg: "bg-blue-100", fg: "text-blue-700" },
+    instagram: { bg: "bg-pink-100", fg: "text-pink-700" },
   };
-  const m = map[platform] ?? { label: platform, bg: "bg-gray-100", fg: "text-gray-700" };
+  const tone = tones[platform] ?? { bg: "bg-gray-100", fg: "text-gray-700" };
+  const label = t(`scheduled.platform.${platform}`, { defaultValue: platform });
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${m.bg} ${m.fg}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${tone.bg} ${tone.fg}`}
     >
-      {m.label}
+      {label}
     </span>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; bg: string; fg: string }> = {
-    scheduled: { label: "Scheduled", bg: "bg-indigo-100", fg: "text-indigo-700" },
-    posting: { label: "Posting…", bg: "bg-amber-100", fg: "text-amber-900" },
-    posted: { label: "Posted", bg: "bg-emerald-100", fg: "text-emerald-800" },
-    failed: { label: "Failed", bg: "bg-red-100", fg: "text-red-700" },
-    cancelled: { label: "Cancelled", bg: "bg-gray-100", fg: "text-gray-600" },
+function StatusBadge({ status, t }: { status: string; t: ScheduledT }) {
+  const tones: Record<string, { bg: string; fg: string }> = {
+    scheduled: { bg: "bg-indigo-100", fg: "text-indigo-700" },
+    posting: { bg: "bg-amber-100", fg: "text-amber-900" },
+    posted: { bg: "bg-emerald-100", fg: "text-emerald-800" },
+    failed: { bg: "bg-red-100", fg: "text-red-700" },
+    cancelled: { bg: "bg-gray-100", fg: "text-gray-600" },
   };
-  const m = map[status] ?? { label: status, bg: "bg-gray-100", fg: "text-gray-700" };
+  const tone = tones[status] ?? { bg: "bg-gray-100", fg: "text-gray-700" };
+  const label = t(`scheduled.status.${status}`, { defaultValue: status });
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${m.bg} ${m.fg}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${tone.bg} ${tone.fg}`}
     >
-      {m.label}
+      {label}
     </span>
   );
 }
 
-function EmptyState() {
+function EmptyState({ t }: { t: ScheduledT }) {
   return (
     <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50/40 p-8 text-center">
       <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
@@ -318,17 +352,14 @@ function EmptyState() {
         </svg>
       </div>
       <h2 className="text-base font-semibold text-gray-900">
-        Nothing scheduled
+        {t("scheduled.empty.title")}
       </h2>
-      <p className="mt-1 text-sm text-gray-500">
-        Draft a Quick Post and choose &ldquo;Schedule for later&rdquo; to queue it
-        up — handy for Saturday open-house reminders and Sunday recaps.
-      </p>
+      <p className="mt-1 text-sm text-gray-500">{t("scheduled.empty.body")}</p>
       <Link
         href="/dashboard/leads/generate/post/new"
         className="mt-4 inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
       >
-        Draft a post
+        {t("scheduled.empty.cta")}
       </Link>
     </div>
   );
