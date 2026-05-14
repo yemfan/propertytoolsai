@@ -1,0 +1,151 @@
+{
+  "title": "Quick Post",
+  "back": "Back",
+  "section_label": "What's this about?",
+  "trigger_options": {
+    "new_listing": "New listing",
+    "open_house": "Open house",
+    "price_drop": "Price drop",
+    "just_sold": "Just sold",
+    "market_update": "Market update",
+    "testimonial": "Testimonial",
+    "custom": "Custom",
+    "by_address": "By address / URL"
+  },
+  "brief": {
+    "section_label_default": "Details (address, price, angle)",
+    "section_label_synthetic": "Brief",
+    "section_label_by_address": "Address or listing URL",
+    "placeholder": {
+      "new_listing": "e.g. 123 Main St, Pasadena. 3bd 2ba, $1.2M. Modern reno, walk to Old Town.",
+      "open_house": "e.g. 123 Main St, Saturday 1-4pm. Light bites + coffee, brand-new kitchen.",
+      "price_drop": "e.g. 123 Main St — down from $1.45M to $1.39M. Motivated seller.",
+      "just_sold": "e.g. Closed 123 Main St in 14 days, multiple offers. Repeat client.",
+      "market_update": "e.g. Inventory in Pasadena up 18% MoM, rates eased below 6.5%. Buyers are back.",
+      "testimonial": "e.g. Sarah said \"Mike made the whole process easy — closed in under 30 days, $15k off asking.\"",
+      "custom": "Describe the post — angle, tone, anything specific to include.",
+      "by_address": "Paste a listing URL (Zillow / Redfin / MLS) or just type an address."
+    },
+    "picked_subject_hint": "Anchored to a CRM record. AI will only use facts you typed — edit above if you want different ones."
+  },
+  "subject_picker": {
+    "cta": {
+      "new_listing": "Pick from listings",
+      "open_house": "Pick an open house",
+      "price_drop": "Pick a listing",
+      "just_sold": "Pick a closing",
+      "default": "Pick a record"
+    },
+    "header": {
+      "new_listing": "Your recent listings",
+      "open_house": "Upcoming open houses",
+      "price_drop": "Active listings",
+      "just_sold": "Recent closings",
+      "default": "Pick a record"
+    },
+    "empty": {
+      "new_listing": "No listings from the last 60 days. Try the Custom trigger.",
+      "open_house": "No open houses in the next 21 days. Schedule one first.",
+      "price_drop": "No active listings to re-price. Add or activate a listing.",
+      "just_sold": "No closings in the last 60 days.",
+      "default": "Nothing to pick — type your brief directly."
+    }
+  },
+  "lookup": {
+    "input_placeholder": "123 Main St, Pasadena CA — or paste a Zillow / Redfin / MLS URL",
+    "button": "Look up",
+    "button_busy": "Looking up…",
+    "error_too_short": "Paste an address or a listing URL first.",
+    "found": "Property found",
+    "not_found": "Not in our database — using what you typed",
+    "hint": "Edit the brief below before generating — the AI grounds the caption on whatever you leave there."
+  },
+  "image": {
+    "section_label": "Image (optional)",
+    "camera": "Camera",
+    "library": "Library",
+    "change": "Change",
+    "remove": "Remove",
+    "attached_fallback": "Attached image",
+    "permission_library_denied": "Photo library access denied. Enable it in Settings → LeadSmart.",
+    "permission_camera_denied": "Camera access denied. Enable it in Settings → LeadSmart."
+  },
+  "platform": {
+    "section_label": "Platform"
+  },
+  "generate": {
+    "button": "Generate",
+    "regenerate": "Regenerate",
+    "errors": {
+      "brief_required_default": "Add a brief — what's the address, the angle, anything special?",
+      "brief_required_synthetic": "Tell me what the post should be about.",
+      "brief_required_by_address": "Paste an address or URL above and tap Look up first, or type a brief below."
+    }
+  },
+  "caption": {
+    "label": "Caption"
+  },
+  "mode": {
+    "now": "Now",
+    "schedule": "Schedule",
+    "recurring": "Recurring"
+  },
+  "schedule_box": {
+    "publish_at": "Publish at ({{tz}})",
+    "instagram_needs_image": "Instagram requires an image. Attach one above.",
+    "future_clamp": "Pick a time at least 1 minute from now.",
+    "hint": "Cron picks up due posts every 5 minutes. Actual publish may land up to 5 min after your chosen time."
+  },
+  "recurring_box": {
+    "cadence": "Cadence",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "day_of_week": "Day of week",
+    "weekdays": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
+    "time_of_day": "Time of day ({{tz}})",
+    "stop_after": "Stop after (occurrences)",
+    "unlimited_placeholder": "(unlimited)",
+    "ig_needs_image": "Instagram recurring posts require an image. Attach one above.",
+    "hint": "Materialize cron creates a scheduled post about an hour before each fire time. Pause or cancel anytime from the Recurring screen."
+  },
+  "actions": {
+    "publish_to": "Publish to {{platform}}",
+    "schedule": "Schedule",
+    "create_recurring": "Create recurring",
+    "share_copy": "Share / Copy",
+    "ig_needs_image_publish": "Instagram posts require an image. Attach one above."
+  },
+  "banners": {
+    "scheduled_for": "Scheduled for {{date}}",
+    "view_scheduled": "View scheduled posts →",
+    "recurring_created": "Recurring post created — next fires {{date}}",
+    "manage_recurring": "Manage recurring posts →",
+    "published_to": "Published to {{platform}} ✓",
+    "view_the_post": "View the post →"
+  },
+  "share": {
+    "fail_title": "Share failed",
+    "fail_body": "Couldn't open the share sheet."
+  },
+  "helper": {
+    "want_one_tap": "Want one-tap publish?",
+    "connect_fb_page": "Connect your Facebook Page",
+    "connect_linkedin": "Connect LinkedIn",
+    "and_post_personal_feed": "and we'll post to your personal feed.",
+    "with_ig_business": "with a linked Instagram Business account.",
+    "instagram_needs_image_attach": "Instagram requires an image — attach one above to enable direct publish.",
+    "instagram_publish_note": "Posts go to your linked Instagram Business account. Make sure you're happy with the caption + image before tapping Publish.",
+    "facebook_publish_note": "Posts go straight to your connected Facebook Page. Manage connections from",
+    "linkedin_publish_note": "Posts go to your personal LinkedIn feed. Manage connections from",
+    "connect_platforms_link": "Connect Platforms",
+    "share_only_note": "Share / Copy into the {{platform}} app. Direct publish for {{platform}} is coming soon."
+  }
+}

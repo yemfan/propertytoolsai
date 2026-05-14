@@ -18,6 +18,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { useTranslation } from "react-i18next";
 import {
   createMobileRecurringPost,
   fetchMobileConnections,
@@ -68,19 +69,23 @@ import type { ThemeTokens } from "../lib/theme";
 
 type TriggerOption = {
   id: MobileQuickPostTrigger;
-  label: string;
   icon: keyof typeof Ionicons.glyphMap;
 };
 
+/**
+ * Trigger pill order + icons. Labels resolve at render time via
+ * `t("trigger_options.<id>")` so they translate when the agent
+ * flips locale without reloading the screen.
+ */
 const TRIGGERS: TriggerOption[] = [
-  { id: "new_listing", label: "New listing", icon: "home-outline" },
-  { id: "open_house", label: "Open house", icon: "calendar-outline" },
-  { id: "price_drop", label: "Price drop", icon: "trending-down-outline" },
-  { id: "just_sold", label: "Just sold", icon: "trophy-outline" },
-  { id: "market_update", label: "Market update", icon: "stats-chart-outline" },
-  { id: "testimonial", label: "Testimonial", icon: "chatbox-ellipses-outline" },
-  { id: "custom", label: "Custom", icon: "sparkles-outline" },
-  { id: "by_address", label: "By address / URL", icon: "link-outline" },
+  { id: "new_listing", icon: "home-outline" },
+  { id: "open_house", icon: "calendar-outline" },
+  { id: "price_drop", icon: "trending-down-outline" },
+  { id: "just_sold", icon: "trophy-outline" },
+  { id: "market_update", icon: "stats-chart-outline" },
+  { id: "testimonial", icon: "chatbox-ellipses-outline" },
+  { id: "custom", icon: "sparkles-outline" },
+  { id: "by_address", icon: "link-outline" },
 ];
 
 type PlatformOption = {
@@ -99,6 +104,7 @@ export default function QuickPostScreen() {
   const tokens = useThemeTokens();
   const router = useRouter();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("quick_post");
 
   // Optional deep-link params from the Home "Suggested next post"
   // card. When present, we pre-select the trigger + auto-pick the
@@ -376,7 +382,7 @@ export default function QuickPostScreen() {
   const onLookupAddress = useCallback(async () => {
     const input = lookupInput.trim();
     if (input.length < 3) {
-      setLookupError("Paste an address or a listing URL first.");
+      setLookupError(t("lookup.error_too_short"));
       hapticError();
       return;
     }
@@ -394,7 +400,7 @@ export default function QuickPostScreen() {
     setLookupResult(res.result);
     setBrief(res.result.brief);
     setGenerated(false);
-  }, [lookupInput]);
+  }, [lookupInput, t]);
 
   // Reset the picker state when the agent flips triggers — the
   // listing-anchored subjects don't make sense for a different
@@ -415,12 +421,12 @@ export default function QuickPostScreen() {
     if (!trimmed) {
       setError(
         trigger === "by_address"
-          ? "Paste an address or URL above and tap Look up first, or type a brief below."
+          ? t("generate.errors.brief_required_by_address")
           : trigger === "custom" ||
               trigger === "market_update" ||
               trigger === "testimonial"
-            ? "Tell me what the post should be about."
-            : "Add a brief — what's the address, the angle, anything special?",
+            ? t("generate.errors.brief_required_synthetic")
+            : t("generate.errors.brief_required_default"),
       );
       hapticError();
       return;
@@ -443,7 +449,7 @@ export default function QuickPostScreen() {
     setCaption(res.caption);
     setHashtags(res.hashtags);
     setGenerated(true);
-  }, [trigger, platform, brief]);
+  }, [trigger, platform, brief, t]);
 
   const onShare = useCallback(async () => {
     if (!caption) return;
@@ -463,9 +469,9 @@ export default function QuickPostScreen() {
       hapticSuccess();
     } catch {
       hapticError();
-      Alert.alert("Share failed", "Couldn't open the share sheet.");
+      Alert.alert(t("share.fail_title"), t("share.fail_body"));
     }
-  }, [caption, hashtags, platform]);
+  }, [caption, hashtags, platform, t]);
 
   /**
    * Upload a picked image to the media library. Shared by both
@@ -498,9 +504,7 @@ export default function QuickPostScreen() {
     hapticButtonPress();
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      setImageError(
-        "Photo library access denied. Enable it in Settings → LeadSmart.",
-      );
+      setImageError(t("image.permission_library_denied"));
       hapticError();
       return;
     }
@@ -510,21 +514,19 @@ export default function QuickPostScreen() {
       quality: 0.9,
     });
     await handlePicked(result);
-  }, [handlePicked]);
+  }, [handlePicked, t]);
 
   const onPickFromCamera = useCallback(async () => {
     hapticButtonPress();
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      setImageError(
-        "Camera access denied. Enable it in Settings → LeadSmart.",
-      );
+      setImageError(t("image.permission_camera_denied"));
       hapticError();
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.9 });
     await handlePicked(result);
-  }, [handlePicked]);
+  }, [handlePicked, t]);
 
   const onClearImage = useCallback(() => {
     hapticButtonPress();
@@ -545,7 +547,7 @@ export default function QuickPostScreen() {
     if (platform === "instagram" && !media) {
       setScheduleResult({
         ok: false,
-        error: "Instagram requires an image. Attach one above.",
+        error: t("schedule_box.instagram_needs_image"),
       });
       hapticError();
       return;
@@ -556,7 +558,7 @@ export default function QuickPostScreen() {
     if (scheduledAt.getTime() - Date.now() < 60_000) {
       setScheduleResult({
         ok: false,
-        error: "Pick a time at least 1 minute from now.",
+        error: t("schedule_box.future_clamp"),
       });
       hapticError();
       return;
@@ -592,6 +594,7 @@ export default function QuickPostScreen() {
     media,
     scheduledAt,
     pickedSubject,
+    t,
   ]);
 
   const onCreateRecurring = useCallback(async () => {
@@ -607,7 +610,7 @@ export default function QuickPostScreen() {
     if (platform === "instagram" && !media) {
       setRecurringResult({
         ok: false,
-        error: "Instagram recurring posts require an image. Attach one above.",
+        error: t("recurring_box.ig_needs_image"),
       });
       hapticError();
       return;
@@ -658,6 +661,7 @@ export default function QuickPostScreen() {
     recurringTime,
     recurringTimezone,
     recurringMax,
+    t,
   ]);
 
   const onPublish = useCallback(async () => {
@@ -675,7 +679,7 @@ export default function QuickPostScreen() {
     if (platform === "instagram" && !media) {
       setPublishResult({
         ok: false,
-        error: "Instagram posts require an image. Attach one above.",
+        error: t("actions.ig_needs_image_publish"),
       });
       hapticError();
       return;
@@ -713,6 +717,7 @@ export default function QuickPostScreen() {
     trigger,
     media,
     pickedSubject,
+    t,
   ]);
 
   return (
@@ -721,21 +726,21 @@ export default function QuickPostScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
     >
-      <Stack.Screen options={{ title: "Quick Post", headerBackTitle: "Back" }} />
+      <Stack.Screen options={{ title: t("title"), headerBackTitle: t("back") }} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
         {/* Trigger picker */}
-        <Text style={styles.sectionLabel}>What&apos;s this about?</Text>
+        <Text style={styles.sectionLabel}>{t("section_label")}</Text>
         <View style={styles.triggerGrid}>
-          {TRIGGERS.map((t) => {
-            const active = trigger === t.id;
+          {TRIGGERS.map((trig) => {
+            const active = trigger === trig.id;
             return (
               <Pressable
-                key={t.id}
+                key={trig.id}
                 onPress={() => {
-                  setTrigger(t.id);
+                  setTrigger(trig.id);
                   setGenerated(false);
                   hapticButtonPress();
                 }}
@@ -745,7 +750,7 @@ export default function QuickPostScreen() {
                 ]}
               >
                 <Ionicons
-                  name={t.icon}
+                  name={trig.icon}
                   size={18}
                   color={active ? tokens.accent : tokens.text}
                 />
@@ -755,7 +760,7 @@ export default function QuickPostScreen() {
                     active && styles.triggerChipTextActive,
                   ]}
                 >
-                  {t.label}
+                  {t(`trigger_options.${trig.id}`)}
                 </Text>
               </Pressable>
             );
@@ -766,12 +771,12 @@ export default function QuickPostScreen() {
         <View style={[styles.briefHeaderRow, { marginTop: 18 }]}>
           <Text style={styles.sectionLabel}>
             {trigger === "by_address"
-              ? "Address or listing URL"
+              ? t("brief.section_label_by_address")
               : trigger === "custom" ||
                   trigger === "market_update" ||
                   trigger === "testimonial"
-                ? "Brief"
-                : "Details (address, price, angle)"}
+                ? t("brief.section_label_synthetic")
+                : t("brief.section_label_default")}
           </Text>
           {triggerAllowsSubjects && (
             <Pressable
@@ -780,7 +785,7 @@ export default function QuickPostScreen() {
             >
               <Ionicons name="list-outline" size={14} color={tokens.accent} />
               <Text style={styles.subjectPickButtonText}>
-                {subjectPickerCtaLabel(trigger)}
+                {subjectPickerCtaLabel(trigger, t)}
               </Text>
             </Pressable>
           )}
@@ -793,7 +798,7 @@ export default function QuickPostScreen() {
           <View style={styles.lookupBox}>
             <TextInput
               style={styles.lookupInput}
-              placeholder="123 Main St, Pasadena CA — or paste a Zillow / Redfin / MLS URL"
+              placeholder={t("lookup.input_placeholder")}
               placeholderTextColor={tokens.textSubtle}
               value={lookupInput}
               onChangeText={setLookupInput}
@@ -818,7 +823,7 @@ export default function QuickPostScreen() {
               ) : (
                 <>
                   <Ionicons name="search" size={14} color="#fff" />
-                  <Text style={styles.lookupButtonText}>Look up</Text>
+                  <Text style={styles.lookupButtonText}>{t("lookup.button")}</Text>
                 </>
               )}
             </Pressable>
@@ -850,8 +855,8 @@ export default function QuickPostScreen() {
                   ]}
                 >
                   {lookupResult.found
-                    ? "Property found"
-                    : "Not in our database — using what you typed"}
+                    ? t("lookup.found")
+                    : t("lookup.not_found")}
                 </Text>
                 {lookupResult.found && (
                   <Text style={styles.lookupResultDetail}>
@@ -869,8 +874,7 @@ export default function QuickPostScreen() {
                   </Text>
                 )}
                 <Text style={styles.lookupResultHint}>
-                  Edit the brief below before generating — the AI grounds the
-                  caption on whatever you leave there.
+                  {t("lookup.hint")}
                 </Text>
               </View>
             )}
@@ -882,7 +886,7 @@ export default function QuickPostScreen() {
             styles.briefInput,
             trigger === "by_address" && { marginTop: 10 },
           ]}
-          placeholder={placeholderFor(trigger)}
+          placeholder={placeholderFor(trigger, t)}
           placeholderTextColor={tokens.textSubtle}
           multiline
           value={brief}
@@ -897,8 +901,7 @@ export default function QuickPostScreen() {
               color={tokens.success}
             />
             <Text style={styles.pickedSubjectText}>
-              Anchored to a CRM record. AI will only use facts you typed —
-              edit above if you want different ones.
+              {t("brief.picked_subject_hint")}
             </Text>
           </View>
         )}
@@ -910,7 +913,7 @@ export default function QuickPostScreen() {
           <View style={styles.subjectPickerCard}>
             <View style={styles.subjectPickerHeader}>
               <Text style={styles.subjectPickerTitle}>
-                {subjectPickerHeaderLabel(trigger)}
+                {subjectPickerHeaderLabel(trigger, t)}
               </Text>
               <Pressable
                 onPress={() => setShowSubjectPicker(false)}
@@ -927,7 +930,7 @@ export default function QuickPostScreen() {
               <Text style={styles.subjectErrorText}>{subjectsError}</Text>
             ) : subjects.length === 0 ? (
               <Text style={styles.subjectEmptyText}>
-                {subjectEmptyLabel(trigger)}
+                {subjectEmptyLabel(trigger, t)}
               </Text>
             ) : (
               subjects.map((s) => (
@@ -962,7 +965,7 @@ export default function QuickPostScreen() {
             chosen image uploads to media_library and is referenced
             by id in the publish payload. */}
         <Text style={[styles.sectionLabel, { marginTop: 18 }]}>
-          Image (optional)
+          {t("image.section_label")}
         </Text>
         {media ? (
           <View style={styles.imagePreview}>
@@ -976,7 +979,7 @@ export default function QuickPostScreen() {
             )}
             <View style={styles.imagePreviewMeta}>
               <Text style={styles.imagePreviewName} numberOfLines={1}>
-                {media.fileName ?? "Attached image"}
+                {media.fileName ?? t("image.attached_fallback")}
               </Text>
               <Text style={styles.imagePreviewSub}>
                 {media.contentType ?? "image"}
@@ -990,14 +993,14 @@ export default function QuickPostScreen() {
                   disabled={uploading}
                   style={styles.imageActionLink}
                 >
-                  <Text style={styles.imageActionLinkText}>Change</Text>
+                  <Text style={styles.imageActionLinkText}>{t("image.change")}</Text>
                 </Pressable>
                 <Pressable
                   onPress={onClearImage}
                   disabled={uploading}
                   style={styles.imageActionLink}
                 >
-                  <Text style={styles.imageActionLinkText}>Remove</Text>
+                  <Text style={styles.imageActionLinkText}>{t("image.remove")}</Text>
                 </Pressable>
               </View>
             </View>
@@ -1010,7 +1013,7 @@ export default function QuickPostScreen() {
               style={[styles.imagePickerButton, uploading && styles.imagePickerBusy]}
             >
               <Ionicons name="camera-outline" size={18} color={tokens.text} />
-              <Text style={styles.imagePickerText}>Camera</Text>
+              <Text style={styles.imagePickerText}>{t("image.camera")}</Text>
             </Pressable>
             <Pressable
               onPress={onPickFromLibrary}
@@ -1022,7 +1025,7 @@ export default function QuickPostScreen() {
               ) : (
                 <>
                   <Ionicons name="image-outline" size={18} color={tokens.text} />
-                  <Text style={styles.imagePickerText}>Library</Text>
+                  <Text style={styles.imagePickerText}>{t("image.library")}</Text>
                 </>
               )}
             </Pressable>
@@ -1037,7 +1040,7 @@ export default function QuickPostScreen() {
 
         {/* Platform tabs */}
         <Text style={[styles.sectionLabel, { marginTop: 18 }]}>
-          Platform
+          {t("platform.section_label")}
         </Text>
         <View style={styles.platformRow}>
           {PLATFORMS.map((p) => {
@@ -1080,7 +1083,7 @@ export default function QuickPostScreen() {
             <>
               <Ionicons name="sparkles" size={18} color="#fff" />
               <Text style={styles.generateButtonText}>
-                {generated ? "Regenerate" : "Generate"}
+                {generated ? t("generate.regenerate") : t("generate.button")}
               </Text>
             </>
           )}
@@ -1096,7 +1099,7 @@ export default function QuickPostScreen() {
         {/* Generated caption */}
         {generated && caption && (
           <View style={styles.captionCard}>
-            <Text style={styles.captionLabel}>Caption</Text>
+            <Text style={styles.captionLabel}>{t("caption.label")}</Text>
             <TextInput
               style={styles.captionInput}
               value={caption}
@@ -1124,10 +1127,10 @@ export default function QuickPostScreen() {
                   const active = mode === m;
                   const label =
                     m === "now"
-                      ? "Now"
+                      ? t("mode.now")
                       : m === "schedule"
-                        ? "Schedule"
-                        : "Recurring";
+                        ? t("mode.schedule")
+                        : t("mode.recurring");
                   return (
                     <Pressable
                       key={m}
@@ -1157,7 +1160,7 @@ export default function QuickPostScreen() {
             {canDirectPublish && mode === "schedule" && (
               <View style={styles.scheduleBox}>
                 <Text style={styles.scheduleLabel}>
-                  Publish at ({recurringTimezone})
+                  {t("schedule_box.publish_at", { tz: recurringTimezone })}
                 </Text>
                 <View style={styles.schedulePickerRow}>
                   <Pressable
@@ -1210,15 +1213,14 @@ export default function QuickPostScreen() {
                   />
                 )}
                 <Text style={styles.scheduleHint}>
-                  Cron picks up due posts every 5 minutes. Actual publish
-                  may land up to 5 min after your chosen time.
+                  {t("schedule_box.hint")}
                 </Text>
               </View>
             )}
 
             {canDirectPublish && mode === "recurring" && (
               <View style={styles.recurringBox}>
-                <Text style={styles.scheduleLabel}>Cadence</Text>
+                <Text style={styles.scheduleLabel}>{t("recurring_box.cadence")}</Text>
                 <View style={styles.modeRow}>
                   {(["daily", "weekly"] as const).map((c) => {
                     const active = recurringCadence === c;
@@ -1240,7 +1242,7 @@ export default function QuickPostScreen() {
                             active && styles.modeTabTextActive,
                           ]}
                         >
-                          {c === "daily" ? "Daily" : "Weekly"}
+                          {c === "daily" ? t("recurring_box.daily") : t("recurring_box.weekly")}
                         </Text>
                       </Pressable>
                     );
@@ -1250,15 +1252,15 @@ export default function QuickPostScreen() {
                 {recurringCadence === "weekly" && (
                   <>
                     <Text style={[styles.scheduleLabel, { marginTop: 12 }]}>
-                      Day of week
+                      {t("recurring_box.day_of_week")}
                     </Text>
                     <View style={styles.weekdayRow}>
-                      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-                        (label, i) => {
+                      {(["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const).map(
+                        (key, i) => {
                           const active = recurringWeekday === i;
                           return (
                             <Pressable
-                              key={label}
+                              key={key}
                               onPress={() => {
                                 setRecurringWeekday(i);
                                 hapticButtonPress();
@@ -1274,7 +1276,7 @@ export default function QuickPostScreen() {
                                   active && styles.weekdayChipTextActive,
                                 ]}
                               >
-                                {label}
+                                {t(`recurring_box.weekdays.${key}`)}
                               </Text>
                             </Pressable>
                           );
@@ -1285,7 +1287,7 @@ export default function QuickPostScreen() {
                 )}
 
                 <Text style={[styles.scheduleLabel, { marginTop: 12 }]}>
-                  Time of day ({recurringTimezone})
+                  {t("recurring_box.time_of_day", { tz: recurringTimezone })}
                 </Text>
                 <Pressable
                   onPress={() => setShowRecurringTimePicker(true)}
@@ -1315,21 +1317,19 @@ export default function QuickPostScreen() {
                 )}
 
                 <Text style={[styles.scheduleLabel, { marginTop: 12 }]}>
-                  Stop after (occurrences)
+                  {t("recurring_box.stop_after")}
                 </Text>
                 <TextInput
                   value={recurringMax}
                   onChangeText={setRecurringMax}
                   keyboardType="number-pad"
-                  placeholder="(unlimited)"
+                  placeholder={t("recurring_box.unlimited_placeholder")}
                   placeholderTextColor={tokens.textSubtle}
                   style={styles.maxOccurrencesInput}
                 />
 
                 <Text style={styles.scheduleHint}>
-                  Materialize cron creates a scheduled post about an hour
-                  before each fire time. Pause or cancel anytime from the
-                  Recurring screen.
+                  {t("recurring_box.hint")}
                 </Text>
               </View>
             )}
@@ -1375,10 +1375,10 @@ export default function QuickPostScreen() {
                       />
                       <Text style={styles.publishButtonText}>
                         {mode === "schedule"
-                          ? "Schedule"
+                          ? t("actions.schedule")
                           : mode === "recurring"
-                            ? "Create recurring"
-                            : `Publish to ${platform === "linkedin" ? "LinkedIn" : "Facebook"}`}
+                            ? t("actions.create_recurring")
+                            : t("actions.publish_to", { platform: platform === "linkedin" ? "LinkedIn" : "Facebook" })}
                       </Text>
                     </>
                   )}
@@ -1390,7 +1390,7 @@ export default function QuickPostScreen() {
                   size={16}
                   color={tokens.accent}
                 />
-                <Text style={styles.actionButtonText}>Share / Copy</Text>
+                <Text style={styles.actionButtonText}>{t("actions.share_copy")}</Text>
               </Pressable>
             </View>
 
@@ -1403,14 +1403,15 @@ export default function QuickPostScreen() {
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.successBannerTitle}>
-                    Scheduled for{" "}
-                    {new Date(scheduleResult.scheduledFor).toLocaleString()}
+                    {t("banners.scheduled_for", {
+                      date: new Date(scheduleResult.scheduledFor).toLocaleString(),
+                    })}
                   </Text>
                   <Pressable
                     onPress={() => router.push("/scheduled" as never)}
                   >
                     <Text style={styles.successBannerLink}>
-                      View scheduled posts →
+                      {t("banners.view_scheduled")}
                     </Text>
                   </Pressable>
                 </View>
@@ -1431,16 +1432,15 @@ export default function QuickPostScreen() {
                 <Ionicons name="repeat" size={18} color={tokens.success} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.successBannerTitle}>
-                    Recurring post created — next fires{" "}
-                    {new Date(
-                      recurringResult.nextOccurrenceAt,
-                    ).toLocaleString()}
+                    {t("banners.recurring_created", {
+                      date: new Date(recurringResult.nextOccurrenceAt).toLocaleString(),
+                    })}
                   </Text>
                   <Pressable
                     onPress={() => router.push("/recurring" as never)}
                   >
                     <Text style={styles.successBannerLink}>
-                      Manage recurring posts →
+                      {t("banners.manage_recurring")}
                     </Text>
                   </Pressable>
                 </View>
@@ -1468,7 +1468,7 @@ export default function QuickPostScreen() {
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.successBannerTitle}>
-                    Published to {labelFor(publishResult.platform)} ✓
+                    {t("banners.published_to", { platform: labelFor(publishResult.platform) })}
                   </Text>
                   {publishResult.externalPostUrl && (
                     <Pressable
@@ -1478,7 +1478,7 @@ export default function QuickPostScreen() {
                       }
                     >
                       <Text style={styles.successBannerLink}>
-                        View the post →
+                        {t("banners.view_the_post")}
                       </Text>
                     </Pressable>
                   )}
@@ -1498,76 +1498,66 @@ export default function QuickPostScreen() {
             <Text style={styles.helperText}>
               {platform === "facebook" && !canDirectPublish ? (
                 <>
-                  Want one-tap publish?{" "}
+                  {t("helper.want_one_tap")}{" "}
                   <Text
                     style={styles.linkText}
                     onPress={() => router.push("/connect-platforms" as never)}
                   >
-                    Connect your Facebook Page
+                    {t("helper.connect_fb_page")}
                   </Text>
                   .
                 </>
               ) : platform === "linkedin" && !canDirectPublish ? (
                 <>
-                  Want one-tap publish?{" "}
+                  {t("helper.want_one_tap")}{" "}
                   <Text
                     style={styles.linkText}
                     onPress={() => router.push("/connect-platforms" as never)}
                   >
-                    Connect LinkedIn
+                    {t("helper.connect_linkedin")}
                   </Text>{" "}
-                  and we&apos;ll post to your personal feed.
+                  {t("helper.and_post_personal_feed")}
                 </>
               ) : platform === "instagram" && !igConnection ? (
                 <>
-                  Want one-tap publish?{" "}
+                  {t("helper.want_one_tap")}{" "}
                   <Text
                     style={styles.linkText}
                     onPress={() => router.push("/connect-platforms" as never)}
                   >
-                    Connect your Facebook Page
+                    {t("helper.connect_fb_page")}
                   </Text>{" "}
-                  with a linked Instagram Business account.
+                  {t("helper.with_ig_business")}
                 </>
               ) : platform === "instagram" && !media ? (
-                <>
-                  Instagram requires an image — attach one above to enable
-                  direct publish.
-                </>
+                <>{t("helper.instagram_needs_image_attach")}</>
               ) : platform === "instagram" ? (
-                <>
-                  Posts go to your linked Instagram Business account. Make sure
-                  you&apos;re happy with the caption + image before tapping
-                  Publish.
-                </>
+                <>{t("helper.instagram_publish_note")}</>
               ) : platform === "facebook" ? (
                 <>
-                  Posts go straight to your connected Facebook Page. Manage
-                  connections from{" "}
+                  {t("helper.facebook_publish_note")}{" "}
                   <Text
                     style={styles.linkText}
                     onPress={() => router.push("/connect-platforms" as never)}
                   >
-                    Connect Platforms
+                    {t("helper.connect_platforms_link")}
                   </Text>
                   .
                 </>
               ) : platform === "linkedin" ? (
                 <>
-                  Posts go to your personal LinkedIn feed. Manage connections
-                  from{" "}
+                  {t("helper.linkedin_publish_note")}{" "}
                   <Text
                     style={styles.linkText}
                     onPress={() => router.push("/connect-platforms" as never)}
                   >
-                    Connect Platforms
+                    {t("helper.connect_platforms_link")}
                   </Text>
                   .
                 </>
               ) : (
                 <>
-                  Share / Copy into the {labelFor(platform)} app. Direct
-                  publish for {labelFor(platform)} is coming soon.
+                  {t("helper.share_only_note", { platform: labelFor(platform) })}
                 </>
               )}
             </Text>
@@ -1578,70 +1568,79 @@ export default function QuickPostScreen() {
   );
 }
 
-function subjectPickerCtaLabel(t: MobileQuickPostTrigger): string {
-  switch (t) {
+/**
+ * Helper functions take the `t` function as a parameter so they
+ * stay pure + don't capture a stale i18n instance. Caller passes
+ * the `t` from `useTranslation("quick_post")`.
+ *
+ * The CTA / header / empty helpers fall back to `.default` for
+ * synthetic triggers (custom / market_update / testimonial /
+ * by_address) since those don't have a CRM subject picker.
+ */
+type QuickPostTFunction = (
+  key: string,
+  options?: Record<string, unknown>,
+) => string;
+
+function subjectPickerCtaLabel(
+  trigger: MobileQuickPostTrigger,
+  t: QuickPostTFunction,
+): string {
+  switch (trigger) {
     case "new_listing":
-      return "Pick from listings";
+      return t("subject_picker.cta.new_listing");
     case "open_house":
-      return "Pick an open house";
+      return t("subject_picker.cta.open_house");
     case "price_drop":
-      return "Pick a listing";
+      return t("subject_picker.cta.price_drop");
     case "just_sold":
-      return "Pick a closing";
+      return t("subject_picker.cta.just_sold");
     default:
-      return "Pick a record";
+      return t("subject_picker.cta.default");
   }
 }
 
-function subjectPickerHeaderLabel(t: MobileQuickPostTrigger): string {
-  switch (t) {
+function subjectPickerHeaderLabel(
+  trigger: MobileQuickPostTrigger,
+  t: QuickPostTFunction,
+): string {
+  switch (trigger) {
     case "new_listing":
-      return "Your recent listings";
+      return t("subject_picker.header.new_listing");
     case "open_house":
-      return "Upcoming open houses";
+      return t("subject_picker.header.open_house");
     case "price_drop":
-      return "Active listings";
+      return t("subject_picker.header.price_drop");
     case "just_sold":
-      return "Recent closings";
+      return t("subject_picker.header.just_sold");
     default:
-      return "Pick a record";
+      return t("subject_picker.header.default");
   }
 }
 
-function subjectEmptyLabel(t: MobileQuickPostTrigger): string {
-  switch (t) {
+function subjectEmptyLabel(
+  trigger: MobileQuickPostTrigger,
+  t: QuickPostTFunction,
+): string {
+  switch (trigger) {
     case "new_listing":
-      return "No listings from the last 60 days. Try the Custom trigger.";
+      return t("subject_picker.empty.new_listing");
     case "open_house":
-      return "No open houses in the next 21 days. Schedule one first.";
+      return t("subject_picker.empty.open_house");
     case "price_drop":
-      return "No active listings to re-price. Add or activate a listing.";
+      return t("subject_picker.empty.price_drop");
     case "just_sold":
-      return "No closings in the last 60 days.";
+      return t("subject_picker.empty.just_sold");
     default:
-      return "Nothing to pick — type your brief directly.";
+      return t("subject_picker.empty.default");
   }
 }
 
-function placeholderFor(t: MobileQuickPostTrigger): string {
-  switch (t) {
-    case "new_listing":
-      return "e.g. 123 Main St, Pasadena. 3bd 2ba, $1.2M. Modern reno, walk to Old Town.";
-    case "open_house":
-      return "e.g. 123 Main St, Saturday 1-4pm. Light bites + coffee, brand-new kitchen.";
-    case "price_drop":
-      return "e.g. 123 Main St — down from $1.45M to $1.39M. Motivated seller.";
-    case "just_sold":
-      return "e.g. Closed 123 Main St in 14 days, multiple offers. Repeat client.";
-    case "market_update":
-      return "e.g. Inventory in Pasadena up 18% MoM, rates eased below 6.5%. Buyers are back.";
-    case "testimonial":
-      return 'e.g. Sarah said "Mike made the whole process easy — closed in under 30 days, $15k off asking."';
-    case "custom":
-      return "Describe the post — angle, tone, anything specific to include.";
-    case "by_address":
-      return "Paste a listing URL (Zillow / Redfin / MLS) or just type an address.";
-  }
+function placeholderFor(
+  trigger: MobileQuickPostTrigger,
+  t: QuickPostTFunction,
+): string {
+  return t(`brief.placeholder.${trigger}`);
 }
 
 function formatBytes(bytes: number): string {

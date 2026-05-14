@@ -32,10 +32,12 @@ import {
 import enCommon from "@leadsmart/i18n/locale/en/common";
 import enHome from "@leadsmart/i18n/locale/en/home";
 import enNav from "@leadsmart/i18n/locale/en/nav";
+import enQuickPost from "@leadsmart/i18n/locale/en/quick_post";
 import enSettings from "@leadsmart/i18n/locale/en/settings";
 import zhCommon from "@leadsmart/i18n/locale/zh-Hans/common";
 import zhHome from "@leadsmart/i18n/locale/zh-Hans/home";
 import zhNav from "@leadsmart/i18n/locale/zh-Hans/nav";
+import zhQuickPost from "@leadsmart/i18n/locale/zh-Hans/quick_post";
 import zhSettings from "@leadsmart/i18n/locale/zh-Hans/settings";
 
 const STORAGE_KEY = "i18n:locale";
@@ -46,12 +48,14 @@ const resources = {
     settings: enSettings,
     nav: enNav,
     home: enHome,
+    quick_post: enQuickPost,
   },
   "zh-Hans": {
     common: zhCommon,
     settings: zhSettings,
     nav: zhNav,
     home: zhHome,
+    quick_post: zhQuickPost,
   },
 } as const;
 
@@ -117,7 +121,7 @@ export function initI18n(): Promise<typeof i18n> {
       // doesn't bypass the resolver.
       supportedLngs: [...SUPPORTED_LOCALES],
       defaultNS: "common",
-      ns: ["common", "settings", "nav", "home"],
+      ns: ["common", "settings", "nav", "home", "quick_post"],
       interpolation: {
         // React Native handles escaping; double-escaping breaks
         // strings with apostrophes / quotes inside translations.
