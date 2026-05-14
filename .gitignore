@@ -7,6 +7,15 @@ node_modules/
 .expo/
 **/.expo/
 apps/leadsmart-mobile/dist/
+# Stray Expo/EAS configs — only apps/leadsmart-mobile should own app.json + eas.json.
+# Running `eas build` from another app dir (or the repo root) regenerates these and
+# targets the wrong EAS project, breaking the mobile bundle. Negate the mobile path.
+/app.json
+/eas.json
+/apps/*/app.json
+/apps/*/eas.json
+!/apps/leadsmart-mobile/app.json
+!/apps/leadsmart-mobile/eas.json
 # Use only the root lockfile in this monorepo (nested lockfiles confuse Next.js + Vercel)
 apps/**/package-lock.json
 /.pnp
