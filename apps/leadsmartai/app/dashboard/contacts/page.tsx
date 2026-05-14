@@ -2,17 +2,21 @@ import type { Metadata } from "next";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { listContacts } from "@/lib/contacts/service";
 import { listSmartLists } from "@/lib/contacts/smart-lists";
+import { getServerT } from "@/lib/i18n/server";
 import { getContactOfferStats } from "@/lib/offers/service";
 import { getContactShowingStats } from "@/lib/showings/service";
 import SmartListTabs from "@/components/dashboard/SmartListTabs";
 import ContactsClient from "./ContactsClient";
 
-export const metadata: Metadata = {
-  title: "Contacts",
-  description: "Manage your contact database and client relationships.",
-  keywords: ["contacts", "CRM", "client management"],
-  robots: { index: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t("metadata.title", { ns: "web_contacts" }),
+    description: t("metadata.description", { ns: "web_contacts" }),
+    keywords: ["contacts", "CRM", "client management"],
+    robots: { index: false },
+  };
+}
 
 type PageProps = {
   searchParams: Promise<{ list?: string }>;
