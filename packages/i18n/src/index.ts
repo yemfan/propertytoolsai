@@ -25,6 +25,7 @@
  *                       tab, and Calendar tab)
  *   - reply_composer    SMS ReplyComposer, EmailReplyModal, AI draft
  *                       button, and the AI-action upgrade banner
+ *   - inbox             Mobile Inbox tab (thread list)
  *
  * Future namespaces follow the same pattern — add a JSON file pair
  * (en + zh-Hans) and reference it from the app's resources map.
@@ -54,5 +55,6 @@ export const NAMESPACES = [
   "lead_components",
   "task_calendar_components",
   "reply_composer",
+  "inbox",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];
