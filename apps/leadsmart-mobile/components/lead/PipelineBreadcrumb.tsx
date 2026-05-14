@@ -1,6 +1,7 @@
 import type { MobilePipelineSlug, MobilePipelineStageOptionDto } from "@leadsmart/shared";
 import { MOBILE_PIPELINE_LABELS } from "@leadsmart/shared";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
@@ -17,9 +18,10 @@ function labelFor(stage: MobilePipelineStageOptionDto): string {
 export function PipelineBreadcrumb({ stages, selectedSlug }: Props) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("lead_components");
   if (!stages.length) {
     return (
-      <Text style={styles.fallback}>Pipeline stages not configured</Text>
+      <Text style={styles.fallback}>{t("pipeline.breadcrumb_not_configured")}</Text>
     );
   }
 

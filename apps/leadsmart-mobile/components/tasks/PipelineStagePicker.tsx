@@ -1,6 +1,7 @@
 import type { MobilePipelineSlug, MobilePipelineStageOptionDto } from "@leadsmart/shared";
 import { MOBILE_PIPELINE_LABELS } from "@leadsmart/shared";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
@@ -26,11 +27,12 @@ export function PipelineStagePicker({
 }: Props) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("lead_components");
 
   if (!stages.length) {
     return (
       <View style={styles.unavailable}>
-        <Text style={styles.unavailableText}>Pipeline stages unavailable for this account.</Text>
+        <Text style={styles.unavailableText}>{t("pipeline.picker_unavailable")}</Text>
       </View>
     );
   }

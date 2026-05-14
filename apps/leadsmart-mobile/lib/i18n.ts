@@ -31,6 +31,7 @@ import {
 
 import enCommon from "@leadsmart/i18n/locale/en/common";
 import enHome from "@leadsmart/i18n/locale/en/home";
+import enLeadComponents from "@leadsmart/i18n/locale/en/lead_components";
 import enLeadDetail from "@leadsmart/i18n/locale/en/lead_detail";
 import enLeads from "@leadsmart/i18n/locale/en/leads";
 import enNav from "@leadsmart/i18n/locale/en/nav";
@@ -38,6 +39,7 @@ import enQuickPost from "@leadsmart/i18n/locale/en/quick_post";
 import enSettings from "@leadsmart/i18n/locale/en/settings";
 import zhCommon from "@leadsmart/i18n/locale/zh-Hans/common";
 import zhHome from "@leadsmart/i18n/locale/zh-Hans/home";
+import zhLeadComponents from "@leadsmart/i18n/locale/zh-Hans/lead_components";
 import zhLeadDetail from "@leadsmart/i18n/locale/zh-Hans/lead_detail";
 import zhLeads from "@leadsmart/i18n/locale/zh-Hans/leads";
 import zhNav from "@leadsmart/i18n/locale/zh-Hans/nav";
@@ -55,6 +57,7 @@ const resources = {
     quick_post: enQuickPost,
     leads: enLeads,
     lead_detail: enLeadDetail,
+    lead_components: enLeadComponents,
   },
   "zh-Hans": {
     common: zhCommon,
@@ -64,6 +67,7 @@ const resources = {
     quick_post: zhQuickPost,
     leads: zhLeads,
     lead_detail: zhLeadDetail,
+    lead_components: zhLeadComponents,
   },
 } as const;
 
@@ -137,6 +141,7 @@ export function initI18n(): Promise<typeof i18n> {
         "quick_post",
         "leads",
         "lead_detail",
+        "lead_components",
       ],
       interpolation: {
         // React Native handles escaping; double-escaping breaks

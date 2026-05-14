@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { presentAiQuickReplyPlaceholder } from "../../lib/lead/aiQuickReplyPlaceholder";
 import { buildMailtoUrl, buildSmsUrl, buildTelUrl, normalizePhoneForLinking } from "../../lib/lead/contactLinking";
@@ -18,12 +19,11 @@ export type LeadQuickActionsRowProps = {
 
 type ActionKey = "call" | "sms" | "email" | "ai";
 
-const ACTIONS: { key: ActionKey; label: string; hint: string }[] = [
-  { key: "call", label: "Call", hint: "Bridges your phone to the contact via Twilio (logs the call)" },
-  { key: "sms", label: "Text", hint: "Opens the SMS app" },
-  { key: "email", label: "Email", hint: "Opens the mail composer" },
-  { key: "ai", label: "AI Reply", hint: "AI-assisted reply (coming soon)" },
-];
+/**
+ * Action ids only. Labels + hints resolve from i18n at render time —
+ * see the JSX below for `t("actions.<id>.label")` / `t("actions.<id>.hint")`.
+ */
+const ACTION_KEYS: ActionKey[] = ["call", "sms", "email", "ai"];
 
 type CallUiState =
   | { kind: "idle" }
@@ -31,47 +31,57 @@ type CallUiState =
   | { kind: "ringing" }
   | { kind: "error"; message: string };
 
+type LeadComponentsT = (
+  key: string,
+  options?: Record<string, unknown>,
+) => string;
+
 /**
  * Map structured click-to-call error codes to a short chip label.
  * The full message is set as the chip's title so a long-press on iOS
  * (or VoiceOver) reveals the why.
  */
-function callErrorLabel(code: string | undefined): string {
+function callErrorLabel(code: string | undefined, t: LeadComponentsT): string {
   switch (code) {
     case "missing_agent_phone":
-      return "Add phone";
+      return t("call_error.label.missing_agent_phone");
     case "missing_contact_phone":
-      return "No phone";
+      return t("call_error.label.missing_contact_phone");
     case "invalid_phone":
-      return "Bad phone";
+      return t("call_error.label.invalid_phone");
     case "twilio_api_failed":
-      return "Twilio failed";
+      return t("call_error.label.twilio_api_failed");
     default:
-      return "Failed";
+      return t("call_error.label.default");
   }
 }
 
-function callErrorDetail(code: string | undefined, fallback: string | undefined): string {
+function callErrorDetail(
+  code: string | undefined,
+  fallback: string | undefined,
+  t: LeadComponentsT,
+): string {
   switch (code) {
     case "missing_agent_phone":
-      return "Add your phone number under Settings before placing calls.";
+      return t("call_error.detail.missing_agent_phone");
     case "missing_contact_phone":
-      return "This contact has no phone number on file.";
+      return t("call_error.detail.missing_contact_phone");
     case "invalid_phone":
-      return "The phone number isn't in a valid format.";
+      return t("call_error.detail.invalid_phone");
     case "missing_caller_id":
     case "twilio_not_configured":
-      return "Twilio is not configured for this account.";
+      return t("call_error.detail.twilio_not_configured");
     case "twilio_api_failed":
-      return "Twilio rejected the call.";
+      return t("call_error.detail.twilio_api_failed");
     default:
-      return fallback ?? "Call could not be placed.";
+      return fallback ?? t("call_error.detail.default");
   }
 }
 
 export function LeadQuickActionsRow({ leadId, displayPhone, email, toolbar }: LeadQuickActionsRowProps) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("lead_components");
   const phone = normalizePhoneForLinking(displayPhone);
   const emailTrimmed = email.trim();
   const canCall = Boolean(phone);
@@ -118,16 +128,16 @@ export function LeadQuickActionsRow({ leadId, displayPhone, email, toolbar }: Le
     if (res.code === "missing_caller_id" || res.code === "twilio_not_configured") {
       // Twilio not wired — drop to the native dialer instead of failing.
       setCallState({ kind: "idle" });
-      await openExternalUrl(buildTelUrl(phone), "No app can handle phone calls on this device.");
+      await openExternalUrl(buildTelUrl(phone), t("open_external_fail.tel"));
       return;
     }
     hapticError();
     setCallState({
       kind: "error",
-      message: callErrorDetail(res.code, res.message),
+      message: callErrorDetail(res.code, res.message, t),
     });
     scheduleReset(6000);
-  }, [leadId, phone, scheduleReset]);
+  }, [leadId, phone, scheduleReset, t]);
 
   const onPress = useCallback(
     async (key: ActionKey) => {
@@ -136,13 +146,13 @@ export function LeadQuickActionsRow({ leadId, displayPhone, email, toolbar }: Le
         return;
       }
       if (key === "sms" && phone) {
-        await openExternalUrl(buildSmsUrl(phone), "No app can handle SMS on this device.");
+        await openExternalUrl(buildSmsUrl(phone), t("open_external_fail.sms"));
         return;
       }
       if (key === "email" && emailTrimmed) {
         await openExternalUrl(
           buildMailtoUrl(emailTrimmed),
-          "No app can handle email links on this device.",
+          t("open_external_fail.email"),
         );
         return;
       }
@@ -150,7 +160,7 @@ export function LeadQuickActionsRow({ leadId, displayPhone, email, toolbar }: Le
         presentAiQuickReplyPlaceholder(leadId, "choose");
       }
     },
-    [leadId, phone, emailTrimmed, onCall],
+    [leadId, phone, emailTrimmed, onCall, t],
   );
 
   const enabled = (key: ActionKey) => {
@@ -163,13 +173,13 @@ export function LeadQuickActionsRow({ leadId, displayPhone, email, toolbar }: Le
   const callLabel = (() => {
     switch (callState.kind) {
       case "calling":
-        return "Calling…";
+        return t("call_state.calling");
       case "ringing":
-        return "Ringing…";
+        return t("call_state.ringing");
       case "error":
-        return callErrorLabel(undefined);
+        return callErrorLabel(undefined, t);
       default:
-        return "Call";
+        return t("actions.call.label");
     }
   })();
 
@@ -177,13 +187,15 @@ export function LeadQuickActionsRow({ leadId, displayPhone, email, toolbar }: Le
     <View
       style={[styles.wrap, toolbar && styles.wrapToolbar]}
       accessibilityRole="toolbar"
-      accessibilityLabel="Lead quick actions"
+      accessibilityLabel={t("actions.toolbar_a11y")}
     >
-      {ACTIONS.map(({ key, label, hint }) => {
+      {ACTION_KEYS.map((key) => {
         const isEnabled = enabled(key);
         const isCall = key === "call";
         const callBusy = isCall && (callState.kind === "calling" || callState.kind === "ringing");
         const callErrored = isCall && callState.kind === "error";
+        const label = t(`actions.${key}.label`);
+        const hint = t(`actions.${key}.hint`);
         const displayLabel = isCall ? callLabel : label;
         const displayHint = isCall && callState.kind === "error" ? callState.message : hint;
         return (

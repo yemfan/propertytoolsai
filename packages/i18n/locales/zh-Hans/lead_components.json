@@ -1,0 +1,58 @@
+{
+  "actions": {
+    "call": {
+      "label": "拨打",
+      "hint": "通过 Twilio 桥接您的手机至客户 (并记录通话)"
+    },
+    "sms": {
+      "label": "短信",
+      "hint": "打开短信应用"
+    },
+    "email": {
+      "label": "邮件",
+      "hint": "打开邮件撰写器"
+    },
+    "ai": {
+      "label": "AI 回复",
+      "hint": "AI 辅助回复 (即将上线)"
+    },
+    "toolbar_a11y": "客户快捷操作"
+  },
+  "call_state": {
+    "calling": "拨号中…",
+    "ringing": "正在响铃…"
+  },
+  "call_error": {
+    "label": {
+      "missing_agent_phone": "添加电话",
+      "missing_contact_phone": "无电话",
+      "invalid_phone": "电话无效",
+      "twilio_api_failed": "Twilio 失败",
+      "default": "失败"
+    },
+    "detail": {
+      "missing_agent_phone": "请先在设置中添加您的手机号,再发起拨打。",
+      "missing_contact_phone": "该客户档案中没有电话号码。",
+      "invalid_phone": "电话号码格式无效。",
+      "twilio_not_configured": "该账户尚未配置 Twilio。",
+      "twilio_api_failed": "Twilio 拒绝了此次拨打。",
+      "default": "无法发起通话。"
+    }
+  },
+  "open_external_fail": {
+    "tel": "本设备没有可处理电话的应用。",
+    "sms": "本设备没有可处理短信的应用。",
+    "email": "本设备没有可处理邮件链接的应用。"
+  },
+  "reply": {
+    "placeholder": "输入回复内容…",
+    "email_button": "用邮件回复",
+    "email_button_a11y": "用邮件回复",
+    "demo_ai_blocked": "示例客户 — 请连接您的 CRM 以使用 AI 回复。",
+    "demo_send_blocked": "示例客户 — 请连接您的 CRM 以发送消息。"
+  },
+  "pipeline": {
+    "breadcrumb_not_configured": "未配置客户阶段",
+    "picker_unavailable": "该账户暂无可用的客户阶段。"
+  }
+}
