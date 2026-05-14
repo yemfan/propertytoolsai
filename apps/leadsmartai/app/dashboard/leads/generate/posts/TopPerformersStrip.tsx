@@ -1,4 +1,7 @@
+import { getServerLocale, getServerT } from "@/lib/i18n/server";
 import type { TopPostItem } from "@/lib/leads-gen/top-posts";
+
+type WebPostsT = (key: string, opts?: { ns?: string; [k: string]: unknown }) => string;
 
 /**
  * "Top performers" strip on the web Posts page. Server-rendered;
@@ -10,39 +13,47 @@ import type { TopPostItem } from "@/lib/leads-gen/top-posts";
  * The strip auto-hides upstream (`top.hasMetrics`) so brand-new
  * agents don't see an empty section.
  */
-export default function TopPerformersStrip({
+export default async function TopPerformersStrip({
   items,
   windowDays,
 }: {
   items: TopPostItem[];
   windowDays: number;
 }) {
+  const t = await getServerT();
+  const locale = await getServerLocale();
   return (
     <section className="mb-6">
       <h2 className="mb-3 flex items-baseline gap-2 text-sm font-semibold text-gray-700">
-        Top performers
+        {t("top_performers.title", { ns: "web_posts" })}
         <span className="text-xs font-normal text-gray-500">
-          · last {windowDays} days
+          {t("top_performers.window", { ns: "web_posts", days: windowDays })}
         </span>
       </h2>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item, idx) => (
-          <Card key={item.id} item={item} rank={idx + 1} />
+          <Card key={item.id} item={item} rank={idx + 1} t={t} locale={locale} />
         ))}
       </div>
     </section>
   );
 }
 
-function Card({ item, rank }: { item: TopPostItem; rank: number }) {
+function Card({
+  item,
+  rank,
+  t,
+  locale,
+}: {
+  item: TopPostItem;
+  rank: number;
+  t: WebPostsT;
+  locale: string;
+}) {
   const platformLabel =
-    item.platform === "facebook"
-      ? "Facebook"
-      : item.platform === "instagram"
-        ? "Instagram"
-        : item.platform === "linkedin"
-          ? "LinkedIn"
-          : item.platform;
+    item.platform === "facebook" || item.platform === "instagram" || item.platform === "linkedin"
+      ? t(`platforms.${item.platform}`, { ns: "web_posts" })
+      : item.platform;
   const platformAccent =
     item.platform === "facebook"
       ? "bg-blue-100 text-blue-700"
@@ -53,14 +64,14 @@ function Card({ item, rank }: { item: TopPostItem; rank: number }) {
     item.pageName ??
     item.igBusinessUsername ??
     item.linkedinDisplayName ??
-    "—";
+    t("card.account_fallback", { ns: "web_posts" });
   const publishedAt = item.publishedAt ? new Date(item.publishedAt) : null;
 
   const cells: Array<{ label: string; value: number | null }> = [
-    { label: "Likes", value: item.metrics.likes },
-    { label: "Comments", value: item.metrics.comments },
-    { label: "Shares", value: item.metrics.shares },
-    { label: "Saves", value: item.metrics.saves },
+    { label: t("top_performers.metrics.likes", { ns: "web_posts" }), value: item.metrics.likes },
+    { label: t("top_performers.metrics.comments", { ns: "web_posts" }), value: item.metrics.comments },
+    { label: t("top_performers.metrics.shares", { ns: "web_posts" }), value: item.metrics.shares },
+    { label: t("top_performers.metrics.saves", { ns: "web_posts" }), value: item.metrics.saves },
   ];
   const ranked = cells
     .filter((c) => (c.value ?? 0) > 0)
@@ -97,10 +108,10 @@ function Card({ item, rank }: { item: TopPostItem; rank: number }) {
 
       <div className="mt-3 flex items-baseline gap-1.5">
         <span className="text-2xl font-bold text-gray-900">
-          {item.engagementScore.toLocaleString()}
+          {item.engagementScore.toLocaleString(locale)}
         </span>
         <span className="text-xs font-medium text-gray-500">
-          total engagement
+          {t("top_performers.total_engagement", { ns: "web_posts" })}
         </span>
       </div>
 
@@ -109,9 +120,9 @@ function Card({ item, rank }: { item: TopPostItem; rank: number }) {
           {ranked.map((c) => (
             <span key={c.label}>
               <strong className="text-gray-700">
-                {c.value!.toLocaleString()}
+                {c.value!.toLocaleString(locale)}
               </strong>{" "}
-              {c.label.toLowerCase()}
+              {c.label}
             </span>
           ))}
         </div>
@@ -119,7 +130,7 @@ function Card({ item, rank }: { item: TopPostItem; rank: number }) {
 
       {publishedAt && (
         <p className="mt-2 text-[11px] text-gray-400">
-          {publishedAt.toLocaleString([], {
+          {publishedAt.toLocaleString(locale, {
             month: "short",
             day: "numeric",
             hour: "numeric",

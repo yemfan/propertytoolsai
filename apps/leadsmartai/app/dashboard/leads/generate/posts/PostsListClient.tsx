@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Reconstruct the Quick Post deep-link params from a lead_post row.
@@ -20,18 +21,18 @@ function reconstructFollowUpHref(post: {
   subjectKind: string | null;
   subjectRefId: string | null;
 }): string | null {
-  const t = post.triggerKind;
+  const trigger = post.triggerKind;
   if (
-    t !== "new_listing" &&
-    t !== "open_house" &&
-    t !== "price_drop" &&
-    t !== "just_sold"
+    trigger !== "new_listing" &&
+    trigger !== "open_house" &&
+    trigger !== "price_drop" &&
+    trigger !== "just_sold"
   ) {
     return null;
   }
   if (!post.subjectKind || !post.subjectRefId) return null;
   const subjectId = `${post.subjectKind}:${post.subjectRefId}`;
-  const params = new URLSearchParams({ trigger: t, subjectId });
+  const params = new URLSearchParams({ trigger, subjectId });
   return `/dashboard/leads/generate/post/new?${params.toString()}`;
 }
 
@@ -82,6 +83,7 @@ export default function PostsListClient({
 }: {
   posts: PublishedPostRow[];
 }) {
+  const { t, i18n } = useTranslation("web_posts");
   // Track per-row metrics state so Refresh updates feel instant
   // without a full router.refresh().
   const initial = useMemo(() => {
@@ -98,57 +100,60 @@ export default function PostsListClient({
   }, [posts]);
   const [rowState, setRowState] = useState<Record<string, RowState>>(initial);
 
-  const refresh = useCallback(async (id: string) => {
-    setRowState((s) => ({
-      ...s,
-      [id]: { ...s[id], refreshing: true, refreshError: null },
-    }));
-    try {
-      const res = await fetch(`/api/leads-gen/posts/${id}/refresh`, {
-        method: "POST",
-      });
-      const body = (await res.json().catch(() => ({}))) as {
-        ok?: boolean;
-        metrics?: MetricsMap | null;
-        refreshedAt?: string;
-        error?: string;
-      };
-      if (!res.ok || !body.ok) {
+  const refresh = useCallback(
+    async (id: string) => {
+      setRowState((s) => ({
+        ...s,
+        [id]: { ...s[id], refreshing: true, refreshError: null },
+      }));
+      try {
+        const res = await fetch(`/api/leads-gen/posts/${id}/refresh`, {
+          method: "POST",
+        });
+        const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          metrics?: MetricsMap | null;
+          refreshedAt?: string;
+          error?: string;
+        };
+        if (!res.ok || !body.ok) {
+          setRowState((s) => ({
+            ...s,
+            [id]: {
+              ...s[id],
+              refreshing: false,
+              refreshError: body.error ?? t("card.refresh_failed"),
+              // The server still stamps refreshedAt on LinkedIn 422s; reflect that.
+              metricsRefreshedAt:
+                body.refreshedAt ?? s[id].metricsRefreshedAt,
+            },
+          }));
+          return;
+        }
+        setRowState((s) => ({
+          ...s,
+          [id]: {
+            metrics: body.metrics ?? s[id].metrics,
+            metricsRefreshedAt: body.refreshedAt ?? new Date().toISOString(),
+            refreshing: false,
+            refreshError: null,
+          },
+        }));
+      } catch (e) {
         setRowState((s) => ({
           ...s,
           [id]: {
             ...s[id],
             refreshing: false,
-            refreshError: body.error ?? "Refresh failed",
-            // The server still stamps refreshedAt on LinkedIn 422s; reflect that.
-            metricsRefreshedAt:
-              body.refreshedAt ?? s[id].metricsRefreshedAt,
+            refreshError: e instanceof Error ? e.message : t("card.refresh_failed"),
           },
         }));
-        return;
       }
-      setRowState((s) => ({
-        ...s,
-        [id]: {
-          metrics: body.metrics ?? s[id].metrics,
-          metricsRefreshedAt: body.refreshedAt ?? new Date().toISOString(),
-          refreshing: false,
-          refreshError: null,
-        },
-      }));
-    } catch (e) {
-      setRowState((s) => ({
-        ...s,
-        [id]: {
-          ...s[id],
-          refreshing: false,
-          refreshError: e instanceof Error ? e.message : "Refresh failed",
-        },
-      }));
-    }
-  }, []);
+    },
+    [t],
+  );
 
-  if (posts.length === 0) return <EmptyState />;
+  if (posts.length === 0) return <EmptyState t={t} />;
 
   const published = posts.filter((p) => p.status === "published");
   const failed = posts.filter((p) => p.status === "failed");
@@ -158,7 +163,7 @@ export default function PostsListClient({
       {published.length > 0 && (
         <section>
           <h2 className="mb-3 text-sm font-semibold text-gray-700">
-            Published ({published.length})
+            {t("list.section_published", { count: published.length })}
           </h2>
           <div className="space-y-3">
             {published.map((p) => (
@@ -167,6 +172,8 @@ export default function PostsListClient({
                 post={p}
                 state={rowState[p.id]}
                 onRefresh={() => void refresh(p.id)}
+                t={t}
+                locale={i18n.language}
               />
             ))}
           </div>
@@ -176,7 +183,7 @@ export default function PostsListClient({
       {failed.length > 0 && (
         <section>
           <h2 className="mb-3 text-sm font-semibold text-red-700">
-            Failed ({failed.length})
+            {t("list.section_failed", { count: failed.length })}
           </h2>
           <div className="space-y-3">
             {failed.map((p) => (
@@ -185,6 +192,8 @@ export default function PostsListClient({
                 post={p}
                 state={rowState[p.id]}
                 onRefresh={() => void refresh(p.id)}
+                t={t}
+                locale={i18n.language}
               />
             ))}
           </div>
@@ -194,21 +203,25 @@ export default function PostsListClient({
   );
 }
 
+type WebPostsT = (key: string, options?: Record<string, unknown>) => string;
+
 function PostCard({
   post,
   state,
   onRefresh,
+  t,
+  locale,
 }: {
   post: PublishedPostRow;
   state: RowState;
   onRefresh: () => void;
+  t: WebPostsT;
+  locale: string;
 }) {
   const platformLabel =
-    post.platform === "facebook"
-      ? "Facebook"
-      : post.platform === "instagram"
-        ? "Instagram"
-        : "LinkedIn";
+    post.platform === "facebook" || post.platform === "instagram" || post.platform === "linkedin"
+      ? t(`platforms.${post.platform}`)
+      : post.platform;
   const platformAccent =
     post.platform === "facebook"
       ? "bg-blue-100 text-blue-700"
@@ -219,11 +232,24 @@ function PostCard({
     post.pageName ??
     post.igBusinessUsername ??
     post.linkedinDisplayName ??
-    "—";
+    t("card.account_fallback");
 
   const publishedAt = post.publishedAt
     ? new Date(post.publishedAt)
     : new Date(post.createdAt);
+  const longDateOpts: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  };
+  const shortDateOpts: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  };
 
   return (
     <article className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -251,19 +277,13 @@ function PostCard({
             <span className="text-gray-600">{accountName}</span>
             <span className="text-gray-400">·</span>
             <time className="text-gray-500">
-              {publishedAt.toLocaleString([], {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              })}
+              {publishedAt.toLocaleString(locale, longDateOpts)}
             </time>
             {post.triggerKind && (
               <>
                 <span className="text-gray-400">·</span>
                 <span className="text-gray-500">
-                  {triggerLabel(post.triggerKind)}
+                  {triggerLabel(post.triggerKind, t)}
                 </span>
               </>
             )}
@@ -288,13 +308,18 @@ function PostCard({
 
           {post.status === "failed" && post.errorMessage && (
             <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
-              <strong className="block">Publish failed</strong>
+              <strong className="block">{t("card.publish_failed_label")}</strong>
               {post.errorMessage}
             </div>
           )}
 
           {post.status === "published" && (
-            <MetricsRow metrics={state.metrics} platform={post.platform} />
+            <MetricsRow
+              metrics={state.metrics}
+              platform={post.platform}
+              t={t}
+              locale={locale}
+            />
           )}
 
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
@@ -305,7 +330,7 @@ function PostCard({
                 rel="noopener noreferrer"
                 className="font-semibold text-blue-700 hover:text-blue-900"
               >
-                View on {platformLabel} →
+                {t("card.view_on", { platform: platformLabel })}
               </a>
             )}
             {post.status === "published" && (
@@ -315,7 +340,7 @@ function PostCard({
                 disabled={state.refreshing}
                 className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
-                {state.refreshing ? "Refreshing…" : "Refresh metrics"}
+                {state.refreshing ? t("card.refreshing") : t("card.refresh_metrics")}
               </button>
             )}
             {(() => {
@@ -326,15 +351,17 @@ function PostCard({
                   href={followUpHref}
                   className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
                 >
-                  + Post follow-up
+                  {t("card.post_follow_up")}
                 </Link>
               );
             })()}
             <span className="text-gray-400">
               {state.metricsRefreshedAt
-                ? `Last refresh: ${new Date(state.metricsRefreshedAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
+                ? t("card.last_refresh", {
+                    when: new Date(state.metricsRefreshedAt).toLocaleString(locale, shortDateOpts),
+                  })
                 : post.status === "published"
-                  ? "No metrics yet — refresh to fetch"
+                  ? t("card.no_metrics")
                   : ""}
             </span>
             {state.refreshError && (
@@ -350,9 +377,13 @@ function PostCard({
 function MetricsRow({
   metrics,
   platform,
+  t,
+  locale,
 }: {
   metrics: MetricsMap;
   platform: string;
+  t: WebPostsT;
+  locale: string;
 }) {
   // Order tuned per platform — surface the most-meaningful number
   // first. FB foregrounds reach + reactions; IG foregrounds reach
@@ -360,29 +391,26 @@ function MetricsRow({
   const cells: Array<{ label: string; value: number | null }> =
     platform === "instagram"
       ? [
-          { label: "Likes", value: getNum(metrics, "likes") },
-          { label: "Comments", value: getNum(metrics, "comments") },
-          { label: "Saves", value: getNum(metrics, "saves") },
-          { label: "Reach", value: getNum(metrics, "reach") },
-          { label: "Impressions", value: getNum(metrics, "impressions") },
+          { label: t("metrics.likes"), value: getNum(metrics, "likes") },
+          { label: t("metrics.comments"), value: getNum(metrics, "comments") },
+          { label: t("metrics.saves"), value: getNum(metrics, "saves") },
+          { label: t("metrics.reach"), value: getNum(metrics, "reach") },
+          { label: t("metrics.impressions"), value: getNum(metrics, "impressions") },
         ]
       : platform === "facebook"
         ? [
-            { label: "Reactions", value: getNum(metrics, "likes") },
-            { label: "Comments", value: getNum(metrics, "comments") },
-            { label: "Shares", value: getNum(metrics, "shares") },
-            { label: "Reach", value: getNum(metrics, "reach") },
-            { label: "Impressions", value: getNum(metrics, "impressions") },
-            { label: "Clicks", value: getNum(metrics, "clicks") },
+            { label: t("metrics.reactions"), value: getNum(metrics, "likes") },
+            { label: t("metrics.comments"), value: getNum(metrics, "comments") },
+            { label: t("metrics.shares"), value: getNum(metrics, "shares") },
+            { label: t("metrics.reach"), value: getNum(metrics, "reach") },
+            { label: t("metrics.impressions"), value: getNum(metrics, "impressions") },
+            { label: t("metrics.clicks"), value: getNum(metrics, "clicks") },
           ]
         : [];
 
   if (cells.length === 0) {
     return (
-      <p className="mt-3 text-xs italic text-gray-400">
-        LinkedIn analytics aren&apos;t available via the API. View the post on
-        LinkedIn for engagement.
-      </p>
+      <p className="mt-3 text-xs italic text-gray-400">{t("metrics.linkedin_note")}</p>
     );
   }
 
@@ -391,7 +419,7 @@ function MetricsRow({
       {cells.map((c) => (
         <span key={c.label}>
           <strong className="text-gray-900">
-            {c.value == null ? "—" : c.value.toLocaleString()}
+            {c.value == null ? t("metrics.empty_value") : c.value.toLocaleString(locale)}
           </strong>{" "}
           <span className="text-gray-500">{c.label}</span>
         </span>
@@ -405,40 +433,16 @@ function getNum(m: Record<string, unknown>, key: string): number | null {
   return typeof v === "number" ? v : null;
 }
 
-function triggerLabel(t: string): string {
-  switch (t) {
-    case "new_listing":
-      return "New listing";
-    case "open_house":
-      return "Open house";
-    case "price_drop":
-      return "Price drop";
-    case "just_sold":
-      return "Just sold";
-    case "market_update":
-      return "Market update";
-    case "testimonial":
-      return "Testimonial";
-    case "custom":
-      return "Custom";
-    case "by_address":
-      return "By address";
-    default:
-      return t;
-  }
+function triggerLabel(kind: string, t: WebPostsT): string {
+  return t(`card.triggers.${kind}`, { defaultValue: kind });
 }
 
-function EmptyState() {
+function EmptyState({ t }: { t: WebPostsT }) {
   return (
     <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
       <div className="mb-2 text-3xl">📭</div>
-      <p className="text-sm font-semibold text-gray-900">
-        No published posts yet
-      </p>
-      <p className="mt-1 text-sm text-gray-500">
-        Once you publish a post from the wizard, it shows up here with
-        engagement metrics.
-      </p>
+      <p className="text-sm font-semibold text-gray-900">{t("empty.title")}</p>
+      <p className="mt-1 text-sm text-gray-500">{t("empty.body")}</p>
     </div>
   );
 }

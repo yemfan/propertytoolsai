@@ -35,6 +35,9 @@
  *                       Small standalone mobile screens:
  *                        notifications, post-history, scheduled,
  *                        recurring
+ *   - web_posts         Web /dashboard/leads/generate/posts page
+ *                        (Server Component + PostsListClient +
+ *                        TopPerformersStrip)
  *
  * Future namespaces follow the same pattern — add a JSON file pair
  * (en + zh-Hans) and reference it from the app's resources map.
@@ -69,5 +72,6 @@ export const NAMESPACES = [
   "showings_screen",
   "sphere_screen",
   "mobile_misc_screens",
+  "web_posts",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];

@@ -12,15 +12,17 @@ import {
 
 import enCommon from "@leadsmart/i18n/locale/en/common";
 import enSettings from "@leadsmart/i18n/locale/en/settings";
+import enWebPosts from "@leadsmart/i18n/locale/en/web_posts";
 import zhCommon from "@leadsmart/i18n/locale/zh-Hans/common";
 import zhSettings from "@leadsmart/i18n/locale/zh-Hans/settings";
+import zhWebPosts from "@leadsmart/i18n/locale/zh-Hans/web_posts";
 
 export const I18N_COOKIE_NAME = "leadsmart_locale";
 
 /** How long the locale cookie sticks around — one year, refreshed on each change. */
 export const I18N_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
-export const namespaces = ["common", "settings"] as const;
+export const namespaces = ["common", "settings", "web_posts"] as const;
 export type WebNamespace = (typeof namespaces)[number];
 
 export const resources: Record<
@@ -30,10 +32,12 @@ export const resources: Record<
   en: {
     common: enCommon,
     settings: enSettings,
+    web_posts: enWebPosts,
   },
   "zh-Hans": {
     common: zhCommon,
     settings: zhSettings,
+    web_posts: zhWebPosts,
   },
 };
 

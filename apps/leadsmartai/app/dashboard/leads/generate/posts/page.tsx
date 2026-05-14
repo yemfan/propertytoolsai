@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { getServerT } from "@/lib/i18n/server";
 import {
   LEAD_MEDIA_BUCKET,
   SIGNED_URL_TTL_SECONDS,
@@ -12,12 +13,14 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import PostsListClient, { type PublishedPostRow } from "./PostsListClient";
 import TopPerformersStrip from "./TopPerformersStrip";
 
-export const metadata: Metadata = {
-  title: "Published Posts | LeadSmart AI",
-  description:
-    "Every post you've published through Generate Leads, with engagement metrics.",
-  robots: { index: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t("metadata.title", { ns: "web_posts" }),
+    description: t("metadata.description", { ns: "web_posts" }),
+    robots: { index: false },
+  };
+}
 
 /**
  * Published-posts dashboard. Server-renders the agent's
@@ -31,6 +34,7 @@ export const metadata: Metadata = {
  */
 export default async function PublishedPostsPage() {
   const { agentId } = await getCurrentAgentContext();
+  const t = await getServerT();
 
   // Top performers — separate query so it shares the page's data
   // budget but stays decoupled from the main list rendering.
@@ -57,7 +61,7 @@ export default async function PublishedPostsPage() {
     return (
       <div className="mx-auto max-w-6xl px-4 py-6">
         <p className="text-sm text-red-700">
-          Couldn&apos;t load posts: {error.message}
+          {t("page.error_prefix", { ns: "web_posts", message: error.message })}
         </p>
       </div>
     );
@@ -188,11 +192,10 @@ export default async function PublishedPostsPage() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">
-            Published Posts
+            {t("page.title", { ns: "web_posts" })}
           </h1>
           <p className="text-sm text-gray-500">
-            Everything you&apos;ve published through Generate Leads, with
-            engagement metrics from Meta.
+            {t("page.subtitle", { ns: "web_posts" })}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -200,25 +203,25 @@ export default async function PublishedPostsPage() {
             href="/dashboard/leads/generate"
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            &larr; Generate Leads
+            {t("page.actions.back_to_generate", { ns: "web_posts" })}
           </Link>
           <Link
             href="/dashboard/leads/generate/scheduled"
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            🗓 Scheduled
+            {t("page.actions.scheduled", { ns: "web_posts" })}
           </Link>
           <Link
             href="/dashboard/leads/generate/recurring"
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            🔁 Recurring
+            {t("page.actions.recurring", { ns: "web_posts" })}
           </Link>
           <Link
             href="/dashboard/leads/generate/post/new"
             className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
           >
-            + New post
+            {t("page.actions.new_post", { ns: "web_posts" })}
           </Link>
         </div>
       </div>
