@@ -3,26 +3,27 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import JsonLd from "@/components/JsonLd";
+import { getServerT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = {
-  title: "About LeadSmart AI — the AI growth engine for real estate",
-  description:
-    "LeadSmart AI is the AI deal engine + coaching program built for real estate agents and financing professionals. Learn how we help agents close more deals and become top producers.",
-  alternates: { canonical: "/about" },
-  openGraph: {
-    title: "About LeadSmart AI",
-    description:
-      "The AI deal engine + coaching program for real estate professionals — capture, qualify, convert, and grow your annual transaction count.",
-    url: "/about",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "About LeadSmart AI",
-    description:
-      "The AI deal engine + coaching program for real estate professionals.",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t("about.title", { ns: "web_marketing" }),
+    description: t("about.description", { ns: "web_marketing" }),
+    alternates: { canonical: "/about" },
+    openGraph: {
+      title: t("about.og.title", { ns: "web_marketing" }),
+      description: t("about.og.description", { ns: "web_marketing" }),
+      url: "/about",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t("about.twitter.title", { ns: "web_marketing" }),
+      description: t("about.twitter.description", { ns: "web_marketing" }),
+    },
+  };
+}
 
 export default function AboutLeadSmartAIPage() {
   return (

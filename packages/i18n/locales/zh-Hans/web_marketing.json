@@ -1,0 +1,26 @@
+{
+  "landing": {
+    "title": "LeadSmart AI — 房产经纪人的 AI 交易引擎 + 教练系统",
+    "description": "捕获、筛选、转化、辅导 — 每个交易阶段都由房产原生 AI 驱动。包含设定年度成交目标的 LeadSmart AI 教练计划。Pro 版每月 49 美元起，Team 版每月 199 美元起。",
+    "og": {
+      "title": "LeadSmart AI — 房产经纪人的 AI 交易引擎 + 教练系统",
+      "description": "为房产经纪人打造的 AI 交易引擎和成长计划。14 天免费试用，可随时取消。"
+    }
+  },
+  "about": {
+    "title": "关于 LeadSmart AI — 房产行业的 AI 成长引擎",
+    "description": "LeadSmart AI 是为房产经纪人和贷款专业人士打造的 AI 交易引擎 + 教练计划。了解我们如何帮助经纪人完成更多交易、成为顶级成交者。",
+    "og": {
+      "title": "关于 LeadSmart AI",
+      "description": "为房产专业人士打造的 AI 交易引擎 + 教练计划 — 捕获、筛选、转化，提升年度成交量。"
+    },
+    "twitter": {
+      "title": "关于 LeadSmart AI",
+      "description": "为房产专业人士打造的 AI 交易引擎 + 教练计划。"
+    }
+  },
+  "pricing": {
+    "title": "套餐价格 | LeadSmart AI",
+    "description": "免费版、Pro 版（49 美元）、Elite 版（99 美元）和 Team 版（199 美元）— AI 客户管理、CRM 和自动化功能全面对比。"
+  }
+}

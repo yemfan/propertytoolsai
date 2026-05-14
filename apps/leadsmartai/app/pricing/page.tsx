@@ -1,15 +1,20 @@
+import type { Metadata } from "next";
+
 import ConsumerPricingClientPage from "./page.client";
 import { redirectAdminSupportAwayFromCommercialPricing } from "@/lib/auth/redirectStaffFromCommercialPricing";
 import JsonLd from "@/components/JsonLd";
+import { getServerT } from "@/lib/i18n/server";
 
-export const metadata = {
-  title: "Pricing | LeadSmart AI",
-  description:
-    "Free, Pro ($49), Elite ($99), and Team ($199) plans — full feature comparison for AI lead management, CRM, and automation.",
-  alternates: {
-    canonical: "/pricing",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t("pricing.title", { ns: "web_marketing" }),
+    description: t("pricing.description", { ns: "web_marketing" }),
+    alternates: {
+      canonical: "/pricing",
+    },
+  };
+}
 
 export default async function ConsumerPricingPage() {
   await redirectAdminSupportAwayFromCommercialPricing();
