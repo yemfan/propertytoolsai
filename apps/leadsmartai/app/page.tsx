@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { getServerT } from "@/lib/i18n/server";
 import { resolvePostAuthHomePath } from "@/lib/rolePortalServer";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 // V2 conversion-focused landing — see components/marketing/LeadSmartLandingV2.tsx.
@@ -13,19 +14,20 @@ import LeadSmartLanding from "@/components/marketing/LeadSmartLandingV2";
  * landing) if FAQ rich-snippet SEO becomes a priority again.
  */
 
-export const metadata: Metadata = {
-  title: "LeadSmart AI — The AI Deal Engine + Coaching for Real Estate",
-  description:
-    "Capture, qualify, convert, and coach — every stage of the deal on real-estate-native AI. Includes the LeadSmart AI Coaching program with annual transaction targets. Pro from $49/mo, Team from $199/mo.",
-  alternates: {
-    canonical: "/",
-  },
-  openGraph: {
-    title: "LeadSmart AI — The AI Deal Engine + Coaching for Real Estate",
-    description:
-      "The AI deal engine + producer-development program built for real estate agents. 14-day trial, cancel anytime.",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t("landing.title", { ns: "web_marketing" }),
+    description: t("landing.description", { ns: "web_marketing" }),
+    alternates: {
+      canonical: "/",
+    },
+    openGraph: {
+      title: t("landing.og.title", { ns: "web_marketing" }),
+      description: t("landing.og.description", { ns: "web_marketing" }),
+    },
+  };
+}
 
 export default async function HomePage() {
   try {

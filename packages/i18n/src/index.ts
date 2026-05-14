@@ -44,6 +44,8 @@
  *                        Server Component headers
  *   - web_contacts      Web /dashboard/contacts page + the shared
  *                        SmartListTabs nav + manager popover
+ *   - web_marketing     Document metadata for the public marketing
+ *                        pages: landing (/), about, pricing
  *
  * Future namespaces follow the same pattern — add a JSON file pair
  * (en + zh-Hans) and reference it from the app's resources map.
@@ -81,5 +83,6 @@ export const NAMESPACES = [
   "web_posts",
   "web_generate_leads",
   "web_contacts",
+  "web_marketing",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];
