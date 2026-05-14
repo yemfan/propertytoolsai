@@ -1,0 +1,49 @@
+{
+  "greeting": {
+    "morning": "早上好",
+    "afternoon": "下午好",
+    "evening": "晚上好",
+    "fallback_name": "您"
+  },
+  "summary": "{{hot}} 个热门线索 · {{tasks}} 个任务 · {{appointments}} 个约见",
+  "chips": {
+    "hot_leads": "热门线索",
+    "unread": "未读消息",
+    "tasks": "任务",
+    "appointments": "约见",
+    "cma": "比较市场分析",
+    "postcards": "明信片",
+    "quick_post": "快速发帖",
+    "sphere": "人脉圈",
+    "scheduled": "已排程",
+    "recurring": "定期发布",
+    "posts": "帖子",
+    "showings": "看房",
+    "coaching": "辅导",
+    "alerts": "提醒"
+  },
+  "sections": {
+    "today": "今日",
+    "today_hint": "{{day}} · 显示为本地时间",
+    "priority_alerts": "优先提醒",
+    "no_alerts": "暂无优先提醒,一切都安排好了。",
+    "quick_actions": "快捷操作"
+  },
+  "lead_queue": {
+    "one": "{{count}} 个可领取的线索",
+    "other": "{{count}} 个可领取的线索",
+    "cta": "点击查看线索池"
+  },
+  "quick_actions": {
+    "lead": "+ 新建线索",
+    "task": "+ 新建任务",
+    "booking": "+ 新建预约",
+    "message": "+ 发消息"
+  },
+  "errors": {
+    "dashboard_unavailable_title": "无法加载概览",
+    "dashboard_unavailable_body": "未收到数据,请稍后重试。",
+    "dashboard_update_failed": "概览更新失败",
+    "agenda_unavailable": "今日日程无法加载"
+  }
+}

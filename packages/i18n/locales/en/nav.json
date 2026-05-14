@@ -1,0 +1,9 @@
+{
+  "tabs": {
+    "home": "Home",
+    "inbox": "Inbox",
+    "leads": "Leads",
+    "calendar": "Calendar",
+    "settings": "Settings"
+  }
+}
