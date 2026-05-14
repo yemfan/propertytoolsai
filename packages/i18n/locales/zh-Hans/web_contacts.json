@@ -1,0 +1,33 @@
+{
+  "metadata": {
+    "title": "联系人",
+    "description": "管理您的联系人数据库和客户关系。"
+  },
+  "leads_legacy_metadata": {
+    "title": "客户",
+    "description": "管理您的客户漏斗、跟进和 CRM。"
+  },
+  "smart_lists": {
+    "nav_a11y": "智能列表",
+    "default_badge": "默认",
+    "manage": "管理",
+    "hidden_badge": "已隐藏",
+    "manager": {
+      "heading": "管理智能列表",
+      "close_a11y": "关闭",
+      "show": "显示",
+      "hide": "隐藏",
+      "delete_a11y": "删除列表",
+      "new_placeholder": "列表名称（例如：热门买家）",
+      "add_inline": "添加",
+      "cancel": "取消",
+      "add_smart_list": "新建智能列表",
+      "hint": "自定义列表创建时不含筛选条件 — 打开列表后可以添加条件以缩小范围。高级筛选编辑即将上线；目前，三个默认列表（客户、客户圈、全部）已涵盖常见用例。",
+      "errors": {
+        "update_failed": "更新失败",
+        "delete_failed": "删除失败",
+        "create_failed": "创建失败"
+      }
+    }
+  }
+}

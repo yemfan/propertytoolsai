@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
 import type { SmartList } from "@/lib/contacts/types";
 
@@ -20,13 +21,14 @@ type Props = {
  * read it and pre-filter the contact list in the same SSR pass.
  */
 export default function SmartListTabs({ lists, activeListId }: Props) {
+  const { t } = useTranslation("web_contacts");
   const visible = lists.filter((l) => !l.isHidden);
   const [manageOpen, setManageOpen] = useState(false);
 
   return (
     <div className="border-b border-gray-200 bg-white">
       <div className="flex items-center justify-between gap-3 px-4 py-2">
-        <nav aria-label="Smart lists" className="flex flex-wrap items-center gap-1">
+        <nav aria-label={t("smart_lists.nav_a11y")} className="flex flex-wrap items-center gap-1">
           {visible.map((list) => {
             const isActive = list.id === activeListId;
             return (
@@ -48,7 +50,7 @@ export default function SmartListTabs({ lists, activeListId }: Props) {
                       isActive ? "text-white/60" : "text-gray-400"
                     }`}
                   >
-                    default
+                    {t("smart_lists.default_badge")}
                   </span>
                 )}
               </Link>
@@ -61,7 +63,7 @@ export default function SmartListTabs({ lists, activeListId }: Props) {
             onClick={() => setManageOpen((o) => !o)}
             className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50"
           >
-            <Pencil className="h-3 w-3" aria-hidden /> Manage
+            <Pencil className="h-3 w-3" aria-hidden /> {t("smart_lists.manage")}
           </button>
         </div>
       </div>
@@ -82,6 +84,7 @@ function SmartListManager({
   lists: SmartList[];
   onClose: () => void;
 }) {
+  const { t } = useTranslation("web_contacts");
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +103,7 @@ function SmartListManager({
       if (!res.ok) throw new Error(`${res.status}`);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Update failed");
+      setError(e instanceof Error ? e.message : t("smart_lists.manager.errors.update_failed"));
     } finally {
       setPendingId(null);
     }
@@ -117,7 +120,7 @@ function SmartListManager({
       if (!res.ok) throw new Error(`${res.status}`);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Delete failed");
+      setError(e instanceof Error ? e.message : t("smart_lists.manager.errors.delete_failed"));
     } finally {
       setPendingId(null);
     }
@@ -142,7 +145,7 @@ function SmartListManager({
       setCreating(false);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Create failed");
+      setError(e instanceof Error ? e.message : t("smart_lists.manager.errors.create_failed"));
     } finally {
       setPendingId(null);
     }
@@ -152,13 +155,13 @@ function SmartListManager({
     <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
       <div className="flex items-center justify-between gap-3">
         <div className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
-          Manage Smart Lists
+          {t("smart_lists.manager.heading")}
         </div>
         <button
           type="button"
           onClick={onClose}
           className="inline-flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700"
-          aria-label="Close"
+          aria-label={t("smart_lists.manager.close_a11y")}
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -178,12 +181,12 @@ function SmartListManager({
               <span className="text-gray-900">{list.name}</span>
               {list.isDefault && (
                 <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-gray-500">
-                  default
+                  {t("smart_lists.default_badge")}
                 </span>
               )}
               {list.isHidden && (
                 <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-700">
-                  hidden
+                  {t("smart_lists.hidden_badge")}
                 </span>
               )}
             </span>
@@ -195,7 +198,7 @@ function SmartListManager({
                 className="inline-flex h-7 items-center gap-1 rounded border border-gray-200 bg-white px-2 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
               >
                 <Check className="h-3 w-3" />
-                {list.isHidden ? "Show" : "Hide"}
+                {list.isHidden ? t("smart_lists.manager.show") : t("smart_lists.manager.hide")}
               </button>
               {!list.isDefault && (
                 <button
@@ -203,7 +206,7 @@ function SmartListManager({
                   onClick={() => remove(list)}
                   disabled={pendingId === list.id}
                   className="inline-flex h-7 w-7 items-center justify-center rounded border border-gray-200 bg-white text-red-600 hover:bg-red-50 disabled:opacity-50"
-                  aria-label="Delete list"
+                  aria-label={t("smart_lists.manager.delete_a11y")}
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>
@@ -218,7 +221,7 @@ function SmartListManager({
             <input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="List name (e.g. Hot buyers)"
+              placeholder={t("smart_lists.manager.new_placeholder")}
               className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
               autoFocus
               onKeyDown={(e) => {
@@ -232,14 +235,14 @@ function SmartListManager({
               disabled={pendingId === "__new__"}
               className="rounded bg-gray-900 px-3 py-1 text-xs text-white disabled:opacity-50"
             >
-              Add
+              {t("smart_lists.manager.add_inline")}
             </button>
             <button
               type="button"
               onClick={() => setCreating(false)}
               className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600"
             >
-              Cancel
+              {t("smart_lists.manager.cancel")}
             </button>
           </div>
         ) : (
@@ -248,14 +251,10 @@ function SmartListManager({
             onClick={() => setCreating(true)}
             className="inline-flex items-center gap-1 rounded border border-dashed border-gray-300 px-2.5 py-1 text-xs text-gray-600 hover:bg-white"
           >
-            <Plus className="h-3 w-3" /> Add Smart List
+            <Plus className="h-3 w-3" /> {t("smart_lists.manager.add_smart_list")}
           </button>
         )}
-        <p className="mt-2 text-[11px] text-gray-500">
-          Custom lists start with no filters — open the list and add conditions
-          to narrow it down. Advanced filter editing is coming soon; for now,
-          the three defaults (Leads, Sphere, All) cover the common cases.
-        </p>
+        <p className="mt-2 text-[11px] text-gray-500">{t("smart_lists.manager.hint")}</p>
       </div>
     </div>
   );

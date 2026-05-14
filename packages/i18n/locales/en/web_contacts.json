@@ -1,0 +1,33 @@
+{
+  "metadata": {
+    "title": "Contacts",
+    "description": "Manage your contact database and client relationships."
+  },
+  "leads_legacy_metadata": {
+    "title": "Leads",
+    "description": "Manage your lead pipeline, follow-ups, and CRM."
+  },
+  "smart_lists": {
+    "nav_a11y": "Smart lists",
+    "default_badge": "default",
+    "manage": "Manage",
+    "hidden_badge": "hidden",
+    "manager": {
+      "heading": "Manage Smart Lists",
+      "close_a11y": "Close",
+      "show": "Show",
+      "hide": "Hide",
+      "delete_a11y": "Delete list",
+      "new_placeholder": "List name (e.g. Hot buyers)",
+      "add_inline": "Add",
+      "cancel": "Cancel",
+      "add_smart_list": "Add Smart List",
+      "hint": "Custom lists start with no filters — open the list and add conditions to narrow it down. Advanced filter editing is coming soon; for now, the three defaults (Leads, Sphere, All) cover the common cases.",
+      "errors": {
+        "update_failed": "Update failed",
+        "delete_failed": "Delete failed",
+        "create_failed": "Create failed"
+      }
+    }
+  }
+}
