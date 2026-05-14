@@ -1,0 +1,172 @@
+{
+  "header": {
+    "badge": "无合约 · 随时可取消",
+    "h1": "简单、透明的价格",
+    "subtitle": "所有付费套餐均含 14 天免费试用。免费起步，准备好后升级。"
+  },
+  "errors": {
+    "open_failed": "无法打开结算页面",
+    "missing_url": "缺少结算 URL",
+    "default": "无法打开结算页面",
+    "opening_busy": "正在打开结算……",
+    "opening_busy_short": "打开中……"
+  },
+  "plans": {
+    "free": {
+      "name": "入门版",
+      "price": "$0",
+      "period": "永久免费",
+      "tagline": "功能与用量有限。",
+      "cta": "立即开始"
+    },
+    "pro": {
+      "name": "Pro 版",
+      "price": "$49",
+      "period_short": "/月",
+      "tagline": "为活跃经纪人提供完整 CRM 和 AI。",
+      "cta": "开启免费试用",
+      "badge": "最受欢迎",
+      "trial_note": "14 天免费试用 · 无需信用卡"
+    },
+    "elite": {
+      "name": "Elite 版",
+      "price": "$99",
+      "period_short": "/月",
+      "tagline": "为每月成交 10+ 单的顶尖成交者打造。",
+      "cta": "开启免费试用",
+      "trial_note": "14 天免费试用"
+    },
+    "team": {
+      "name": "Team 版",
+      "price": "$199",
+      "period_short": "/月",
+      "tagline": "多位经纪人共享一个客户漏斗。",
+      "cta": "联系销售"
+    }
+  },
+  "table": {
+    "title": "完整功能对比",
+    "column_feature": "功能",
+    "ready_label": "准备开始？"
+  },
+  "groups": {
+    "lead_pipeline": "客户漏斗",
+    "ai_followup": "AI 跟进",
+    "scoring": "客户打分与智能",
+    "crm": "CRM 与联系人",
+    "reports": "报告与分析",
+    "team_admin": "团队与管理",
+    "support": "支持"
+  },
+  "rows": {
+    "leads_per_month": "每月客户数",
+    "leads_per_month_v": {
+      "free": "25",
+      "pro": "500",
+      "elite": "无限",
+      "team": "无限（共享）"
+    },
+    "pipeline_dashboard": "客户漏斗仪表盘",
+    "stage_tracking": "客户阶段追踪",
+    "stage_tracking_v": {
+      "free": "基础",
+      "pro": "完整",
+      "elite": "完整",
+      "team": "完整"
+    },
+    "milestones": "看房与报价里程碑",
+    "shared_pool": "团队共享客户池",
+    "first_response": "自动首次回应",
+    "first_response_tooltip": "AI 在 60 秒内回复新客户",
+    "first_response_v": {
+      "free": "仅邮件",
+      "pro": "短信 + 邮件",
+      "elite": "短信 + 邮件",
+      "team": "短信 + 邮件"
+    },
+    "response_time": "响应时间",
+    "response_time_v": {
+      "free": "< 5 分钟",
+      "pro": "< 60 秒",
+      "elite": "< 60 秒",
+      "team": "< 60 秒"
+    },
+    "ai_continuation": "AI 对话延续",
+    "drip_sequences": "滴灌式跟进序列",
+    "drip_sequences_v": {
+      "free": "1 组序列",
+      "pro": "无限",
+      "elite": "无限",
+      "team": "无限"
+    },
+    "custom_drip": "自定义滴灌活动",
+    "auto_pause": "回复后自动暂停",
+    "lead_scoring": "客户打分",
+    "lead_scoring_v": {
+      "free": "基础",
+      "pro": "进阶",
+      "elite": "预测 AI",
+      "team": "预测 AI"
+    },
+    "buyer_intent": "买家意向信号",
+    "hwc_labels": "热门 / 温和 / 冷淡标签",
+    "deal_probability": "成交概率预测",
+    "routing_rules": "客户路由规则",
+    "contacts": "联系人",
+    "contacts_v": {
+      "free": "最多 50",
+      "pro": "最多 500",
+      "elite": "无限",
+      "team": "无限"
+    },
+    "enrichment": "联系人补全",
+    "crm_integrations": "CRM 集成",
+    "crm_integrations_tooltip": "Follow Up Boss、kvCORE、Sierra、Zapier",
+    "activity_log": "活动日志与备注",
+    "cma_reports": "CMA 报告",
+    "cma_reports_v": {
+      "free": "2 份/天",
+      "pro": "5 份/天",
+      "elite": "10 份/天",
+      "team": "无限"
+    },
+    "report_downloads": "报告下载",
+    "report_downloads_v": {
+      "free": "有限",
+      "pro": "完整",
+      "elite": "完整",
+      "team": "完整"
+    },
+    "pipeline_analytics": "漏斗分析",
+    "pipeline_analytics_v": {
+      "free": "",
+      "pro": "标准",
+      "elite": "进阶",
+      "team": "进阶"
+    },
+    "team_performance": "团队业绩仪表盘",
+    "agents_included": "包含经纪人数",
+    "agents_included_v": {
+      "free": "1",
+      "pro": "1",
+      "elite": "1",
+      "team": "最多 10"
+    },
+    "admin_controls": "管理员控制",
+    "whitelabel": "白标选项",
+    "support_channel": "支持渠道",
+    "support_channel_v": {
+      "free": "邮件",
+      "pro": "优先邮件",
+      "elite": "专属上手指导",
+      "team": "优先 SLA + 客户成功经理"
+    },
+    "onboarding_assist": "上手协助"
+  },
+  "footer": {
+    "questions_label": "有疑问？",
+    "body_prefix": " 所有付费套餐均含 14 天免费试用。试用结束前可随时取消，不收取费用。需要为大型经纪公司定制套餐？",
+    "link": "与我们沟通",
+    "suffix": "。"
+  }
+}
