@@ -31,11 +31,13 @@ import {
 
 import enCommon from "@leadsmart/i18n/locale/en/common";
 import enHome from "@leadsmart/i18n/locale/en/home";
+import enLeads from "@leadsmart/i18n/locale/en/leads";
 import enNav from "@leadsmart/i18n/locale/en/nav";
 import enQuickPost from "@leadsmart/i18n/locale/en/quick_post";
 import enSettings from "@leadsmart/i18n/locale/en/settings";
 import zhCommon from "@leadsmart/i18n/locale/zh-Hans/common";
 import zhHome from "@leadsmart/i18n/locale/zh-Hans/home";
+import zhLeads from "@leadsmart/i18n/locale/zh-Hans/leads";
 import zhNav from "@leadsmart/i18n/locale/zh-Hans/nav";
 import zhQuickPost from "@leadsmart/i18n/locale/zh-Hans/quick_post";
 import zhSettings from "@leadsmart/i18n/locale/zh-Hans/settings";
@@ -49,6 +51,7 @@ const resources = {
     nav: enNav,
     home: enHome,
     quick_post: enQuickPost,
+    leads: enLeads,
   },
   "zh-Hans": {
     common: zhCommon,
@@ -56,6 +59,7 @@ const resources = {
     nav: zhNav,
     home: zhHome,
     quick_post: zhQuickPost,
+    leads: zhLeads,
   },
 } as const;
 
@@ -121,7 +125,7 @@ export function initI18n(): Promise<typeof i18n> {
       // doesn't bypass the resolver.
       supportedLngs: [...SUPPORTED_LOCALES],
       defaultNS: "common",
-      ns: ["common", "settings", "nav", "home", "quick_post"],
+      ns: ["common", "settings", "nav", "home", "quick_post", "leads"],
       interpolation: {
         // React Native handles escaping; double-escaping breaks
         // strings with apostrophes / quotes inside translations.
