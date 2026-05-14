@@ -1,0 +1,86 @@
+{
+  "list": {
+    "title": "看房",
+    "back": "返回",
+    "filters": {
+      "upcoming": "即将进行",
+      "attended": "已参加",
+      "cancelled": "已取消",
+      "all": "全部"
+    },
+    "empty": {
+      "upcoming_title": "暂无即将进行的看房",
+      "upcoming_subtitle": "从联系人详情页安排看房。",
+      "other_title": "暂无看房",
+      "other_subtitle": "尝试切换其他筛选条件。"
+    },
+    "row": {
+      "offer_chip": "出价",
+      "a11y_label": "{{address}} 的看房，时间 {{when}}，{{status}}"
+    }
+  },
+  "status": {
+    "scheduled": "已安排",
+    "attended": "已参加",
+    "cancelled": "已取消",
+    "no_show": "未到场"
+  },
+  "when": {
+    "tbd": "时间待定",
+    "today": "今天",
+    "tomorrow": "明天",
+    "yesterday": "昨天"
+  },
+  "detail": {
+    "title": "看房",
+    "back": "返回",
+    "loading": "正在加载看房……",
+    "errors": {
+      "missing_id": "缺少看房 ID。",
+      "load_title": "无法加载看房",
+      "unknown": "未知错误",
+      "not_found_title": "未找到该看房",
+      "not_found_body": "此看房可能已被删除。",
+      "back_to_list": "返回列表"
+    },
+    "contact_with": "与 {{name}} 同行",
+    "mls_label": "MLS 编号 {{number}}",
+    "section_status": "状态",
+    "status_saving": "保存中……",
+    "status_a11y": "标记为{{label}}",
+    "quick": {
+      "call": "致电买家",
+      "open": "打开买家",
+      "directions": "导航"
+    },
+    "feedback": {
+      "section_title": "买家反馈",
+      "overall_reaction": "整体反应",
+      "ready_to_offer": "准备好出价了吗？",
+      "yes": "是",
+      "no": "否",
+      "would_offer_a11y": "是否出价：{{label}}",
+      "concerns": "顾虑",
+      "concern_price": "价格顾虑",
+      "concern_location": "位置顾虑",
+      "concern_condition": "房况顾虑",
+      "pros": "优点",
+      "pros_placeholder": "买家最喜欢什么？",
+      "cons": "缺点",
+      "cons_placeholder": "什么让他们却步？",
+      "notes": "备注",
+      "notes_placeholder": "下次看房时值得记住的其他事项",
+      "saved": "已保存。",
+      "saving": "保存中……",
+      "save": "保存反馈",
+      "save_a11y": "保存反馈",
+      "hint_attend_first": "将此看房标记为「已参加」即可记录买家反馈。"
+    },
+    "reactions": {
+      "love": "非常喜欢",
+      "like": "喜欢",
+      "maybe": "再看看",
+      "pass": "不考虑"
+    }
+  }
+}

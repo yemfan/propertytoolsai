@@ -1,4 +1,5 @@
 import { memo, useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FlatList,
   Pressable,
@@ -24,12 +25,7 @@ import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
 
 type FilterKey = "upcoming" | "attended" | "cancelled" | "all";
-const FILTER_CHIPS: Array<{ key: FilterKey; label: string }> = [
-  { key: "upcoming", label: "Upcoming" },
-  { key: "attended", label: "Attended" },
-  { key: "cancelled", label: "Cancelled" },
-  { key: "all", label: "All" },
-];
+const FILTER_KEYS: FilterKey[] = ["upcoming", "attended", "cancelled", "all"];
 
 const REACTION_EMOJI: Record<string, string> = {
   love: "❤️",
@@ -45,13 +41,6 @@ const STATUS_TONE: Record<MobileShowingStatus, "blue" | "green" | "red" | "gray"
   no_show: "gray",
 };
 
-const STATUS_LABEL: Record<MobileShowingStatus, string> = {
-  scheduled: "Scheduled",
-  attended: "Attended",
-  cancelled: "Cancelled",
-  no_show: "No-show",
-};
-
 /**
  * Showings list — agent's buyer-side property visits, sorted newest
  * first. Uses the same useCachedFetch pattern as the Leads tab so
@@ -65,6 +54,7 @@ export default function ShowingsListScreen() {
   const router = useRouter();
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("showings_screen");
 
   const [filter, setFilter] = useState<FilterKey>("upcoming");
 
@@ -109,20 +99,20 @@ export default function ShowingsListScreen() {
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: "Showings",
-          headerBackTitle: "Back",
+          title: t("list.title"),
+          headerBackTitle: t("list.back"),
         }}
       />
 
       <View style={styles.filterStrip}>
-        {FILTER_CHIPS.map((c) => (
+        {FILTER_KEYS.map((key) => (
           <Pressable
-            key={c.key}
-            onPress={() => setFilter(c.key)}
-            style={[styles.chip, filter === c.key && styles.chipActive]}
+            key={key}
+            onPress={() => setFilter(key)}
+            style={[styles.chip, filter === key && styles.chipActive]}
           >
-            <Text style={[styles.chipText, filter === c.key && styles.chipTextActive]}>
-              {c.label}
+            <Text style={[styles.chipText, filter === key && styles.chipTextActive]}>
+              {t(`list.filters.${key}`)}
             </Text>
           </Pressable>
         ))}
@@ -138,15 +128,11 @@ export default function ShowingsListScreen() {
         <SkeletonList count={6} renderItem={() => <LeadRowSkeleton />} />
       ) : filtered.length === 0 ? (
         <EmptyState
-          title={
-            filter === "upcoming"
-              ? "No upcoming showings"
-              : "No showings"
-          }
+          title={filter === "upcoming" ? t("list.empty.upcoming_title") : t("list.empty.other_title")}
           subtitle={
             filter === "upcoming"
-              ? "Schedule a showing from a contact's detail page."
-              : "Try a different filter."
+              ? t("list.empty.upcoming_subtitle")
+              : t("list.empty.other_subtitle")
           }
         />
       ) : (
@@ -176,17 +162,23 @@ const ShowingRow = memo(function ShowingRow({
 }) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t, i18n } = useTranslation("showings_screen");
 
-  const when = formatWhen(row.scheduled_at);
+  const when = formatWhen(row.scheduled_at, i18n.language, t);
   const reaction = row.feedback_reaction ? REACTION_EMOJI[row.feedback_reaction] : null;
   const tone = STATUS_TONE[row.status];
+  const statusLabel = t(`status.${row.status}`, { defaultValue: row.status });
 
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
       accessibilityRole="button"
-      accessibilityLabel={`Showing at ${row.property_address} on ${when}, ${STATUS_LABEL[row.status]}`}
+      accessibilityLabel={t("list.row.a11y_label", {
+        address: row.property_address,
+        when,
+        status: statusLabel,
+      })}
     >
       <View style={styles.rowHeader}>
         <Text style={styles.address} numberOfLines={1}>
@@ -194,7 +186,7 @@ const ShowingRow = memo(function ShowingRow({
         </Text>
         <View style={[styles.statusPill, styles[`statusPill_${tone}`]]}>
           <Text style={[styles.statusPillText, styles[`statusPillText_${tone}`]]}>
-            {STATUS_LABEL[row.status]}
+            {statusLabel}
           </Text>
         </View>
       </View>
@@ -209,7 +201,7 @@ const ShowingRow = memo(function ShowingRow({
             {row.feedback_would_offer ? (
               <View style={styles.offerChip}>
                 <Ionicons name="document-text" size={11} color={tokens.successText} />
-                <Text style={styles.offerChipText}>Offer</Text>
+                <Text style={styles.offerChipText}>{t("list.row.offer_chip")}</Text>
               </View>
             ) : null}
           </View>
@@ -219,26 +211,34 @@ const ShowingRow = memo(function ShowingRow({
   );
 });
 
-function formatWhen(iso: string | null | undefined): string {
-  if (!iso) return "Date TBD";
+type ShowingsT = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * `t` should be the function from `useTranslation("showings_screen")` —
+ * callers pass it so the "Today"/"Tomorrow"/"Yesterday" / "Date TBD"
+ * labels and the underlying date/time strings render in the active
+ * locale.
+ */
+function formatWhen(iso: string | null | undefined, locale: string, t: ShowingsT): string {
+  if (!iso) return t("when.tbd");
   const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return "Date TBD";
+  if (!Number.isFinite(d.getTime())) return t("when.tbd");
   const now = Date.now();
   const diffMs = d.getTime() - now;
   const diffDays = Math.round(diffMs / 86_400_000);
   const dayLabel =
     diffDays === 0
-      ? "Today"
+      ? t("when.today")
       : diffDays === 1
-        ? "Tomorrow"
+        ? t("when.tomorrow")
         : diffDays === -1
-          ? "Yesterday"
-          : d.toLocaleDateString(undefined, {
+          ? t("when.yesterday")
+          : d.toLocaleDateString(locale, {
               weekday: "short",
               month: "short",
               day: "numeric",
             });
-  const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const time = d.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
   return `${dayLabel} · ${time}`;
 }
 

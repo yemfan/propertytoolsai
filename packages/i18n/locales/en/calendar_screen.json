@@ -1,0 +1,45 @@
+{
+  "screen": {
+    "title": "Calendar",
+    "new_button": "New",
+    "new_button_a11y": "New appointment",
+    "loading": "Loading calendar…",
+    "load_error": {
+      "title": "Unable to load calendar",
+      "reminders_partial_title": "Reminders partially unavailable"
+    },
+    "action_error": {
+      "title": "Action failed",
+      "dismiss": "Dismiss"
+    },
+    "empty": {
+      "title": "Nothing scheduled",
+      "subtitle": "Add an appointment or booking link from a lead, or tap New."
+    }
+  },
+  "sections": {
+    "appointments": {
+      "title": "Appointments",
+      "hint": "Scheduled on your leads (CRM)",
+      "empty": "No upcoming appointments in this window."
+    },
+    "overdue_tasks": {
+      "title": "Overdue tasks",
+      "hint": "Open tasks past due (UTC day)",
+      "empty": "You’re caught up on overdue tasks."
+    },
+    "follow_ups": {
+      "title": "Follow-ups",
+      "hint": "From lead next contact date",
+      "empty": "No follow-up dates on your leads."
+    }
+  },
+  "reminder_card": {
+    "lead_fallback": "Lead {{id}}",
+    "status": {
+      "overdue": "Overdue follow-up",
+      "scheduled": "Follow-up scheduled"
+    },
+    "hint": "Tap to open lead"
+  }
+}
