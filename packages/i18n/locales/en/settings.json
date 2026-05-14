@@ -1,0 +1,30 @@
+{
+  "title": "Settings",
+  "subtitle": "Account and preferences",
+  "signed_in_as": "Signed in as",
+  "push": {
+    "title": "Push notifications",
+    "description": "Hot leads send immediately. Reminders are batched on the server to reduce noise.",
+    "hot_leads": "Hot leads (high priority)",
+    "missed_calls": "Missed calls",
+    "follow_ups": "Follow-up reminders (batched)",
+    "post_milestones": "Post engagement milestones",
+    "digest_window": "Digest window: {{minutes}} min (server-side; contact support to tune)."
+  },
+  "language": {
+    "title": "Language",
+    "description": "Choose the language used throughout the app.",
+    "auto_detected": "Auto-detected from your device."
+  },
+  "links": {
+    "notification_center": "Notification center",
+    "replay_onboarding": "Replay onboarding"
+  },
+  "app_section": {
+    "title": "App",
+    "version": "LeadSmart AI · v{{version}}"
+  },
+  "sign_out_a11y": "Sign out",
+  "sign_out_confirm_title": "Sign out?",
+  "sign_out_confirm_body": "You'll be returned to the login screen."
+}

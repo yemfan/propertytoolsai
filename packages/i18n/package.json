@@ -1,0 +1,22 @@
+{
+  "name": "@leadsmart/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./locales": "./src/locales.ts",
+    "./locales/*.json": "./locales/*.json",
+    "./locale/en/*": "./locales/en/*.json",
+    "./locale/zh-Hans/*": "./locales/zh-Hans/*.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo skip"
+  },
+  "devDependencies": {
+    "typescript": "^5.1.6"
+  }
+}

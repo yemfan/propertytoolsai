@@ -9,6 +9,7 @@ import ComplianceCard from "@/components/dashboard/ComplianceCard";
 import { CommissionDefaultsPanel } from "@/components/dashboard/CommissionDefaultsPanel";
 import { TransactionNotificationsPanel } from "@/components/dashboard/TransactionNotificationsPanel";
 import HomeValueSmartLinkCopyShare from "@/components/dashboard/HomeValueSmartLinkCopyShare";
+import LanguagePanel from "@/components/dashboard/LanguagePanel";
 import LeadRoutingSettingsPanel from "@/components/dashboard/LeadRoutingSettingsPanel";
 import ReviewPolicyPanel from "@/components/dashboard/ReviewPolicyPanel";
 import SettingsTabsClient from "@/components/dashboard/SettingsTabsClient";
@@ -33,7 +34,9 @@ export default async function SettingsPage() {
     <div className="mx-auto max-w-3xl">
       <SettingsTabsClient
         voice={
-          <div className="rounded-xl border border-gray-200 bg-white shadow-sm divide-y divide-gray-100">
+          <div className="space-y-4">
+            <LanguagePanel />
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm divide-y divide-gray-100">
             <div className="p-5">
               <h2 className="text-sm font-semibold text-gray-900 mb-3">AI Assistant Style</h2>
               <AgentAiSettingsPanel />
@@ -55,6 +58,7 @@ export default async function SettingsPage() {
                 When the ☀️ morning plan and 🌙 evening summary fire each day on your dashboard and in the mobile app.
               </p>
               <BriefingScheduleCard />
+            </div>
             </div>
           </div>
         }
