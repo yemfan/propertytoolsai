@@ -1,5 +1,6 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Pressable,
   ScrollView,
@@ -64,6 +65,7 @@ export default function CalendarScreen() {
   const router = useRouter();
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("calendar_screen");
   const { isConnected } = useNetwork();
   const { queueWrite } = useWriteQueue();
   const { newAppt } = useLocalSearchParams<{ newAppt?: string | string[] }>();
@@ -183,14 +185,14 @@ export default function CalendarScreen() {
   }, [isConnected, queueWrite]);
 
   if (initialLoad) {
-    return <ScreenLoading message="Loading calendar…" />;
+    return <ScreenLoading message={t("screen.loading")} />;
   }
 
   if (error && events.length === 0) {
     return (
       <View style={styles.centered}>
         <ErrorBanner
-          title="Unable to load calendar"
+          title={t("screen.load_error.title")}
           message={error.message}
           onRetry={() => {
             void load("full");
@@ -206,17 +208,17 @@ export default function CalendarScreen() {
   return (
     <View style={styles.root}>
       <View style={styles.headerRow}>
-        <Text style={styles.headerTitle}>Calendar</Text>
+        <Text style={styles.headerTitle}>{t("screen.title")}</Text>
         <Pressable
           onPress={() => {
             hapticButtonPress();
             setComposerOpen(true);
           }}
           accessibilityRole="button"
-          accessibilityLabel="New appointment"
+          accessibilityLabel={t("screen.new_button_a11y")}
           style={({ pressed }) => [styles.newBtn, pressed && styles.newBtnPressed]}
         >
-          <Text style={styles.newBtnText}>New</Text>
+          <Text style={styles.newBtnText}>{t("screen.new_button")}</Text>
         </Pressable>
       </View>
       <ScrollView
@@ -227,7 +229,7 @@ export default function CalendarScreen() {
         {remindersLoadError ? (
           <View style={styles.bannerPad}>
             <ErrorBanner
-              title="Reminders partially unavailable"
+              title={t("screen.load_error.reminders_partial_title")}
               message={remindersLoadError}
               onRetry={() => {
                 void load("refresh");
@@ -238,10 +240,10 @@ export default function CalendarScreen() {
         {actionError ? (
           <View style={styles.bannerPad}>
             <ErrorBanner
-              title="Action failed"
+              title={t("screen.action_error.title")}
               message={actionError}
               onRetry={() => setActionError(null)}
-              retryLabel="Dismiss"
+              retryLabel={t("screen.action_error.dismiss")}
             />
           </View>
         ) : null}
@@ -249,15 +251,19 @@ export default function CalendarScreen() {
         {!hasAny ? (
           <View style={styles.emptyWrap}>
             <EmptyState
-              title="Nothing scheduled"
-              subtitle="Add an appointment or booking link from a lead, or tap New."
+              title={t("screen.empty.title")}
+              subtitle={t("screen.empty.subtitle")}
             />
           </View>
         ) : null}
 
-        <Section title="Appointments" hint="Scheduled on your leads (CRM)" styles={styles}>
+        <Section
+          title={t("sections.appointments.title")}
+          hint={t("sections.appointments.hint")}
+          styles={styles}
+        >
           {events.length === 0 ? (
-            <Text style={styles.muted}>No upcoming appointments in this window.</Text>
+            <Text style={styles.muted}>{t("sections.appointments.empty")}</Text>
           ) : (
             events.map((e) => (
               <AppointmentCard
@@ -274,29 +280,37 @@ export default function CalendarScreen() {
           )}
         </Section>
 
-        <Section title="Overdue tasks" hint="Open tasks past due (UTC day)" styles={styles}>
+        <Section
+          title={t("sections.overdue_tasks.title")}
+          hint={t("sections.overdue_tasks.hint")}
+          styles={styles}
+        >
           {overdueTasks.length === 0 ? (
-            <Text style={styles.muted}>You’re caught up on overdue tasks.</Text>
+            <Text style={styles.muted}>{t("sections.overdue_tasks.empty")}</Text>
           ) : (
-            overdueTasks.map((t) => (
+            overdueTasks.map((task) => (
               <TaskCard
-                key={t.id}
-                task={t}
+                key={task.id}
+                task={task}
                 showLeadName
                 onPress={() => {
                   hapticRowTap();
-                  router.push(`/lead/${t.contact_id}`);
+                  router.push(`/lead/${task.contact_id}`);
                 }}
-                onComplete={() => void completeTask(t.id)}
-                completing={completingTaskId === t.id}
+                onComplete={() => void completeTask(task.id)}
+                completing={completingTaskId === task.id}
               />
             ))
           )}
         </Section>
 
-        <Section title="Follow-ups" hint="From lead next contact date" styles={styles}>
+        <Section
+          title={t("sections.follow_ups.title")}
+          hint={t("sections.follow_ups.hint")}
+          styles={styles}
+        >
           {followUpsState.length === 0 ? (
-            <Text style={styles.muted}>No follow-up dates on your leads.</Text>
+            <Text style={styles.muted}>{t("sections.follow_ups.empty")}</Text>
           ) : (
             followUpsState.map((f) => (
               <ReminderCard

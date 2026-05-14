@@ -29,6 +29,7 @@ import {
   type SupportedLocale,
 } from "@leadsmart/i18n";
 
+import enCalendarScreen from "@leadsmart/i18n/locale/en/calendar_screen";
 import enCommon from "@leadsmart/i18n/locale/en/common";
 import enHome from "@leadsmart/i18n/locale/en/home";
 import enInbox from "@leadsmart/i18n/locale/en/inbox";
@@ -39,7 +40,10 @@ import enNav from "@leadsmart/i18n/locale/en/nav";
 import enQuickPost from "@leadsmart/i18n/locale/en/quick_post";
 import enReplyComposer from "@leadsmart/i18n/locale/en/reply_composer";
 import enSettings from "@leadsmart/i18n/locale/en/settings";
+import enShowingsScreen from "@leadsmart/i18n/locale/en/showings_screen";
+import enSphereScreen from "@leadsmart/i18n/locale/en/sphere_screen";
 import enTaskCalendarComponents from "@leadsmart/i18n/locale/en/task_calendar_components";
+import zhCalendarScreen from "@leadsmart/i18n/locale/zh-Hans/calendar_screen";
 import zhCommon from "@leadsmart/i18n/locale/zh-Hans/common";
 import zhHome from "@leadsmart/i18n/locale/zh-Hans/home";
 import zhInbox from "@leadsmart/i18n/locale/zh-Hans/inbox";
@@ -50,6 +54,8 @@ import zhNav from "@leadsmart/i18n/locale/zh-Hans/nav";
 import zhQuickPost from "@leadsmart/i18n/locale/zh-Hans/quick_post";
 import zhReplyComposer from "@leadsmart/i18n/locale/zh-Hans/reply_composer";
 import zhSettings from "@leadsmart/i18n/locale/zh-Hans/settings";
+import zhShowingsScreen from "@leadsmart/i18n/locale/zh-Hans/showings_screen";
+import zhSphereScreen from "@leadsmart/i18n/locale/zh-Hans/sphere_screen";
 import zhTaskCalendarComponents from "@leadsmart/i18n/locale/zh-Hans/task_calendar_components";
 
 const STORAGE_KEY = "i18n:locale";
@@ -67,6 +73,9 @@ const resources = {
     task_calendar_components: enTaskCalendarComponents,
     reply_composer: enReplyComposer,
     inbox: enInbox,
+    calendar_screen: enCalendarScreen,
+    showings_screen: enShowingsScreen,
+    sphere_screen: enSphereScreen,
   },
   "zh-Hans": {
     common: zhCommon,
@@ -80,6 +89,9 @@ const resources = {
     task_calendar_components: zhTaskCalendarComponents,
     reply_composer: zhReplyComposer,
     inbox: zhInbox,
+    calendar_screen: zhCalendarScreen,
+    showings_screen: zhShowingsScreen,
+    sphere_screen: zhSphereScreen,
   },
 } as const;
 
@@ -157,6 +169,9 @@ export function initI18n(): Promise<typeof i18n> {
         "task_calendar_components",
         "reply_composer",
         "inbox",
+        "calendar_screen",
+        "showings_screen",
+        "sphere_screen",
       ],
       interpolation: {
         // React Native handles escaping; double-escaping breaks

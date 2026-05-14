@@ -1,0 +1,26 @@
+{
+  "title": "Sphere",
+  "back": "Home",
+  "intro": "Top contacts your CRM thinks are ready to act. Tap to open, or call / text directly.",
+  "modes": {
+    "buyers": "Likely buyers",
+    "sellers": "Likely sellers"
+  },
+  "empty": {
+    "buyers_title": "No likely buyers right now",
+    "sellers_title": "No likely sellers right now",
+    "body": "Your CRM ranks contacts each day. Past clients + sphere contacts surface here when their signals reach a meaningful threshold. Check back tomorrow."
+  },
+  "row": {
+    "band": {
+      "high": "HIGH",
+      "medium": "MEDIUM",
+      "low": "LOW"
+    },
+    "sold_on": "sold {{date}}",
+    "actions": {
+      "call": "Call",
+      "text": "Text"
+    }
+  }
+}

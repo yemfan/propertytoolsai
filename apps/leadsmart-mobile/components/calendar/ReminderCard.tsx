@@ -1,5 +1,6 @@
 import type { MobileFollowUpReminderDto } from "@leadsmart/shared";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { formatShortDateTime } from "../../lib/format";
 import { useThemeTokens } from "../../lib/useThemeTokens";
@@ -14,8 +15,11 @@ type Props = {
 export function ReminderCard({ reminder, onPress }: Props) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
-  const title = reminder.lead_name ?? `Lead ${reminder.contact_id}`;
-  const status = reminder.overdue ? "Overdue follow-up" : "Follow-up scheduled";
+  const { t } = useTranslation("calendar_screen");
+  const title = reminder.lead_name ?? t("reminder_card.lead_fallback", { id: reminder.contact_id });
+  const status = reminder.overdue
+    ? t("reminder_card.status.overdue")
+    : t("reminder_card.status.scheduled");
 
   const body = (
     <View style={[styles.card, reminder.overdue && styles.cardOverdue]}>
@@ -25,7 +29,7 @@ export function ReminderCard({ reminder, onPress }: Props) {
       <Text style={styles.sub}>
         {status} · {formatShortDateTime(reminder.next_contact_at)}
       </Text>
-      <Text style={styles.hint}>Tap to open lead</Text>
+      <Text style={styles.hint}>{t("reminder_card.hint")}</Text>
     </View>
   );
 
