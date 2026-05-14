@@ -30,8 +30,12 @@ import {
 } from "@leadsmart/i18n";
 
 import enCommon from "@leadsmart/i18n/locale/en/common";
+import enHome from "@leadsmart/i18n/locale/en/home";
+import enNav from "@leadsmart/i18n/locale/en/nav";
 import enSettings from "@leadsmart/i18n/locale/en/settings";
 import zhCommon from "@leadsmart/i18n/locale/zh-Hans/common";
+import zhHome from "@leadsmart/i18n/locale/zh-Hans/home";
+import zhNav from "@leadsmart/i18n/locale/zh-Hans/nav";
 import zhSettings from "@leadsmart/i18n/locale/zh-Hans/settings";
 
 const STORAGE_KEY = "i18n:locale";
@@ -40,10 +44,14 @@ const resources = {
   en: {
     common: enCommon,
     settings: enSettings,
+    nav: enNav,
+    home: enHome,
   },
   "zh-Hans": {
     common: zhCommon,
     settings: zhSettings,
+    nav: zhNav,
+    home: zhHome,
   },
 } as const;
 
@@ -109,7 +117,7 @@ export function initI18n(): Promise<typeof i18n> {
       // doesn't bypass the resolver.
       supportedLngs: [...SUPPORTED_LOCALES],
       defaultNS: "common",
-      ns: ["common", "settings"],
+      ns: ["common", "settings", "nav", "home"],
       interpolation: {
         // React Native handles escaping; double-escaping breaks
         // strings with apostrophes / quotes inside translations.

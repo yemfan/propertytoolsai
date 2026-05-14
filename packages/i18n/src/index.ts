@@ -30,5 +30,5 @@ export {
  * here + the JSON file pair, and i18next will pick it up when the
  * app reinitializes.
  */
-export const NAMESPACES = ["common", "settings"] as const;
+export const NAMESPACES = ["common", "settings", "nav", "home"] as const;
 export type Namespace = (typeof NAMESPACES)[number];

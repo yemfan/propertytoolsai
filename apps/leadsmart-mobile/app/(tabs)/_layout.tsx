@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import { Platform, StatusBar } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useTranslation } from "react-i18next";
 import { useThemeTokens, useIsDarkMode } from "../../lib/useThemeTokens";
 import { hapticTabSwitch } from "../../lib/haptics";
 import { OfflineBanner } from "../../components/OfflineBanner";
@@ -18,6 +19,7 @@ import { OfflineBanner } from "../../components/OfflineBanner";
 export default function TabsLayout() {
   const tokens = useThemeTokens();
   const isDark = useIsDarkMode();
+  const { t } = useTranslation("nav");
 
   return (
     <>
@@ -65,8 +67,8 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="home"
           options={{
-            title: "Home",
-            tabBarLabel: "Home",
+            title: t("tabs.home"),
+            tabBarLabel: t("tabs.home"),
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="home-outline" size={size} color={color} />
             ),
@@ -75,8 +77,8 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="inbox"
           options={{
-            title: "Inbox",
-            tabBarLabel: "Inbox",
+            title: t("tabs.inbox"),
+            tabBarLabel: t("tabs.inbox"),
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="chatbubble-outline" size={size} color={color} />
             ),
@@ -85,8 +87,8 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="leads"
           options={{
-            title: "Leads",
-            tabBarLabel: "Leads",
+            title: t("tabs.leads"),
+            tabBarLabel: t("tabs.leads"),
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="people-outline" size={size} color={color} />
             ),
@@ -95,8 +97,8 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="calendar"
           options={{
-            title: "Calendar",
-            tabBarLabel: "Calendar",
+            title: t("tabs.calendar"),
+            tabBarLabel: t("tabs.calendar"),
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="calendar-outline" size={size} color={color} />
             ),
@@ -105,8 +107,8 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="settings"
           options={{
-            title: "Settings",
-            tabBarLabel: "Settings",
+            title: t("tabs.settings"),
+            tabBarLabel: t("tabs.settings"),
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="settings-outline" size={size} color={color} />
             ),

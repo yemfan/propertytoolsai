@@ -1,0 +1,49 @@
+{
+  "greeting": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening",
+    "fallback_name": "there"
+  },
+  "summary": "{{hot}} hot leads • {{tasks}} tasks • {{appointments}} appointments",
+  "chips": {
+    "hot_leads": "Hot Leads",
+    "unread": "Unread",
+    "tasks": "Tasks",
+    "appointments": "Appointments",
+    "cma": "CMA",
+    "postcards": "Postcards",
+    "quick_post": "Quick Post",
+    "sphere": "Sphere",
+    "scheduled": "Scheduled",
+    "recurring": "Recurring",
+    "posts": "Posts",
+    "showings": "Showings",
+    "coaching": "Coaching",
+    "alerts": "Alerts"
+  },
+  "sections": {
+    "today": "Today",
+    "today_hint": "{{day}} · times in your local timezone",
+    "priority_alerts": "Priority Alerts",
+    "no_alerts": "No priority alerts — you're caught up.",
+    "quick_actions": "Quick Actions"
+  },
+  "lead_queue": {
+    "one": "{{count}} lead available to claim",
+    "other": "{{count}} leads available to claim",
+    "cta": "Tap to view the lead queue"
+  },
+  "quick_actions": {
+    "lead": "+ Lead",
+    "task": "+ Task",
+    "booking": "+ Booking",
+    "message": "+ Message"
+  },
+  "errors": {
+    "dashboard_unavailable_title": "Dashboard unavailable",
+    "dashboard_unavailable_body": "Unexpected empty response.",
+    "dashboard_update_failed": "Dashboard update failed",
+    "agenda_unavailable": "Agenda unavailable"
+  }
+}

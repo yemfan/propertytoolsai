@@ -6,6 +6,7 @@ import type {
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useCachedFetch } from "../../lib/offline/useCachedFetch";
 import {
   Pressable,
@@ -34,20 +35,26 @@ import { getSupabaseAuthClient } from "../../lib/supabaseAuthClient";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
 
-function getGreeting(): string {
+/**
+ * Returns the i18n key under `home.greeting.*` matching the
+ * current hour. Caller passes the result to `t()`.
+ */
+function getGreetingKey(): "greeting.morning" | "greeting.afternoon" | "greeting.evening" {
   const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
+  if (h < 12) return "greeting.morning";
+  if (h < 17) return "greeting.afternoon";
+  return "greeting.evening";
 }
 
-function formatAgendaDayLabel(agendaDate: string): string {
+function formatAgendaDayLabel(agendaDate: string, locale: string): string {
   try {
     const parts = agendaDate.split("-").map(Number);
     if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return agendaDate;
     const [y, m, d] = parts;
     const dt = new Date(Date.UTC(y, m - 1, d));
-    return dt.toLocaleDateString(undefined, {
+    // Locale-aware day label — "Monday, May 13" in English,
+    // "5月13日 星期一" in Chinese (Intl handles the rendering).
+    return dt.toLocaleDateString(locale, {
       weekday: "long",
       month: "short",
       day: "numeric",
@@ -66,6 +73,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t, i18n } = useTranslation(["home", "common"]);
   const [firstName, setFirstName] = useState<string | null>(null);
   const [queueCount, setQueueCount] = useState(0);
   /** Counts for the Home chip row. `scheduledUpcoming` = posts
@@ -296,7 +304,7 @@ export default function HomeScreen() {
     return (
       <View style={styles.centered}>
         <ErrorBanner
-          title="Could not load home"
+          title={t("errors.dashboard_unavailable_title")}
           message={dashboardError.message}
           onRetry={dashRefresh}
         />
@@ -307,13 +315,21 @@ export default function HomeScreen() {
   if (!stats) {
     return (
       <View style={styles.centered}>
-        <ErrorBanner title="Dashboard unavailable" message="Unexpected empty response." onRetry={dashRefresh} />
+        <ErrorBanner
+          title={t("errors.dashboard_unavailable_title")}
+          message={t("errors.dashboard_unavailable_body")}
+          onRetry={dashRefresh}
+        />
       </View>
     );
   }
 
-  const displayName = firstName?.trim() || "there";
-  const summaryLine = `${stats.hotLeads} hot leads • ${stats.tasksToday} tasks • ${stats.appointmentsToday} appointments`;
+  const displayName = firstName?.trim() || t("greeting.fallback_name");
+  const summaryLine = t("summary", {
+    hot: stats.hotLeads,
+    tasks: stats.tasksToday,
+    appointments: stats.appointmentsToday,
+  });
 
   return (
     <FadeIn style={styles.root}>
@@ -324,7 +340,7 @@ export default function HomeScreen() {
       >
         <View style={styles.heroBlock}>
           <Text style={styles.greeting}>
-            {getGreeting()}, {displayName}
+            {t(getGreetingKey())}, {displayName}
           </Text>
           <Text style={styles.summaryLine}>{summaryLine}</Text>
         </View>
@@ -342,56 +358,56 @@ export default function HomeScreen() {
             onPress={() => router.push({ pathname: "/(tabs)/leads", params: { filter: "hot" } })}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
-            <Text style={styles.chipText}>Hot Leads</Text>
+            <Text style={styles.chipText}>{t("chips.hot_leads")}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/(tabs)/inbox")}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
-            <Text style={styles.chipText}>Unread</Text>
+            <Text style={styles.chipText}>{t("chips.unread")}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/tasks")}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
-            <Text style={styles.chipText}>Tasks</Text>
+            <Text style={styles.chipText}>{t("chips.tasks")}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/(tabs)/calendar")}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
-            <Text style={styles.chipText}>Appointments</Text>
+            <Text style={styles.chipText}>{t("chips.appointments")}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/cma" as never)}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
-            <Text style={styles.chipText}>CMA</Text>
+            <Text style={styles.chipText}>{t("chips.cma")}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/postcards" as never)}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
-            <Text style={styles.chipText}>Postcards</Text>
+            <Text style={styles.chipText}>{t("chips.postcards")}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/quick-post" as never)}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
-            <Text style={styles.chipText}>Quick Post</Text>
+            <Text style={styles.chipText}>{t("chips.quick_post")}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/sphere" as never)}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
-            <Text style={styles.chipText}>Sphere</Text>
+            <Text style={styles.chipText}>{t("chips.sphere")}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/scheduled" as never)}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
             <Text style={styles.chipText}>
-              Scheduled
+              {t("chips.scheduled")}
               {scheduledCounts.upcoming > 0
                 ? ` · ${scheduledCounts.upcoming}`
                 : ""}
@@ -408,46 +424,48 @@ export default function HomeScreen() {
             onPress={() => router.push("/recurring" as never)}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
-            <Text style={styles.chipText}>Recurring</Text>
+            <Text style={styles.chipText}>{t("chips.recurring")}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/post-history" as never)}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
-            <Text style={styles.chipText}>Posts</Text>
+            <Text style={styles.chipText}>{t("chips.posts")}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/showings" as never)}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
-            <Text style={styles.chipText}>Showings</Text>
+            <Text style={styles.chipText}>{t("chips.showings")}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/coaching" as never)}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
-            <Text style={styles.chipText}>Coaching</Text>
+            <Text style={styles.chipText}>{t("chips.coaching")}</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push("/notifications")}
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
           >
-            <Text style={styles.chipText}>Alerts</Text>
+            <Text style={styles.chipText}>{t("chips.alerts")}</Text>
           </Pressable>
         </View>
 
         <SectionRule color={tokens.border} />
 
-        <Text style={styles.sectionHeading}>Today</Text>
+        <Text style={styles.sectionHeading}>{t("sections.today")}</Text>
         {agendaDate ? (
           <Text style={styles.agendaHint}>
-            {formatAgendaDayLabel(agendaDate)} · times in your local timezone
+            {t("sections.today_hint", {
+              day: formatAgendaDayLabel(agendaDate, i18n.language),
+            })}
           </Text>
         ) : null}
 
         {agendaError ? (
           <ErrorBanner
-            title="Agenda unavailable"
+            title={t("errors.agenda_unavailable")}
             message={agendaError.message}
             onRetry={agendaRefresh}
           />
@@ -456,16 +474,16 @@ export default function HomeScreen() {
 
         <SectionRule color={tokens.border} />
 
-        <Text style={styles.sectionHeading}>Priority Alerts</Text>
+        <Text style={styles.sectionHeading}>{t("sections.priority_alerts")}</Text>
         {dashboardError ? (
           <ErrorBanner
-            title="Dashboard update failed"
+            title={t("errors.dashboard_update_failed")}
             message={dashboardError.message}
             onRetry={dashRefresh}
           />
         ) : null}
         {alerts.length === 0 ? (
-          <Text style={styles.muted}>No priority alerts — you&apos;re caught up.</Text>
+          <Text style={styles.muted}>{t("sections.no_alerts")}</Text>
         ) : (
           alerts.map((a, i) => (
             <PriorityAlertCard
@@ -504,8 +522,11 @@ export default function HomeScreen() {
             <Pressable
               onPress={() => router.push("/(tabs)/leads" as any)}
               accessibilityRole="button"
-              accessibilityLabel={`${queueCount} lead${queueCount > 1 ? "s" : ""} available to claim`}
-              accessibilityHint="Opens the lead queue"
+              accessibilityLabel={t("lead_queue.one", {
+                count: queueCount,
+                defaultValue: t("lead_queue.other", { count: queueCount }),
+              })}
+              accessibilityHint={t("lead_queue.cta")}
               style={({ pressed }) => [{
                 backgroundColor: pressed ? tokens.accentPressed : tokens.infoBgAlt,
                 borderRadius: 12,
@@ -517,41 +538,44 @@ export default function HomeScreen() {
               }]}
             >
               <Text style={{ fontSize: 15, fontWeight: "700", color: tokens.infoText }}>
-                {queueCount} lead{queueCount > 1 ? "s" : ""} available to claim
+                {t("lead_queue.one", {
+                  count: queueCount,
+                  defaultValue: t("lead_queue.other", { count: queueCount }),
+                })}
               </Text>
               <Text style={{ fontSize: 12, color: tokens.infoAccent, marginTop: 2 }}>
-                Tap to view the lead queue
+                {t("lead_queue.cta")}
               </Text>
             </Pressable>
             <SectionRule color={tokens.border} />
           </>
         )}
 
-        <Text style={styles.sectionHeading}>Quick Actions</Text>
+        <Text style={styles.sectionHeading}>{t("sections.quick_actions")}</Text>
         <View style={styles.quickGrid}>
           <Pressable
             onPress={() => handleFixedQuickAction("lead")}
             style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
           >
-            <Text style={styles.quickBtnText}>+ Lead</Text>
+            <Text style={styles.quickBtnText}>{t("quick_actions.lead")}</Text>
           </Pressable>
           <Pressable
             onPress={() => handleFixedQuickAction("task")}
             style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
           >
-            <Text style={styles.quickBtnText}>+ Task</Text>
+            <Text style={styles.quickBtnText}>{t("quick_actions.task")}</Text>
           </Pressable>
           <Pressable
             onPress={() => handleFixedQuickAction("booking")}
             style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
           >
-            <Text style={styles.quickBtnText}>+ Booking</Text>
+            <Text style={styles.quickBtnText}>{t("quick_actions.booking")}</Text>
           </Pressable>
           <Pressable
             onPress={() => handleFixedQuickAction("message")}
             style={({ pressed }) => [styles.quickBtn, pressed && styles.quickBtnPressed]}
           >
-            <Text style={styles.quickBtnText}>+ Message</Text>
+            <Text style={styles.quickBtnText}>{t("quick_actions.message")}</Text>
           </Pressable>
         </View>
       </ScrollView>
