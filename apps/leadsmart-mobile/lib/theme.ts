@@ -53,6 +53,8 @@ type Tokens = {
   warning: string;
   warningBg: string;
   warningBorder: string;
+  /** Deep amber/yellow for text on `warningBg`. */
+  warningText: string;
 
   /* Danger / error */
   danger: string;
@@ -60,6 +62,8 @@ type Tokens = {
   dangerBorder: string;
   dangerTitle: string;
   dangerBody: string;
+  /** Deep red for text on `dangerBg`. */
+  dangerText: string;
   /** @deprecated use `dangerBg` */
   errorBg: string;
   /** @deprecated use `dangerBorder` */
@@ -68,6 +72,15 @@ type Tokens = {
   errorTitle: string;
   /** @deprecated use `dangerBody` */
   errorBody: string;
+
+  /* Legacy aliases — kept for screens that imported from an earlier
+   * shape of the palette. Prefer the canonical names on new code. */
+  /** @deprecated use `bg` */
+  background: string;
+  /** @deprecated use `surface` */
+  card: string;
+  /** @deprecated use `accent` */
+  brand: string;
 
   /* Hot-lead callouts */
   hotBg: string;
@@ -130,12 +143,18 @@ export const lightTheme: Tokens = {
   warning: "#b45309",
   warningBg: "#fefce8",
   warningBorder: "#fef08a",
+  // amber-800 — deep enough to read on the pale-yellow warningBg
+  // surface used by the morning-briefing card + coaching pills.
+  warningText: "#854d0e",
 
   danger: "#b91c1c",
   dangerBg: "#fef2f2",
   dangerBorder: "#fecaca",
   dangerTitle: "#991b1b",
   dangerBody: "#7f1d1d",
+  // red-900 — readable on dangerBg (pale red) in the lead-quick-
+  // actions chipError variant.
+  dangerText: "#7f1d1d",
   errorBg: "#fef2f2",
   errorBorder: "#fecaca",
   errorTitle: "#991b1b",
@@ -163,6 +182,10 @@ export const lightTheme: Tokens = {
 
   skeletonBase: "#e2e8f0",
   skeletonHighlight: "#f1f5f9",
+
+  background: "#f8fafc",
+  card: "#ffffff",
+  brand: "#0072ce",
 };
 
 /**
@@ -205,12 +228,16 @@ export const darkTheme: Tokens = {
   warning: "#facc15",
   warningBg: "#2a2209",
   warningBorder: "#ca8a04",
+  // amber-300 — bright enough to read on the dark warningBg
+  warningText: "#fde047",
 
   danger: "#f87171",
   dangerBg: "#2a0e0e",
   dangerBorder: "#7f1d1d",
   dangerTitle: "#fca5a5",
   dangerBody: "#fecaca",
+  // red-300 — readable on dark dangerBg surface
+  dangerText: "#fca5a5",
   errorBg: "#2a0e0e",
   errorBorder: "#7f1d1d",
   errorTitle: "#fca5a5",
@@ -238,6 +265,10 @@ export const darkTheme: Tokens = {
 
   skeletonBase: "#1a243c",
   skeletonHighlight: "#26334d",
+
+  background: "#0b1220",
+  card: "#111a2e",
+  brand: "#4da3e8",
 };
 
 /**
