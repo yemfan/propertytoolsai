@@ -53,6 +53,14 @@
   },
   "pipeline": {
     "breadcrumb_not_configured": "Pipeline stages not configured",
-    "picker_unavailable": "Pipeline stages unavailable for this account."
+    "picker_unavailable": "Pipeline stages unavailable for this account.",
+    "slug": {
+      "new": "New",
+      "contacted": "Contacted",
+      "qualified": "Qualified",
+      "showing": "Showing",
+      "offer": "Offer",
+      "closed": "Closed"
+    }
   }
 }
