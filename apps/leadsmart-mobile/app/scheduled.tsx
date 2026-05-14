@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -41,6 +42,7 @@ import type { ThemeTokens } from "../lib/theme";
 export default function ScheduledPostsScreen() {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t, i18n } = useTranslation("mobile_misc_screens");
 
   const [rows, setRows] = useState<MobileScheduledPost[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -67,14 +69,15 @@ export default function ScheduledPostsScreen() {
   const onCancel = useCallback(
     (row: MobileScheduledPost) => {
       Alert.alert(
-        "Cancel scheduled post",
-        `Cancel this ${labelFor(row.platform)} post scheduled for ${new Date(
-          row.scheduledFor,
-        ).toLocaleString()}? This cannot be undone.`,
+        t("scheduled.alert.cancel_title"),
+        t("scheduled.alert.cancel_body", {
+          platform: labelFor(row.platform, t),
+          when: new Date(row.scheduledFor).toLocaleString(i18n.language),
+        }),
         [
-          { text: "Keep", style: "cancel" },
+          { text: t("scheduled.alert.keep"), style: "cancel" },
           {
-            text: "Cancel post",
+            text: t("scheduled.alert.cancel"),
             style: "destructive",
             onPress: async () => {
               hapticButtonPress();
@@ -83,7 +86,7 @@ export default function ScheduledPostsScreen() {
               setBusyId(null);
               if (res.ok === false) {
                 hapticError();
-                Alert.alert("Cancel failed", res.message);
+                Alert.alert(t("scheduled.alert.cancel_failed_title"), res.message);
                 return;
               }
               hapticSuccess();
@@ -93,14 +96,14 @@ export default function ScheduledPostsScreen() {
         ],
       );
     },
-    [load],
+    [load, t, i18n.language],
   );
 
   if (rows === null) {
     return (
       <View style={styles.loadingBlock}>
         <Stack.Screen
-          options={{ title: "Scheduled posts", headerBackTitle: "Home" }}
+          options={{ title: t("scheduled.title"), headerBackTitle: t("scheduled.back") }}
         />
         <ActivityIndicator color={tokens.accent} />
       </View>
@@ -128,7 +131,7 @@ export default function ScheduledPostsScreen() {
       }
     >
       <Stack.Screen
-        options={{ title: "Scheduled posts", headerBackTitle: "Home" }}
+        options={{ title: t("scheduled.title"), headerBackTitle: t("scheduled.back") }}
       />
 
       {error && (
@@ -140,16 +143,16 @@ export default function ScheduledPostsScreen() {
 
       {upcoming.length === 0 && failed.length === 0 && recent.length === 0 ? (
         <View style={styles.emptyBlock}>
-          <Text style={styles.emptyTitle}>Nothing scheduled yet</Text>
-          <Text style={styles.emptyBody}>
-            Open Quick Post → toggle Schedule → pick a time. Your scheduled
-            drafts will show here.
-          </Text>
+          <Text style={styles.emptyTitle}>{t("scheduled.empty_title")}</Text>
+          <Text style={styles.emptyBody}>{t("scheduled.empty_body")}</Text>
         </View>
       ) : null}
 
       {upcoming.length > 0 && (
-        <Section title="Upcoming" subtitle="Waiting for the publish cron.">
+        <Section
+          title={t("scheduled.sections.upcoming_title")}
+          subtitle={t("scheduled.sections.upcoming_subtitle")}
+        >
           {upcoming.map((r) => (
             <Card
               key={r.id}
@@ -157,6 +160,8 @@ export default function ScheduledPostsScreen() {
               styles={styles}
               busy={busyId === r.id}
               onCancel={() => onCancel(r)}
+              t={t}
+              locale={i18n.language}
             />
           ))}
         </Section>
@@ -164,25 +169,44 @@ export default function ScheduledPostsScreen() {
 
       {failed.length > 0 && (
         <Section
-          title="Failed"
-          subtitle="Permanent errors. Reconnect or try a new post."
+          title={t("scheduled.sections.failed_title")}
+          subtitle={t("scheduled.sections.failed_subtitle")}
         >
           {failed.map((r) => (
-            <Card key={r.id} row={r} styles={styles} busy={false} />
+            <Card
+              key={r.id}
+              row={r}
+              styles={styles}
+              busy={false}
+              t={t}
+              locale={i18n.language}
+            />
           ))}
         </Section>
       )}
 
       {recent.length > 0 && (
-        <Section title="Recent" subtitle="Posted or cancelled.">
+        <Section
+          title={t("scheduled.sections.recent_title")}
+          subtitle={t("scheduled.sections.recent_subtitle")}
+        >
           {recent.slice(0, 30).map((r) => (
-            <Card key={r.id} row={r} styles={styles} busy={false} />
+            <Card
+              key={r.id}
+              row={r}
+              styles={styles}
+              busy={false}
+              t={t}
+              locale={i18n.language}
+            />
           ))}
         </Section>
       )}
     </ScrollView>
   );
 }
+
+type ScheduledT = (key: string, options?: Record<string, unknown>) => string;
 
 function Section({
   title,
@@ -221,49 +245,53 @@ function Card({
   styles,
   busy,
   onCancel,
+  t,
+  locale,
 }: {
   row: MobileScheduledPost;
   styles: ReturnType<typeof createStyles>;
   busy: boolean;
   onCancel?: () => void;
+  t: ScheduledT;
+  locale: string;
 }) {
-  const when = new Date(row.scheduledFor).toLocaleString();
+  const when = new Date(row.scheduledFor).toLocaleString(locale);
   const display =
     row.platform === "instagram"
       ? row.igBusinessUsername
         ? `@${row.igBusinessUsername}`
-        : "Instagram"
+        : t("platforms.instagram")
       : row.platform === "facebook"
-        ? row.pageName ?? "Facebook"
-        : row.linkedinDisplayName ?? "LinkedIn";
+        ? row.pageName ?? t("platforms.facebook")
+        : row.linkedinDisplayName ?? t("platforms.linkedin");
+  const whenLine =
+    row.status === "posted"
+      ? t("scheduled.card.posted_at", {
+          when: row.publishedAt ? new Date(row.publishedAt).toLocaleString(locale) : when,
+        })
+      : row.status === "cancelled"
+        ? t("scheduled.card.was_scheduled", { when })
+        : t("scheduled.card.scheduled_for", { when });
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.cardHeaderLeft}>
           <View style={styles.platformBadge}>
-            <Text style={styles.platformBadgeText}>
-              {labelFor(row.platform)}
-            </Text>
+            <Text style={styles.platformBadgeText}>{labelFor(row.platform, t)}</Text>
           </View>
           <Text style={styles.cardDisplay} numberOfLines={1}>
             {display}
           </Text>
         </View>
-        <StatusBadge status={row.status} />
+        <StatusBadge status={row.status} t={t} />
       </View>
       <Text style={styles.cardCaption} numberOfLines={3}>
         {row.caption}
       </Text>
-      <Text style={styles.cardWhen}>
-        {row.status === "posted"
-          ? `Posted ${row.publishedAt ? new Date(row.publishedAt).toLocaleString() : when}`
-          : row.status === "cancelled"
-            ? `Was scheduled for ${when}`
-            : `Scheduled for ${when}`}
-      </Text>
+      <Text style={styles.cardWhen}>{whenLine}</Text>
       {row.lastError && (
         <Text style={styles.cardError} numberOfLines={3}>
-          Error: {row.lastError}
+          {t("scheduled.card.error_prefix", { message: row.lastError })}
         </Text>
       )}
       {(onCancel || row.publishedUrl) && (
@@ -275,7 +303,7 @@ function Card({
               }
               style={styles.cardActionLink}
             >
-              <Text style={styles.cardActionLinkText}>View the post →</Text>
+              <Text style={styles.cardActionLinkText}>{t("scheduled.card.view_post")}</Text>
             </Pressable>
           )}
           {onCancel && (
@@ -285,7 +313,7 @@ function Card({
               style={styles.cardCancelButton}
             >
               <Text style={styles.cardCancelText}>
-                {busy ? "…" : "Cancel"}
+                {busy ? t("scheduled.card.busy") : t("scheduled.card.cancel")}
               </Text>
             </Pressable>
           )}
@@ -295,13 +323,17 @@ function Card({
   );
 }
 
-function labelFor(p: MobileScheduledPost["platform"]): string {
-  if (p === "facebook") return "Facebook";
-  if (p === "instagram") return "Instagram";
-  return "LinkedIn";
+function labelFor(p: MobileScheduledPost["platform"], t: ScheduledT): string {
+  return t(`platforms.${p}`);
 }
 
-function StatusBadge({ status }: { status: MobileScheduledPost["status"] }) {
+function StatusBadge({
+  status,
+  t,
+}: {
+  status: MobileScheduledPost["status"];
+  t: ScheduledT;
+}) {
   const color =
     status === "posted"
       ? "#059669"
@@ -335,12 +367,11 @@ function StatusBadge({ status }: { status: MobileScheduledPost["status"] }) {
         style={{
           fontSize: 10,
           fontWeight: "700",
-          textTransform: "uppercase",
           letterSpacing: 0.3,
           color,
         }}
       >
-        {status}
+        {t(`scheduled.status.${status}`, { defaultValue: status })}
       </Text>
     </View>
   );

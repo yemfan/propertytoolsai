@@ -1,0 +1,168 @@
+{
+  "notifications": {
+    "loading": "Loading notifications…",
+    "toolbar_hint": "Recent alerts from your CRM",
+    "mark_all": "Mark all read",
+    "mark_all_a11y": "Mark all as read",
+    "filters": {
+      "all": "All",
+      "hot_lead": "Hot leads",
+      "briefing": "Briefings",
+      "publish_failure": "Post failures",
+      "missed_call": "Calls",
+      "reminder": "Other"
+    },
+    "kinds": {
+      "hot_lead": "Hot lead",
+      "missed_call": "Missed call",
+      "briefing": "Briefing",
+      "publish_failure": "Post failed",
+      "reminder": "Reminder"
+    },
+    "priority": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "error_title": "Could not load notifications",
+    "open": "Open",
+    "empty_all": "You're all caught up. Hot leads and reminders will show here.",
+    "empty_kind": "No {{kind}} notifications yet."
+  },
+  "post_history": {
+    "title": "Posts",
+    "back": "Home",
+    "section_published": "Published ({{count}})",
+    "section_failed": "Failed ({{count}})",
+    "empty_title": "No published posts yet",
+    "empty_body": "Publish a post from Quick Post and it'll show up here with engagement metrics from Meta.",
+    "publish_failed": "Publish failed",
+    "view_on": "View on {{platform}}",
+    "refresh": "Refresh",
+    "follow_up": "Follow-up",
+    "last_refresh": "Last refresh: {{when}}",
+    "no_metrics": "No metrics yet — tap Refresh to fetch",
+    "linkedin_note": "LinkedIn analytics aren't available via the API. Tap View on LinkedIn for engagement.",
+    "metrics": {
+      "likes": "Likes",
+      "comments": "Comments",
+      "saves": "Saves",
+      "reach": "Reach",
+      "impressions": "Impressions",
+      "reactions": "Reactions",
+      "shares": "Shares",
+      "clicks": "Clicks",
+      "empty_value": "—"
+    },
+    "triggers": {
+      "new_listing": "New listing",
+      "open_house": "Open house",
+      "price_drop": "Price drop",
+      "just_sold": "Just sold",
+      "market_update": "Market update",
+      "testimonial": "Testimonial",
+      "custom": "Custom",
+      "by_address": "By address"
+    },
+    "account_fallback": "—"
+  },
+  "scheduled": {
+    "title": "Scheduled posts",
+    "back": "Home",
+    "empty_title": "Nothing scheduled yet",
+    "empty_body": "Open Quick Post → toggle Schedule → pick a time. Your scheduled drafts will show here.",
+    "sections": {
+      "upcoming_title": "Upcoming",
+      "upcoming_subtitle": "Waiting for the publish cron.",
+      "failed_title": "Failed",
+      "failed_subtitle": "Permanent errors. Reconnect or try a new post.",
+      "recent_title": "Recent",
+      "recent_subtitle": "Posted or cancelled."
+    },
+    "alert": {
+      "cancel_title": "Cancel scheduled post",
+      "cancel_body": "Cancel this {{platform}} post scheduled for {{when}}? This cannot be undone.",
+      "keep": "Keep",
+      "cancel": "Cancel post",
+      "cancel_failed_title": "Cancel failed"
+    },
+    "card": {
+      "posted_at": "Posted {{when}}",
+      "was_scheduled": "Was scheduled for {{when}}",
+      "scheduled_for": "Scheduled for {{when}}",
+      "error_prefix": "Error: {{message}}",
+      "view_post": "View the post →",
+      "cancel": "Cancel",
+      "busy": "…"
+    },
+    "status": {
+      "scheduled": "Scheduled",
+      "posting": "Posting",
+      "posted": "Posted",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "recurring": {
+    "title": "Recurring posts",
+    "back": "Home",
+    "empty_title": "No recurring posts",
+    "empty_body": "Open Quick Post → toggle Recurring → pick a cadence. Your recurrences will live here.",
+    "weekdays": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "unknown": "?"
+    },
+    "cadence": {
+      "daily": "Every day at {{time}} {{tz}}",
+      "weekly": "Every {{day}} at {{time}} {{tz}}"
+    },
+    "sections": {
+      "active_title": "Active",
+      "active_subtitle": "Materializing on cadence.",
+      "paused_title": "Paused",
+      "paused_subtitle": "Cron is skipping these.",
+      "done_title": "Done",
+      "done_subtitle": "Completed or cancelled. Read-only."
+    },
+    "alert": {
+      "cancel_title": "Cancel recurrence",
+      "cancel_body": "Cancel this recurring post? This is permanent — agent will need to create a new recurrence to start over.",
+      "keep": "Keep",
+      "cancel": "Cancel",
+      "action_failed_pause": "Pause failed",
+      "action_failed_resume": "Resume failed",
+      "action_failed_cancel": "Cancel failed"
+    },
+    "actions": {
+      "pause": "Pause",
+      "resume": "Resume",
+      "cancel": "Cancel",
+      "busy": "…"
+    },
+    "card": {
+      "next_prefix": "Next: {{when}}",
+      "paused_prefix": "Paused — next would have been {{when}}",
+      "posted_one": "Posted {{count}} time",
+      "posted_other": "Posted {{count}} times",
+      "ends_suffix": "ends {{date}}",
+      "last_error_prefix": "Last error: {{message}}"
+    },
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "platforms": {
+    "facebook": "Facebook",
+    "instagram": "Instagram",
+    "linkedin": "LinkedIn"
+  }
+}

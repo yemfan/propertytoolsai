@@ -36,6 +36,7 @@ import enInbox from "@leadsmart/i18n/locale/en/inbox";
 import enLeadComponents from "@leadsmart/i18n/locale/en/lead_components";
 import enLeadDetail from "@leadsmart/i18n/locale/en/lead_detail";
 import enLeads from "@leadsmart/i18n/locale/en/leads";
+import enMobileMiscScreens from "@leadsmart/i18n/locale/en/mobile_misc_screens";
 import enNav from "@leadsmart/i18n/locale/en/nav";
 import enQuickPost from "@leadsmart/i18n/locale/en/quick_post";
 import enReplyComposer from "@leadsmart/i18n/locale/en/reply_composer";
@@ -50,6 +51,7 @@ import zhInbox from "@leadsmart/i18n/locale/zh-Hans/inbox";
 import zhLeadComponents from "@leadsmart/i18n/locale/zh-Hans/lead_components";
 import zhLeadDetail from "@leadsmart/i18n/locale/zh-Hans/lead_detail";
 import zhLeads from "@leadsmart/i18n/locale/zh-Hans/leads";
+import zhMobileMiscScreens from "@leadsmart/i18n/locale/zh-Hans/mobile_misc_screens";
 import zhNav from "@leadsmart/i18n/locale/zh-Hans/nav";
 import zhQuickPost from "@leadsmart/i18n/locale/zh-Hans/quick_post";
 import zhReplyComposer from "@leadsmart/i18n/locale/zh-Hans/reply_composer";
@@ -76,6 +78,7 @@ const resources = {
     calendar_screen: enCalendarScreen,
     showings_screen: enShowingsScreen,
     sphere_screen: enSphereScreen,
+    mobile_misc_screens: enMobileMiscScreens,
   },
   "zh-Hans": {
     common: zhCommon,
@@ -92,6 +95,7 @@ const resources = {
     calendar_screen: zhCalendarScreen,
     showings_screen: zhShowingsScreen,
     sphere_screen: zhSphereScreen,
+    mobile_misc_screens: zhMobileMiscScreens,
   },
 } as const;
 
@@ -172,6 +176,7 @@ export function initI18n(): Promise<typeof i18n> {
         "calendar_screen",
         "showings_screen",
         "sphere_screen",
+        "mobile_misc_screens",
       ],
       interpolation: {
         // React Native handles escaping; double-escaping breaks

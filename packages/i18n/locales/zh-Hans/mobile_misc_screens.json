@@ -1,0 +1,168 @@
+{
+  "notifications": {
+    "loading": "正在加载通知……",
+    "toolbar_hint": "CRM 的最新提醒",
+    "mark_all": "全部标记为已读",
+    "mark_all_a11y": "全部标记为已读",
+    "filters": {
+      "all": "全部",
+      "hot_lead": "热门客户",
+      "briefing": "简报",
+      "publish_failure": "发布失败",
+      "missed_call": "未接来电",
+      "reminder": "其他"
+    },
+    "kinds": {
+      "hot_lead": "热门客户",
+      "missed_call": "未接来电",
+      "briefing": "简报",
+      "publish_failure": "发布失败",
+      "reminder": "提醒"
+    },
+    "priority": {
+      "high": "高",
+      "medium": "中",
+      "low": "低"
+    },
+    "error_title": "无法加载通知",
+    "open": "打开",
+    "empty_all": "暂无未读通知。热门客户和提醒会显示在这里。",
+    "empty_kind": "暂无{{kind}}通知。"
+  },
+  "post_history": {
+    "title": "帖子",
+    "back": "首页",
+    "section_published": "已发布 ({{count}})",
+    "section_failed": "失败 ({{count}})",
+    "empty_title": "暂无已发布帖子",
+    "empty_body": "从快速发布中发布帖子，它会显示在这里，并附带来自 Meta 的互动数据。",
+    "publish_failed": "发布失败",
+    "view_on": "在 {{platform}} 查看",
+    "refresh": "刷新",
+    "follow_up": "跟进",
+    "last_refresh": "上次刷新：{{when}}",
+    "no_metrics": "暂无数据 — 点击刷新以获取",
+    "linkedin_note": "LinkedIn 的数据无法通过 API 获取。点击「在 LinkedIn 查看」可查看互动情况。",
+    "metrics": {
+      "likes": "点赞",
+      "comments": "评论",
+      "saves": "收藏",
+      "reach": "覆盖",
+      "impressions": "展示",
+      "reactions": "反应",
+      "shares": "分享",
+      "clicks": "点击",
+      "empty_value": "—"
+    },
+    "triggers": {
+      "new_listing": "新房源",
+      "open_house": "看房日",
+      "price_drop": "降价",
+      "just_sold": "已售出",
+      "market_update": "市场动态",
+      "testimonial": "客户好评",
+      "custom": "自定义",
+      "by_address": "按地址"
+    },
+    "account_fallback": "—"
+  },
+  "scheduled": {
+    "title": "定时发布",
+    "back": "首页",
+    "empty_title": "暂无定时发布",
+    "empty_body": "在快速发布中打开「定时」并选择时间。您的定时草稿将显示在这里。",
+    "sections": {
+      "upcoming_title": "即将发布",
+      "upcoming_subtitle": "等待发布任务执行。",
+      "failed_title": "失败",
+      "failed_subtitle": "永久错误。请重新连接或新建帖子。",
+      "recent_title": "近期",
+      "recent_subtitle": "已发布或已取消。"
+    },
+    "alert": {
+      "cancel_title": "取消定时发布",
+      "cancel_body": "取消此预定于 {{when}} 发布的 {{platform}} 帖子？此操作无法撤销。",
+      "keep": "保留",
+      "cancel": "取消发布",
+      "cancel_failed_title": "取消失败"
+    },
+    "card": {
+      "posted_at": "已发布于 {{when}}",
+      "was_scheduled": "原定于 {{when}}",
+      "scheduled_for": "预定于 {{when}}",
+      "error_prefix": "错误：{{message}}",
+      "view_post": "查看帖子 →",
+      "cancel": "取消",
+      "busy": "……"
+    },
+    "status": {
+      "scheduled": "已定时",
+      "posting": "发布中",
+      "posted": "已发布",
+      "failed": "失败",
+      "cancelled": "已取消"
+    }
+  },
+  "recurring": {
+    "title": "周期发布",
+    "back": "首页",
+    "empty_title": "暂无周期发布",
+    "empty_body": "在快速发布中打开「周期」并选择频率。您的周期发布将显示在这里。",
+    "weekdays": {
+      "sun": "周日",
+      "mon": "周一",
+      "tue": "周二",
+      "wed": "周三",
+      "thu": "周四",
+      "fri": "周五",
+      "sat": "周六",
+      "unknown": "？"
+    },
+    "cadence": {
+      "daily": "每天 {{time}} {{tz}}",
+      "weekly": "每{{day}} {{time}} {{tz}}"
+    },
+    "sections": {
+      "active_title": "进行中",
+      "active_subtitle": "按周期自动发布。",
+      "paused_title": "已暂停",
+      "paused_subtitle": "发布任务暂时跳过这些。",
+      "done_title": "已完成",
+      "done_subtitle": "已完成或已取消。只读。"
+    },
+    "alert": {
+      "cancel_title": "取消周期发布",
+      "cancel_body": "取消此周期发布？此操作不可恢复 — 需要重新创建。",
+      "keep": "保留",
+      "cancel": "取消",
+      "action_failed_pause": "暂停失败",
+      "action_failed_resume": "恢复失败",
+      "action_failed_cancel": "取消失败"
+    },
+    "actions": {
+      "pause": "暂停",
+      "resume": "恢复",
+      "cancel": "取消",
+      "busy": "……"
+    },
+    "card": {
+      "next_prefix": "下次：{{when}}",
+      "paused_prefix": "已暂停 — 原定 {{when}}",
+      "posted_one": "已发布 {{count}} 次",
+      "posted_other": "已发布 {{count}} 次",
+      "ends_suffix": "结束于 {{date}}",
+      "last_error_prefix": "上次错误：{{message}}"
+    },
+    "status": {
+      "active": "进行中",
+      "paused": "已暂停",
+      "completed": "已完成",
+      "cancelled": "已取消"
+    }
+  },
+  "platforms": {
+    "facebook": "Facebook",
+    "instagram": "Instagram",
+    "linkedin": "LinkedIn"
+  }
+}

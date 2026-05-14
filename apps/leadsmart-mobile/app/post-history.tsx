@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Image,
@@ -76,6 +77,7 @@ export default function PostHistoryScreen() {
   const tokens = useThemeTokens();
   const router = useRouter();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t, i18n } = useTranslation("mobile_misc_screens");
 
   const [rows, setRows] = useState<MobilePublishedPost[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -161,7 +163,7 @@ export default function PostHistoryScreen() {
     return (
       <View style={styles.loadingBlock}>
         <Stack.Screen
-          options={{ title: "Posts", headerBackTitle: "Home" }}
+          options={{ title: t("post_history.title"), headerBackTitle: t("post_history.back") }}
         />
         <ActivityIndicator color={tokens.accent} />
       </View>
@@ -183,7 +185,9 @@ export default function PostHistoryScreen() {
         />
       }
     >
-      <Stack.Screen options={{ title: "Posts", headerBackTitle: "Home" }} />
+      <Stack.Screen
+        options={{ title: t("post_history.title"), headerBackTitle: t("post_history.back") }}
+      />
 
       {error && (
         <View style={styles.errorBox}>
@@ -192,12 +196,12 @@ export default function PostHistoryScreen() {
         </View>
       )}
 
-      {rows.length === 0 && !error && <EmptyState tokens={tokens} />}
+      {rows.length === 0 && !error && <EmptyState tokens={tokens} t={t} />}
 
       {published.length > 0 && (
         <>
           <Text style={styles.sectionLabel}>
-            Published ({published.length})
+            {t("post_history.section_published", { count: published.length })}
           </Text>
           {published.map((p) => (
             <PostCard
@@ -217,6 +221,8 @@ export default function PostHistoryScreen() {
               }}
               tokens={tokens}
               styles={styles}
+              t={t}
+              locale={i18n.language}
             />
           ))}
         </>
@@ -225,7 +231,7 @@ export default function PostHistoryScreen() {
       {failed.length > 0 && (
         <>
           <Text style={[styles.sectionLabel, styles.sectionLabelDanger]}>
-            Failed ({failed.length})
+            {t("post_history.section_failed", { count: failed.length })}
           </Text>
           {failed.map((p) => (
             <PostCard
@@ -245,6 +251,8 @@ export default function PostHistoryScreen() {
               }}
               tokens={tokens}
               styles={styles}
+              t={t}
+              locale={i18n.language}
             />
           ))}
         </>
@@ -253,6 +261,8 @@ export default function PostHistoryScreen() {
   );
 }
 
+type PostHistoryT = (key: string, options?: Record<string, unknown>) => string;
+
 function PostCard({
   post,
   state,
@@ -260,6 +270,8 @@ function PostCard({
   onFollowUp,
   tokens,
   styles,
+  t,
+  locale,
 }: {
   post: MobilePublishedPost;
   state:
@@ -274,6 +286,8 @@ function PostCard({
   onFollowUp: (link: { trigger: string; subjectId: string }) => void;
   tokens: ThemeTokens;
   styles: ReturnType<typeof createStyles>;
+  t: PostHistoryT;
+  locale: string;
 }) {
   const followUpLink = reconstructFollowUpLink(post);
   const metrics = state?.metrics ?? post.metrics ?? {};
@@ -281,15 +295,21 @@ function PostCard({
   const refreshedAt = state?.metricsRefreshedAt ?? post.metricsRefreshedAt;
   const refreshError = state?.refreshError ?? null;
 
-  const platformLabel = labelFor(post.platform);
+  const platformLabel = labelFor(post.platform, t);
   const accountName =
     post.pageName ??
     post.igBusinessUsername ??
     post.linkedinDisplayName ??
-    "—";
+    t("post_history.account_fallback");
   const publishedAt = post.publishedAt
     ? new Date(post.publishedAt)
     : new Date(post.createdAt);
+  const shortDateOpts: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  };
 
   return (
     <View style={styles.card}>
@@ -323,13 +343,8 @@ function PostCard({
             </Text>
           </View>
           <Text style={styles.timeText}>
-            {publishedAt.toLocaleString([], {
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            })}
-            {post.triggerKind ? ` · ${triggerLabel(post.triggerKind)}` : ""}
+            {publishedAt.toLocaleString(locale, shortDateOpts)}
+            {post.triggerKind ? ` · ${triggerLabel(post.triggerKind, t)}` : ""}
           </Text>
         </View>
       </View>
@@ -340,7 +355,7 @@ function PostCard({
 
       {post.status === "failed" && post.errorMessage && (
         <View style={styles.failBox}>
-          <Text style={styles.failTitle}>Publish failed</Text>
+          <Text style={styles.failTitle}>{t("post_history.publish_failed")}</Text>
           <Text style={styles.failBody}>{post.errorMessage}</Text>
         </View>
       )}
@@ -349,8 +364,9 @@ function PostCard({
         <MetricsRow
           metrics={metrics}
           platform={post.platform}
-          tokens={tokens}
           styles={styles}
+          t={t}
+          locale={locale}
         />
       )}
 
@@ -366,7 +382,9 @@ function PostCard({
             style={styles.actionButton}
           >
             <Ionicons name="open-outline" size={14} color={tokens.accent} />
-            <Text style={styles.actionButtonText}>View on {platformLabel}</Text>
+            <Text style={styles.actionButtonText}>
+              {t("post_history.view_on", { platform: platformLabel })}
+            </Text>
           </Pressable>
         )}
         {post.status === "published" && (
@@ -384,7 +402,7 @@ function PostCard({
                   size={14}
                   color={tokens.accent}
                 />
-                <Text style={styles.actionButtonText}>Refresh</Text>
+                <Text style={styles.actionButtonText}>{t("post_history.refresh")}</Text>
               </>
             )}
           </Pressable>
@@ -399,16 +417,18 @@ function PostCard({
               size={14}
               color={tokens.accent}
             />
-            <Text style={styles.actionButtonText}>Follow-up</Text>
+            <Text style={styles.actionButtonText}>{t("post_history.follow_up")}</Text>
           </Pressable>
         )}
       </View>
 
       <Text style={styles.refreshFooter}>
         {refreshedAt
-          ? `Last refresh: ${new Date(refreshedAt).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
+          ? t("post_history.last_refresh", {
+              when: new Date(refreshedAt).toLocaleString(locale, shortDateOpts),
+            })
           : post.status === "published"
-            ? "No metrics yet — tap Refresh to fetch"
+            ? t("post_history.no_metrics")
             : ""}
       </Text>
       {refreshError && (
@@ -421,41 +441,38 @@ function PostCard({
 function MetricsRow({
   metrics,
   platform,
-  tokens,
   styles,
+  t,
+  locale,
 }: {
   metrics: MobilePostMetrics;
   platform: string;
-  tokens: ThemeTokens;
   styles: ReturnType<typeof createStyles>;
+  t: PostHistoryT;
+  locale: string;
 }) {
   const cells: Array<{ label: string; value: number | null }> =
     platform === "instagram"
       ? [
-          { label: "Likes", value: metrics.likes ?? null },
-          { label: "Comments", value: metrics.comments ?? null },
-          { label: "Saves", value: metrics.saves ?? null },
-          { label: "Reach", value: metrics.reach ?? null },
-          { label: "Impressions", value: metrics.impressions ?? null },
+          { label: t("post_history.metrics.likes"), value: metrics.likes ?? null },
+          { label: t("post_history.metrics.comments"), value: metrics.comments ?? null },
+          { label: t("post_history.metrics.saves"), value: metrics.saves ?? null },
+          { label: t("post_history.metrics.reach"), value: metrics.reach ?? null },
+          { label: t("post_history.metrics.impressions"), value: metrics.impressions ?? null },
         ]
       : platform === "facebook"
         ? [
-            { label: "Reactions", value: metrics.likes ?? null },
-            { label: "Comments", value: metrics.comments ?? null },
-            { label: "Shares", value: metrics.shares ?? null },
-            { label: "Reach", value: metrics.reach ?? null },
-            { label: "Impressions", value: metrics.impressions ?? null },
-            { label: "Clicks", value: metrics.clicks ?? null },
+            { label: t("post_history.metrics.reactions"), value: metrics.likes ?? null },
+            { label: t("post_history.metrics.comments"), value: metrics.comments ?? null },
+            { label: t("post_history.metrics.shares"), value: metrics.shares ?? null },
+            { label: t("post_history.metrics.reach"), value: metrics.reach ?? null },
+            { label: t("post_history.metrics.impressions"), value: metrics.impressions ?? null },
+            { label: t("post_history.metrics.clicks"), value: metrics.clicks ?? null },
           ]
         : [];
 
   if (cells.length === 0) {
-    return (
-      <Text style={styles.linkedinNoteText}>
-        LinkedIn analytics aren&apos;t available via the API. Tap View on
-        LinkedIn for engagement.
-      </Text>
-    );
+    return <Text style={styles.linkedinNoteText}>{t("post_history.linkedin_note")}</Text>;
   }
 
   return (
@@ -463,7 +480,7 @@ function MetricsRow({
       {cells.map((c) => (
         <View key={c.label} style={styles.metricCell}>
           <Text style={styles.metricValue}>
-            {c.value == null ? "—" : c.value.toLocaleString()}
+            {c.value == null ? t("post_history.metrics.empty_value") : c.value.toLocaleString(locale)}
           </Text>
           <Text style={styles.metricLabel}>{c.label}</Text>
         </View>
@@ -472,7 +489,7 @@ function MetricsRow({
   );
 }
 
-function EmptyState({ tokens }: { tokens: ThemeTokens }) {
+function EmptyState({ tokens, t }: { tokens: ThemeTokens; t: PostHistoryT }) {
   return (
     <View
       style={{
@@ -495,7 +512,7 @@ function EmptyState({ tokens }: { tokens: ThemeTokens }) {
           color: tokens.text,
         }}
       >
-        No published posts yet
+        {t("post_history.empty_title")}
       </Text>
       <Text
         style={{
@@ -505,47 +522,21 @@ function EmptyState({ tokens }: { tokens: ThemeTokens }) {
           textAlign: "center",
         }}
       >
-        Publish a post from Quick Post and it&apos;ll show up here with
-        engagement metrics from Meta.
+        {t("post_history.empty_body")}
       </Text>
     </View>
   );
 }
 
-function labelFor(p: string): string {
-  switch (p) {
-    case "facebook":
-      return "Facebook";
-    case "instagram":
-      return "Instagram";
-    case "linkedin":
-      return "LinkedIn";
-    default:
-      return p;
+function labelFor(p: string, t: PostHistoryT): string {
+  if (p === "facebook" || p === "instagram" || p === "linkedin") {
+    return t(`platforms.${p}`);
   }
+  return p;
 }
 
-function triggerLabel(t: string): string {
-  switch (t) {
-    case "new_listing":
-      return "New listing";
-    case "open_house":
-      return "Open house";
-    case "price_drop":
-      return "Price drop";
-    case "just_sold":
-      return "Just sold";
-    case "market_update":
-      return "Market update";
-    case "testimonial":
-      return "Testimonial";
-    case "custom":
-      return "Custom";
-    case "by_address":
-      return "By address";
-    default:
-      return t;
-  }
+function triggerLabel(kind: string, t: PostHistoryT): string {
+  return t(`post_history.triggers.${kind}`, { defaultValue: kind });
 }
 
 function createStyles(tokens: ThemeTokens) {
