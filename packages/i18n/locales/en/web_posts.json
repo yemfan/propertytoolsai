@@ -1,0 +1,74 @@
+{
+  "metadata": {
+    "title": "Published Posts | LeadSmart AI",
+    "description": "Every post you've published through Generate Leads, with engagement metrics."
+  },
+  "page": {
+    "title": "Published Posts",
+    "subtitle": "Everything you've published through Generate Leads, with engagement metrics from Meta.",
+    "actions": {
+      "back_to_generate": "← Generate Leads",
+      "scheduled": "🗓 Scheduled",
+      "recurring": "🔁 Recurring",
+      "new_post": "+ New post"
+    },
+    "error_prefix": "Couldn't load posts: {{message}}"
+  },
+  "top_performers": {
+    "title": "Top performers",
+    "window": "· last {{days}} days",
+    "total_engagement": "total engagement",
+    "metrics": {
+      "likes": "likes",
+      "comments": "comments",
+      "shares": "shares",
+      "saves": "saves"
+    }
+  },
+  "list": {
+    "section_published": "Published ({{count}})",
+    "section_failed": "Failed ({{count}})"
+  },
+  "card": {
+    "account_fallback": "—",
+    "publish_failed_label": "Publish failed",
+    "view_on": "View on {{platform}} →",
+    "refresh_metrics": "Refresh metrics",
+    "refreshing": "Refreshing…",
+    "post_follow_up": "+ Post follow-up",
+    "last_refresh": "Last refresh: {{when}}",
+    "no_metrics": "No metrics yet — refresh to fetch",
+    "refresh_failed": "Refresh failed",
+    "triggers": {
+      "new_listing": "New listing",
+      "open_house": "Open house",
+      "price_drop": "Price drop",
+      "just_sold": "Just sold",
+      "market_update": "Market update",
+      "testimonial": "Testimonial",
+      "custom": "Custom",
+      "by_address": "By address"
+    }
+  },
+  "platforms": {
+    "facebook": "Facebook",
+    "instagram": "Instagram",
+    "linkedin": "LinkedIn"
+  },
+  "metrics": {
+    "likes": "Likes",
+    "comments": "Comments",
+    "saves": "Saves",
+    "reach": "Reach",
+    "impressions": "Impressions",
+    "reactions": "Reactions",
+    "shares": "Shares",
+    "clicks": "Clicks",
+    "empty_value": "—",
+    "linkedin_note": "LinkedIn analytics aren't available via the API. View the post on LinkedIn for engagement."
+  },
+  "empty": {
+    "title": "No published posts yet",
+    "body": "Once you publish a post from the wizard, it shows up here with engagement metrics."
+  }
+}
