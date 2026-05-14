@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
@@ -14,10 +15,12 @@ export function AiReplyButton({
   onPress,
   loading,
   disabled,
-  label = "AI draft",
+  label,
 }: AiReplyButtonProps) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("reply_composer");
+  const resolvedLabel = label ?? t("ai_button.label_default");
   const off = Boolean(disabled || loading);
   return (
     <Pressable
@@ -25,13 +28,13 @@ export function AiReplyButton({
       disabled={off}
       style={[styles.btn, off && styles.btnDisabled]}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={resolvedLabel}
       accessibilityState={{ disabled: off }}
     >
       {loading ? (
         <ActivityIndicator size="small" color={tokens.accent} />
       ) : (
-        <Text style={styles.text}>{label}</Text>
+        <Text style={styles.text}>{resolvedLabel}</Text>
       )}
     </Pressable>
   );

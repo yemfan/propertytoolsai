@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Pressable,
@@ -34,16 +35,18 @@ export function ReplyComposer({
   aiLoading,
   error,
   showSent,
-  placeholder = "Type a reply…",
+  placeholder,
   hideLabel,
 }: ReplyComposerProps) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("reply_composer");
   const canSend = value.trim().length > 0 && !sending;
+  const resolvedPlaceholder = placeholder ?? t("sms.placeholder");
 
   return (
     <View style={styles.wrap}>
-      {!hideLabel ? <Text style={styles.label}>SMS reply</Text> : null}
+      {!hideLabel ? <Text style={styles.label}>{t("sms.label")}</Text> : null}
       {error ? (
         <Text style={styles.error} accessibilityLiveRegion="polite">
           {error}
@@ -51,7 +54,7 @@ export function ReplyComposer({
       ) : null}
       {showSent ? (
         <Text style={styles.success} accessibilityLiveRegion="polite">
-          Message sent
+          {t("sms.sent")}
         </Text>
       ) : null}
       <View style={styles.composerRow}>
@@ -59,26 +62,31 @@ export function ReplyComposer({
           style={styles.input}
           value={value}
           onChangeText={onChangeText}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           placeholderTextColor={tokens.textSubtle}
           multiline
           maxLength={1600}
           editable={!sending}
-          accessibilityLabel="Reply message"
+          accessibilityLabel={t("sms.a11y.input")}
         />
         <View style={styles.actions}>
-          <AiReplyButton onPress={onAiDraft} loading={aiLoading} disabled={sending} label="AI" />
+          <AiReplyButton
+            onPress={onAiDraft}
+            loading={aiLoading}
+            disabled={sending}
+            label={t("sms.ai_label")}
+          />
           <Pressable
             style={[styles.sendBtn, !canSend && styles.sendDisabled]}
             onPress={onSend}
             disabled={!canSend}
             accessibilityRole="button"
-            accessibilityLabel="Send message"
+            accessibilityLabel={t("sms.a11y.send")}
           >
             {sending ? (
               <ActivityIndicator color={tokens.textOnAccent} size="small" />
             ) : (
-              <Text style={styles.sendText}>Send</Text>
+              <Text style={styles.sendText}>{t("sms.send")}</Text>
             )}
           </Pressable>
         </View>

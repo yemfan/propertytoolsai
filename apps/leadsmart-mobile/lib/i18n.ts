@@ -36,6 +36,7 @@ import enLeadDetail from "@leadsmart/i18n/locale/en/lead_detail";
 import enLeads from "@leadsmart/i18n/locale/en/leads";
 import enNav from "@leadsmart/i18n/locale/en/nav";
 import enQuickPost from "@leadsmart/i18n/locale/en/quick_post";
+import enReplyComposer from "@leadsmart/i18n/locale/en/reply_composer";
 import enSettings from "@leadsmart/i18n/locale/en/settings";
 import enTaskCalendarComponents from "@leadsmart/i18n/locale/en/task_calendar_components";
 import zhCommon from "@leadsmart/i18n/locale/zh-Hans/common";
@@ -45,6 +46,7 @@ import zhLeadDetail from "@leadsmart/i18n/locale/zh-Hans/lead_detail";
 import zhLeads from "@leadsmart/i18n/locale/zh-Hans/leads";
 import zhNav from "@leadsmart/i18n/locale/zh-Hans/nav";
 import zhQuickPost from "@leadsmart/i18n/locale/zh-Hans/quick_post";
+import zhReplyComposer from "@leadsmart/i18n/locale/zh-Hans/reply_composer";
 import zhSettings from "@leadsmart/i18n/locale/zh-Hans/settings";
 import zhTaskCalendarComponents from "@leadsmart/i18n/locale/zh-Hans/task_calendar_components";
 
@@ -61,6 +63,7 @@ const resources = {
     lead_detail: enLeadDetail,
     lead_components: enLeadComponents,
     task_calendar_components: enTaskCalendarComponents,
+    reply_composer: enReplyComposer,
   },
   "zh-Hans": {
     common: zhCommon,
@@ -72,6 +75,7 @@ const resources = {
     lead_detail: zhLeadDetail,
     lead_components: zhLeadComponents,
     task_calendar_components: zhTaskCalendarComponents,
+    reply_composer: zhReplyComposer,
   },
 } as const;
 
@@ -147,6 +151,7 @@ export function initI18n(): Promise<typeof i18n> {
         "lead_detail",
         "lead_components",
         "task_calendar_components",
+        "reply_composer",
       ],
       interpolation: {
         // React Native handles escaping; double-escaping breaks

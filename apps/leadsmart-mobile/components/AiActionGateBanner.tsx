@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { getLeadsmartApiBaseUrl } from "../lib/env";
 import type { AiActionGateReason } from "../lib/aiActionGate";
@@ -21,13 +22,13 @@ export function AiActionGateBanner({
 }: {
   reason: AiActionGateReason;
 }) {
+  const { t } = useTranslation("reply_composer");
   const isLimit = reason === "ai_usage_limit_reached";
-  const title = isLimit
-    ? "You've hit your AI limit for this period"
-    : "AI actions aren't on your plan yet";
-  const body = isLimit
-    ? "Your current plan caps how many AI drafts run each month. Upgrade for a higher limit, or wait until next period."
-    : "AI-drafted replies run on a paid plan. Pick a plan to turn this on for your workspace.";
+  const variant = isLimit ? "limit" : "not_on_plan";
+  const title = t(`ai_gate.${variant}.title`);
+  const body = t(`ai_gate.${variant}.body`);
+  const cta = t(`ai_gate.${variant}.cta`);
+  const ctaA11y = t(`ai_gate.${variant}.cta_a11y`);
 
   const onUpgrade = () => {
     const base = getLeadsmartApiBaseUrl();
@@ -45,11 +46,9 @@ export function AiActionGateBanner({
         style={styles.cta}
         onPress={onUpgrade}
         accessibilityRole="button"
-        accessibilityLabel={isLimit ? "View plans and upgrade" : "Choose a plan"}
+        accessibilityLabel={ctaA11y}
       >
-        <Text style={styles.ctaText}>
-          {isLimit ? "View plans & upgrade" : "Choose a plan"}
-        </Text>
+        <Text style={styles.ctaText}>{cta}</Text>
       </Pressable>
     </View>
   );
