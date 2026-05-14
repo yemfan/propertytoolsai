@@ -12,6 +12,9 @@
  * Namespaces (current set):
  *   - common        Shared verbs / status / errors used everywhere
  *   - settings      Settings screens (mobile + web)
+ *   - nav           Tab bar + navigation labels (mobile)
+ *   - home          Mobile Home screen
+ *   - quick_post    Mobile Quick Post wizard
  *
  * Future namespaces follow the same pattern — add a JSON file pair
  * (en + zh-Hans) and reference it from the app's resources map.
@@ -30,5 +33,11 @@ export {
  * here + the JSON file pair, and i18next will pick it up when the
  * app reinitializes.
  */
-export const NAMESPACES = ["common", "settings", "nav", "home"] as const;
+export const NAMESPACES = [
+  "common",
+  "settings",
+  "nav",
+  "home",
+  "quick_post",
+] as const;
 export type Namespace = (typeof NAMESPACES)[number];
