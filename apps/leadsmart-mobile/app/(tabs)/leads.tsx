@@ -1,5 +1,6 @@
 import type { MobileLeadRecordDto } from "@leadsmart/shared";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FlatList,
   Pressable,
@@ -29,14 +30,12 @@ const PAGE_SIZE = 30;
  * Local UI filter key — `"all"` is the UI-only "no filter" state,
  * the rest correspond 1:1 with `MobileLeadsFilter` from the API
  * client so this union stays narrow.
+ *
+ * Labels are resolved at render time via `t("filters.<key>")` so
+ * the chip row re-renders cleanly when the agent flips locale.
  */
 type FilterKey = "all" | MobileLeadsFilter;
-const FILTER_CHIPS: Array<{ key: FilterKey; label: string }> = [
-  { key: "all", label: "All" },
-  { key: "hot", label: "Hot" },
-  { key: "high_engagement", label: "Engaged" },
-  { key: "inactive", label: "Inactive" },
-];
+const FILTER_KEYS: FilterKey[] = ["all", "hot", "high_engagement", "inactive"];
 
 function paramStr(v: string | string[] | undefined): string | undefined {
   if (v == null) return undefined;
@@ -60,7 +59,8 @@ function LeadRowInner({
 }) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
-  const name = leadField(lead, "name") || `Lead ${lead.id}`;
+  const { t } = useTranslation("leads");
+  const name = leadField(lead, "name") || t("lead_fallback", { id: lead.id });
   const phone = lead.display_phone || leadField(lead, "phone") || leadField(lead, "phone_number");
   const address = leadField(lead, "property_address");
   const rating = leadField(lead, "rating");
@@ -75,9 +75,9 @@ function LeadRowInner({
    */
   const accessibilityLabel = [
     name,
-    hot ? "hot lead" : null,
-    phone ? `phone ${phone}` : null,
-    stage ? `stage ${stage}` : null,
+    hot ? t("a11y.hot_lead") : null,
+    phone ? t("a11y.phone", { phone }) : null,
+    stage ? t("a11y.stage", { stage }) : null,
   ]
     .filter(Boolean)
     .join(", ");
@@ -87,7 +87,7 @@ function LeadRowInner({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityHint="Opens lead details"
+      accessibilityHint={t("a11y.open_lead")}
       style={({ pressed }) => [styles.row, hot && styles.rowHot, pressed && styles.rowPressed]}
     >
       <View style={styles.rowTop}>
@@ -96,7 +96,7 @@ function LeadRowInner({
         </Text>
         {hot ? (
           <View style={styles.hotPill}>
-            <Text style={styles.hotText}>Hot</Text>
+            <Text style={styles.hotText}>{t("hot_pill")}</Text>
           </View>
         ) : null}
       </View>
@@ -113,7 +113,9 @@ function LeadRowInner({
           </View>
         ) : null}
         {lead.ai_lead_score != null ? (
-          <Text style={styles.score}>AI {Math.round(lead.ai_lead_score)}</Text>
+          <Text style={styles.score}>
+            {t("ai_score", { score: Math.round(lead.ai_lead_score) })}
+          </Text>
         ) : null}
       </View>
     </Pressable>
@@ -126,6 +128,7 @@ export default function LeadsScreen() {
   const router = useRouter();
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("leads");
   const params = useLocalSearchParams<{ filter?: string | string[]; booking?: string | string[] }>();
   const filterRaw = paramStr(params.filter);
   const initialFilter: FilterKey =
@@ -271,10 +274,20 @@ export default function LeadsScreen() {
   const listEmpty = useMemo(() => {
     if (error) return null;
     if (search.trim()) {
-      return <EmptyState title="No matches" subtitle="Try a different search term." />;
+      return (
+        <EmptyState
+          title={t("empty.no_matches_title")}
+          subtitle={t("empty.no_matches_sub")}
+        />
+      );
     }
-    return <EmptyState title="No leads yet" subtitle="New leads from your funnels will appear here." />;
-  }, [error, search]);
+    return (
+      <EmptyState
+        title={t("empty.no_leads_title")}
+        subtitle={t("empty.no_leads_sub")}
+      />
+    );
+  }, [error, search, t]);
 
   /*
    * First-load state: show a stack of skeleton rows inside the
@@ -290,21 +303,21 @@ export default function LeadsScreen() {
         <View style={styles.searchWrap}>
           <TextInput
             editable={false}
-            placeholder="Search name, phone, address..."
+            placeholder={t("search_placeholder")}
             placeholderTextColor={tokens.textSubtle}
             style={styles.searchInput}
           />
         </View>
         <View style={styles.chipRow}>
-          {FILTER_CHIPS.map((chip) => (
+          {FILTER_KEYS.map((key) => (
             <View
-              key={chip.key}
-              style={[styles.chip, activeFilter === chip.key && styles.chipActive]}
+              key={key}
+              style={[styles.chip, activeFilter === key && styles.chipActive]}
             >
               <Text
-                style={[styles.chipText, activeFilter === chip.key && styles.chipTextActive]}
+                style={[styles.chipText, activeFilter === key && styles.chipTextActive]}
               >
-                {chip.label}
+                {t(`filters.${key}`)}
               </Text>
             </View>
           ))}
@@ -318,7 +331,7 @@ export default function LeadsScreen() {
     <FadeIn style={styles.container}>
       {error ? (
         <ErrorBanner
-          title="Could not load leads"
+          title={t("errors.load_failed")}
           message={error.message}
           onRetry={cacheRefresh}
         />
@@ -329,7 +342,7 @@ export default function LeadsScreen() {
         <TextInput
           value={search}
           onChangeText={setSearch}
-          placeholder="Search name, phone, address..."
+          placeholder={t("search_placeholder")}
           placeholderTextColor={tokens.textSubtle}
           style={styles.searchInput}
           returnKeyType="search"
@@ -339,14 +352,14 @@ export default function LeadsScreen() {
 
       {/* Filter chips */}
       <View style={styles.chipRow}>
-        {FILTER_CHIPS.map((chip) => (
+        {FILTER_KEYS.map((key) => (
           <Pressable
-            key={chip.key}
-            onPress={() => setActiveFilter(chip.key)}
-            style={[styles.chip, activeFilter === chip.key && styles.chipActive]}
+            key={key}
+            onPress={() => setActiveFilter(key)}
+            style={[styles.chip, activeFilter === key && styles.chipActive]}
           >
-            <Text style={[styles.chipText, activeFilter === chip.key && styles.chipTextActive]}>
-              {chip.label}
+            <Text style={[styles.chipText, activeFilter === key && styles.chipTextActive]}>
+              {t(`filters.${key}`)}
             </Text>
           </Pressable>
         ))}
@@ -381,20 +394,20 @@ export default function LeadsScreen() {
           <>
             {showBookingHint ? (
               <View style={styles.hintBanner}>
-                <Text style={styles.hintText}>
-                  Pick a lead below, open their profile, then use booking links or calendar tools to share
-                  scheduling.
-                </Text>
+                <Text style={styles.hintText}>{t("booking_hint")}</Text>
               </View>
             ) : null}
             {total > 0 ? (
               <Text style={styles.count}>
                 {filtered.length === total
-                  ? `${total} lead${total !== 1 ? "s" : ""}`
-                  : `${filtered.length} of ${total} leads`}
+                  ? t("count", { count: total })
+                  : t("count_partial", {
+                      count: filtered.length,
+                      total,
+                    })}
               </Text>
             ) : leads.length === 1 && String(leads[0].id) === DEMO_LEAD_ID ? (
-              <Text style={styles.count}>Sample lead — add real leads in LeadSmart CRM</Text>
+              <Text style={styles.count}>{t("demo_label")}</Text>
             ) : null}
           </>
         }
