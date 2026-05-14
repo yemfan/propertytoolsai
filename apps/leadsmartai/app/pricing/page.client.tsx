@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { loginUrl } from "@/lib/loginUrl";
 import { mergeAuthHeaders } from "@/lib/mergeAuthHeaders";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+
+type PricingT = (key: string, options?: Record<string, unknown>) => string;
 
 // ─── Plan definitions ─────────────────────────────────────────────────────────
 
@@ -13,63 +16,37 @@ type PlanKey = "free" | "pro" | "elite" | "team";
 /** Stripe checkout plan key (maps to STRIPE_PRICE_ID_* env vars). */
 type CheckoutPlanKey = "pro" | "premium";
 
+/**
+ * Plan metadata: only the wire fields (key, checkoutKey, href, highlight,
+ * hasBadge, hasTrialNote, periodIsForever) stay in code. User-facing
+ * strings (name, price, period, tagline, cta, badge, trialNote) resolve
+ * per-render via `t(\`plans.\${key}.field\`)` from the web_pricing
+ * namespace.
+ */
 const PLANS: Array<{
   key: PlanKey;
-  name: string;
-  price: string;
-  period: string;
-  tagline: string;
-  cta: string;
   /** For paid plans: triggers Stripe checkout. For free/team: navigates to href. */
   checkoutKey?: CheckoutPlanKey;
   href?: string;
   highlight?: boolean;
-  badge?: string;
-  trialNote?: string;
+  hasBadge?: boolean;
+  hasTrialNote?: boolean;
+  /** True for the Starter plan: shows "forever" period without a leading "/". */
+  periodIsForever?: boolean;
 }> = [
-  {
-    // `key` stays "free" as the internal plan identifier (matches plan_type
-    // in the agents table, Stripe price keys, and ~60 other call sites).
-    // User-facing name only → "Starter" per product rename.
-    key: "free",
-    name: "Starter",
-    price: "$0",
-    period: "forever",
-    tagline: "Limited functions and usages.",
-    cta: "Get started",
-    href: "/signup",
-  },
+  // `key` stays "free" as the internal plan identifier (matches plan_type
+  // in the agents table, Stripe price keys, and ~60 other call sites).
+  // User-facing name only → "Starter" per product rename.
+  { key: "free", href: "/signup", periodIsForever: true },
   {
     key: "pro",
-    name: "Pro",
-    price: "$49",
-    period: "/month",
-    tagline: "Full CRM and AI for active agents.",
-    cta: "Start free trial",
     checkoutKey: "pro",
     highlight: true,
-    badge: "Most Popular",
-    trialNote: "14-day free trial · No credit card required",
+    hasBadge: true,
+    hasTrialNote: true,
   },
-  {
-    key: "elite",
-    name: "Elite",
-    price: "$99",
-    period: "/month",
-    tagline: "For top producers closing 10+ deals/month.",
-    cta: "Start free trial",
-    checkoutKey: "premium",
-    trialNote: "14-day free trial",
-  },
-  {
-    key: "team",
-    name: "Team",
-    price: "$199",
-    period: "/month",
-    tagline: "Multiple agents, one shared pipeline.",
-    cta: "Contact sales",
-    href: "/contact?from=pricing",
-  },
+  { key: "elite", checkoutKey: "premium", hasTrialNote: true },
+  { key: "team", href: "/contact?from=pricing" },
 ];
 
 // ─── Feature rows ─────────────────────────────────────────────────────────────
@@ -77,82 +54,102 @@ const PLANS: Array<{
 type CellValue = string | boolean | null;
 
 type FeatureRow = {
-  label: string;
-  tooltip?: string;
+  /** Translation key under `rows.${key}`. */
+  key: string;
+  /** When true, look up the tooltip body via `t(\`rows.${key}_tooltip\`)`. */
+  hasTooltip?: boolean;
+  /**
+   * Per-plan cell. Boolean cells render checkmark/dash regardless of locale;
+   * string cells resolve via `t(\`rows.${key}_v.${planKey}\`)` and fall back
+   * to the inline value for safety if a translation slot is missing.
+   */
   values: Record<PlanKey, CellValue>;
 };
 
 type FeatureGroup = {
-  group: string;
+  /** Translation key under `groups.${key}`. */
+  key: string;
   rows: FeatureRow[];
 };
 
 const FEATURE_GROUPS: FeatureGroup[] = [
   {
-    group: "Lead Pipeline",
+    key: "lead_pipeline",
     rows: [
-      { label: "Leads per month", values: { free: "25", pro: "500", elite: "Unlimited", team: "Unlimited (shared)" } },
-      { label: "Lead pipeline dashboard", values: { free: true, pro: true, elite: true, team: true } },
-      { label: "Lead stage tracking", values: { free: "Basic", pro: "Full", elite: "Full", team: "Full" } },
-      { label: "Tour & offer milestones", values: { free: false, pro: true, elite: true, team: true } },
-      { label: "Shared team lead pool", values: { free: false, pro: false, elite: false, team: true } },
+      { key: "leads_per_month", values: { free: "25", pro: "500", elite: "Unlimited", team: "Unlimited (shared)" } },
+      { key: "pipeline_dashboard", values: { free: true, pro: true, elite: true, team: true } },
+      { key: "stage_tracking", values: { free: "Basic", pro: "Full", elite: "Full", team: "Full" } },
+      { key: "milestones", values: { free: false, pro: true, elite: true, team: true } },
+      { key: "shared_pool", values: { free: false, pro: false, elite: false, team: true } },
     ],
   },
   {
-    group: "AI Follow-Up",
+    key: "ai_followup",
     rows: [
-      { label: "Automated first response", tooltip: "AI replies to new leads within 60 seconds", values: { free: "Email only", pro: "SMS + Email", elite: "SMS + Email", team: "SMS + Email" } },
-      { label: "Response time", values: { free: "< 5 min", pro: "< 60 sec", elite: "< 60 sec", team: "< 60 sec" } },
-      { label: "AI conversation continuation", values: { free: false, pro: true, elite: true, team: true } },
-      { label: "Drip sequences", values: { free: "1 sequence", pro: "Unlimited", elite: "Unlimited", team: "Unlimited" } },
-      { label: "Custom drip campaigns", values: { free: false, pro: false, elite: true, team: true } },
-      { label: "Auto-pause on reply", values: { free: false, pro: true, elite: true, team: true } },
+      { key: "first_response", hasTooltip: true, values: { free: "Email only", pro: "SMS + Email", elite: "SMS + Email", team: "SMS + Email" } },
+      { key: "response_time", values: { free: "< 5 min", pro: "< 60 sec", elite: "< 60 sec", team: "< 60 sec" } },
+      { key: "ai_continuation", values: { free: false, pro: true, elite: true, team: true } },
+      { key: "drip_sequences", values: { free: "1 sequence", pro: "Unlimited", elite: "Unlimited", team: "Unlimited" } },
+      { key: "custom_drip", values: { free: false, pro: false, elite: true, team: true } },
+      { key: "auto_pause", values: { free: false, pro: true, elite: true, team: true } },
     ],
   },
   {
-    group: "Lead Scoring & Intelligence",
+    key: "scoring",
     rows: [
-      { label: "Lead scoring", values: { free: "Basic", pro: "Advanced", elite: "Predictive AI", team: "Predictive AI" } },
-      { label: "Buyer intent signals", values: { free: false, pro: true, elite: true, team: true } },
-      { label: "Hot / warm / cold labels", values: { free: false, pro: true, elite: true, team: true } },
-      { label: "Predictive deal probability", values: { free: false, pro: false, elite: true, team: true } },
-      { label: "Lead routing rules", values: { free: false, pro: false, elite: false, team: true } },
+      { key: "lead_scoring", values: { free: "Basic", pro: "Advanced", elite: "Predictive AI", team: "Predictive AI" } },
+      { key: "buyer_intent", values: { free: false, pro: true, elite: true, team: true } },
+      { key: "hwc_labels", values: { free: false, pro: true, elite: true, team: true } },
+      { key: "deal_probability", values: { free: false, pro: false, elite: true, team: true } },
+      { key: "routing_rules", values: { free: false, pro: false, elite: false, team: true } },
     ],
   },
   {
-    group: "CRM & Contacts",
+    key: "crm",
     rows: [
-      { label: "Contacts", values: { free: "Up to 50", pro: "Up to 500", elite: "Unlimited", team: "Unlimited" } },
-      { label: "Contact enrichment", values: { free: false, pro: true, elite: true, team: true } },
-      { label: "CRM integrations", tooltip: "Follow Up Boss, kvCORE, Sierra, Zapier", values: { free: false, pro: true, elite: true, team: true } },
-      { label: "Activity log & notes", values: { free: false, pro: true, elite: true, team: true } },
+      { key: "contacts", values: { free: "Up to 50", pro: "Up to 500", elite: "Unlimited", team: "Unlimited" } },
+      { key: "enrichment", values: { free: false, pro: true, elite: true, team: true } },
+      { key: "crm_integrations", hasTooltip: true, values: { free: false, pro: true, elite: true, team: true } },
+      { key: "activity_log", values: { free: false, pro: true, elite: true, team: true } },
     ],
   },
   {
-    group: "Reports & Analytics",
+    key: "reports",
     rows: [
-      { label: "CMA reports", values: { free: "2/day", pro: "5/day", elite: "10/day", team: "Unlimited" } },
-      { label: "Report downloads", values: { free: "Limited", pro: "Full", elite: "Full", team: "Full" } },
-      { label: "Pipeline analytics", values: { free: false, pro: "Standard", elite: "Advanced", team: "Advanced" } },
-      { label: "Team performance dashboard", values: { free: false, pro: false, elite: false, team: true } },
+      { key: "cma_reports", values: { free: "2/day", pro: "5/day", elite: "10/day", team: "Unlimited" } },
+      { key: "report_downloads", values: { free: "Limited", pro: "Full", elite: "Full", team: "Full" } },
+      { key: "pipeline_analytics", values: { free: false, pro: "Standard", elite: "Advanced", team: "Advanced" } },
+      { key: "team_performance", values: { free: false, pro: false, elite: false, team: true } },
     ],
   },
   {
-    group: "Team & Admin",
+    key: "team_admin",
     rows: [
-      { label: "Agents included", values: { free: "1", pro: "1", elite: "1", team: "Up to 10" } },
-      { label: "Admin controls", values: { free: false, pro: false, elite: false, team: true } },
-      { label: "White-label option", values: { free: false, pro: false, elite: false, team: true } },
+      { key: "agents_included", values: { free: "1", pro: "1", elite: "1", team: "Up to 10" } },
+      { key: "admin_controls", values: { free: false, pro: false, elite: false, team: true } },
+      { key: "whitelabel", values: { free: false, pro: false, elite: false, team: true } },
     ],
   },
   {
-    group: "Support",
+    key: "support",
     rows: [
-      { label: "Support channel", values: { free: "Email", pro: "Priority email", elite: "Dedicated onboarding", team: "Priority SLA + CSM" } },
-      { label: "Onboarding assistance", values: { free: false, pro: false, elite: true, team: true } },
+      { key: "support_channel", values: { free: "Email", pro: "Priority email", elite: "Dedicated onboarding", team: "Priority SLA + CSM" } },
+      { key: "onboarding_assist", values: { free: false, pro: false, elite: true, team: true } },
     ],
   },
 ];
+
+/**
+ * Resolve a cell's display value through the namespace when it's a
+ * string. Booleans/nulls pass through so the checkmark / dash renderer
+ * picks them up. The inline value acts as `defaultValue` so if a row's
+ * translation is missing the page falls back to English instead of
+ * showing the raw key.
+ */
+function resolveCell(rowKey: string, planKey: PlanKey, raw: CellValue, t: PricingT): CellValue {
+  if (typeof raw !== "string") return raw;
+  return t(`rows.${rowKey}_v.${planKey}`, { defaultValue: raw });
+}
 
 // ─── Cell rendering ───────────────────────────────────────────────────────────
 
@@ -175,6 +172,7 @@ function Cell({ value }: { value: CellValue }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ConsumerPricingClientPage() {
+  const { t } = useTranslation("web_pricing");
   const [tooltip, setTooltip] = useState<string | null>(null);
   const [loadingPlan, setLoadingPlan] = useState<CheckoutPlanKey | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -244,12 +242,12 @@ export default function ConsumerPricingClientPage() {
         body: JSON.stringify({ plan, with_trial: withTrial, cancel_surface: "agent" }),
       });
       const body = (await res.json().catch(() => ({}))) as any;
-      if (!res.ok) throw new Error(body?.error || "Failed to open checkout");
-      if (!body.url) throw new Error("Missing checkout URL");
+      if (!res.ok) throw new Error(body?.error || t("errors.open_failed"));
+      if (!body.url) throw new Error(t("errors.missing_url"));
       window.location.href = body.url;
     } catch (e: any) {
       autoCheckoutRef.current = false;
-      setError(e?.message ?? "Could not open checkout");
+      setError(e?.message ?? t("errors.default"));
       setLoadingPlan(null);
     }
   }
@@ -267,13 +265,13 @@ export default function ConsumerPricingClientPage() {
       <div className="border-b border-slate-200/80 bg-gradient-to-b from-slate-50 to-white px-4 py-14 text-center md:px-6 md:py-16">
         <div className="mx-auto max-w-3xl">
           <div className="mb-3 inline-flex rounded-full border border-blue-200/80 bg-white/90 px-3 py-1 text-xs font-medium text-blue-700">
-            No contracts · Cancel anytime
+            {t("header.badge")}
           </div>
           <h1 className="font-heading text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
-            Simple, Transparent Pricing
+            {t("header.h1")}
           </h1>
           <p className="mt-3 text-base text-slate-600">
-            Every plan includes a 14-day free trial on paid tiers. Start free, upgrade when you&apos;re ready.
+            {t("header.subtitle")}
           </p>
         </div>
       </div>
@@ -290,7 +288,9 @@ export default function ConsumerPricingClientPage() {
       {/* Plan cards */}
       <div className="px-4 py-12 md:px-6">
         <div className="mx-auto grid max-w-6xl gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {PLANS.map((plan) => (
+          {PLANS.map((plan) => {
+            const periodKey = plan.periodIsForever ? "period" : "period_short";
+            return (
             <div
               key={plan.key}
               className={`relative flex flex-col rounded-2xl border p-6 ${
@@ -299,18 +299,18 @@ export default function ConsumerPricingClientPage() {
                   : "border-slate-200 shadow-sm"
               }`}
             >
-              {plan.badge && (
+              {plan.hasBadge && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#0072ce] to-[#4F46E5] px-3 py-0.5 text-xs font-semibold text-white whitespace-nowrap shadow-sm">
-                  {plan.badge}
+                  {t(`plans.${plan.key}.badge`)}
                 </div>
               )}
               <div>
-                <h2 className="font-heading text-base font-semibold text-slate-900">{plan.name}</h2>
+                <h2 className="font-heading text-base font-semibold text-slate-900">{t(`plans.${plan.key}.name`)}</h2>
                 <div className="mt-2 flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-slate-900">{plan.price}</span>
-                  <span className="text-sm text-slate-500">{plan.period}</span>
+                  <span className="text-2xl font-bold text-slate-900">{t(`plans.${plan.key}.price`)}</span>
+                  <span className="text-sm text-slate-500">{t(`plans.${plan.key}.${periodKey}`)}</span>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">{plan.tagline}</p>
+                <p className="mt-2 text-xs text-slate-500">{t(`plans.${plan.key}.tagline`)}</p>
               </div>
               <div className="mt-5 flex flex-col gap-2">
                 {plan.checkoutKey ? (
@@ -336,22 +336,23 @@ export default function ConsumerPricingClientPage() {
                         : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
                     }`}
                   >
-                    {loadingPlan === plan.checkoutKey ? "Opening checkout…" : plan.cta}
+                    {loadingPlan === plan.checkoutKey ? t("errors.opening_busy") : t(`plans.${plan.key}.cta`)}
                   </a>
                 ) : (
                   <Link
                     href={plan.href!}
                     className="block rounded-xl border border-slate-200 bg-white py-2.5 text-center text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
                   >
-                    {plan.cta}
+                    {t(`plans.${plan.key}.cta`)}
                   </Link>
                 )}
-                {plan.trialNote && (
-                  <p className="text-center text-[11px] text-slate-400">{plan.trialNote}</p>
+                {plan.hasTrialNote && (
+                  <p className="text-center text-[11px] text-slate-400">{t(`plans.${plan.key}.trial_note`)}</p>
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -359,19 +360,19 @@ export default function ConsumerPricingClientPage() {
       <div className="px-4 pb-20 md:px-6">
         <div className="mx-auto max-w-6xl">
           <h2 className="mb-8 text-center font-heading text-xl font-semibold text-slate-900">
-            Full Feature Comparison
+            {t("table.title")}
           </h2>
 
           <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
             <table className="w-full min-w-[640px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="px-5 py-4 text-left font-semibold text-slate-600 w-1/3">Feature</th>
+                  <th className="px-5 py-4 text-left font-semibold text-slate-600 w-1/3">{t("table.column_feature")}</th>
                   {PLANS.map((p) => (
                     <th key={p.key} className={`px-4 py-4 text-center font-semibold ${p.highlight ? "text-[#0072ce]" : "text-slate-700"}`}>
-                      {p.name}
+                      {t(`plans.${p.key}.name`)}
                       <div className="mt-0.5 text-xs font-normal text-slate-500">
-                        {p.price}{p.period === "forever" ? "" : p.period}
+                        {t(`plans.${p.key}.price`)}{p.periodIsForever ? "" : t(`plans.${p.key}.period_short`)}
                       </div>
                     </th>
                   ))}
@@ -381,18 +382,20 @@ export default function ConsumerPricingClientPage() {
                 {FEATURE_GROUPS.map((group, gi) => (
                   <>
                     <tr key={`group-${gi}`} className="border-t-2 border-slate-100 bg-slate-50/70">
-                      <td colSpan={5} className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-500">{group.group}</td>
+                      <td colSpan={5} className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-500">{t(`groups.${group.key}`)}</td>
                     </tr>
-                    {group.rows.map((row, ri) => (
+                    {group.rows.map((row, ri) => {
+                      const tooltipText = row.hasTooltip ? t(`rows.${row.key}_tooltip`) : null;
+                      return (
                       <tr key={`row-${gi}-${ri}`} className={`border-t border-slate-100 transition-colors hover:bg-slate-50/60 ${ri % 2 === 0 ? "bg-white" : "bg-slate-50/30"}`}>
                         <td className="px-5 py-3 text-slate-700">
                           <span className="flex items-center gap-1.5">
-                            {row.label}
-                            {row.tooltip && (
-                              <button type="button" onMouseEnter={() => setTooltip(row.tooltip!)} onMouseLeave={() => setTooltip(null)} className="relative flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-500 hover:bg-slate-300">
+                            {t(`rows.${row.key}`)}
+                            {tooltipText && (
+                              <button type="button" onMouseEnter={() => setTooltip(tooltipText)} onMouseLeave={() => setTooltip(null)} className="relative flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-500 hover:bg-slate-300">
                                 ?
-                                {tooltip === row.tooltip && (
-                                  <span className="absolute bottom-full left-0 z-10 mb-1 w-48 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left text-xs text-slate-700 shadow-md">{row.tooltip}</span>
+                                {tooltip === tooltipText && (
+                                  <span className="absolute bottom-full left-0 z-10 mb-1 w-48 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left text-xs text-slate-700 shadow-md">{tooltipText}</span>
                                 )}
                               </button>
                             )}
@@ -400,17 +403,18 @@ export default function ConsumerPricingClientPage() {
                         </td>
                         {PLANS.map((p) => (
                           <td key={p.key} className={`px-4 py-3 text-center ${p.highlight ? "bg-[#0072ce]/[0.03]" : ""}`}>
-                            <Cell value={row.values[p.key]} />
+                            <Cell value={resolveCell(row.key, p.key, row.values[p.key], t)} />
                           </td>
                         ))}
                       </tr>
-                    ))}
+                      );
+                    })}
                   </>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-slate-200 bg-slate-50">
-                  <td className="px-5 py-5 text-sm font-medium text-slate-600">Ready to start?</td>
+                  <td className="px-5 py-5 text-sm font-medium text-slate-600">{t("table.ready_label")}</td>
                   {PLANS.map((p) => (
                     <td key={p.key} className="px-4 py-5 text-center">
                       {p.checkoutKey ? (
@@ -430,7 +434,7 @@ export default function ConsumerPricingClientPage() {
                               : "border border-slate-200 text-slate-700 hover:bg-white"
                           }`}
                         >
-                          {loadingPlan === p.checkoutKey ? "Opening…" : p.cta}
+                          {loadingPlan === p.checkoutKey ? t("errors.opening_busy_short") : t(`plans.${p.key}.cta`)}
                         </a>
                       ) : (
                         <Link
@@ -441,7 +445,7 @@ export default function ConsumerPricingClientPage() {
                               : "border border-slate-200 text-slate-700 hover:bg-white"
                           }`}
                         >
-                          {p.cta}
+                          {t(`plans.${p.key}.cta`)}
                         </Link>
                       )}
                     </td>
@@ -453,11 +457,10 @@ export default function ConsumerPricingClientPage() {
 
           <div className="mt-10 rounded-2xl border border-slate-200 bg-slate-50 px-6 py-6 text-center">
             <p className="text-sm text-slate-700">
-              <strong>Questions?</strong> Every paid plan starts with a 14-day free trial. Cancel anytime before your trial ends — no charge.
-              Need a custom plan for a large brokerage?{" "}
+              <strong>{t("footer.questions_label")}</strong>{t("footer.body_prefix")}
               <Link href="/contact" className="font-semibold text-[#0072ce] hover:underline">
-                Talk to us
-              </Link>.
+                {t("footer.link")}
+              </Link>{t("footer.suffix")}
             </p>
           </div>
         </div>

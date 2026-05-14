@@ -57,6 +57,8 @@
  *   - web_landing       Public landing-page body
  *                        (LeadSmartLandingV2 marketing site)
  *   - web_about         /about page body
+ *   - web_pricing       /pricing page body
+ *                        (ConsumerPricingClientPage)
  *
  * Future namespaces follow the same pattern — add a JSON file pair
  * (en + zh-Hans) and reference it from the app's resources map.
@@ -99,5 +101,6 @@ export const NAMESPACES = [
   "web_generate_leads_clients",
   "web_landing",
   "web_about",
+  "web_pricing",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];
