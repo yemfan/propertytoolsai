@@ -265,7 +265,7 @@ export default function CalendarScreen() {
                 event={e}
                 onPress={() => {
                   hapticRowTap();
-                  router.push(`/lead/${e.lead_id}`);
+                  router.push(`/lead/${e.contact_id}`);
                 }}
                 onCancel={() => void cancelEvent(e.id)}
                 cancelling={cancellingId === e.id}
@@ -285,7 +285,7 @@ export default function CalendarScreen() {
                 showLeadName
                 onPress={() => {
                   hapticRowTap();
-                  router.push(`/lead/${t.lead_id}`);
+                  router.push(`/lead/${t.contact_id}`);
                 }}
                 onComplete={() => void completeTask(t.id)}
                 completing={completingTaskId === t.id}
@@ -300,11 +300,11 @@ export default function CalendarScreen() {
           ) : (
             followUpsState.map((f) => (
               <ReminderCard
-                key={`${f.lead_id}-${f.next_contact_at}`}
+                key={`${f.contact_id}-${f.next_contact_at}`}
                 reminder={f}
                 onPress={() => {
                   hapticRowTap();
-                  router.push(`/lead/${f.lead_id}`);
+                  router.push(`/lead/${f.contact_id}`);
                 }}
               />
             ))

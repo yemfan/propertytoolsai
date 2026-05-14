@@ -159,7 +159,7 @@ export default function TasksScreen() {
               key={t.id}
               task={t}
               showLeadName
-              onPress={() => router.push(`/lead/${t.lead_id}`)}
+              onPress={() => router.push(`/lead/${t.contact_id}`)}
               onComplete={() => void completeTask(t)}
               completing={completingId === t.id}
             />
@@ -174,7 +174,7 @@ export default function TasksScreen() {
               key={t.id}
               task={t}
               showLeadName
-              onPress={() => router.push(`/lead/${t.lead_id}`)}
+              onPress={() => router.push(`/lead/${t.contact_id}`)}
               onComplete={() => void completeTask(t)}
               completing={completingId === t.id}
             />
@@ -189,7 +189,7 @@ export default function TasksScreen() {
               key={t.id}
               task={t}
               showLeadName
-              onPress={() => router.push(`/lead/${t.lead_id}`)}
+              onPress={() => router.push(`/lead/${t.contact_id}`)}
               onComplete={() => void completeTask(t)}
               completing={completingId === t.id}
             />
