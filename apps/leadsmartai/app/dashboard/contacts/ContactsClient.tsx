@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
   Plus,
@@ -74,15 +75,22 @@ function downloadTemplate() {
   URL.revokeObjectURL(url);
 }
 
-function timeAgo(iso: string | null) {
+type ContactsT = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * `t` here is the function from `useTranslation("web_contacts_client")` \u2014
+ * callers pass it down so the "today / yesterday / Nd ago" labels follow
+ * the active locale without each call site re-acquiring a hook.
+ */
+function timeAgo(iso: string | null, t: ContactsT) {
   if (!iso) return "\u2014";
   const diff = Date.now() - new Date(iso).getTime();
   const days = Math.floor(diff / 86_400_000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 30) return `${days}d ago`;
-  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
-  return `${Math.floor(days / 365)}y ago`;
+  if (days === 0) return t("time_ago.today");
+  if (days === 1) return t("time_ago.yesterday");
+  if (days < 30) return t("time_ago.days", { count: days });
+  if (days < 365) return t("time_ago.months", { count: Math.floor(days / 30) });
+  return t("time_ago.years", { count: Math.floor(days / 365) });
 }
 
 const RATING_COLORS: Record<string, string> = {
@@ -125,6 +133,7 @@ function MiniPie({ data, title }: { data: ChartItem[]; title: string }) {
 type SortKey = "name" | "email" | "rating" | "last_contacted_at" | "created_at";
 
 export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow[] }) {
+  const { t } = useTranslation("web_contacts_client");
   const [leads, setLeads] = useState(initialLeads);
   const [stats, setStats] = useState<Stats | null>(null);
   const [search, setSearch] = useState("");
@@ -188,13 +197,13 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
         body: JSON.stringify({ ...addFields, source: "manual_entry", forceCreate: true }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.ok) throw new Error(body.error ?? "Failed");
+      if (!res.ok || !body.ok) throw new Error(body.error ?? t("messages.add_failed"));
       setAddFields({ name: "", email: "", phone: "", property_address: "", notes: "" });
       setShowAddForm(false);
-      setActionMsg("Contact added.");
+      setActionMsg(t("messages.added"));
       // Refresh page data
       window.location.reload();
-    } catch (e) { setActionMsg(e instanceof Error ? e.message : "Error"); }
+    } catch (e) { setActionMsg(e instanceof Error ? e.message : t("messages.default_error")); }
     finally { setActionLoading(false); }
   }
 
@@ -207,11 +216,11 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
         body: JSON.stringify(editFields),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error ?? "Update failed");
+      if (!res.ok) throw new Error(body.error ?? t("messages.update_failed"));
       setLeads((prev) => prev.map((l) => l.id === id ? { ...l, ...editFields } as LeadRow : l));
       setEditingId(null);
-      setActionMsg("Updated.");
-    } catch (e) { setActionMsg(e instanceof Error ? e.message : "Error"); }
+      setActionMsg(t("messages.updated"));
+    } catch (e) { setActionMsg(e instanceof Error ? e.message : t("messages.default_error")); }
     finally { setActionLoading(false); }
   }
 
@@ -224,11 +233,11 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ last_contacted_at: now }),
       });
-      if (!res.ok) throw new Error("Update failed");
+      if (!res.ok) throw new Error(t("messages.update_failed"));
       setLeads((prev) => prev.map((l) => l.id === id ? { ...l, last_contacted_at: now } : l));
-      setActionMsg("Marked as contacted.");
+      setActionMsg(t("messages.marked_contacted"));
       loadStats();
-    } catch (e) { setActionMsg(e instanceof Error ? e.message : "Error"); }
+    } catch (e) { setActionMsg(e instanceof Error ? e.message : t("messages.default_error")); }
     finally { setActionLoading(false); }
   }
 
@@ -274,8 +283,10 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Contacts</h1>
-          <p className="text-sm text-gray-500">{leads.length} total contacts</p>
+          <h1 className="text-xl font-semibold text-gray-900">{t("header.title")}</h1>
+          <p className="text-sm text-gray-500">
+            {t("header.subtitle_total", { count: leads.length })}
+          </p>
         </div>
       </div>
 
@@ -285,18 +296,18 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
       {/* Charts */}
       {stats && (
         <div className="grid gap-3 md:grid-cols-3">
-          <MiniPie data={stats.rating} title="Rating Distribution" />
-          <MiniPie data={stats.lastContacted} title="Last Contacted" />
+          <MiniPie data={stats.rating} title={t("charts.rating")} />
+          <MiniPie data={stats.lastContacted} title={t("charts.last_contacted")} />
 
           <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <h3 className="text-xs font-semibold text-gray-500 mb-2">Contact Growth (12 months)</h3>
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">{t("charts.growth")}</h3>
             <div className="h-[120px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats.growth} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 9 }} stroke="#9ca3af" interval={1} />
                   <YAxis tick={{ fontSize: 9 }} stroke="#9ca3af" allowDecimals={false} />
-                  <Tooltip formatter={((v: number) => [v, "Contacts"]) as never} />
+                  <Tooltip formatter={((v: number) => [v, t("charts.growth_tooltip")]) as never} />
                   <Bar dataKey="count" fill="#3b82f6" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -323,7 +334,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
             aria-expanded={addMenuOpen}
           >
             <Plus className="h-4 w-4" strokeWidth={2.5} />
-            Add…
+            {t("add_menu.button")}
           </button>
           {addMenuOpen ? (
             <div
@@ -340,7 +351,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                 className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
               >
                 <UserPlus className="h-4 w-4 text-gray-500" />
-                Enter a contact
+                {t("add_menu.enter_contact")}
               </button>
               <Link
                 href="/dashboard/contacts/scan"
@@ -349,7 +360,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                 className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
               >
                 <ScanLine className="h-4 w-4 text-gray-500" />
-                Scan business card
+                {t("add_menu.scan_card")}
               </Link>
               <Link
                 href="/dashboard/contacts/import-file"
@@ -358,7 +369,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                 className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
               >
                 <Sparkles className="h-4 w-4 text-gray-500" />
-                AI extract from file
+                {t("add_menu.ai_extract")}
               </Link>
               <button
                 type="button"
@@ -370,7 +381,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                 className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
               >
                 <Upload className="h-4 w-4 text-gray-500" />
-                Upload CSV
+                {t("add_menu.upload_csv")}
               </button>
               <button
                 type="button"
@@ -382,7 +393,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                 className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
               >
                 <Download className="h-4 w-4 text-gray-500" />
-                Download template
+                {t("add_menu.download_template")}
               </button>
             </div>
           ) : null}
@@ -392,23 +403,23 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
       {/* Inline add form */}
       {showAddForm && (
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm space-y-3">
-          <h3 className="text-sm font-semibold text-gray-900">New Contact</h3>
+          <h3 className="text-sm font-semibold text-gray-900">{t("add_form.title")}</h3>
           <div className="grid gap-3 sm:grid-cols-2">
-            <input value={addFields.name} onChange={(e) => setAddFields((f) => ({ ...f, name: e.target.value }))} placeholder="Name" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-            <input value={addFields.email} onChange={(e) => setAddFields((f) => ({ ...f, email: e.target.value }))} placeholder="Email" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-            <input value={addFields.phone} onChange={(e) => setAddFields((f) => ({ ...f, phone: e.target.value }))} placeholder="Phone" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            <input value={addFields.name} onChange={(e) => setAddFields((f) => ({ ...f, name: e.target.value }))} placeholder={t("add_form.placeholder_name")} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            <input value={addFields.email} onChange={(e) => setAddFields((f) => ({ ...f, email: e.target.value }))} placeholder={t("add_form.placeholder_email")} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            <input value={addFields.phone} onChange={(e) => setAddFields((f) => ({ ...f, phone: e.target.value }))} placeholder={t("add_form.placeholder_phone")} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
             <AddressAutocomplete
               value={addFields.property_address}
               onChange={(v) => setAddFields((f) => ({ ...f, property_address: v }))}
               onSelect={(v) => setAddFields((f) => ({ ...f, property_address: v.formattedAddress }))}
-              placeholder="Address"
+              placeholder={t("add_form.placeholder_address")}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
             />
           </div>
-          <input value={addFields.notes} onChange={(e) => setAddFields((f) => ({ ...f, notes: e.target.value }))} placeholder="Notes / memo" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+          <input value={addFields.notes} onChange={(e) => setAddFields((f) => ({ ...f, notes: e.target.value }))} placeholder={t("add_form.placeholder_notes")} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           <button type="button" onClick={() => void addContact()} disabled={actionLoading || !addFields.name}
             className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50">
-            {actionLoading ? "Saving..." : "Add Contact"}
+            {actionLoading ? t("add_form.saving") : t("add_form.submit")}
           </button>
         </div>
       )}
@@ -418,7 +429,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name, email, phone, address..."
+          placeholder={t("search.placeholder")}
           className="flex-1 min-w-[200px] max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <select
@@ -426,10 +437,10 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
           onChange={(e) => setRatingFilter(e.target.value)}
           className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
         >
-          <option value="all">All ratings</option>
-          <option value="hot">Hot</option>
-          <option value="warm">Warm</option>
-          <option value="cold">Cold</option>
+          <option value="all">{t("search.filter_all")}</option>
+          <option value="hot">{t("rating.hot")}</option>
+          <option value="warm">{t("rating.warm")}</option>
+          <option value="cold">{t("rating.cold")}</option>
         </select>
       </div>
 
@@ -439,8 +450,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
       {selectedIds.size > 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm">
           <div className="text-indigo-900">
-            <span className="font-semibold">{selectedIds.size}</span>{" "}
-            selected
+            {t("bulk_bar.selected", { count: selectedIds.size })}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -448,14 +458,14 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
               onClick={() => setSelectedIds(new Set())}
               className="rounded-md px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
             >
-              Clear
+              {t("bulk_bar.clear")}
             </button>
             <button
               type="button"
               onClick={() => setBulkPostcardOpen(true)}
               className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
             >
-              💌 Send postcard to {selectedIds.size}
+              {t("bulk_bar.send_postcards", { count: selectedIds.size })}
             </button>
           </div>
         </div>
@@ -485,18 +495,18 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                       });
                     }}
                     className="h-4 w-4 rounded border-slate-300"
-                    aria-label="Select all filtered contacts"
+                    aria-label={t("row.select_all_a11y")}
                   />
                 </th>
                 {([
-                  { key: "name" as SortKey, label: "Name" },
-                  { key: "email" as SortKey, label: "Email" },
-                  { key: null, label: "Phone" },
-                  { key: "rating" as SortKey, label: "Rating" },
-                  { key: "last_contacted_at" as SortKey, label: "Last Contacted" },
+                  { key: "name" as SortKey, label: t("columns.name") },
+                  { key: "email" as SortKey, label: t("columns.email") },
+                  { key: null, label: t("columns.phone") },
+                  { key: "rating" as SortKey, label: t("columns.rating") },
+                  { key: "last_contacted_at" as SortKey, label: t("columns.last_contacted") },
                   { key: null, label: "" },
-                  { key: null, label: "Memo" },
-                  { key: null, label: "Address" },
+                  { key: null, label: t("columns.memo") },
+                  { key: null, label: t("columns.address") },
                 ] as const).map((col, i) => (
                   <th
                     key={i}
@@ -525,10 +535,10 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-2">
                           <select value={editFields.rating ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, rating: e.target.value || null }))} className="rounded border border-gray-300 px-2 py-1 text-sm">
-                            <option value="">—</option>
-                            <option value="hot">Hot</option>
-                            <option value="warm">Warm</option>
-                            <option value="cold">Cold</option>
+                            <option value="">{t("rating.empty")}</option>
+                            <option value="hot">{t("rating.hot")}</option>
+                            <option value="warm">{t("rating.warm")}</option>
+                            <option value="cold">{t("rating.cold")}</option>
                           </select>
                           {/* Per-contact preferred language override (BCP-47 base id).
                               Empty = "use agent's default_outbound_language". See
@@ -537,9 +547,8 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                             value={editFields.preferred_language ?? ""}
                             onChange={(e) => setEditFields((f) => ({ ...f, preferred_language: (e.target.value || null) as LocaleId | null }))}
                             className="rounded border border-gray-300 px-2 py-1 text-sm"
-                            title="Preferred language for AI outbound (SMS / email)"
                           >
-                            <option value="">Lang: default</option>
+                            <option value="">{t("row.language_default")}</option>
                             {listOutboundEnabled().map((l) => (
                               <option key={l.id} value={l.id}>
                                 {l.nativeLabel}
@@ -548,12 +557,12 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                           </select>
                         </div>
                       </td>
-                      <td className="px-4 py-2 text-xs text-gray-500">{timeAgo(c.last_contacted_at)}</td>
+                      <td className="px-4 py-2 text-xs text-gray-500">{timeAgo(c.last_contacted_at, t)}</td>
                       <td className="px-4 py-2 whitespace-nowrap">
-                        <button onClick={() => void saveEdit(c.id)} disabled={actionLoading} className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 mr-2">Save</button>
-                        <button onClick={() => setEditingId(null)} className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                        <button onClick={() => void saveEdit(c.id)} disabled={actionLoading} className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 mr-2">{t("row.save")}</button>
+                        <button onClick={() => setEditingId(null)} className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">{t("row.cancel")}</button>
                       </td>
-                      <td className="px-4 py-2"><input value={editFields.notes ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, notes: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" placeholder="Notes" /></td>
+                      <td className="px-4 py-2"><input value={editFields.notes ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, notes: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" placeholder={t("columns.memo")} /></td>
                       <td className="px-4 py-2"><input value={editFields.property_address ?? ""} onChange={(e) => setEditFields((f) => ({ ...f, property_address: e.target.value }))} className="w-full rounded border border-gray-300 px-2 py-1 text-sm" /></td>
                     </tr>
                   );
@@ -573,19 +582,23 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                           });
                         }}
                         className="h-4 w-4 rounded border-slate-300"
-                        aria-label={`Select ${c.name ?? "contact"}`}
+                        aria-label={
+                          c.name
+                            ? t("row.select_contact_a11y", { name: c.name })
+                            : t("row.select_contact_a11y_fallback")
+                        }
                       />
                     </td>
-                    <td className="px-4 py-2.5 font-medium text-gray-900">{c.name ?? "\u2014"}</td>
+                    <td className="px-4 py-2.5 font-medium text-gray-900">{c.name ?? t("row.empty_value")}</td>
                     <td className="px-4 py-2.5 text-gray-600 max-w-[180px]">
                       <div className="flex items-center gap-1.5">
-                        <span className="truncate">{c.email ?? "\u2014"}</span>
+                        <span className="truncate">{c.email ?? t("row.empty_value")}</span>
                         {c.email ? (
                           <a
                             href={`mailto:${c.email}`}
                             className="shrink-0 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-blue-600"
-                            title={`Email ${c.email}`}
-                            aria-label="Email contact"
+                            title={t("row.email_tooltip", { email: c.email })}
+                            aria-label={t("row.email_a11y")}
                           >
                             <Mail className="h-3.5 w-3.5" strokeWidth={2} />
                           </a>
@@ -594,18 +607,18 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                     </td>
                     <td className="px-4 py-2.5 text-gray-600">
                       <div className="flex items-center gap-2">
-                        <span>{c.phone ?? "\u2014"}</span>
+                        <span>{c.phone ?? t("row.empty_value")}</span>
                         <CallButton contactId={c.id} hasPhone={Boolean(c.phone)} />
                       </div>
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1.5">
                         {c.rating ? (
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${RATING_COLORS[c.rating.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}>
-                            {c.rating}
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${RATING_COLORS[c.rating.toLowerCase()] ?? "bg-gray-100 text-gray-600"}`}>
+                            {t(`rating.${c.rating.toLowerCase()}`, { defaultValue: c.rating })}
                           </span>
                         ) : (
-                          <span className="text-gray-400">{"\u2014"}</span>
+                          <span className="text-gray-400">{t("row.empty_value")}</span>
                         )}
                         {/* Language override badge — only rendered when the
                             contact has a non-null preferred_language. Shown as
@@ -614,7 +627,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                         {c.preferred_language ? (
                           <span
                             className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700"
-                            title={`AI outbound in: ${c.preferred_language}`}
+                            title={t("row.language_tooltip", { lang: c.preferred_language })}
                           >
                             {listOutboundEnabled().find((l) => l.id === c.preferred_language)?.nativeLabel ?? c.preferred_language}
                           </span>
@@ -626,7 +639,14 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                           <Link
                             href={`/dashboard/showings?contactId=${encodeURIComponent(c.id)}`}
                             className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700 hover:bg-slate-200"
-                            title={`${c.showing_total} showing${c.showing_total === 1 ? "" : "s"}${c.showing_loved ? `, ${c.showing_loved} loved` : ""}`}
+                            title={
+                              c.showing_loved && c.showing_loved > 0
+                                ? t("row.showings_tooltip_with_loved", {
+                                    count: c.showing_total,
+                                    loved: c.showing_loved,
+                                  })
+                                : t("row.showings_tooltip", { count: c.showing_total })
+                            }
                           >
                             {c.showing_total}
                             {c.showing_loved && c.showing_loved > 0 ? (
@@ -640,7 +660,10 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                           <Link
                             href={`/dashboard/offers?contactId=${encodeURIComponent(c.id)}`}
                             className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800 hover:bg-amber-100"
-                            title={`${c.offer_active ?? 0} active, ${c.offer_won ?? 0} accepted`}
+                            title={t("row.offers_tooltip", {
+                              active: c.offer_active ?? 0,
+                              won: c.offer_won ?? 0,
+                            })}
                           >
                             {(c.offer_active ?? 0) > 0 ? `${c.offer_active}` : ""}
                             {(c.offer_won ?? 0) > 0 ? (
@@ -652,7 +675,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{timeAgo(c.last_contacted_at)}</td>
+                    <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{timeAgo(c.last_contacted_at, t)}</td>
                     {/* Row actions \u2014 compact icon buttons with hover
                         tooltips. SMS is new and only renders when the
                         contact has a phone on file. */}
@@ -660,16 +683,16 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                       <div className="inline-flex items-center gap-0.5">
                         <RowIconButton
                           onClick={() => startEdit(c)}
-                          title="Edit contact"
-                          ariaLabel="Edit contact"
+                          title={t("row.edit_label")}
+                          ariaLabel={t("row.edit_label")}
                         >
                           <Pencil className="h-4 w-4" strokeWidth={2} />
                         </RowIconButton>
                         <RowIconButton
                           onClick={() => void markContacted(c.id)}
                           disabled={actionLoading}
-                          title="Mark contacted"
-                          ariaLabel="Mark contacted"
+                          title={t("row.mark_contacted_label")}
+                          ariaLabel={t("row.mark_contacted_label")}
                           tone="success"
                         >
                           <Check className="h-4 w-4" strokeWidth={2.5} />
@@ -677,30 +700,30 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                         {c.phone ? (
                           <RowIconButton
                             href={`sms:${c.phone}`}
-                            title={`Text ${c.phone}`}
-                            ariaLabel="Send SMS"
+                            title={t("row.text_phone_tooltip", { phone: c.phone })}
+                            ariaLabel={t("row.send_sms_a11y")}
                           >
                             <MessageCircle className="h-4 w-4" strokeWidth={2} />
                           </RowIconButton>
                         ) : null}
                         <RowIconButton
                           href={`/dashboard/showings/new?contactId=${encodeURIComponent(c.id)}`}
-                          title="Schedule showing"
-                          ariaLabel="Schedule showing"
+                          title={t("row.schedule_showing_label")}
+                          ariaLabel={t("row.schedule_showing_label")}
                         >
                           <HomeIcon className="h-4 w-4" strokeWidth={2} />
                         </RowIconButton>
                         <RowIconButton
                           href={`/dashboard/offers/new?contactId=${encodeURIComponent(c.id)}`}
-                          title="Draft offer"
-                          ariaLabel="Draft offer"
+                          title={t("row.draft_offer_label")}
+                          ariaLabel={t("row.draft_offer_label")}
                         >
                           <FileText className="h-4 w-4" strokeWidth={2} />
                         </RowIconButton>
                         <RowIconButton
                           href={`/dashboard/transactions/new?contactId=${encodeURIComponent(c.id)}`}
-                          title="Start deal"
-                          ariaLabel="Start deal"
+                          title={t("row.start_deal_label")}
+                          ariaLabel={t("row.start_deal_label")}
                         >
                           <Key className="h-4 w-4" strokeWidth={2} />
                         </RowIconButton>
@@ -717,19 +740,19 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
                               phone: c.phone,
                             })
                           }
-                          title="Send postcard"
-                          ariaLabel="Send postcard"
+                          title={t("row.send_postcard_label")}
+                          ariaLabel={t("row.send_postcard_label")}
                         >
                           <span className="text-base leading-none" aria-hidden>💌</span>
                         </RowIconButton>
                       </div>
                     </td>
                     <td className="px-4 py-2.5 text-xs text-gray-500 max-w-[200px] truncate" title={c.notes ?? ""}>
-                      {c.notes ?? "—"}
+                      {c.notes ?? t("row.empty_value")}
                     </td>
                     <td className="px-4 py-2.5 text-gray-600 min-w-[200px] max-w-[320px]">
                       <span className="block truncate" title={c.property_address ?? ""}>
-                        {c.property_address ?? "—"}
+                        {c.property_address ?? t("row.empty_value")}
                       </span>
                     </td>
                   </tr>
@@ -738,7 +761,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
               {!filtered.length && (
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
-                    {search ? "No contacts match your search." : "No contacts yet."}
+                    {search ? t("empty.no_match") : t("empty.no_contacts")}
                   </td>
                 </tr>
               )}
@@ -759,7 +782,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
           onClose={() => setPostcardTarget(null)}
           target={postcardTarget}
           onSent={() => {
-            setActionMsg("Postcard sent ✓");
+            setActionMsg(t("messages.postcard_sent"));
           }}
         />
       ) : null}
@@ -772,12 +795,12 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
             .filter((c) => selectedIds.has(c.id))
             .map((c) => ({
               contactId: c.id,
-              name: c.name ?? c.email ?? "friend",
+              name: c.name ?? c.email ?? t("bulk_postcard.recipient_fallback_name"),
               email: c.email,
               phone: c.phone,
             }))}
           onSent={() => {
-            setActionMsg(`Sent ${selectedIds.size} postcards ✓`);
+            setActionMsg(t("messages.postcards_sent", { count: selectedIds.size }));
             setSelectedIds(new Set());
           }}
         />

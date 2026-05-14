@@ -46,6 +46,10 @@
  *                        SmartListTabs nav + manager popover
  *   - web_marketing     Document metadata for the public marketing
  *                        pages: landing (/), about, pricing
+ *   - web_contacts_client
+ *                       Web ContactsClient — the full contacts list,
+ *                        add menu, search/filter, table rows, bulk
+ *                        actions, edit form
  *
  * Future namespaces follow the same pattern — add a JSON file pair
  * (en + zh-Hans) and reference it from the app's resources map.
@@ -84,5 +88,6 @@ export const NAMESPACES = [
   "web_generate_leads",
   "web_contacts",
   "web_marketing",
+  "web_contacts_client",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];
