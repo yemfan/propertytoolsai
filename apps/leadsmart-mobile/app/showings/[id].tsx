@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   KeyboardAvoidingView,
   Linking,
@@ -38,18 +39,23 @@ import {
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
 
-const STATUS_OPTIONS: Array<{ value: MobileShowingStatus; label: string }> = [
-  { value: "scheduled", label: "Scheduled" },
-  { value: "attended", label: "Attended" },
-  { value: "cancelled", label: "Cancelled" },
-  { value: "no_show", label: "No-show" },
+/**
+ * Status / reaction option ids — labels resolve per-render via
+ * `t(`status.${value}`)` and `t(`detail.reactions.${value}`)` so a
+ * locale flip re-renders the picker without an app restart.
+ */
+const STATUS_OPTION_VALUES: MobileShowingStatus[] = [
+  "scheduled",
+  "attended",
+  "cancelled",
+  "no_show",
 ];
 
-const REACTION_OPTIONS: Array<{ value: MobileShowingReaction; emoji: string; label: string }> = [
-  { value: "love", emoji: "❤️", label: "Love it" },
-  { value: "like", emoji: "👍", label: "Like" },
-  { value: "maybe", emoji: "🤔", label: "Maybe" },
-  { value: "pass", emoji: "👎", label: "Pass" },
+const REACTION_OPTIONS: Array<{ value: MobileShowingReaction; emoji: string }> = [
+  { value: "love", emoji: "❤️" },
+  { value: "like", emoji: "👍" },
+  { value: "maybe", emoji: "🤔" },
+  { value: "pass", emoji: "👎" },
 ];
 
 /**
@@ -80,10 +86,11 @@ export default function ShowingDetailScreen() {
 
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t, i18n } = useTranslation("showings_screen");
 
   const fetcher = useCallback(async (): Promise<MobileShowingDetail | MobileApiFailure> => {
     if (!showingId) {
-      return { ok: false, status: 0, message: "Missing showing id." };
+      return { ok: false, status: 0, message: t("detail.errors.missing_id") };
     }
     const res = await fetchMobileShowingDetail(showingId);
     if (res.ok === false) return res;
@@ -92,7 +99,7 @@ export default function ShowingDetailScreen() {
       feedback: res.feedback,
       contactName: res.contactName,
     };
-  }, [showingId]);
+  }, [showingId, t]);
 
   const { data, loading, error, refresh } = useCachedFetch<MobileShowingDetail>(
     `showing:${showingId}`,
@@ -204,16 +211,16 @@ export default function ShowingDetailScreen() {
   }, [router]);
 
   if (loading && !showing) {
-    return <ScreenLoading message="Loading showing…" />;
+    return <ScreenLoading message={t("detail.loading")} />;
   }
 
   if (error && !showing) {
     return (
       <View style={styles.errorWrap}>
-        <Stack.Screen options={{ title: "Showing", headerBackTitle: "Back" }} />
+        <Stack.Screen options={{ title: t("detail.title"), headerBackTitle: t("detail.back") }} />
         <ErrorBanner
-          title="Could not load showing"
-          message={error.message || "Unknown error"}
+          title={t("detail.errors.load_title")}
+          message={error.message || t("detail.errors.unknown")}
           onRetry={refresh}
         />
       </View>
@@ -223,18 +230,18 @@ export default function ShowingDetailScreen() {
   if (!showing) {
     return (
       <View style={styles.errorWrap}>
-        <Stack.Screen options={{ title: "Showing", headerBackTitle: "Back" }} />
+        <Stack.Screen options={{ title: t("detail.title"), headerBackTitle: t("detail.back") }} />
         <ErrorBanner
-          title="Showing not found"
-          message="This showing may have been deleted."
+          title={t("detail.errors.not_found_title")}
+          message={t("detail.errors.not_found_body")}
           onRetry={goBack}
-          retryLabel="Back to list"
+          retryLabel={t("detail.errors.back_to_list")}
         />
       </View>
     );
   }
 
-  const when = formatWhen(showing.scheduled_at);
+  const when = formatWhen(showing.scheduled_at, i18n.language, t);
   const showFeedbackBlock = showing.status === "attended" || feedback != null;
 
   return (
@@ -245,8 +252,8 @@ export default function ShowingDetailScreen() {
     >
       <Stack.Screen
         options={{
-          title: "Showing",
-          headerBackTitle: "Back",
+          title: t("detail.title"),
+          headerBackTitle: t("detail.back"),
         }}
       />
       <FadeIn style={styles.flex}>
@@ -268,10 +275,10 @@ export default function ShowingDetailScreen() {
             ) : null}
             <Text style={styles.whenLine}>{when}</Text>
             {contactName ? (
-              <Text style={styles.contactLine}>With {contactName}</Text>
+              <Text style={styles.contactLine}>{t("detail.contact_with", { name: contactName })}</Text>
             ) : null}
             {showing.mls_number ? (
-              <Text style={styles.mlsLine}>MLS #{showing.mls_number}</Text>
+              <Text style={styles.mlsLine}>{t("detail.mls_label", { number: showing.mls_number })}</Text>
             ) : null}
             {showing.access_notes ? (
               <View style={styles.accessNotes}>
@@ -288,18 +295,19 @@ export default function ShowingDetailScreen() {
           </View>
 
           {/* Status picker */}
-          <Text style={styles.sectionHeading}>Status</Text>
+          <Text style={styles.sectionHeading}>{t("detail.section_status")}</Text>
           <View style={styles.statusGrid}>
-            {STATUS_OPTIONS.map((opt) => {
-              const active = showing.status === opt.value;
-              const busy = statusBusy === opt.value;
+            {STATUS_OPTION_VALUES.map((value) => {
+              const active = showing.status === value;
+              const busy = statusBusy === value;
+              const label = t(`status.${value}`);
               return (
                 <Pressable
-                  key={opt.value}
-                  onPress={() => void onPickStatus(opt.value)}
+                  key={value}
+                  onPress={() => void onPickStatus(value)}
                   disabled={busy}
                   accessibilityRole="button"
-                  accessibilityLabel={`Mark as ${opt.label}`}
+                  accessibilityLabel={t("detail.status_a11y", { label })}
                   accessibilityState={{ selected: active, disabled: busy }}
                   style={({ pressed }) => [
                     styles.statusBtn,
@@ -308,7 +316,7 @@ export default function ShowingDetailScreen() {
                   ]}
                 >
                   <Text style={[styles.statusBtnText, active && styles.statusBtnTextActive]}>
-                    {busy ? "Saving…" : opt.label}
+                    {busy ? t("detail.status_saving") : label}
                   </Text>
                 </Pressable>
               );
@@ -320,7 +328,7 @@ export default function ShowingDetailScreen() {
           <View style={styles.quickRow}>
             <ContactActionButton
               icon="call-outline"
-              label="Call buyer"
+              label={t("detail.quick.call")}
               styles={styles}
               tokens={tokens}
               onPress={() => {
@@ -334,7 +342,7 @@ export default function ShowingDetailScreen() {
             />
             <ContactActionButton
               icon="chatbubble-outline"
-              label="Open buyer"
+              label={t("detail.quick.open")}
               styles={styles}
               tokens={tokens}
               onPress={() => {
@@ -344,7 +352,7 @@ export default function ShowingDetailScreen() {
             />
             <ContactActionButton
               icon="map-outline"
-              label="Directions"
+              label={t("detail.quick.directions")}
               styles={styles}
               tokens={tokens}
               onPress={() => {
@@ -375,12 +383,13 @@ export default function ShowingDetailScreen() {
           {showFeedbackBlock ? (
             <>
               <View style={styles.divider} />
-              <Text style={styles.sectionHeading}>Buyer feedback</Text>
+              <Text style={styles.sectionHeading}>{t("detail.feedback.section_title")}</Text>
 
-              <Text style={styles.label}>Overall reaction</Text>
+              <Text style={styles.label}>{t("detail.feedback.overall_reaction")}</Text>
               <View style={styles.reactionRow}>
                 {REACTION_OPTIONS.map((r) => {
                   const active = reaction === r.value;
+                  const label = t(`detail.reactions.${r.value}`);
                   return (
                     <Pressable
                       key={r.value}
@@ -389,7 +398,7 @@ export default function ShowingDetailScreen() {
                         setReaction(active ? null : r.value);
                       }}
                       accessibilityRole="button"
-                      accessibilityLabel={r.label}
+                      accessibilityLabel={label}
                       accessibilityState={{ selected: active }}
                       style={({ pressed }) => [
                         styles.reactionBtn,
@@ -404,20 +413,21 @@ export default function ShowingDetailScreen() {
                           active && styles.reactionLabelActive,
                         ]}
                       >
-                        {r.label}
+                        {label}
                       </Text>
                     </Pressable>
                   );
                 })}
               </View>
 
-              <Text style={styles.label}>Ready to make an offer?</Text>
+              <Text style={styles.label}>{t("detail.feedback.ready_to_offer")}</Text>
               <View style={styles.offerRow}>
                 {[
-                  { value: true, label: "Yes" },
-                  { value: false, label: "No" },
+                  { value: true, key: "yes" as const },
+                  { value: false, key: "no" as const },
                 ].map((o) => {
                   const active = wouldOffer === o.value;
+                  const label = t(`detail.feedback.${o.key}`);
                   return (
                     <Pressable
                       key={String(o.value)}
@@ -426,7 +436,7 @@ export default function ShowingDetailScreen() {
                         setWouldOffer(active ? null : o.value);
                       }}
                       accessibilityRole="button"
-                      accessibilityLabel={`Would offer: ${o.label}`}
+                      accessibilityLabel={t("detail.feedback.would_offer_a11y", { label })}
                       accessibilityState={{ selected: active }}
                       style={({ pressed }) => [
                         styles.offerBtn,
@@ -435,31 +445,31 @@ export default function ShowingDetailScreen() {
                       ]}
                     >
                       <Text style={[styles.offerText, active && styles.offerTextActive]}>
-                        {o.label}
+                        {label}
                       </Text>
                     </Pressable>
                   );
                 })}
               </View>
 
-              <Text style={styles.label}>Concerns</Text>
+              <Text style={styles.label}>{t("detail.feedback.concerns")}</Text>
               <View style={styles.checkboxColumn}>
                 <ConcernCheckbox
-                  label="Price concerns"
+                  label={t("detail.feedback.concern_price")}
                   checked={priceConcerns}
                   onChange={setPriceConcerns}
                   styles={styles}
                   tokens={tokens}
                 />
                 <ConcernCheckbox
-                  label="Location concerns"
+                  label={t("detail.feedback.concern_location")}
                   checked={locationConcerns}
                   onChange={setLocationConcerns}
                   styles={styles}
                   tokens={tokens}
                 />
                 <ConcernCheckbox
-                  label="Condition concerns"
+                  label={t("detail.feedback.concern_condition")}
                   checked={conditionConcerns}
                   onChange={setConditionConcerns}
                   styles={styles}
@@ -467,46 +477,46 @@ export default function ShowingDetailScreen() {
                 />
               </View>
 
-              <Text style={styles.label}>Pros</Text>
+              <Text style={styles.label}>{t("detail.feedback.pros")}</Text>
               <TextInput
                 multiline
                 value={pros}
                 onChangeText={setPros}
-                placeholder="What did the buyer love?"
+                placeholder={t("detail.feedback.pros_placeholder")}
                 placeholderTextColor={tokens.textSubtle}
                 style={styles.textArea}
               />
 
-              <Text style={styles.label}>Cons</Text>
+              <Text style={styles.label}>{t("detail.feedback.cons")}</Text>
               <TextInput
                 multiline
                 value={cons}
                 onChangeText={setCons}
-                placeholder="What turned them off?"
+                placeholder={t("detail.feedback.cons_placeholder")}
                 placeholderTextColor={tokens.textSubtle}
                 style={styles.textArea}
               />
 
-              <Text style={styles.label}>Notes</Text>
+              <Text style={styles.label}>{t("detail.feedback.notes")}</Text>
               <TextInput
                 multiline
                 value={notes}
                 onChangeText={setNotes}
-                placeholder="Anything else worth remembering for the next showing"
+                placeholder={t("detail.feedback.notes_placeholder")}
                 placeholderTextColor={tokens.textSubtle}
                 style={styles.textArea}
               />
 
               {feedbackError ? <Text style={styles.inlineError}>{feedbackError}</Text> : null}
               {feedbackSavedAt && !feedbackError ? (
-                <Text style={styles.inlineSaved}>Saved.</Text>
+                <Text style={styles.inlineSaved}>{t("detail.feedback.saved")}</Text>
               ) : null}
 
               <Pressable
                 onPress={() => void onSaveFeedback()}
                 disabled={feedbackSaving}
                 accessibilityRole="button"
-                accessibilityLabel="Save feedback"
+                accessibilityLabel={t("detail.feedback.save_a11y")}
                 accessibilityState={{ disabled: feedbackSaving }}
                 style={({ pressed }) => [
                   styles.saveBtn,
@@ -515,15 +525,13 @@ export default function ShowingDetailScreen() {
                 ]}
               >
                 <Text style={styles.saveBtnText}>
-                  {feedbackSaving ? "Saving…" : "Save feedback"}
+                  {feedbackSaving ? t("detail.feedback.saving") : t("detail.feedback.save")}
                 </Text>
               </Pressable>
             </>
           ) : (
             <View style={styles.feedbackHint}>
-              <Text style={styles.feedbackHintText}>
-                Mark this showing as Attended to capture buyer feedback.
-              </Text>
+              <Text style={styles.feedbackHintText}>{t("detail.feedback.hint_attend_first")}</Text>
             </View>
           )}
         </ScrollView>
@@ -590,15 +598,23 @@ function ConcernCheckbox({
   );
 }
 
-function formatWhen(iso: string | null | undefined): string {
-  if (!iso) return "Date TBD";
+type ShowingsT = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * Detail-page "when" formatter — different from the list view's
+ * compressed format because the hero card has room for the full
+ * "Monday, May 12 · 3:00 PM" line. `t` resolves the "Date TBD"
+ * fallback in the active locale.
+ */
+function formatWhen(iso: string | null | undefined, locale: string, t: ShowingsT): string {
+  if (!iso) return t("when.tbd");
   const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return "Date TBD";
-  return `${d.toLocaleDateString(undefined, {
+  if (!Number.isFinite(d.getTime())) return t("when.tbd");
+  return `${d.toLocaleDateString(locale, {
     weekday: "long",
     month: "long",
     day: "numeric",
-  })} · ${d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
+  })} · ${d.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" })}`;
 }
 
 function createStyles(t: ThemeTokens) {

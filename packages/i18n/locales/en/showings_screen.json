@@ -1,0 +1,86 @@
+{
+  "list": {
+    "title": "Showings",
+    "back": "Back",
+    "filters": {
+      "upcoming": "Upcoming",
+      "attended": "Attended",
+      "cancelled": "Cancelled",
+      "all": "All"
+    },
+    "empty": {
+      "upcoming_title": "No upcoming showings",
+      "upcoming_subtitle": "Schedule a showing from a contact's detail page.",
+      "other_title": "No showings",
+      "other_subtitle": "Try a different filter."
+    },
+    "row": {
+      "offer_chip": "Offer",
+      "a11y_label": "Showing at {{address}} on {{when}}, {{status}}"
+    }
+  },
+  "status": {
+    "scheduled": "Scheduled",
+    "attended": "Attended",
+    "cancelled": "Cancelled",
+    "no_show": "No-show"
+  },
+  "when": {
+    "tbd": "Date TBD",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday"
+  },
+  "detail": {
+    "title": "Showing",
+    "back": "Back",
+    "loading": "Loading showing…",
+    "errors": {
+      "missing_id": "Missing showing id.",
+      "load_title": "Could not load showing",
+      "unknown": "Unknown error",
+      "not_found_title": "Showing not found",
+      "not_found_body": "This showing may have been deleted.",
+      "back_to_list": "Back to list"
+    },
+    "contact_with": "With {{name}}",
+    "mls_label": "MLS #{{number}}",
+    "section_status": "Status",
+    "status_saving": "Saving…",
+    "status_a11y": "Mark as {{label}}",
+    "quick": {
+      "call": "Call buyer",
+      "open": "Open buyer",
+      "directions": "Directions"
+    },
+    "feedback": {
+      "section_title": "Buyer feedback",
+      "overall_reaction": "Overall reaction",
+      "ready_to_offer": "Ready to make an offer?",
+      "yes": "Yes",
+      "no": "No",
+      "would_offer_a11y": "Would offer: {{label}}",
+      "concerns": "Concerns",
+      "concern_price": "Price concerns",
+      "concern_location": "Location concerns",
+      "concern_condition": "Condition concerns",
+      "pros": "Pros",
+      "pros_placeholder": "What did the buyer love?",
+      "cons": "Cons",
+      "cons_placeholder": "What turned them off?",
+      "notes": "Notes",
+      "notes_placeholder": "Anything else worth remembering for the next showing",
+      "saved": "Saved.",
+      "saving": "Saving…",
+      "save": "Save feedback",
+      "save_a11y": "Save feedback",
+      "hint_attend_first": "Mark this showing as Attended to capture buyer feedback."
+    },
+    "reactions": {
+      "love": "Love it",
+      "like": "Like",
+      "maybe": "Maybe",
+      "pass": "Pass"
+    }
+  }
+}

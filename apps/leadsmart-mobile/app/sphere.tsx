@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Linking,
@@ -45,6 +46,7 @@ export default function SphereScreen() {
   const tokens = useThemeTokens();
   const router = useRouter();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("sphere_screen");
 
   const [mode, setMode] = useState<Mode>("buyers");
   const [buyers, setBuyers] = useState<MobileSphereRow[] | null>(null);
@@ -116,14 +118,9 @@ export default function SphereScreen() {
         />
       }
     >
-      <Stack.Screen
-        options={{ title: "Sphere", headerBackTitle: "Home" }}
-      />
+      <Stack.Screen options={{ title: t("title"), headerBackTitle: t("back") }} />
 
-      <Text style={styles.intro}>
-        Top contacts your CRM thinks are ready to act. Tap to open, or call
-        / text directly.
-      </Text>
+      <Text style={styles.intro}>{t("intro")}</Text>
 
       <View style={styles.modeRow}>
         {(["buyers", "sellers"] as Mode[]).map((m) => {
@@ -144,7 +141,7 @@ export default function SphereScreen() {
                   active && styles.modeTabTextActive,
                 ]}
               >
-                {m === "buyers" ? "Likely buyers" : "Likely sellers"}
+                {t(`modes.${m}`)}
                 {count > 0 ? ` · ${count}` : ""}
               </Text>
             </Pressable>
@@ -166,15 +163,9 @@ export default function SphereScreen() {
       ) : rows.length === 0 ? (
         <View style={styles.emptyBlock}>
           <Text style={styles.emptyTitle}>
-            {mode === "buyers"
-              ? "No likely buyers right now"
-              : "No likely sellers right now"}
+            {mode === "buyers" ? t("empty.buyers_title") : t("empty.sellers_title")}
           </Text>
-          <Text style={styles.emptyBody}>
-            Your CRM ranks contacts each day. Past clients + sphere
-            contacts surface here when their signals reach a meaningful
-            threshold. Check back tomorrow.
-          </Text>
+          <Text style={styles.emptyBody}>{t("empty.body")}</Text>
         </View>
       ) : (
         rows.map((row) => (
@@ -208,12 +199,14 @@ function SphereRowCard({
   onCall?: () => void;
   onText?: () => void;
 }) {
+  const { t, i18n } = useTranslation("sphere_screen");
   const bandColor = (() => {
     if (row.label === "high") return { bg: "#FEE2E2", fg: "#B91C1C" };
     if (row.label === "medium") return { bg: "#FEF3C7", fg: "#92400E" };
     return { bg: "#E5E7EB", fg: "#374151" };
   })();
   const score = Math.round(row.score);
+  const bandLabel = t(`row.band.${row.label}`, { defaultValue: row.label.toUpperCase() });
 
   return (
     <Pressable
@@ -229,7 +222,7 @@ function SphereRowCard({
             style={[styles.bandPill, { backgroundColor: bandColor.bg }]}
           >
             <Text style={[styles.bandPillText, { color: bandColor.fg }]}>
-              {row.label.toUpperCase()} · {score}
+              {bandLabel} · {score}
             </Text>
           </View>
         </View>
@@ -247,7 +240,7 @@ function SphereRowCard({
         <Text style={styles.cardClosing} numberOfLines={1}>
           {row.closingAddress}
           {row.closingDate
-            ? ` · sold ${new Date(row.closingDate).toLocaleDateString()}`
+            ? ` · ${t("row.sold_on", { date: new Date(row.closingDate).toLocaleDateString(i18n.language) })}`
             : ""}
         </Text>
       ) : null}
@@ -258,7 +251,7 @@ function SphereRowCard({
             <Pressable onPress={onCall} style={styles.cardActionBtn}>
               <Ionicons name="call-outline" size={14} color="#059669" />
               <Text style={[styles.cardActionText, { color: "#059669" }]}>
-                Call
+                {t("row.actions.call")}
               </Text>
             </Pressable>
           )}
@@ -270,7 +263,7 @@ function SphereRowCard({
                 color="#2563EB"
               />
               <Text style={[styles.cardActionText, { color: "#2563EB" }]}>
-                Text
+                {t("row.actions.text")}
               </Text>
             </Pressable>
           )}

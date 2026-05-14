@@ -26,6 +26,11 @@
  *   - reply_composer    SMS ReplyComposer, EmailReplyModal, AI draft
  *                       button, and the AI-action upgrade banner
  *   - inbox             Mobile Inbox tab (thread list)
+ *   - calendar_screen   Mobile Calendar tab parent (sections, header,
+ *                        ReminderCard)
+ *   - showings_screen   Mobile Showings list + detail (status, reactions,
+ *                        feedback form)
+ *   - sphere_screen     Mobile Sphere screen (likely buyers / sellers)
  *
  * Future namespaces follow the same pattern — add a JSON file pair
  * (en + zh-Hans) and reference it from the app's resources map.
@@ -56,5 +61,8 @@ export const NAMESPACES = [
   "task_calendar_components",
   "reply_composer",
   "inbox",
+  "calendar_screen",
+  "showings_screen",
+  "sphere_screen",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];

@@ -1,0 +1,45 @@
+{
+  "screen": {
+    "title": "日历",
+    "new_button": "新建",
+    "new_button_a11y": "新建约见",
+    "loading": "正在加载日历……",
+    "load_error": {
+      "title": "无法加载日历",
+      "reminders_partial_title": "部分提醒暂不可用"
+    },
+    "action_error": {
+      "title": "操作失败",
+      "dismiss": "忽略"
+    },
+    "empty": {
+      "title": "暂无日程",
+      "subtitle": "从客户详情添加约见或预约链接，或点击「新建」。"
+    }
+  },
+  "sections": {
+    "appointments": {
+      "title": "约见",
+      "hint": "已安排在您客户上的约见 (CRM)",
+      "empty": "近期暂无约见。"
+    },
+    "overdue_tasks": {
+      "title": "逾期任务",
+      "hint": "已过期的未完成任务 (UTC 日)",
+      "empty": "您已处理完所有逾期任务。"
+    },
+    "follow_ups": {
+      "title": "跟进",
+      "hint": "来自客户的下次联系日期",
+      "empty": "您的客户暂无跟进日期。"
+    }
+  },
+  "reminder_card": {
+    "lead_fallback": "客户 {{id}}",
+    "status": {
+      "overdue": "逾期跟进",
+      "scheduled": "已安排跟进"
+    },
+    "hint": "点击打开客户"
+  }
+}
