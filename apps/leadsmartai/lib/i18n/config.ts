@@ -15,12 +15,14 @@ import enSettings from "@leadsmart/i18n/locale/en/settings";
 import enWebContacts from "@leadsmart/i18n/locale/en/web_contacts";
 import enWebContactsClient from "@leadsmart/i18n/locale/en/web_contacts_client";
 import enWebGenerateLeads from "@leadsmart/i18n/locale/en/web_generate_leads";
+import enWebAbout from "@leadsmart/i18n/locale/en/web_about";
 import enWebGenerateLeadsClients from "@leadsmart/i18n/locale/en/web_generate_leads_clients";
 import enWebLanding from "@leadsmart/i18n/locale/en/web_landing";
 import enWebMarketing from "@leadsmart/i18n/locale/en/web_marketing";
 import enWebPosts from "@leadsmart/i18n/locale/en/web_posts";
 import zhCommon from "@leadsmart/i18n/locale/zh-Hans/common";
 import zhSettings from "@leadsmart/i18n/locale/zh-Hans/settings";
+import zhWebAbout from "@leadsmart/i18n/locale/zh-Hans/web_about";
 import zhWebContacts from "@leadsmart/i18n/locale/zh-Hans/web_contacts";
 import zhWebContactsClient from "@leadsmart/i18n/locale/zh-Hans/web_contacts_client";
 import zhWebGenerateLeads from "@leadsmart/i18n/locale/zh-Hans/web_generate_leads";
@@ -44,6 +46,7 @@ export const namespaces = [
   "web_contacts_client",
   "web_generate_leads_clients",
   "web_landing",
+  "web_about",
 ] as const;
 export type WebNamespace = (typeof namespaces)[number];
 
@@ -61,6 +64,7 @@ export const resources: Record<
     web_contacts_client: enWebContactsClient,
     web_generate_leads_clients: enWebGenerateLeadsClients,
     web_landing: enWebLanding,
+    web_about: enWebAbout,
   },
   "zh-Hans": {
     common: zhCommon,
@@ -72,6 +76,7 @@ export const resources: Record<
     web_contacts_client: zhWebContactsClient,
     web_generate_leads_clients: zhWebGenerateLeadsClients,
     web_landing: zhWebLanding,
+    web_about: zhWebAbout,
   },
 };
 

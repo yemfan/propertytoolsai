@@ -1,0 +1,93 @@
+{
+  "hero": {
+    "eyebrow": "About LeadSmart AI",
+    "h1": "The AI Growth Engine for Real Estate Professionals",
+    "subtitle": "LeadSmart AI helps real estate agents and financing professionals capture, qualify, and convert leads with AI — so they can spend less time chasing and more time closing.",
+    "cta_primary": "Get Started",
+    "cta_secondary": "See Demo"
+  },
+  "intro": {
+    "headline_top": "We don't just generate leads.",
+    "headline_bottom": "We turn them into closed deals.",
+    "p1": "In today's market, getting traffic is no longer the hardest part. The real challenge is converting that traffic into real conversations, qualified opportunities, and closed transactions.",
+    "p2": "LeadSmart AI was built to solve that problem. We combine intelligent automation, behavioral insights, and AI-powered follow-up into one system designed specifically for real estate.",
+    "p3": "Instead of simply storing contacts in a CRM, LeadSmart AI helps agents respond faster, prioritize smarter, and move every lead closer to a deal."
+  },
+  "differentiator": {
+    "h2": "What makes us different",
+    "subtitle": "Traditional tools help you manage contacts. LeadSmart AI helps you create outcomes.",
+    "cards": {
+      "ai_qualification": {
+        "eyebrow": "AI Qualification",
+        "title": "Prioritize serious leads",
+        "body": "Identify high-intent buyers and sellers faster, so your time goes where it matters most."
+      },
+      "instant_follow_up": {
+        "eyebrow": "Instant Follow-Up",
+        "title": "Respond in seconds",
+        "body": "AI-powered responses help you engage leads immediately, before they move on to someone else."
+      },
+      "workflow": {
+        "eyebrow": "Workflow Automation",
+        "title": "Reduce manual work",
+        "body": "Automate repetitive tasks and follow-up sequences without sacrificing the personal touch."
+      },
+      "deal_visibility": {
+        "eyebrow": "Deal Visibility",
+        "title": "Track the full pipeline",
+        "body": "From first click to closed deal, see exactly where every lead stands and what to do next."
+      }
+    }
+  },
+  "problem": {
+    "eyebrow": "The problem",
+    "h2": "Real estate teams are losing deals in the gaps.",
+    "bullets": {
+      "slow_followup": "Leads go cold because follow-up is too slow",
+      "low_quality": "Agents waste time on low-quality prospects",
+      "manual_workflows": "Important opportunities slip through manual workflows",
+      "crm_logs_only": "Most CRMs record activity, but don't drive conversion"
+    }
+  },
+  "solution": {
+    "eyebrow": "The solution",
+    "h2": "LeadSmart AI closes the gaps with intelligent automation.",
+    "bullets": {
+      "capture": "Capture high-intent leads from inbound traffic",
+      "score": "Score and qualify opportunities automatically",
+      "ai_followup": "Trigger fast, personalized AI follow-up",
+      "next_action": "Surface the right next action at the right time"
+    }
+  },
+  "workflow": {
+    "eyebrow": "How it works",
+    "h2": "A connected system from first click to closed deal",
+    "steps": {
+      "traffic": "Traffic",
+      "lead_capture": "Lead Capture",
+      "ai_qualification": "AI Qualification",
+      "ai_follow_up": "AI Follow-Up",
+      "agent_dashboard": "Agent Dashboard",
+      "closed_deal": "Closed Deal"
+    }
+  },
+  "audience": {
+    "h2": "Built for modern real estate teams",
+    "subtitle": "LeadSmart AI is designed for professionals who need speed, visibility, and a more reliable way to convert opportunities into revenue.",
+    "items": {
+      "agents": "Real estate agents",
+      "mortgage": "Mortgage brokers",
+      "teams": "Teams & brokerages",
+      "loan_officers": "Loan officers & lenders",
+      "isa": "Inside sales & ISA teams",
+      "solo": "High-volume solo producers"
+    }
+  },
+  "cta": {
+    "h2": "Ready to turn more leads into closings?",
+    "subtitle": "Join professionals who use LeadSmart AI to respond faster, qualify smarter, and keep every deal moving.",
+    "primary": "Get Started",
+    "secondary": "View pricing",
+    "back_home": "← Back to home"
+  }
+}
