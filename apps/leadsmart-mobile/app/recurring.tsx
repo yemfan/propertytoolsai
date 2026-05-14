@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -35,11 +36,17 @@ import type { ThemeTokens } from "../lib/theme";
  * recreate is the workflow).
  */
 
-const WEEKDAY_LABEL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+/**
+ * Day-of-week ids — labels resolve per-render via
+ * `t(`recurring.weekdays.${id}`)` so locale flips re-render without an
+ * app restart.
+ */
+const WEEKDAY_IDS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 
 export default function RecurringScreen() {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t, i18n } = useTranslation("mobile_misc_screens");
 
   const [rows, setRows] = useState<MobileRecurrence[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -72,7 +79,13 @@ export default function RecurringScreen() {
         setBusyId(null);
         if (res.ok === false) {
           hapticError();
-          Alert.alert(`${action} failed`, res.message);
+          const failedKey =
+            action === "pause"
+              ? "recurring.alert.action_failed_pause"
+              : action === "resume"
+                ? "recurring.alert.action_failed_resume"
+                : "recurring.alert.action_failed_cancel";
+          Alert.alert(t(failedKey), res.message);
           return;
         }
         hapticSuccess();
@@ -80,25 +93,29 @@ export default function RecurringScreen() {
       };
       if (action === "cancel") {
         Alert.alert(
-          "Cancel recurrence",
-          "Cancel this recurring post? This is permanent — agent will need to create a new recurrence to start over.",
+          t("recurring.alert.cancel_title"),
+          t("recurring.alert.cancel_body"),
           [
-            { text: "Keep", style: "cancel" },
-            { text: "Cancel", style: "destructive", onPress: () => void proceed() },
+            { text: t("recurring.alert.keep"), style: "cancel" },
+            {
+              text: t("recurring.alert.cancel"),
+              style: "destructive",
+              onPress: () => void proceed(),
+            },
           ],
         );
       } else {
         void proceed();
       }
     },
-    [load],
+    [load, t],
   );
 
   if (rows === null) {
     return (
       <View style={styles.loadingBlock}>
         <Stack.Screen
-          options={{ title: "Recurring posts", headerBackTitle: "Home" }}
+          options={{ title: t("recurring.title"), headerBackTitle: t("recurring.back") }}
         />
         <ActivityIndicator color={tokens.accent} />
       </View>
@@ -124,7 +141,7 @@ export default function RecurringScreen() {
       }
     >
       <Stack.Screen
-        options={{ title: "Recurring posts", headerBackTitle: "Home" }}
+        options={{ title: t("recurring.title"), headerBackTitle: t("recurring.back") }}
       />
 
       {error && (
@@ -136,16 +153,16 @@ export default function RecurringScreen() {
 
       {active.length === 0 && paused.length === 0 && done.length === 0 ? (
         <View style={styles.emptyBlock}>
-          <Text style={styles.emptyTitle}>No recurring posts</Text>
-          <Text style={styles.emptyBody}>
-            Open Quick Post → toggle Recurring → pick a cadence. Your
-            recurrences will live here.
-          </Text>
+          <Text style={styles.emptyTitle}>{t("recurring.empty_title")}</Text>
+          <Text style={styles.emptyBody}>{t("recurring.empty_body")}</Text>
         </View>
       ) : null}
 
       {active.length > 0 && (
-        <Section title="Active" subtitle="Materializing on cadence.">
+        <Section
+          title={t("recurring.sections.active_title")}
+          subtitle={t("recurring.sections.active_subtitle")}
+        >
           {active.map((r) => (
             <Card
               key={r.id}
@@ -153,20 +170,25 @@ export default function RecurringScreen() {
               styles={styles}
               busy={busyId === r.id}
               actions={[
-                { label: "Pause", onPress: () => act(r, "pause") },
+                { label: t("recurring.actions.pause"), onPress: () => act(r, "pause") },
                 {
-                  label: "Cancel",
+                  label: t("recurring.actions.cancel"),
                   onPress: () => act(r, "cancel"),
                   destructive: true,
                 },
               ]}
+              t={t}
+              locale={i18n.language}
             />
           ))}
         </Section>
       )}
 
       {paused.length > 0 && (
-        <Section title="Paused" subtitle="Cron is skipping these.">
+        <Section
+          title={t("recurring.sections.paused_title")}
+          subtitle={t("recurring.sections.paused_subtitle")}
+        >
           {paused.map((r) => (
             <Card
               key={r.id}
@@ -174,28 +196,43 @@ export default function RecurringScreen() {
               styles={styles}
               busy={busyId === r.id}
               actions={[
-                { label: "Resume", onPress: () => act(r, "resume") },
+                { label: t("recurring.actions.resume"), onPress: () => act(r, "resume") },
                 {
-                  label: "Cancel",
+                  label: t("recurring.actions.cancel"),
                   onPress: () => act(r, "cancel"),
                   destructive: true,
                 },
               ]}
+              t={t}
+              locale={i18n.language}
             />
           ))}
         </Section>
       )}
 
       {done.length > 0 && (
-        <Section title="Done" subtitle="Completed or cancelled. Read-only.">
+        <Section
+          title={t("recurring.sections.done_title")}
+          subtitle={t("recurring.sections.done_subtitle")}
+        >
           {done.slice(0, 30).map((r) => (
-            <Card key={r.id} row={r} styles={styles} busy={false} actions={[]} />
+            <Card
+              key={r.id}
+              row={r}
+              styles={styles}
+              busy={false}
+              actions={[]}
+              t={t}
+              locale={i18n.language}
+            />
           ))}
         </Section>
       )}
     </ScrollView>
   );
 }
+
+type RecurringT = (key: string, options?: Record<string, unknown>) => string;
 
 function Section({
   title,
@@ -229,15 +266,18 @@ function Section({
   );
 }
 
-function describeCadence(r: MobileRecurrence): string {
+function describeCadence(r: MobileRecurrence, t: RecurringT): string {
   const hh = String(r.timeOfDayHour).padStart(2, "0");
   const mm = String(r.timeOfDayMinute).padStart(2, "0");
-  if (r.cadence === "daily") return `Every day at ${hh}:${mm} ${r.timezone}`;
+  const time = `${hh}:${mm}`;
+  if (r.cadence === "daily") {
+    return t("recurring.cadence.daily", { time, tz: r.timezone });
+  }
   const day =
-    r.weeklyDayOfWeek !== null
-      ? WEEKDAY_LABEL[r.weeklyDayOfWeek]
-      : "?";
-  return `Every ${day} at ${hh}:${mm} ${r.timezone}`;
+    r.weeklyDayOfWeek !== null && r.weeklyDayOfWeek >= 0 && r.weeklyDayOfWeek < 7
+      ? t(`recurring.weekdays.${WEEKDAY_IDS[r.weeklyDayOfWeek]}`)
+      : t("recurring.weekdays.unknown");
+  return t("recurring.cadence.weekly", { day, time, tz: r.timezone });
 }
 
 function Card({
@@ -245,6 +285,8 @@ function Card({
   styles,
   busy,
   actions,
+  t,
+  locale,
 }: {
   row: MobileRecurrence;
   styles: ReturnType<typeof createStyles>;
@@ -254,21 +296,41 @@ function Card({
     onPress: () => void;
     destructive?: boolean;
   }>;
+  t: RecurringT;
+  locale: string;
 }) {
-  const next = new Date(row.nextOccurrenceAt).toLocaleString();
-  const ends = row.endsAt ? new Date(row.endsAt).toLocaleDateString() : null;
+  const next = new Date(row.nextOccurrenceAt).toLocaleString(locale);
+  const ends = row.endsAt ? new Date(row.endsAt).toLocaleDateString(locale) : null;
+  const platformLabel =
+    row.platform === "linkedin"
+      ? t("platforms.linkedin")
+      : row.platform === "instagram"
+        ? t("platforms.instagram")
+        : t("platforms.facebook");
+  const whenBase =
+    row.status === "active"
+      ? t("recurring.card.next_prefix", { when: next })
+      : row.status === "paused"
+        ? t("recurring.card.paused_prefix", { when: next })
+        : t("recurring.card.posted_one", { count: row.occurrenceCount });
+  // Pluralization: i18next returns the _other variant when count !== 1
+  // for the "posted" line. We could call t("posted", { count }) directly
+  // and rely on plural suffixes, but our key layout uses explicit
+  // posted_one / posted_other so we pick manually for clarity.
+  const whenLine =
+    row.status === "completed" || row.status === "cancelled"
+      ? row.occurrenceCount === 1
+        ? t("recurring.card.posted_one", { count: row.occurrenceCount })
+        : t("recurring.card.posted_other", { count: row.occurrenceCount })
+      : whenBase;
+  const maxSuffix = row.maxOccurrences ? ` · ${row.occurrenceCount}/${row.maxOccurrences}` : "";
+  const endsSuffix = ends ? ` · ${t("recurring.card.ends_suffix", { date: ends })}` : "";
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.cardHeaderLeft}>
           <View style={styles.platformBadge}>
-            <Text style={styles.platformBadgeText}>
-              {row.platform === "linkedin"
-                ? "LinkedIn"
-                : row.platform === "instagram"
-                  ? "Instagram"
-                  : "Facebook"}
-            </Text>
+            <Text style={styles.platformBadgeText}>{platformLabel}</Text>
           </View>
           {row.socialAccountDisplay && (
             <Text style={styles.cardDisplay} numberOfLines={1}>
@@ -276,24 +338,20 @@ function Card({
             </Text>
           )}
         </View>
-        <StatusBadge status={row.status} />
+        <StatusBadge status={row.status} t={t} />
       </View>
-      <Text style={styles.cadence}>{describeCadence(row)}</Text>
+      <Text style={styles.cadence}>{describeCadence(row, t)}</Text>
       <Text style={styles.caption} numberOfLines={2}>
         {row.caption}
       </Text>
       <Text style={styles.cardWhen}>
-        {row.status === "active"
-          ? `Next: ${next}`
-          : row.status === "paused"
-            ? `Paused — next would have been ${next}`
-            : `Posted ${row.occurrenceCount} time${row.occurrenceCount === 1 ? "" : "s"}`}
-        {row.maxOccurrences ? ` · ${row.occurrenceCount}/${row.maxOccurrences}` : ""}
-        {ends ? ` · ends ${ends}` : ""}
+        {whenLine}
+        {maxSuffix}
+        {endsSuffix}
       </Text>
       {row.lastError && (
         <Text style={styles.cardError} numberOfLines={3}>
-          Last error: {row.lastError}
+          {t("recurring.card.last_error_prefix", { message: row.lastError })}
         </Text>
       )}
       {actions.length > 0 && (
@@ -314,7 +372,7 @@ function Card({
                   a.destructive && styles.cardCancelText,
                 ]}
               >
-                {busy ? "…" : a.label}
+                {busy ? t("recurring.actions.busy") : a.label}
               </Text>
             </Pressable>
           ))}
@@ -324,7 +382,13 @@ function Card({
   );
 }
 
-function StatusBadge({ status }: { status: MobileRecurrence["status"] }) {
+function StatusBadge({
+  status,
+  t,
+}: {
+  status: MobileRecurrence["status"];
+  t: RecurringT;
+}) {
   const color =
     status === "active"
       ? "#059669"
@@ -354,12 +418,11 @@ function StatusBadge({ status }: { status: MobileRecurrence["status"] }) {
         style={{
           fontSize: 10,
           fontWeight: "700",
-          textTransform: "uppercase",
           letterSpacing: 0.3,
           color,
         }}
       >
-        {status}
+        {t(`recurring.status.${status}`, { defaultValue: status })}
       </Text>
     </View>
   );

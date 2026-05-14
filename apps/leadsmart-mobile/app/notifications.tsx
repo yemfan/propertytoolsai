@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FlatList,
   Pressable,
@@ -46,13 +47,18 @@ type ClassifiedKind =
   | "publish_failure"
   | "reminder";
 
-const FILTERS: Array<{ id: "all" | ClassifiedKind; label: string }> = [
-  { id: "all", label: "All" },
-  { id: "hot_lead", label: "Hot leads" },
-  { id: "briefing", label: "Briefings" },
-  { id: "publish_failure", label: "Post failures" },
-  { id: "missed_call", label: "Calls" },
-  { id: "reminder", label: "Other" },
+/**
+ * Filter chip ids — labels resolve per-render via
+ * `t(`notifications.filters.${id}`)` so a locale flip rebuilds the chip
+ * strip without an app restart.
+ */
+const FILTER_IDS: Array<"all" | ClassifiedKind> = [
+  "all",
+  "hot_lead",
+  "briefing",
+  "publish_failure",
+  "missed_call",
+  "reminder",
 ];
 
 function classify(
@@ -73,18 +79,19 @@ function classify(
   return "reminder";
 }
 
-function priorityLabel(p: MobileAgentInboxNotificationDto["priority"]): string {
-  if (p === "high") return "High";
-  if (p === "medium") return "Medium";
-  return "Low";
+type NotificationsT = (key: string, options?: Record<string, unknown>) => string;
+
+function priorityLabel(
+  p: MobileAgentInboxNotificationDto["priority"],
+  t: NotificationsT,
+): string {
+  if (p === "high") return t("notifications.priority.high");
+  if (p === "medium") return t("notifications.priority.medium");
+  return t("notifications.priority.low");
 }
 
-function kindLabel(k: ClassifiedKind): string {
-  if (k === "hot_lead") return "Hot lead";
-  if (k === "missed_call") return "Missed call";
-  if (k === "briefing") return "Briefing";
-  if (k === "publish_failure") return "Post failed";
-  return "Reminder";
+function kindLabel(k: ClassifiedKind, t: NotificationsT): string {
+  return t(`notifications.kinds.${k}`);
 }
 
 function kindIcon(k: ClassifiedKind): keyof typeof Ionicons.glyphMap {
@@ -146,11 +153,12 @@ export default function NotificationsCenterScreen() {
   const router = useRouter();
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t, i18n } = useTranslation("mobile_misc_screens");
   const [items, setItems] = useState<MobileAgentInboxNotificationDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<MobileApiFailure | null>(null);
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
+  const [filter, setFilter] = useState<(typeof FILTER_IDS)[number]>("all");
 
   const load = useCallback(async (mode: "full" | "refresh") => {
     if (mode === "full") {
@@ -222,20 +230,20 @@ export default function NotificationsCenterScreen() {
   }, [items, filter]);
 
   if (loading) {
-    return <ScreenLoading message="Loading notifications…" />;
+    return <ScreenLoading message={t("notifications.loading")} />;
   }
 
   return (
     <View style={styles.root}>
       <View style={styles.toolbar}>
-        <Text style={styles.toolbarHint}>Recent alerts from your CRM</Text>
+        <Text style={styles.toolbarHint}>{t("notifications.toolbar_hint")}</Text>
         <Pressable
           onPress={() => void onMarkAll()}
           style={({ pressed }) => [styles.markAll, pressed && styles.markAllPressed]}
           accessibilityRole="button"
-          accessibilityLabel="Mark all as read"
+          accessibilityLabel={t("notifications.mark_all_a11y")}
         >
-          <Text style={styles.markAllText}>Mark all read</Text>
+          <Text style={styles.markAllText}>{t("notifications.mark_all")}</Text>
         </Pressable>
       </View>
 
@@ -244,16 +252,13 @@ export default function NotificationsCenterScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterRow}
       >
-        {FILTERS.map((f) => {
-          const active = filter === f.id;
-          const badge =
-            f.id === "all"
-              ? items.filter((n) => !n.read).length
-              : counts[f.id];
+        {FILTER_IDS.map((id) => {
+          const active = filter === id;
+          const badge = id === "all" ? items.filter((n) => !n.read).length : counts[id];
           return (
             <Pressable
-              key={f.id}
-              onPress={() => setFilter(f.id)}
+              key={id}
+              onPress={() => setFilter(id)}
               style={[
                 styles.filterChip,
                 active && styles.filterChipActive,
@@ -265,7 +270,7 @@ export default function NotificationsCenterScreen() {
                   active && styles.filterChipTextActive,
                 ]}
               >
-                {f.label}
+                {t(`notifications.filters.${id}`)}
               </Text>
               {badge > 0 && (
                 <View style={styles.filterChipBadge}>
@@ -279,7 +284,7 @@ export default function NotificationsCenterScreen() {
 
       {error ? (
         <ErrorBanner
-          title="Could not load notifications"
+          title={t("notifications.error_title")}
           message={error.message}
           onRetry={() => void load("full")}
         />
@@ -298,8 +303,10 @@ export default function NotificationsCenterScreen() {
         ListEmptyComponent={
           <Text style={styles.empty}>
             {filter === "all"
-              ? "You're all caught up. Hot leads and reminders will show here."
-              : `No ${kindLabel(filter as ClassifiedKind).toLowerCase()} notifications yet.`}
+              ? t("notifications.empty_all")
+              : t("notifications.empty_kind", {
+                  kind: kindLabel(filter as ClassifiedKind, t),
+                })}
           </Text>
         }
         renderItem={({ item: n }) => {
@@ -324,18 +331,18 @@ export default function NotificationsCenterScreen() {
                     color={colors.fg}
                   />
                   <Text style={[styles.kindPillText, { color: colors.fg }]}>
-                    {kindLabel(kind)} · {priorityLabel(n.priority)}
+                    {kindLabel(kind, t)} · {priorityLabel(n.priority, t)}
                   </Text>
                 </View>
                 <Text style={styles.time}>
-                  {new Date(n.created_at).toLocaleString()}
+                  {new Date(n.created_at).toLocaleString(i18n.language)}
                 </Text>
               </View>
               <Text style={styles.title}>{n.title}</Text>
               <Text style={styles.body} numberOfLines={3}>
                 {n.body}
               </Text>
-              <Text style={styles.cta}>Open</Text>
+              <Text style={styles.cta}>{t("notifications.open")}</Text>
             </Pressable>
           );
         }}
