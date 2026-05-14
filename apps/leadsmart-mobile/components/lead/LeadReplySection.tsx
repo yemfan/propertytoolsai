@@ -1,5 +1,6 @@
 import type { MobileEmailMessageDto, MobileSmsMessageDto } from "@leadsmart/shared";
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import {
   postMobileEmailAiReply,
@@ -47,6 +48,7 @@ export function LeadReplySection({
 }: LeadReplySectionProps) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("lead_components");
   const { isConnected } = useNetwork();
   const { queueWrite } = useWriteQueue();
   const [smsText, setSmsText] = useState("");
@@ -78,7 +80,7 @@ export function LeadReplySection({
   const onSmsAi = useCallback(async () => {
     setSmsError(null);
     if (demo) {
-      setSmsError("Sample lead — connect your CRM to use AI replies.");
+      setSmsError(t("reply.demo_ai_blocked"));
       return;
     }
     setSmsAiLoading(true);
@@ -98,14 +100,14 @@ export function LeadReplySection({
     } finally {
       setSmsAiLoading(false);
     }
-  }, [leadId, demo]);
+  }, [leadId, demo, t]);
 
   const onSmsSend = useCallback(async () => {
     const text = smsText.trim();
     if (!text) return;
     setSmsError(null);
     if (demo) {
-      setSmsError("Sample lead — connect your CRM to send messages.");
+      setSmsError(t("reply.demo_send_blocked"));
       return;
     }
 
@@ -138,7 +140,7 @@ export function LeadReplySection({
     } finally {
       setSmsSending(false);
     }
-  }, [leadId, smsText, setSms, flashSent, demo, isConnected, queueWrite]);
+  }, [leadId, smsText, setSms, flashSent, demo, isConnected, queueWrite, t]);
 
   const onEmailAi = useCallback(async (): Promise<
     | { ok: true; subject: string; body: string }
@@ -185,16 +187,16 @@ export function LeadReplySection({
         error={smsError}
         showSent={smsSentFlash}
         hideLabel
-        placeholder="Type a reply…"
+        placeholder={t("reply.placeholder")}
       />
       {!demo ? (
         <Pressable
           style={styles.emailBtn}
           onPress={() => setEmailOpen(true)}
           accessibilityRole="button"
-          accessibilityLabel="Reply by email"
+          accessibilityLabel={t("reply.email_button_a11y")}
         >
-          <Text style={styles.emailBtnText}>Reply by email</Text>
+          <Text style={styles.emailBtnText}>{t("reply.email_button")}</Text>
         </Pressable>
       ) : null}
       <EmailReplyModal

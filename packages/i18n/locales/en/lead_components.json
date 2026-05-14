@@ -1,0 +1,58 @@
+{
+  "actions": {
+    "call": {
+      "label": "Call",
+      "hint": "Bridges your phone to the contact via Twilio (logs the call)"
+    },
+    "sms": {
+      "label": "Text",
+      "hint": "Opens the SMS app"
+    },
+    "email": {
+      "label": "Email",
+      "hint": "Opens the mail composer"
+    },
+    "ai": {
+      "label": "AI Reply",
+      "hint": "AI-assisted reply (coming soon)"
+    },
+    "toolbar_a11y": "Lead quick actions"
+  },
+  "call_state": {
+    "calling": "Calling…",
+    "ringing": "Ringing…"
+  },
+  "call_error": {
+    "label": {
+      "missing_agent_phone": "Add phone",
+      "missing_contact_phone": "No phone",
+      "invalid_phone": "Bad phone",
+      "twilio_api_failed": "Twilio failed",
+      "default": "Failed"
+    },
+    "detail": {
+      "missing_agent_phone": "Add your phone number under Settings before placing calls.",
+      "missing_contact_phone": "This contact has no phone number on file.",
+      "invalid_phone": "The phone number isn't in a valid format.",
+      "twilio_not_configured": "Twilio is not configured for this account.",
+      "twilio_api_failed": "Twilio rejected the call.",
+      "default": "Call could not be placed."
+    }
+  },
+  "open_external_fail": {
+    "tel": "No app can handle phone calls on this device.",
+    "sms": "No app can handle SMS on this device.",
+    "email": "No app can handle email links on this device."
+  },
+  "reply": {
+    "placeholder": "Type a reply…",
+    "email_button": "Reply by email",
+    "email_button_a11y": "Reply by email",
+    "demo_ai_blocked": "Sample lead — connect your CRM to use AI replies.",
+    "demo_send_blocked": "Sample lead — connect your CRM to send messages."
+  },
+  "pipeline": {
+    "breadcrumb_not_configured": "Pipeline stages not configured",
+    "picker_unavailable": "Pipeline stages unavailable for this account."
+  }
+}

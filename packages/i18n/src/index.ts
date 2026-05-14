@@ -15,8 +15,10 @@
  *   - nav           Tab bar + navigation labels (mobile)
  *   - home          Mobile Home screen
  *   - quick_post    Mobile Quick Post wizard
- *   - leads         Mobile Leads list tab
- *   - lead_detail   Mobile Lead detail screen (/lead/[id])
+ *   - leads             Mobile Leads list tab
+ *   - lead_detail       Mobile Lead detail screen (/lead/[id])
+ *   - lead_components   Embedded lead detail components
+ *                        (QuickActionsRow, ReplySection, Pipeline*)
  *
  * Future namespaces follow the same pattern — add a JSON file pair
  * (en + zh-Hans) and reference it from the app's resources map.
@@ -43,5 +45,6 @@ export const NAMESPACES = [
   "quick_post",
   "leads",
   "lead_detail",
+  "lead_components",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];
