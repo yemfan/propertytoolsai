@@ -54,6 +54,8 @@
  *                       Web Generate Leads list clients:
  *                        ConnectClient, CampaignListClient,
  *                        ScheduledListClient, RecurringListClient
+ *   - web_landing       Public landing-page body
+ *                        (LeadSmartLandingV2 marketing site)
  *
  * Future namespaces follow the same pattern — add a JSON file pair
  * (en + zh-Hans) and reference it from the app's resources map.
@@ -94,5 +96,6 @@ export const NAMESPACES = [
   "web_marketing",
   "web_contacts_client",
   "web_generate_leads_clients",
+  "web_landing",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];

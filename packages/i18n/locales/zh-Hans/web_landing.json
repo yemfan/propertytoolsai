@@ -1,0 +1,227 @@
+{
+  "jump": {
+    "page_a11y": "页面区块",
+    "label": "跳至",
+    "how": "工作原理",
+    "results": "成效",
+    "why": "为何选择我们"
+  },
+  "hero": {
+    "badge": "为房产经纪人打造的 AI 交易引擎",
+    "h1_prefix": "把在线流量转化为 ",
+    "h1_highlight": "成交订单",
+    "h1_suffix": " — 自动完成",
+    "subtitle": "全天候捕获、筛选、跟进、转化客户 — 这是您 AI 驱动的成长引擎，专为房产经纪人打造。",
+    "bullets": {
+      "speed": "在 60 秒内回应每一位客户",
+      "missed_call": "未接来电自动回短信 — 不再错失任何客户",
+      "focus": "只专注于高意向的买家和卖家"
+    },
+    "cta_primary": "开启您的 AI 交易引擎",
+    "cta_secondary": "了解工作原理",
+    "trial_note": "无需设置 · 付费套餐 14 天试用 · 随时可取消"
+  },
+  "mock": {
+    "live_label": "LeadSmart AI — 实时",
+    "auto_replying": "自动回复中",
+    "stats": {
+      "new_leads": "新客户",
+      "reply_rate": "回复率",
+      "tours_booked": "已预约看房"
+    },
+    "lead_status": {
+      "hot": "热门",
+      "warm": "温和",
+      "new": "新"
+    },
+    "time": {
+      "two_min_ago": "2 分钟前",
+      "fifteen_min_ago": "15 分钟前",
+      "one_hour_ago": "1 小时前"
+    },
+    "pipeline_health": "漏斗健康度"
+  },
+  "how": {
+    "eyebrow": "交易流程",
+    "h2_prefix": "从客户到成交 — ",
+    "h2_highlight": "由 AI 处理",
+    "body": "LeadSmart AI 将您的网站访客和入站流量转化为有效对话 — 并持续培育，直到他们准备好成交。",
+    "flow": {
+      "traffic": "流量",
+      "ai_capture": "AI 捕获",
+      "ai_qualify": "AI 筛选",
+      "ai_follow_up": "AI 跟进",
+      "agent": "经纪人",
+      "deal_closed": "成交"
+    }
+  },
+  "growth": {
+    "eyebrow": "您的 AI 成长引擎",
+    "h2": "五大系统助您成交更多 — 而无需投入更多时间",
+    "step_label": "第 {{step}} 步",
+    "pillars": {
+      "capture": {
+        "title": "捕获每一位客户",
+        "tagline": "把匿名流量变成真实机会 — 智能落地页、房屋估值工具、客户捕获表单和 CRM 集成。",
+        "bullets": {
+          "landing": "智能落地页",
+          "home_value": "房屋估值工具",
+          "forms": "客户捕获表单",
+          "crm": "原生 CRM 集成"
+        }
+      },
+      "qualify": {
+        "title": "即时筛选",
+        "tagline": "不动手指就知道谁是认真的 — AI 客户打分、意向识别和智能丰富化为您完成。",
+        "bullets": {
+          "scoring": "AI 客户打分",
+          "intent": "买家与卖家意向识别",
+          "enrichment": "智能数据丰富化"
+        }
+      },
+      "follow_up": {
+        "title": "自动跟进",
+        "tagline": "在恰当时机触达每一位客户 — 短信 + 邮件自动化、即时回应、基于行为的触发。",
+        "bullets": {
+          "automation": "短信 + 邮件自动化",
+          "instant": "即时回应（数秒内）",
+          "triggers": "基于行为的触发"
+        }
+      },
+      "convert": {
+        "title": "转化更多对话",
+        "tagline": "把互动变成真实约见 — AI 对话引擎、智能回复建议、一键预约。",
+        "bullets": {
+          "engine": "AI 对话引擎",
+          "suggestions": "智能回复建议",
+          "booking": "约见自动预约"
+        }
+      },
+      "scale": {
+        "title": "无上限扩张",
+        "tagline": "在不增加工作量的前提下扩大业务 — 业绩分析、AI 优化和自动化工作流。",
+        "bullets": {
+          "analytics": "业绩分析",
+          "optimization": "AI 优化引擎",
+          "workflows": "自动化工作流"
+        }
+      }
+    }
+  },
+  "missed_call": {
+    "badge": "📞 招牌功能 · 隶属跟进模块",
+    "h2": "未接来电恢复 AI™",
+    "tagline": "把未接来电变成对话 — 自动完成。",
+    "body_p1_prefix": "未接来电不仅仅是一通错过的电话——",
+    "body_p1_emphasis": "您可能错过了一笔交易。",
+    "body_p2": "LeadSmart AI 会立即回发短信，开启对话，并持续跟进，直到客户准备好交谈——然后在最佳时机交接给您。",
+    "features": {
+      "text_back": "即时未接来电短信回复",
+      "sms_convo": "AI 驱动的短信对话",
+      "qualification": "通过短信筛选客户",
+      "handoff": "准备好时智能交接给经纪人"
+    },
+    "cta": "了解工作原理",
+    "included_note": "每个付费套餐均包含"
+  },
+  "styles": {
+    "eyebrow": "差异化优势",
+    "h2": "选择 AI 为您销售的方式",
+    "subtitle": "每位经纪人风格不同 — 现在您的 AI 可以与之匹配。",
+    "consultative": {
+      "name": "顾问式引导",
+      "body": "建立信任、教育引导、长期培育。长线节奏适合需要被引导走完流程的买家。",
+      "best_for": "客户圈推荐 · 长销售周期"
+    },
+    "closer": {
+      "name": "成交模式",
+      "body": "营造紧迫感、推动快速决策。直接、行动导向，旨在抢在客户接触其他经纪人前完成转化。",
+      "best_for": "广告 / 门户客户 · 多方报价市场"
+    },
+    "connector": {
+      "name": "亲和连接者",
+      "body": "关系优先。轻松、温暖、富有个人色彩 — 这种语调会让首次置业者真正愿意回复。",
+      "best_for": "首次置业者 · 社交媒体客户"
+    },
+    "best_for_label": "适合：",
+    "tagline": "让 AI 适配您的个性与市场。"
+  },
+  "results": {
+    "eyebrow": "为增加成交而设计",
+    "h2_prefix": "速度 + 一致性 = ",
+    "h2_highlight": "更多成交",
+    "appointments": {
+      "value": "2×",
+      "label": "更多约见预约",
+      "body": "当 AI 在 60 秒内发出第一条回复，更多客户会实际到场看房或咨询。"
+    },
+    "speed": {
+      "value": "90%",
+      "label": "更快的客户响应",
+      "body": "首次回复中位时间从几分钟（甚至几小时）降至数秒 — 这就是您与下一位经纪人的差距。"
+    },
+    "conversion": {
+      "value": "↑",
+      "label": "更高的转化率",
+      "body": "基于行为的跟进让温热客户在漏斗中段的沉默期保持活跃。"
+    },
+    "disclaimer": "数据基于内部试点估算。当客户响应速度低于 60 秒且跟进节奏自动运行时，您的成绩也会随之提升。"
+  },
+  "missed_call_hook": {
+    "section_a11y": "未接来电提醒",
+    "h3": "未接来电？您可能错过了一笔交易。",
+    "body": "当您无法接听时，LeadSmart AI 会立即回应 — 将未接来电转化为真实机会。",
+    "cta": "了解工作原理"
+  },
+  "why": {
+    "eyebrow": "为什么选择 LeadSmart AI",
+    "h2_prefix": "不只是另一款 CRM — ",
+    "h2_highlight": "完整的 AI 成交系统",
+    "col_traditional": "传统工具",
+    "col_us": "LeadSmart AI",
+    "rows": {
+      "manual_followup": {
+        "left": "人工跟进",
+        "right": "AI 全天候即时响应"
+      },
+      "generic_crm": {
+        "left": "通用 CRM",
+        "right": "房产行业原生 AI"
+      },
+      "missed_after_hours": {
+        "left": "下班后错失客户",
+        "right": "客户提交瞬间 AI 即回应"
+      },
+      "disconnected": {
+        "left": "分散的工具",
+        "right": "一站式成长引擎"
+      },
+      "no_coaching": {
+        "left": "没有教练体系",
+        "right": "包含成长计划 + 顶尖成交者计划"
+      }
+    }
+  },
+  "roi": {
+    "eyebrow": "无所作为的代价",
+    "h2_prefix": "您现在 ",
+    "h2_highlight": "正在错过多少笔交易",
+    "h2_suffix": "？",
+    "body": "如果您错过跟进、回复迟缓或忘记培育客户 — 每个月都在流失订单。",
+    "bullets": {
+      "first_responder": "热门客户被最先回应的经纪人抢走",
+      "broken_sequences": "跟进流程在第二条消息后中断",
+      "equity_threshold": "客户圈成员跨过房产升值阈值却无人提醒"
+    },
+    "fix_line": "LeadSmart AI 自动为您解决这些问题。",
+    "cta_primary": "今天就开始成交更多订单",
+    "cta_secondary": "测算您的 ROI"
+  },
+  "final": {
+    "h2": "您的下一笔交易就在浏览您的网站。",
+    "subtitle": "别让它溜走。",
+    "cta_primary": "激活您的 AI 交易引擎",
+    "cta_secondary": "预约演示",
+    "footer_note": "付费套餐 14 天试用 · 注册无需信用卡"
+  }
+}

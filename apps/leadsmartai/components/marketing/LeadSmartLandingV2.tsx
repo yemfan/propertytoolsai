@@ -3,6 +3,7 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
   Bot,
@@ -25,6 +26,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandCheck } from "@/components/brand/BrandCheck";
+
+type LandingT = (key: string, options?: Record<string, unknown>) => string;
 
 const ExitIntentPopup = dynamic(
   () => import("@/components/marketing/ExitIntentPopup"),
@@ -49,14 +52,15 @@ const ExitIntentPopup = dynamic(
 const PRIMARY_CTA_HREF = "/onboarding";
 
 /**
- * In-page anchors surfaced as a jump-link strip above the hero.
- * `/features` and `/pricing` are real routes and live in the shared
- * marketing topbar — they don't belong in this strip.
+ * In-page anchors surfaced as a jump-link strip above the hero. Labels
+ * resolve per-render via `t(\`jump.${key}\`)`; `/features` and
+ * `/pricing` are real routes and live in the shared marketing topbar —
+ * they don't belong in this strip.
  */
-const JUMP_LINKS: { label: string; href: string }[] = [
-  { label: "How It Works", href: "#how" },
-  { label: "Results", href: "#results" },
-  { label: "Why Us", href: "#why" },
+const JUMP_LINKS: { key: "how" | "results" | "why"; href: string }[] = [
+  { key: "how", href: "#how" },
+  { key: "results", href: "#results" },
+  { key: "why", href: "#why" },
 ];
 
 /**
@@ -114,6 +118,7 @@ function RevealSection({
 }
 
 export default function LeadSmartLandingV2() {
+  const { t } = useTranslation("web_landing");
   return (
     <>
       <div className="-mx-4 bg-white text-gray-900 sm:-mx-8 dark:bg-slate-950 dark:text-slate-100">
@@ -123,11 +128,11 @@ export default function LeadSmartLandingV2() {
             marketing topbar. */}
         <nav
           className="border-b border-gray-100 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:border-slate-800 dark:bg-slate-950/80"
-          aria-label="Page sections"
+          aria-label={t("jump.page_a11y")}
         >
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-2 text-xs sm:px-6 sm:text-sm">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 sm:text-xs">
-              Jump to
+              {t("jump.label")}
             </span>
             {JUMP_LINKS.map((item) => (
               <a
@@ -135,7 +140,7 @@ export default function LeadSmartLandingV2() {
                 href={item.href}
                 className="font-medium text-slate-600 transition-colors hover:text-[#0072ce] dark:text-slate-300 dark:hover:text-[#4da3e8]"
               >
-                {item.label}
+                {t(`jump.${item.key}`)}
               </a>
             ))}
           </div>
@@ -162,19 +167,17 @@ export default function LeadSmartLandingV2() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0072ce] opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-[#0072ce]" />
                 </span>
-                The AI deal engine for real estate agents
+                {t("hero.badge")}
               </div>
               <h1 className="font-heading text-4xl font-extrabold leading-[1.08] tracking-tight text-gray-950 md:text-5xl lg:text-[3.25rem] dark:text-white">
-                Turn Online Traffic into{" "}
+                {t("hero.h1_prefix")}
                 <span className="bg-gradient-to-r from-[#0072ce] via-[#4F46E5] to-[#7c3aed] bg-clip-text text-transparent">
-                  Closed Deals
-                </span>{" "}
-                — Automatically
+                  {t("hero.h1_highlight")}
+                </span>
+                {t("hero.h1_suffix")}
               </h1>
               <p className="mt-5 text-lg leading-relaxed text-gray-600 md:text-xl dark:text-slate-400">
-                Capture, qualify, follow up, and convert leads 24/7 with your
-                AI-powered growth engine — built specifically for real estate
-                agents.
+                {t("hero.subtitle")}
               </p>
 
               {/* Hero proof bullets — Missed Call Recovery sits in
@@ -185,17 +188,15 @@ export default function LeadSmartLandingV2() {
               <ul className="mt-7 space-y-2.5 text-base text-slate-700 dark:text-slate-300">
                 <li className="flex items-start gap-2.5">
                   <span aria-hidden className="mt-0.5 text-lg">⚡</span>
-                  <span>Respond to every lead in under 60 seconds</span>
+                  <span>{t("hero.bullets.speed")}</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <span aria-hidden className="mt-0.5 text-lg">📞</span>
-                  <span>
-                    Instantly text back missed calls — never lose a lead again
-                  </span>
+                  <span>{t("hero.bullets.missed_call")}</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <span aria-hidden className="mt-0.5 text-lg">🎯</span>
-                  <span>Focus only on high-intent buyers &amp; sellers</span>
+                  <span>{t("hero.bullets.focus")}</span>
                 </li>
               </ul>
 
@@ -204,19 +205,19 @@ export default function LeadSmartLandingV2() {
                   href={PRIMARY_CTA_HREF}
                   className="min-h-[48px] px-7 text-base shadow-lg shadow-[#0072ce]/20 hover:shadow-xl hover:shadow-[#0072ce]/30"
                 >
-                  Get Your AI Deal Engine Started
+                  {t("hero.cta_primary")}
                 </Button>
                 <Button
                   variant="outline"
                   href="#how"
                   className="min-h-11 px-6 text-base"
                 >
-                  See How It Works
+                  {t("hero.cta_secondary")}
                 </Button>
               </div>
 
               <p className="mt-6 text-xs text-slate-500 dark:text-slate-400">
-                No setup required · 14-day trial on paid plans · Cancel anytime
+                {t("hero.trial_note")}
               </p>
             </div>
 
@@ -229,26 +230,26 @@ export default function LeadSmartLandingV2() {
                   <div className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
                 </div>
                 <span className="ml-2 text-[10px] font-medium text-slate-400">
-                  LeadSmart AI — Live
+                  {t("mock.live_label")}
                 </span>
                 <div className="ml-auto flex items-center gap-1">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
                   <span className="text-[9px] font-medium text-emerald-600 dark:text-emerald-400">
-                    Auto-replying
+                    {t("mock.auto_replying")}
                   </span>
                 </div>
               </div>
               <div className="space-y-3 p-4">
                 <div className="grid grid-cols-3 gap-2">
-                  <DashStat n="12" l="New leads" tone="blue" />
-                  <DashStat n="94%" l="Reply rate" tone="green" />
-                  <DashStat n="8" l="Tours booked" tone="violet" />
+                  <DashStat n="12" l={t("mock.stats.new_leads")} tone="blue" />
+                  <DashStat n="94%" l={t("mock.stats.reply_rate")} tone="green" />
+                  <DashStat n="8" l={t("mock.stats.tours_booked")} tone="violet" />
                 </div>
                 <div className="space-y-1.5">
                   {[
-                    { name: "Sarah M.", status: "Hot", emoji: "🔥", time: "2m ago" },
-                    { name: "James W.", status: "Warm", emoji: "💬", time: "15m ago" },
-                    { name: "Lisa K.", status: "New", emoji: "✨", time: "1h ago" },
+                    { name: "Sarah M.", statusKey: "hot" as const, emoji: "🔥", timeKey: "two_min_ago" as const },
+                    { name: "James W.", statusKey: "warm" as const, emoji: "💬", timeKey: "fifteen_min_ago" as const },
+                    { name: "Lisa K.", statusKey: "new" as const, emoji: "✨", timeKey: "one_hour_ago" as const },
                   ].map((lead) => (
                     <div
                       key={lead.name}
@@ -261,23 +262,23 @@ export default function LeadSmartLandingV2() {
                         </span>
                         <span
                           className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                            lead.status === "Hot"
+                            lead.statusKey === "hot"
                               ? "bg-orange-100 text-orange-700"
-                              : lead.status === "Warm"
+                              : lead.statusKey === "warm"
                                 ? "bg-blue-100 text-blue-700"
                                 : "bg-emerald-100 text-emerald-700"
                           }`}
                         >
-                          {lead.status}
+                          {t(`mock.lead_status.${lead.statusKey}`)}
                         </span>
                       </div>
-                      <span className="text-[10px] text-slate-400">{lead.time}</span>
+                      <span className="text-[10px] text-slate-400">{t(`mock.time.${lead.timeKey}`)}</span>
                     </div>
                   ))}
                 </div>
                 <div>
                   <div className="flex items-center justify-between text-[10px] font-medium text-slate-400">
-                    <span>Pipeline health</span>
+                    <span>{t("mock.pipeline_health")}</span>
                     <span>72%</span>
                   </div>
                   <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
@@ -297,30 +298,28 @@ export default function LeadSmartLandingV2() {
           <div className="mx-auto max-w-6xl">
             <RevealSection className="mx-auto max-w-3xl text-center">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0072ce]">
-                The deal flow
+                {t("how.eyebrow")}
               </p>
               <h2 className="mt-2 font-heading text-3xl font-bold text-slate-900 md:text-4xl dark:text-white">
-                From Lead to Closing —{" "}
+                {t("how.h2_prefix")}
                 <span className="bg-gradient-to-r from-[#0072ce] to-[#4F46E5] bg-clip-text text-transparent">
-                  handled by AI
+                  {t("how.h2_highlight")}
                 </span>
               </h2>
               <p className="mt-4 text-base text-slate-600 dark:text-slate-400 md:text-lg">
-                LeadSmart AI turns your website visitors and inbound traffic into
-                qualified conversations — and keeps nurturing them until they&apos;re
-                ready to close.
+                {t("how.body")}
               </p>
             </RevealSection>
 
             <RevealSection delay={120} className="mt-12">
               <FlowDiagram
                 steps={[
-                  { label: "Traffic", icon: Globe2, tone: "slate" },
-                  { label: "AI Capture", icon: Filter, tone: "blue" },
-                  { label: "AI Qualify", icon: Sparkles, tone: "violet" },
-                  { label: "AI Follow-up", icon: MessagesSquare, tone: "amber" },
-                  { label: "Agent", icon: HandHeart, tone: "emerald" },
-                  { label: "Deal Closed", icon: CheckCircle2, tone: "green" },
+                  { label: t("how.flow.traffic"), icon: Globe2, tone: "slate" },
+                  { label: t("how.flow.ai_capture"), icon: Filter, tone: "blue" },
+                  { label: t("how.flow.ai_qualify"), icon: Sparkles, tone: "violet" },
+                  { label: t("how.flow.ai_follow_up"), icon: MessagesSquare, tone: "amber" },
+                  { label: t("how.flow.agent"), icon: HandHeart, tone: "emerald" },
+                  { label: t("how.flow.deal_closed"), icon: CheckCircle2, tone: "green" },
                 ]}
               />
             </RevealSection>
@@ -332,23 +331,23 @@ export default function LeadSmartLandingV2() {
           <div className="mx-auto max-w-7xl">
             <RevealSection className="mx-auto max-w-3xl text-center">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0072ce]">
-                Your AI growth engine
+                {t("growth.eyebrow")}
               </p>
               <h2 className="mt-2 font-heading text-3xl font-bold text-slate-900 md:text-4xl dark:text-white">
-                Five systems that close more deals — without more hours
+                {t("growth.h2")}
               </h2>
             </RevealSection>
 
             <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {GROWTH_ENGINE.map((p, i) => (
-                <RevealSection key={p.title} delay={i * 80}>
+                <RevealSection key={p.key} delay={i * 80}>
                   <div className="group relative flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-6 transition hover:-translate-y-1 hover:shadow-xl dark:border-slate-700 dark:bg-slate-900">
                     <div className="mb-4 flex items-center justify-between">
                       <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ${p.chip.bg} ${p.chip.text}`}>
                         <p.icon size={22} strokeWidth={2} aria-hidden />
                       </div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                        Step {p.step}
+                        {t("growth.step_label", { step: p.step })}
                       </span>
                     </div>
                     <div className="flex items-baseline gap-2">
@@ -356,20 +355,20 @@ export default function LeadSmartLandingV2() {
                         {p.emoji}
                       </span>
                       <h3 className="font-heading text-base font-bold text-slate-900 dark:text-white">
-                        {p.title}
+                        {t(`growth.pillars.${p.key}.title`)}
                       </h3>
                     </div>
                     <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                      {p.tagline}
+                      {t(`growth.pillars.${p.key}.tagline`)}
                     </p>
                     <ul className="mt-5 space-y-2">
-                      {p.bullets.map((b) => (
+                      {p.bullets.map((bulletKey) => (
                         <li
-                          key={b}
+                          key={bulletKey}
                           className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300"
                         >
                           <BrandCheck tone={p.checkTone} />
-                          {b}
+                          {t(`growth.pillars.${p.key}.bullets.${bulletKey}`)}
                         </li>
                       ))}
                     </ul>
@@ -397,44 +396,34 @@ export default function LeadSmartLandingV2() {
               <div className="grid gap-8 lg:grid-cols-[2fr_3fr] lg:gap-12">
                 <div>
                   <span className="inline-flex items-center gap-2 rounded-full bg-amber-900 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white">
-                    📞 Signature feature · part of Follow Up
+                    {t("missed_call.badge")}
                   </span>
                   <h2 className="mt-5 font-heading text-3xl font-bold leading-tight text-amber-900 md:text-4xl dark:text-amber-200">
-                    Missed Call Recovery AI™
+                    {t("missed_call.h2")}
                   </h2>
                   <p className="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-200">
-                    Turn missed calls into conversations — automatically.
+                    {t("missed_call.tagline")}
                   </p>
                 </div>
                 <div className="space-y-4 text-base leading-relaxed text-slate-700 dark:text-slate-300">
                   <p>
-                    When you miss a call, you&apos;re not just missing a call —
+                    {t("missed_call.body_p1_prefix")}
                     <span className="font-semibold text-slate-900 dark:text-white">
-                      {" "}
-                      you&apos;re missing a deal.
+                      {t("missed_call.body_p1_emphasis")}
                     </span>
                   </p>
-                  <p>
-                    LeadSmart AI instantly sends a text back, starts the
-                    conversation, and keeps engaging until the lead is ready to
-                    talk — then hands off to you at the perfect moment.
-                  </p>
+                  <p>{t("missed_call.body_p2")}</p>
                   <ul className="grid gap-2 pt-2 sm:grid-cols-2">
-                    {[
-                      "Instant missed-call text-back",
-                      "AI-powered SMS conversation",
-                      "Lead qualification via text",
-                      "Smart agent handoff when ready",
-                    ].map((f) => (
+                    {(["text_back", "sms_convo", "qualification", "handoff"] as const).map((featureKey) => (
                       <li
-                        key={f}
+                        key={featureKey}
                         className="flex items-start gap-2 rounded-lg border border-amber-200/70 bg-white/70 px-3 py-2 text-sm text-slate-700 backdrop-blur dark:border-amber-800/50 dark:bg-slate-900/60 dark:text-slate-300"
                       >
                         <CheckCircle2
                           className="mt-0.5 h-4 w-4 shrink-0 text-amber-600"
                           aria-hidden
                         />
-                        <span>{f}</span>
+                        <span>{t(`missed_call.features.${featureKey}`)}</span>
                       </li>
                     ))}
                   </ul>
@@ -443,11 +432,11 @@ export default function LeadSmartLandingV2() {
                       href="/features#follow-up"
                       className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-900 hover:underline dark:text-amber-300"
                     >
-                      See how it works
+                      {t("missed_call.cta")}
                       <ArrowRight size={14} aria-hidden />
                     </Link>
                     <span className="text-xs text-slate-500 dark:text-slate-400">
-                      Included on every paid plan
+                      {t("missed_call.included_note")}
                     </span>
                   </div>
                 </div>
@@ -461,31 +450,31 @@ export default function LeadSmartLandingV2() {
           <div className="mx-auto max-w-6xl">
             <RevealSection className="mx-auto max-w-3xl text-center">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0072ce]">
-                The differentiator
+                {t("styles.eyebrow")}
               </p>
               <h2 className="mt-2 font-heading text-3xl font-bold text-slate-900 md:text-4xl dark:text-white">
-                Choose how your AI sells for you
+                {t("styles.h2")}
               </h2>
               <p className="mt-4 text-base text-slate-600 dark:text-slate-400 md:text-lg">
-                Every agent has a different style — now your AI can match it.
+                {t("styles.subtitle")}
               </p>
             </RevealSection>
 
             <div className="mt-12 grid gap-5 md:grid-cols-3">
               {SALES_STYLES.map((s, i) => (
-                <RevealSection key={s.name} delay={i * 100}>
+                <RevealSection key={s.key} delay={i * 100}>
                   <div className="flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
                     <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ${s.chip.bg} ${s.chip.text} text-2xl`}>
                       {s.emoji}
                     </div>
                     <h3 className="mt-4 font-heading text-lg font-bold text-slate-900 dark:text-white">
-                      {s.name}
+                      {t(`styles.${s.key}.name`)}
                     </h3>
                     <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                      {s.body}
+                      {t(`styles.${s.key}.body`)}
                     </p>
                     <p className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Best for: <span className="text-slate-700 dark:text-slate-200">{s.bestFor}</span>
+                      {t("styles.best_for_label")} <span className="text-slate-700 dark:text-slate-200">{t(`styles.${s.key}.best_for`)}</span>
                     </p>
                   </div>
                 </RevealSection>
@@ -494,7 +483,7 @@ export default function LeadSmartLandingV2() {
 
             <RevealSection delay={400} className="mt-10 text-center">
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Adapt your AI to your personality — and your market.
+                {t("styles.tagline")}
               </p>
             </RevealSection>
           </div>
@@ -508,31 +497,31 @@ export default function LeadSmartLandingV2() {
           <div className="mx-auto max-w-6xl">
             <RevealSection className="mx-auto max-w-3xl text-center">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0072ce]">
-                Designed to increase your closings
+                {t("results.eyebrow")}
               </p>
               <h2 className="mt-2 font-heading text-3xl font-bold text-slate-900 md:text-4xl dark:text-white">
-                Speed + consistency ={" "}
+                {t("results.h2_prefix")}
                 <span className="bg-gradient-to-r from-[#0072ce] to-[#4F46E5] bg-clip-text text-transparent">
-                  more deals
+                  {t("results.h2_highlight")}
                 </span>
               </h2>
             </RevealSection>
 
             <div className="mt-12 grid gap-5 md:grid-cols-3">
               {RESULTS.map((r, i) => (
-                <RevealSection key={r.label} delay={i * 100}>
+                <RevealSection key={r.key} delay={i * 100}>
                   <div className="flex h-full flex-col rounded-2xl border-2 border-slate-200/80 bg-white p-7 text-center shadow-sm transition hover:-translate-y-1 hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
                     <span aria-hidden className="text-3xl">
                       {r.emoji}
                     </span>
                     <p className="mt-3 font-heading text-4xl font-extrabold text-[#0072ce] md:text-5xl">
-                      {r.value}
+                      {t(`results.${r.key}.value`)}
                     </p>
                     <p className="mt-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                      {r.label}
+                      {t(`results.${r.key}.label`)}
                     </p>
                     <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                      {r.body}
+                      {t(`results.${r.key}.body`)}
                     </p>
                   </div>
                 </RevealSection>
@@ -540,11 +529,7 @@ export default function LeadSmartLandingV2() {
             </div>
 
             <RevealSection delay={400} className="mt-8 text-center text-xs text-slate-400 dark:text-slate-500">
-              <p>
-                Estimates based on internal pilots. Your numbers will move when
-                speed-to-lead drops below 60 seconds and follow-up cadence runs
-                automatically.
-              </p>
+              <p>{t("results.disclaimer")}</p>
             </RevealSection>
           </div>
         </section>
@@ -556,7 +541,7 @@ export default function LeadSmartLandingV2() {
             full-content section. Pairs with the hero bullet and the
             dedicated section above. */}
         <section
-          aria-label="Missed call hook"
+          aria-label={t("missed_call_hook.section_a11y")}
           className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 px-6 py-12 text-white md:py-14"
         >
           <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 text-center md:flex-row md:gap-8 md:text-left">
@@ -566,18 +551,17 @@ export default function LeadSmartLandingV2() {
             <div className="flex-1">
               <h3 className="font-heading text-2xl font-bold leading-tight md:text-3xl">
                 <span aria-hidden className="mr-2 md:hidden">⚡</span>
-                Missed a call? You may have missed a deal.
+                {t("missed_call_hook.h3")}
               </h3>
               <p className="mt-2 text-sm text-white/90 md:text-base">
-                LeadSmart AI responds instantly when you can&apos;t — and turns
-                missed calls into real opportunities.
+                {t("missed_call_hook.body")}
               </p>
             </div>
             <Link
               href="#missed-call-recovery"
               className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-amber-700 shadow-md transition hover:bg-slate-50 md:text-base"
             >
-              See How It Works
+              {t("missed_call_hook.cta")}
               <ArrowRight size={16} aria-hidden />
             </Link>
           </div>
@@ -591,12 +575,12 @@ export default function LeadSmartLandingV2() {
           <div className="mx-auto max-w-5xl">
             <RevealSection className="mx-auto max-w-3xl text-center">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0072ce]">
-                Why LeadSmart AI
+                {t("why.eyebrow")}
               </p>
               <h2 className="mt-2 font-heading text-3xl font-bold text-slate-900 md:text-4xl dark:text-white">
-                Not just another CRM —{" "}
+                {t("why.h2_prefix")}
                 <span className="bg-gradient-to-r from-[#0072ce] to-[#4F46E5] bg-clip-text text-transparent">
-                  a complete AI closing system
+                  {t("why.h2_highlight")}
                 </span>
               </h2>
             </RevealSection>
@@ -607,23 +591,23 @@ export default function LeadSmartLandingV2() {
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
                       <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        Traditional Tools
+                        {t("why.col_traditional")}
                       </th>
                       <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[#0072ce] dark:text-[#4da3e8]">
-                        LeadSmart AI
+                        {t("why.col_us")}
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {COMPARISON.map((row) => (
-                      <tr key={row.left}>
+                    {COMPARISON_KEYS.map((rowKey) => (
+                      <tr key={rowKey}>
                         <td className="px-5 py-3.5 text-slate-600 dark:text-slate-400">
                           <span className="mr-2 text-slate-400">✕</span>
-                          {row.left}
+                          {t(`why.rows.${rowKey}.left`)}
                         </td>
                         <td className="px-5 py-3.5 font-medium text-slate-900 dark:text-white">
                           <span className="mr-2 text-emerald-600">✓</span>
-                          {row.right}
+                          {t(`why.rows.${rowKey}.right`)}
                         </td>
                       </tr>
                     ))}
@@ -639,33 +623,29 @@ export default function LeadSmartLandingV2() {
           <div className="mx-auto max-w-3xl text-center">
             <RevealSection>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700 dark:text-rose-400">
-                The cost of doing nothing
+                {t("roi.eyebrow")}
               </p>
               <h2 className="mt-2 font-heading text-3xl font-bold leading-tight text-slate-900 md:text-4xl dark:text-white">
-                How many deals are you{" "}
-                <span className="text-rose-700 dark:text-rose-400">missing right now</span>?
+                {t("roi.h2_prefix")}
+                <span className="text-rose-700 dark:text-rose-400">{t("roi.h2_highlight")}</span>
+                {t("roi.h2_suffix")}
               </h2>
               <p className="mt-5 text-base text-slate-700 dark:text-slate-300 md:text-lg">
-                If you miss follow-ups, respond late, or forget to nurture leads —
-                you&apos;re losing deals every month.
+                {t("roi.body")}
               </p>
             </RevealSection>
 
             <RevealSection delay={120}>
               <ul className="mx-auto mt-8 max-w-md space-y-3 text-left text-base text-slate-700 dark:text-slate-300">
-                {[
-                  "Hot leads going to the agent who responded first",
-                  "Follow-up sequences breaking after the second message",
-                  "Sphere contacts crossing equity thresholds without a nudge",
-                ].map((text) => (
+                {(["first_responder", "broken_sequences", "equity_threshold"] as const).map((bulletKey) => (
                   <li
-                    key={text}
+                    key={bulletKey}
                     className="flex items-start gap-3 border-l-4 border-rose-200 pl-4 dark:border-rose-800"
                   >
                     <span className="font-semibold text-rose-600 dark:text-rose-400">
                       →
                     </span>
-                    <span>{text}</span>
+                    <span>{t(`roi.bullets.${bulletKey}`)}</span>
                   </li>
                 ))}
               </ul>
@@ -673,18 +653,18 @@ export default function LeadSmartLandingV2() {
 
             <RevealSection delay={220}>
               <p className="mt-8 font-heading text-lg font-bold text-slate-900 md:text-xl dark:text-white">
-                LeadSmart AI fixes that — automatically.
+                {t("roi.fix_line")}
               </p>
               <div className="mt-7 flex flex-wrap justify-center gap-3">
                 <Button href={PRIMARY_CTA_HREF} className="min-h-11 px-6 text-base">
-                  Start Closing More Deals Today
+                  {t("roi.cta_primary")}
                 </Button>
                 <Button
                   variant="outline"
                   href="/agent/pricing"
                   className="min-h-11 px-6 text-base"
                 >
-                  Estimate Your ROI
+                  {t("roi.cta_secondary")}
                 </Button>
               </div>
             </RevealSection>
@@ -696,28 +676,28 @@ export default function LeadSmartLandingV2() {
           <div className="mx-auto max-w-4xl rounded-3xl bg-gradient-to-br from-[#0072ce] via-[#4F46E5] to-[#7c3aed] px-8 py-14 text-center text-white shadow-2xl md:px-12">
             <RevealSection>
               <h2 className="font-heading text-3xl font-bold leading-tight md:text-4xl">
-                Your next deal is already visiting your website.
+                {t("final.h2")}
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-base text-white/90 md:text-lg">
-                Don&apos;t let it slip away.
+                {t("final.subtitle")}
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-3">
                 <Link
                   href={PRIMARY_CTA_HREF}
                   className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-bold text-[#0072ce] shadow-lg transition hover:bg-slate-50 md:text-base"
                 >
-                  Activate Your AI Deal Engine
+                  {t("final.cta_primary")}
                   <ArrowRight size={18} aria-hidden />
                 </Link>
                 <Link
                   href="/contact"
                   className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/30 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/20 md:text-base"
                 >
-                  Book a Demo
+                  {t("final.cta_secondary")}
                 </Link>
               </div>
               <p className="mt-6 text-xs text-white/70">
-                14-day trial on paid plans · No credit card required to start
+                {t("final.footer_note")}
               </p>
             </RevealSection>
           </div>
@@ -803,154 +783,110 @@ function FlowDiagram({
   );
 }
 
+type PillarKey = "capture" | "qualify" | "follow_up" | "convert" | "scale";
 type GrowthPillar = {
+  key: PillarKey;
   step: string;
   emoji: string;
-  title: string;
-  tagline: string;
   bullets: string[];
   icon: LucideIcon;
   chip: { bg: string; text: string };
   checkTone: "primary" | "primaryDark" | "success" | "accent";
 };
 
+/**
+ * Pillar metadata: text resolves per-render via
+ * `t(\`growth.pillars.${key}.title\`)` etc. Bullets are key suffixes so
+ * the same key list can drive both the JSX render and translation
+ * lookups.
+ */
 const GROWTH_ENGINE: GrowthPillar[] = [
   {
+    key: "capture",
     step: "1",
     emoji: "🧲",
-    title: "Capture Every Lead",
-    tagline:
-      "Turn anonymous traffic into real opportunities — smart landing pages, home value tools, lead capture forms, and CRM integrations.",
-    bullets: [
-      "Smart landing pages",
-      "Home value tools",
-      "Lead capture forms",
-      "Native CRM integrations",
-    ],
+    bullets: ["landing", "home_value", "forms", "crm"],
     icon: Filter,
     chip: { bg: "bg-blue-50 dark:bg-blue-900/30", text: "text-[#0072ce] dark:text-[#4da3e8]" },
     checkTone: "primary",
   },
   {
+    key: "qualify",
     step: "2",
     emoji: "⚡",
-    title: "Qualify Instantly",
-    tagline:
-      "Know who's serious without lifting a finger — AI lead scoring, intent detection, and smart enrichment do the work.",
-    bullets: [
-      "AI lead scoring",
-      "Buyer & seller intent detection",
-      "Smart data enrichment",
-    ],
+    bullets: ["scoring", "intent", "enrichment"],
     icon: Sparkles,
     chip: { bg: "bg-violet-50 dark:bg-violet-900/30", text: "text-violet-600 dark:text-violet-300" },
     checkTone: "primaryDark",
   },
   {
+    key: "follow_up",
     step: "3",
     emoji: "🤖",
-    title: "Follow Up Automatically",
-    tagline:
-      "Engage every lead at the perfect moment — SMS + email automation, instant responses, and behavior-based triggers.",
-    bullets: [
-      "SMS + email automation",
-      "Instant responses (within seconds)",
-      "Behavior-based triggers",
-    ],
+    bullets: ["automation", "instant", "triggers"],
     icon: Bot,
     chip: { bg: "bg-amber-50 dark:bg-amber-900/30", text: "text-amber-600 dark:text-amber-300" },
     checkTone: "accent",
   },
   {
+    key: "convert",
     step: "4",
     emoji: "💬",
-    title: "Convert More Conversations",
-    tagline:
-      "Turn engagement into real appointments — AI conversation engine, smart reply suggestions, and one-click booking.",
-    bullets: [
-      "AI conversation engine",
-      "Smart reply suggestions",
-      "Appointment booking automation",
-    ],
+    bullets: ["engine", "suggestions", "booking"],
     icon: MessagesSquare,
     chip: { bg: "bg-emerald-50 dark:bg-emerald-900/30", text: "text-emerald-600 dark:text-emerald-300" },
     checkTone: "success",
   },
   {
+    key: "scale",
     step: "5",
     emoji: "📈",
-    title: "Scale Without Limits",
-    tagline:
-      "Grow your business without growing your workload — performance analytics, AI optimization, and automated workflows.",
-    bullets: [
-      "Performance analytics",
-      "AI optimization engine",
-      "Automated workflows",
-    ],
+    bullets: ["analytics", "optimization", "workflows"],
     icon: LineChart,
     chip: { bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-300" },
     checkTone: "primaryDark",
   },
 ];
 
+type StyleKey = "consultative" | "closer" | "connector";
+
 const SALES_STYLES: Array<{
+  key: StyleKey;
   emoji: string;
-  name: string;
-  body: string;
-  bestFor: string;
   chip: { bg: string; text: string };
 }> = [
   {
+    key: "consultative",
     emoji: "🤝",
-    name: "Consultative Advisor",
-    body: "Builds trust, educates, and nurtures over time. Long-game tone for buyers who need to feel guided through the process.",
-    bestFor: "Sphere referrals · long sales cycles",
     chip: { bg: "bg-blue-50 dark:bg-blue-900/30", text: "text-[#0072ce] dark:text-[#4da3e8]" },
   },
   {
+    key: "closer",
     emoji: "⚡",
-    name: "Closer Mode",
-    body: "Drives urgency and fast decisions. Direct, action-oriented, designed to convert hot leads before they shop another agent.",
-    bestFor: "PPC / portal leads · multiple-offer markets",
     chip: { bg: "bg-amber-50 dark:bg-amber-900/30", text: "text-amber-600 dark:text-amber-300" },
   },
   {
+    key: "connector",
     emoji: "💬",
-    name: "Friendly Connector",
-    body: "Relationship-first. Casual, warm, and personable — the tone that makes first-time buyers actually reply.",
-    bestFor: "First-time buyers · social-media leads",
     chip: { bg: "bg-emerald-50 dark:bg-emerald-900/30", text: "text-emerald-600 dark:text-emerald-300" },
   },
 ];
 
-const RESULTS: Array<{ emoji: string; value: string; label: string; body: string }> = [
-  {
-    emoji: "📈",
-    value: "2×",
-    label: "More appointments booked",
-    body: "When AI fires the first reply in under 60 seconds, more leads show up to a tour or consultation.",
-  },
-  {
-    emoji: "⚡",
-    value: "90%",
-    label: "Faster lead response",
-    body: "Median first-reply time drops from minutes (or hours) to seconds — the difference between you and the next agent.",
-  },
-  {
-    emoji: "💰",
-    value: "↑",
-    label: "Higher conversion rates",
-    body: "Behavior-based follow-up keeps warm leads engaged through the silent middle of the funnel.",
-  },
+type ResultKey = "appointments" | "speed" | "conversion";
+
+const RESULTS: Array<{ key: ResultKey; emoji: string }> = [
+  { key: "appointments", emoji: "📈" },
+  { key: "speed", emoji: "⚡" },
+  { key: "conversion", emoji: "💰" },
 ];
 
-const COMPARISON: Array<{ left: string; right: string }> = [
-  { left: "Manual follow-up", right: "Instant AI engagement, 24/7" },
-  { left: "Generic CRM", right: "Real-estate-native AI" },
-  { left: "Missed leads after hours", right: "AI replies the moment they hit submit" },
-  { left: "Disconnected tools", right: "One full growth engine" },
-  { left: "No coaching layer", right: "Producer Track + Top Producer Track included" },
-];
+const COMPARISON_KEYS = [
+  "manual_followup",
+  "generic_crm",
+  "missed_after_hours",
+  "disconnected",
+  "no_coaching",
+] as const;
 
 // Suppress unused-import lint when icons are referenced inline above.
 // (TypeScript doesn't flag, but keep these so future edits don't

@@ -1,0 +1,227 @@
+{
+  "jump": {
+    "page_a11y": "Page sections",
+    "label": "Jump to",
+    "how": "How It Works",
+    "results": "Results",
+    "why": "Why Us"
+  },
+  "hero": {
+    "badge": "The AI deal engine for real estate agents",
+    "h1_prefix": "Turn Online Traffic into ",
+    "h1_highlight": "Closed Deals",
+    "h1_suffix": " — Automatically",
+    "subtitle": "Capture, qualify, follow up, and convert leads 24/7 with your AI-powered growth engine — built specifically for real estate agents.",
+    "bullets": {
+      "speed": "Respond to every lead in under 60 seconds",
+      "missed_call": "Instantly text back missed calls — never lose a lead again",
+      "focus": "Focus only on high-intent buyers & sellers"
+    },
+    "cta_primary": "Get Your AI Deal Engine Started",
+    "cta_secondary": "See How It Works",
+    "trial_note": "No setup required · 14-day trial on paid plans · Cancel anytime"
+  },
+  "mock": {
+    "live_label": "LeadSmart AI — Live",
+    "auto_replying": "Auto-replying",
+    "stats": {
+      "new_leads": "New leads",
+      "reply_rate": "Reply rate",
+      "tours_booked": "Tours booked"
+    },
+    "lead_status": {
+      "hot": "Hot",
+      "warm": "Warm",
+      "new": "New"
+    },
+    "time": {
+      "two_min_ago": "2m ago",
+      "fifteen_min_ago": "15m ago",
+      "one_hour_ago": "1h ago"
+    },
+    "pipeline_health": "Pipeline health"
+  },
+  "how": {
+    "eyebrow": "The deal flow",
+    "h2_prefix": "From Lead to Closing — ",
+    "h2_highlight": "handled by AI",
+    "body": "LeadSmart AI turns your website visitors and inbound traffic into qualified conversations — and keeps nurturing them until they're ready to close.",
+    "flow": {
+      "traffic": "Traffic",
+      "ai_capture": "AI Capture",
+      "ai_qualify": "AI Qualify",
+      "ai_follow_up": "AI Follow-up",
+      "agent": "Agent",
+      "deal_closed": "Deal Closed"
+    }
+  },
+  "growth": {
+    "eyebrow": "Your AI growth engine",
+    "h2": "Five systems that close more deals — without more hours",
+    "step_label": "Step {{step}}",
+    "pillars": {
+      "capture": {
+        "title": "Capture Every Lead",
+        "tagline": "Turn anonymous traffic into real opportunities — smart landing pages, home value tools, lead capture forms, and CRM integrations.",
+        "bullets": {
+          "landing": "Smart landing pages",
+          "home_value": "Home value tools",
+          "forms": "Lead capture forms",
+          "crm": "Native CRM integrations"
+        }
+      },
+      "qualify": {
+        "title": "Qualify Instantly",
+        "tagline": "Know who's serious without lifting a finger — AI lead scoring, intent detection, and smart enrichment do the work.",
+        "bullets": {
+          "scoring": "AI lead scoring",
+          "intent": "Buyer & seller intent detection",
+          "enrichment": "Smart data enrichment"
+        }
+      },
+      "follow_up": {
+        "title": "Follow Up Automatically",
+        "tagline": "Engage every lead at the perfect moment — SMS + email automation, instant responses, and behavior-based triggers.",
+        "bullets": {
+          "automation": "SMS + email automation",
+          "instant": "Instant responses (within seconds)",
+          "triggers": "Behavior-based triggers"
+        }
+      },
+      "convert": {
+        "title": "Convert More Conversations",
+        "tagline": "Turn engagement into real appointments — AI conversation engine, smart reply suggestions, and one-click booking.",
+        "bullets": {
+          "engine": "AI conversation engine",
+          "suggestions": "Smart reply suggestions",
+          "booking": "Appointment booking automation"
+        }
+      },
+      "scale": {
+        "title": "Scale Without Limits",
+        "tagline": "Grow your business without growing your workload — performance analytics, AI optimization, and automated workflows.",
+        "bullets": {
+          "analytics": "Performance analytics",
+          "optimization": "AI optimization engine",
+          "workflows": "Automated workflows"
+        }
+      }
+    }
+  },
+  "missed_call": {
+    "badge": "📞 Signature feature · part of Follow Up",
+    "h2": "Missed Call Recovery AI™",
+    "tagline": "Turn missed calls into conversations — automatically.",
+    "body_p1_prefix": "When you miss a call, you're not just missing a call —",
+    "body_p1_emphasis": " you're missing a deal.",
+    "body_p2": "LeadSmart AI instantly sends a text back, starts the conversation, and keeps engaging until the lead is ready to talk — then hands off to you at the perfect moment.",
+    "features": {
+      "text_back": "Instant missed-call text-back",
+      "sms_convo": "AI-powered SMS conversation",
+      "qualification": "Lead qualification via text",
+      "handoff": "Smart agent handoff when ready"
+    },
+    "cta": "See how it works",
+    "included_note": "Included on every paid plan"
+  },
+  "styles": {
+    "eyebrow": "The differentiator",
+    "h2": "Choose how your AI sells for you",
+    "subtitle": "Every agent has a different style — now your AI can match it.",
+    "consultative": {
+      "name": "Consultative Advisor",
+      "body": "Builds trust, educates, and nurtures over time. Long-game tone for buyers who need to feel guided through the process.",
+      "best_for": "Sphere referrals · long sales cycles"
+    },
+    "closer": {
+      "name": "Closer Mode",
+      "body": "Drives urgency and fast decisions. Direct, action-oriented, designed to convert hot leads before they shop another agent.",
+      "best_for": "PPC / portal leads · multiple-offer markets"
+    },
+    "connector": {
+      "name": "Friendly Connector",
+      "body": "Relationship-first. Casual, warm, and personable — the tone that makes first-time buyers actually reply.",
+      "best_for": "First-time buyers · social-media leads"
+    },
+    "best_for_label": "Best for:",
+    "tagline": "Adapt your AI to your personality — and your market."
+  },
+  "results": {
+    "eyebrow": "Designed to increase your closings",
+    "h2_prefix": "Speed + consistency = ",
+    "h2_highlight": "more deals",
+    "appointments": {
+      "value": "2×",
+      "label": "More appointments booked",
+      "body": "When AI fires the first reply in under 60 seconds, more leads show up to a tour or consultation."
+    },
+    "speed": {
+      "value": "90%",
+      "label": "Faster lead response",
+      "body": "Median first-reply time drops from minutes (or hours) to seconds — the difference between you and the next agent."
+    },
+    "conversion": {
+      "value": "↑",
+      "label": "Higher conversion rates",
+      "body": "Behavior-based follow-up keeps warm leads engaged through the silent middle of the funnel."
+    },
+    "disclaimer": "Estimates based on internal pilots. Your numbers will move when speed-to-lead drops below 60 seconds and follow-up cadence runs automatically."
+  },
+  "missed_call_hook": {
+    "section_a11y": "Missed call hook",
+    "h3": "Missed a call? You may have missed a deal.",
+    "body": "LeadSmart AI responds instantly when you can't — and turns missed calls into real opportunities.",
+    "cta": "See How It Works"
+  },
+  "why": {
+    "eyebrow": "Why LeadSmart AI",
+    "h2_prefix": "Not just another CRM — ",
+    "h2_highlight": "a complete AI closing system",
+    "col_traditional": "Traditional Tools",
+    "col_us": "LeadSmart AI",
+    "rows": {
+      "manual_followup": {
+        "left": "Manual follow-up",
+        "right": "Instant AI engagement, 24/7"
+      },
+      "generic_crm": {
+        "left": "Generic CRM",
+        "right": "Real-estate-native AI"
+      },
+      "missed_after_hours": {
+        "left": "Missed leads after hours",
+        "right": "AI replies the moment they hit submit"
+      },
+      "disconnected": {
+        "left": "Disconnected tools",
+        "right": "One full growth engine"
+      },
+      "no_coaching": {
+        "left": "No coaching layer",
+        "right": "Producer Track + Top Producer Track included"
+      }
+    }
+  },
+  "roi": {
+    "eyebrow": "The cost of doing nothing",
+    "h2_prefix": "How many deals are you ",
+    "h2_highlight": "missing right now",
+    "h2_suffix": "?",
+    "body": "If you miss follow-ups, respond late, or forget to nurture leads — you're losing deals every month.",
+    "bullets": {
+      "first_responder": "Hot leads going to the agent who responded first",
+      "broken_sequences": "Follow-up sequences breaking after the second message",
+      "equity_threshold": "Sphere contacts crossing equity thresholds without a nudge"
+    },
+    "fix_line": "LeadSmart AI fixes that — automatically.",
+    "cta_primary": "Start Closing More Deals Today",
+    "cta_secondary": "Estimate Your ROI"
+  },
+  "final": {
+    "h2": "Your next deal is already visiting your website.",
+    "subtitle": "Don't let it slip away.",
+    "cta_primary": "Activate Your AI Deal Engine",
+    "cta_secondary": "Book a Demo",
+    "footer_note": "14-day trial on paid plans · No credit card required to start"
+  }
+}
