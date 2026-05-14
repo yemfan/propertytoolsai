@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -20,12 +21,16 @@ function hoursFromNow(h: number): string {
   return new Date(Date.now() + h * 60 * 60 * 1000).toISOString();
 }
 
-const OFFSETS: { label: string; h: number }[] = [
-  { label: "1h", h: 1 },
-  { label: "4h", h: 4 },
-  { label: "24h", h: 24 },
-  { label: "3d", h: 72 },
-  { label: "1wk", h: 168 },
+/**
+ * Offset ids — labels resolve per-render via
+ * `t(\`appointment_composer.offsets.${id}\`)`.
+ */
+const OFFSETS: { id: "1h" | "4h" | "24h" | "3d" | "1wk"; h: number }[] = [
+  { id: "1h", h: 1 },
+  { id: "4h", h: 4 },
+  { id: "24h", h: 24 },
+  { id: "3d", h: 72 },
+  { id: "1wk", h: 168 },
 ];
 
 type Props = {
@@ -39,6 +44,7 @@ type Props = {
 export function AppointmentComposerModal({ visible, leadIdFixed, onClose, onCreated }: Props) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("task_calendar_components");
   const [leadIdInput, setLeadIdInput] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -63,20 +69,20 @@ export function AppointmentComposerModal({ visible, leadIdFixed, onClose, onCrea
 
   const submit = useCallback(async () => {
     const lid = (leadIdFixed ?? leadIdInput).trim();
-    const t = title.trim();
+    const trimmedTitle = title.trim();
     if (!lid) {
-      setError("Lead ID is required.");
+      setError(t("appointment_composer.errors.lead_id_required"));
       return;
     }
-    if (!t) {
-      setError("Add a title.");
+    if (!trimmedTitle) {
+      setError(t("appointment_composer.errors.title_required"));
       return;
     }
     setSubmitting(true);
     setError(null);
     const res = await postMobileCalendarEvent({
       lead_id: lid,
-      title: t,
+      title: trimmedTitle,
       description: description.trim() || null,
       starts_at: hoursFromNow(offsetHours),
       calendar_provider: "local",
@@ -91,22 +97,22 @@ export function AppointmentComposerModal({ visible, leadIdFixed, onClose, onCrea
     onCreated?.(res.event);
     reset();
     onClose();
-  }, [leadIdFixed, leadIdInput, title, description, offsetHours, onCreated, onClose, reset]);
+  }, [leadIdFixed, leadIdInput, title, description, offsetHours, onCreated, onClose, reset, t]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={styles.modalRoot}>
-        <Pressable style={styles.backdrop} onPress={handleClose} accessibilityLabel="Dismiss" />
+        <Pressable style={styles.backdrop} onPress={handleClose} accessibilityLabel={t("actions.dismiss_a11y")} />
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.sheetWrap}
         >
           <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>New appointment</Text>
+            <Text style={styles.sheetTitle}>{t("appointment_composer.title")}</Text>
             {!leadIdFixed ? (
               <TextInput
                 style={styles.input}
-                placeholder="Lead ID"
+                placeholder={t("appointment_composer.placeholder_lead_id")}
                 placeholderTextColor={tokens.textSubtle}
                 value={leadIdInput}
                 onChangeText={setLeadIdInput}
@@ -117,7 +123,7 @@ export function AppointmentComposerModal({ visible, leadIdFixed, onClose, onCrea
             ) : null}
             <TextInput
               style={styles.input}
-              placeholder="Title (e.g. Showing · 123 Main St)"
+              placeholder={t("appointment_composer.placeholder_title")}
               placeholderTextColor={tokens.textSubtle}
               value={title}
               onChangeText={setTitle}
@@ -125,24 +131,24 @@ export function AppointmentComposerModal({ visible, leadIdFixed, onClose, onCrea
             />
             <TextInput
               style={[styles.input, styles.inputMultiline]}
-              placeholder="Notes (optional)"
+              placeholder={t("appointment_composer.placeholder_notes")}
               placeholderTextColor={tokens.textSubtle}
               value={description}
               onChangeText={setDescription}
               multiline
               editable={!submitting}
             />
-            <Text style={styles.label}>Starts in</Text>
+            <Text style={styles.label}>{t("appointment_composer.label_starts_in")}</Text>
             <View style={styles.chipRow}>
-              {OFFSETS.map(({ label, h }) => (
+              {OFFSETS.map(({ id, h }) => (
                 <Pressable
-                  key={label}
+                  key={id}
                   onPress={() => setOffsetHours(h)}
                   disabled={submitting}
                   style={[styles.chip, offsetHours === h && styles.chipOn]}
                 >
                   <Text style={[styles.chipText, offsetHours === h && styles.chipTextOn]}>
-                    {label}
+                    {t(`appointment_composer.offsets.${id}`)}
                   </Text>
                 </Pressable>
               ))}
@@ -150,13 +156,13 @@ export function AppointmentComposerModal({ visible, leadIdFixed, onClose, onCrea
             {error ? <Text style={styles.error}>{error}</Text> : null}
             <View style={styles.actions}>
               <Pressable onPress={handleClose} disabled={submitting} style={styles.cancelBtn}>
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={styles.cancelText}>{t("actions.cancel")}</Text>
               </Pressable>
               <Pressable onPress={() => void submit()} disabled={submitting} style={styles.saveBtn}>
                 {submitting ? (
                   <ActivityIndicator color={tokens.textOnAccent} />
                 ) : (
-                  <Text style={styles.saveText}>Save</Text>
+                  <Text style={styles.saveText}>{t("actions.save")}</Text>
                 )}
               </Pressable>
             </View>

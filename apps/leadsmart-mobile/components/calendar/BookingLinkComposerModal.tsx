@@ -1,5 +1,6 @@
 import type { MobileBookingLinkDto } from "@leadsmart/shared";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -26,6 +27,7 @@ type Props = {
 export function BookingLinkComposerModal({ visible, leadId, onClose, onCreated }: Props) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("task_calendar_components");
   const [url, setUrl] = useState("");
   const [label, setLabel] = useState("");
   const [shareMessage, setShareMessage] = useState("");
@@ -49,7 +51,7 @@ export function BookingLinkComposerModal({ visible, leadId, onClose, onCreated }
   const submit = useCallback(async () => {
     const u = url.trim();
     if (!u) {
-      setError("Paste your scheduling URL (Calendly, Google Appointment, etc.).");
+      setError(t("booking_link_composer.errors.url_required"));
       return;
     }
     setSubmitting(true);
@@ -70,25 +72,22 @@ export function BookingLinkComposerModal({ visible, leadId, onClose, onCreated }
     onCreated?.(res.booking_link);
     reset();
     onClose();
-  }, [leadId, url, label, shareMessage, onCreated, onClose, reset]);
+  }, [leadId, url, label, shareMessage, onCreated, onClose, reset, t]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={styles.modalRoot}>
-        <Pressable style={styles.backdrop} onPress={handleClose} accessibilityLabel="Dismiss" />
+        <Pressable style={styles.backdrop} onPress={handleClose} accessibilityLabel={t("actions.dismiss_a11y")} />
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.sheetWrap}
         >
           <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>Send booking link</Text>
-            <Text style={styles.hint}>
-              Saved on the lead for the CRM timeline and bumps last activity. Share opens the system
-              share sheet.
-            </Text>
+            <Text style={styles.sheetTitle}>{t("booking_link_composer.title")}</Text>
+            <Text style={styles.hint}>{t("booking_link_composer.hint")}</Text>
             <TextInput
               style={styles.input}
-              placeholder="https://…"
+              placeholder={t("booking_link_composer.placeholder_url")}
               placeholderTextColor={tokens.textSubtle}
               value={url}
               onChangeText={setUrl}
@@ -99,7 +98,7 @@ export function BookingLinkComposerModal({ visible, leadId, onClose, onCreated }
             />
             <TextInput
               style={styles.input}
-              placeholder="Label (optional)"
+              placeholder={t("booking_link_composer.placeholder_label")}
               placeholderTextColor={tokens.textSubtle}
               value={label}
               onChangeText={setLabel}
@@ -107,7 +106,7 @@ export function BookingLinkComposerModal({ visible, leadId, onClose, onCreated }
             />
             <TextInput
               style={[styles.input, styles.inputMultiline]}
-              placeholder="Message for SMS/email when sharing (optional)"
+              placeholder={t("booking_link_composer.placeholder_share_message")}
               placeholderTextColor={tokens.textSubtle}
               value={shareMessage}
               onChangeText={setShareMessage}
@@ -117,13 +116,13 @@ export function BookingLinkComposerModal({ visible, leadId, onClose, onCreated }
             {error ? <Text style={styles.error}>{error}</Text> : null}
             <View style={styles.actions}>
               <Pressable onPress={handleClose} disabled={submitting} style={styles.cancelBtn}>
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={styles.cancelText}>{t("actions.cancel")}</Text>
               </Pressable>
               <Pressable onPress={() => void submit()} disabled={submitting} style={styles.saveBtn}>
                 {submitting ? (
                   <ActivityIndicator color={tokens.textOnAccent} />
                 ) : (
-                  <Text style={styles.saveText}>Save link</Text>
+                  <Text style={styles.saveText}>{t("actions.save_link")}</Text>
                 )}
               </Pressable>
             </View>

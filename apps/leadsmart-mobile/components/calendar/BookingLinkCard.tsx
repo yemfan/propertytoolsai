@@ -1,6 +1,7 @@
 import type { MobileBookingLinkDto } from "@leadsmart/shared";
 import * as Linking from "expo-linking";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, Share, StyleSheet, Text, View } from "react-native";
 import { formatShortDateTime } from "../../lib/format";
 import { useThemeTokens } from "../../lib/useThemeTokens";
@@ -14,6 +15,7 @@ type Props = {
 export function BookingLinkCard({ link, compact }: Props) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("task_calendar_components");
 
   const open = () => {
     void Linking.openURL(link.booking_url);
@@ -31,18 +33,20 @@ export function BookingLinkCard({ link, compact }: Props) {
           {link.label}
         </Text>
       ) : (
-        <Text style={styles.labelMuted}>Booking link</Text>
+        <Text style={styles.labelMuted}>{t("booking_link_card.fallback_label")}</Text>
       )}
       <Text style={styles.url} numberOfLines={2}>
         {link.booking_url}
       </Text>
-      <Text style={styles.created}>Saved {formatShortDateTime(link.created_at)}</Text>
+      <Text style={styles.created}>
+        {t("booking_link_card.saved_at", { date: formatShortDateTime(link.created_at) })}
+      </Text>
       <View style={styles.row}>
         <Pressable onPress={open} style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
-          <Text style={styles.btnTextPrimary}>Open</Text>
+          <Text style={styles.btnTextPrimary}>{t("actions.open")}</Text>
         </Pressable>
         <Pressable onPress={() => void share()} style={({ pressed }) => [styles.btnOutline, pressed && styles.btnPressed]}>
-          <Text style={styles.btnTextOutline}>Share</Text>
+          <Text style={styles.btnTextOutline}>{t("actions.share")}</Text>
         </Pressable>
       </View>
     </View>

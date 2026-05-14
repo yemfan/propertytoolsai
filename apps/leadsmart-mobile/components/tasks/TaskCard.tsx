@@ -1,5 +1,6 @@
 import type { MobileLeadTaskDto } from "@leadsmart/shared";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { formatTaskDueLabel } from "../../lib/format";
 import { useThemeTokens } from "../../lib/useThemeTokens";
@@ -31,9 +32,15 @@ export function TaskCard({
 }: Props) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("task_calendar_components");
   const open = task.status === "open";
   const pri = priorityStyle[task.priority] ?? priorityStyle.medium;
   const compact = variant === "compact";
+  // i18next falls back to the raw priority string if a key is
+  // missing — keeps the pill non-empty for unexpected values.
+  const priorityLabel = t(`task_card.priority.${task.priority}`, {
+    defaultValue: task.priority,
+  });
 
   const body = (
     <>
@@ -42,7 +49,7 @@ export function TaskCard({
           {task.title}
         </Text>
         <View style={[styles.priorityPill, { backgroundColor: pri.bg }]}>
-          <Text style={[styles.priorityText, { color: pri.fg }]}>{task.priority}</Text>
+          <Text style={[styles.priorityText, { color: pri.fg }]}>{priorityLabel}</Text>
         </View>
       </View>
       {showLeadName && task.lead_name ? (
@@ -63,7 +70,7 @@ export function TaskCard({
           {completing ? (
             <ActivityIndicator size="small" color={tokens.textOnAccent} />
           ) : (
-            <Text style={styles.doneBtnText}>Done</Text>
+            <Text style={styles.doneBtnText}>{t("actions.done")}</Text>
           )}
         </Pressable>
       ) : null}

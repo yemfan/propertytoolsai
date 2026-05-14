@@ -1,5 +1,6 @@
 import type { MobileLeadTaskDto, MobileTaskPriority } from "@leadsmart/shared";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -34,6 +35,7 @@ type Props = {
 export function TaskComposerModal({ visible, leadId, onClose, onCreated }: Props) {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { t } = useTranslation("task_calendar_components");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<MobileTaskPriority>("medium");
@@ -57,16 +59,16 @@ export function TaskComposerModal({ visible, leadId, onClose, onCreated }: Props
   }, [onClose, reset, submitting]);
 
   const submit = useCallback(async () => {
-    const t = title.trim();
-    if (!t) {
-      setError("Add a title.");
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      setError(t("task_composer.errors.title_required"));
       return;
     }
     setSubmitting(true);
     setError(null);
     const res = await postMobileTask({
       lead_id: leadId,
-      title: t,
+      title: trimmedTitle,
       description: description.trim() || null,
       priority,
       due_at: dueToday ? utcNoonTodayIso() : null,
@@ -82,21 +84,21 @@ export function TaskComposerModal({ visible, leadId, onClose, onCreated }: Props
     onCreated?.(res.task);
     reset();
     onClose();
-  }, [title, description, priority, dueToday, leadId, onCreated, onClose, reset]);
+  }, [title, description, priority, dueToday, leadId, onCreated, onClose, reset, t]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={styles.modalRoot}>
-        <Pressable style={styles.backdrop} onPress={handleClose} accessibilityLabel="Dismiss" />
+        <Pressable style={styles.backdrop} onPress={handleClose} accessibilityLabel={t("actions.dismiss_a11y")} />
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.sheetWrap}
         >
         <View style={styles.sheet}>
-          <Text style={styles.sheetTitle}>New task</Text>
+          <Text style={styles.sheetTitle}>{t("task_composer.title")}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Title"
+            placeholder={t("task_composer.placeholder_title")}
             placeholderTextColor={tokens.textSubtle}
             value={title}
             onChangeText={setTitle}
@@ -104,14 +106,14 @@ export function TaskComposerModal({ visible, leadId, onClose, onCreated }: Props
           />
           <TextInput
             style={[styles.input, styles.inputMultiline]}
-            placeholder="Notes (optional)"
+            placeholder={t("task_composer.placeholder_notes")}
             placeholderTextColor={tokens.textSubtle}
             value={description}
             onChangeText={setDescription}
             multiline
             editable={!submitting}
           />
-          <Text style={styles.label}>Priority</Text>
+          <Text style={styles.label}>{t("task_composer.label_priority")}</Text>
           <View style={styles.priorityRow}>
             {PRIORITIES.map((p) => (
               <Pressable
@@ -124,32 +126,32 @@ export function TaskComposerModal({ visible, leadId, onClose, onCreated }: Props
                 ]}
               >
                 <Text style={[styles.priorityChipText, priority === p && styles.priorityChipTextOn]}>
-                  {p}
+                  {t(`task_card.priority.${p}`, { defaultValue: p })}
                 </Text>
               </Pressable>
             ))}
           </View>
-          <Text style={styles.label}>Due</Text>
+          <Text style={styles.label}>{t("task_composer.label_due")}</Text>
           <View style={styles.dueRow}>
             <Pressable
               onPress={() => setDueToday(false)}
               disabled={submitting}
               style={[styles.dueChip, !dueToday && styles.dueChipOn]}
             >
-              <Text style={[styles.dueChipText, !dueToday && styles.dueChipTextOn]}>None</Text>
+              <Text style={[styles.dueChipText, !dueToday && styles.dueChipTextOn]}>{t("task_composer.due_none")}</Text>
             </Pressable>
             <Pressable
               onPress={() => setDueToday(true)}
               disabled={submitting}
               style={[styles.dueChip, dueToday && styles.dueChipOn]}
             >
-              <Text style={[styles.dueChipText, dueToday && styles.dueChipTextOn]}>Today</Text>
+              <Text style={[styles.dueChipText, dueToday && styles.dueChipTextOn]}>{t("task_composer.due_today")}</Text>
             </Pressable>
           </View>
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <View style={styles.actions}>
             <Pressable onPress={handleClose} disabled={submitting} style={styles.cancelBtn}>
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>{t("actions.cancel")}</Text>
             </Pressable>
             <Pressable
               onPress={() => void submit()}
@@ -159,7 +161,7 @@ export function TaskComposerModal({ visible, leadId, onClose, onCreated }: Props
               {submitting ? (
                 <ActivityIndicator color={tokens.textOnAccent} />
               ) : (
-                <Text style={styles.saveText}>Save</Text>
+                <Text style={styles.saveText}>{t("actions.save")}</Text>
               )}
             </Pressable>
           </View>

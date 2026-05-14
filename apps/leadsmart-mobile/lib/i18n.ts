@@ -37,6 +37,7 @@ import enLeads from "@leadsmart/i18n/locale/en/leads";
 import enNav from "@leadsmart/i18n/locale/en/nav";
 import enQuickPost from "@leadsmart/i18n/locale/en/quick_post";
 import enSettings from "@leadsmart/i18n/locale/en/settings";
+import enTaskCalendarComponents from "@leadsmart/i18n/locale/en/task_calendar_components";
 import zhCommon from "@leadsmart/i18n/locale/zh-Hans/common";
 import zhHome from "@leadsmart/i18n/locale/zh-Hans/home";
 import zhLeadComponents from "@leadsmart/i18n/locale/zh-Hans/lead_components";
@@ -45,6 +46,7 @@ import zhLeads from "@leadsmart/i18n/locale/zh-Hans/leads";
 import zhNav from "@leadsmart/i18n/locale/zh-Hans/nav";
 import zhQuickPost from "@leadsmart/i18n/locale/zh-Hans/quick_post";
 import zhSettings from "@leadsmart/i18n/locale/zh-Hans/settings";
+import zhTaskCalendarComponents from "@leadsmart/i18n/locale/zh-Hans/task_calendar_components";
 
 const STORAGE_KEY = "i18n:locale";
 
@@ -58,6 +60,7 @@ const resources = {
     leads: enLeads,
     lead_detail: enLeadDetail,
     lead_components: enLeadComponents,
+    task_calendar_components: enTaskCalendarComponents,
   },
   "zh-Hans": {
     common: zhCommon,
@@ -68,6 +71,7 @@ const resources = {
     leads: zhLeads,
     lead_detail: zhLeadDetail,
     lead_components: zhLeadComponents,
+    task_calendar_components: zhTaskCalendarComponents,
   },
 } as const;
 
@@ -142,6 +146,7 @@ export function initI18n(): Promise<typeof i18n> {
         "leads",
         "lead_detail",
         "lead_components",
+        "task_calendar_components",
       ],
       interpolation: {
         // React Native handles escaping; double-escaping breaks

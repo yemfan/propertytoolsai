@@ -1,0 +1,71 @@
+{
+  "actions": {
+    "done": "完成",
+    "cancel": "取消",
+    "save": "保存",
+    "save_link": "保存链接",
+    "open": "打开",
+    "share": "分享",
+    "dismiss_a11y": "关闭"
+  },
+  "task_card": {
+    "priority": {
+      "low": "低",
+      "medium": "中",
+      "high": "高",
+      "urgent": "紧急"
+    }
+  },
+  "task_composer": {
+    "title": "新建任务",
+    "placeholder_title": "标题",
+    "placeholder_notes": "备注 (可选)",
+    "label_priority": "优先级",
+    "label_due": "截止",
+    "due_none": "无",
+    "due_today": "今天",
+    "errors": {
+      "title_required": "请填写标题。"
+    }
+  },
+  "appointment_card": {
+    "provider_local": "本地",
+    "status": {
+      "scheduled": "已安排",
+      "cancelled": "已取消",
+      "completed": "已完成"
+    }
+  },
+  "appointment_composer": {
+    "title": "新建约见",
+    "placeholder_lead_id": "客户 ID",
+    "placeholder_title": "标题 (例如:看房 · 123 Main St)",
+    "placeholder_notes": "备注 (可选)",
+    "label_starts_in": "开始时间",
+    "offsets": {
+      "1h": "1 小时",
+      "4h": "4 小时",
+      "24h": "24 小时",
+      "3d": "3 天",
+      "1wk": "1 周"
+    },
+    "errors": {
+      "lead_id_required": "请填写客户 ID。",
+      "title_required": "请填写标题。"
+    }
+  },
+  "booking_link_card": {
+    "fallback_label": "预约链接",
+    "saved_at": "已保存 {{date}}"
+  },
+  "booking_link_composer": {
+    "title": "发送预约链接",
+    "hint": "链接会保存到客户档案,并更新最后活动时间。分享会调起系统分享面板。",
+    "placeholder_url": "https://…",
+    "placeholder_label": "标签 (可选)",
+    "placeholder_share_message": "分享时随短信 / 邮件发送的消息 (可选)",
+    "errors": {
+      "url_required": "请粘贴您的预约 URL (Calendly、Google Appointment 等)。"
+    }
+  }
+}
