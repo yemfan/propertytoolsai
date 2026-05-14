@@ -1,0 +1,84 @@
+{
+  "landing": {
+    "metadata": {
+      "title": "Generate Leads | LeadSmart AI",
+      "description": "Generate social posts and run ads to bring new leads into LeadSmart AI."
+    },
+    "title": "Generate Leads",
+    "subtitle": "Draft social posts in seconds, then share to Facebook, Instagram, LinkedIn, or X.",
+    "nav": {
+      "posts": "Posts →",
+      "scheduled": "Scheduled →",
+      "recurring": "Recurring →",
+      "connect": "Connect platforms →"
+    },
+    "quick_post": {
+      "title": "Quick Post",
+      "body": "Tap to draft a social post about a listing or open house. AI writes it, you share it — Facebook, Instagram, LinkedIn, X.",
+      "cta": "New post"
+    },
+    "ads": {
+      "title": "Run Ads",
+      "premium_badge": "Premium",
+      "body": "Launch a Meta Lead Ad campaign — your leads land directly in the CRM tagged with the source campaign.",
+      "billing_note": "Meta ad billing stays with you · Google Ads in Phase 3",
+      "cta": "View campaigns"
+    },
+    "suggestions": {
+      "heading": "Suggested this week",
+      "hint": "Click a card to open the wizard pre-filled with this subject.",
+      "draft_cta": "Draft post →",
+      "badges": {
+        "new": "New",
+        "this_week": "This week",
+        "celebrate": "Just closed"
+      }
+    },
+    "roadmap_footer": "Phase 1: Quick Post (today). Phase 2 (in ~4 weeks): direct Meta posting + Meta Lead Ads. Phase 3: Google Ads + cross-platform optimizer."
+  },
+  "connect": {
+    "metadata": {
+      "title": "Connect Platforms | LeadSmart AI",
+      "description": "Connect your Facebook Pages, Instagram Business accounts, and LinkedIn profile so Generate Leads can publish directly."
+    },
+    "title": "Connect platforms",
+    "subtitle": "Connect your social accounts so Generate Leads can publish posts directly.",
+    "back": "← Back"
+  },
+  "scheduled": {
+    "metadata": {
+      "title": "Scheduled Posts | LeadSmart AI",
+      "description": "Queue of social posts waiting to publish, plus recent results."
+    },
+    "title": "Scheduled Posts",
+    "subtitle": "Posts queued to publish later, plus recent results.",
+    "error_prefix": "Couldn't load scheduled posts: {{message}}",
+    "nav": {
+      "back_to_generate": "← Generate Leads",
+      "recurring": "🔁 Recurring",
+      "new_post": "+ New post"
+    }
+  },
+  "recurring": {
+    "metadata": {
+      "title": "Recurring Posts | LeadSmart AI",
+      "description": "Manage your daily and weekly recurring social posts."
+    },
+    "title": "Recurring posts",
+    "subtitle": "Daily and weekly templates the cron materializes into scheduled posts automatically.",
+    "back": "← Back"
+  },
+  "ads": {
+    "metadata": {
+      "title": "Lead Ad Campaigns | LeadSmart AI",
+      "description": "Manage your Meta Lead Ad campaigns — pause / resume, refresh metrics, view captured leads."
+    },
+    "title": "Lead Ad Campaigns",
+    "subtitle": "Your Meta Lead Ad history. Pause, resume, or refresh metrics on any active campaign.",
+    "error_prefix": "Couldn't load campaigns: {{message}}",
+    "nav": {
+      "back_to_generate": "← Generate Leads",
+      "new_campaign": "+ New campaign"
+    }
+  }
+}

@@ -38,6 +38,10 @@
  *   - web_posts         Web /dashboard/leads/generate/posts page
  *                        (Server Component + PostsListClient +
  *                        TopPerformersStrip)
+ *   - web_generate_leads
+ *                       Web /dashboard/leads/generate landing +
+ *                        connect / scheduled / recurring / ads
+ *                        Server Component headers
  *
  * Future namespaces follow the same pattern — add a JSON file pair
  * (en + zh-Hans) and reference it from the app's resources map.
@@ -73,5 +77,6 @@ export const NAMESPACES = [
   "sphere_screen",
   "mobile_misc_screens",
   "web_posts",
+  "web_generate_leads",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];

@@ -2,18 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { getServerT } from "@/lib/i18n/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 import ScheduledListClient, {
   type ScheduledRow,
 } from "./ScheduledListClient";
 
-export const metadata: Metadata = {
-  title: "Scheduled Posts | LeadSmart AI",
-  description:
-    "Queue of social posts waiting to publish, plus recent results.",
-  robots: { index: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t("scheduled.metadata.title", { ns: "web_generate_leads" }),
+    description: t("scheduled.metadata.description", { ns: "web_generate_leads" }),
+    robots: { index: false },
+  };
+}
 
 /**
  * Scheduled posts dashboard. Server-renders the queue (token-free
@@ -21,6 +24,7 @@ export const metadata: Metadata = {
  */
 export default async function ScheduledPostsPage() {
   const { agentId } = await getCurrentAgentContext();
+  const t = await getServerT();
 
   const { data, error } = await supabaseAdmin
     .from("scheduled_posts")
@@ -35,7 +39,7 @@ export default async function ScheduledPostsPage() {
     return (
       <div className="mx-auto max-w-5xl px-4 py-6">
         <p className="text-sm text-red-700">
-          Couldn&apos;t load scheduled posts: {error.message}
+          {t("scheduled.error_prefix", { ns: "web_generate_leads", message: error.message })}
         </p>
       </div>
     );
@@ -130,10 +134,10 @@ export default async function ScheduledPostsPage() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">
-            Scheduled Posts
+            {t("scheduled.title", { ns: "web_generate_leads" })}
           </h1>
           <p className="text-sm text-gray-500">
-            Posts queued to publish later, plus recent results.
+            {t("scheduled.subtitle", { ns: "web_generate_leads" })}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -141,19 +145,19 @@ export default async function ScheduledPostsPage() {
             href="/dashboard/leads/generate"
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            &larr; Generate Leads
+            {t("scheduled.nav.back_to_generate", { ns: "web_generate_leads" })}
           </Link>
           <Link
             href="/dashboard/leads/generate/recurring"
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            🔁 Recurring
+            {t("scheduled.nav.recurring", { ns: "web_generate_leads" })}
           </Link>
           <Link
             href="/dashboard/leads/generate/post/new"
             className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
           >
-            + New post
+            {t("scheduled.nav.new_post", { ns: "web_generate_leads" })}
           </Link>
         </div>
       </div>

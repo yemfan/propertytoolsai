@@ -2,14 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { getServerT } from "@/lib/i18n/server";
 import { getWeeklySuggestions, type Suggestion } from "@/lib/leads-gen/suggestions";
 
-export const metadata: Metadata = {
-  title: "Generate Leads | LeadSmart AI",
-  description:
-    "Generate social posts and run ads to bring new leads into LeadSmart AI.",
-  robots: { index: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t("landing.metadata.title", { ns: "web_generate_leads" }),
+    description: t("landing.metadata.description", { ns: "web_generate_leads" }),
+    robots: { index: false },
+  };
+}
 
 /**
  * Landing for the Generate Leads feature. Three sections stacked:
@@ -26,6 +29,9 @@ export const metadata: Metadata = {
  */
 export default async function GenerateLeadsPage() {
   const { agentId } = await getCurrentAgentContext();
+  const t = await getServerT();
+  const tg = (key: string, opts?: Record<string, unknown>): string =>
+    t(key, { ns: "web_generate_leads", ...opts });
 
   // Suggestions are best-effort — a query failure shouldn't blank
   // the whole page. Empty array == no suggestion strip rendered.
@@ -40,36 +46,33 @@ export default async function GenerateLeadsPage() {
     <div className="mx-auto max-w-5xl px-4 py-6">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Generate Leads</h1>
-          <p className="text-sm text-gray-500">
-            Draft social posts in seconds, then share to Facebook, Instagram,
-            LinkedIn, or X.
-          </p>
+          <h1 className="text-xl font-semibold text-gray-900">{tg("landing.title")}</h1>
+          <p className="text-sm text-gray-500">{tg("landing.subtitle")}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Link
             href="/dashboard/leads/generate/posts"
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Posts →
+            {tg("landing.nav.posts")}
           </Link>
           <Link
             href="/dashboard/leads/generate/scheduled"
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Scheduled →
+            {tg("landing.nav.scheduled")}
           </Link>
           <Link
             href="/dashboard/leads/generate/recurring"
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Recurring →
+            {tg("landing.nav.recurring")}
           </Link>
           <Link
             href="/dashboard/leads/generate/connect"
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Connect platforms →
+            {tg("landing.nav.connect")}
           </Link>
         </div>
       </div>
@@ -94,13 +97,10 @@ export default async function GenerateLeadsPage() {
               />
             </svg>
           </div>
-          <h2 className="text-base font-semibold text-gray-900">Quick Post</h2>
-          <p className="mt-1 text-sm text-gray-600">
-            Tap to draft a social post about a listing or open house. AI writes
-            it, you share it — Facebook, Instagram, LinkedIn, X.
-          </p>
+          <h2 className="text-base font-semibold text-gray-900">{tg("landing.quick_post.title")}</h2>
+          <p className="mt-1 text-sm text-gray-600">{tg("landing.quick_post.body")}</p>
           <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-600 group-hover:gap-1.5">
-            New post
+            {tg("landing.quick_post.cta")}
             <svg
               className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
               fill="none"
@@ -137,20 +137,15 @@ export default async function GenerateLeadsPage() {
             </svg>
           </div>
           <div className="mb-1 flex items-center gap-2">
-            <h2 className="text-base font-semibold text-gray-900">Run Ads</h2>
+            <h2 className="text-base font-semibold text-gray-900">{tg("landing.ads.title")}</h2>
             <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-800">
-              Premium
+              {tg("landing.ads.premium_badge")}
             </span>
           </div>
-          <p className="text-sm text-gray-600">
-            Launch a Meta Lead Ad campaign — your leads land directly in the
-            CRM tagged with the source campaign.
-          </p>
-          <p className="mt-3 text-xs text-gray-500">
-            Meta ad billing stays with you · Google Ads in Phase 3
-          </p>
+          <p className="text-sm text-gray-600">{tg("landing.ads.body")}</p>
+          <p className="mt-3 text-xs text-gray-500">{tg("landing.ads.billing_note")}</p>
           <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-purple-600 group-hover:gap-1.5">
-            View campaigns
+            {tg("landing.ads.cta")}
             <svg
               className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
               fill="none"
@@ -170,12 +165,8 @@ export default async function GenerateLeadsPage() {
 
       {suggestions.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-sm font-semibold text-gray-900">
-            Suggested this week
-          </h2>
-          <p className="mb-3 text-xs text-gray-500">
-            Click a card to open the wizard pre-filled with this subject.
-          </p>
+          <h2 className="text-sm font-semibold text-gray-900">{tg("landing.suggestions.heading")}</h2>
+          <p className="mb-3 text-xs text-gray-500">{tg("landing.suggestions.hint")}</p>
           <div className="space-y-2">
             {suggestions.map((s) => (
               <Link
@@ -184,7 +175,7 @@ export default async function GenerateLeadsPage() {
                 className="group flex items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition hover:border-blue-300 hover:shadow-md"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <SuggestionBadge badge={s.badge} />
+                  <SuggestionBadge badge={s.badge} tg={tg} />
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold text-gray-900">
                       {s.title}
@@ -197,7 +188,7 @@ export default async function GenerateLeadsPage() {
                   </div>
                 </div>
                 <span className="shrink-0 text-sm font-medium text-blue-600 group-hover:translate-x-0.5">
-                  Draft post →
+                  {tg("landing.suggestions.draft_cta")}
                 </span>
               </Link>
             ))}
@@ -205,29 +196,29 @@ export default async function GenerateLeadsPage() {
         </div>
       )}
 
-      <p className="mt-6 text-xs text-gray-400">
-        Phase 1: Quick Post (today). Phase 2 (in ~4 weeks): direct Meta posting
-        + Meta Lead Ads. Phase 3: Google Ads + cross-platform optimizer.
-      </p>
+      <p className="mt-6 text-xs text-gray-400">{tg("landing.roadmap_footer")}</p>
     </div>
   );
 }
 
-function SuggestionBadge({ badge }: { badge: Suggestion["badge"] }) {
-  const map: Record<
-    Suggestion["badge"],
-    { label: string; bg: string; fg: string }
-  > = {
-    new: { label: "New", bg: "bg-blue-100", fg: "text-blue-700" },
-    this_week: { label: "This week", bg: "bg-emerald-100", fg: "text-emerald-700" },
-    celebrate: { label: "Just closed", bg: "bg-amber-100", fg: "text-amber-800" },
+function SuggestionBadge({
+  badge,
+  tg,
+}: {
+  badge: Suggestion["badge"];
+  tg: (key: string, opts?: Record<string, unknown>) => string;
+}) {
+  const tone: Record<Suggestion["badge"], { bg: string; fg: string }> = {
+    new: { bg: "bg-blue-100", fg: "text-blue-700" },
+    this_week: { bg: "bg-emerald-100", fg: "text-emerald-700" },
+    celebrate: { bg: "bg-amber-100", fg: "text-amber-800" },
   };
-  const { label, bg, fg } = map[badge];
+  const { bg, fg } = tone[badge];
   return (
     <span
       className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${bg} ${fg}`}
     >
-      {label}
+      {tg(`landing.suggestions.badges.${badge}`)}
     </span>
   );
 }
