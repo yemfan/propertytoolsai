@@ -1,0 +1,222 @@
+{
+  "header": {
+    "title": "快速发布",
+    "subtitle": "AI 几秒内起草社交媒体帖子。编辑后发布。",
+    "back": "← 返回"
+  },
+  "errors": {
+    "subjects_load_failed": "加载主题失败",
+    "subjects_load_short": "加载失败",
+    "lookup_failed": "查询失败",
+    "lookup_input_required": "请先粘贴地址或房源链接。",
+    "draft_failed": "草稿生成失败",
+    "publish_failed": "发布失败",
+    "schedule_failed": "定时设置失败",
+    "invalid_datetime": "日期时间无效",
+    "recurring_failed": "周期发布创建失败",
+    "library_load_failed": "加载失败",
+    "upload_failed": "上传失败"
+  },
+  "triggers": {
+    "new_listing": {
+      "label": "新房源",
+      "hint": "宣传您刚刚上架的房源"
+    },
+    "open_house": {
+      "label": "看房日",
+      "hint": "推广即将举办的看房日"
+    },
+    "price_drop": {
+      "label": "降价",
+      "hint": "以新价格重新推广房源"
+    },
+    "just_sold": {
+      "label": "已售出",
+      "hint": "庆祝您刚刚完成的成交"
+    },
+    "market_update": {
+      "label": "市场动态",
+      "hint": "分享您对本地市场的观察"
+    },
+    "testimonial": {
+      "label": "客户好评",
+      "hint": "将客户评价整理成精美帖子"
+    },
+    "custom": {
+      "label": "自定义",
+      "hint": "撰写您的简介，AI 起草帖子"
+    },
+    "by_address": {
+      "label": "按地址 / URL",
+      "hint": "粘贴房源链接或地址 — 由我们提取详情"
+    }
+  },
+  "brief": {
+    "new_listing": {
+      "placeholder": "可选 — 这套房源的亮点是什么？（例如：「精装厨房、阳光明媚的后院、步行可达村镇」）",
+      "help": "可选。具体细节会让帖子更具体、不流于模板。"
+    },
+    "open_house": {
+      "placeholder": "可选 — 房源或看房日的特别之处（例如：「全新装修浴室、提供咖啡与点心」）",
+      "help": "可选。如有摆设、点心或独特之处可一并说明。"
+    },
+    "price_drop": {
+      "placeholder": "可选 — 旧价格 + 原因（例如：「从 145 万降至 139 万 — 卖家诚意出售，可快速过户」）",
+      "help": "如希望提及原价，请在此输入。AI 不会自行编造数字。"
+    },
+    "just_sold": {
+      "placeholder": "可选 — 任何特别之处（例如：「14 天内成交、多份报价、回头客户」）",
+      "help": "可选。除非客户明确同意公开提及，否则请勿写出客户姓名。"
+    },
+    "market_update": {
+      "placeholder": "重点角度是什么？（例如：「帕萨迪纳库存环比增长 18%，利率回落至 6.5% 以下 — 此前观望的买家正在回归」）",
+      "help": "具体数据比泛泛的「市场正在变化」更能写出好帖子。"
+    },
+    "testimonial": {
+      "placeholder": "粘贴客户原话，如知道客户名字也一并填上（例如：「Sarah：『Mike 让整个过程变得轻松 — 我们 30 天内成交，他还为我们砍了 1.5 万美元的报价。』」）",
+      "help": "AI 会原文使用客户引言。如客户同意公开提及姓名，请一并提供。"
+    },
+    "custom": {
+      "placeholder": "描述帖子内容 — 角度、语气、需要包含的具体信息。",
+      "help": "请尽量具体 — 姓名、街区、数字和角度能帮助 AI 写出非模板的帖子。"
+    },
+    "by_address": {
+      "placeholder": "粘贴房源 URL（Zillow、Redfin、MLS 等），或直接输入地址。",
+      "help": "我们会查询该房产并预填简介 — 您可以在生成前编辑。"
+    }
+  },
+  "step1": {
+    "title": "本帖关于什么？",
+    "subtitle": "选择帖子的角度。"
+  },
+  "step2": {
+    "title_lookup": "粘贴地址或 URL",
+    "title_brief": "简介是什么？",
+    "title_picker": "选择一个",
+    "subtitle_lookup": "我们会提取房产详情并预填简介。",
+    "subtitle_brief": "AI 将直接根据您的简介撰写帖子。",
+    "subtitle_picker_new_listing": "从最近 60 天的房源中挑选。",
+    "subtitle_picker_open_house": "选择即将到来的看房日。",
+    "subtitle_picker_price_drop": "选择需要重新定价的房源。",
+    "subtitle_picker_just_sold": "选择最近一次成交来庆祝。",
+    "lookup": {
+      "input_placeholder": "123 Main St, Pasadena CA — 或粘贴 Zillow / Redfin / MLS URL",
+      "looking_up_busy": "查询中……",
+      "look_up": "查询",
+      "result_found": "已找到房产",
+      "result_not_found": "数据库中未找到该房产 — 将使用您输入的内容",
+      "brief_label": "简介（可编辑）",
+      "brief_help": "AI 不会编造细节 — 编辑此处以补充任何您想提及的内容（看房日时间、亮点等）。"
+    },
+    "loading": "加载中……",
+    "add_angle": "添加角度（可选）"
+  },
+  "brief_input": {
+    "saved": "简介已保存",
+    "use_this": "使用此简介"
+  },
+  "step3": {
+    "title": "起草 + 分享",
+    "subtitle": "AI 为每个平台撰写专属文案。发布前可随意编辑。",
+    "no_draft": "尚无 {{platform}} 的草稿。",
+    "generate": "生成草稿",
+    "drafting": "起草中……",
+    "regenerate": "↻ 重新生成",
+    "regenerating": "重新生成中……",
+    "copy_caption": "复制文案",
+    "save_image": "保存图片",
+    "post_to": "发布到：",
+    "linkedin_member_fallback": "LinkedIn 用户",
+    "page_fallback": "已连接的主页"
+  },
+  "actions": {
+    "creating_recurring": "创建中……",
+    "create_recurring": "创建周期发布",
+    "scheduling": "定时设置中……",
+    "schedule": "设置定时",
+    "publishing": "发布中……",
+    "publish_to": "发布到 {{platform}}",
+    "share_to": "分享到 {{platform}}",
+    "ig_no_compose": "Instagram 没有网页发布入口 — 请复制文案、保存图片，然后在 IG 应用内发布。或连接一个主页以直接发布。",
+    "no_share": "此平台暂不支持直接分享"
+  },
+  "schedule": {
+    "later_cta": "⏰ 改为定时发布",
+    "recurring_cta": "🔁 设为周期发布",
+    "label": "发布时间（您的本地时间）",
+    "cancel": "取消",
+    "cron_hint": "每 5 分钟运行一次发布任务，实际发布时间可能比所选时间晚最多 5 分钟。"
+  },
+  "recurring": {
+    "header": "🔁 设为周期发布",
+    "cancel": "取消",
+    "cadence_label": "周期",
+    "cadence_weekly": "每周",
+    "cadence_daily": "每天",
+    "weekday_label": "星期几",
+    "weekdays": {
+      "sun": "周日",
+      "mon": "周一",
+      "tue": "周二",
+      "wed": "周三",
+      "thu": "周四",
+      "fri": "周五",
+      "sat": "周六"
+    },
+    "time_label": "时间（{{tz}}）",
+    "max_label": "停止条件（次数）",
+    "max_placeholder": "（无上限）",
+    "hint_prefix": "周期任务会在每次发布前约一小时创建一条定时帖子。您可以随时在",
+    "hint_link": "周期发布页面",
+    "hint_suffix": "暂停或取消。"
+  },
+  "banners": {
+    "recurring_created": "周期发布已创建 — 首次发布时间 {{when}}",
+    "recurring_manage": "管理周期发布 →",
+    "recurring_failed": "周期发布创建失败",
+    "scheduled_for": "已定时于 {{when}}",
+    "view_scheduled": "查看定时发布 →",
+    "schedule_failed": "定时设置失败",
+    "published_to": "已发布到 {{platform}} ✓",
+    "view_post": "查看帖子 →",
+    "publish_failed": "发布失败"
+  },
+  "connect_nudge": {
+    "meta_prefix": "想要一键发布？",
+    "meta_link": "连接 Facebook 主页",
+    "meta_suffix": "，我们将直接发布。",
+    "linkedin_prefix": "想要一键发布？",
+    "linkedin_link": "连接 LinkedIn",
+    "linkedin_suffix": "，我们将直接发布到您的个人动态。"
+  },
+  "compose_hint": {
+    "linkedin": "LinkedIn 分享对话框只识别链接 — 正文不会自动填入。请先点击「复制文案」，再粘贴到 LinkedIn 发布器中。",
+    "default": "文案不会自动填入 — 请先复制。"
+  },
+  "footer": "第一阶段：打开平台的发布对话框并填入您的文案。第二阶段（约 4 周后）将在一次性授权后直接发布 — 无需额外点击。",
+  "image": {
+    "selected_fallback_alt": "已选图片",
+    "attached_fallback": "已附加图片",
+    "image_label_fallback": "图片",
+    "change": "更换",
+    "remove": "移除",
+    "your_library": "您的图库",
+    "library_close": "关闭",
+    "library_loading": "加载中……",
+    "library_empty": "您的图库为空。上传一张图片开始使用。",
+    "library_image_alt_fallback": "图库图片",
+    "upload_busy": "上传中……",
+    "upload_label": "上传新图片（JPG / PNG / WEBP，≤ 20 MB）",
+    "prompt_prefix_emphasis": "添加图片",
+    "prompt_suffix": " — 附加照片以便发布时直接使用。可选。",
+    "upload_short": "上传",
+    "open_library": "图库"
+  },
+  "empty_subjects": {
+    "new_listing": "最近 60 天没有房源。请先创建房源，或使用「自定义」选项。",
+    "open_house": "未来 21 天内没有看房日。请先安排，或使用「自定义」选项。",
+    "price_drop": "没有可以重新定价的活跃房源。请先添加或激活房源。",
+    "just_sold": "最近 60 天没有成交记录。请使用「自定义」选项起草一篇通用的庆祝帖子。",
+    "default": "此处没有可选项 — 请使用「自定义」选项。"
+  }
+}

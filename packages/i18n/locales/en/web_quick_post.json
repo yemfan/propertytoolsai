@@ -1,0 +1,222 @@
+{
+  "header": {
+    "title": "Quick Post",
+    "subtitle": "AI drafts a social post in seconds. Edit, then share.",
+    "back": "← Back"
+  },
+  "errors": {
+    "subjects_load_failed": "Failed to load subjects",
+    "subjects_load_short": "Failed to load",
+    "lookup_failed": "Lookup failed",
+    "lookup_input_required": "Paste an address or listing URL first.",
+    "draft_failed": "Draft failed",
+    "publish_failed": "Publish failed",
+    "schedule_failed": "Schedule failed",
+    "invalid_datetime": "Invalid date/time",
+    "recurring_failed": "Recurring create failed",
+    "library_load_failed": "Failed to load",
+    "upload_failed": "Upload failed"
+  },
+  "triggers": {
+    "new_listing": {
+      "label": "New listing",
+      "hint": "Announce a property you just listed"
+    },
+    "open_house": {
+      "label": "Open house",
+      "hint": "Promote an upcoming open house"
+    },
+    "price_drop": {
+      "label": "Price drop",
+      "hint": "Re-introduce a listing at a new price"
+    },
+    "just_sold": {
+      "label": "Just sold",
+      "hint": "Celebrate a deal you just closed"
+    },
+    "market_update": {
+      "label": "Market update",
+      "hint": "Share an observation about your local market"
+    },
+    "testimonial": {
+      "label": "Testimonial",
+      "hint": "Style a client quote into a polished post"
+    },
+    "custom": {
+      "label": "Custom",
+      "hint": "Write your own brief, AI drafts the post"
+    },
+    "by_address": {
+      "label": "By address / URL",
+      "hint": "Paste a listing link or address — we pull the details"
+    }
+  },
+  "brief": {
+    "new_listing": {
+      "placeholder": "Optional — what's the standout feature? (e.g. 'beautifully updated kitchen, sun-drenched backyard, walk to the village')",
+      "help": "Optional. Specific details make the post sound less generic."
+    },
+    "open_house": {
+      "placeholder": "Optional — anything special about the home or the open house (e.g. 'brand-new bathroom, light bites & coffee provided')",
+      "help": "Optional. Mention staging, refreshments, or unique features if any."
+    },
+    "price_drop": {
+      "placeholder": "Optional — old price + reason (e.g. 'Down from $1.45M to $1.39M — motivated seller, fast close possible')",
+      "help": "Mention the previous price if you want it referenced. AI will not invent numbers."
+    },
+    "just_sold": {
+      "placeholder": "Optional — anything special (e.g. 'closed in 14 days, multiple offers, repeat client')",
+      "help": "Optional. Skip client names unless they've explicitly OK'd a public mention."
+    },
+    "market_update": {
+      "placeholder": "What's the angle? (e.g. 'Inventory in Pasadena is up 18% MoM, rates have eased below 6.5% — buyers who paused are back')",
+      "help": "Specific data points produce better posts than generic 'the market is changing'."
+    },
+    "testimonial": {
+      "placeholder": "Paste the client quote verbatim, plus their first name if you have it (e.g. 'Sarah: \"Mike made the whole process feel easy — we closed in under 30 days and he negotiated $15k off the asking.\"')",
+      "help": "AI will use the quote verbatim. Add the client's first name if they've consented to public mention."
+    },
+    "custom": {
+      "placeholder": "Describe what the post should say — angle, tone, any specifics worth including.",
+      "help": "Be specific — names, neighborhoods, numbers, and angles help AI write a post that doesn't sound generic."
+    },
+    "by_address": {
+      "placeholder": "Paste a listing URL (Zillow, Redfin, MLS, etc.) or just type an address.",
+      "help": "We'll look up the property and pre-fill the brief with what we find — you can edit before generating."
+    }
+  },
+  "step1": {
+    "title": "What's this about?",
+    "subtitle": "Pick the angle of your post."
+  },
+  "step2": {
+    "title_lookup": "Paste the address or URL",
+    "title_brief": "What's the brief?",
+    "title_picker": "Which one?",
+    "subtitle_lookup": "We'll pull the property details and seed the brief.",
+    "subtitle_brief": "AI writes the post directly from your brief.",
+    "subtitle_picker_new_listing": "Pick a listing from the last 60 days.",
+    "subtitle_picker_open_house": "Pick an upcoming open house.",
+    "subtitle_picker_price_drop": "Pick the listing you're re-pricing.",
+    "subtitle_picker_just_sold": "Pick a recent closing to celebrate.",
+    "lookup": {
+      "input_placeholder": "123 Main St, Pasadena CA — or paste a Zillow / Redfin / MLS URL",
+      "looking_up_busy": "Looking up…",
+      "look_up": "Look up",
+      "result_found": "Property found",
+      "result_not_found": "Property not in our database — using what you typed",
+      "brief_label": "Brief (editable)",
+      "brief_help": "AI never invents details — edit to add anything else you want mentioned (open-house time, standout features, etc.)."
+    },
+    "loading": "Loading…",
+    "add_angle": "Add an angle (optional)"
+  },
+  "brief_input": {
+    "saved": "Brief saved",
+    "use_this": "Use this brief"
+  },
+  "step3": {
+    "title": "Draft + share",
+    "subtitle": "AI writes a platform-specific caption. Edit anything before sharing.",
+    "no_draft": "No draft yet for {{platform}}.",
+    "generate": "Generate draft",
+    "drafting": "Drafting...",
+    "regenerate": "↻ Regenerate",
+    "regenerating": "Regenerating...",
+    "copy_caption": "Copy caption",
+    "save_image": "Save image",
+    "post_to": "Post to:",
+    "linkedin_member_fallback": "LinkedIn member",
+    "page_fallback": "Connected Page"
+  },
+  "actions": {
+    "creating_recurring": "Creating…",
+    "create_recurring": "Create recurring",
+    "scheduling": "Scheduling…",
+    "schedule": "Schedule",
+    "publishing": "Publishing…",
+    "publish_to": "Publish to {{platform}}",
+    "share_to": "Share to {{platform}}",
+    "ig_no_compose": "Instagram has no web compose — copy the caption, save the image, and post from the IG app. Or connect a Page to publish directly.",
+    "no_share": "Direct share unavailable on this platform"
+  },
+  "schedule": {
+    "later_cta": "⏰ Schedule for later instead",
+    "recurring_cta": "🔁 Make this recurring",
+    "label": "Publish at (your local time)",
+    "cancel": "Cancel",
+    "cron_hint": "Cron picks it up every 5 minutes. Actual publish may land up to 5 min after your chosen time."
+  },
+  "recurring": {
+    "header": "🔁 Make this recurring",
+    "cancel": "Cancel",
+    "cadence_label": "Cadence",
+    "cadence_weekly": "Weekly",
+    "cadence_daily": "Daily",
+    "weekday_label": "Day of week",
+    "weekdays": {
+      "sun": "Sunday",
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday"
+    },
+    "time_label": "Time of day ({{tz}})",
+    "max_label": "Stop after (occurrences)",
+    "max_placeholder": "(unlimited)",
+    "hint_prefix": "The materialize cron creates a scheduled post for each occurrence about an hour before fire time. You can pause or cancel anytime from the ",
+    "hint_link": "recurring posts page",
+    "hint_suffix": "."
+  },
+  "banners": {
+    "recurring_created": "Recurring post created — first occurrence {{when}}",
+    "recurring_manage": "Manage recurring posts →",
+    "recurring_failed": "Recurring create failed",
+    "scheduled_for": "Scheduled for {{when}}",
+    "view_scheduled": "View scheduled posts →",
+    "schedule_failed": "Schedule failed",
+    "published_to": "Published to {{platform}} ✓",
+    "view_post": "View the post →",
+    "publish_failed": "Publish failed"
+  },
+  "connect_nudge": {
+    "meta_prefix": "Want one-click publish? ",
+    "meta_link": "Connect a Facebook Page",
+    "meta_suffix": " and we'll publish directly.",
+    "linkedin_prefix": "Want one-click publish? ",
+    "linkedin_link": "Connect LinkedIn",
+    "linkedin_suffix": " and we'll post to your personal feed directly."
+  },
+  "compose_hint": {
+    "linkedin": "LinkedIn's share dialog only honors the link — the body won't pre-fill. Tap Copy caption first, then paste into the LinkedIn compose.",
+    "default": "Caption won't pre-fill — copy it first."
+  },
+  "footer": "Phase 1: opens the platform's compose dialog with your caption. Phase 2 (in ~4 weeks) will post directly after one-time authorization — no extra click required.",
+  "image": {
+    "selected_fallback_alt": "Selected image",
+    "attached_fallback": "Image attached",
+    "image_label_fallback": "image",
+    "change": "Change",
+    "remove": "Remove",
+    "your_library": "Your library",
+    "library_close": "Close",
+    "library_loading": "Loading…",
+    "library_empty": "Your library is empty. Upload an image to get started.",
+    "library_image_alt_fallback": "Library image",
+    "upload_busy": "Uploading…",
+    "upload_label": "Upload a new image (JPG / PNG / WEBP, ≤ 20 MB)",
+    "prompt_prefix_emphasis": "Add an image",
+    "prompt_suffix": " — attach a photo so you have it ready when sharing. Optional.",
+    "upload_short": "Upload",
+    "open_library": "Library"
+  },
+  "empty_subjects": {
+    "new_listing": "No listings from the last 60 days. Create a listing first, or use the Custom option.",
+    "open_house": "No upcoming open houses in the next 21 days. Schedule one, or use the Custom option.",
+    "price_drop": "No active listings to re-price. Add or activate a listing first.",
+    "just_sold": "No transactions closed in the last 60 days. Use the Custom option to draft a general celebration post.",
+    "default": "Nothing to pick here — use the Custom option."
+  }
+}
