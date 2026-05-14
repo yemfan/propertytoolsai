@@ -1,0 +1,107 @@
+{
+  "header": {
+    "title": "Contacts",
+    "subtitle_total_one": "{{count}} total contact",
+    "subtitle_total_other": "{{count}} total contacts"
+  },
+  "charts": {
+    "rating": "Rating Distribution",
+    "last_contacted": "Last Contacted",
+    "growth": "Contact Growth (12 months)",
+    "growth_tooltip": "Contacts"
+  },
+  "messages": {
+    "added": "Contact added.",
+    "updated": "Updated.",
+    "marked_contacted": "Marked as contacted.",
+    "postcard_sent": "Postcard sent ✓",
+    "postcards_sent_one": "Sent {{count}} postcard ✓",
+    "postcards_sent_other": "Sent {{count}} postcards ✓",
+    "default_error": "Error",
+    "add_failed": "Failed",
+    "update_failed": "Update failed"
+  },
+  "add_menu": {
+    "button": "Add…",
+    "enter_contact": "Enter a contact",
+    "scan_card": "Scan business card",
+    "ai_extract": "AI extract from file",
+    "upload_csv": "Upload CSV",
+    "download_template": "Download template"
+  },
+  "add_form": {
+    "title": "New Contact",
+    "placeholder_name": "Name",
+    "placeholder_email": "Email",
+    "placeholder_phone": "Phone",
+    "placeholder_address": "Address",
+    "placeholder_notes": "Notes / memo",
+    "submit": "Add Contact",
+    "saving": "Saving..."
+  },
+  "search": {
+    "placeholder": "Search name, email, phone, address...",
+    "filter_all": "All ratings"
+  },
+  "rating": {
+    "hot": "Hot",
+    "warm": "Warm",
+    "cold": "Cold",
+    "empty": "—"
+  },
+  "bulk_bar": {
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "clear": "Clear",
+    "send_postcards_one": "💌 Send postcard to {{count}}",
+    "send_postcards_other": "💌 Send postcard to {{count}}"
+  },
+  "columns": {
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "rating": "Rating",
+    "last_contacted": "Last Contacted",
+    "memo": "Memo",
+    "address": "Address"
+  },
+  "time_ago": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "days": "{{count}}d ago",
+    "months": "{{count}}mo ago",
+    "years": "{{count}}y ago"
+  },
+  "row": {
+    "empty_value": "—",
+    "language_default": "Lang: default",
+    "email_tooltip": "Email {{email}}",
+    "email_a11y": "Email contact",
+    "language_tooltip": "AI outbound in: {{lang}}",
+    "showings_tooltip_one": "{{count}} showing",
+    "showings_tooltip_other": "{{count}} showings",
+    "showings_tooltip_with_loved_one": "{{count}} showing, {{loved}} loved",
+    "showings_tooltip_with_loved_other": "{{count}} showings, {{loved}} loved",
+    "offers_tooltip": "{{active}} active, {{won}} accepted",
+    "edit_label": "Edit contact",
+    "save": "Save",
+    "cancel": "Cancel",
+    "mark_contacted_label": "Mark contacted",
+    "text_phone_tooltip": "Text {{phone}}",
+    "send_sms_a11y": "Send SMS",
+    "schedule_showing_label": "Schedule showing",
+    "draft_offer_label": "Draft offer",
+    "start_deal_label": "Start deal",
+    "send_postcard_label": "Send postcard",
+    "select_contact_a11y": "Select {{name}}",
+    "select_contact_a11y_fallback": "Select contact",
+    "select_all_a11y": "Select all filtered contacts"
+  },
+  "empty": {
+    "no_match": "No contacts match your search.",
+    "no_contacts": "No contacts yet."
+  },
+  "bulk_postcard": {
+    "recipient_fallback_name": "friend"
+  }
+}

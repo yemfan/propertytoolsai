@@ -1,0 +1,107 @@
+{
+  "header": {
+    "title": "联系人",
+    "subtitle_total_one": "共 {{count}} 位联系人",
+    "subtitle_total_other": "共 {{count}} 位联系人"
+  },
+  "charts": {
+    "rating": "评级分布",
+    "last_contacted": "最近联系",
+    "growth": "联系人增长（12 个月）",
+    "growth_tooltip": "联系人"
+  },
+  "messages": {
+    "added": "已添加联系人。",
+    "updated": "已更新。",
+    "marked_contacted": "已标记为已联系。",
+    "postcard_sent": "明信片已发送 ✓",
+    "postcards_sent_one": "已发送 {{count}} 张明信片 ✓",
+    "postcards_sent_other": "已发送 {{count}} 张明信片 ✓",
+    "default_error": "出错",
+    "add_failed": "失败",
+    "update_failed": "更新失败"
+  },
+  "add_menu": {
+    "button": "添加……",
+    "enter_contact": "手动添加联系人",
+    "scan_card": "扫描名片",
+    "ai_extract": "AI 从文件提取",
+    "upload_csv": "上传 CSV",
+    "download_template": "下载模板"
+  },
+  "add_form": {
+    "title": "新建联系人",
+    "placeholder_name": "姓名",
+    "placeholder_email": "邮箱",
+    "placeholder_phone": "电话",
+    "placeholder_address": "地址",
+    "placeholder_notes": "备注 / 备忘",
+    "submit": "添加联系人",
+    "saving": "保存中……"
+  },
+  "search": {
+    "placeholder": "搜索姓名、邮箱、电话或地址……",
+    "filter_all": "全部评级"
+  },
+  "rating": {
+    "hot": "热门",
+    "warm": "温和",
+    "cold": "冷淡",
+    "empty": "—"
+  },
+  "bulk_bar": {
+    "selected_one": "已选 {{count}} 位",
+    "selected_other": "已选 {{count}} 位",
+    "clear": "清空",
+    "send_postcards_one": "💌 向 {{count}} 位发送明信片",
+    "send_postcards_other": "💌 向 {{count}} 位发送明信片"
+  },
+  "columns": {
+    "name": "姓名",
+    "email": "邮箱",
+    "phone": "电话",
+    "rating": "评级",
+    "last_contacted": "最近联系",
+    "memo": "备注",
+    "address": "地址"
+  },
+  "time_ago": {
+    "today": "今天",
+    "yesterday": "昨天",
+    "days": "{{count}} 天前",
+    "months": "{{count}} 个月前",
+    "years": "{{count}} 年前"
+  },
+  "row": {
+    "empty_value": "—",
+    "language_default": "语言：默认",
+    "email_tooltip": "发邮件给 {{email}}",
+    "email_a11y": "发送邮件",
+    "language_tooltip": "AI 外发语言：{{lang}}",
+    "showings_tooltip_one": "{{count}} 次看房",
+    "showings_tooltip_other": "{{count}} 次看房",
+    "showings_tooltip_with_loved_one": "{{count}} 次看房，{{loved}} 次非常满意",
+    "showings_tooltip_with_loved_other": "{{count}} 次看房，{{loved}} 次非常满意",
+    "offers_tooltip": "{{active}} 个进行中，{{won}} 个已接受",
+    "edit_label": "编辑联系人",
+    "save": "保存",
+    "cancel": "取消",
+    "mark_contacted_label": "标记为已联系",
+    "text_phone_tooltip": "发短信给 {{phone}}",
+    "send_sms_a11y": "发送短信",
+    "schedule_showing_label": "安排看房",
+    "draft_offer_label": "起草报价",
+    "start_deal_label": "开启交易",
+    "send_postcard_label": "发送明信片",
+    "select_contact_a11y": "选择 {{name}}",
+    "select_contact_a11y_fallback": "选择联系人",
+    "select_all_a11y": "选择所有筛选后的联系人"
+  },
+  "empty": {
+    "no_match": "未找到匹配的联系人。",
+    "no_contacts": "暂无联系人。"
+  },
+  "bulk_postcard": {
+    "recipient_fallback_name": "朋友"
+  }
+}
