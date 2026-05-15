@@ -27,6 +27,23 @@
     "hot_lead": "hot lead",
     "phone": "phone {{phone}}",
     "stage": "stage {{stage}}",
-    "open_lead": "Opens lead details"
+    "open_lead": "Opens lead details",
+    "add_contact": "Add contact"
+  },
+  "add_contact": {
+    "header": "New contact",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "notes": "Notes",
+    "submit": "Save contact",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "success": "Contact added.",
+    "duplicate_warning": "A similar contact already exists. Save anyway?",
+    "force_create": "Save anyway",
+    "validation_failed": "Please fix the errors below."
   }
 }
+

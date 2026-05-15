@@ -27,6 +27,23 @@
     "hot_lead": "热门线索",
     "phone": "电话 {{phone}}",
     "stage": "阶段 {{stage}}",
-    "open_lead": "打开线索详情"
+    "open_lead": "打开线索详情",
+    "add_contact": "添加联系人"
+  },
+  "add_contact": {
+    "header": "新建联系人",
+    "name": "姓名",
+    "email": "邮箱",
+    "phone": "电话",
+    "address": "地址",
+    "notes": "备注",
+    "submit": "保存联系人",
+    "saving": "保存中……",
+    "cancel": "取消",
+    "success": "已添加联系人。",
+    "duplicate_warning": "已存在相似的联系人。仍要保存吗?",
+    "force_create": "仍要保存",
+    "validation_failed": "请修正下方的错误。"
   }
 }
+

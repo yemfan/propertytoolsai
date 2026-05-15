@@ -6,6 +6,7 @@ export const MOBILE_API_PATHS = {
   dailyAgenda: "/api/mobile/daily-agenda",
   leads: "/api/mobile/leads",
   lead: (leadId: string) => `/api/mobile/leads/${encodeURIComponent(leadId)}`,
+  contactsIntake: "/api/mobile/contacts/intake",
   leadSmsSend: (leadId: string) =>
     `/api/mobile/leads/${encodeURIComponent(leadId)}/sms/send`,
   leadSmsAiReply: (leadId: string) =>
