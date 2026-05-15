@@ -445,19 +445,23 @@ function applyDraftHref(
     return `/dashboard/offers/upload?${params.toString()}`;
   }
   if (d.intent === "showing_requested") {
-    // /dashboard/showings/new will fetch the delivery on mount and
-    // prefill address / date / time / notes from the extraction.
-    // contactId only preselects the buyer when the matched-contact
-    // toggle is "Use this contact" — otherwise the form's Contact
-    // Picker stays open for manual selection (most likely case for
+    // /dashboard/showings/new fetches the delivery on mount and
+    // prefills address / date / time / notes from the extraction.
+    // contactId preselects the buyer when the matched-contact toggle
+    // is "Use this contact" — otherwise the form's Contact Picker
+    // stays open for manual selection (most likely case for
     // showings, since the requester is often a NEW lead).
     const params = new URLSearchParams({ inboundId: d.id });
     if (contactId) params.set("contactId", contactId);
     return `/dashboard/showings/new?${params.toString()}`;
   }
-  // Listing-agreement upload flow doesn't exist yet (transactions/new
-  // is the manual entry surface). When it lands we can wire this up;
-  // for now return null so the CTA is hidden and the agent uses the
-  // extraction view as a copy-paste reference.
+  if (d.intent === "listing_signed") {
+    // Phase 2B-4: /dashboard/listings/upload mirrors the offer upload
+    // — fetches the delivery, prefills with the parsed RLA fields,
+    // agent picks the seller and saves as a listing-rep transaction.
+    const params = new URLSearchParams({ inboundId: d.id });
+    if (contactId) params.set("contactId", contactId);
+    return `/dashboard/listings/upload?${params.toString()}`;
+  }
   return null;
 }
