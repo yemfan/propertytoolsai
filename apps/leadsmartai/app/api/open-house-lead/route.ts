@@ -224,7 +224,7 @@ export async function POST(req: Request) {
     // 2) Fetch/refresh property data so we have latest snapshots (rent + estimated value).
     //    This also ensures the warehouse rows exist for comps generation.
     try {
-      await getPropertyData(propertyRow.address, false);
+      await getPropertyData(propertyAddress, false);
     } catch (e) {
       console.error("open-house: getPropertyData refresh failed", e);
       // Continue with whatever snapshots/comps are already available.
@@ -232,8 +232,8 @@ export async function POST(req: Request) {
 
     // 3) Generate report data: estimated value + rent estimate + subject details + CMA comps.
     const reportData = await generateOpenHouseReportData({
-      propertyId: String(propertyRow.id),
-      address: propertyRow.address,
+      propertyId: String(propertyId),
+      address: propertyAddress,
     });
 
     // 4) Save report to `reports` table.
