@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, type MouseEvent, type ReactNode } from "react";
+import {
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+} from "motion/react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
@@ -64,34 +70,23 @@ const JUMP_LINKS: { key: "how" | "results" | "why"; href: string }[] = [
 ];
 
 /**
- * IntersectionObserver-backed scroll reveal — keeps the page from
- * feeling static without a runtime animation library. Runs once
- * per element.
+ * Scroll-triggered reveal — `motion`'s `whileInView` watches the
+ * element via IntersectionObserver and runs the transition on the
+ * compositor thread. `once: true` keeps the animation from re-firing
+ * on every scroll-back; `amount: 0.18` requires ~18% of the element
+ * visible before triggering, mirroring the threshold of the previous
+ * hand-rolled hook.
+ *
+ * The transition is a spring (not a linear ease) so the entrance
+ * settles with the slight overshoot Linear/Vercel use on their
+ * landing pages — `stiffness: 90, damping: 22` gives a ~700ms total
+ * motion that doesn't feel either bouncy or sluggish.
+ *
+ * `useReducedMotion()` short-circuits all animation when the user
+ * has the OS-level preference set; equivalent to the existing
+ * `prefers-reduced-motion` CSS guard but read at render time so the
+ * variants don't run at all.
  */
-function useScrollReveal() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setVisible(true);
-            io.disconnect();
-            return;
-          }
-        }
-      },
-      { threshold: 0.12, rootMargin: "0px 0px -10% 0px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  return { ref, visible };
-}
-
 function RevealSection({
   children,
   className = "",
@@ -101,19 +96,86 @@ function RevealSection({
   className?: string;
   delay?: number;
 }) {
-  const { ref, visible } = useScrollReveal();
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) {
+    return <div className={className}>{children}</div>;
+  }
   return (
-    <div
-      ref={ref}
-      style={{ transitionDelay: `${delay}ms` }}
-      className={`transition-all duration-700 ease-out ${
-        visible
-          ? "translate-y-0 opacity-100"
-          : "translate-y-4 opacity-0"
-      } ${className}`}
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.18, margin: "0px 0px -10% 0px" }}
+      transition={{
+        type: "spring",
+        stiffness: 90,
+        damping: 22,
+        delay: delay / 1000,
+      }}
+      className={className}
     >
       {children}
-    </div>
+    </motion.div>
+  );
+}
+
+/**
+ * Magnetic CTA wrapper — the button gently follows the cursor when
+ * the user hovers within a ~28px field around it, then springs back
+ * to center on leave. The pull is small (max ±10px) so the click
+ * target stays predictable. Wraps `<Button>` so the underlying
+ * primitive keeps all its existing styling, focus management, and
+ * accessibility wiring; this only adds the motion shell.
+ *
+ * Honors `prefers-reduced-motion` by skipping the spring entirely
+ * and rendering the children inline — keyboard users and anyone
+ * with the OS toggle on get a static button with no surprise.
+ */
+function MagneticButton({
+  children,
+  strength = 0.35,
+}: {
+  children: ReactNode;
+  /** 0..1 — fraction of the cursor distance the button follows. */
+  strength?: number;
+}) {
+  const reduceMotion = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  // `useSpring` smooths the cursor follow so the button doesn't snap
+  // to every micro-movement; the spring config is intentionally
+  // light so it feels like a gentle pull, not a tether.
+  const sx = useSpring(x, { stiffness: 250, damping: 22, mass: 0.4 });
+  const sy = useSpring(y, { stiffness: 250, damping: 22, mass: 0.4 });
+
+  if (reduceMotion) {
+    return <>{children}</>;
+  }
+
+  function onMove(event: MouseEvent<HTMLDivElement>) {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const dx = event.clientX - (rect.left + rect.width / 2);
+    const dy = event.clientY - (rect.top + rect.height / 2);
+    x.set(dx * strength);
+    y.set(dy * strength);
+  }
+
+  function onLeave() {
+    x.set(0);
+    y.set(0);
+  }
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      style={{ x: sx, y: sy, display: "inline-block" }}
+    >
+      {children}
+    </motion.div>
   );
 }
 
@@ -201,12 +263,14 @@ export default function LeadSmartLandingV2() {
               </ul>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                <Button
-                  href={PRIMARY_CTA_HREF}
-                  className="min-h-[48px] px-7 text-base shadow-lg shadow-[#0072ce]/20 hover:shadow-xl hover:shadow-[#0072ce]/30"
-                >
-                  {t("hero.cta_primary")}
-                </Button>
+                <MagneticButton>
+                  <Button
+                    href={PRIMARY_CTA_HREF}
+                    className="min-h-[48px] px-7 text-base shadow-floating hover:shadow-overlay"
+                  >
+                    {t("hero.cta_primary")}
+                  </Button>
+                </MagneticButton>
                 <Button
                   variant="outline"
                   href="#how"
@@ -326,7 +390,13 @@ export default function LeadSmartLandingV2() {
           </div>
         </section>
 
-        {/* ── GROWTH ENGINE (5 pillars) ─── */}
+        {/* ── GROWTH ENGINE (5 pillars, bento layout) ───
+            4-column grid on lg+, where `follow_up` is the featured
+            tile (gradient background, brand ring, larger icon). The
+            asymmetric layout — 2 small + 1 wide on row 1, 2 wide on
+            row 2 — is the "bento" idiom Apple/Vercel use to break the
+            row-of-equal-boxes feel of a standard product grid.
+            Falls back to a stacked 1-col on mobile, 2-col on md. */}
         <section className="px-6 py-20 md:py-24">
           <div className="mx-auto max-w-7xl">
             <RevealSection className="mx-auto max-w-3xl text-center">
@@ -338,43 +408,92 @@ export default function LeadSmartLandingV2() {
               </h2>
             </RevealSection>
 
-            <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {GROWTH_ENGINE.map((p, i) => (
-                <RevealSection key={p.key} delay={i * 80}>
-                  <div className="group relative flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-6 transition hover:-translate-y-1 hover:shadow-xl dark:border-slate-700 dark:bg-slate-900">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ${p.chip.bg} ${p.chip.text}`}>
-                        <p.icon size={22} strokeWidth={2} aria-hidden />
-                      </div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                        {t("growth.step_label", { step: p.step })}
-                      </span>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <span aria-hidden className="text-xl">
-                        {p.emoji}
-                      </span>
-                      <h3 className="font-heading text-base font-bold text-slate-900 dark:text-white">
-                        {t(`growth.pillars.${p.key}.title`)}
-                      </h3>
-                    </div>
-                    <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                      {t(`growth.pillars.${p.key}.tagline`)}
-                    </p>
-                    <ul className="mt-5 space-y-2">
-                      {p.bullets.map((bulletKey) => (
-                        <li
-                          key={bulletKey}
-                          className="flex items-center gap-2.5 text-xs text-slate-700 dark:text-slate-300"
+            <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+              {GROWTH_ENGINE.map((p, i) => {
+                const isFeatured = p.key === "follow_up";
+                const colSpan = PILLAR_BENTO_SPANS[p.key];
+                return (
+                  <RevealSection
+                    key={p.key}
+                    delay={i * 80}
+                    className={colSpan}
+                  >
+                    <div
+                      className={
+                        // Featured tile gets a brand-tinted gradient
+                        // background + brand ring; standard tiles
+                        // stay on plain surface with the shared
+                        // shadow-raised treatment from globals.css.
+                        isFeatured
+                          ? "group relative flex h-full flex-col overflow-hidden rounded-2xl border border-transparent bg-gradient-to-br from-[#0072ce]/[0.08] via-white to-white p-6 shadow-raised ring-1 ring-[#0072ce]/25 transition-all duration-300 hover:-translate-y-1 hover:shadow-overlay md:p-8 dark:from-[#0072ce]/[0.18] dark:via-slate-900 dark:to-slate-900 dark:ring-[#0072ce]/40"
+                          : "group relative flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-6 shadow-raised transition-all duration-300 hover:-translate-y-1 hover:shadow-floating dark:border-slate-700 dark:bg-slate-900"
+                      }
+                    >
+                      {/* Conic-gradient halo behind the featured card —
+                          subtle radial glow that only appears on the
+                          follow_up tile to reinforce its hierarchy. */}
+                      {isFeatured ? (
+                        <div
+                          aria-hidden
+                          className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-30 blur-3xl dark:opacity-20"
+                          style={{
+                            background:
+                              "conic-gradient(from 180deg at 50% 50%, #0072ce 0deg, #4F46E5 120deg, #0072ce 240deg, #7c3aed 360deg)",
+                          }}
+                        />
+                      ) : null}
+                      <div className="relative mb-4 flex items-center justify-between">
+                        <div
+                          className={`inline-flex items-center justify-center rounded-xl ${p.chip.bg} ${p.chip.text} ${
+                            isFeatured ? "h-14 w-14" : "h-12 w-12"
+                          }`}
                         >
-                          <BrandCheck tone={p.checkTone} />
-                          {t(`growth.pillars.${p.key}.bullets.${bulletKey}`)}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </RevealSection>
-              ))}
+                          <p.icon
+                            size={isFeatured ? 26 : 22}
+                            strokeWidth={2}
+                            aria-hidden
+                          />
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                          {t("growth.step_label", { step: p.step })}
+                        </span>
+                      </div>
+                      <div className="relative flex items-baseline gap-2">
+                        <span aria-hidden className={isFeatured ? "text-2xl" : "text-xl"}>
+                          {p.emoji}
+                        </span>
+                        <h3
+                          className={`font-heading font-bold text-slate-900 dark:text-white ${
+                            isFeatured ? "text-lg md:text-xl" : "text-base"
+                          }`}
+                        >
+                          {t(`growth.pillars.${p.key}.title`)}
+                        </h3>
+                      </div>
+                      <p
+                        className={`relative mt-2 flex-1 leading-relaxed text-slate-600 dark:text-slate-400 ${
+                          isFeatured ? "text-base" : "text-sm"
+                        }`}
+                      >
+                        {t(`growth.pillars.${p.key}.tagline`)}
+                      </p>
+                      <ul className="relative mt-5 space-y-2">
+                        {p.bullets.map((bulletKey) => (
+                          <li
+                            key={bulletKey}
+                            className={`flex items-center gap-2.5 text-slate-700 dark:text-slate-300 ${
+                              isFeatured ? "text-sm" : "text-xs"
+                            }`}
+                          >
+                            <BrandCheck tone={p.checkTone} />
+                            {t(`growth.pillars.${p.key}.bullets.${bulletKey}`)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </RevealSection>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -792,6 +911,23 @@ type GrowthPillar = {
   icon: LucideIcon;
   chip: { bg: string; text: string };
   checkTone: "primary" | "primaryDark" | "success" | "accent";
+};
+
+/**
+ * Bento layout map — at `lg` (4-col grid):
+ *   Row 1: [capture: 1] [qualify: 1] [follow_up: 2, featured tile]
+ *   Row 2: [convert: 2] [scale: 2]
+ *
+ * This produces 3 tiles on row 1 and 2 wide tiles on row 2, the
+ * asymmetric "bento" rhythm. At `md` (2-col), every tile gets
+ * `md:col-span-1`; mobile is 1-col stacked.
+ */
+const PILLAR_BENTO_SPANS: Record<PillarKey, string> = {
+  capture: "md:col-span-1 lg:col-span-1",
+  qualify: "md:col-span-1 lg:col-span-1",
+  follow_up: "md:col-span-2 lg:col-span-2",
+  convert: "md:col-span-2 lg:col-span-2",
+  scale: "md:col-span-2 lg:col-span-2",
 };
 
 /**

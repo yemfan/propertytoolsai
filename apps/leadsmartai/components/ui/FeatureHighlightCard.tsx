@@ -38,14 +38,18 @@ export function FeatureHighlightCard({
   return (
     <div
       className={cn(
-        "rounded-xl border border-slate-200/90 border-t-4 bg-gradient-to-b to-slate-50/80 p-6 text-center shadow-sm",
+        // `shadow-raised` at rest + `shadow-floating` on hover comes
+        // from the brand-tinted elevation tokens in `globals.css`. The
+        // -0.5 translate is the matching vertical motion — without it
+        // the shadow change reads as a flicker.
+        "group rounded-xl border border-slate-200/90 border-t-4 bg-gradient-to-b to-slate-50/80 p-6 text-center shadow-raised transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-floating dark:to-slate-900/40",
         a.borderTop,
         a.gradientFrom,
         className
       )}
     >
-      <p className="font-heading font-semibold text-slate-900">{title}</p>
-      <p className="mt-2 text-sm text-gray-600">{description}</p>
+      <p className="font-heading font-semibold text-slate-900 dark:text-slate-100">{title}</p>
+      <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">{description}</p>
     </div>
   );
 }

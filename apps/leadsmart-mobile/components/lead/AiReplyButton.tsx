@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
+import { hapticButtonPress } from "../../lib/haptics";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
 
@@ -24,7 +25,13 @@ export function AiReplyButton({
   const off = Boolean(disabled || loading);
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        // Medium "button press" tick — kicks off the AI draft request.
+        // The downstream success/error notifications inside the modal
+        // handle the terminal feedback.
+        hapticButtonPress();
+        onPress();
+      }}
       disabled={off}
       style={[styles.btn, off && styles.btnDisabled]}
       accessibilityRole="button"

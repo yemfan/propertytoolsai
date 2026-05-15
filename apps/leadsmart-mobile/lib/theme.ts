@@ -15,6 +15,29 @@
  * not into a screen-level StyleSheet.
  */
 
+type Ramp11 = {
+  50: string;
+  100: string;
+  200: string;
+  300: string;
+  400: string;
+  500: string;
+  600: string;
+  700: string;
+  800: string;
+  900: string;
+  950: string;
+};
+
+type ElevationShadow = {
+  shadowColor: string;
+  shadowOffset: { width: number; height: number };
+  shadowOpacity: number;
+  shadowRadius: number;
+  /** Android — RN ignores `shadow*` on Android, falls back to `elevation`. */
+  elevation: number;
+};
+
 type Tokens = {
   /* Base surfaces */
   bg: string;
@@ -23,6 +46,29 @@ type Tokens = {
   surfaceMuted: string;
   border: string;
   borderSubtle: string;
+
+  /* 11-step ramps — additive, do not displace existing semantic
+   * tokens below. Use these on new screens when you need a specific
+   * step (e.g. brandScale[200] for a hover ring, neutralScale[700]
+   * for a body paragraph). Existing screens keep consuming `accent`,
+   * `textMuted`, etc. Named `brandScale`/`neutralScale` rather than
+   * `brand`/`neutral` because the legacy block below still has a flat
+   * `brand: string` alias for `accent` — keeping that working until
+   * every screen migrates. */
+  brandScale: Ramp11;
+  neutralScale: Ramp11;
+
+  /* Four-level elevation — pass directly to a View's `style` prop.
+   * Mirrors the web ramp in globals.css so the two platforms feel
+   * like one product. iOS uses shadowColor/Offset/Opacity/Radius;
+   * Android uses `elevation` (a single number that RN translates
+   * to its material shadow). */
+  elevation: {
+    raised: ElevationShadow;
+    floating: ElevationShadow;
+    overlay: ElevationShadow;
+    modal: ElevationShadow;
+  };
 
   /* Text */
   text: string;
@@ -110,6 +156,135 @@ type Tokens = {
   skeletonHighlight: string;
 };
 
+/**
+ * Brand 11-step ramp (hex, perceptually-uniform).
+ * brand[500] = #0072ce (legacy accent), brand[600] = #005ca8 (legacy
+ * accentDark). Computed from the OKLCH ramp in `apps/leadsmartai/app/
+ * globals.css` so web and mobile pick the same shade for the same step.
+ */
+const brandLight: Ramp11 = {
+  50: "#ebf5fc",
+  100: "#d6ebf9",
+  200: "#a8d4f1",
+  300: "#6fb6e6",
+  400: "#3093d9",
+  500: "#0072ce",
+  600: "#005ca8",
+  700: "#00477f",
+  800: "#003560",
+  900: "#002543",
+  950: "#00172d",
+};
+
+/**
+ * Dark-mode brand ramp — same hue family, lifted toward the lighter
+ * end so foreground accents read against the deep-slate background.
+ * brand[400] is the new "accent" in dark mode (≈ #4da3e8 from the
+ * existing palette).
+ */
+const brandDark: Ramp11 = {
+  50: "#00172d",
+  100: "#002543",
+  200: "#003560",
+  300: "#00477f",
+  400: "#005ca8",
+  500: "#0072ce",
+  600: "#3093d9",
+  700: "#6fb6e6",
+  800: "#a8d4f1",
+  900: "#d6ebf9",
+  950: "#ebf5fc",
+};
+
+/**
+ * Neutral ramp — aligned with the existing slate-* references already
+ * sprinkled through the mobile screens, so swapping in `neutral[N]`
+ * doesn't shift any existing visual.
+ */
+const neutralRamp: Ramp11 = {
+  50: "#f8fafc",
+  100: "#f1f5f9",
+  200: "#e2e8f0",
+  300: "#cbd5e1",
+  400: "#94a3b8",
+  500: "#64748b",
+  600: "#475569",
+  700: "#334155",
+  800: "#1e293b",
+  900: "#0f172a",
+  950: "#020617",
+};
+
+/**
+ * Elevation ramp — values are tuned for iOS (real shadow physics) and
+ * Android (single `elevation` int). `raised` is the default card,
+ * `floating` is hover/pressed, `overlay` is popovers, `modal` is full-
+ * sheet dialogs.
+ */
+const elevationLight = {
+  raised: {
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  floating: {
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  overlay: {
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.16,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  modal: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 24 },
+    shadowOpacity: 0.28,
+    shadowRadius: 48,
+    elevation: 24,
+  },
+} as const;
+
+/** Dark elevation — black shadow on dark bg disappears, so use a more
+ *  saturated drop with higher opacity to still read as separation. */
+const elevationDark = {
+  raised: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.4,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  floating: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  overlay: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.6,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  modal: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 24 },
+    shadowOpacity: 0.7,
+    shadowRadius: 48,
+    elevation: 24,
+  },
+} as const;
+
 export const lightTheme: Tokens = {
   bg: "#f8fafc",
   surface: "#ffffff",
@@ -117,6 +292,10 @@ export const lightTheme: Tokens = {
   surfaceMuted: "#f8fafc",
   border: "#e2e8f0",
   borderSubtle: "#f1f5f9",
+
+  brandScale: brandLight,
+  neutralScale: neutralRamp,
+  elevation: elevationLight,
 
   text: "#0f172a",
   textMuted: "#64748b",
@@ -202,6 +381,10 @@ export const darkTheme: Tokens = {
   surfaceMuted: "#0f1830",
   border: "#1f2a44",
   borderSubtle: "#172034",
+
+  brandScale: brandDark,
+  neutralScale: neutralRamp,
+  elevation: elevationDark,
 
   text: "#f1f5f9",
   textMuted: "#94a3b8",

@@ -13,6 +13,52 @@
   /* Shared with PropertyTools: bg-blue-600 / hover:bg-blue-700 = brand primary + hover. */
   --color-blue-600: #0072ce;
   --color-blue-700: #005ca8;
+
+  /* ── Brand ramp (OKLCH) ──
+     Perceptually uniform 50-950 ladder anchored at brand-500 = #0072ce.
+     Use the ramp tokens (bg-brand-500, text-brand-700, ring-brand-200/40)
+     on new code; the flat aliases above stay so existing components keep
+     compiling. */
+  --color-brand-50: oklch(0.97 0.018 248);
+  --color-brand-100: oklch(0.93 0.04 248);
+  --color-brand-200: oklch(0.86 0.075 248);
+  --color-brand-300: oklch(0.77 0.115 248);
+  --color-brand-400: oklch(0.68 0.155 248);
+  --color-brand-500: oklch(0.59 0.18 248);
+  --color-brand-600: oklch(0.51 0.185 248);
+  --color-brand-700: oklch(0.43 0.175 250);
+  --color-brand-800: oklch(0.36 0.155 252);
+  --color-brand-900: oklch(0.28 0.125 254);
+  --color-brand-950: oklch(0.20 0.085 254);
+
+  /* ── Neutral ramp (OKLCH) ──
+     Slightly warmer than Tailwind's default slate; chroma stays under 0.015
+     so colored text still pops against it. */
+  --color-neutral-50: oklch(0.985 0.003 270);
+  --color-neutral-100: oklch(0.965 0.005 270);
+  --color-neutral-200: oklch(0.925 0.007 270);
+  --color-neutral-300: oklch(0.875 0.01 270);
+  --color-neutral-400: oklch(0.77 0.012 270);
+  --color-neutral-500: oklch(0.62 0.014 270);
+  --color-neutral-600: oklch(0.50 0.015 270);
+  --color-neutral-700: oklch(0.40 0.014 270);
+  --color-neutral-800: oklch(0.30 0.012 270);
+  --color-neutral-900: oklch(0.22 0.009 270);
+  --color-neutral-950: oklch(0.15 0.006 270);
+
+  /* ── Elevation ramp ──
+     Four explicit levels so cards, hover states, sticky bars and modals
+     read as distinct surfaces. Tinted with the brand hue rather than pure
+     black — gives shadows the "expensive-but-not-heavy" feel used by
+     Linear/Vercel/Stripe. */
+  --shadow-raised: 0 1px 2px oklch(0.59 0.18 248 / 0.06),
+    0 1px 1px oklch(0 0 0 / 0.04);
+  --shadow-floating: 0 4px 12px -2px oklch(0.59 0.18 248 / 0.10),
+    0 2px 6px -2px oklch(0 0 0 / 0.06);
+  --shadow-overlay: 0 18px 40px -12px oklch(0.59 0.18 248 / 0.18),
+    0 8px 16px -6px oklch(0 0 0 / 0.08);
+  --shadow-modal: 0 32px 64px -16px oklch(0 0 0 / 0.25),
+    0 12px 24px -8px oklch(0 0 0 / 0.12);
 }
 
 /* Plain CSS (not @layer) — avoids Turbopack/PostCSS ordering issues on Vercel */
@@ -40,6 +86,13 @@ body {
   background-color: var(--color-surface);
   color: var(--color-text);
   line-height: 1.5;
+  /* Geist ships stylistic alternates that tighten the alphabet's
+     proportions — cv11 = single-storey 'a', ss03 = slashed zero.
+     Together they're what gives Vercel/Linear their crisp UI feel. */
+  font-feature-settings: "cv11", "ss03";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 h1,
@@ -49,6 +102,34 @@ h4,
 h5,
 h6 {
   font-family: var(--font-heading), system-ui, sans-serif;
+  /* Optical-size compensation — at heading sizes Geist needs to be
+     pulled tighter than the body to read as one word, not a row of
+     letters. The ratio scales with size so display H1s breathe a
+     little more than h4-h6. */
+  letter-spacing: -0.011em;
+}
+
+h1 {
+  letter-spacing: -0.022em;
+}
+
+h2 {
+  letter-spacing: -0.018em;
+}
+
+/* Tabular numerics — opt-in for stat cards, tables, and any UI where
+   numbers re-render in place (counters, dashboards). Without this,
+   proportional digits make a value visibly jitter as it ticks. */
+.tabular-nums,
+.font-mono,
+.ui-stat-value {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.font-mono {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo,
+    monospace;
 }
 
 .brand-logo-text {

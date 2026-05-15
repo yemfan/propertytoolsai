@@ -141,15 +141,22 @@ export function LeadQuickActionsRow({ leadId, displayPhone, email, toolbar }: Le
 
   const onPress = useCallback(
     async (key: ActionKey) => {
+      // The `call` branch already fires `hapticButtonPress()` inside
+      // `onCall` (right before it kicks off the Twilio bridge). For
+      // the other three actions — SMS, Email, AI quick-reply — we
+      // fire it here so every chip in the toolbar feels the same on
+      // tap, instead of `call` being the only "tactile" one.
       if (key === "call" && phone) {
         await onCall();
         return;
       }
       if (key === "sms" && phone) {
+        hapticButtonPress();
         await openExternalUrl(buildSmsUrl(phone), t("open_external_fail.sms"));
         return;
       }
       if (key === "email" && emailTrimmed) {
+        hapticButtonPress();
         await openExternalUrl(
           buildMailtoUrl(emailTrimmed),
           t("open_external_fail.email"),
@@ -157,6 +164,7 @@ export function LeadQuickActionsRow({ leadId, displayPhone, email, toolbar }: Le
         return;
       }
       if (key === "ai") {
+        hapticButtonPress();
         presentAiQuickReplyPlaceholder(leadId, "choose");
       }
     },

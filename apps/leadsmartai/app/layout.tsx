@@ -1,6 +1,6 @@
 import "./globals.css";
 import { ReactNode } from "react";
-import { Montserrat, Roboto } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import AuthProvider from "@/components/AuthProvider";
 import AppShell from "@/components/AppShell";
 import { CookieConsentProvider } from "@/components/cookie-consent/CookieConsent";
@@ -9,17 +9,31 @@ import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import { getServerLocale } from "@/lib/i18n/server";
 import { getSiteUrl } from "@/lib/siteUrl";
 
-const fontHeading = Montserrat({
+/**
+ * Typography — Geist Sans (display + body) + Geist Mono (data/tabular).
+ *
+ * Single variable family handles every weight via `font-weight`, so the
+ * heading / body CSS variables both point at it. Existing classes like
+ * `.font-heading` / `.font-body` in globals.css keep working — they
+ * resolve through the same vars, just with a sharper, more modern face
+ * than Montserrat + Roboto. Mono is used for stat values + tabular
+ * numbers (see `.font-mono` and `.tabular-nums` in globals.css).
+ */
+const fontHeading = Geist({
   subsets: ["latin"],
   variable: "--font-heading",
-  weight: ["600", "700", "800"],
   display: "swap",
 });
 
-const fontBody = Roboto({
+const fontBody = Geist({
   subsets: ["latin"],
   variable: "--font-body",
-  weight: ["400", "500", "700"],
+  display: "swap",
+});
+
+const fontMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
   display: "swap",
 });
 
@@ -174,7 +188,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           />
         ))}
       </head>
-      <body className={`${fontHeading.variable} ${fontBody.variable} bg-brand-surface text-brand-text font-body`}>
+      <body className={`${fontHeading.variable} ${fontBody.variable} ${fontMono.variable} bg-brand-surface text-brand-text font-body`}>
         {/*
          * Skip-to-content link — WCAG 2.4.1 "Bypass Blocks".
          * Hidden by default with `sr-only`, becomes visible on

@@ -1,10 +1,11 @@
 import { Tabs } from "expo-router";
-import { Platform, StatusBar } from "react-native";
+import { Platform, StatusBar, StyleSheet } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTranslation } from "react-i18next";
 import { useThemeTokens, useIsDarkMode } from "../../lib/useThemeTokens";
 import { hapticTabSwitch } from "../../lib/haptics";
 import { OfflineBanner } from "../../components/OfflineBanner";
+import { type } from "../../lib/typography";
 
 /**
  * Bottom tab bar — batch-3 dark mode wiring.
@@ -41,27 +42,38 @@ export default function TabsLayout() {
           headerStyle: {
             backgroundColor: tokens.surface,
             ...(Platform.OS === "ios"
-              ? { borderBottomWidth: 0.5, borderBottomColor: tokens.border }
+              ? {
+                  // Light hairline using `brandScale[100]` (very pale
+                  // blue) instead of the neutral slate border — gives
+                  // the chrome a subtle brand presence without being
+                  // loud.
+                  borderBottomWidth: StyleSheet.hairlineWidth,
+                  borderBottomColor: isDark
+                    ? tokens.border
+                    : tokens.brandScale[100],
+                }
               : {}),
           },
           headerTitleStyle: {
-            fontWeight: "700",
-            fontSize: 18,
+            ...type.titleMd,
             color: tokens.text,
           },
-          tabBarActiveTintColor: tokens.accent,
-          tabBarInactiveTintColor: tokens.textSubtle,
+          // Active tint pulls from the `brand` ramp at `[600]` so the
+          // selected tab reads as the brand color at full saturation;
+          // inactive uses `[400]` on the neutral ramp for a softer
+          // contrast than pure slate.
+          tabBarActiveTintColor: isDark
+            ? tokens.brandScale[600]
+            : tokens.brandScale[600],
+          tabBarInactiveTintColor: tokens.neutralScale[400],
           tabBarStyle: {
             backgroundColor: tokens.surface,
-            borderTopColor: tokens.border,
-            borderTopWidth: 0.5,
+            borderTopColor: isDark ? tokens.border : tokens.brandScale[100],
+            borderTopWidth: StyleSheet.hairlineWidth,
             paddingTop: 4,
             ...(Platform.OS === "ios" ? { height: 88 } : {}),
           },
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: "600",
-          },
+          tabBarLabelStyle: type.tabLabel,
         }}
       >
         <Tabs.Screen
