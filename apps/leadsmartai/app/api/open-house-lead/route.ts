@@ -4,8 +4,27 @@ import { getPropertyData } from "@/lib/getPropertyData";
 import { scheduleEmailSequenceForLead } from "@/lib/emailSequences";
 import { sendEmail } from "@/lib/email";
 import { generateOpenHouseReportData } from "@/lib/openHouseReport";
+import {
+  CONSENT_SOURCE_OPEN_HOUSE_SIGNUP,
+  OPEN_HOUSE_SIGNUP_DISCLOSURE_VERSION,
+} from "@/lib/consent/disclosureVersions";
+import { extractRequestMeta } from "@/lib/consent/extractRequestMeta";
+import { recordInboundContactRequest } from "@/lib/consent/service";
 
 export const runtime = "nodejs";
+
+/**
+ * Default property address used when the signup form is submitted
+ * without a `property_id` — i.e. the demo path TCR / A2P 10DLC
+ * verifiers land on when they visit `/open-house-signup` directly
+ * instead of via a QR code with `?property_id=...`.
+ *
+ * The submission still creates a contact + records consent (so the
+ * audit row is real and verifiable) but the report-generation /
+ * comps / email-with-report block is skipped because there's no
+ * real warehouse row to drive it.
+ */
+const DEFAULT_DEMO_ADDRESS = "123 Main St, Los Angeles, CA 90001";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -40,6 +59,7 @@ export async function POST(req: Request) {
       notes?: string;
       property_id?: string;
       agent_id?: string;
+      smsConsent?: boolean;
     };
 
     const name = (body.name ?? "").trim();
@@ -50,13 +70,15 @@ export async function POST(req: Request) {
     const agentIdRaw = (body.agent_id ?? "").trim();
     const resolvedAgentId = await resolveLeadsAgentId(agentIdRaw);
     const preferences = (body as any).preferences ?? null;
+    const smsConsent = Boolean(body.smsConsent);
 
-    if (!propertyId) {
-      return NextResponse.json(
-        { success: false, message: "property_id is required." },
-        { status: 400 }
-      );
-    }
+    // Demo / verifier path: a fresh visit without `property_id` is
+    // allowed so TCR & other A2P 10DLC reviewers can land on a
+    // working opt-in surface. The submission still records consent
+    // and creates a lead — just skips the warehouse-driven report
+    // generation that doesn't apply to a fake property.
+    const isDemoSubmission = !propertyId;
+
     if (!name) {
       return NextResponse.json(
         { success: false, message: "name is required." },
@@ -75,23 +97,35 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-
-    // Resolve property_id to an address (warehouse rows drive estimator/CMA).
-    const { data: propertyRow, error: propertyErr } = await supabaseServer
-      .from("properties_warehouse")
-      .select("id,address")
-      .eq("id", propertyId)
-      .maybeSingle();
-
-    if (propertyErr || !propertyRow?.address) {
+    if (smsConsent && !phone) {
       return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Could not find the property for this signup link. Please request a new QR code.",
-        },
+        { success: false, message: "Provide a phone number to receive SMS, or untick SMS consent." },
         { status: 400 }
       );
+    }
+
+    // Resolve property_id to an address (warehouse rows drive
+    // estimator/CMA). Skipped on the demo path — we use a fixed
+    // default address and don't generate a report.
+    let propertyAddress: string = DEFAULT_DEMO_ADDRESS;
+    if (!isDemoSubmission) {
+      const { data: propertyRow, error: propertyErr } = await supabaseServer
+        .from("properties_warehouse")
+        .select("id,address")
+        .eq("id", propertyId)
+        .maybeSingle();
+
+      if (propertyErr || !propertyRow?.address) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Could not find the property for this signup link. Please request a new QR code.",
+          },
+          { status: 400 }
+        );
+      }
+      propertyAddress = propertyRow.address as string;
     }
 
     // 1) Insert lead into existing CRM schema.
@@ -108,11 +142,16 @@ export async function POST(req: Request) {
           preferences?.want_more_info ? "Wants more info about property" : null,
           preferences?.want_similar_properties ? "Wants similar properties" : null,
           preferences?.want_home_valuation ? "Wants home valuation" : null,
+          isDemoSubmission ? "Submitted from /open-house-signup demo path (no property_id)" : null,
         ].filter(Boolean).join(" | ") || null,
-        property_address: propertyRow.address,
-        source: "Open House",
+        property_address: propertyAddress,
+        source: isDemoSubmission ? "Open House (demo)" : "Open House",
         lead_status: "new",
         agent_id: resolvedAgentId,
+        // SMS opt-in is the load-bearing TCPA flag — only flip when
+        // the visitor ticked the consent box. Audit row below stores
+        // the disclosure version they saw.
+        sms_opt_in: smsConsent,
       })
       .select("id")
       .single();
@@ -126,6 +165,46 @@ export async function POST(req: Request) {
     }
 
     const leadId = String(lead.id);
+
+    // Record proof-of-consent audit row immediately after the lead
+    // create. Same audit table as /contact uses — TCR / carrier audits
+    // can grep by `consent_disclosure_version` to retrieve the exact
+    // wording the consenting party saw at submit time.
+    //
+    // Best-effort: a consent-table outage MUST NOT block the open
+    // house lead capture. `recordInboundContactRequest` catches its
+    // own errors and returns null on failure.
+    try {
+      const meta = extractRequestMeta(req);
+      await recordInboundContactRequest({
+        source: CONSENT_SOURCE_OPEN_HOUSE_SIGNUP,
+        name: name || null,
+        email: email || null,
+        phone: phone || null,
+        subject: isDemoSubmission ? "Open house signup (demo)" : "Open house signup",
+        message: notes || null,
+        smsConsent,
+        emailConsent: null,
+        consentDisclosureVersion: OPEN_HOUSE_SIGNUP_DISCLOSURE_VERSION,
+        ipAddress: meta.ipAddress,
+        userAgent: meta.userAgent,
+        contactId: leadId,
+      });
+    } catch (e) {
+      console.error("open-house-lead: consent audit write threw", e);
+    }
+
+    // Demo / verifier path stops here — no warehouse row, no comps
+    // to generate, no property report to email. The contact is in
+    // the CRM and the consent audit row is recorded; that's what TCR
+    // is verifying.
+    if (isDemoSubmission) {
+      return NextResponse.json({
+        success: true,
+        message:
+          "Thanks! We received your signup. (Demo open house — a real property report is generated when you sign up via a QR code at an actual open house.)",
+      });
+    }
 
     // Best-effort: store the property_id on the lead if that column exists.
     // (We don't fail the request if the DB schema isn't fully deployed yet.)
