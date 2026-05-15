@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,12 +14,34 @@ import {
 import { Stack, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import {
+  claimQueueLead,
   createMobileContact,
+  fetchLeadQueue,
   type CreateMobileContactInput,
 } from "../../lib/leadsmartMobileApi";
 import { hapticButtonPress, hapticError, hapticSuccess } from "../../lib/haptics";
 import { useThemeTokens } from "../../lib/useThemeTokens";
 import type { ThemeTokens } from "../../lib/theme";
+
+const QUEUE_PREVIEW_LIMIT = 5;
+
+type QueueLeadRow = {
+  id: string;
+  name: string;
+  details: string;
+  source: string;
+  createdAt: string;
+};
+
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 /**
  * New-contact form. Mirrors the field set of the web `/dashboard/leads/add`
@@ -58,14 +80,76 @@ export default function NewContactScreen() {
   const [duplicateLeadId, setDuplicateLeadId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  /**
+   * Available-lead queue preview. Mirrors `/dashboard/leads/add` on
+   * the web: top N unclaimed leads shown above the manual form, each
+   * with a Claim action. When the queue is empty or load fails, the
+   * section is hidden entirely so the manual form sits at the top of
+   * the screen — same visual as the no-queue web fallback.
+   */
+  const [queue, setQueue] = useState<QueueLeadRow[]>([]);
+  const [queueLoaded, setQueueLoaded] = useState(false);
+  const [claiming, setClaiming] = useState<string | null>(null);
+  const [claimMsg, setClaimMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const res = await fetchLeadQueue();
+      if (cancelled) return;
+      setQueueLoaded(true);
+      if (res.ok === false) return;
+      const rows: QueueLeadRow[] = res.leads.slice(0, QUEUE_PREVIEW_LIMIT).map((l) => ({
+        id: String(l.id),
+        name: (l.name && l.name.trim()) || `Lead ${l.id}`,
+        details: l.property_address || l.email || t("add_contact.queue_no_details"),
+        source: l.source || t("add_contact.queue_unknown_source"),
+        createdAt: l.created_at,
+      }));
+      setQueue(rows);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
+
+  const handleClaim = useCallback(
+    async (leadId: string) => {
+      if (claiming) return;
+      hapticButtonPress();
+      setClaiming(leadId);
+      setClaimMsg(null);
+      const res = await claimQueueLead(leadId);
+      if (res.ok === false) {
+        hapticError();
+        setClaiming(null);
+        setClaimMsg(
+          res.status === 409
+            ? t("add_contact.queue_already_claimed")
+            : res.message || t("add_contact.queue_claim_failed"),
+        );
+        // Drop the now-stale row so the agent doesn't get stuck retrying it.
+        if (res.status === 409) {
+          setQueue((q) => q.filter((row) => row.id !== leadId));
+        }
+        return;
+      }
+      hapticSuccess();
+      setClaiming(null);
+      router.replace({ pathname: "/lead/[id]", params: { id: res.leadId } });
+    },
+    [claiming, router, t],
+  );
+
   const setField = useCallback((key: keyof typeof fields, value: string) => {
     setFields((f) => ({ ...f, [key]: value }));
     // Clear that field's error as the user edits — small win that
     // prevents stale red borders after the obvious correction.
     setErrors((prev) => {
       if (!prev[key]) return prev;
-      const { [key]: _, ...rest } = prev;
-      return rest;
+      const next = { ...prev };
+      delete next[key];
+      return next;
     });
   }, []);
 
@@ -127,6 +211,49 @@ export default function NewContactScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
+          <Text style={styles.intro}>{t("add_contact.intro")}</Text>
+
+          {queueLoaded && queue.length > 0 ? (
+            <View style={styles.queueSection}>
+              <Text style={styles.sectionLabel}>{t("add_contact.queue_title")}</Text>
+              {claimMsg ? (
+                <View style={styles.claimMsgBox}>
+                  <Text style={styles.claimMsgText}>{claimMsg}</Text>
+                </View>
+              ) : null}
+              {queue.map((lead) => (
+                <View key={lead.id} style={styles.queueRow}>
+                  <View style={styles.queueRowText}>
+                    <Text style={styles.queueName} numberOfLines={1}>
+                      {lead.name}
+                    </Text>
+                    <Text style={styles.queueDetails} numberOfLines={1}>
+                      {lead.details} · {lead.source} · {timeAgo(lead.createdAt)}
+                    </Text>
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => void handleClaim(lead.id)}
+                    disabled={claiming !== null}
+                    style={({ pressed }) => [
+                      styles.claimBtn,
+                      pressed && styles.btnPressed,
+                      claiming !== null && styles.btnDisabled,
+                    ]}
+                  >
+                    <Text style={styles.claimBtnText}>
+                      {claiming === lead.id
+                        ? t("add_contact.queue_claiming")
+                        : t("add_contact.queue_claim")}
+                    </Text>
+                  </Pressable>
+                </View>
+              ))}
+              <View style={styles.queueDivider} />
+              <Text style={styles.manualDivider}>{t("add_contact.manual_divider")}</Text>
+            </View>
+          ) : null}
+
           {topError ? (
             <View style={styles.topErrorBox}>
               <Text style={styles.topErrorText}>{topError}</Text>
@@ -282,6 +409,70 @@ const createStyles = (theme: ThemeTokens) =>
   StyleSheet.create({
     flex: { flex: 1, backgroundColor: theme.bg },
     scrollContent: { padding: 16, paddingBottom: 48 },
+    intro: {
+      fontSize: 13,
+      color: theme.textMuted,
+      marginBottom: 16,
+      lineHeight: 18,
+    },
+    queueSection: { marginBottom: 18 },
+    sectionLabel: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: theme.textMuted,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginBottom: 8,
+    },
+    queueRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.surface,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      marginBottom: 8,
+    },
+    queueRowText: { flex: 1, minWidth: 0 },
+    queueName: { fontSize: 14, fontWeight: "600", color: theme.text },
+    queueDetails: { fontSize: 12, color: theme.textSubtle, marginTop: 2 },
+    claimBtn: {
+      marginLeft: 10,
+      backgroundColor: theme.accent,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 8,
+      minWidth: 64,
+      alignItems: "center",
+    },
+    claimBtnText: {
+      color: theme.textOnAccent,
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    claimMsgBox: {
+      backgroundColor: theme.infoBg,
+      borderWidth: 1,
+      borderColor: theme.infoBorder,
+      borderRadius: 10,
+      padding: 10,
+      marginBottom: 10,
+    },
+    claimMsgText: { color: theme.infoTextDeep, fontSize: 13, lineHeight: 18 },
+    queueDivider: {
+      height: 1,
+      backgroundColor: theme.border,
+      marginTop: 8,
+      marginBottom: 10,
+    },
+    manualDivider: {
+      textAlign: "center",
+      fontSize: 11,
+      color: theme.textSubtle,
+      marginBottom: 4,
+    },
     topErrorBox: {
       backgroundColor: theme.dangerBg,
       borderWidth: 1,

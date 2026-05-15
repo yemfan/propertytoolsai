@@ -32,6 +32,15 @@
   },
   "add_contact": {
     "header": "新建联系人",
+    "intro": "从待领取队列中认领线索,或手动添加。",
+    "queue_title": "可领取的线索",
+    "queue_claim": "领取",
+    "queue_claiming": "……",
+    "queue_no_details": "暂无详情",
+    "queue_unknown_source": "未知来源",
+    "queue_claim_failed": "未能领取该线索。",
+    "queue_already_claimed": "已被其他代理领取。",
+    "manual_divider": "或在下方手动添加联系人",
     "name": "姓名",
     "email": "邮箱",
     "phone": "电话",
@@ -46,4 +55,5 @@
     "validation_failed": "请修正下方的错误。"
   }
 }
+
 
