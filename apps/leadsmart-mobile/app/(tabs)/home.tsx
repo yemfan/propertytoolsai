@@ -183,7 +183,10 @@ export default function HomeScreen() {
     (key: "lead" | "task" | "booking" | "message") => {
       switch (key) {
         case "lead":
-          router.push("/(tabs)/leads");
+          // Previously routed to the leads tab as a stub — now opens
+          // the actual new-contact flow so the "新建线索" / "New lead"
+          // quick action lives up to its label.
+          router.push("/contact/new");
           break;
         case "task":
           router.push("/tasks");

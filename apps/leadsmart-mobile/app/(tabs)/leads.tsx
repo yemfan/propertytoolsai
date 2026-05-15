@@ -9,7 +9,8 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { EmptyState } from "../../components/EmptyState";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { BrandRefreshControl } from "../../components/BrandRefreshControl";
@@ -126,9 +127,32 @@ const LeadRow = memo(LeadRowInner);
 
 export default function LeadsScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const { t } = useTranslation("leads");
+
+  // Header "+" button — wires into the new-contact flow.
+  // Set via `navigation.setOptions` instead of in `(tabs)/_layout.tsx`
+  // so the layout file doesn't need a leads-specific branch.
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("a11y.add_contact")}
+          onPress={() => router.push("/contact/new")}
+          style={({ pressed }) => ({
+            paddingHorizontal: 14,
+            paddingVertical: 6,
+            opacity: pressed ? 0.6 : 1,
+          })}
+        >
+          <Ionicons name="add" size={26} color={tokens.accent} />
+        </Pressable>
+      ),
+    });
+  }, [navigation, router, t, tokens.accent]);
   const params = useLocalSearchParams<{ filter?: string | string[]; booking?: string | string[] }>();
   const filterRaw = paramStr(params.filter);
   const initialFilter: FilterKey =

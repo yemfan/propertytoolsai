@@ -166,6 +166,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState<Partial<LeadRow>>({});
   const [addFields, setAddFields] = useState({ name: "", email: "", phone: "", property_address: "", notes: "" });
+  const [addErrors, setAddErrors] = useState<Record<string, string[]>>({});
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [postcardTarget, setPostcardTarget] = useState<{
@@ -189,7 +190,7 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
   useEffect(() => { loadStats(); }, [loadStats]);
 
   async function addContact() {
-    setActionLoading(true); setActionMsg(null);
+    setActionLoading(true); setActionMsg(null); setAddErrors({});
     try {
       const res = await fetch("/api/dashboard/contacts/intake", {
         method: "POST",
@@ -197,7 +198,12 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
         body: JSON.stringify({ ...addFields, source: "manual_entry", forceCreate: true }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body.ok) throw new Error(body.error ?? t("messages.add_failed"));
+      if (!res.ok || !body.ok) {
+        if (res.status === 400 && body.details && typeof body.details === "object") {
+          setAddErrors(body.details as Record<string, string[]>);
+        }
+        throw new Error(body.error ?? t("messages.add_failed"));
+      }
       setAddFields({ name: "", email: "", phone: "", property_address: "", notes: "" });
       setShowAddForm(false);
       setActionMsg(t("messages.added"));
@@ -405,18 +411,42 @@ export default function ContactsClient({ leads: initialLeads }: { leads: LeadRow
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm space-y-3">
           <h3 className="text-sm font-semibold text-gray-900">{t("add_form.title")}</h3>
           <div className="grid gap-3 sm:grid-cols-2">
-            <input value={addFields.name} onChange={(e) => setAddFields((f) => ({ ...f, name: e.target.value }))} placeholder={t("add_form.placeholder_name")} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-            <input value={addFields.email} onChange={(e) => setAddFields((f) => ({ ...f, email: e.target.value }))} placeholder={t("add_form.placeholder_email")} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-            <input value={addFields.phone} onChange={(e) => setAddFields((f) => ({ ...f, phone: e.target.value }))} placeholder={t("add_form.placeholder_phone")} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-            <AddressAutocomplete
-              value={addFields.property_address}
-              onChange={(v) => setAddFields((f) => ({ ...f, property_address: v }))}
-              onSelect={(v) => setAddFields((f) => ({ ...f, property_address: v.formattedAddress }))}
-              placeholder={t("add_form.placeholder_address")}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
+            <label className="block text-sm font-medium text-gray-700">
+              {t("add_form.placeholder_name")}
+              <input value={addFields.name} onChange={(e) => setAddFields((f) => ({ ...f, name: e.target.value }))} placeholder={t("add_form.placeholder_name")}
+                className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${addErrors.name?.length ? "border-red-400" : "border-gray-300"}`} />
+              {addErrors.name?.length ? <p className="mt-1 text-xs text-red-600">{addErrors.name.join(" ")}</p> : null}
+            </label>
+            <label className="block text-sm font-medium text-gray-700">
+              {t("add_form.placeholder_email")}
+              <input value={addFields.email} onChange={(e) => setAddFields((f) => ({ ...f, email: e.target.value }))} placeholder={t("add_form.placeholder_email")} type="email" inputMode="email" autoCapitalize="off"
+                className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${addErrors.email?.length ? "border-red-400" : "border-gray-300"}`} />
+              {addErrors.email?.length ? <p className="mt-1 text-xs text-red-600">{addErrors.email.join(" ")}</p> : null}
+            </label>
+            <label className="block text-sm font-medium text-gray-700">
+              {t("add_form.placeholder_phone")}
+              <input value={addFields.phone} onChange={(e) => setAddFields((f) => ({ ...f, phone: e.target.value }))} placeholder={t("add_form.placeholder_phone")} inputMode="tel"
+                className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${addErrors.phone?.length ? "border-red-400" : "border-gray-300"}`} />
+              {addErrors.phone?.length ? <p className="mt-1 text-xs text-red-600">{addErrors.phone.join(" ")}</p> : null}
+            </label>
+            <div className="block text-sm font-medium text-gray-700">
+              {t("add_form.placeholder_address")}
+              <AddressAutocomplete
+                value={addFields.property_address}
+                onChange={(v) => setAddFields((f) => ({ ...f, property_address: v }))}
+                onSelect={(v) => setAddFields((f) => ({ ...f, property_address: v.formattedAddress }))}
+                placeholder={t("add_form.placeholder_address")}
+                className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${addErrors.property_address?.length ? "border-red-400" : "border-gray-300"}`}
+              />
+              {addErrors.property_address?.length ? <p className="mt-1 text-xs text-red-600">{addErrors.property_address.join(" ")}</p> : null}
+            </div>
           </div>
-          <input value={addFields.notes} onChange={(e) => setAddFields((f) => ({ ...f, notes: e.target.value }))} placeholder={t("add_form.placeholder_notes")} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+          <label className="block text-sm font-medium text-gray-700">
+            {t("add_form.placeholder_notes")}
+            <input value={addFields.notes} onChange={(e) => setAddFields((f) => ({ ...f, notes: e.target.value }))} placeholder={t("add_form.placeholder_notes")}
+              className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${addErrors.notes?.length ? "border-red-400" : "border-gray-300"}`} />
+            {addErrors.notes?.length ? <p className="mt-1 text-xs text-red-600">{addErrors.notes.join(" ")}</p> : null}
+          </label>
           <button type="button" onClick={() => void addContact()} disabled={actionLoading || !addFields.name}
             className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50">
             {actionLoading ? t("add_form.saving") : t("add_form.submit")}

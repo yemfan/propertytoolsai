@@ -48,7 +48,7 @@ export async function GET(req: Request) {
 
     const { data: sequences, error: seqErr } = await supabaseServer
       .from("lead_sequences")
-      .select("id,contact_id,current_step,next_send_at,status,created_at")
+      .select("id,lead_id,current_step,next_send_at,status,created_at")
       .eq("status", "active")
       .lte("next_send_at", nowIso)
       .limit(100);
@@ -60,7 +60,7 @@ export async function GET(req: Request) {
 
     for (const seq of (sequences ?? []) as any[]) {
       const sequenceId = String(seq.id);
-      const leadIdNum = Number(seq.contact_id);
+      const leadIdNum = Number(seq.lead_id);
       if (!Number.isFinite(leadIdNum)) continue;
 
       // Stop automation if we've already recorded a reply for this lead.
