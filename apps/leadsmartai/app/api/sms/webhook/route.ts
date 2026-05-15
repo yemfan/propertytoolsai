@@ -338,7 +338,7 @@ export async function POST(req: Request) {
       } catch {}
       // Best-effort: also complete any active lead sequence.
       try {
-        await supabaseServer.from("lead_sequences").update({ status: "completed" }).eq("contact_id", leadId);
+        await supabaseServer.from("lead_sequences").update({ status: "completed" }).eq("lead_id", leadId);
       } catch {}
 
       const toE164 = normalizeUsPhoneToE164(fromUsPhone);
@@ -444,7 +444,7 @@ export async function POST(req: Request) {
 
       // Stop automation for this lead.
       try {
-        await supabaseServer.from("lead_sequences").update({ status: "completed" }).eq("contact_id", leadId);
+        await supabaseServer.from("lead_sequences").update({ status: "completed" }).eq("lead_id", leadId);
       } catch {}
       await supabaseServer.from("contacts").update({ automation_disabled: true } as any).eq("id", leadId);
 
