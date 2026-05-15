@@ -80,7 +80,11 @@ export async function POST(req: Request) {
       agentId: auth.ctx.agentId,
       planType,
       fields,
-      intakeChannel: "mobile",
+      // IntakeChannel union doesn't include a "mobile" variant; the
+      // mobile surface still goes through the same manual-entry code
+      // path, and `source: "mobile_app"` on the body already records
+      // the entry point for analytics.
+      intakeChannel: "manual",
       duplicateStrategy: dup && body.forceCreate ? "create_anyway" : "skip",
       skipEnrichment: false,
     });
