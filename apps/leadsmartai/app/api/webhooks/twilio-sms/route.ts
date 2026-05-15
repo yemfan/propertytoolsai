@@ -232,7 +232,7 @@ export async function POST(req: Request) {
       const rating = (scoreRes as { data?: { rating?: string } } | null)?.data?.rating;
 
       // Stop automation for this lead.
-      await supabaseServer.from("lead_sequences").update({ status: "completed" }).eq("contact_id", leadId);
+      await supabaseServer.from("lead_sequences").update({ status: "completed" }).eq("lead_id", leadId);
       await supabaseServer.from("contacts").update({ automation_disabled: true } as Record<string, unknown>).eq("id", leadId);
 
       // Alerts

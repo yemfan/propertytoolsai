@@ -87,7 +87,7 @@ export async function POST(req: Request) {
     await supabaseServer
       .from("lead_sequences")
       .update({ status: "completed" })
-      .eq("contact_id", leadId);
+      .eq("lead_id", leadId);
 
     await supabaseServer
       .from("contacts")

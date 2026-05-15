@@ -53,7 +53,7 @@ async function upsertLeadSequence(leadIdNum: number, steps: typeof STEPS, leadTy
   const { data: existingSeq, error: seqErr } = await supabaseServer
     .from("lead_sequences")
     .select("id")
-    .eq("contact_id", leadIdNum)
+    .eq("lead_id", leadIdNum)
     .maybeSingle();
 
   if (seqErr && (seqErr as any).code !== "PGRST116") throw seqErr;
@@ -75,7 +75,7 @@ async function upsertLeadSequence(leadIdNum: number, steps: typeof STEPS, leadTy
     const { data: insSeq, error: insSeqErr } = await supabaseServer
       .from("lead_sequences")
       .insert({
-        contact_id: leadIdNum,
+        lead_id: leadIdNum,
         status: "active",
         current_step: 0,
         next_send_at: nextSendAt.toISOString(),
