@@ -27,6 +27,33 @@
     "hot_lead": "hot lead",
     "phone": "phone {{phone}}",
     "stage": "stage {{stage}}",
-    "open_lead": "Opens lead details"
+    "open_lead": "Opens lead details",
+    "add_contact": "Add contact"
+  },
+  "add_contact": {
+    "header": "New contact",
+    "intro": "Claim a lead from the queue or add one manually.",
+    "queue_title": "Available leads",
+    "queue_claim": "Claim",
+    "queue_claiming": "…",
+    "queue_no_details": "No details",
+    "queue_unknown_source": "unknown",
+    "queue_claim_failed": "Couldn't claim that lead.",
+    "queue_already_claimed": "Already claimed by another agent.",
+    "manual_divider": "Or add a contact manually below",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "notes": "Notes",
+    "submit": "Save contact",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "success": "Contact added.",
+    "duplicate_warning": "A similar contact already exists. Save anyway?",
+    "force_create": "Save anyway",
+    "validation_failed": "Please fix the errors below."
   }
 }
+
+

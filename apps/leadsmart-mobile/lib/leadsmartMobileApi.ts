@@ -46,6 +46,8 @@ export type MobileApiFailure = {
   status: number;
   message: string;
   code?: string;
+  /** Per-field validation errors (typically only on HTTP 400 from zod-validating routes). */
+  details?: Record<string, string[]>;
 };
 
 export type MobileInboxSuccess = {
@@ -73,12 +75,17 @@ function parseMobileFailure(
   fallback: string
 ): MobileApiFailure {
   if (body && typeof body === "object") {
-    const b = body as MobileJsonError;
+    const b = body as MobileJsonError & { details?: unknown };
+    const details =
+      b.details && typeof b.details === "object" && !Array.isArray(b.details)
+        ? (b.details as Record<string, string[]>)
+        : undefined;
     return {
       ok: false,
       status,
       message: typeof b.error === "string" && b.error.trim() ? b.error : fallback,
       code: typeof b.code === "string" ? b.code : undefined,
+      ...(details ? { details } : {}),
     };
   }
   return { ok: false, status, message: fallback };
@@ -365,6 +372,61 @@ export async function fetchMobileLeads(params: {
     page: Number(data.page) || page,
     pageSize: Number(data.pageSize) || pageSize,
   };
+}
+
+/** Server response shape from POST /api/mobile/contacts/intake. */
+type CreateContactJson = MobileJsonError & {
+  leadId?: string;
+  action?: string;
+  details?: Record<string, string[]>;
+  code?: string;
+  duplicate?: { leadId?: string; score?: number; reasons?: unknown };
+};
+
+export type CreateMobileContactInput = {
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  property_address?: string | null;
+  notes?: string | null;
+  /** Force-create past a duplicate match. */
+  forceCreate?: boolean;
+};
+
+export type CreateMobileContactResult =
+  | { ok: true; leadId: string }
+  | MobileApiFailure;
+
+/**
+ * Create a contact from the mobile app via the shared intake pipeline.
+ * Mirrors what `/dashboard/leads/add` does on the web side but routed
+ * through `/api/mobile/contacts/intake` with mobile bearer-token auth.
+ *
+ * On validation failure (HTTP 400) the per-field zod error map is
+ * preserved on the returned `MobileApiFailure.details` so the form
+ * can render inline errors next to the offending input.
+ */
+export async function createMobileContact(
+  input: CreateMobileContactInput
+): Promise<CreateMobileContactResult> {
+  const res = await mobilePost<CreateContactJson>(MOBILE_API_PATHS.contactsIntake, {
+    name: input.name ?? null,
+    email: input.email ?? null,
+    phone: input.phone ?? null,
+    property_address: input.property_address ?? null,
+    notes: input.notes ?? null,
+    source: "mobile_app",
+    forceCreate: input.forceCreate ?? false,
+  });
+
+  if (res.ok === false) return res;
+
+  const leadId = res.data.leadId;
+  if (!leadId) {
+    return { ok: false, status: 200, message: "Invalid create-contact response." };
+  }
+
+  return { ok: true, leadId: String(leadId) };
 }
 
 type LeadDetailJson = MobileJsonError & Partial<MobileLeadDetailResponseDto> & {
