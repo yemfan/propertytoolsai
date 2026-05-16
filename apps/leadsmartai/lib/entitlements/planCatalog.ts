@@ -1,7 +1,13 @@
 import type { AgentPlan } from "./types";
 
 /** Canonical plan ids stored in product_entitlements.plan */
-export const AGENT_PLANS = ["starter", "growth", "elite", "team"] as const;
+export const AGENT_PLANS = [
+  "starter",
+  "growth",
+  "elite",
+  "signature",
+  "team",
+] as const;
 
 export type PlanCatalogEntry = {
   label: string;
@@ -104,6 +110,31 @@ export const PLAN_CATALOG: Record<AgentPlan, PlanCatalogEntry> = {
       "Advanced AI coaching + peer benchmarks",
       "Unlimited AI actions",
       "Priority support",
+    ],
+  },
+  signature: {
+    // For relationship-driven agents serving high-value and bilingual
+    // clients. Inherits everything from Premium (`elite`) and adds the
+    // five Signature-only features. Display copy refinements + the
+    // dark-navy/gold visual treatment live in the pricing-page work
+    // (PR 3); this entry is the data spine.
+    label: "Signature",
+    cmaReportsPerDay: 10,
+    maxLeads: null,
+    maxContacts: null,
+    alertsLevel: "advanced",
+    reportsDownloadLevel: "unlimited",
+    teamAccess: true,
+    teamSeatCap: 10,
+    aiActionsPerMonth: null,
+    coachingPrograms: ["producer_track", "top_producer_track"],
+    bullets: [
+      "Everything in Premium, plus:",
+      "Sphere Intelligence Pro — equity tracking, life-event signals, referral mapping",
+      "White-glove onboarding — 1:1 setup with a specialist, sphere import included",
+      "Concierge support — priority response, named account contact",
+      "Cultural calendar automations — Chinese New Year, Mid-Autumn, Lunar holidays auto-pause / auto-greet",
+      "Custom voice tuning — AI trained on your past conversations for tone match",
     ],
   },
   team: {
