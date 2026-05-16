@@ -109,6 +109,7 @@ export default function OnboardingFunnel({
   const [step, setStep] = useState<OnboardingStep>(1);
   const [profile, setProfile] = useState<Partial<OnboardingProfile>>({});
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [onboardingCadence, setOnboardingCadence] = useState<"monthly" | "annual">("monthly");
   const [hasReplied, setHasReplied] = useState(false);
   const [paywallSeen, setPaywallSeen] = useState(false);
   const [engagementPoints, setEngagementPoints] = useState(0);
@@ -706,94 +707,235 @@ export default function OnboardingFunnel({
 
   /* ——— Step 7: Pricing (embedded summary) ——— */
   if (step === 7) {
-    const plans = [
+    type CardCadence = "monthly" | "annual";
+    const cadence: CardCadence = onboardingCadence;
+    const annualMo = (annual: number) => Math.round((annual / 12) * 100) / 100;
+    const formatHeadline = (m: number, a: number) =>
+      cadence === "annual" ? `$${annualMo(a)}` : `$${m}`;
+    const formatSubtext = (a: number, m: number) =>
+      cadence === "annual" ? `$${a} billed yearly · save $${m * 2}` : "Billed monthly";
+
+    type SoloPlan = {
+      slug: "starter" | "pro" | "premium" | "signature";
+      name: string;
+      monthly: number;
+      annual: number | null;
+      cta: string;
+      tagline: string;
+      features: string[];
+      limits?: string[];
+      primary?: boolean;
+      badge?: string;
+      signatureLook?: boolean;
+      trialNote?: string;
+    };
+
+    const soloPlans: SoloPlan[] = [
       {
-        // Display name is "Starter" per product rename; DB plan_type stays "free".
-        name: "Starter", price: "$0", period: "forever", cta: "Get started", href: "/signup", primary: false,
-        tagline: "Limited functions and usages.",
-        features: ["25 leads/mo", "Basic lead pipeline", "Email-only auto-response", "1 drip sequence", "Up to 50 contacts", "2 CMA reports/day", "Email support"],
-        limits: ["No SMS", "No AI conversations", "No lead scoring", "No CRM integrations"],
+        slug: "starter",
+        name: "Starter",
+        monthly: 0,
+        annual: null,
+        cta: "Get started",
+        tagline: "For new agents testing the platform.",
+        features: ["5 leads · 50 contacts", "2 CMA reports/day", "AI SMS + email (basic)", "100 AI actions/mo"],
+        limits: ["No SMS automation", "Limited AI"],
       },
       {
-        name: "Pro", price: "$49", period: "/mo", cta: "Start free trial", href: "/pricing?checkout_plan=pro", primary: true, badge: "Most Popular",
-        tagline: "Full CRM and AI for active agents.",
-        features: ["500 leads/mo", "Full lead stage tracking", "SMS + Email auto-response (< 60s)", "Unlimited drip sequences", "AI conversation continuation", "Up to 500 contacts", "Contact enrichment", "CRM integrations", "Advanced lead scoring", "Buyer intent signals", "5 CMA reports/day", "Priority email support"],
-        limits: ["No custom drip campaigns", "No predictive deal probability", "No team features"],
-        trialNote: "14-day free trial · No credit card required",
-      },
-      {
-        name: "Elite", price: "$99", period: "/mo", cta: "Start free trial", href: "/pricing?checkout_plan=premium", primary: false,
-        tagline: "For top producers closing 10+ deals/month.",
-        features: ["Unlimited leads", "SMS + Email auto-response (< 60s)", "Custom drip campaigns", "Predictive AI lead scoring", "Predictive deal probability", "Unlimited contacts", "10 CMA reports/day", "Advanced pipeline analytics", "Dedicated onboarding"],
-        limits: ["No team lead pool", "No lead routing rules", "No admin controls"],
+        slug: "pro",
+        name: "Pro",
+        monthly: 49,
+        annual: 490,
+        cta: "Start 14-day trial",
+        tagline: "For active agents closing deals consistently.",
+        features: [
+          "500 leads · 500 contacts",
+          "Bilingual English / 中文 AI",
+          "Producer Track coaching",
+          "5 CMA reports/day",
+          "SMS + email AI (< 60s)",
+          "5,000 AI actions/mo",
+        ],
+        primary: true,
+        badge: "Most Popular",
         trialNote: "14-day free trial",
       },
       {
-        name: "Team", price: "$199", period: "/mo", cta: "Contact sales", href: "/contact?from=pricing", primary: false,
-        tagline: "Multiple agents, one shared pipeline.",
-        features: ["Everything in Elite", "Up to 10 agents", "Shared team lead pool", "Lead routing rules", "Team performance dashboard", "Admin controls", "White-label option", "Unlimited CMA reports", "Priority SLA + dedicated CSM"],
-        limits: [],
+        slug: "premium",
+        name: "Premium",
+        monthly: 99,
+        annual: 990,
+        cta: "Start 14-day trial",
+        tagline: "For top producers running solo.",
+        features: [
+          "Unlimited leads & contacts",
+          "Top Producer Track coaching",
+          "ISA workflow",
+          "E-signature (Dotloop / DocuSign)",
+          "Unlimited AI actions",
+        ],
+        trialNote: "14-day free trial",
+      },
+      {
+        slug: "signature",
+        name: "Signature",
+        monthly: 249,
+        annual: 2490,
+        cta: "Start 14-day trial",
+        tagline: "For relationship-driven agents serving high-value clients.",
+        features: [
+          "Everything in Premium, plus:",
+          "Sphere Intelligence Pro",
+          "White-glove onboarding",
+          "Concierge support",
+          "Cultural calendar automations",
+          "Custom voice tuning",
+        ],
+        signatureLook: true,
+        badge: "Bilingual & Luxury",
+        trialNote: "14-day free trial",
       },
     ];
+
+    function deepLinkFor(slug: SoloPlan["slug"]): string {
+      const params = new URLSearchParams({
+        from: "onboarding",
+        checkout_plan: slug,
+        cadence,
+      });
+      if (profile.email) params.set("email", profile.email.trim());
+      return `/agent/pricing?${params.toString()}`;
+    }
+
     return (
       <Shell step={7}>
         <div className="space-y-6">
           <div className="text-center">
             <h1 className="font-heading text-2xl font-bold sm:text-3xl">Choose how you scale</h1>
-            <p className="mt-2 text-sm text-slate-400">Every paid plan includes a 14-day free trial. Cancel anytime.</p>
+            <p className="mt-2 text-sm text-slate-400">
+              Every paid plan includes a 14-day free trial. Cancel anytime.
+              <br />
+              Available in English and 中文.
+            </p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {plans.map((p) => (
-              <div
-                key={p.name}
-                className={`relative flex flex-col rounded-2xl border p-5 ${
-                  p.primary ? "border-sky-500/50 bg-sky-500/10 shadow-lg shadow-sky-900/20" : "border-white/10 bg-white/5"
+
+          {/* Cadence toggle */}
+          <div className="flex justify-center">
+            <div className="inline-flex rounded-full border border-white/15 bg-white/5 p-1">
+              <button
+                type="button"
+                onClick={() => setOnboardingCadence("monthly")}
+                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                  cadence === "monthly" ? "bg-white text-slate-900" : "text-slate-300 hover:text-white"
                 }`}
               >
-                {p.badge && (
-                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-[#0072ce] px-3 py-0.5 text-[10px] font-semibold text-white whitespace-nowrap">
-                    {p.badge}
-                  </span>
-                )}
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{p.name}</p>
-                <div className="mt-2 flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-white">{p.price}</span>
-                  <span className="text-xs text-slate-400">{p.period}</span>
-                </div>
-                <p className="mt-1 text-xs text-slate-400">{p.tagline}</p>
-
-                {/* Features */}
-                <ul className="mt-4 flex-1 space-y-1.5">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-1.5 text-xs text-slate-300">
-                      <svg className="mt-0.5 h-3 w-3 shrink-0 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                      {f}
-                    </li>
-                  ))}
-                  {p.limits.map((l) => (
-                    <li key={l} className="flex items-start gap-1.5 text-xs text-slate-500">
-                      <span className="mt-0.5 inline-block h-3 w-3 shrink-0 text-center leading-3">—</span>
-                      {l}
-                    </li>
-                  ))}
-                </ul>
-
-                <Link
-                  href={p.href}
-                  className={`mt-5 block w-full rounded-xl py-3 text-center text-sm font-bold ${
-                    p.primary ? "bg-[#0072ce] text-white hover:bg-[#005ca8]" : "border border-white/20 text-white hover:bg-white/5"
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setOnboardingCadence("annual")}
+                className={`ml-1 inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                  cadence === "annual" ? "bg-white text-slate-900" : "text-slate-300 hover:text-white"
+                }`}
+              >
+                Annual
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                    cadence === "annual" ? "bg-emerald-500 text-white" : "bg-emerald-500/20 text-emerald-300"
                   }`}
                 >
-                  {p.cta}
-                </Link>
-                {p.trialNote && (
-                  <p className="mt-1.5 text-center text-[10px] text-slate-500">{p.trialNote}</p>
-                )}
-              </div>
-            ))}
+                  Save 17%
+                </span>
+              </button>
+            </div>
           </div>
+
+          {/* Solo plans — 4-up at lg, 2-up at sm */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {soloPlans.map((p) => {
+              const isSignature = !!p.signatureLook;
+              const wrapClass = isSignature
+                ? "relative flex flex-col rounded-2xl border border-amber-300/50 bg-[#0b1e3f] p-5 shadow-xl shadow-amber-300/10"
+                : p.primary
+                  ? "relative flex flex-col rounded-2xl border border-sky-500/50 bg-sky-500/10 p-5 shadow-lg shadow-sky-900/20"
+                  : "relative flex flex-col rounded-2xl border border-white/10 bg-white/5 p-5";
+              const ctaClass = isSignature
+                ? "bg-amber-300 text-amber-950 hover:bg-amber-200"
+                : p.primary
+                  ? "bg-[#0072ce] text-white hover:bg-[#005ca8]"
+                  : "border border-white/20 text-white hover:bg-white/5";
+              const badgeClass = isSignature
+                ? "absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-amber-300 px-3 py-0.5 text-[10px] font-bold text-amber-950 whitespace-nowrap"
+                : "absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-[#0072ce] px-3 py-0.5 text-[10px] font-semibold text-white whitespace-nowrap";
+
+              return (
+                <div key={p.slug} className={wrapClass}>
+                  {p.badge && <span className={badgeClass}>{p.badge}</span>}
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{p.name}</p>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="text-2xl font-bold text-white">
+                      {p.slug === "starter" ? "$0" : formatHeadline(p.monthly, p.annual ?? p.monthly * 10)}
+                    </span>
+                    <span className="text-xs text-slate-400">{p.slug === "starter" ? "forever" : "/mo"}</span>
+                  </div>
+                  {p.slug !== "starter" && p.annual && (
+                    <p className="mt-0.5 text-[10px] text-slate-400">
+                      {formatSubtext(p.annual, p.monthly)}
+                    </p>
+                  )}
+                  <p className="mt-1.5 text-xs text-slate-400">{p.tagline}</p>
+
+                  <ul className="mt-3 flex-1 space-y-1.5">
+                    {p.features.map((f) => (
+                      <li key={f} className="flex items-start gap-1.5 text-xs text-slate-300">
+                        <svg className="mt-0.5 h-3 w-3 shrink-0 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        {f}
+                      </li>
+                    ))}
+                    {(p.limits ?? []).map((l) => (
+                      <li key={l} className="flex items-start gap-1.5 text-xs text-slate-500">
+                        <span className="mt-0.5 inline-block h-3 w-3 shrink-0 text-center leading-3">—</span>
+                        {l}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link
+                    href={p.slug === "starter" ? "/signup" : deepLinkFor(p.slug)}
+                    className={`mt-5 block w-full rounded-xl py-3 text-center text-sm font-bold ${ctaClass}`}
+                  >
+                    {p.cta}
+                  </Link>
+                  {p.trialNote && (
+                    <p className="mt-1.5 text-center text-[10px] text-slate-500">{p.trialNote}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Team CTA — own row, brokerage positioning */}
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white">
+                  Team — {cadence === "annual" ? "$249/mo" : "$299/mo"} per team
+                </p>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Up to 5 seats · round-robin routing · Top Producer Track for every member.
+                </p>
+              </div>
+              <Link
+                href="/contact?from=onboarding&topic=team"
+                className="rounded-xl border border-white/20 px-4 py-2 text-xs font-semibold text-white hover:bg-white/5"
+              >
+                Contact sales →
+              </Link>
+            </div>
+          </div>
+
           <button
             type="button"
             onClick={() => go(8, "upgrade_flow")}
