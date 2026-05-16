@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-type PlanSlug = "starter" | "pro" | "premium" | "team";
+type PlanSlug = "starter" | "pro" | "premium" | "signature" | "team";
+type BillingCadence = "monthly" | "annual";
 
 /**
  * Wire shape returned by `/api/billing/subscription` — server hands
@@ -17,6 +18,7 @@ type CatalogEntry = {
   displayName: string;
   tagline: string;
   price: number;
+  annualPrice: number | null;
   features: readonly string[];
   coachingTier?: string;
   popular?: boolean;
@@ -43,8 +45,9 @@ type PaymentMethod = {
 type SubscriptionPayload = {
   plan: PlanSlug;
   status: string;
+  cadence?: BillingCadence;
   features: readonly string[];
-  tier: { price: number; features: readonly string[] };
+  tier: { price: number; annualPrice?: number | null; features: readonly string[] };
 } | null;
 
 const BRAND = "#0072CE";
@@ -64,8 +67,14 @@ const FEATURE_LABELS: Record<string, string> = {
   prediction: "Lead predictions",
   multi_agent: "Multi-agent workspace",
   routing: "Smart lead routing",
-  producer_track_coaching: "Producer Track coaching",
-  top_producer_track_coaching: "Top Producer Track coaching",
+  producer_track_coaching: "LeadSmart AI Coaching — Producer Track",
+  top_producer_track_coaching: "LeadSmart AI Coaching — Top Producer Track",
+  bilingual_ai: "Bilingual English / 中文 AI",
+  sphere_intelligence_pro: "Sphere Intelligence Pro",
+  white_glove_onboarding: "White-glove onboarding",
+  concierge_support: "Concierge support",
+  cultural_calendar: "Cultural calendar automations",
+  custom_voice_tuning: "Custom voice tuning",
 };
 
 function featureLabel(key: string) {
@@ -125,6 +134,7 @@ export default function BillingPageClient() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionPayload>(null);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(null);
@@ -133,6 +143,8 @@ export default function BillingPageClient() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [busyPlan, setBusyPlan] = useState<PlanSlug | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [cadence, setCadence] = useState<BillingCadence>("monthly");
+  const [switchingCadence, setSwitchingCadence] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -176,7 +188,7 @@ export default function BillingPageClient() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, cadence }),
       });
       const body = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
@@ -192,6 +204,36 @@ export default function BillingPageClient() {
       setError("Could not start checkout");
     } finally {
       setBusyPlan(null);
+    }
+  };
+
+  const switchToAnnual = async () => {
+    if (!subscription) return;
+    setSwitchingCadence(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await fetch("/api/billing/crm-change-cadence", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cadence: "annual" }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        message?: string;
+        error?: string;
+      };
+      if (!res.ok || body.ok === false) {
+        setError(typeof body.error === "string" ? body.error : "Could not switch cadence");
+        return;
+      }
+      setInfo(body.message ?? "Switched to annual billing. Stripe issued a prorated invoice for the difference.");
+      await load();
+    } catch {
+      setError("Could not switch cadence");
+    } finally {
+      setSwitchingCadence(false);
     }
   };
 
@@ -222,11 +264,11 @@ export default function BillingPageClient() {
 
   /**
    * Render order matches the catalog (Starter → Pro → Premium →
-   * Team). Listed explicitly here rather than `Object.keys(catalog)`
-   * so the order is deterministic and not dependent on JS object
-   * insertion ordering.
+   * Signature → Team). Listed explicitly here rather than
+   * `Object.keys(catalog)` so the order is deterministic and not
+   * dependent on JS object insertion ordering.
    */
-  const tiers: PlanSlug[] = ["starter", "pro", "premium", "team"];
+  const tiers: PlanSlug[] = ["starter", "pro", "premium", "signature", "team"];
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 py-6">
@@ -271,6 +313,11 @@ export default function BillingPageClient() {
           {error}
         </div>
       )}
+      {info && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          {info}
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-4">
@@ -299,6 +346,11 @@ export default function BillingPageClient() {
                   {subscription && (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <StatusBadge status={subscription.status} />
+                      {subscription.cadence && subscription.tier.price > 0 && (
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+                          {subscription.cadence === "annual" ? "Annual billing" : "Monthly billing"}
+                        </span>
+                      )}
                       {cancelAtPeriodEnd && (
                         <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
                           Cancels at period end
@@ -314,6 +366,15 @@ export default function BillingPageClient() {
                         — same intent as the tier-card pricing. */}
                     {subscription.tier.price === 0 ? (
                       <p className="text-3xl font-extrabold text-brand-text">Free</p>
+                    ) : subscription.cadence === "annual" && subscription.tier.annualPrice ? (
+                      <>
+                        <p className="text-3xl font-extrabold text-brand-text">
+                          ${subscription.tier.annualPrice}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          per year · billed annually
+                        </p>
+                      </>
                     ) : (
                       <>
                         <p className="text-3xl font-extrabold text-brand-text">
@@ -384,6 +445,48 @@ export default function BillingPageClient() {
                 </p>
               )}
 
+              {/* Switch to annual — paid monthly subscribers only */}
+              {subscription &&
+                subscription.cadence === "monthly" &&
+                subscription.tier.price > 0 &&
+                subscription.tier.annualPrice && (
+                  <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-emerald-900">
+                          Switch to annual and save{" "}
+                          ${subscription.tier.price * 2}/yr
+                        </p>
+                        <p className="mt-0.5 text-xs text-emerald-800/80">
+                          $
+                          {subscription.tier.annualPrice}/yr · 2 months free vs monthly. The
+                          remaining month is prorated as a credit.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void switchToAnnual()}
+                        disabled={switchingCadence}
+                        className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
+                      >
+                        {switchingCadence ? "Switching…" : "Switch to annual →"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+              {/* Annual subscriber note */}
+              {subscription &&
+                subscription.cadence === "annual" &&
+                subscription.tier.price > 0 && (
+                  <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+                    You&apos;re on annual billing. To switch back to monthly, cancel
+                    auto-renewal in <strong>Manage billing</strong> and a new monthly
+                    subscription can start after your annual period ends on{" "}
+                    {currentPeriodEnd ? <strong>{fmt(currentPeriodEnd)}</strong> : "renewal"}.
+                  </div>
+                )}
+
               {/* Portal button */}
               {subscription && (
                 <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -405,14 +508,46 @@ export default function BillingPageClient() {
 
           {/* ── Plan cards ────────────────────────────────────────────────── */}
           <div>
-            <h2 className="mb-4 text-lg font-bold text-brand-text">
-              {subscription ? "Change plan" : "Choose a plan"}
-            </h2>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-bold text-brand-text">
+                {subscription ? "Change plan" : "Choose a plan"}
+              </h2>
+              <div className="inline-flex rounded-full border border-gray-200 bg-white p-1 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setCadence("monthly")}
+                  className={`rounded-full px-3 py-1.5 transition ${
+                    cadence === "monthly" ? "bg-gray-900 text-white" : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCadence("annual")}
+                  className={`ml-1 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition ${
+                    cadence === "annual" ? "bg-gray-900 text-white" : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  Annual
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                      cadence === "annual"
+                        ? "bg-white/20 text-white"
+                        : "bg-emerald-100 text-emerald-800"
+                    }`}
+                  >
+                    Save 17%
+                  </span>
+                </button>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {tiers.map((slug) => {
                 const row = catalog?.[slug];
                 const isCurrent = subscription?.plan === slug;
                 const price = row?.price;
+                const annualPrice = row?.annualPrice ?? null;
                 /* Tier card driven by the catalog entry — `displayName`,
                    `tagline`, and `popular` come straight from
                    `lib/billing/plans.ts`, so adding/renaming a tier
@@ -454,16 +589,25 @@ export default function BillingPageClient() {
                     >
                       {displayName}
                     </p>
-                    <p className="mt-1 text-3xl font-extrabold text-brand-text">
-                      {price === 0
-                        ? "Free"
-                        : price !== undefined
-                          ? `$${price}`
-                          : "—"}
-                      {price !== undefined && price > 0 && (
-                        <span className="text-base font-normal text-gray-500">/mo</span>
-                      )}
-                    </p>
+                    {price === 0 ? (
+                      <p className="mt-1 text-3xl font-extrabold text-brand-text">Free</p>
+                    ) : price !== undefined ? (
+                      <>
+                        <p className="mt-1 text-3xl font-extrabold text-brand-text">
+                          {cadence === "annual" && annualPrice
+                            ? `$${(annualPrice / 12).toFixed(2)}`
+                            : `$${price}`}
+                          <span className="text-base font-normal text-gray-500">/mo</span>
+                        </p>
+                        {cadence === "annual" && annualPrice && (
+                          <p className="mt-0.5 text-[11px] text-gray-500">
+                            ${annualPrice}/yr · save ${price * 2}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="mt-1 text-3xl font-extrabold text-brand-text">—</p>
+                    )}
                     <p className="mt-1 text-xs text-gray-500">{tagline}</p>
 
                     <ul className="mt-4 flex-1 space-y-2 text-sm text-gray-600">

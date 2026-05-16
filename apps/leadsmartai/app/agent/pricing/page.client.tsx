@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { messageFromUnknownError } from "@/lib/supabaseThrow";
 import type { BillingCadence, PlanSlug } from "@/lib/billing/plans";
 
@@ -458,12 +458,25 @@ function PlanCard({
   );
 }
 
+function isPlanSlug(v: unknown): v is PlanSlug {
+  return v === "starter" || v === "pro" || v === "premium" || v === "signature" || v === "team";
+}
+
+function isPaidSlug(v: unknown): v is Exclude<PlanSlug, "starter" | "team"> {
+  return v === "pro" || v === "premium" || v === "signature";
+}
+
+function isBillingCadence(v: unknown): v is BillingCadence {
+  return v === "monthly" || v === "annual";
+}
+
 export default function AgentPricingClientPage() {
   const [loadingSlug, setLoadingSlug] = useState<PlanSlug | "">("");
   const [currentPlan, setCurrentPlan] = useState<PlanSlug | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [error, setError] = useState("");
   const [cadence, setCadence] = useState<BillingCadence>("monthly");
+  const autoCheckoutRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -473,6 +486,16 @@ export default function AgentPricingClientPage() {
       }
     } catch {
       // sessionStorage unavailable (private mode) — leave default
+    }
+
+    // Honor a cadence URL param (?cadence=annual) so onboarding /
+    // deep-link redirects preselect the toggle correctly.
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlCadence = params.get("cadence");
+      if (isBillingCadence(urlCadence)) {
+        setCadence(urlCadence);
+      }
     }
   }, []);
 
@@ -506,6 +529,20 @@ export default function AgentPricingClientPage() {
     void loadAccess();
   }, []);
 
+  // Auto-checkout on ?checkout_plan=<slug>&cadence=<cadence> deep-link
+  // (used by the onboarding funnel + marketing-page CTAs). Fires once
+  // and skips if `canceled=1` (the user hit cancel and came back).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (autoCheckoutRef.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const slug = params.get("checkout_plan");
+    if (!isPaidSlug(slug)) return;
+    if (params.get("canceled") === "1" || params.get("checkout_canceled") === "1") return;
+    autoCheckoutRef.current = true;
+    void handlePaid(slug);
+  }, []);
+
   async function handleStarter() {
     try {
       setLoadingSlug("starter");
@@ -537,14 +574,14 @@ export default function AgentPricingClientPage() {
     try {
       setLoadingSlug(slug);
       setError("");
-      const res = await fetch("/api/billing/crm/checkout", {
+      const res = await fetch("/api/billing/crm-checkout", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, cadence, with_trial: true }),
+        body: JSON.stringify({ plan: slug, cadence, with_trial: true }),
       });
-      const json = (await res.json()) as { success?: boolean; error?: unknown; url?: string };
-      if (!res.ok) {
+      const json = (await res.json()) as { ok?: boolean; error?: unknown; url?: string };
+      if (!res.ok || !json.ok) {
         throw new Error(messageFromUnknownError(json?.error, "Failed to create checkout session"));
       }
       if (!json.url) throw new Error("Missing checkout URL");

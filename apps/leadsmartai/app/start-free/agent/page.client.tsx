@@ -85,14 +85,14 @@ export default function StartFreeAgentClientPage() {
     setError(null);
     setLoading(slug);
     try {
-      const res = await fetch("/api/billing/crm/checkout", {
+      const res = await fetch("/api/billing/crm-checkout", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, cadence, with_trial: true }),
+        body: JSON.stringify({ plan: slug, cadence, with_trial: true }),
       });
-      const json = (await res.json()) as { url?: string; ok?: boolean; success?: boolean; error?: string };
-      if (!res.ok || !json.url) {
+      const json = (await res.json()) as { url?: string; ok?: boolean; error?: string };
+      if (!res.ok || !json.ok || !json.url) {
         throw new Error(json.error ?? "Could not start checkout. Try again.");
       }
       window.location.href = json.url;
