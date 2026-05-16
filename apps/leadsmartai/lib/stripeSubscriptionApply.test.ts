@@ -10,12 +10,15 @@ import {
 
 function mockSubscription(
   status: Stripe.Subscription["status"],
-  opts?: { priceId?: string; planMeta?: string }
+  opts?: { priceId?: string; planMeta?: string; internalPlan?: string }
 ): Stripe.Subscription {
+  const metadata: Record<string, string> = {};
+  if (opts?.planMeta) metadata.plan = opts.planMeta;
+  if (opts?.internalPlan) metadata.internal_plan = opts.internalPlan;
   return {
     status,
     items: { data: [{ price: { id: opts?.priceId ?? undefined } }] },
-    metadata: opts?.planMeta ? { plan: opts.planMeta } : {},
+    metadata,
   } as unknown as Stripe.Subscription;
 }
 
@@ -166,5 +169,50 @@ describe("resolvePaidPlanFromStripe", () => {
   });
   it("returns free when nothing matches", () => {
     expect(resolvePaidPlanFromStripe(mockSubscription("active", { priceId: "price_unknown" }))).toBe("free");
+  });
+
+  describe("v2.0 internal_plan resolution (legacy 3-value collapse)", () => {
+    it("crm_starter → free (Starter IS the free tier in v2.0)", () => {
+      expect(
+        resolvePaidPlanFromStripe(mockSubscription("active", { internalPlan: "crm_starter" }))
+      ).toBe("free");
+    });
+
+    it("crm_pro → pro ($49 tier)", () => {
+      expect(
+        resolvePaidPlanFromStripe(mockSubscription("active", { internalPlan: "crm_pro" }))
+      ).toBe("pro");
+    });
+
+    it("crm_premium → premium ($99 tier)", () => {
+      expect(
+        resolvePaidPlanFromStripe(mockSubscription("active", { internalPlan: "crm_premium" }))
+      ).toBe("premium");
+    });
+
+    it("crm_signature → premium (legacy collapse; signature gates via subscriptions.plan)", () => {
+      expect(
+        resolvePaidPlanFromStripe(mockSubscription("active", { internalPlan: "crm_signature" }))
+      ).toBe("premium");
+    });
+
+    it("crm_team → premium (legacy collapse; team gates via subscriptions.plan)", () => {
+      expect(
+        resolvePaidPlanFromStripe(mockSubscription("active", { internalPlan: "crm_team" }))
+      ).toBe("premium");
+    });
+
+    it("annual price IDs resolve same as monthly counterparts", () => {
+      const prev = process.env.STRIPE_PRICE_ID_SIGNATURE_ANNUAL;
+      process.env.STRIPE_PRICE_ID_SIGNATURE_ANNUAL = "price_sig_yr";
+      try {
+        expect(
+          resolvePaidPlanFromStripe(mockSubscription("active", { priceId: "price_sig_yr" }))
+        ).toBe("premium");
+      } finally {
+        if (prev === undefined) delete process.env.STRIPE_PRICE_ID_SIGNATURE_ANNUAL;
+        else process.env.STRIPE_PRICE_ID_SIGNATURE_ANNUAL = prev;
+      }
+    });
   });
 });
