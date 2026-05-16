@@ -1,6 +1,20 @@
 export type ProductKey = "leadsmart_agent";
 
-export type AgentPlan = "starter" | "growth" | "elite" | "team";
+/**
+ * Entitlements-side plan dialect. Uses legacy names for the $49/$99
+ * tiers (`growth` = Pro, `elite` = Premium) because they appear in
+ * existing `product_entitlements.plan` rows. `signature` was added
+ * for the v2.0 ladder — it sits between `elite` and `team` and gets
+ * the same coaching + entitlements as `elite` plus five extra
+ * Signature-only features (Sphere Intelligence Pro, white-glove
+ * onboarding, concierge support, cultural calendar, custom voice
+ * tuning).
+ *
+ * The billing-catalog dialect (`PlanSlug` in `lib/billing/plans.ts`)
+ * uses the marketing names — `subscriptionAccess.mapAgentPlanToCrmSlug`
+ * bridges the two.
+ */
+export type AgentPlan = "starter" | "growth" | "elite" | "signature" | "team";
 
 /** @deprecated Prefer `AgentPlan` — kept for existing imports */
 export type AgentPlanId = AgentPlan;

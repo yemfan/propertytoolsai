@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import type { InternalPlan } from "@/lib/billing/stripe-plan-map";
-import type { PlanSlug } from "@/lib/billing/plans";
+import type { BillingCadence, PlanSlug } from "@/lib/billing/plans";
 import { recordSubscriptionEvent } from "@/lib/analytics/analyticsEvents";
 import { SUBSCRIPTION_EVENT_TYPES } from "@/lib/analytics/eventCatalog";
 import { recordFunnelEvent } from "@/lib/funnel/funnelAnalytics";
@@ -8,6 +8,12 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
  * Maps Stripe subscription rows (CRM + legacy agent SKUs) to public `subscriptions.plan` slugs.
+ *
+ * Legacy `agent_*` SKUs are bridged onto CRM slugs (`agent_starter` was the
+ * $49 product → maps to `pro`; `agent_pro` was the $99 product → maps to
+ * `premium`). After v2.0 launch new checkouts always emit `crm_*` plans
+ * via `internal_plan` metadata; these legacy mappings keep historical
+ * subscriptions resolvable.
  */
 export function mapInternalPlanToCrmSlug(plan: InternalPlan): PlanSlug | null {
   switch (plan) {
@@ -15,15 +21,35 @@ export function mapInternalPlanToCrmSlug(plan: InternalPlan): PlanSlug | null {
       return "starter";
     case "crm_pro":
       return "pro";
+    case "crm_premium":
+      return "premium";
+    case "crm_signature":
+      return "signature";
     case "crm_team":
       return "team";
     case "agent_starter":
       return "pro";
     case "agent_pro":
-      return "team";
+      return "premium";
     default:
       return null;
   }
+}
+
+/**
+ * Pulls billing cadence from a Stripe Subscription. Checkout sets
+ * `metadata.billing_cadence` to `"monthly"` or `"annual"`. We also
+ * inspect the price interval as a fallback when metadata is missing
+ * (legacy rows pre-v2.0 are always monthly).
+ */
+function resolveBillingCadence(
+  subscription: Stripe.Subscription,
+): BillingCadence {
+  const raw = String(subscription.metadata?.billing_cadence ?? "").toLowerCase().trim();
+  if (raw === "annual" || raw === "monthly") return raw;
+  const interval = subscription.items.data[0]?.price?.recurring?.interval;
+  if (interval === "year") return "annual";
+  return "monthly";
 }
 
 function mapStripeStatus(status: Stripe.Subscription.Status): string {
@@ -73,33 +99,57 @@ export async function syncPublicSubscriptionFromStripe(params: {
 
   const { data: priorSub } = await supabaseAdmin
     .from("subscriptions")
-    .select("plan, status")
+    .select("plan, status, billing_cadence, current_period_end")
     .eq("stripe_subscription_id", params.stripeSubscriptionId)
     .maybeSingle();
 
-  const prior = priorSub as { plan: string; status: string } | null;
+  const cadence = resolveBillingCadence(params.subscription);
+
+  const prior = priorSub as {
+    plan: string;
+    status: string;
+    billing_cadence?: string | null;
+    current_period_end?: string | null;
+  } | null;
   const crmChanged =
-    !prior || prior.plan !== slug || prior.status !== status;
+    !prior ||
+    prior.plan !== slug ||
+    prior.status !== status ||
+    prior.billing_cadence !== cadence;
+
+  // Clear the renewal-reminder timestamp whenever current_period_end
+  // advances — that means we entered a new annual period and the next
+  // 30-day reminder should fire when this period nears its end.
+  const periodAdvanced =
+    !!params.currentPeriodEnd &&
+    !!prior?.current_period_end &&
+    params.currentPeriodEnd > prior.current_period_end;
 
   const now = new Date().toISOString();
-  const { error } = await supabaseAdmin.from("subscriptions").upsert(
-    {
-      user_id: params.userId,
-      stripe_customer_id: params.stripeCustomerId,
-      stripe_subscription_id: params.stripeSubscriptionId,
-      plan: slug,
-      status,
-      current_period_end: params.currentPeriodEnd,
-      updated_at: now,
-    },
-    { onConflict: "stripe_subscription_id" }
-  );
+  const upsertPayload: Record<string, unknown> = {
+    user_id: params.userId,
+    stripe_customer_id: params.stripeCustomerId,
+    stripe_subscription_id: params.stripeSubscriptionId,
+    plan: slug,
+    status,
+    billing_cadence: cadence,
+    current_period_end: params.currentPeriodEnd,
+    updated_at: now,
+  };
+  if (periodAdvanced) {
+    upsertPayload.annual_renewal_reminder_sent_at = null;
+  }
+
+  const { error } = await supabaseAdmin
+    .from("subscriptions")
+    .upsert(upsertPayload, { onConflict: "stripe_subscription_id" });
 
   if (error) throw error;
 
   if (status === "active" || status === "trialing") {
     void recordFunnelEvent(params.userId, "subscription_active_crm", {
       plan: slug,
+      cadence,
       stripe_subscription_id: params.stripeSubscriptionId,
     });
     if (crmChanged) {
@@ -109,7 +159,7 @@ export async function syncPublicSubscriptionFromStripe(params: {
         plan: slug,
         amount: null,
         stripeSubscriptionId: params.stripeSubscriptionId,
-        metadata: { source: "crm_stripe_mirror" },
+        metadata: { source: "crm_stripe_mirror", cadence },
       });
     }
   }

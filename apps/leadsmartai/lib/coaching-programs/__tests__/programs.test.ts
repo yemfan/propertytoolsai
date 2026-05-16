@@ -27,17 +27,19 @@ describe("coaching-programs / registry", () => {
 });
 
 describe("canPlanAccessProgram", () => {
-  it("Producer Track: starter excluded; growth + elite + team included", () => {
+  it("Producer Track: starter excluded; growth + elite + signature + team included", () => {
     expect(canPlanAccessProgram({ plan: "starter", program: "producer_track" })).toBe(false);
     expect(canPlanAccessProgram({ plan: "growth", program: "producer_track" })).toBe(true);
     expect(canPlanAccessProgram({ plan: "elite", program: "producer_track" })).toBe(true);
+    expect(canPlanAccessProgram({ plan: "signature", program: "producer_track" })).toBe(true);
     expect(canPlanAccessProgram({ plan: "team", program: "producer_track" })).toBe(true);
   });
 
-  it("Top Producer Track: Premium + Team eligible; Starter + Pro excluded", () => {
+  it("Top Producer Track: Premium + Signature + Team eligible; Starter + Pro excluded", () => {
     expect(canPlanAccessProgram({ plan: "starter", program: "top_producer_track" })).toBe(false);
     expect(canPlanAccessProgram({ plan: "growth", program: "top_producer_track" })).toBe(false);
     expect(canPlanAccessProgram({ plan: "elite", program: "top_producer_track" })).toBe(true);
+    expect(canPlanAccessProgram({ plan: "signature", program: "top_producer_track" })).toBe(true);
     expect(canPlanAccessProgram({ plan: "team", program: "top_producer_track" })).toBe(true);
   });
 
@@ -48,9 +50,10 @@ describe("canPlanAccessProgram", () => {
 });
 
 describe("planAutoEnrollsProgram", () => {
-  it("Producer Track auto-enrolls on Pro, Premium, and Team", () => {
+  it("Producer Track auto-enrolls on Pro, Premium, Signature, and Team", () => {
     expect(planAutoEnrollsProgram({ plan: "growth", program: "producer_track" })).toBe(true);
     expect(planAutoEnrollsProgram({ plan: "elite", program: "producer_track" })).toBe(true);
+    expect(planAutoEnrollsProgram({ plan: "signature", program: "producer_track" })).toBe(true);
     expect(planAutoEnrollsProgram({ plan: "team", program: "producer_track" })).toBe(true);
   });
 
@@ -58,9 +61,10 @@ describe("planAutoEnrollsProgram", () => {
     expect(planAutoEnrollsProgram({ plan: "starter", program: "producer_track" })).toBe(false);
   });
 
-  it("Top Producer Track auto-enrolls on Premium and Team only", () => {
+  it("Top Producer Track auto-enrolls on Premium, Signature, and Team only", () => {
     expect(planAutoEnrollsProgram({ plan: "growth", program: "top_producer_track" })).toBe(false);
     expect(planAutoEnrollsProgram({ plan: "elite", program: "top_producer_track" })).toBe(true);
+    expect(planAutoEnrollsProgram({ plan: "signature", program: "top_producer_track" })).toBe(true);
     expect(planAutoEnrollsProgram({ plan: "team", program: "top_producer_track" })).toBe(true);
   });
 });
@@ -78,6 +82,11 @@ describe("programsForPlan", () => {
 
   it("elite (Premium) → both programs in display order", () => {
     const out = programsForPlan("elite").map((p) => p.slug);
+    expect(out).toEqual(["producer_track", "top_producer_track"]);
+  });
+
+  it("signature → both programs in display order", () => {
+    const out = programsForPlan("signature").map((p) => p.slug);
     expect(out).toEqual(["producer_track", "top_producer_track"]);
   });
 

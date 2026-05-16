@@ -6,22 +6,25 @@ import type { InternalPlan } from "./stripe-plan-map";
  * page, the Stripe checkout, and entitlement gating.
  *
  * Derived elsewhere (so we don't fork pricing across files):
- *   - `crmStripePrices.ts`     reads `stripePriceEnvVar` per slug
+ *   - `crmStripePrices.ts`     reads `stripePriceEnvVar` / `stripePriceEnvVarAnnual` per slug
  *   - `stripe-plan-map.ts`     reads `internalPlan` per slug
  *   - `subscriptionAccess.ts`  exposes feature gating via `hasFeature`
  *   - `BillingPageClient.tsx`  renders cards from `displayName` +
- *                              `tagline` + `price` + `features` +
+ *                              `tagline` + `price`/`annualPrice` + `features` +
  *                              `popular`
  *
- * Naming aligns with the marketing pricing page (Starter / Pro /
- * Premium / Team — see `apps/leadsmartai/app/agent/pricing/`). The
- * older CRM tier names (`starter` was $49, `pro` was $99) are retired
- * — `starter` is now the free entry tier and `premium` covers the
- * $99 step. Existing `subscriptions.plan='starter'` rows that were
- * paying customers need a one-time migration to `pro` (see PR body).
+ * Naming aligns with the marketing pricing page v2.0 (Starter / Pro /
+ * Premium / Signature / Team — see `apps/leadsmartai/app/agent/pricing/`).
+ *
+ * Cadence model: every paid tier exposes a monthly price and (when
+ * offered) an annual price. The `price` field stays as the monthly
+ * value so legacy callers (`PLANS[slug].price`) keep resolving. The
+ * Stripe Price IDs split into `stripePriceEnvVar` (monthly, existing)
+ * and `stripePriceEnvVarAnnual` (new — null until the annual SKU is
+ * created in Stripe).
  */
 
-export type PlanSlug = "starter" | "pro" | "premium" | "team";
+export type PlanSlug = "starter" | "pro" | "premium" | "signature" | "team";
 
 export type PlanFeature =
   | "basic_crm"
@@ -32,7 +35,15 @@ export type PlanFeature =
   | "multi_agent"
   | "routing"
   | "producer_track_coaching"
-  | "top_producer_track_coaching";
+  | "top_producer_track_coaching"
+  | "bilingual_ai"
+  | "sphere_intelligence_pro"
+  | "white_glove_onboarding"
+  | "concierge_support"
+  | "cultural_calendar"
+  | "custom_voice_tuning";
+
+export type BillingCadence = "monthly" | "annual";
 
 export type PlanDefinition = {
   slug: PlanSlug;
@@ -42,10 +53,14 @@ export type PlanDefinition = {
   tagline: string;
   /** Monthly price in USD. 0 = free (no Stripe subscription). */
   price: number;
+  /** Annual price in USD. null = no annual SKU (free tier, or not offered yet). */
+  annualPrice: number | null;
   /** Feature flags — drive both `hasFeature` gating and card bullets. */
   features: readonly PlanFeature[];
-  /** Env var holding the Stripe Price ID (`price_…`). Null for free. */
+  /** Env var holding the MONTHLY Stripe Price ID (`price_…`). Null for free. */
   stripePriceEnvVar: string | null;
+  /** Env var holding the ANNUAL Stripe Price ID (`price_…`). Null if annual not offered. */
+  stripePriceEnvVarAnnual: string | null;
   /** Maps to `InternalPlan` for entitlements + analytics. */
   internalPlan: InternalPlan;
   /** Coaching tier label (Producer Track / Top Producer Track), if any. */
@@ -64,20 +79,29 @@ export const PLANS: Record<PlanSlug, PlanDefinition> = {
     displayName: "Starter",
     tagline: "For new agents testing the platform",
     price: 0,
+    annualPrice: null,
     features: ["basic_crm"],
     stripePriceEnvVar: null,
+    stripePriceEnvVarAnnual: null,
     internalPlan: "crm_starter",
   },
   pro: {
     slug: "pro",
     displayName: "Pro",
-    tagline: "Producer Track coaching + AI drafts",
+    tagline: "Producer Track coaching + bilingual AI",
     price: 49,
-    features: ["basic_crm", "limited_ai", "producer_track_coaching"],
+    annualPrice: 490,
+    features: [
+      "basic_crm",
+      "limited_ai",
+      "bilingual_ai",
+      "producer_track_coaching",
+    ],
     // Reuses the existing STRIPE_PRICE_ID_PRO env var — historically
     // the $49 product was wired to this name (the old "starter" CRM
     // slug also pointed here). Same Stripe product, new slug name.
     stripePriceEnvVar: "STRIPE_PRICE_ID_PRO",
+    stripePriceEnvVarAnnual: "STRIPE_PRICE_ID_PRO_ANNUAL",
     internalPlan: "crm_pro",
     coachingTier: "Producer Track",
     popular: true,
@@ -87,35 +111,65 @@ export const PLANS: Record<PlanSlug, PlanDefinition> = {
     displayName: "Premium",
     tagline: "Top Producer Track + full AI",
     price: 99,
+    annualPrice: 990,
     features: [
       "basic_crm",
       "full_ai",
       "automation",
       "prediction",
+      "bilingual_ai",
       "top_producer_track_coaching",
     ],
     // STRIPE_PRICE_ID_PREMIUM with fallback to STRIPE_PRICE_ID_ELITE
     // is handled in crmStripePrices.ts so existing deployments don't
     // need to rename the env var on day one.
     stripePriceEnvVar: "STRIPE_PRICE_ID_PREMIUM",
+    stripePriceEnvVarAnnual: "STRIPE_PRICE_ID_PREMIUM_ANNUAL",
     internalPlan: "crm_premium",
     coachingTier: "Top Producer Track",
   },
-  team: {
-    slug: "team",
-    displayName: "Team",
-    tagline: "Up to 5 seats, multi-agent workspace",
-    price: 199,
+  signature: {
+    slug: "signature",
+    displayName: "Signature",
+    tagline: "Relationship-driven agents serving high-value clients",
+    price: 249,
+    annualPrice: 2490,
     features: [
       "basic_crm",
       "full_ai",
       "automation",
       "prediction",
+      "bilingual_ai",
+      "top_producer_track_coaching",
+      "sphere_intelligence_pro",
+      "white_glove_onboarding",
+      "concierge_support",
+      "cultural_calendar",
+      "custom_voice_tuning",
+    ],
+    stripePriceEnvVar: "STRIPE_PRICE_ID_SIGNATURE",
+    stripePriceEnvVarAnnual: "STRIPE_PRICE_ID_SIGNATURE_ANNUAL",
+    internalPlan: "crm_signature",
+    coachingTier: "Top Producer Track",
+  },
+  team: {
+    slug: "team",
+    displayName: "Team",
+    tagline: "Brokerages with shared workflows and rosters",
+    price: 299,
+    annualPrice: 2990,
+    features: [
+      "basic_crm",
+      "full_ai",
+      "automation",
+      "prediction",
+      "bilingual_ai",
       "multi_agent",
       "routing",
       "top_producer_track_coaching",
     ],
     stripePriceEnvVar: "STRIPE_PRICE_ID_TEAM",
+    stripePriceEnvVarAnnual: "STRIPE_PRICE_ID_TEAM_ANNUAL",
     internalPlan: "crm_team",
     coachingTier: "Top Producer Track",
   },
@@ -126,6 +180,7 @@ export const PLAN_SLUGS_IN_ORDER: ReadonlyArray<PlanSlug> = [
   "starter",
   "pro",
   "premium",
+  "signature",
   "team",
 ];
 
@@ -155,10 +210,28 @@ export function hasFeature(
 }
 
 /**
+ * Effective monthly cost for a given (plan, cadence). Annual is
+ * presented as `$/mo billed annually` in the UI, so callers that need
+ * the per-month figure for display can derive it without recomputing.
+ * Returns 0 for free tiers. Returns monthly price if `annual` requested
+ * but no annual SKU exists.
+ */
+export function effectiveMonthlyPrice(
+  plan: PlanSlug,
+  cadence: BillingCadence,
+): number {
+  const def = PLANS[plan];
+  if (cadence === "annual" && def.annualPrice != null) {
+    return def.annualPrice / 12;
+  }
+  return def.price;
+}
+
+/**
  * Monthly AI draft generations for capped tiers. `free` is the
  * implicit "no plan" state used by code that reads `plan: null` and
  * needs a tiny default; `starter` matches it (paid name for the same
- * free tier). High caps for Premium / Team are functionally
+ * free tier). High caps for Premium / Signature / Team are functionally
  * unlimited but kept finite for safety.
  */
 export const AI_USAGE_MONTHLY_LIMIT: Record<PlanSlug | "free", number> = {
@@ -166,5 +239,6 @@ export const AI_USAGE_MONTHLY_LIMIT: Record<PlanSlug | "free", number> = {
   starter: 100,
   pro: 5_000,
   premium: 999_999,
+  signature: 999_999,
   team: 999_999,
 };

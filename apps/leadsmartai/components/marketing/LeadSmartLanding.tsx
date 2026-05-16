@@ -903,11 +903,12 @@ export default function LeadSmartLanding() {
                     </p>
                     <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">For active agents closing deals consistently.</p>
                     <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold text-[#0072ce] ring-1 ring-blue-200 dark:bg-blue-900/30 dark:text-[#4da3e8] dark:ring-blue-800">
-                      ★ Producer Track included
+                      ★ LeadSmart AI Coaching: Producer Track included
                     </div>
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 dark:text-slate-300">
                       {[
                         "500 leads · 500 contacts",
+                        "Bilingual English / 中文 templates & AI",
                         "Producer Track coaching (auto-enrolled)",
                         "Video email (record & send)",
                         "Buyer Broker Agreement workflow",
@@ -941,7 +942,7 @@ export default function LeadSmartLanding() {
                     </p>
                     <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">For top producers running solo.</p>
                     <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-2.5 py-0.5 text-[10px] font-semibold text-violet-700 ring-1 ring-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:ring-violet-800">
-                      ★ Top Producer Track included
+                      ★ LeadSmart AI Coaching: Top Producer Track included
                     </div>
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 dark:text-slate-300">
                       {[
@@ -966,19 +967,19 @@ export default function LeadSmartLanding() {
                     <h3 className="font-heading text-base font-semibold dark:text-white">Team</h3>
                     <div className="mt-1 flex items-baseline gap-2">
                       <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                        ${billingCycle === "annual" ? 165 : 199}{" "}
+                        ${billingCycle === "annual" ? 249 : 299}{" "}
                         <span className="text-xs font-normal text-gray-500 dark:text-slate-400">/mo</span>
                       </p>
                       {billingCycle === "annual" && (
-                        <span className="text-xs font-normal text-gray-400 line-through dark:text-slate-500">$199</span>
+                        <span className="text-xs font-normal text-gray-400 line-through dark:text-slate-500">$299</span>
                       )}
                     </div>
                     <p className="mt-1 text-[11px] text-gray-500 dark:text-slate-500">
-                      {billingCycle === "annual" ? "$1,990 billed yearly · per team" : "Billed monthly · per team"}
+                      {billingCycle === "annual" ? "$2,990 billed yearly · per team" : "Billed monthly · per team"}
                     </p>
                     <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">For brokerages and small teams up to 5 seats.</p>
                     <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-800">
-                      ★ Top Producer Track for whole team
+                      ★ LeadSmart AI Coaching: Top Producer Track for every seat
                     </div>
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 dark:text-slate-300">
                       {[
@@ -992,14 +993,40 @@ export default function LeadSmartLanding() {
                         <li key={f} className="flex items-center gap-2"><BrandCheck tone="accent" />{f}</li>
                       ))}
                     </ul>
-                    <Button className="mt-5 w-full text-xs" variant="outline" href={`/agent/pricing?checkout_plan=team&cycle=${billingCycle}`} aria-label={`Start free trial — Team plan at $${billingCycle === "annual" ? 165 : 199} per month`}>Start 14-day trial</Button>
+                    <Button className="mt-5 w-full text-xs" variant="outline" href={`/agent/pricing?checkout_plan=team&cycle=${billingCycle}`} aria-label={`Start free trial — Team plan at $${billingCycle === "annual" ? 249 : 299} per month`}>Start 14-day trial</Button>
                     <p className="mt-1.5 text-center text-[11px] text-gray-400 dark:text-slate-500">More than 5 seats? <a href="/contact?topic=team" className="underline hover:text-slate-600 dark:hover:text-slate-300">Contact sales</a></p>
                   </CardContent>
                 </Card>
               </RevealSection>
             </div>
+
+            {/* Signature teaser — full ladder lives on /agent/pricing */}
+            <RevealSection>
+              <div className="mt-6 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100/50 px-5 py-4 text-sm dark:border-amber-900/40 dark:from-amber-950/30 dark:to-amber-900/10">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <span className="rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-950">
+                      Signature
+                    </span>
+                    <span className="ml-2 font-semibold text-slate-900 dark:text-amber-100">
+                      $249/mo
+                    </span>
+                    <span className="ml-2 text-slate-700 dark:text-amber-200/80">
+                      — bilingual + luxury concierge tier with Sphere Intelligence Pro, white-glove onboarding, cultural calendar automations, custom voice tuning.
+                    </span>
+                  </div>
+                  <a
+                    href="/agent/pricing"
+                    className="text-sm font-semibold text-amber-900 underline-offset-2 hover:underline dark:text-amber-300"
+                  >
+                    See Signature details →
+                  </a>
+                </div>
+              </div>
+            </RevealSection>
+
             <p className="mt-6 text-sm text-gray-500 dark:text-slate-400">
-              See the full feature comparison →{" "}
+              From your first lead to your highest-value clients — available in English and 中文. See the full feature comparison →{" "}
               <a href="/agent/pricing" className="font-semibold text-[#0072ce] hover:underline dark:text-[#4da3e8]">View all plans</a>
             </p>
           </div>

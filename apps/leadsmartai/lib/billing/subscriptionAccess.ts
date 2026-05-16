@@ -1,12 +1,28 @@
 import { NextResponse } from "next/server";
-import { hasFeature, PLANS, type PlanFeature, type PlanSlug } from "@/lib/billing/plans";
+import {
+  hasFeature,
+  PLANS,
+  type BillingCadence,
+  type PlanFeature,
+  type PlanSlug,
+} from "@/lib/billing/plans";
 import type { LimitReason } from "@/lib/entitlements/types";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const PAID_STATUSES = ["active", "trialing"] as const;
 
 function isPlanSlug(v: string): v is PlanSlug {
-  return v === "starter" || v === "pro" || v === "premium" || v === "team";
+  return (
+    v === "starter" ||
+    v === "pro" ||
+    v === "premium" ||
+    v === "signature" ||
+    v === "team"
+  );
+}
+
+function isBillingCadence(v: unknown): v is BillingCadence {
+  return v === "monthly" || v === "annual";
 }
 
 /**
@@ -28,10 +44,11 @@ function isPlanSlug(v: string): v is PlanSlug {
 export async function getActiveCrmSubscription(userId: string): Promise<{
   plan: PlanSlug;
   status: string;
+  cadence: BillingCadence;
 } | null> {
   const { data, error } = await supabaseAdmin
     .from("subscriptions")
-    .select("plan, status, updated_at")
+    .select("plan, status, billing_cadence, updated_at")
     .eq("user_id", userId)
     .in("status", [...PAID_STATUSES])
     .order("updated_at", { ascending: false })
@@ -42,13 +59,22 @@ export async function getActiveCrmSubscription(userId: string): Promise<{
   if (data) {
     const p = String((data as { plan: unknown }).plan ?? "");
     if (isPlanSlug(p)) {
-      return { plan: p, status: String((data as { status: unknown }).status ?? "") };
+      const rawCadence = (data as { billing_cadence?: unknown }).billing_cadence;
+      const cadence: BillingCadence = isBillingCadence(rawCadence)
+        ? rawCadence
+        : "monthly";
+      return {
+        plan: p,
+        status: String((data as { status: unknown }).status ?? ""),
+        cadence,
+      };
     }
   }
 
   // Fallback: read the agent's plan_type. Maps the new agent plans
-  // (free / starter / pro / growth / elite / premium / team) onto
-  // the legacy CRM slugs (starter | pro | team).
+  // (free / starter / pro / growth / elite / premium / signature /
+  // team) onto the catalog CRM slugs. Cadence isn't tracked on the
+  // agent row, so this path defaults to monthly.
   const { data: agentRow, error: agentErr } = await supabaseAdmin
     .from("agents")
     .select("plan_type")
@@ -60,7 +86,7 @@ export async function getActiveCrmSubscription(userId: string): Promise<{
     .trim();
   const mapped = mapAgentPlanToCrmSlug(planType);
   if (!mapped) return null;
-  return { plan: mapped, status: "active" };
+  return { plan: mapped, status: "active", cadence: "monthly" };
 }
 
 /**
@@ -86,6 +112,8 @@ function mapAgentPlanToCrmSlug(planType: string): PlanSlug | null {
     case "premium":
     case "elite":
       return "premium";
+    case "signature":
+      return "signature";
     case "team":
       return "team";
     default:
@@ -102,6 +130,7 @@ export async function userHasCrmFeature(userId: string, feature: PlanFeature | s
 export async function getCrmSubscriptionSnapshot(userId: string): Promise<{
   plan: PlanSlug;
   status: string;
+  cadence: BillingCadence;
   features: readonly string[];
   tier: (typeof PLANS)[PlanSlug];
 } | null> {
@@ -110,6 +139,7 @@ export async function getCrmSubscriptionSnapshot(userId: string): Promise<{
   return {
     plan: sub.plan,
     status: sub.status,
+    cadence: sub.cadence,
     features: PLANS[sub.plan].features,
     tier: PLANS[sub.plan],
   };

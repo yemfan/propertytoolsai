@@ -43,6 +43,14 @@ export function computeAgentPlanFromSubscriptionSync(params: {
 function planFromPriceId(priceId: string | null | undefined): "pro" | "premium" | null {
   if (!priceId) return null;
   if (priceId === process.env.STRIPE_PRICE_ID_PRO) return "pro";
+  // CRM annual variants — same legacy collapse (annual cadence doesn't change tier mapping).
+  if (priceId === process.env.STRIPE_PRICE_ID_PRO_ANNUAL) return "pro";
+  if (priceId === process.env.STRIPE_PRICE_ID_PREMIUM) return "premium";
+  if (priceId === process.env.STRIPE_PRICE_ID_PREMIUM_ANNUAL) return "premium";
+  if (priceId === process.env.STRIPE_PRICE_ID_SIGNATURE) return "premium";
+  if (priceId === process.env.STRIPE_PRICE_ID_SIGNATURE_ANNUAL) return "premium";
+  if (priceId === process.env.STRIPE_PRICE_ID_TEAM) return "premium";
+  if (priceId === process.env.STRIPE_PRICE_ID_TEAM_ANNUAL) return "premium";
   const consumerPrem = (process.env.STRIPE_PRICE_ID_CONSUMER_PREMIUM ?? "").trim();
   if (consumerPrem && priceId === consumerPrem) return "premium";
   const agentPro = (process.env.STRIPE_PRICE_ID_AGENT_PRO ?? "").trim();
@@ -53,16 +61,34 @@ function planFromPriceId(priceId: string | null | undefined): "pro" | "premium" 
 }
 
 /**
- * Map Stripe price + checkout metadata to a plan. Metadata is used when env price IDs
- * are misconfigured or Stripe test/live IDs differ from .env.
+ * Map Stripe price + checkout metadata to a plan stored on `agents.plan_type` /
+ * `leadsmart_users.plan`. These legacy columns are a 3-value collapse (`free` /
+ * `pro` / `premium`) — the TRUE source of truth for v2.0 tier features is
+ * `public.subscriptions.plan` written by `syncPublicSubscriptionFromStripe`.
+ *
+ * Mapping under the v2.0 catalog (post-rename):
+ *   - `crm_starter`  → `free`     (Starter IS the free tier in v2.0)
+ *   - `crm_pro`      → `pro`      ($49 tier)
+ *   - `crm_premium`  → `premium`  ($99 tier)
+ *   - `crm_signature`→ `premium`  ($249 tier; legacy collapse — features gate
+ *                                  via subscriptions.plan = 'signature')
+ *   - `crm_team`     → `premium`  ($299 tier; legacy collapse — multi-seat
+ *                                  features gate via subscriptions.plan = 'team')
  */
 export function resolvePaidPlanFromStripe(
   subscription: Stripe.Subscription,
   checkoutPlanMeta?: string | null
 ): "pro" | "premium" | "free" {
   const internal = String(subscription.metadata?.internal_plan ?? "").trim();
-  if (internal === "crm_starter") return "pro";
-  if (internal === "crm_pro" || internal === "crm_team") return "premium";
+  if (internal === "crm_starter") return "free";
+  if (internal === "crm_pro") return "pro";
+  if (
+    internal === "crm_premium" ||
+    internal === "crm_signature" ||
+    internal === "crm_team"
+  ) {
+    return "premium";
+  }
 
   const priceId = subscription.items.data[0]?.price?.id;
   const fromEnv = planFromPriceId(priceId);

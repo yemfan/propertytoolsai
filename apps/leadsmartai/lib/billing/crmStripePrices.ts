@@ -1,15 +1,16 @@
 import type { InternalPlan } from "@/lib/billing/stripe-plan-map";
-import { PLANS, type PlanSlug } from "@/lib/billing/plans";
+import { PLANS, type BillingCadence, type PlanSlug } from "@/lib/billing/plans";
 
 /**
  * Backward-compat env var aliases.
  *
  * The catalog renamed slugs to align with the marketing tiers
- * (Starter Free / Pro $49 / Premium $99 / Team $199). The old
- * deployments wired the $99 product to STRIPE_PRICE_ID_ELITE and
- * never had a STRIPE_PRICE_ID_PREMIUM. Keep the lookup forgiving so
- * existing .env.local files keep working — preferred name wins,
- * legacy name is a fallback.
+ * (Starter Free / Pro $49 / Premium $99 / Signature $249 / Team $299).
+ * The old deployments wired the $99 product to STRIPE_PRICE_ID_ELITE
+ * and never had a STRIPE_PRICE_ID_PREMIUM. Keep the lookup forgiving
+ * so existing .env.local files keep working — preferred name wins,
+ * legacy name is a fallback. Annual env vars have no legacy aliases
+ * because they're new in v2.0.
  */
 const ENV_VAR_FALLBACKS: Record<string, string> = {
   STRIPE_PRICE_ID_PREMIUM: "STRIPE_PRICE_ID_ELITE",
@@ -26,17 +27,33 @@ function readEnvWithFallback(envKey: string): string {
 }
 
 /**
- * Monthly Stripe Price ID (`price_…`) for a CRM tier. Throws on
+ * Stripe Price ID (`price_…`) for a (CRM tier, cadence) pair. Throws on
  * misconfiguration so checkout fails loudly instead of silently
  * landing the user on the wrong product.
  *
  * Free tiers (Starter) intentionally don't have a Stripe Price ID —
  * calling this with a free slug throws. Callers that handle free
  * separately should branch on `PLANS[slug].stripePriceEnvVar` first.
+ *
+ * `cadence` defaults to `"monthly"` so legacy callers that don't pass
+ * it keep resolving to the monthly Price ID. Pass `"annual"` to look
+ * up the yearly SKU.
  */
-export function getCrmStripePriceId(plan: PlanSlug): string {
-  const envKey = PLANS[plan].stripePriceEnvVar;
+export function getCrmStripePriceId(
+  plan: PlanSlug,
+  cadence: BillingCadence = "monthly",
+): string {
+  const def = PLANS[plan];
+  const envKey =
+    cadence === "annual" ? def.stripePriceEnvVarAnnual : def.stripePriceEnvVar;
+
   if (!envKey) {
+    if (cadence === "annual" && def.stripePriceEnvVar) {
+      throw new Error(
+        `Plan "${plan}" does not offer an annual cadence. ` +
+          `Pass cadence="monthly" or add stripePriceEnvVarAnnual in PLANS.`,
+      );
+    }
     throw new Error(
       `Plan "${plan}" is free and has no Stripe Price ID. Branch on PLANS[slug].stripePriceEnvVar before calling getCrmStripePriceId.`,
     );
@@ -48,7 +65,7 @@ export function getCrmStripePriceId(plan: PlanSlug): string {
 
   if (!v) {
     throw new Error(
-      `Missing ${lookupSummary}. Add a recurring monthly Stripe Price ID for the ${plan} CRM plan.`,
+      `Missing ${lookupSummary}. Add a recurring ${cadence} Stripe Price ID for the ${plan} CRM plan.`,
     );
   }
   if (v.startsWith("prod_")) {
