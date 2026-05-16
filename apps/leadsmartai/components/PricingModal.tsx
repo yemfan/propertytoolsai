@@ -52,16 +52,16 @@ const plans: {
   },
   {
     key: "premium",
-    title: "Premium / Team",
+    title: "Premium",
     price: "$99/mo",
-    subtitle: "For top producers and teams",
+    subtitle: "For top producers running solo",
     features: [
       "CMA Reports: 10/day (expandable)",
       "Lead Management: Unlimited",
       "Alerts: Advanced + automation",
       "CRM Access: Full",
       "Reports Download: Unlimited",
-      "Team Access: Yes",
+      "Top Producer Track coaching included",
     ],
     cta: "Upgrade to Premium",
   },
@@ -363,7 +363,16 @@ export default function PricingModal({
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            Trusted by 500+ agents · 10,000+ leads managed · Designed to save you hours every week.
+            <p className="font-medium text-slate-900">Need more?</p>
+            <p className="mt-1 text-slate-600">
+              <strong>Signature</strong> ($249/mo) adds bilingual English / 中文 AI, Sphere
+              Intelligence Pro, white-glove onboarding, and concierge support.{" "}
+              <strong>Team</strong> ($299/mo per team) adds round-robin routing and shared
+              workflows for up to 5 agents.{" "}
+              <a href="/agent/pricing" className="font-semibold text-blue-700 hover:underline">
+                See the full ladder →
+              </a>
+            </p>
           </div>
         </div>
       </div>

@@ -13,6 +13,8 @@ const PLAN_CHECKOUT: Record<string, { plan: string; price: string } | null> = {
   starter: null,
   growth: { plan: "pro", price: "$49/mo" },
   elite: { plan: "premium", price: "$99/mo" },
+  signature: { plan: "signature", price: "$249/mo" },
+  team: { plan: "team", price: "$299/mo" },
 };
 
 function PlanCard({
@@ -148,9 +150,10 @@ export function AgentPricingComparison() {
         ))}
       </div>
       <p className="mt-8 text-center text-sm text-slate-600">
-        Need help choosing?{" "}
+        Need bilingual or luxury concierge? See <strong>Signature</strong> ($249/mo) and{" "}
+        <strong>Team</strong> ($299/mo) on the{" "}
         <Link href="/agent/pricing" className="font-semibold text-blue-700 hover:text-blue-800">
-          Open full pricing
+          full pricing page →
         </Link>
       </p>
     </section>
