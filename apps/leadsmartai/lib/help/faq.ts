@@ -65,7 +65,7 @@ export const HELP_FAQ: ReadonlyArray<HelpFaqEntry> = [
   {
     category: "coaching",
     q: "What is LeadSmart AI Coaching?",
-    a: "Coaching is a producer-development program built into the dashboard. Producer Track (Pro and above) targets 10 transactions / 3% conversion; Top Producer Track (Premium and Team) targets 15 transactions / 5% conversion. Daily plans, weekly playbooks, monthly AI deep-dives, peer benchmarks. No add-on fee.",
+    a: "Coaching is a producer-development program built into the dashboard. Producer Track (Pro and above) targets 10 transactions / 3% conversion; Top Producer Track (Premium, Signature, and Team) targets 15 transactions / 5% conversion. Daily plans, weekly playbooks, monthly AI deep-dives, peer benchmarks. No add-on fee.",
   },
   {
     category: "coaching",
@@ -78,6 +78,21 @@ export const HELP_FAQ: ReadonlyArray<HelpFaqEntry> = [
     category: "billing",
     q: "Can I cancel my subscription anytime?",
     a: "Yes. Cancel from Settings → Billing or directly from your Stripe Customer Portal. There's no minimum term and no cancellation fee. Your plan stays active through the end of the current billing period, then drops to Starter automatically.",
+  },
+  {
+    category: "billing",
+    q: "What's the difference between monthly and annual billing?",
+    a: "Every paid tier (Pro, Premium, Signature, Team) offers both. Annual is two months free — you pay the equivalent of 10 monthly invoices upfront. Pick your cadence on the pricing toggle or switch later from Settings → Billing. We send a renewal reminder 30 days before each annual renewal.",
+  },
+  {
+    category: "billing",
+    q: "Can I switch from monthly to annual mid-cycle?",
+    a: "Yes. From Settings → Billing, click \"Switch to annual.\" Stripe issues a prorated invoice for the difference (your remaining monthly time becomes a credit) and charges the annual amount immediately. Switching from annual back to monthly is only available at your next renewal — cancel auto-renewal first, then resubscribe monthly when the annual period ends.",
+  },
+  {
+    category: "billing",
+    q: "What is the Signature tier?",
+    a: "Signature ($249/mo or $2,490/yr) is for relationship-driven agents serving high-value and bilingual clients. It includes everything in Premium plus Sphere Intelligence Pro (equity tracking, life-event signals, referral mapping), white-glove onboarding with a specialist, concierge support, cultural calendar automations (Lunar holidays auto-pause/auto-greet), and custom voice tuning trained on your past conversations.",
   },
   {
     category: "billing",

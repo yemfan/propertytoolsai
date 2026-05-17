@@ -1,8 +1,8 @@
 {
   "header": {
-    "badge": "无合约 · 随时可取消",
+    "badge": "无合约 · 随时可取消 · 英文 + 中文",
     "h1": "简单、透明的价格",
-    "subtitle": "所有付费套餐均含 14 天免费试用。免费起步，准备好后升级。"
+    "subtitle": "所有付费套餐均含 14 天免费试用。可随时切换月付 / 年付 — 年付立省 2 个月。"
   },
   "errors": {
     "open_failed": "无法打开结算页面",
@@ -16,31 +16,40 @@
       "name": "入门版",
       "price": "$0",
       "period": "永久免费",
-      "tagline": "功能与用量有限。",
+      "tagline": "适合刚开始尝试平台的经纪人。",
       "cta": "立即开始"
     },
     "pro": {
       "name": "Pro 版",
       "price": "$49",
       "period_short": "/月",
-      "tagline": "为活跃经纪人提供完整 CRM 和 AI。",
+      "tagline": "为活跃经纪人提供完整 CRM、Producer Track 教练计划 + 双语英中 AI。",
       "cta": "开启免费试用",
       "badge": "最受欢迎",
       "trial_note": "14 天免费试用 · 无需信用卡"
     },
     "elite": {
-      "name": "Elite 版",
+      "name": "Premium 版",
       "price": "$99",
       "period_short": "/月",
-      "tagline": "为每月成交 10+ 单的顶尖成交者打造。",
+      "tagline": "为顶尖独立经纪人打造。Top Producer Track + 无限制使用。",
       "cta": "开启免费试用",
+      "trial_note": "14 天免费试用"
+    },
+    "signature": {
+      "name": "Signature 版",
+      "price": "$249",
+      "period_short": "/月",
+      "tagline": "为关系驱动、服务高净值与双语客户的经纪人打造。含礼宾级支持。",
+      "cta": "开启免费试用",
+      "badge": "双语 & 高端",
       "trial_note": "14 天免费试用"
     },
     "team": {
       "name": "Team 版",
-      "price": "$199",
+      "price": "$299",
       "period_short": "/月",
-      "tagline": "多位经纪人共享一个客户漏斗。",
+      "tagline": "经纪公司与小型团队。最多 5 位经纪人共享工作流。",
       "cta": "联系销售"
     }
   },
@@ -64,6 +73,7 @@
       "free": "25",
       "pro": "500",
       "elite": "无限",
+      "signature": "无限",
       "team": "无限（共享）"
     },
     "pipeline_dashboard": "客户漏斗仪表盘",
@@ -72,6 +82,7 @@
       "free": "基础",
       "pro": "完整",
       "elite": "完整",
+      "signature": "完整",
       "team": "完整"
     },
     "milestones": "看房与报价里程碑",
@@ -82,6 +93,7 @@
       "free": "仅邮件",
       "pro": "短信 + 邮件",
       "elite": "短信 + 邮件",
+      "signature": "短信 + 邮件",
       "team": "短信 + 邮件"
     },
     "response_time": "响应时间",
@@ -89,34 +101,64 @@
       "free": "< 5 分钟",
       "pro": "< 60 秒",
       "elite": "< 60 秒",
+      "signature": "< 60 秒",
       "team": "< 60 秒"
     },
     "ai_continuation": "AI 对话延续",
+    "bilingual_ai": "双语英中 AI",
+    "bilingual_ai_v": {
+      "free": false,
+      "pro": true,
+      "elite": true,
+      "signature": true,
+      "team": true
+    },
     "drip_sequences": "滴灌式跟进序列",
     "drip_sequences_v": {
       "free": "1 组序列",
       "pro": "无限",
       "elite": "无限",
+      "signature": "无限",
       "team": "无限"
     },
     "custom_drip": "自定义滴灌活动",
     "auto_pause": "回复后自动暂停",
+    "cultural_calendar": "文化日历自动化",
+    "cultural_calendar_tooltip": "春节、中秋、农历节日自动暂停 / 自动祝贺",
+    "cultural_calendar_v": {
+      "free": false,
+      "pro": false,
+      "elite": false,
+      "signature": true,
+      "team": false
+    },
     "lead_scoring": "客户打分",
     "lead_scoring_v": {
       "free": "基础",
       "pro": "进阶",
       "elite": "预测 AI",
+      "signature": "预测 AI",
       "team": "预测 AI"
     },
     "buyer_intent": "买家意向信号",
     "hwc_labels": "热门 / 温和 / 冷淡标签",
     "deal_probability": "成交概率预测",
     "routing_rules": "客户路由规则",
+    "sphere_intelligence_pro": "Sphere Intelligence Pro",
+    "sphere_intelligence_pro_tooltip": "净值追踪、生活事件信号、转介绍人脉图谱",
+    "sphere_intelligence_pro_v": {
+      "free": false,
+      "pro": false,
+      "elite": false,
+      "signature": true,
+      "team": false
+    },
     "contacts": "联系人",
     "contacts_v": {
       "free": "最多 50",
       "pro": "最多 500",
       "elite": "无限",
+      "signature": "无限",
       "team": "无限"
     },
     "enrichment": "联系人补全",
@@ -128,6 +170,7 @@
       "free": "2 份/天",
       "pro": "5 份/天",
       "elite": "10 份/天",
+      "signature": "无限",
       "team": "无限"
     },
     "report_downloads": "报告下载",
@@ -135,6 +178,7 @@
       "free": "有限",
       "pro": "完整",
       "elite": "完整",
+      "signature": "完整",
       "team": "完整"
     },
     "pipeline_analytics": "漏斗分析",
@@ -142,6 +186,7 @@
       "free": "",
       "pro": "标准",
       "elite": "进阶",
+      "signature": "进阶",
       "team": "进阶"
     },
     "team_performance": "团队业绩仪表盘",
@@ -150,7 +195,8 @@
       "free": "1",
       "pro": "1",
       "elite": "1",
-      "team": "最多 10"
+      "signature": "1",
+      "team": "最多 5"
     },
     "admin_controls": "管理员控制",
     "whitelabel": "白标选项",
@@ -159,13 +205,32 @@
       "free": "邮件",
       "pro": "优先邮件",
       "elite": "专属上手指导",
+      "signature": "礼宾级 — 专属联系人",
       "team": "优先 SLA + 客户成功经理"
     },
-    "onboarding_assist": "上手协助"
+    "onboarding_assist": "上手协助",
+    "white_glove_onboarding": "高级上手服务",
+    "white_glove_onboarding_tooltip": "专家 1 对 1 部署,含人脉导入",
+    "white_glove_onboarding_v": {
+      "free": false,
+      "pro": false,
+      "elite": false,
+      "signature": true,
+      "team": false
+    },
+    "custom_voice_tuning": "AI 语气定制",
+    "custom_voice_tuning_tooltip": "基于您过往对话训练 AI,贴合您的语气",
+    "custom_voice_tuning_v": {
+      "free": false,
+      "pro": false,
+      "elite": false,
+      "signature": true,
+      "team": false
+    }
   },
   "footer": {
-    "questions_label": "有疑问？",
-    "body_prefix": " 所有付费套餐均含 14 天免费试用。试用结束前可随时取消，不收取费用。需要为大型经纪公司定制套餐？",
+    "questions_label": "有疑问?",
+    "body_prefix": " 所有付费套餐均含 14 天免费试用。试用结束前可随时取消,不收取费用。年付立省 2 个月。需要为大型经纪公司定制套餐?",
     "link": "与我们沟通",
     "suffix": "。"
   }

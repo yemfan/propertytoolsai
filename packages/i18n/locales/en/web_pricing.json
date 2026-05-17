@@ -1,8 +1,8 @@
 {
   "header": {
-    "badge": "No contracts · Cancel anytime",
+    "badge": "No contracts · Cancel anytime · English + 中文",
     "h1": "Simple, Transparent Pricing",
-    "subtitle": "Every plan includes a 14-day free trial on paid tiers. Start free, upgrade when you're ready."
+    "subtitle": "Every paid tier includes a 14-day free trial. Switch monthly or annual any time — annual is 2 months free."
   },
   "errors": {
     "open_failed": "Failed to open checkout",
@@ -16,31 +16,40 @@
       "name": "Starter",
       "price": "$0",
       "period": "forever",
-      "tagline": "Limited functions and usages.",
+      "tagline": "For new agents testing the platform.",
       "cta": "Get started"
     },
     "pro": {
       "name": "Pro",
       "price": "$49",
       "period_short": "/month",
-      "tagline": "Full CRM and AI for active agents.",
+      "tagline": "For active agents closing deals consistently. Producer Track coaching + bilingual English / 中文 AI.",
       "cta": "Start free trial",
       "badge": "Most Popular",
       "trial_note": "14-day free trial · No credit card required"
     },
     "elite": {
-      "name": "Elite",
+      "name": "Premium",
       "price": "$99",
       "period_short": "/month",
-      "tagline": "For top producers closing 10+ deals/month.",
+      "tagline": "For top producers running solo. Top Producer Track + unlimited everything.",
       "cta": "Start free trial",
+      "trial_note": "14-day free trial"
+    },
+    "signature": {
+      "name": "Signature",
+      "price": "$249",
+      "period_short": "/month",
+      "tagline": "For relationship-driven agents serving high-value and bilingual clients. Concierge support included.",
+      "cta": "Start free trial",
+      "badge": "Bilingual & Luxury",
       "trial_note": "14-day free trial"
     },
     "team": {
       "name": "Team",
-      "price": "$199",
+      "price": "$299",
       "period_short": "/month",
-      "tagline": "Multiple agents, one shared pipeline.",
+      "tagline": "Brokerages and small teams. Shared workflows for up to 5 agents.",
       "cta": "Contact sales"
     }
   },
@@ -64,6 +73,7 @@
       "free": "25",
       "pro": "500",
       "elite": "Unlimited",
+      "signature": "Unlimited",
       "team": "Unlimited (shared)"
     },
     "pipeline_dashboard": "Lead pipeline dashboard",
@@ -72,6 +82,7 @@
       "free": "Basic",
       "pro": "Full",
       "elite": "Full",
+      "signature": "Full",
       "team": "Full"
     },
     "milestones": "Tour & offer milestones",
@@ -82,6 +93,7 @@
       "free": "Email only",
       "pro": "SMS + Email",
       "elite": "SMS + Email",
+      "signature": "SMS + Email",
       "team": "SMS + Email"
     },
     "response_time": "Response time",
@@ -89,34 +101,64 @@
       "free": "< 5 min",
       "pro": "< 60 sec",
       "elite": "< 60 sec",
+      "signature": "< 60 sec",
       "team": "< 60 sec"
     },
     "ai_continuation": "AI conversation continuation",
+    "bilingual_ai": "Bilingual English / 中文 AI",
+    "bilingual_ai_v": {
+      "free": false,
+      "pro": true,
+      "elite": true,
+      "signature": true,
+      "team": true
+    },
     "drip_sequences": "Drip sequences",
     "drip_sequences_v": {
       "free": "1 sequence",
       "pro": "Unlimited",
       "elite": "Unlimited",
+      "signature": "Unlimited",
       "team": "Unlimited"
     },
     "custom_drip": "Custom drip campaigns",
     "auto_pause": "Auto-pause on reply",
+    "cultural_calendar": "Cultural calendar automations",
+    "cultural_calendar_tooltip": "CNY, Mid-Autumn, Lunar holidays auto-pause / auto-greet",
+    "cultural_calendar_v": {
+      "free": false,
+      "pro": false,
+      "elite": false,
+      "signature": true,
+      "team": false
+    },
     "lead_scoring": "Lead scoring",
     "lead_scoring_v": {
       "free": "Basic",
       "pro": "Advanced",
       "elite": "Predictive AI",
+      "signature": "Predictive AI",
       "team": "Predictive AI"
     },
     "buyer_intent": "Buyer intent signals",
     "hwc_labels": "Hot / warm / cold labels",
     "deal_probability": "Predictive deal probability",
     "routing_rules": "Lead routing rules",
+    "sphere_intelligence_pro": "Sphere Intelligence Pro",
+    "sphere_intelligence_pro_tooltip": "Equity tracking, life-event signals, referral mapping",
+    "sphere_intelligence_pro_v": {
+      "free": false,
+      "pro": false,
+      "elite": false,
+      "signature": true,
+      "team": false
+    },
     "contacts": "Contacts",
     "contacts_v": {
       "free": "Up to 50",
       "pro": "Up to 500",
       "elite": "Unlimited",
+      "signature": "Unlimited",
       "team": "Unlimited"
     },
     "enrichment": "Contact enrichment",
@@ -128,6 +170,7 @@
       "free": "2/day",
       "pro": "5/day",
       "elite": "10/day",
+      "signature": "Unlimited",
       "team": "Unlimited"
     },
     "report_downloads": "Report downloads",
@@ -135,6 +178,7 @@
       "free": "Limited",
       "pro": "Full",
       "elite": "Full",
+      "signature": "Full",
       "team": "Full"
     },
     "pipeline_analytics": "Pipeline analytics",
@@ -142,6 +186,7 @@
       "free": "",
       "pro": "Standard",
       "elite": "Advanced",
+      "signature": "Advanced",
       "team": "Advanced"
     },
     "team_performance": "Team performance dashboard",
@@ -150,7 +195,8 @@
       "free": "1",
       "pro": "1",
       "elite": "1",
-      "team": "Up to 10"
+      "signature": "1",
+      "team": "Up to 5"
     },
     "admin_controls": "Admin controls",
     "whitelabel": "White-label option",
@@ -159,13 +205,32 @@
       "free": "Email",
       "pro": "Priority email",
       "elite": "Dedicated onboarding",
+      "signature": "Concierge — named contact",
       "team": "Priority SLA + CSM"
     },
-    "onboarding_assist": "Onboarding assistance"
+    "onboarding_assist": "Onboarding assistance",
+    "white_glove_onboarding": "White-glove onboarding",
+    "white_glove_onboarding_tooltip": "1:1 setup with a specialist, sphere import included",
+    "white_glove_onboarding_v": {
+      "free": false,
+      "pro": false,
+      "elite": false,
+      "signature": true,
+      "team": false
+    },
+    "custom_voice_tuning": "Custom AI voice tuning",
+    "custom_voice_tuning_tooltip": "AI trained on your past conversations for tone match",
+    "custom_voice_tuning_v": {
+      "free": false,
+      "pro": false,
+      "elite": false,
+      "signature": true,
+      "team": false
+    }
   },
   "footer": {
     "questions_label": "Questions?",
-    "body_prefix": " Every paid plan starts with a 14-day free trial. Cancel anytime before your trial ends — no charge. Need a custom plan for a large brokerage? ",
+    "body_prefix": " Every paid plan starts with a 14-day free trial. Cancel anytime before your trial ends — no charge. Annual billing saves 2 months. Need a custom plan for a large brokerage? ",
     "link": "Talk to us",
     "suffix": "."
   }

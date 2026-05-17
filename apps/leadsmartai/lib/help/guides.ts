@@ -83,7 +83,7 @@ export const HELP_GUIDES: ReadonlyArray<HelpGuide> = [
     readTime: "2 min",
     category: "coaching",
     body: [
-      "Coaching is auto-enrolled when you upgrade to a plan that includes a program — Producer Track on Pro+, Top Producer Track on Premium and Team. You can opt out at any time, and we won't re-enroll you silently. To re-enroll later, take an explicit action from the same panel.",
+      "Coaching is auto-enrolled when you upgrade to a plan that includes a program — Producer Track on Pro+, Top Producer Track on Premium, Signature, and Team. You can opt out at any time, and we won't re-enroll you silently. To re-enroll later, take an explicit action from the same panel.",
     ],
     steps: [
       "Open Settings → Coaching.",

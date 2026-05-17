@@ -11,10 +11,10 @@ type PricingT = (key: string, options?: Record<string, unknown>) => string;
 
 // ─── Plan definitions ─────────────────────────────────────────────────────────
 
-type PlanKey = "free" | "pro" | "elite" | "team";
+type PlanKey = "free" | "pro" | "elite" | "signature" | "team";
 
-/** Stripe checkout plan key (maps to STRIPE_PRICE_ID_* env vars). */
-type CheckoutPlanKey = "pro" | "premium";
+/** v2.0 CRM checkout plan key — matches PlanSlug paid tiers. */
+type CheckoutPlanKey = "pro" | "premium" | "signature";
 
 /**
  * Plan metadata: only the wire fields (key, checkoutKey, href, highlight,
@@ -22,6 +22,10 @@ type CheckoutPlanKey = "pro" | "premium";
  * strings (name, price, period, tagline, cta, badge, trialNote) resolve
  * per-render via `t(\`plans.\${key}.field\`)` from the web_pricing
  * namespace.
+ *
+ * The translation key is "elite" for back-compat with the existing
+ * resource files, but the display name renders as "Premium" per the
+ * v2.0 rename. Same for "free" → "Starter".
  */
 const PLANS: Array<{
   key: PlanKey;
@@ -33,10 +37,9 @@ const PLANS: Array<{
   hasTrialNote?: boolean;
   /** True for the Starter plan: shows "forever" period without a leading "/". */
   periodIsForever?: boolean;
+  /** True for Signature — deep navy + gold visual treatment. */
+  signatureLook?: boolean;
 }> = [
-  // `key` stays "free" as the internal plan identifier (matches plan_type
-  // in the agents table, Stripe price keys, and ~60 other call sites).
-  // User-facing name only → "Starter" per product rename.
   { key: "free", href: "/signup", periodIsForever: true },
   {
     key: "pro",
@@ -46,6 +49,13 @@ const PLANS: Array<{
     hasTrialNote: true,
   },
   { key: "elite", checkoutKey: "premium", hasTrialNote: true },
+  {
+    key: "signature",
+    checkoutKey: "signature",
+    hasBadge: true,
+    hasTrialNote: true,
+    signatureLook: true,
+  },
   { key: "team", href: "/contact?from=pricing" },
 ];
 
@@ -76,65 +86,70 @@ const FEATURE_GROUPS: FeatureGroup[] = [
   {
     key: "lead_pipeline",
     rows: [
-      { key: "leads_per_month", values: { free: "25", pro: "500", elite: "Unlimited", team: "Unlimited (shared)" } },
-      { key: "pipeline_dashboard", values: { free: true, pro: true, elite: true, team: true } },
-      { key: "stage_tracking", values: { free: "Basic", pro: "Full", elite: "Full", team: "Full" } },
-      { key: "milestones", values: { free: false, pro: true, elite: true, team: true } },
-      { key: "shared_pool", values: { free: false, pro: false, elite: false, team: true } },
+      { key: "leads_per_month", values: { free: "25", pro: "500", elite: "Unlimited", signature: "Unlimited", team: "Unlimited (shared)" } },
+      { key: "pipeline_dashboard", values: { free: true, pro: true, elite: true, signature: true, team: true } },
+      { key: "stage_tracking", values: { free: "Basic", pro: "Full", elite: "Full", signature: "Full", team: "Full" } },
+      { key: "milestones", values: { free: false, pro: true, elite: true, signature: true, team: true } },
+      { key: "shared_pool", values: { free: false, pro: false, elite: false, signature: false, team: true } },
     ],
   },
   {
     key: "ai_followup",
     rows: [
-      { key: "first_response", hasTooltip: true, values: { free: "Email only", pro: "SMS + Email", elite: "SMS + Email", team: "SMS + Email" } },
-      { key: "response_time", values: { free: "< 5 min", pro: "< 60 sec", elite: "< 60 sec", team: "< 60 sec" } },
-      { key: "ai_continuation", values: { free: false, pro: true, elite: true, team: true } },
-      { key: "drip_sequences", values: { free: "1 sequence", pro: "Unlimited", elite: "Unlimited", team: "Unlimited" } },
-      { key: "custom_drip", values: { free: false, pro: false, elite: true, team: true } },
-      { key: "auto_pause", values: { free: false, pro: true, elite: true, team: true } },
+      { key: "first_response", hasTooltip: true, values: { free: "Email only", pro: "SMS + Email", elite: "SMS + Email", signature: "SMS + Email", team: "SMS + Email" } },
+      { key: "response_time", values: { free: "< 5 min", pro: "< 60 sec", elite: "< 60 sec", signature: "< 60 sec", team: "< 60 sec" } },
+      { key: "ai_continuation", values: { free: false, pro: true, elite: true, signature: true, team: true } },
+      { key: "bilingual_ai", values: { free: false, pro: true, elite: true, signature: true, team: true } },
+      { key: "drip_sequences", values: { free: "1 sequence", pro: "Unlimited", elite: "Unlimited", signature: "Unlimited", team: "Unlimited" } },
+      { key: "custom_drip", values: { free: false, pro: false, elite: true, signature: true, team: true } },
+      { key: "auto_pause", values: { free: false, pro: true, elite: true, signature: true, team: true } },
+      { key: "cultural_calendar", hasTooltip: true, values: { free: false, pro: false, elite: false, signature: true, team: false } },
     ],
   },
   {
     key: "scoring",
     rows: [
-      { key: "lead_scoring", values: { free: "Basic", pro: "Advanced", elite: "Predictive AI", team: "Predictive AI" } },
-      { key: "buyer_intent", values: { free: false, pro: true, elite: true, team: true } },
-      { key: "hwc_labels", values: { free: false, pro: true, elite: true, team: true } },
-      { key: "deal_probability", values: { free: false, pro: false, elite: true, team: true } },
-      { key: "routing_rules", values: { free: false, pro: false, elite: false, team: true } },
+      { key: "lead_scoring", values: { free: "Basic", pro: "Advanced", elite: "Predictive AI", signature: "Predictive AI", team: "Predictive AI" } },
+      { key: "buyer_intent", values: { free: false, pro: true, elite: true, signature: true, team: true } },
+      { key: "hwc_labels", values: { free: false, pro: true, elite: true, signature: true, team: true } },
+      { key: "deal_probability", values: { free: false, pro: false, elite: true, signature: true, team: true } },
+      { key: "routing_rules", values: { free: false, pro: false, elite: false, signature: false, team: true } },
+      { key: "sphere_intelligence_pro", hasTooltip: true, values: { free: false, pro: false, elite: false, signature: true, team: false } },
     ],
   },
   {
     key: "crm",
     rows: [
-      { key: "contacts", values: { free: "Up to 50", pro: "Up to 500", elite: "Unlimited", team: "Unlimited" } },
-      { key: "enrichment", values: { free: false, pro: true, elite: true, team: true } },
-      { key: "crm_integrations", hasTooltip: true, values: { free: false, pro: true, elite: true, team: true } },
-      { key: "activity_log", values: { free: false, pro: true, elite: true, team: true } },
+      { key: "contacts", values: { free: "Up to 50", pro: "Up to 500", elite: "Unlimited", signature: "Unlimited", team: "Unlimited" } },
+      { key: "enrichment", values: { free: false, pro: true, elite: true, signature: true, team: true } },
+      { key: "crm_integrations", hasTooltip: true, values: { free: false, pro: true, elite: true, signature: true, team: true } },
+      { key: "activity_log", values: { free: false, pro: true, elite: true, signature: true, team: true } },
     ],
   },
   {
     key: "reports",
     rows: [
-      { key: "cma_reports", values: { free: "2/day", pro: "5/day", elite: "10/day", team: "Unlimited" } },
-      { key: "report_downloads", values: { free: "Limited", pro: "Full", elite: "Full", team: "Full" } },
-      { key: "pipeline_analytics", values: { free: false, pro: "Standard", elite: "Advanced", team: "Advanced" } },
-      { key: "team_performance", values: { free: false, pro: false, elite: false, team: true } },
+      { key: "cma_reports", values: { free: "2/day", pro: "5/day", elite: "10/day", signature: "Unlimited", team: "Unlimited" } },
+      { key: "report_downloads", values: { free: "Limited", pro: "Full", elite: "Full", signature: "Full", team: "Full" } },
+      { key: "pipeline_analytics", values: { free: false, pro: "Standard", elite: "Advanced", signature: "Advanced", team: "Advanced" } },
+      { key: "team_performance", values: { free: false, pro: false, elite: false, signature: false, team: true } },
     ],
   },
   {
     key: "team_admin",
     rows: [
-      { key: "agents_included", values: { free: "1", pro: "1", elite: "1", team: "Up to 10" } },
-      { key: "admin_controls", values: { free: false, pro: false, elite: false, team: true } },
-      { key: "whitelabel", values: { free: false, pro: false, elite: false, team: true } },
+      { key: "agents_included", values: { free: "1", pro: "1", elite: "1", signature: "1", team: "Up to 5" } },
+      { key: "admin_controls", values: { free: false, pro: false, elite: false, signature: false, team: true } },
+      { key: "whitelabel", values: { free: false, pro: false, elite: false, signature: false, team: true } },
     ],
   },
   {
     key: "support",
     rows: [
-      { key: "support_channel", values: { free: "Email", pro: "Priority email", elite: "Dedicated onboarding", team: "Priority SLA + CSM" } },
-      { key: "onboarding_assist", values: { free: false, pro: false, elite: true, team: true } },
+      { key: "support_channel", values: { free: "Email", pro: "Priority email", elite: "Dedicated onboarding", signature: "Concierge — named contact", team: "Priority SLA + CSM" } },
+      { key: "onboarding_assist", values: { free: false, pro: false, elite: true, signature: true, team: true } },
+      { key: "white_glove_onboarding", hasTooltip: true, values: { free: false, pro: false, elite: false, signature: true, team: false } },
+      { key: "custom_voice_tuning", hasTooltip: true, values: { free: false, pro: false, elite: false, signature: true, team: false } },
     ],
   },
 ];
@@ -199,7 +214,7 @@ export default function ConsumerPricingClientPage() {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
     const plan = sp.get("checkout_plan") as CheckoutPlanKey | null;
-    if (!plan || (plan !== "pro" && plan !== "premium")) return;
+    if (!plan || (plan !== "pro" && plan !== "premium" && plan !== "signature")) return;
     if (sp.get("canceled") === "1") return;
     if (autoCheckoutRef.current) return;
     autoCheckoutRef.current = true;
@@ -235,19 +250,22 @@ export default function ConsumerPricingClientPage() {
         return;
       }
       const headers = await mergeAuthHeaders();
-      const res = await fetch("/api/create-checkout-session", {
+      // Route through the v2.0 CRM checkout endpoint so cadence
+      // metadata + CA/NY disclosure are wired in. Default to monthly
+      // here — annual cadence is selectable on /agent/pricing.
+      const res = await fetch("/api/billing/crm-checkout", {
         method: "POST",
         headers,
         credentials: "include",
-        body: JSON.stringify({ plan, with_trial: withTrial, cancel_surface: "agent" }),
+        body: JSON.stringify({ plan, cadence: "monthly", with_trial: withTrial }),
       });
-      const body = (await res.json().catch(() => ({}))) as any;
-      if (!res.ok) throw new Error(body?.error || t("errors.open_failed"));
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; url?: string; error?: string };
+      if (!res.ok || body.ok === false) throw new Error(body?.error || t("errors.open_failed"));
       if (!body.url) throw new Error(t("errors.missing_url"));
       window.location.href = body.url;
-    } catch (e: any) {
+    } catch (e: unknown) {
       autoCheckoutRef.current = false;
-      setError(e?.message ?? t("errors.default"));
+      setError(e instanceof Error ? e.message : t("errors.default"));
       setLoadingPlan(null);
     }
   }
@@ -285,42 +303,50 @@ export default function ConsumerPricingClientPage() {
         </div>
       )}
 
-      {/* Plan cards */}
+      {/* Plan cards — 5 tiers, 5-up on lg screens (xl gives breathing room). */}
       <div className="px-4 py-12 md:px-6">
-        <div className="mx-auto grid max-w-6xl gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-7xl gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {PLANS.map((plan) => {
             const periodKey = plan.periodIsForever ? "period" : "period_short";
+            const isSignature = !!plan.signatureLook;
+            const cardCls = isSignature
+              ? "relative flex flex-col rounded-2xl border-2 border-amber-300 bg-[#0b1e3f] p-6 text-slate-100 shadow-lg"
+              : plan.highlight
+                ? "relative flex flex-col rounded-2xl border-2 border-[#0072ce] p-6 shadow-lg shadow-[#0072ce]/10"
+                : "relative flex flex-col rounded-2xl border border-slate-200 p-6 shadow-sm";
+            const badgeCls = isSignature
+              ? "absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-amber-300 px-3 py-0.5 text-xs font-bold text-amber-950 whitespace-nowrap shadow-sm"
+              : "absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#0072ce] to-[#4F46E5] px-3 py-0.5 text-xs font-semibold text-white whitespace-nowrap shadow-sm";
+            const titleCls = isSignature ? "font-heading text-base font-semibold text-white" : "font-heading text-base font-semibold text-slate-900";
+            const priceCls = isSignature ? "text-2xl font-bold text-white" : "text-2xl font-bold text-slate-900";
+            const periodTextCls = isSignature ? "text-sm text-slate-300" : "text-sm text-slate-500";
+            const tagCls = isSignature ? "mt-2 text-xs text-slate-300" : "mt-2 text-xs text-slate-500";
             return (
             <div
               key={plan.key}
-              className={`relative flex flex-col rounded-2xl border p-6 ${
-                plan.highlight
-                  ? "border-2 border-[#0072ce] shadow-lg shadow-[#0072ce]/10"
-                  : "border-slate-200 shadow-sm"
-              }`}
+              className={cardCls}
             >
               {plan.hasBadge && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#0072ce] to-[#4F46E5] px-3 py-0.5 text-xs font-semibold text-white whitespace-nowrap shadow-sm">
+                <div className={badgeCls}>
                   {t(`plans.${plan.key}.badge`)}
                 </div>
               )}
               <div>
-                <h2 className="font-heading text-base font-semibold text-slate-900">{t(`plans.${plan.key}.name`)}</h2>
+                <h2 className={titleCls}>{t(`plans.${plan.key}.name`)}</h2>
                 <div className="mt-2 flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-slate-900">{t(`plans.${plan.key}.price`)}</span>
-                  <span className="text-sm text-slate-500">{t(`plans.${plan.key}.${periodKey}`)}</span>
+                  <span className={priceCls}>{t(`plans.${plan.key}.price`)}</span>
+                  <span className={periodTextCls}>{t(`plans.${plan.key}.${periodKey}`)}</span>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">{t(`plans.${plan.key}.tagline`)}</p>
+                <p className={tagCls}>{t(`plans.${plan.key}.tagline`)}</p>
               </div>
               <div className="mt-5 flex flex-col gap-2">
                 {plan.checkoutKey ? (
-                  // MJ-001: anchor instead of button so Pro/Elite CTAs have a real
+                  // MJ-001: anchor instead of button so paid CTAs have a real
                   // href for no-JS users, crawlers, and right-click "open in new
                   // tab". With JS, onClick preventDefault + startCheckout opens
                   // Stripe directly. Without JS, the href navigates to
                   // /pricing?checkout_plan=..., which the auto-checkout effect
-                  // (see useEffect at "checkout_plan" param) picks up once the
-                  // target page loads.
+                  // picks up after the target page loads.
                   <a
                     href={`/pricing?checkout_plan=${plan.checkoutKey}`}
                     onClick={(e) => {
@@ -331,9 +357,11 @@ export default function ConsumerPricingClientPage() {
                     className={`block rounded-xl py-2.5 text-center text-sm font-semibold transition-all duration-200 active:scale-[0.98] ${
                       loadingPlan === plan.checkoutKey ? "pointer-events-none opacity-60" : ""
                     } ${
-                      plan.highlight
-                        ? "bg-gradient-to-r from-[#0072ce] to-[#4F46E5] text-white shadow-md shadow-[#0072ce]/20 hover:shadow-lg hover:brightness-110"
-                        : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+                      isSignature
+                        ? "bg-amber-300 text-amber-950 hover:bg-amber-200"
+                        : plan.highlight
+                          ? "bg-gradient-to-r from-[#0072ce] to-[#4F46E5] text-white shadow-md shadow-[#0072ce]/20 hover:shadow-lg hover:brightness-110"
+                          : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
                     }`}
                   >
                     {loadingPlan === plan.checkoutKey ? t("errors.opening_busy") : t(`plans.${plan.key}.cta`)}
@@ -341,13 +369,19 @@ export default function ConsumerPricingClientPage() {
                 ) : (
                   <Link
                     href={plan.href!}
-                    className="block rounded-xl border border-slate-200 bg-white py-2.5 text-center text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+                    className={
+                      isSignature
+                        ? "block rounded-xl border border-amber-300 py-2.5 text-center text-sm font-semibold text-amber-200 transition hover:bg-amber-300/10"
+                        : "block rounded-xl border border-slate-200 bg-white py-2.5 text-center text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+                    }
                   >
                     {t(`plans.${plan.key}.cta`)}
                   </Link>
                 )}
                 {plan.hasTrialNote && (
-                  <p className="text-center text-[11px] text-slate-400">{t(`plans.${plan.key}.trial_note`)}</p>
+                  <p className={isSignature ? "text-center text-[11px] text-slate-400" : "text-center text-[11px] text-slate-400"}>
+                    {t(`plans.${plan.key}.trial_note`)}
+                  </p>
                 )}
               </div>
             </div>
@@ -364,12 +398,21 @@ export default function ConsumerPricingClientPage() {
           </h2>
 
           <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
-            <table className="w-full min-w-[640px] border-collapse text-sm">
+            <table className="w-full min-w-[760px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="px-5 py-4 text-left font-semibold text-slate-600 w-1/3">{t("table.column_feature")}</th>
+                  <th className="px-5 py-4 text-left font-semibold text-slate-600 w-1/4">{t("table.column_feature")}</th>
                   {PLANS.map((p) => (
-                    <th key={p.key} className={`px-4 py-4 text-center font-semibold ${p.highlight ? "text-[#0072ce]" : "text-slate-700"}`}>
+                    <th
+                      key={p.key}
+                      className={`px-3 py-4 text-center font-semibold ${
+                        p.signatureLook
+                          ? "text-amber-700"
+                          : p.highlight
+                            ? "text-[#0072ce]"
+                            : "text-slate-700"
+                      }`}
+                    >
                       {t(`plans.${p.key}.name`)}
                       <div className="mt-0.5 text-xs font-normal text-slate-500">
                         {t(`plans.${p.key}.price`)}{p.periodIsForever ? "" : t(`plans.${p.key}.period_short`)}
@@ -382,7 +425,7 @@ export default function ConsumerPricingClientPage() {
                 {FEATURE_GROUPS.map((group, gi) => (
                   <>
                     <tr key={`group-${gi}`} className="border-t-2 border-slate-100 bg-slate-50/70">
-                      <td colSpan={5} className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-500">{t(`groups.${group.key}`)}</td>
+                      <td colSpan={PLANS.length + 1} className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-500">{t(`groups.${group.key}`)}</td>
                     </tr>
                     {group.rows.map((row, ri) => {
                       const tooltipText = row.hasTooltip ? t(`rows.${row.key}_tooltip`) : null;
@@ -402,7 +445,16 @@ export default function ConsumerPricingClientPage() {
                           </span>
                         </td>
                         {PLANS.map((p) => (
-                          <td key={p.key} className={`px-4 py-3 text-center ${p.highlight ? "bg-[#0072ce]/[0.03]" : ""}`}>
+                          <td
+                            key={p.key}
+                            className={`px-3 py-3 text-center ${
+                              p.signatureLook
+                                ? "bg-amber-50/40"
+                                : p.highlight
+                                  ? "bg-[#0072ce]/[0.03]"
+                                  : ""
+                            }`}
+                          >
                             <Cell value={resolveCell(row.key, p.key, row.values[p.key], t)} />
                           </td>
                         ))}
@@ -416,7 +468,7 @@ export default function ConsumerPricingClientPage() {
                 <tr className="border-t-2 border-slate-200 bg-slate-50">
                   <td className="px-5 py-5 text-sm font-medium text-slate-600">{t("table.ready_label")}</td>
                   {PLANS.map((p) => (
-                    <td key={p.key} className="px-4 py-5 text-center">
+                    <td key={p.key} className="px-3 py-5 text-center">
                       {p.checkoutKey ? (
                         // See MJ-001 note above — same anchor-with-onClick pattern.
                         <a
@@ -429,9 +481,11 @@ export default function ConsumerPricingClientPage() {
                           className={`inline-block rounded-xl px-4 py-2 text-xs font-semibold transition-all duration-200 active:scale-[0.98] ${
                             loadingPlan === p.checkoutKey ? "pointer-events-none opacity-60" : ""
                           } ${
-                            p.highlight
-                              ? "bg-[#0072ce] text-white hover:bg-[#005ca8]"
-                              : "border border-slate-200 text-slate-700 hover:bg-white"
+                            p.signatureLook
+                              ? "bg-amber-500 text-amber-950 hover:bg-amber-400"
+                              : p.highlight
+                                ? "bg-[#0072ce] text-white hover:bg-[#005ca8]"
+                                : "border border-slate-200 text-slate-700 hover:bg-white"
                           }`}
                         >
                           {loadingPlan === p.checkoutKey ? t("errors.opening_busy_short") : t(`plans.${p.key}.cta`)}
@@ -440,9 +494,11 @@ export default function ConsumerPricingClientPage() {
                         <Link
                           href={p.href!}
                           className={`inline-block rounded-xl px-4 py-2 text-xs font-semibold transition ${
-                            p.highlight
-                              ? "bg-[#0072ce] text-white hover:bg-[#005ca8]"
-                              : "border border-slate-200 text-slate-700 hover:bg-white"
+                            p.signatureLook
+                              ? "border border-amber-300 text-amber-700 hover:bg-amber-50"
+                              : p.highlight
+                                ? "bg-[#0072ce] text-white hover:bg-[#005ca8]"
+                                : "border border-slate-200 text-slate-700 hover:bg-white"
                           }`}
                         >
                           {t(`plans.${p.key}.cta`)}
