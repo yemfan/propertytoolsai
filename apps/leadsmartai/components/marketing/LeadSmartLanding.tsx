@@ -17,6 +17,10 @@ import { FeatureHighlightCard } from "@/components/ui/FeatureHighlightCard";
 import { BrandCheck } from "@/components/brand/BrandCheck";
 import HeaderAuthActions from "@/components/HeaderAuthActions";
 import VslSection from "@/components/VslSection";
+import {
+  activateSignaturePreviewFromUrl,
+  isSignatureTierVisibleClient,
+} from "@/lib/billing/signatureFlag";
 
 const ExitIntentPopup = dynamic(
   () => import("@/components/marketing/ExitIntentPopup"),
@@ -118,6 +122,12 @@ export default function LeadSmartLanding() {
    * slug regardless of cycle, so no routing changes are required.
    */
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
+  const [signatureVisible, setSignatureVisible] = useState(false);
+
+  useEffect(() => {
+    activateSignaturePreviewFromUrl();
+    setSignatureVisible(isSignatureTierVisibleClient());
+  }, []);
 
   /**
    * Body scroll lock while the mobile nav drawer is open. Uses
@@ -1000,30 +1010,32 @@ export default function LeadSmartLanding() {
               </RevealSection>
             </div>
 
-            {/* Signature teaser — full ladder lives on /agent/pricing */}
-            <RevealSection>
-              <div className="mt-6 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100/50 px-5 py-4 text-sm dark:border-amber-900/40 dark:from-amber-950/30 dark:to-amber-900/10">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <span className="rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-950">
-                      Signature
-                    </span>
-                    <span className="ml-2 font-semibold text-slate-900 dark:text-amber-100">
-                      $249/mo
-                    </span>
-                    <span className="ml-2 text-slate-700 dark:text-amber-200/80">
-                      — bilingual + luxury concierge tier with Sphere Intelligence Pro, white-glove onboarding, cultural calendar automations, custom voice tuning.
-                    </span>
+            {/* Signature teaser — gated behind the soft-launch flag */}
+            {signatureVisible && (
+              <RevealSection>
+                <div className="mt-6 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100/50 px-5 py-4 text-sm dark:border-amber-900/40 dark:from-amber-950/30 dark:to-amber-900/10">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <span className="rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-950">
+                        Signature
+                      </span>
+                      <span className="ml-2 font-semibold text-slate-900 dark:text-amber-100">
+                        $249/mo
+                      </span>
+                      <span className="ml-2 text-slate-700 dark:text-amber-200/80">
+                        — bilingual + luxury concierge tier with Sphere Intelligence Pro, white-glove onboarding, cultural calendar automations, custom voice tuning.
+                      </span>
+                    </div>
+                    <a
+                      href="/agent/pricing"
+                      className="text-sm font-semibold text-amber-900 underline-offset-2 hover:underline dark:text-amber-300"
+                    >
+                      See Signature details →
+                    </a>
                   </div>
-                  <a
-                    href="/agent/pricing"
-                    className="text-sm font-semibold text-amber-900 underline-offset-2 hover:underline dark:text-amber-300"
-                  >
-                    See Signature details →
-                  </a>
                 </div>
-              </div>
-            </RevealSection>
+              </RevealSection>
+            )}
 
             <p className="mt-6 text-sm text-gray-500 dark:text-slate-400">
               From your first lead to your highest-value clients — available in English and 中文. See the full feature comparison →{" "}

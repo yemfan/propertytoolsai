@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ArrowRight, Loader2, Sparkles } from "lucide-react";
@@ -8,6 +8,10 @@ import { PLAN_CATALOG } from "@/lib/entitlements/planCatalog";
 import { messageFromUnknownError } from "@/lib/supabaseThrow";
 import type { AgentPlanId } from "@/lib/entitlements/types";
 import type { BillingCadence, PlanSlug } from "@/lib/billing/plans";
+import {
+  activateSignaturePreviewFromUrl,
+  isSignatureTierVisibleClient,
+} from "@/lib/billing/signatureFlag";
 
 type CheckoutSlug = Exclude<PlanSlug, "starter" | "team">;
 
@@ -57,6 +61,17 @@ export default function StartFreeAgentClientPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cadence, setCadence] = useState<BillingCadence>("monthly");
+  const [signatureVisible, setSignatureVisible] = useState(false);
+
+  useEffect(() => {
+    activateSignaturePreviewFromUrl();
+    setSignatureVisible(isSignatureTierVisibleClient());
+  }, []);
+
+  const visiblePlans = useMemo(
+    () => PLANS.filter((p) => p.id !== "signature" || signatureVisible),
+    [signatureVisible],
+  );
 
   async function handleStarter() {
     setError(null);
@@ -163,8 +178,8 @@ export default function StartFreeAgentClientPage() {
           </p>
         )}
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-4">
-          {PLANS.map((plan) => {
+        <div className={`mt-10 grid gap-6 ${signatureVisible ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+          {visiblePlans.map((plan) => {
             const catalog = PLAN_CATALOG[plan.id];
             const isLoading =
               loading === plan.id || (plan.checkoutSlug ? loading === plan.checkoutSlug : false);

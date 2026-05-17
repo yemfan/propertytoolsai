@@ -4,6 +4,10 @@ import Link from "next/link";
 import { BrandCheck } from "@/components/brand/BrandCheck";
 import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import {
+  activateSignaturePreviewFromUrl,
+  isSignatureTierVisibleClient,
+} from "@/lib/billing/signatureFlag";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildDemoLeads, randomIncomingSnippet } from "./demoLeads";
 import { clearOnboarding, loadOnboarding, saveOnboarding, stepToProgress } from "./storage";
@@ -110,6 +114,7 @@ export default function OnboardingFunnel({
   const [profile, setProfile] = useState<Partial<OnboardingProfile>>({});
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [onboardingCadence, setOnboardingCadence] = useState<"monthly" | "annual">("monthly");
+  const [signatureVisible, setSignatureVisible] = useState(false);
   const [hasReplied, setHasReplied] = useState(false);
   const [paywallSeen, setPaywallSeen] = useState(false);
   const [engagementPoints, setEngagementPoints] = useState(0);
@@ -129,6 +134,10 @@ export default function OnboardingFunnel({
     setPaywallSeen(s.paywallSeen);
     setEngagementPoints(s.engagementPoints);
     setHydrated(true);
+
+    /* Signature soft-launch gate */
+    activateSignaturePreviewFromUrl();
+    setSignatureVisible(isSignatureTierVisibleClient());
   }, []);
 
   /** If the visitor is already signed in, merge account name/email into step 1 when fields are empty. */
@@ -730,7 +739,7 @@ export default function OnboardingFunnel({
       trialNote?: string;
     };
 
-    const soloPlans: SoloPlan[] = [
+    const allSoloPlans: SoloPlan[] = [
       {
         slug: "starter",
         name: "Starter",
@@ -796,6 +805,9 @@ export default function OnboardingFunnel({
         trialNote: "14-day free trial",
       },
     ];
+    const soloPlans = allSoloPlans.filter(
+      (p) => p.slug !== "signature" || signatureVisible,
+    );
 
     function deepLinkFor(slug: SoloPlan["slug"]): string {
       const params = new URLSearchParams({
@@ -850,8 +862,8 @@ export default function OnboardingFunnel({
             </div>
           </div>
 
-          {/* Solo plans — 4-up at lg, 2-up at sm */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Solo plans — 4-up (or 3-up if Signature gated) at lg, 2-up at sm */}
+          <div className={`grid gap-4 sm:grid-cols-2 ${signatureVisible ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
             {soloPlans.map((p) => {
               const isSignature = !!p.signatureLook;
               const wrapClass = isSignature

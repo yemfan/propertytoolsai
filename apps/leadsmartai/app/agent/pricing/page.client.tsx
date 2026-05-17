@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { messageFromUnknownError } from "@/lib/supabaseThrow";
 import type { BillingCadence, PlanSlug } from "@/lib/billing/plans";
+import {
+  activateSignaturePreviewFromUrl,
+  isSignatureTierVisibleClient,
+} from "@/lib/billing/signatureFlag";
 
 type EntitlementPlan = "starter" | "growth" | "elite" | "signature" | "team";
 
@@ -476,6 +480,7 @@ export default function AgentPricingClientPage() {
   const [hasAccess, setHasAccess] = useState(false);
   const [error, setError] = useState("");
   const [cadence, setCadence] = useState<BillingCadence>("monthly");
+  const [signatureVisible, setSignatureVisible] = useState(false);
   const autoCheckoutRef = useRef(false);
 
   useEffect(() => {
@@ -497,6 +502,13 @@ export default function AgentPricingClientPage() {
         setCadence(urlCadence);
       }
     }
+
+    // Signature soft-launch gate. Honor `?signature_preview=1` to
+    // activate preview mode, then evaluate visibility against env +
+    // sessionStorage. Default OFF until you flip
+    // NEXT_PUBLIC_FEATURE_SIGNATURE_TIER=true.
+    activateSignaturePreviewFromUrl();
+    setSignatureVisible(isSignatureTierVisibleClient());
   }, []);
 
   function handleCadenceChange(next: BillingCadence) {
@@ -593,7 +605,10 @@ export default function AgentPricingClientPage() {
     }
   }
 
-  const topFour = useMemo(() => CARD_DEFS, []);
+  const topFour = useMemo(
+    () => CARD_DEFS.filter((c) => c.slug !== "signature" || signatureVisible),
+    [signatureVisible],
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-12 md:px-6">
@@ -675,7 +690,13 @@ export default function AgentPricingClientPage() {
         <div className="rounded-3xl border bg-white p-6 shadow-sm">
           <h3 className="text-xl font-semibold text-gray-900">Which plan is right for you?</h3>
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div
+            className={
+              signatureVisible
+                ? "mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+                : "mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            }
+          >
             <div className="rounded-2xl bg-gray-50 p-5">
               <div className="text-sm font-semibold text-gray-900">Starter</div>
               <p className="mt-2 text-sm text-gray-600">
@@ -696,13 +717,15 @@ export default function AgentPricingClientPage() {
                 coaching.
               </p>
             </div>
-            <div className="rounded-2xl border border-amber-200 bg-amber-50/40 p-5">
-              <div className="text-sm font-semibold text-gray-900">Signature</div>
-              <p className="mt-2 text-sm text-gray-600">
-                Best for relationship-driven agents serving high-value and bilingual clients.
-                Sphere Intelligence Pro, white-glove onboarding, and concierge support.
-              </p>
-            </div>
+            {signatureVisible && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/40 p-5">
+                <div className="text-sm font-semibold text-gray-900">Signature</div>
+                <p className="mt-2 text-sm text-gray-600">
+                  Best for relationship-driven agents serving high-value and bilingual clients.
+                  Sphere Intelligence Pro, white-glove onboarding, and concierge support.
+                </p>
+              </div>
+            )}
             <div className="rounded-2xl bg-gray-50 p-5">
               <div className="text-sm font-semibold text-gray-900">Team</div>
               <p className="mt-2 text-sm text-gray-600">

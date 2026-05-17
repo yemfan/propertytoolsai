@@ -1,7 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import {
+  activateSignaturePreviewFromUrl,
+  isSignatureTierVisibleClient,
+} from "@/lib/billing/signatureFlag";
 
 type PlanSlug = "starter" | "pro" | "premium" | "signature" | "team";
 type BillingCadence = "monthly" | "annual";
@@ -145,6 +149,12 @@ export default function BillingPageClient() {
   const [portalLoading, setPortalLoading] = useState(false);
   const [cadence, setCadence] = useState<BillingCadence>("monthly");
   const [switchingCadence, setSwitchingCadence] = useState(false);
+  const [signatureVisible, setSignatureVisible] = useState(false);
+
+  useEffect(() => {
+    activateSignaturePreviewFromUrl();
+    setSignatureVisible(isSignatureTierVisibleClient());
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -264,11 +274,16 @@ export default function BillingPageClient() {
 
   /**
    * Render order matches the catalog (Starter → Pro → Premium →
-   * Signature → Team). Listed explicitly here rather than
-   * `Object.keys(catalog)` so the order is deterministic and not
-   * dependent on JS object insertion ordering.
+   * Signature → Team). Signature is gated behind the soft-launch
+   * flag; existing Signature customers always see their plan tile
+   * regardless of the flag — same logic as not hiding the price
+   * field for someone already on the tier.
    */
-  const tiers: PlanSlug[] = ["starter", "pro", "premium", "signature", "team"];
+  const tiers: PlanSlug[] = useMemo(() => {
+    const all: PlanSlug[] = ["starter", "pro", "premium", "signature", "team"];
+    if (signatureVisible || subscription?.plan === "signature") return all;
+    return all.filter((t) => t !== "signature");
+  }, [signatureVisible, subscription?.plan]);
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 py-6">

@@ -6,6 +6,10 @@ import { BrandCheck, toneAt } from "@/components/brand/BrandCheck";
 import { PRICING_TRIAL_CHECKOUT_PATH, loginUrl } from "@/lib/loginUrl";
 import { mergeAuthHeaders } from "@/lib/mergeAuthHeaders";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import {
+  activateSignaturePreviewFromUrl,
+  isSignatureTierVisibleClient,
+} from "@/lib/billing/signatureFlag";
 
 type PlanKey = "free" | "pro" | "premium";
 
@@ -79,6 +83,12 @@ export default function PricingModal({
   const [loading, setLoading] = useState<PlanKey | null>(null);
   const [trialLoading, setTrialLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [signatureVisible, setSignatureVisible] = useState(false);
+
+  useEffect(() => {
+    activateSignaturePreviewFromUrl();
+    setSignatureVisible(isSignatureTierVisibleClient());
+  }, []);
 
   const [planInfo, setPlanInfo] = useState<{
     plan: string;
@@ -365,8 +375,12 @@ export default function PricingModal({
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
             <p className="font-medium text-slate-900">Need more?</p>
             <p className="mt-1 text-slate-600">
-              <strong>Signature</strong> ($249/mo) adds bilingual English / 中文 AI, Sphere
-              Intelligence Pro, white-glove onboarding, and concierge support.{" "}
+              {signatureVisible && (
+                <>
+                  <strong>Signature</strong> ($249/mo) adds bilingual English / 中文 AI, Sphere
+                  Intelligence Pro, white-glove onboarding, and concierge support.{" "}
+                </>
+              )}
               <strong>Team</strong> ($299/mo per team) adds round-robin routing and shared
               workflows for up to 5 agents.{" "}
               <a href="/agent/pricing" className="font-semibold text-blue-700 hover:underline">

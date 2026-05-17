@@ -4,6 +4,7 @@ import { getCurrentUserWithRole } from "@/lib/auth/getCurrentUser";
 import { recordUpgradeCheckoutStarted } from "@/lib/funnel/funnelAnalytics";
 import { getCrmStripePriceId, internalPlanForCrmSlug } from "@/lib/billing/crmStripePrices";
 import { PLANS, type BillingCadence, type PlanSlug } from "@/lib/billing/plans";
+import { isSignatureTierAllowedServer } from "@/lib/billing/signatureFlag";
 import { stripe } from "@/lib/stripe/server";
 
 /**
@@ -52,6 +53,20 @@ export async function POST(req: Request) {
     const plan = parsed.data.plan as PlanSlug;
     const cadence: BillingCadence = parsed.data.cadence;
     const withTrial = parsed.data.with_trial;
+
+    // Signature soft-launch gate: requires the feature flag to be on
+    // OR the preview cookie to be present. Returns 404 so that the
+    // tier looks "not exposed" rather than "behind a paywall" to
+    // anyone probing the endpoint directly.
+    if (plan === "signature") {
+      const cookieHeader = req.headers.get("cookie");
+      if (!isSignatureTierAllowedServer(cookieHeader)) {
+        return NextResponse.json(
+          { ok: false, error: "Tier not available." },
+          { status: 404 }
+        );
+      }
+    }
 
     const def = PLANS[plan];
     if (cadence === "annual" && def.annualPrice == null) {

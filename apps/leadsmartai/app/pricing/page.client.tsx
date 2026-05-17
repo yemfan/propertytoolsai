@@ -1,11 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { loginUrl } from "@/lib/loginUrl";
 import { mergeAuthHeaders } from "@/lib/mergeAuthHeaders";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import {
+  activateSignaturePreviewFromUrl,
+  isSignatureTierVisibleClient,
+} from "@/lib/billing/signatureFlag";
 
 type PricingT = (key: string, options?: Record<string, unknown>) => string;
 
@@ -193,7 +197,19 @@ export default function ConsumerPricingClientPage() {
   const [error, setError] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [signatureVisible, setSignatureVisible] = useState(false);
   const autoCheckoutRef = useRef(false);
+
+  /* Signature soft-launch gate */
+  useEffect(() => {
+    activateSignaturePreviewFromUrl();
+    setSignatureVisible(isSignatureTierVisibleClient());
+  }, []);
+
+  const visiblePlans = useMemo(
+    () => PLANS.filter((p) => p.key !== "signature" || signatureVisible),
+    [signatureVisible],
+  );
 
   /* Auth state */
   useEffect(() => {
@@ -303,10 +319,16 @@ export default function ConsumerPricingClientPage() {
         </div>
       )}
 
-      {/* Plan cards — 5 tiers, 5-up on lg screens (xl gives breathing room). */}
+      {/* Plan cards — 4 or 5 tiers depending on Signature flag. */}
       <div className="px-4 py-12 md:px-6">
-        <div className="mx-auto grid max-w-7xl gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {PLANS.map((plan) => {
+        <div
+          className={
+            signatureVisible
+              ? "mx-auto grid max-w-7xl gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+              : "mx-auto grid max-w-6xl gap-5 sm:grid-cols-2 lg:grid-cols-4"
+          }
+        >
+          {visiblePlans.map((plan) => {
             const periodKey = plan.periodIsForever ? "period" : "period_short";
             const isSignature = !!plan.signatureLook;
             const cardCls = isSignature
@@ -402,7 +424,7 @@ export default function ConsumerPricingClientPage() {
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
                   <th className="px-5 py-4 text-left font-semibold text-slate-600 w-1/4">{t("table.column_feature")}</th>
-                  {PLANS.map((p) => (
+                  {visiblePlans.map((p) => (
                     <th
                       key={p.key}
                       className={`px-3 py-4 text-center font-semibold ${
@@ -425,7 +447,7 @@ export default function ConsumerPricingClientPage() {
                 {FEATURE_GROUPS.map((group, gi) => (
                   <>
                     <tr key={`group-${gi}`} className="border-t-2 border-slate-100 bg-slate-50/70">
-                      <td colSpan={PLANS.length + 1} className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-500">{t(`groups.${group.key}`)}</td>
+                      <td colSpan={visiblePlans.length + 1} className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-500">{t(`groups.${group.key}`)}</td>
                     </tr>
                     {group.rows.map((row, ri) => {
                       const tooltipText = row.hasTooltip ? t(`rows.${row.key}_tooltip`) : null;
@@ -444,7 +466,7 @@ export default function ConsumerPricingClientPage() {
                             )}
                           </span>
                         </td>
-                        {PLANS.map((p) => (
+                        {visiblePlans.map((p) => (
                           <td
                             key={p.key}
                             className={`px-3 py-3 text-center ${
@@ -467,7 +489,7 @@ export default function ConsumerPricingClientPage() {
               <tfoot>
                 <tr className="border-t-2 border-slate-200 bg-slate-50">
                   <td className="px-5 py-5 text-sm font-medium text-slate-600">{t("table.ready_label")}</td>
-                  {PLANS.map((p) => (
+                  {visiblePlans.map((p) => (
                     <td key={p.key} className="px-3 py-5 text-center">
                       {p.checkoutKey ? (
                         // See MJ-001 note above — same anchor-with-onClick pattern.
