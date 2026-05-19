@@ -73,6 +73,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // produce a double-sidebar on the dashboard and a wrong-brand sidebar
   // on the landing/pricing/one-pager surfaces.
   const isFinancialServices = pathname.startsWith("/financial-services");
+  // The brokerage-tier landing page (/for-brokerages) is a focused sales
+  // page with its own custom header + footer. Wrapping it in the global
+  // marketing PremiumSidebar (which surfaces calculators / consumer tools
+  // not relevant to a brokerage owner) would dilute the pitch.
+  const isForBrokerages = pathname.startsWith("/for-brokerages");
   const isAuthShell =
     pathname === "/agent-signup" ||
     pathname === "/login" ||
@@ -111,6 +116,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
     // the global marketing shell here would produce a double-sidebar
     // on /financial-services/dashboard/* and the wrong brand on the
     // landing / pricing / one-pager pages.
+    return <div className="min-h-screen">{children}</div>;
+  }
+
+  if (isForBrokerages) {
+    // Focused brokerage-owner sales landing — ships with its own header,
+    // hero, and footer. Bare wrapper keeps the calculators/consumer-tools
+    // sidebar from leaking onto a B2B sales surface.
     return <div className="min-h-screen">{children}</div>;
   }
 
