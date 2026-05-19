@@ -36,6 +36,7 @@ function HomePageInner() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [smsConsent, setSmsConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -305,6 +306,10 @@ function HomePageInner() {
       setError("Please enter a property address.");
       return;
     }
+    if (smsConsent && !phone.trim()) {
+      setError("Please add a phone number to receive SMS, or untick SMS consent.");
+      return;
+    }
 
     // Marketplace tracking: log estimator "submit" when the user requests the full report.
     try {
@@ -334,6 +339,7 @@ function HomePageInner() {
           address: address.trim(),
           agent: agent || undefined,
           source: source || "landing",
+          smsConsent,
         }),
       });
       const json = (await res.json().catch(() => ({}))) as any;
@@ -664,6 +670,61 @@ function HomePageInner() {
                       className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
+
+                  {/* SMS opt-in — Twilio TFV / A2P 10DLC proof-of-consent
+                      surface. Wording mirrors /contact and /open-house-signup
+                      (see lib/consent/disclosureVersions.ts). Do not edit
+                      without bumping HOME_VALUE_FUNNEL_DISCLOSURE_VERSION. */}
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                    <label
+                      htmlFor="hvf-sms-consent"
+                      className="flex cursor-pointer items-start gap-3"
+                    >
+                      <input
+                        id="hvf-sms-consent"
+                        type="checkbox"
+                        checked={smsConsent}
+                        onChange={(e) => setSmsConsent(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-xs text-slate-700">
+                        <span className="font-semibold text-slate-900">
+                          Yes, send me text messages from LeadSmart AI.
+                        </span>{" "}
+                        By checking this box and providing my phone number above, I
+                        consent to receive text messages from{" "}
+                        <strong>LeadSmart AI</strong> for{" "}
+                        <strong>customer care and marketing</strong> related to
+                        real-estate services, account updates, and product
+                        information.
+                      </span>
+                    </label>
+                    <p className="mt-2 pl-7 text-[11px] leading-relaxed text-slate-500">
+                      Message frequency varies. Message and data rates may apply.
+                      Reply <strong>STOP</strong> to opt out at any time, or{" "}
+                      <strong>HELP</strong> for help. Consent is not a condition of
+                      any purchase. See our{" "}
+                      <a
+                        href="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-blue-600 hover:underline"
+                      >
+                        Privacy Policy
+                      </a>{" "}
+                      and{" "}
+                      <a
+                        href="/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-blue-600 hover:underline"
+                      >
+                        Terms of Service
+                      </a>{" "}
+                      for details.
+                    </p>
+                  </div>
+
                   <button
                     type="submit"
                     disabled={submitting}
@@ -676,7 +737,8 @@ function HomePageInner() {
 
               <p className="text-[11px] text-slate-400">
                 By submitting, you agree to be contacted by your agent about your home value and
-                local market conditions. No spam. Unsubscribe at any time.
+                local market conditions. SMS is sent only if you tick the box above. No spam.
+                Unsubscribe at any time.
               </p>
             </div>
 
