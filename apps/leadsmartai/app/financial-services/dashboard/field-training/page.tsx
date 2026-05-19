@@ -1,0 +1,25 @@
+import type { Metadata } from "next";
+import { GraduationCap } from "lucide-react";
+import ComingSoon from "../_components/ComingSoon";
+
+export const metadata: Metadata = {
+  title: "Field Training · LeadSmart AI",
+  robots: { index: false },
+};
+
+export default function FieldTrainingPage() {
+  return (
+    <ComingSoon
+      icon={GraduationCap}
+      title="Field Training"
+      description="New-associate onboarding and licensing path — track each recruit's progress from BPM to first sale."
+      availability="Pilot week 2"
+      bulletPoints={[
+        "Module checklist per new associate (pre-licensing, product, AML)",
+        "License-exam scheduling + status sync",
+        "Field-trainer assignment + ride-along log",
+        "First-sale milestone unlock + override-eligibility flag",
+      ]}
+    />
+  );
+}
