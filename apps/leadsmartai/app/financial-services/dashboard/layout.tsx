@@ -4,16 +4,19 @@ import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { isRedirectError } from "@/lib/isRedirectError";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
-import FinancialServicesTopNav from "./FinancialServicesTopNav";
+import FinancialServicesSidebar from "./FinancialServicesSidebar";
 
 /**
- * Auth gate + minimal top-nav-only shell for the financial-services workspace.
+ * Auth gate + sectioned-sidebar shell for the financial-services workspace.
  *
- * Sidebar is intentionally absent — the standard CRM sidebar is real-estate-flavored
- * and distracts from this vertical's demo. Top tabs cover the four dashboard surfaces.
+ * Uses a finance-specific sidebar (FinancialServicesSidebar) with MLM/IMO
+ * terminology — Sit-Downs, BPMs, Field Training, Dials, Downline, Overrides,
+ * Production, Book of Business — rather than the generic real-estate CRM nav.
+ * The sidebar tells the product story execs already recognize.
  *
  * Demo phase: any signed-in user can enter (no role check).
- * Pre-pilot: restrict to a `financial_advisor` role on `leadsmart_users.role`.
+ * Pre-pilot: restrict to a `financial_advisor` role on `leadsmart_users.role`,
+ * and gate the "MY TEAM" sidebar section to MD-tier+ via a role check.
  */
 export default async function FinancialServicesDashboardLayout({
   children,
@@ -34,9 +37,9 @@ export default async function FinancialServicesDashboardLayout({
 
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-slate-50 text-slate-900">
-        <FinancialServicesTopNav email={email} />
-        <main className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
+      <div className="flex min-h-screen bg-slate-50 text-slate-900">
+        <FinancialServicesSidebar email={email} showTeamSection />
+        <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-6 md:px-8 md:py-8">
           <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </div>
