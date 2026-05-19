@@ -62,6 +62,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const isPublicReport = pathname.startsWith("/report/");
   const isEditorialLanding = pathname === "/landing-v3";
   const isPublicOpenHouse = pathname.startsWith("/oh/");
+  // The financial-services vertical (MLM/IMO pitch demo for GFI/WFG/PFO)
+  // owns its own chrome end-to-end:
+  //   - /financial-services, /financial-services/pricing, and
+  //     /financial-services/one-pager each render a custom marketing
+  //     header inside their page component.
+  //   - /financial-services/dashboard/* renders its own sectioned sidebar
+  //     (FinancialServicesSidebar) via the nested dashboard layout.
+  // Wrapping any of these in the global marketing PremiumSidebar would
+  // produce a double-sidebar on the dashboard and a wrong-brand sidebar
+  // on the landing/pricing/one-pager surfaces.
+  const isFinancialServices = pathname.startsWith("/financial-services");
   const isAuthShell =
     pathname === "/agent-signup" ||
     pathname === "/login" ||
@@ -91,6 +102,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
   if (isPublicOpenHouse) {
     // Public sign-in + iPad kiosk — runs bare so it can be installed as a
     // PWA and doesn't flash marketing chrome at visitors.
+    return <div className="min-h-screen">{children}</div>;
+  }
+
+  if (isFinancialServices) {
+    // Vertical owns its own chrome (custom marketing headers + the
+    // sectioned FinancialServicesSidebar on /dashboard/*). Wrapping in
+    // the global marketing shell here would produce a double-sidebar
+    // on /financial-services/dashboard/* and the wrong brand on the
+    // landing / pricing / one-pager pages.
     return <div className="min-h-screen">{children}</div>;
   }
 
