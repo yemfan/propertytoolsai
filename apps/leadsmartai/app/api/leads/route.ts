@@ -5,6 +5,12 @@ import { sendEmail } from "@/lib/email";
 import { scheduleEmailSequenceForLead } from "@/lib/emailSequences";
 import { recordLeadEvent, scoreLead } from "@/lib/leadScoring";
 import { runLeadMarketplacePipeline } from "@/lib/leadScorePipeline";
+import {
+  CONSENT_SOURCE_HOME_VALUE_FUNNEL,
+  HOME_VALUE_FUNNEL_DISCLOSURE_VERSION,
+} from "@/lib/consent/disclosureVersions";
+import { extractRequestMeta } from "@/lib/consent/extractRequestMeta";
+import { recordInboundContactRequest } from "@/lib/consent/service";
 
 /** Returns { userId, agentId } for an authenticated agent, or a 401/403 NextResponse. */
 async function getAuthenticatedAgentId(): Promise<
@@ -35,6 +41,9 @@ type LeadPayload = {
   source?: string;
   traffic_source?: string;
   lead_quality?: string;
+  /** TCPA opt-in flag from the home-value funnel form. Required for any
+   *  SMS follow-up to fire downstream — see /lib/consent/disclosureVersions. */
+  smsConsent?: boolean;
 };
 
 function formatUsPhone(input: string) {
@@ -48,10 +57,22 @@ export async function POST(req: Request) {
     const body = (await req.json()) as LeadPayload;
     const { name, email, phone, address, agent, source, traffic_source, lead_quality } = body;
     const formattedPhone = phone ? formatUsPhone(phone) : null;
+    const smsConsent = Boolean(body.smsConsent);
 
     if (!email || !address) {
       return NextResponse.json(
         { ok: false, error: "Email and address are required." },
+        { status: 400 }
+      );
+    }
+
+    if (smsConsent && !formattedPhone) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Please add a phone number to receive SMS, or untick the SMS consent checkbox.",
+        },
         { status: 400 }
       );
     }
@@ -64,7 +85,10 @@ export async function POST(req: Request) {
         email,
         phone: formattedPhone ?? null,
         phone_number: formattedPhone ?? null,
-        sms_opt_in: false,
+        // Load-bearing TCPA flag — only flip when the visitor ticked the
+        // homepage SMS consent box. The disclosure version they saw is
+        // captured in the inbound_contact_requests audit row below.
+        sms_opt_in: smsConsent,
         property_address: address,
         source: source || "landing",
         traffic_source: traffic_source ?? source ?? "landing",
@@ -88,6 +112,31 @@ export async function POST(req: Request) {
     }
 
     if (data?.id) {
+      // Record proof-of-consent audit row immediately after the lead create.
+      // Same audit table as /contact and /open-house-signup use — TCR /
+      // carrier audits can grep by `consent_disclosure_version` to retrieve
+      // the exact wording the consenting party saw at submit time.
+      // Best-effort: a consent-table outage MUST NOT block lead capture.
+      try {
+        const meta = extractRequestMeta(req);
+        await recordInboundContactRequest({
+          source: CONSENT_SOURCE_HOME_VALUE_FUNNEL,
+          name: name || null,
+          email: email || null,
+          phone: formattedPhone,
+          subject: "Home value funnel",
+          message: address,
+          smsConsent,
+          emailConsent: null,
+          consentDisclosureVersion: HOME_VALUE_FUNNEL_DISCLOSURE_VERSION,
+          ipAddress: meta.ipAddress,
+          userAgent: meta.userAgent,
+          contactId: String(data.id),
+        });
+      } catch (e) {
+        console.error("/api/leads: consent audit write threw", e);
+      }
+
       await scheduleEmailSequenceForLead(data.id as string);
       // Trigger initial scoring on lead creation.
       try {
