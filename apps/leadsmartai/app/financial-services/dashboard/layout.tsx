@@ -2,19 +2,24 @@ import { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { isRedirectError } from "@/lib/isRedirectError";
-import DashboardShell from "@/components/dashboard/DashboardShell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import FinancialServicesTopNav from "./FinancialServicesTopNav";
 
 /**
- * Auth gate for the financial-services workspace.
+ * Auth gate + minimal top-nav-only shell for the financial-services workspace.
  *
- * Demo phase: any signed-in user can enter (no role check) so the GFI pitch
- * demo works without provisioning a new role.
+ * Sidebar is intentionally absent — the standard CRM sidebar is real-estate-flavored
+ * and distracts from this vertical's demo. Top tabs cover the four dashboard surfaces.
  *
+ * Demo phase: any signed-in user can enter (no role check).
  * Pre-pilot: restrict to a `financial_advisor` role on `leadsmart_users.role`.
  */
-export default async function FinancialServicesDashboardLayout({ children }: { children: ReactNode }) {
+export default async function FinancialServicesDashboardLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   let email: string | null = null;
 
   try {
@@ -29,9 +34,12 @@ export default async function FinancialServicesDashboardLayout({ children }: { c
 
   return (
     <ToastProvider>
-      <DashboardShell email={email} appRole="agent">
-        <ErrorBoundary>{children}</ErrorBoundary>
-      </DashboardShell>
+      <div className="min-h-screen bg-slate-50 text-slate-900">
+        <FinancialServicesTopNav email={email} />
+        <main className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </main>
+      </div>
     </ToastProvider>
   );
 }

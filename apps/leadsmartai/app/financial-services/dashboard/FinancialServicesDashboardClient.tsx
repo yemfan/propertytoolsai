@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   ActionButton,
-  DashboardShell,
   DashboardTable,
   KpiCard,
   kpiSubtext,
@@ -41,13 +40,22 @@ export default function FinancialServicesDashboardClient() {
   const maxRecruit = Math.max(...faRecruitStages.map((s) => s.count), 1);
 
   return (
-    <DashboardShell
-      title="Financial services dashboard"
-      subtitle="Prospects, recruits, and AI tools — built for IUL, annuity, and term life producers."
-      kpis={faKpis.map((k) => (
-        <KpiCard key={k.label} label={k.label} value={k.value} subtext={kpiSubtext(k)} />
-      ))}
-    >
+    <div className="space-y-6">
+      <header>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+          Financial services dashboard
+        </h1>
+        <p className="mt-1 text-sm text-slate-600">
+          Prospects, recruits, and AI tools — built for IUL, annuity, and term life producers.
+        </p>
+      </header>
+
+      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+        {faKpis.map((k) => (
+          <KpiCard key={k.label} label={k.label} value={k.value} subtext={kpiSubtext(k)} />
+        ))}
+      </div>
+
       <section className="grid gap-6 xl:grid-cols-12">
         <SectionCard title="Active prospects" className="xl:col-span-8">
           <DashboardTable
@@ -179,6 +187,6 @@ export default function FinancialServicesDashboardClient() {
           </ul>
         </SectionCard>
       </section>
-    </DashboardShell>
+    </div>
   );
 }
