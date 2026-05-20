@@ -33,6 +33,17 @@ export type NavDividerSection = {
   kind: "divider";
 };
 
+/**
+ * Supercategory band — a short uppercase label that introduces a cluster
+ * of groups (e.g. "WORK", "ENGAGE", "MANAGE"). Non-interactive. Rendered
+ * by `PremiumSidebarV2` and the mobile drawer; the legacy `PremiumSidebar`
+ * renders nothing for these rows.
+ */
+export type NavSectionLabel = {
+  kind: "section-label";
+  label: string;
+};
+
 export type NavGroupItem = {
   label: string;
   icon?: ReactNode;
@@ -54,14 +65,23 @@ export type NavGroupItem = {
   badge?: string;
 };
 
-export type NavSection = NavLeafItem | NavGroupItem | NavDividerSection;
+export type NavSection =
+  | NavLeafItem
+  | NavGroupItem
+  | NavDividerSection
+  | NavSectionLabel;
 
 export function isNavDivider(item: NavSection): item is NavDividerSection {
   return (item as NavDividerSection).kind === "divider";
 }
 
+export function isNavSectionLabel(item: NavSection): item is NavSectionLabel {
+  return (item as NavSectionLabel).kind === "section-label";
+}
+
 export function isNavGroup(item: NavSection): item is NavGroupItem {
   if (isNavDivider(item)) return false;
+  if (isNavSectionLabel(item)) return false;
   return "items" in item && Array.isArray((item as NavGroupItem).items);
 }
 

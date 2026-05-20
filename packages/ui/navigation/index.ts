@@ -7,8 +7,9 @@ export type {
   NavLeafItem,
   NavLinkDef,
   NavSection,
+  NavSectionLabel,
 } from "./types";
-export { isNavDivider, isNavGroup } from "./types";
+export { isNavDivider, isNavGroup, isNavSectionLabel } from "./types";
 export { filterNavSectionsByRole } from "./filterNavByRole";
 export { isGroupActive, isLinkActive, isSectionActive } from "./matchPath";
 export { CollapsibleNavGroup } from "./CollapsibleNavGroup";
@@ -21,7 +22,6 @@ export { PremiumSidebar } from "./PremiumSidebar";
 export type { PremiumSidebarProps } from "./PremiumSidebar";
 export { PremiumSidebarV2 } from "./PremiumSidebarV2";
 export type {
-  NavSectionLabel,
   NavSectionV2,
   PremiumSidebarV2Props,
   PremiumSidebarV2User,

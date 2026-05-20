@@ -1,5 +1,5 @@
 import type { NavGroupItem, NavLeafItem, NavSection } from "./types";
-import { isNavDivider, isNavGroup } from "./types";
+import { isNavDivider, isNavGroup, isNavSectionLabel } from "./types";
 
 function roleMatches(allowed: string[] | undefined, userRole: string): boolean {
   if (!allowed?.length) return true;
@@ -43,6 +43,7 @@ export function filterNavSectionsByRole(
   const r = (userRole ?? "").trim();
   const mapped = sections.flatMap((section): NavSection[] => {
     if (isNavDivider(section)) return [section];
+    if (isNavSectionLabel(section)) return [section];
     if (isNavGroup(section)) {
       const g = section as NavGroupItem;
       if (!roleMatches(g.roles, r)) return [];

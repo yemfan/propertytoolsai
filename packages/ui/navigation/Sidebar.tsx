@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useState, type ReactNode } from "react";
 import type { NavSection } from "./types";
-import { isNavDivider, isNavGroup } from "./types";
+import { isNavDivider, isNavGroup, isNavSectionLabel } from "./types";
 import { isLinkActive } from "./matchPath";
 
 export type SidebarProps = {
@@ -68,6 +68,10 @@ export function Sidebar({
                   aria-hidden
                 />
               );
+            }
+            if (isNavSectionLabel(section)) {
+              // Legacy `Sidebar` (used in dev/demo only) skips supercategory bands.
+              return null;
             }
             if (!isNavGroup(section)) {
               const active = isLinkActive(pathname, section);

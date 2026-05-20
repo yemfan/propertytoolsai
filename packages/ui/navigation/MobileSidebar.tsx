@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { NavSection } from "./types";
-import { isNavDivider, isNavGroup } from "./types";
+import { isNavDivider, isNavGroup, isNavSectionLabel } from "./types";
 import { isLinkActive } from "./matchPath";
 
 function cn(...parts: (string | false | undefined | null)[]) {
@@ -165,6 +165,17 @@ export function MobileSidebar({ appName, sections, className = "" }: MobileSideb
                       role="separator"
                       aria-hidden
                     />
+                  );
+                }
+                if (isNavSectionLabel(section)) {
+                  return (
+                    <div
+                      key={`section-label-${sectionIdx}-${section.label}`}
+                      className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400"
+                      role="presentation"
+                    >
+                      {section.label}
+                    </div>
                   );
                 }
                 if (!isNavGroup(section)) {

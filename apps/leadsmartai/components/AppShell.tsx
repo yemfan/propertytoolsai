@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ReactNode } from "react";
-import { PremiumSidebar, Topbar } from "@repo/ui";
+import { ReactNode, useCallback, useMemo } from "react";
+import { PremiumSidebarV2, Topbar } from "@repo/ui";
+import { useAuth } from "@/components/AuthProvider";
+import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
 import HeaderAuthActions from "@/components/HeaderAuthActions";
 import marketingNavConfig, { leadSmartMarketingNav } from "@/marketing.nav.config";
@@ -16,6 +18,21 @@ const APP_NAME = "LeadSmart AI";
 const marketingSidebarFooter = (
   <p className="text-center text-xs leading-relaxed text-gray-500">© {new Date().getFullYear()} LeadSmart AI</p>
 );
+
+/** Marketing-shell user card — only renders when an auth session exists. */
+function useSidebarUser() {
+  const { user } = useAuth();
+  return useMemo(() => {
+    if (!user?.email) return undefined;
+    const local = user.email.split("@")[0] ?? user.email;
+    const name = local
+      .replace(/[._-]+/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .trim();
+    const initials = local.replace(/[^a-zA-Z]/g, "").slice(0, 2).toUpperCase() || "A";
+    return { name: name || user.email, email: user.email, initials };
+  }, [user?.email]);
+}
 
 function MarketingTopChrome() {
   return (
@@ -201,13 +218,24 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return <div className="min-h-screen bg-slate-50 text-slate-900">{children}</div>;
   }
 
+  return <MarketingChrome>{children}</MarketingChrome>;
+}
+
+function MarketingChrome({ children }: { children: ReactNode }) {
+  const sidebarUser = useSidebarUser();
+  const handleLogout = useCallback(() => {
+    void signOutWithFullReload("/");
+  }, []);
+
   return (
     <div className="flex min-h-screen min-h-0 w-full min-w-0 flex-col overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-emerald-50/20 text-slate-900 lg:min-h-screen lg:flex-row lg:items-stretch">
-      <PremiumSidebar
+      <PremiumSidebarV2
         appName={APP_NAME}
         sections={leadSmartMarketingNav}
         workspaceLabel={marketingNavConfig.sidebarTitle ?? "Tools"}
-        footer={marketingSidebarFooter}
+        user={sidebarUser}
+        onLogout={sidebarUser ? handleLogout : undefined}
+        footer={sidebarUser ? undefined : marketingSidebarFooter}
       />
       <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
         <MarketingTopChrome />

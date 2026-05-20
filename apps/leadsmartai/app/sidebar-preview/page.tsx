@@ -16,7 +16,6 @@
 
 import { PremiumSidebar, PremiumSidebarV2 } from "@repo/ui";
 import { leadSmartNav } from "@/nav.config";
-import { buildPreviewNav } from "./buildPreviewNav";
 
 const PREVIEW_USER = {
   name: "Michael Ye",
@@ -81,8 +80,9 @@ function FakeMainContent({ label }: { label: string }) {
 }
 
 export default function SidebarPreviewPage() {
-  const v2Nav = buildPreviewNav(leadSmartNav);
-
+  // After the V2 rollout, `leadSmartNav` already ships with lucide icons
+  // and supercategory section-labels — no transform needed. The legacy
+  // `PremiumSidebar` silently ignores section-labels (see PremiumSidebar.tsx).
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900">
       {/* Header */}
@@ -127,7 +127,7 @@ export default function SidebarPreviewPage() {
         <PreviewFrame title="Proposed" tone="proposed">
           <PremiumSidebarV2
             appName="LeadSmart AI"
-            sections={v2Nav}
+            sections={leadSmartNav}
             workspaceLabel="Agent portal · Pacific"
             onSearchClick={() => {
               // Preview-only no-op; wire to existing CommandPalette on rollout.

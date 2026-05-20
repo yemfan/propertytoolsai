@@ -43,6 +43,16 @@ export function CommandPalette() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // Sidebar ⌘K trigger row dispatches this event so callers can open the
+  // palette without a keyboard. Pair with `PremiumSidebarV2.onSearchClick`.
+  useEffect(() => {
+    function openHandler() {
+      setOpen(true);
+    }
+    window.addEventListener("open-command-palette", openHandler);
+    return () => window.removeEventListener("open-command-palette", openHandler);
+  }, []);
+
   useEffect(() => {
     if (open) {
       setSearch("");

@@ -26,17 +26,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { NavSection } from "./types";
-import { isNavDivider, isNavGroup } from "./types";
+import { isNavDivider, isNavGroup, isNavSectionLabel } from "./types";
 import { isLinkActive } from "./matchPath";
 
-/** Supercategory band (e.g. "WORK", "ENGAGE"). Non-interactive. */
-export type NavSectionLabel = { kind: "section-label"; label: string };
-
-export type NavSectionV2 = NavSection | NavSectionLabel;
-
-function isSectionLabel(s: NavSectionV2): s is NavSectionLabel {
-  return (s as NavSectionLabel).kind === "section-label";
-}
+/**
+ * @deprecated `NavSectionLabel` is now part of the base `NavSection` union;
+ * `NavSectionV2` is kept as an alias so existing callers
+ * (e.g. `apps/leadsmartai/app/sidebar-preview/buildPreviewNav.tsx`) don't break.
+ */
+export type NavSectionV2 = NavSection;
 
 export type PremiumSidebarV2User = {
   name: string;
@@ -50,7 +48,7 @@ export type PremiumSidebarV2User = {
 export type PremiumSidebarV2Props = {
   appName: string;
   workspaceLabel?: string;
-  sections: NavSectionV2[];
+  sections: NavSection[];
   /** Renders the search trigger row when provided. Wire to Cmd-K. */
   onSearchClick?: () => void;
   /** Footer identity card. Omit to hide the footer. */
@@ -59,6 +57,11 @@ export type PremiumSidebarV2Props = {
   onLogout?: () => void;
   /** Settings icon link (footer). */
   settingsHref?: string;
+  /**
+   * Arbitrary content rendered in the footer area, above the user card.
+   * Typical use: an upgrade-promo banner or workspace-wide notice.
+   */
+  footer?: ReactNode;
   /**
    * `"viewport"` (default) → `lg:h-screen`. Use `"stretch"` when the
    * sidebar is nested inside a flex column with its own height
@@ -150,6 +153,7 @@ export function PremiumSidebarV2({
   user,
   onLogout,
   settingsHref = "/dashboard/settings",
+  footer,
   height = "viewport",
   className,
 }: PremiumSidebarV2Props) {
@@ -158,7 +162,7 @@ export function PremiumSidebarV2({
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     for (const s of sections) {
-      if (!isSectionLabel(s) && isNavGroup(s) && s.defaultOpen) {
+      if (!isNavSectionLabel(s) && isNavGroup(s) && s.defaultOpen) {
         initial[s.label] = true;
       }
     }
@@ -175,7 +179,7 @@ export function PremiumSidebarV2({
     setOpenGroups((prev) => {
       const next = { ...prev };
       for (const s of sectionsRef.current) {
-        if (!isSectionLabel(s) && isNavGroup(s)) {
+        if (!isNavSectionLabel(s) && isNavGroup(s)) {
           if (s.items.some((item) => isLinkActive(pathname, item))) {
             next[s.label] = true;
           }
@@ -264,7 +268,7 @@ export function PremiumSidebarV2({
       <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2.5 py-3 [scrollbar-gutter:stable] [scrollbar-color:rgba(148,163,184,0.5)_transparent]">
         <nav className="space-y-px">
           {sections.map((section, idx) => {
-            if (isSectionLabel(section)) {
+            if (isNavSectionLabel(section)) {
               return (
                 <div
                   key={`label-${idx}-${section.label}`}
@@ -437,9 +441,11 @@ export function PremiumSidebarV2({
         </nav>
       </div>
 
-      {/* Footer — user identity card */}
-      {user ? (
+      {/* Footer — optional consumer slot above the user card */}
+      {footer || user ? (
         <div className="shrink-0 border-t border-slate-200/80 bg-white/70 p-2 backdrop-blur-sm">
+          {footer ? <div className="mb-2">{footer}</div> : null}
+          {user ? (
           <div className="flex items-center gap-2.5 rounded-xl bg-white px-2 py-2 ring-1 ring-slate-200/80">
             <div
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 text-[11px] font-bold text-white shadow-sm ring-1 ring-inset ring-white/15"
@@ -488,6 +494,7 @@ export function PremiumSidebarV2({
               </button>
             ) : null}
           </div>
+          ) : null}
         </div>
       ) : null}
     </aside>
