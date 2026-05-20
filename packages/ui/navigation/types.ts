@@ -47,6 +47,11 @@ export type NavGroupItem = {
    * Omit or `false` → start collapsed (until user opens or a child route matches).
    */
   defaultOpen?: boolean;
+  /**
+   * Optional badge shown on the group row itself (count of children-in-flight, etc.).
+   * Rendered by `PremiumSidebarV2`; ignored by the legacy `PremiumSidebar`.
+   */
+  badge?: string;
 };
 
 export type NavSection = NavLeafItem | NavGroupItem | NavDividerSection;

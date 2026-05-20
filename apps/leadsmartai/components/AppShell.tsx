@@ -78,6 +78,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // marketing PremiumSidebar (which surfaces calculators / consumer tools
   // not relevant to a brokerage owner) would dilute the pitch.
   const isForBrokerages = pathname.startsWith("/for-brokerages");
+  // The sidebar redesign preview renders two sidebars side-by-side for
+  // design review. Wrapping it in the marketing PremiumSidebar would
+  // produce a triple-sidebar layout and obscure the comparison.
+  const isSidebarPreview = pathname.startsWith("/sidebar-preview");
   const isAuthShell =
     pathname === "/agent-signup" ||
     pathname === "/login" ||
@@ -123,6 +127,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
     // Focused brokerage-owner sales landing — ships with its own header,
     // hero, and footer. Bare wrapper keeps the calculators/consumer-tools
     // sidebar from leaking onto a B2B sales surface.
+    return <div className="min-h-screen">{children}</div>;
+  }
+
+  if (isSidebarPreview) {
+    // Sidebar redesign preview renders both the current and proposed
+    // sidebars inside the page. The global marketing sidebar would
+    // turn the comparison into a three-sidebar mess.
     return <div className="min-h-screen">{children}</div>;
   }
 
