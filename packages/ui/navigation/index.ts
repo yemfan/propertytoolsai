@@ -19,6 +19,13 @@ export { Sidebar } from "./Sidebar";
 export type { SidebarProps } from "./Sidebar";
 export { PremiumSidebar } from "./PremiumSidebar";
 export type { PremiumSidebarProps } from "./PremiumSidebar";
+export { PremiumSidebarV2 } from "./PremiumSidebarV2";
+export type {
+  NavSectionLabel,
+  NavSectionV2,
+  PremiumSidebarV2Props,
+  PremiumSidebarV2User,
+} from "./PremiumSidebarV2";
 export { MobileSidebar } from "./MobileSidebar";
 export type { MobileSidebarProps } from "./MobileSidebar";
 export { Topbar } from "./Topbar";
