@@ -1,12 +1,13 @@
 "use client";
 
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { PremiumSidebar, filterNavSectionsByRole } from "@repo/ui";
+import { PremiumSidebarV2, filterNavSectionsByRole } from "@repo/ui";
 import navConfig, { leadSmartNav } from "@/nav.config";
 import brokerNavConfig from "@/brokerNav.config";
 import TopBar from "@/components/dashboard/TopBar";
 import { isAgentOrBrokerProfileRole } from "@/lib/rolePortalPaths";
+import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 
 const APP_NAME = "LeadSmart AI";
 
@@ -17,9 +18,28 @@ const sidebarFooter = (
   </div>
 );
 
+/** Derive the sidebar user card from the email + role we already have on the shell. */
+function buildSidebarUser(
+  email: string | null | undefined,
+  appRole: string | null | undefined
+) {
+  if (!email) return undefined;
+  const local = email.split("@")[0] ?? email;
+  const name = local
+    .replace(/[._-]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+  const initials = local.replace(/[^a-zA-Z]/g, "").slice(0, 2).toUpperCase() || "A";
+  const planLabel = appRole
+    ? appRole.charAt(0).toUpperCase() + appRole.slice(1).toLowerCase()
+    : undefined;
+  return { name: name || email, email, initials, planLabel };
+}
+
 /**
- * Authenticated dashboard shell — matches PropertyTools AI layout:
- * PremiumSidebar (full height, stretch mode) + TopBar + scrollable main.
+ * Authenticated dashboard shell — `PremiumSidebarV2` (full height, stretch mode)
+ * + TopBar + scrollable main. Sidebar surfaces a workspace switcher, persistent
+ * ⌘K trigger, role-aware nav, and a footer user-identity card.
  */
 export default function AppDashboardShell({
   email,
@@ -43,16 +63,28 @@ export default function AppDashboardShell({
 
   const activeNavConfig = navConfigOverride === "broker" ? brokerNavConfig : navConfig;
   const showAgentBrokerPromotion = isAgentOrBrokerProfileRole(appRole);
+  const sidebarUser = useMemo(() => buildSidebarUser(email, appRole), [email, appRole]);
+
+  const handleSearchClick = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new CustomEvent("open-command-palette"));
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    void signOutWithFullReload("/");
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/70 text-slate-900">
       {/* Left: sidebar spans full height (same as PropertyTools) */}
-      <PremiumSidebar
+      <PremiumSidebarV2
         appName={APP_NAME}
         sections={navSections}
         workspaceLabel={activeNavConfig.sidebarTitle ?? "Workspace"}
-        branding="none"
         height="stretch"
+        onSearchClick={handleSearchClick}
+        user={sidebarUser}
+        onLogout={handleLogout}
         footer={showAgentBrokerPromotion ? sidebarFooter : undefined}
       />
       {/* Right: header then scrollable content */}

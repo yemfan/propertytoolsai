@@ -4,7 +4,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { NavConfig, NavLeafItem, NavSection } from "./types";
-import { isNavDivider, isNavGroup } from "./types";
+import { isNavDivider, isNavGroup, isNavSectionLabel } from "./types";
 import { isGroupActive, isLinkActive } from "./matchPath";
 import { CollapsibleNavGroup } from "./CollapsibleNavGroup";
 
@@ -64,6 +64,13 @@ function renderSection(
       />
     );
   }
+  if (isNavSectionLabel(section)) {
+    return (
+      <p className="mt-2 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+        {section.label}
+      </p>
+    );
+  }
   if (!isNavGroup(section)) {
     return <NavLeafLink link={section} onNavigate={onNavigate} />;
   }
@@ -103,9 +110,11 @@ export function NavTree({ nav, variant, onNavigate }: NavTreeProps) {
             key={
               isNavDivider(section)
                 ? `divider-${i}`
-                : isNavGroup(section)
-                  ? `group-${section.label}-${i}`
-                  : `${(section as NavLeafItem).href}-${i}`
+                : isNavSectionLabel(section)
+                  ? `section-label-${section.label}-${i}`
+                  : isNavGroup(section)
+                    ? `group-${section.label}-${i}`
+                    : `${(section as NavLeafItem).href}-${i}`
             }
           >
             {renderSection(section, variant, pathname, onNavigate)}

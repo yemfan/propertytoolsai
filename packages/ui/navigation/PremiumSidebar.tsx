@@ -11,7 +11,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { NavSection } from "./types";
-import { isNavDivider, isNavGroup } from "./types";
+import { isNavDivider, isNavGroup, isNavSectionLabel } from "./types";
 import { isLinkActive } from "./matchPath";
 
 export type PremiumSidebarProps = {
@@ -213,6 +213,10 @@ export function PremiumSidebar({
                   aria-hidden
                 />
               );
+            }
+            if (isNavSectionLabel(section)) {
+              // Legacy sidebar doesn't render supercategory bands.
+              return null;
             }
             if (!isNavGroup(section)) {
               const active = isLinkActive(pathname, section);

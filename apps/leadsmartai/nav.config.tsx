@@ -1,38 +1,73 @@
 import type { NavConfig } from "@repo/ui";
-import { BarChart3, CreditCard, Headphones, LayoutDashboard } from "lucide-react";
+import {
+  BarChart3,
+  Building2,
+  Calendar,
+  CheckCircle2,
+  ClipboardList,
+  Compass,
+  CreditCard,
+  DoorOpen,
+  Eye,
+  FileSignature,
+  Gem,
+  Headphones,
+  House,
+  KeyRound,
+  LayoutDashboard,
+  LayoutGrid,
+  Megaphone,
+  MessageCircle,
+  PenLine,
+  PhoneMissed,
+  Presentation,
+  Rocket,
+  Route,
+  Ruler,
+  Settings,
+  ShoppingBag,
+  Sparkles,
+  Tag,
+  Target,
+  TrendingUp,
+  User,
+  Users,
+  Wrench,
+} from "lucide-react";
+import type { ReactNode } from "react";
 
-function navEmoji(emoji: string) {
-  return (
-    <span
-      className="flex h-[1.125rem] w-[1.125rem] items-center justify-center text-base leading-none"
-      aria-hidden
-    >
-      {emoji}
-    </span>
-  );
+const STROKE = 1.75;
+
+/** Group-row icon (17px). */
+function p(icon: ReactNode): ReactNode {
+  return icon;
+}
+/** Leaf-row icon (14px). */
+function l(icon: ReactNode): ReactNode {
+  return icon;
 }
 
 /**
  * LeadSmart AI — agent portal sidebar.
  *
- * Organized around which side of the deal the agent is working
- * ("am I doing buyer work or seller work right now?") rather than the
- * older Deals/Listings split, which was asymmetric — Deals owned
- * Transactions even though listing-rep deals also become transactions.
+ * Visual structure (consumed by `PremiumSidebarV2`):
+ *   pinned Home  →  WORK band  →  ENGAGE band  →  ANALYZE band  →  MANAGE band  →  Admin
  *
- * Sections:
+ * The supercategory bands ("section-label" sections) collapse the ten
+ * collapsible groups into four scannable clusters; legacy `PremiumSidebar`
+ * + `MobileSidebar` either skip the band rows or render them as small
+ * labels (see `packages/ui/navigation`).
+ *
+ * Sections kept their original semantics:
  *   Home         — daily overview
  *   Leads        — prospecting + ops (contacts, queue, tasks, calendar)
  *   Buyers       — buyer-side activity (showings → offers)
- *   Sellers      — seller-side activity (presentations, CMAs, open
- *                  houses, reports)
- *   Transactions — operational layer that bridges both sides:
- *                  the list of deals + the stage-grouped kanban
- *                  (Coordinator). One transaction can be buyer-rep,
- *                  listing-rep, or dual.
+ *   Sellers      — seller-side activity (presentations, listings)
+ *   Transactions — operational layer (all deals + Coordinator kanban)
  *   Communicate  — inbox, drafts, templates, marketing plans
- *   Workflow     — property tools + playbooks
- *   Insights     — performance, growth
+ *   Workflow     — sales model + playbooks
+ *   Insights     — performance, growth, sphere monetization
+ *   Property Tools — calculator suite + CMA library
  *   Account      — settings, billing, profile, support
  *   Admin        — role-gated platform management
  */
@@ -45,14 +80,17 @@ const navConfig = {
       label: "Home",
       href: "/dashboard/overview",
       match: ["/dashboard", "/dashboard/overview", "/dashboard/broker"],
-      icon: navEmoji("🏠"),
+      icon: p(<LayoutDashboard size={17} strokeWidth={STROKE} aria-hidden />),
     },
+
+    /* ── WORK ── side-of-deal activity + the bridge transactional layer ── */
+    { kind: "section-label" as const, label: "Work" },
 
     /* ── Leads ── daily prospecting + ops + lead-gen events ── */
     {
       label: "Leads",
       defaultOpen: true,
-      icon: navEmoji("👥"),
+      icon: p(<Users size={17} strokeWidth={STROKE} aria-hidden />),
       items: [
         {
           // Unified people hub — Smart Lists inside this page segment into
@@ -65,19 +103,19 @@ const navConfig = {
             "/dashboard/leads",
             "/dashboard/sphere",
           ],
-          icon: navEmoji("👥"),
+          icon: l(<Users size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Tasks",
           href: "/dashboard/tasks",
           match: ["/dashboard/tasks"],
-          icon: navEmoji("✅"),
+          icon: l(<CheckCircle2 size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Calendar",
           href: "/dashboard/calendar",
           match: ["/dashboard/calendar"],
-          icon: navEmoji("📅"),
+          icon: l(<Calendar size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           // Open houses are a lead-generation surface — buyer-side
@@ -88,7 +126,7 @@ const navConfig = {
           label: "Open Houses",
           href: "/dashboard/open-houses",
           match: ["/dashboard/open-houses", "/dashboard/open-house"],
-          icon: navEmoji("🏠"),
+          icon: l(<DoorOpen size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           // Triage queue lives at the bottom — agents land here only when
@@ -96,7 +134,7 @@ const navConfig = {
           label: "Lead Queue",
           href: "/dashboard/lead-queue",
           match: ["/dashboard/lead-queue"],
-          icon: navEmoji("📋"),
+          icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           // Generate Leads — AI-drafted social posts (Phase 1A) + ad
@@ -106,7 +144,7 @@ const navConfig = {
           label: "Generate Leads",
           href: "/dashboard/leads/generate",
           match: ["/dashboard/leads/generate"],
-          icon: navEmoji("✨"),
+          icon: l(<Sparkles size={14} strokeWidth={STROKE} aria-hidden />),
         },
       ],
     },
@@ -115,95 +153,85 @@ const navConfig = {
     {
       label: "Buyers",
       defaultOpen: true,
-      icon: navEmoji("🛒"),
+      icon: p(<ShoppingBag size={17} strokeWidth={STROKE} aria-hidden />),
       items: [
         {
           // Buyer-side property-visit tracker: schedule + feedback capture.
-          // See apps/leadsmartai/lib/showings.
           label: "Showings",
           href: "/dashboard/showings",
           match: ["/dashboard/showings"],
-          icon: navEmoji("🏠"),
+          icon: l(<Eye size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           // Buyer-side offer tracker: drafts, counters, acceptance → transaction.
-          // See apps/leadsmartai/lib/offers.
           label: "Offers",
           href: "/dashboard/offers",
           match: ["/dashboard/offers"],
-          icon: navEmoji("📝"),
+          icon: l(<FileSignature size={14} strokeWidth={STROKE} aria-hidden />),
         },
       ],
     },
 
     /* ── Sellers ── listing-side activity. Open Houses lives under
-       Leads (lead-gen surface, used by both buyer- and listing-side
-       agents); CMAs live under Property Tools (used on both sides
-       too, for pricing strategy AND offer sizing). ── */
+       Leads (lead-gen surface); CMAs live under Property Tools (used on
+       both sides for pricing strategy AND offer sizing). ── */
     {
       label: "Sellers",
-      icon: navEmoji("🏷️"),
+      icon: p(<Tag size={17} strokeWidth={STROKE} aria-hidden />),
       items: [
         {
-          // Agent's active + closed listings (listing-rep + dual
-          // transactions), with showings activity per listing. Backed
-          // by /dashboard/properties — kept the URL since the
-          // CommandPalette already links there. The previous
-          // implementation was a generic warehouse browser; we
-          // repurposed it for listings.
+          // Agent's active + closed listings, backed by /dashboard/properties
+          // — kept that URL since the CommandPalette already links there.
           label: "Listings",
           href: "/dashboard/properties",
           match: ["/dashboard/properties"],
-          icon: navEmoji("🏷️"),
+          icon: l(<House size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Presentations",
           href: "/dashboard/seller-presentation",
           match: ["/dashboard/seller-presentation", "/dashboard/presentations"],
-          icon: navEmoji("📊"),
+          icon: l(<Presentation size={14} strokeWidth={STROKE} aria-hidden />),
         },
       ],
     },
 
-    /* ── Transactions ── operational layer that spans both sides ──
-       Pulled out of Deals so listing-rep closings live in the same
-       place as buyer-rep ones. Two views of the same data:
-         All deals  → flat list (every status; click into a row for the
-                      per-deal timeline + tasks + counterparties)
-         Coordinator → stage-grouped kanban over in-flight deals
+    /* ── Transactions ── operational layer that spans both sides.
        `match` is exact (see packages/ui/navigation/matchPath.ts), so
        /dashboard/transactions/coordinator highlights Coordinator
-       without colliding with the All deals entry. */
+       without colliding with the All deals entry. ── */
     {
       label: "Transactions",
       defaultOpen: true,
-      icon: navEmoji("🔑"),
+      icon: p(<KeyRound size={17} strokeWidth={STROKE} aria-hidden />),
       items: [
         {
           label: "All deals",
           href: "/dashboard/transactions",
           match: ["/dashboard/transactions"],
-          icon: navEmoji("🔑"),
+          icon: l(<KeyRound size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Coordinator",
           href: "/dashboard/transactions/coordinator",
           match: ["/dashboard/transactions/coordinator"],
-          icon: navEmoji("🗂️"),
+          icon: l(<LayoutGrid size={14} strokeWidth={STROKE} aria-hidden />),
         },
       ],
     },
 
-    /* ── Communicate ── */
+    /* ── ENGAGE ── outbound + workflow scaffolding ── */
+    { kind: "section-label" as const, label: "Engage" },
+
     {
       label: "Communicate",
-      icon: navEmoji("💬"),
+      icon: p(<MessageCircle size={17} strokeWidth={STROKE} aria-hidden />),
       items: [
         {
           label: "Conversations",
           href: "/dashboard/inbox",
           match: ["/dashboard/inbox", "/dashboard/calls"],
-          icon: navEmoji("💬"),
+          icon: l(<MessageCircle size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           // Dedicated entry for the missed-call text-back surface.
@@ -213,25 +241,25 @@ const navConfig = {
           label: "Missed-call text-back",
           href: "/dashboard/missed-call",
           match: ["/dashboard/missed-call"],
-          icon: navEmoji("📲"),
+          icon: l(<PhoneMissed size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Drafts",
           href: "/dashboard/drafts",
           match: ["/dashboard/drafts"],
-          icon: navEmoji("📝"),
+          icon: l(<PenLine size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Templates",
           href: "/dashboard/templates",
           match: ["/dashboard/templates"],
-          icon: navEmoji("📋"),
+          icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Marketing Plans",
           href: "/dashboard/marketing/plans",
           match: ["/dashboard/marketing"],
-          icon: navEmoji("📣"),
+          icon: l(<Megaphone size={14} strokeWidth={STROKE} aria-hidden />),
         },
       ],
     },
@@ -239,33 +267,35 @@ const navConfig = {
     /* ── Workflow ── sales model + playbooks ── */
     {
       label: "Workflow",
-      icon: navEmoji("🧰"),
+      icon: p(<Wrench size={17} strokeWidth={STROKE} aria-hidden />),
       items: [
         {
           label: "Sales Model",
           href: "/dashboard/sales-model",
           match: ["/dashboard/sales-model"],
-          icon: navEmoji("🎯"),
+          icon: l(<Target size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Playbooks",
           href: "/dashboard/playbooks",
           match: ["/dashboard/playbooks"],
-          icon: navEmoji("📋"),
+          icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
         },
       ],
     },
 
-    /* ── Insights ── */
+    /* ── ANALYZE ── insight + calculator suites ── */
+    { kind: "section-label" as const, label: "Analyze" },
+
     {
       label: "Insights",
-      icon: navEmoji("📈"),
+      icon: p(<TrendingUp size={17} strokeWidth={STROKE} aria-hidden />),
       items: [
         {
           label: "Performance",
           href: "/dashboard/performance",
           match: ["/dashboard/performance"],
-          icon: navEmoji("📈"),
+          icon: l(<BarChart3 size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           // Actionable nudges pulled live from CRM data: stale past
@@ -274,7 +304,7 @@ const navConfig = {
           label: "Coaching",
           href: "/dashboard/coaching",
           match: ["/dashboard/coaching"],
-          icon: navEmoji("🧭"),
+          icon: l(<Compass size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           // Combined sphere monetization view — seller + buyer scores
@@ -283,13 +313,13 @@ const navConfig = {
           label: "Sphere monetization",
           href: "/dashboard/sphere/monetization",
           match: ["/dashboard/sphere/monetization"],
-          icon: navEmoji("💎"),
+          icon: l(<Gem size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Growth & Opportunities",
           href: "/dashboard/growth",
           match: ["/dashboard/growth"],
-          icon: navEmoji("🚀"),
+          icon: l(<Rocket size={14} strokeWidth={STROKE} aria-hidden />),
         },
       ],
     },
@@ -297,19 +327,16 @@ const navConfig = {
     /* ── Property Tools ── calculator suite + CMA library. CMAs live
        here (not under Sellers) because they're useful on both sides:
        sellers see them as pricing strategy, buyers use them to size
-       offers. The library at /dashboard/cma stores saved snapshots
-       (PDF + email-to-contact flow); the tools tile grid at
-       /dashboard/tools links out to the individual calculators
-       (Smart CMA Builder, AI Deal Closer, etc.). ── */
+       offers. ── */
     {
       label: "Property Tools",
-      icon: navEmoji("🏡"),
+      icon: p(<Building2 size={17} strokeWidth={STROKE} aria-hidden />),
       items: [
         {
           label: "All tools",
           href: "/dashboard/tools",
           match: ["/dashboard/tools"],
-          icon: navEmoji("🧰"),
+          icon: l(<Wrench size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           // Per-agent CMA library — saved snapshots with PDF + email-
@@ -318,33 +345,35 @@ const navConfig = {
           label: "CMAs",
           href: "/dashboard/cma",
           match: ["/dashboard/cma"],
-          icon: navEmoji("📐"),
+          icon: l(<Ruler size={14} strokeWidth={STROKE} aria-hidden />),
         },
       ],
     },
 
-    /* ── Account ── */
+    /* ── MANAGE ── settings + role-gated platform admin ── */
+    { kind: "section-label" as const, label: "Manage" },
+
     {
       label: "Account",
-      icon: navEmoji("⚙️"),
+      icon: p(<Settings size={17} strokeWidth={STROKE} aria-hidden />),
       items: [
         {
           label: "Settings",
           href: "/dashboard/settings",
           match: ["/dashboard/settings", "/dashboard/notifications"],
-          icon: navEmoji("⚙️"),
+          icon: l(<Settings size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Billing",
           href: "/dashboard/billing",
           match: ["/dashboard/billing"],
-          icon: navEmoji("💳"),
+          icon: l(<CreditCard size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Profile",
           href: "/account/profile",
           match: ["/account/profile"],
-          icon: navEmoji("👤"),
+          icon: l(<User size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           // Support staff inbox — hidden for non-staff so agents
@@ -356,7 +385,7 @@ const navConfig = {
           href: "/support",
           match: ["/support"],
           roles: ["admin", "support"],
-          icon: <Headphones size={16} strokeWidth={2} aria-hidden />,
+          icon: l(<Headphones size={14} strokeWidth={STROKE} aria-hidden />),
         },
       ],
     },
@@ -365,7 +394,7 @@ const navConfig = {
     { kind: "divider" as const },
     {
       label: "Admin",
-      icon: <LayoutDashboard size={18} strokeWidth={2} aria-hidden />,
+      icon: p(<LayoutDashboard size={17} strokeWidth={STROKE} aria-hidden />),
       roles: ["admin"],
       items: [
         {
@@ -373,35 +402,35 @@ const navConfig = {
           href: "/admin/platform-overview",
           roles: ["admin"],
           match: ["/admin/platform-overview"],
-          icon: <LayoutDashboard size={16} strokeWidth={2} aria-hidden />,
+          icon: l(<LayoutDashboard size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Analytics",
           href: "/admin/founder",
           roles: ["admin"],
           match: ["/admin/founder"],
-          icon: <BarChart3 size={16} strokeWidth={2} aria-hidden />,
+          icon: l(<BarChart3 size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Billing",
           href: "/admin/billing",
           roles: ["admin"],
           match: ["/admin/billing"],
-          icon: <CreditCard size={16} strokeWidth={2} aria-hidden />,
+          icon: l(<CreditCard size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Support Inbox",
           href: "/admin/support",
           roles: ["admin", "support"],
           match: ["/admin/support"],
-          icon: <Headphones size={16} strokeWidth={2} aria-hidden />,
+          icon: l(<Headphones size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Lead Queue",
           href: "/admin/lead-queue",
           roles: ["admin", "support"],
           match: ["/admin/lead-queue"],
-          icon: navEmoji("📋"),
+          icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           // Read-only roster of every agent in the IDX routing pool
@@ -411,7 +440,7 @@ const navConfig = {
           href: "/dashboard/admin/lead-routing",
           roles: ["admin"],
           match: ["/dashboard/admin/lead-routing"],
-          icon: navEmoji("🛣️"),
+          icon: l(<Route size={14} strokeWidth={STROKE} aria-hidden />),
         },
       ],
     },
