@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Wiseway — 未来物流管理系统（交互式蓝图）</title>
+<meta name="description" content="为 Wiseway Logistics 制定的战略技术蓝图。以客户为中心的统一平台，整合多渠道接入、AI 智能与 iCargo 系统，覆盖 18 至 24 个月的分阶段实施路线图。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Wiseway 未来物流管理系统 — 战略蓝图">
+<meta property="og:description" content="为 Wiseway Logistics 制定的战略技术蓝图。以客户为中心的统一平台，整合多渠道接入、AI 智能与 iCargo 系统。">
+<meta property="og:url" content="https://leadsmart-ai.com/pitches/wiseway-blueprint-cn.html">
+<meta property="og:site_name" content="MXAY Investment Inc.">
+<meta property="og:locale" content="zh_CN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Wiseway 未来物流管理系统 — 战略蓝图">
+<meta name="twitter:description" content="为 Wiseway Logistics 制定的战略技术蓝图。以客户为中心的统一平台，整合多渠道接入、AI 智能与 iCargo 系统。">
+<style>
+  :root {
+    --bg: #F7F9FC;
+    --card: #FFFFFF;
+    --border: #E5E7EB;
+    --border-strong: #D1D5DB;
+    --text: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #94A3B8;
+
+    --customer: #3B82F6;
+    --channel: #06B6D4;
+    --platform: #10B981;
+    --outcome: #F59E0B;
+    --data: #8B5CF6;
+    --icargo: #D97706;
+    --phase1: #06B6D4;
+    --phase2: #10B981;
+    --phase3: #F59E0B;
+    --phase4: #8B5CF6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Microsoft YaHei", "微软雅黑", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 18px 24px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header {
+    max-width: 1280px;
+    margin: 0 auto 18px;
+    text-align: center;
+  }
+  header .eyebrow {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  header h1 {
+    font-size: 26px;
+    font-weight: 400;
+    margin: 6px 0 2px;
+    letter-spacing: 0.5px;
+  }
+  header .subtitle {
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 2px;
+  }
+  header .divider {
+    width: 50px;
+    height: 2px;
+    background: var(--customer);
+    margin: 10px auto;
+    border-radius: 1px;
+  }
+
+  .tabs {
+    max-width: 1280px;
+    margin: 0 auto 14px;
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    background: var(--card);
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    width: fit-content;
+  }
+  .tab {
+    padding: 7px 18px;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .tab:hover { color: var(--text); background: var(--bg); }
+  .tab.active {
+    color: white;
+    background: var(--text);
+  }
+
+  main {
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  .view { display: none; }
+  .view.active { display: block; animation: fadeIn 0.3s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .hint {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 11px;
+    margin-bottom: 8px;
+    font-style: italic;
+  }
+
+  /* Customer Journey */
+  .journey-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .col-title {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .node {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    text-align: left;
+  }
+  .node:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  }
+  .node.customer:hover { border-color: var(--customer); }
+  .node.channel:hover { border-color: var(--channel); }
+  .node.platform:hover { border-color: var(--platform); }
+  .node.outcome:hover { border-color: var(--outcome); }
+
+  .icon-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    background: var(--bg);
+  }
+  .node.customer .icon-wrap { background: #DBEAFE; color: var(--customer); }
+  .node.channel  .icon-wrap { background: #CFFAFE; color: var(--channel); }
+  .node.platform .icon-wrap { background: #D1FAE5; color: var(--platform); }
+  .node.outcome  .icon-wrap { background: #FEF3C7; color: var(--outcome); }
+  .node .icon-wrap svg { width: 20px; height: 20px; }
+
+  .node h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .node p {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .node .phase-tag {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .node .phase-tag.p2 { background: #D1FAE5; color: #065F46; }
+  .node .phase-tag.p3 { background: #FEF3C7; color: #92400E; }
+  .node .phase-tag.p4 { background: #EDE9FE; color: #5B21B6; }
+
+  /* Overview - Hub-and-Spoke */
+  .hub-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 620px;
+    aspect-ratio: 1.15 / 1;
+    margin: 0 auto;
+  }
+  .hub-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .hub-svg line {
+    stroke: #CBD5E1;
+    stroke-width: 1.5;
+    stroke-dasharray: 4 5;
+    opacity: 0.7;
+  }
+  .hub {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+    box-shadow: 0 12px 36px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.04);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 2;
+    padding: 10px;
+  }
+  .hub::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px dashed #E2E8F0;
+    opacity: 0.7;
+  }
+  .hub-eyebrow {
+    font-size: 9px;
+    letter-spacing: 2.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .hub-title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--text);
+  }
+  .hub-sub {
+    font-size: 9px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    letter-spacing: 1px;
+  }
+  .spoke {
+    position: absolute;
+    width: 16%;
+    min-width: 88px;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    z-index: 3;
+    transition: transform 0.25s ease;
+  }
+  .spoke:hover { transform: translate(-50%, -50%) scale(1.08); }
+  .spoke .bubble {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent, #3B82F6);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14), inset 0 2px 4px rgba(255,255,255,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-bottom: 6px;
+    border: 2.5px solid var(--card);
+  }
+  .spoke .bubble svg { width: 24px; height: 24px; }
+  .spoke .label {
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--text);
+    line-height: 1.25;
+    letter-spacing: 0.3px;
+  }
+  .spoke .sub {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+  .spoke.phase-tagged .label::after {
+    content: attr(data-phase);
+    display: inline-block;
+    margin-left: 4px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 8px;
+    font-weight: 700;
+    vertical-align: 2px;
+    background: var(--accent);
+    color: white;
+    opacity: 0.85;
+  }
+
+  .spoke.s1 { top: 6%;    left: 50%; }
+  .spoke.s2 { top: 21%;   left: 84%; }
+  .spoke.s3 { top: 50%;   left: 95%; }
+  .spoke.s4 { top: 79%;   left: 84%; }
+  .spoke.s5 { top: 94%;   left: 50%; }
+  .spoke.s6 { top: 79%;   left: 16%; }
+  .spoke.s7 { top: 50%;   left: 5%;  }
+  .spoke.s8 { top: 21%;   left: 16%; }
+
+  /* Roadmap */
+  .roadmap-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 16px;
+    position: relative;
+  }
+  .phase-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    border-top: 4px solid;
+  }
+  .phase-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
+  }
+  .phase-card.phase1 { border-top-color: var(--phase1); }
+  .phase-card.phase2 { border-top-color: var(--phase2); }
+  .phase-card.phase3 { border-top-color: var(--phase3); }
+  .phase-card.phase4 { border-top-color: var(--phase4); }
+  .phase-num {
+    font-size: 48px;
+    font-weight: 200;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .phase-card.phase1 .phase-num { color: var(--phase1); }
+  .phase-card.phase2 .phase-num { color: var(--phase2); }
+  .phase-card.phase3 .phase-num { color: var(--phase3); }
+  .phase-card.phase4 .phase-num { color: var(--phase4); }
+  .phase-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .phase-card.phase1 .phase-label { color: var(--phase1); }
+  .phase-card.phase2 .phase-label { color: var(--phase2); }
+  .phase-card.phase3 .phase-label { color: var(--phase3); }
+  .phase-card.phase4 .phase-label { color: var(--phase4); }
+  .phase-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .phase-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  .phase-card ul {
+    list-style: none;
+  }
+  .phase-card ul li {
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 4px 0;
+    padding-left: 14px;
+    position: relative;
+  }
+  .phase-card ul li::before {
+    content: "›";
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+  }
+
+  /* Tooltip / detail panel */
+  .detail-panel {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 28px;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+    max-width: 720px;
+    width: calc(100% - 48px);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s ease-out;
+    z-index: 100;
+  }
+  .detail-panel.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .detail-panel .close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-muted);
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+  }
+  .detail-panel .close:hover {
+    background: var(--bg);
+    color: var(--text);
+  }
+  .detail-panel .badge {
+    font-size: 10px;
+    letter-spacing: 2px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .detail-panel h3 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .detail-panel p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+  .detail-panel .meta {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  footer {
+    max-width: 1280px;
+    margin: 48px auto 0;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 900px) {
+    .journey-grid, .roadmap-grid { grid-template-columns: 1fr 1fr; }
+    header h1 { font-size: 22px; }
+  }
+
+  /* Mobile / WeChat in-app browser */
+  @media (max-width: 700px) {
+    body { padding: 12px 12px env(safe-area-inset-bottom, 12px); }
+
+    header { margin-bottom: 12px; }
+    header h1 { font-size: 22px; margin: 4px 0 2px; }
+    header .eyebrow { font-size: 9px; letter-spacing: 2px; }
+    header .subtitle { font-size: 10px; }
+    header .divider { margin: 8px auto; }
+
+    .tabs { width: 100%; margin: 0 0 12px; justify-content: space-between; }
+    .tab { padding: 7px 12px; font-size: 12px; flex: 1; text-align: center; }
+
+    .hint { font-size: 10px; margin-bottom: 10px; }
+
+    /* Overview: convert hub-and-spoke into a vertical card list on mobile */
+    .hub-wrap {
+      aspect-ratio: auto;
+      max-width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 0;
+    }
+    .hub-svg { display: none; }
+
+    .hub {
+      position: static;
+      transform: none;
+      width: 100%;
+      aspect-ratio: auto;
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin: 0 0 6px;
+      text-align: center;
+    }
+    .hub::before { display: none; }
+    .hub-eyebrow { font-size: 10px; margin-bottom: 4px; }
+    .hub-title { font-size: 18px; }
+    .hub-sub { font-size: 10px; margin-top: 4px; }
+
+    .spoke {
+      position: static !important;
+      transform: none !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      grid-template-rows: auto auto;
+      column-gap: 14px;
+      align-items: center;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+      text-align: left;
+    }
+    .spoke:hover { transform: none !important; }
+
+    .spoke .bubble {
+      grid-row: 1 / 3;
+      margin-bottom: 0;
+      width: 44px;
+      height: 44px;
+    }
+    .spoke .bubble svg { width: 20px; height: 20px; }
+
+    .spoke .label {
+      grid-column: 2;
+      grid-row: 1;
+      text-align: left;
+      font-size: 13px;
+    }
+    .spoke .sub {
+      grid-column: 2;
+      grid-row: 2;
+      text-align: left;
+      margin-top: 2px;
+      font-size: 11px;
+    }
+
+    /* Journey + roadmap single-column on mobile */
+    .journey-grid {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .col-title {
+      margin-bottom: 6px;
+      margin-top: 4px;
+      text-align: left;
+    }
+    .col { gap: 8px; }
+    .node { padding: 14px; }
+    .node h3 { font-size: 13px; }
+    .node p { font-size: 12px; }
+
+    .roadmap-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .phase-card { padding: 18px; }
+    .phase-num { font-size: 36px; }
+    .phase-title { font-size: 15px; }
+
+    /* Detail panel as bottom sheet */
+    .detail-panel {
+      bottom: max(12px, env(safe-area-inset-bottom, 12px));
+      width: calc(100% - 24px);
+      padding: 16px 18px;
+      border-radius: 14px;
+    }
+    .detail-panel h3 { font-size: 16px; }
+    .detail-panel p { font-size: 13px; line-height: 1.6; }
+    .detail-panel .meta { font-size: 11px; }
+
+    footer { margin-top: 24px; font-size: 10px; padding-top: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">战略蓝图 · WISEWAY LOGISTICS</div>
+  <h1>未来物流管理系统</h1>
+  <div class="divider"></div>
+  <div class="subtitle">交互式总览</div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-view="overview">总览</button>
+  <button class="tab" data-view="journey">客户旅程</button>
+  <button class="tab" data-view="roadmap">实施路线图</button>
+</div>
+
+<p class="hint">悬停或点击任意元素查看详细说明</p>
+
+<main>
+
+<!-- ============================ OVERVIEW (Hub & Spoke) ============================ -->
+<div id="overview" class="view active">
+  <div class="hub-wrap">
+    <svg class="hub-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <line x1="50" y1="50" x2="50" y2="6"/>
+      <line x1="50" y1="50" x2="84" y2="21"/>
+      <line x1="50" y1="50" x2="95" y2="50"/>
+      <line x1="50" y1="50" x2="84" y2="79"/>
+      <line x1="50" y1="50" x2="50" y2="94"/>
+      <line x1="50" y1="50" x2="16" y2="79"/>
+      <line x1="50" y1="50" x2="5"  y2="50"/>
+      <line x1="50" y1="50" x2="16" y2="21"/>
+    </svg>
+
+    <div class="hub" data-detail="hub-platform">
+      <div class="hub-eyebrow">WISEWAY</div>
+      <div class="hub-title">未来物流平台</div>
+      <div class="hub-sub">集成 · AI 驱动 · 全球化</div>
+    </div>
+
+    <div class="spoke s1" style="--accent:#3B82F6" data-detail="ov-customers">
+      <div class="bubble"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg></div>
+      <div class="label">客户</div>
+      <div class="sub">中国卖家 · 美国进口商</div>
+    </div>
+
+    <div class="spoke s2" style="--accent:#06B6D4" data-detail="ov-channels">
+      <div class="bubble"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+      <div class="label">多渠道接入</div>
+      <div class="sub">网页 · 微信 · 短信 · AI</div>
+    </div>
+
+    <div class="spoke s3" style="--accent:#10B981" data-detail="ov-quote">
+      <div class="bubble"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 2 13 9 20 9"/><path d="M20 13v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7z"/><line x1="9" y1="14" x2="15" y2="14"/></svg></div>
+      <div class="label">报价引擎</div>
+      <div class="sub">秒级响应</div>
+    </div>
+
+    <div class="spoke s4 phase-tagged" style="--accent:#22C55E" data-phase="P2" data-detail="ov-booking">
+      <div class="bubble"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 15 11 17 15 13"/></svg></div>
+      <div class="label">下单与支付</div>
+      <div class="sub">在线 · 微信支付</div>
+    </div>
+
+    <div class="spoke s5 phase-tagged" style="--accent:#F59E0B" data-phase="P3" data-detail="ov-tracking">
+      <div class="bubble"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+      <div class="label">运单追踪</div>
+      <div class="sub">实时 GPS 可视化</div>
+    </div>
+
+    <div class="spoke s6" style="--accent:#8B5CF6" data-detail="ov-ai">
+      <div class="bubble"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v.5a3 3 0 0 0-3 3 3 3 0 0 0 1 5.5 3 3 0 0 0 0 4 3 3 0 0 0 3 3h1a3 3 0 0 0 3-3v-1.5a3 3 0 0 0 1.5-5 3 3 0 0 0 0-4A3 3 0 0 0 12 5z"/></svg></div>
+      <div class="label">AI 智能</div>
+      <div class="sub">货物解析 · 需求预测</div>
+    </div>
+
+    <div class="spoke s7" style="--accent:#D97706" data-detail="ov-icargo">
+      <div class="bubble"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
+      <div class="label">iCargo</div>
+      <div class="sub">保留 · 业务核心系统</div>
+    </div>
+
+    <div class="spoke s8" style="--accent:#F97316" data-detail="ov-physical">
+      <div class="bubble"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V7l9-4 9 4v14"/><path d="M3 12h18"/><rect x="8" y="14" width="3" height="4"/><rect x="13" y="14" width="3" height="4"/></svg></div>
+      <div class="label">物理网络</div>
+      <div class="sub">保税仓 · 3PL · IATA</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ CUSTOMER JOURNEY ============================ -->
+<div id="journey" class="view">
+  <div class="journey-grid">
+
+    <div>
+      <div class="col-title">服务对象</div>
+      <div class="col">
+        <div class="node customer" data-detail="customer-cn">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg></div>
+          <h3>中国跨境电商卖家</h3>
+          <p>TikTok Shop、Temu、Shein、亚马逊 FBA、Shopify 独立站等向美国发货的中国卖家</p>
+        </div>
+        <div class="node customer" data-detail="customer-us">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></div>
+          <h3>美国进口商与品牌</h3>
+          <p>通过 Compton 与 Gardena 仓库流转货物的 Wiseway 现有客户</p>
+        </div>
+        <div class="node customer" data-detail="customer-fwd">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg></div>
+          <h3>货代合作伙伴</h3>
+          <p>使用 Wiseway 运力为其自身客户提供报价的第三方货代</p>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="col-title">接入方式</div>
+      <div class="col">
+        <div class="node channel" data-detail="ch-web">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"/></svg></div>
+          <h3>网页门户</h3>
+          <p>公开自助报价表单，无需注册，搜索引擎可收录</p>
+        </div>
+        <div class="node channel" data-detail="ch-wechat">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <h3>微信渠道</h3>
+          <p>小程序报价、公众号客服、微信支付下单</p>
+          <div class="phase-tag p2">第二阶段</div>
+        </div>
+        <div class="node channel" data-detail="ch-ai">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg></div>
+          <h3>AI 智能助手</h3>
+          <p>中英双语对话式交互界面</p>
+          <div class="phase-tag p2">第二阶段</div>
+        </div>
+        <div class="node channel" data-detail="ch-sms">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="13" y2="13"/></svg></div>
+          <h3>短信与邮件</h3>
+          <p>报价就绪、下单确认、状态更新提醒</p>
+          <div class="phase-tag p2">第二阶段</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="col-title">客户操作</div>
+      <div class="col">
+        <div class="node platform" data-detail="pl-quote">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></div>
+          <h3>获取报价</h3>
+          <p>秒级承运商对比，覆盖公路与跨境空运 / 快递</p>
+          <div class="phase-tag">第一阶段</div>
+        </div>
+        <div class="node platform" data-detail="pl-book">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 15 11 17 15 13"/></svg></div>
+          <h3>在线下单</h3>
+          <p>在平台内确认运单并完成支付</p>
+          <div class="phase-tag p2">第二阶段</div>
+        </div>
+        <div class="node platform" data-detail="pl-track">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <h3>运单追踪</h3>
+          <p>实时 GPS 追踪与面向客户的可视化</p>
+          <div class="phase-tag p3">第三阶段</div>
+        </div>
+        <div class="node platform" data-detail="pl-analyze">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+          <h3>数据洞察</h3>
+          <p>航线分析、需求预测、动态定价</p>
+          <div class="phase-tag p4">第四阶段</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="col-title">Wiseway 收益</div>
+      <div class="col">
+        <div class="node outcome" data-detail="out-growth">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+          <h3>营收增长</h3>
+          <p>打开中国跨境电商这一全新客户获取渠道</p>
+        </div>
+        <div class="node outcome" data-detail="out-leverage">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+          <h3>运营杠杆</h3>
+          <p>同样的运营团队可承接 3-5 倍的报价量</p>
+        </div>
+        <div class="node outcome" data-detail="out-margin">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>
+          <h3>利润扩张</h3>
+          <p>定价情报与 AI 利润优化双重作用</p>
+        </div>
+        <div class="node outcome" data-detail="out-moat">
+          <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <h3>战略数据护城河</h3>
+          <p>18 个月积累的报价与定价数据，竞争对手无法复制</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================ ROADMAP ============================ -->
+<div id="roadmap" class="view">
+  <div class="roadmap-grid">
+    <div class="phase-card phase1" data-detail="phase1">
+      <div class="phase-num">01</div>
+      <div class="phase-label">第一阶段</div>
+      <div class="phase-title">客户报价层</div>
+      <div class="phase-date">2026 年 Q2 — Q3</div>
+      <ul>
+        <li>美国公路货运报价平台</li>
+        <li>中美跨境货运报价平台</li>
+        <li>运营管理后台</li>
+        <li>共享云端基础设施</li>
+      </ul>
+    </div>
+
+    <div class="phase-card phase2" data-detail="phase2">
+      <div class="phase-num">02</div>
+      <div class="phase-label">第二阶段</div>
+      <div class="phase-title">下单 · 微信 · AI · 海运</div>
+      <div class="phase-date">2026 年 Q4 — 2027 年 Q1</div>
+      <ul>
+        <li>在线下单与支付</li>
+        <li>微信小程序与公众号集成</li>
+        <li>双语 AI 智能助手</li>
+        <li>海运 LCL（拼箱）</li>
+        <li>到岸成本估算</li>
+      </ul>
+    </div>
+
+    <div class="phase-card phase3" data-detail="phase3">
+      <div class="phase-num">03</div>
+      <div class="phase-label">第三阶段</div>
+      <div class="phase-title">运营 · 司机 · 车队</div>
+      <div class="phase-date">2027 年 Q2 — Q3</div>
+      <ul>
+        <li>EDI 派单与任务分发</li>
+        <li>司机移动应用</li>
+        <li>GPS 实时追踪</li>
+        <li>多停靠点路径规划</li>
+        <li>iCargo 深度集成</li>
+      </ul>
+    </div>
+
+    <div class="phase-card phase4" data-detail="phase4">
+      <div class="phase-num">04</div>
+      <div class="phase-label">第四阶段</div>
+      <div class="phase-title">多区域 · 高阶 AI</div>
+      <div class="phase-date">2027 年 Q4 — 2028 年</div>
+      <ul>
+        <li>澳大利亚上线</li>
+        <li>新西兰与新加坡扩展</li>
+        <li>嵌入式报价组件</li>
+        <li>动态定价</li>
+        <li>需求预测</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- Detail panel -->
+<div class="detail-panel" id="detail">
+  <button class="close" onclick="hideDetail()">×</button>
+  <div class="badge" id="detail-badge"></div>
+  <h3 id="detail-title"></h3>
+  <p id="detail-body"></p>
+  <div class="meta" id="detail-meta"></div>
+</div>
+
+<footer>
+  MXAY Investment Inc. · 战略技术蓝图 · Wiseway Logistics
+</footer>
+
+<script>
+  const details = {
+    'hub-platform': {
+      badge: '平台核心',
+      title: 'Wiseway 未来物流平台',
+      body: '统一的、AI 驱动的客户服务平台，构建于 Wiseway 现有物理与运营网络之上。它将八项核心能力整合为单一体验，服务于中国跨境电商卖家、美国进口商及货代合作伙伴。',
+      meta: '18-24 个月内分阶段建设 · Wiseway 拥有完整知识产权 · 设计为与业务共同成长'
+    },
+    'ov-customers': {
+      badge: '服务对象',
+      title: '客户',
+      body: '三类核心客户群体：中国跨境电商卖家（最具增长潜力的市场）、通过 Wiseway 设施流转货物的美国进口商与品牌、使用 Wiseway 运力为其客户提供报价的货代合作伙伴。',
+      meta: '潜在市场：数百万中国卖家、数千家美国进口商、数百家货代合作伙伴'
+    },
+    'ov-channels': {
+      badge: '接入方式',
+      title: '多渠道接入',
+      body: '客户可通过任意首选渠道接入平台 — 网页、微信（中国卖家的主要渠道）、短信、邮件，或 AI 智能助手。所有渠道接入同一后端，保证体验一致。',
+      meta: '第一阶段：网页 + 邮件 · 第二阶段：增加微信（小程序 + 公众号 + 微信支付） + 短信 + AI 助手'
+    },
+    'ov-quote': {
+      badge: '核心能力 · 第一阶段',
+      title: '报价引擎',
+      body: '秒级承运商对比。客户输入起运地与目的地后，系统将 Wiseway 利润规则应用于承运商运价，即时返回排名报价。第一阶段同时支持美国公路货运和中美空运 / 快递。',
+      meta: '第一阶段交付 · 后续所有能力的核心基础'
+    },
+    'ov-booking': {
+      badge: '能力 · 第二阶段',
+      title: '在线下单与支付',
+      body: '客户确认报价后直接在平台内完成支付 — 支持美元、人民币以及微信支付。下单后生成运单记录并触发承运商任务派发。',
+      meta: '上线时间：第二阶段（2026 年 Q4 - 2027 年 Q1）· 将平台从报价工具升级为交易型系统'
+    },
+    'ov-tracking': {
+      badge: '能力 · 第三阶段',
+      title: '运单追踪',
+      body: '面向客户的实时运单可视化 — 国内陆运段数据来源为 GPS 与电子运行记录仪（ELD），国际段来源为承运商状态接口。',
+      meta: '上线时间：第三阶段（2027 年 Q2-Q3）· 数据来源：司机端 App + 承运商 API'
+    },
+    'ov-ai': {
+      badge: '战略能力',
+      title: 'AI 智能',
+      body: '不断扩展的 AI 能力套件：双语对话助手、自然语言货物描述解析、自动识别受限品类、AI 价目表录入、需求预测，以及动态定价建议。',
+      meta: '第二阶段：AI 助手 + 货物解析 · 第三阶段：异常检测 · 第四阶段：需求预测 + 动态定价'
+    },
+    'ov-icargo': {
+      badge: '保留 · 业务核心系统',
+      title: 'iCargo',
+      body: 'Wiseway 成熟的航空货运后台系统继续按现有方式运行。新平台与 iCargo 集成，不替换 iCargo。AWB（空运提单）签发、海关单据、运力管理、空运计费等均继续在 iCargo 中处理。',
+      meta: '集成节奏：第一阶段独立运行 · 第二阶段 AWB 衔接 · 第三阶段运力与计费同步'
+    },
+    'ov-physical': {
+      badge: '物理基础',
+      title: '物理网络',
+      body: 'Wiseway 现有的全球物理布局 — IATA 认证空运代理资质，覆盖美国、澳大利亚、新西兰、新加坡的海关保税仓与第三方物流（3PL）履约中心。',
+      meta: '美国：Gardena 保税仓 + Compton 3PL · 澳大利亚：悉尼、墨尔本、布里斯班、珀斯、阿德莱德 · 新西兰 + 新加坡保税仓'
+    },
+    'customer-cn': {
+      badge: '客户群体',
+      title: '中国跨境电商卖家',
+      body: '最大且增长最快的客户群体。涵盖 TikTok Shop、Temu、Shein、亚马逊 FBA 卖家，以及数以万计的独立 Shopify 卖家。',
+      meta: '规模：全球数百万卖家 · 行为特征：价格敏感、偏好自助、中英双语 · 渠道偏好：微信、网页'
+    },
+    'customer-us': {
+      badge: '客户群体',
+      title: '美国进口商与品牌',
+      body: '通过 Gardena 保税仓与 Compton 3PL 履约中心流转货物的 Wiseway 现有客户。涵盖美国本土进口商、零售品牌与分销运营商。',
+      meta: '客户关系：现有账户 · 渠道偏好：邮件、客户经理，并逐步向自助方向迁移'
+    },
+    'customer-fwd': {
+      badge: '客户群体',
+      title: '货代合作伙伴',
+      body: '第三方货代将 Wiseway 运力作为转报价对象提供给其自身客户。平台从第一阶段起即支持这类 B2B 合作渠道。',
+      meta: '客户关系：批发 · 单账户体量大 · 利润率较薄但运力利用率较高'
+    },
+    'ch-web': {
+      badge: '接入渠道',
+      title: '网页门户',
+      body: '简洁的英文公开报价表单。无需登录即可获取报价。针对 SEO 优化，便于中国卖家通过搜索引擎自然发现。',
+      meta: '上线时间：第一阶段 · 公开匿名报价 · 移动端响应式适配'
+    },
+    'ch-wechat': {
+      badge: '接入渠道 · 第二阶段',
+      title: '微信渠道',
+      body: '微信是中国跨境电商卖家最核心的沟通渠道，缺少微信渠道意味着平台失去半数战斗力。第二阶段微信集成覆盖三个层面：',
+      meta: '• 微信小程序 — 在微信内原生发起报价请求 · 公众号 — 客户服务与报价跟进 · 微信支付 — 与第二阶段在线下单结合'
+    },
+    'ch-ai': {
+      badge: '接入渠道 · 第二阶段',
+      title: '双语 AI 智能助手',
+      body: '中英双语对话式交互界面，集成于网页、微信和短信渠道。帮助客户完善货物信息、对比报价方案、即时解答疑问。',
+      meta: '跨渠道集成 · 依托第一阶段积累的报价数据 · 使用越多效果越优'
+    },
+    'ch-sms': {
+      badge: '接入渠道 · 第二阶段',
+      title: '短信与邮件',
+      body: '报价就绪、下单确认、运单状态更新等交易型通知。短信支持中美双方手机号码。',
+      meta: '邮件：第一阶段起 · 短信：第二阶段起'
+    },
+    'pl-quote': {
+      badge: '平台能力 · 第一阶段',
+      title: '获取报价',
+      body: '秒级承运商对比。客户输入起运地与目的地后，系统将 Wiseway 利润规则应用于承运商运价，即时返回排名方案。第一阶段同时支持美国公路货运与中美空运 / 快递。',
+      meta: '基础能力 · 第一阶段（2026 年 Q3）上线'
+    },
+    'pl-book': {
+      badge: '平台能力 · 第二阶段',
+      title: '在线下单',
+      body: '客户确认报价并在平台内直接支付。下单生成运单记录并触发承运商任务派发（第二阶段为人工流程，第三阶段升级为 EDI 自动化）。',
+      meta: '第二阶段（2027 年 Q1）上线 · 支持微信支付 · 美元与人民币双币种'
+    },
+    'pl-track': {
+      badge: '平台能力 · 第三阶段',
+      title: '运单追踪',
+      body: '面向客户的实时运单追踪，数据来源为陆运层的 GPS 与 ELD 数据，以及国际段的承运商状态接口。',
+      meta: '第三阶段（2027 年 Q3）上线 · 数据来源：司机 App + 承运商 API'
+    },
+    'pl-analyze': {
+      badge: '平台能力 · 第四阶段',
+      title: '数据洞察',
+      body: '基于积累的平台数据进行航线维度的需求预测、动态定价建议、报价与运价异常检测。',
+      meta: '第四阶段（2028 年）上线 · 数据越多效果越优，呈复利增长'
+    },
+    'out-growth': {
+      badge: '战略成果',
+      title: '营收增长',
+      body: '现代化的客户服务平台打开数百万中国跨境电商卖家这一 Wiseway 当前尚未触达的市场。秒级报价相较于以邮件耗时数日的报价流程，成交转化率显著提升。',
+      meta: '影响：新增收入流 · 兑现节奏：第一阶段起即开始'
+    },
+    'out-leverage': {
+      badge: '战略成果',
+      title: '运营杠杆',
+      body: '人工询价、人工报价、人工客户沟通 — 全部转化为结构化流程。现有运营团队可在不显著增加人数的前提下承接今天 3-5 倍的报价量。',
+      meta: '影响：成本控制 + 规模扩张 · 兑现节奏：第一阶段起即开始'
+    },
+    'out-margin': {
+      badge: '战略成果',
+      title: '利润扩张',
+      body: '利润引擎、定价情报、以及（第二阶段及以后的）AI 动态利润优化协同发力，对每一个成交报价维护并扩大毛利率。',
+      meta: '影响：以基点（bps）计的毛利率扩张 · 兑现节奏：第二阶段起'
+    },
+    'out-moat': {
+      badge: '战略成果',
+      title: '战略数据护城河',
+      body: '18 个月以上的结构化报价、运价、需求与成交数据，构成一项竞争对手无法通过模仿界面复制的资产。它会随时间持续积累，并驱动 AI 能力进一步巩固定价领先地位。',
+      meta: '影响：结构性竞争优势 · 兑现节奏：随时间持续累积'
+    },
+    'phase1': {
+      badge: '第一阶段 · 2026 年 Q2 — Q3',
+      title: '客户报价层',
+      body: '两个生产级报价平台 — 美国公路货运与中美跨境货运 — 部署于共享的云端基础设施之上。Wiseway 运营管理后台、基础报表。第一阶段平台独立运行，不依赖 iCargo，从而降低首期交付风险。',
+      meta: '交付：市场可见的自助报价层 · 投资：详情见已提交的两份 MXAY 项目提案'
+    },
+    'phase2': {
+      badge: '第二阶段 · 2026 年 Q4 — 2027 年 Q1',
+      title: '下单 · 微信 · AI · 海运',
+      body: '跨境业务的在线下单与支付。微信集成（公众号、小程序、微信支付）。短信通知。简体中文界面。双语 AI 报价助手。AI 货物描述解析。AI 价目表录入。海运 LCL（拼箱）。到岸成本估算。客户账户与运单历史。iCargo 集成首期（AWB 衔接）。',
+      meta: '转型：平台从报价工具升级为交易型系统'
+    },
+    'phase3': {
+      badge: '第三阶段 · 2027 年 Q2 — Q3',
+      title: '运营 · 司机 · 车队',
+      body: '美国公路货运下单与承运商任务派发（EDI）。iOS 与 Android 司机移动应用。GPS / ELD 实时追踪。多停靠点路径规划。车队合规。面向客户的实时运单追踪。iCargo 深度集成（运力、计费同步）。海运 FCL（整箱）。',
+      meta: '延伸：平台从报价向全运营能力扩展'
+    },
+    'phase4': {
+      badge: '第四阶段 · 2027 年 Q4 — 2028 年',
+      title: '多区域 · 高阶 AI',
+      body: '澳大利亚上线（公路 + 跨境双轨）。新西兰与新加坡扩展。面向商业合作伙伴的嵌入式报价组件。市场化（marketplace）功能。高阶 AI：动态定价、航线需求预测、运力优化。完整的企业级 BI 套件。',
+      meta: '完成：全球运营布局统一于一个数字平台'
+    }
+  };
+
+  function showDetail(key) {
+    const d = details[key];
+    if (!d) return;
+    const panel = document.getElementById('detail');
+    document.getElementById('detail-badge').innerHTML = d.badge;
+    document.getElementById('detail-title').innerHTML = d.title;
+    document.getElementById('detail-body').innerHTML = d.body;
+    document.getElementById('detail-meta').innerHTML = d.meta;
+    panel.dataset.key = key;
+    panel.classList.add('show');
+  }
+
+  function hideDetail() {
+    const panel = document.getElementById('detail');
+    panel.classList.remove('show');
+    delete panel.dataset.key;
+  }
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.view).classList.add('active');
+      hideDetail();
+    });
+  });
+
+  const supportsHover = window.matchMedia('(hover: hover)').matches;
+  document.querySelectorAll('[data-detail]').forEach(el => {
+    if (supportsHover) {
+      el.addEventListener('mouseenter', () => showDetail(el.dataset.detail));
+      el.addEventListener('mouseleave', () => hideDetail());
+    }
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const panel = document.getElementById('detail');
+      if (panel.classList.contains('show') && panel.dataset.key === el.dataset.detail) {
+        hideDetail();
+      } else {
+        showDetail(el.dataset.detail);
+      }
+    });
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideDetail();
+  });
+</script>
+
+</body>
+</html>
