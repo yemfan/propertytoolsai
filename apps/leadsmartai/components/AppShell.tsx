@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode, useCallback, useMemo } from "react";
-import { PremiumSidebarV2, Topbar } from "@repo/ui";
+import { PremiumSidebarV2, Topbar, type MobileSidebarUser } from "@repo/ui";
 import { useAuth } from "@/components/AuthProvider";
 import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
@@ -34,12 +34,21 @@ function useSidebarUser() {
   }, [user?.email]);
 }
 
-function MarketingTopChrome() {
+function MarketingTopChrome({
+  user,
+  onLogout,
+}: {
+  user: MobileSidebarUser | undefined;
+  onLogout: () => void;
+}) {
   return (
     <Topbar
       appName={APP_NAME}
       sections={leadSmartMarketingNav}
       searchPlaceholder="Search calculators, tools, and pages…"
+      mobileWorkspaceLabel={marketingNavConfig.sidebarTitle ?? "Tools"}
+      mobileUser={user}
+      onMobileLogout={user ? onLogout : undefined}
       leadingExtra={
         <Link
           href="/"
@@ -238,7 +247,7 @@ function MarketingChrome({ children }: { children: ReactNode }) {
         footer={sidebarUser ? undefined : marketingSidebarFooter}
       />
       <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
-        <MarketingTopChrome />
+        <MarketingTopChrome user={sidebarUser} onLogout={handleLogout} />
         <main id="main-content" className="min-w-0 flex-1 overflow-x-hidden p-4 sm:p-8">{children}</main>
         <Footer />
         <FloatingCTA />

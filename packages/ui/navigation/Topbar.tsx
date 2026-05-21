@@ -3,7 +3,7 @@
 import { Search } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { MobileSidebar } from "./MobileSidebar";
+import { MobileSidebar, type MobileSidebarUser } from "./MobileSidebar";
 import type { NavSection } from "./types";
 
 export type TopbarAction = {
@@ -34,6 +34,19 @@ export type TopbarProps = {
   /** Second row under the bar (e.g. mobile-only search). */
   below?: ReactNode;
   className?: string;
+  // ── Pass-through to the internal MobileSidebar drawer ──
+  /** Drawer header subtitle ("Agent portal", "Tools", etc.). */
+  mobileWorkspaceLabel?: string;
+  /** Renders the drawer's search trigger row; fires when tapped. */
+  onMobileSearchClick?: () => void;
+  /** Drawer footer user-identity card. */
+  mobileUser?: MobileSidebarUser;
+  /** Drawer footer logout button. Renders only with `mobileUser`. */
+  onMobileLogout?: () => void;
+  /** Drawer settings link. Defaults to `/dashboard/settings`. */
+  mobileSettingsHref?: string;
+  /** Drawer footer consumer slot above the user card. */
+  mobileFooter?: ReactNode;
 };
 
 function actionClasses(action: TopbarAction): string {
@@ -87,13 +100,28 @@ export function Topbar({
   trailing,
   below,
   className = "",
+  mobileWorkspaceLabel,
+  onMobileSearchClick,
+  mobileUser,
+  onMobileLogout,
+  mobileSettingsHref,
+  mobileFooter,
 }: TopbarProps) {
   return (
     <header
       className={`sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-xl backdrop-saturate-150 ${className}`}
     >
       <div className="flex h-[60px] items-center gap-3 px-4 md:gap-4 md:px-6">
-        <MobileSidebar appName={appName} sections={sections} />
+        <MobileSidebar
+          appName={appName}
+          sections={sections}
+          workspaceLabel={mobileWorkspaceLabel}
+          onSearchClick={onMobileSearchClick}
+          user={mobileUser}
+          onLogout={onMobileLogout}
+          settingsHref={mobileSettingsHref}
+          footer={mobileFooter}
+        />
 
         {leadingExtra ? <div className="min-w-0 shrink-0">{leadingExtra}</div> : null}
 
