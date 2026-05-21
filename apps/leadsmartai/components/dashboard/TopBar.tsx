@@ -377,6 +377,34 @@ export default function TopBar({
     await signOutWithFullReload("/login");
   }
 
+  // ── Mobile drawer wiring (PremiumSidebarV2 mirror inside MobileSidebar) ──
+  const mobileDisplayName = useMemo(() => displayName(fullName, email), [fullName, email]);
+  const mobileUser = useMemo(
+    () =>
+      email
+        ? {
+            name: mobileDisplayName,
+            email,
+            initials: initialsFromDisplay(mobileDisplayName),
+            planLabel: appRole ? formatUserRoleLabel(appRole) : undefined,
+          }
+        : undefined,
+    [email, appRole, mobileDisplayName]
+  );
+  const handleMobileSearch = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new CustomEvent("open-command-palette"));
+  }, []);
+  const mobileUpgradePromo = showAgentBrokerPromotion ? (
+    <Link
+      href="/dashboard/billing"
+      className="block rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-3 py-2.5 text-sm leading-snug text-white shadow-lg shadow-slate-900/25 ring-1 ring-white/10"
+    >
+      <span className="block font-medium text-white/95">Grow with AI follow-ups</span>
+      <span className="mt-0.5 block text-xs text-white/70">Upgrade for more credits and automation.</span>
+    </Link>
+  ) : undefined;
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -439,6 +467,11 @@ export default function TopBar({
       appName="LeadSmart AI"
       sections={navSections}
       searchPlaceholder="Search leads, clients, addresses..."
+      mobileWorkspaceLabel="Agent portal"
+      onMobileSearchClick={handleMobileSearch}
+      mobileUser={mobileUser}
+      onMobileLogout={onLogout}
+      mobileFooter={mobileUpgradePromo}
       leadingExtra={
         <Link
           href="/dashboard"

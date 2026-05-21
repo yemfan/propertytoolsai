@@ -27,7 +27,7 @@ export type {
   PremiumSidebarV2User,
 } from "./PremiumSidebarV2";
 export { MobileSidebar } from "./MobileSidebar";
-export type { MobileSidebarProps } from "./MobileSidebar";
+export type { MobileSidebarProps, MobileSidebarUser } from "./MobileSidebar";
 export { Topbar } from "./Topbar";
 export type { TopbarAction, TopbarProps } from "./Topbar";
 export { PremiumTopbar } from "./PremiumTopbar";
