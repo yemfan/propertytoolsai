@@ -3,21 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode, useCallback, useMemo } from "react";
-import { PremiumSidebarV2, Topbar, type MobileSidebarUser } from "@repo/ui";
+import type { MobileSidebarUser } from "@repo/ui";
 import { useAuth } from "@/components/AuthProvider";
 import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
-import HeaderAuthActions from "@/components/HeaderAuthActions";
 import marketingNavConfig, { leadSmartMarketingNav } from "@/marketing.nav.config";
+import { MarketingTopNav } from "@/components/marketing/MarketingTopNav";
 import { SupportChatLauncher } from "@/components/support/CustomerSupportChat";
 import Footer from "./Footer";
 import FloatingCTA from "./FloatingCTA";
 
 const APP_NAME = "LeadSmart AI";
-
-const marketingSidebarFooter = (
-  <p className="text-center text-xs leading-relaxed text-gray-500">© {new Date().getFullYear()} LeadSmart AI</p>
-);
 
 /** Marketing-shell user card — only renders when an auth session exists. */
 function useSidebarUser() {
@@ -34,43 +30,12 @@ function useSidebarUser() {
   }, [user?.email]);
 }
 
-function MarketingTopChrome({
-  user,
-  onLogout,
-}: {
-  user: MobileSidebarUser | undefined;
-  onLogout: () => void;
-}) {
-  return (
-    <Topbar
-      appName={APP_NAME}
-      sections={leadSmartMarketingNav}
-      searchPlaceholder="Search calculators, tools, and pages…"
-      mobileWorkspaceLabel={marketingNavConfig.sidebarTitle ?? "Tools"}
-      mobileUser={user}
-      onMobileLogout={user ? onLogout : undefined}
-      leadingExtra={
-        <Link
-          href="/"
-          className="flex min-w-0 shrink-0 items-center rounded-2xl p-1 outline-none transition hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-emerald-500/30"
-        >
-          <LeadSmartLogo className="h-8 max-w-[min(100%,220px)] w-auto sm:h-9" />
-        </Link>
-      }
-      trailing={
-        <div className="flex items-center gap-2">
-          <HeaderAuthActions />
-          <SupportChatLauncher />
-        </div>
-      }
-    />
-  );
-}
-
 /**
  * LeadSmart AI — App Router shell:
- * - Marketing / tools: `PremiumSidebar` + `Topbar` (`MobileSidebar` inside top bar) from `@repo/ui`
- * - Dashboard + account settings use `DashboardShell` in `app/dashboard/layout.tsx` and `app/account/layout.tsx`
+ * - Marketing / tools: top-nav-only chrome via `MarketingTopNav` (the
+ *   legacy left sidebar was removed; the mobile drawer that `MarketingTopNav`
+ *   embeds uses the shared `MobileSidebar` from `@repo/ui`).
+ * - Dashboard + account settings use `DashboardShell` in `app/dashboard/layout.tsx` and `app/account/layout.tsx`.
  */
 function isPlatformDashboardPath(pathname: string): boolean {
   return (
@@ -237,21 +202,18 @@ function MarketingChrome({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="flex min-h-screen min-h-0 w-full min-w-0 flex-col overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-emerald-50/20 text-slate-900 lg:min-h-screen lg:flex-row lg:items-stretch">
-      <PremiumSidebarV2
-        appName={APP_NAME}
+    <div className="flex min-h-screen w-full min-w-0 flex-col overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-emerald-50/20 text-slate-900 dark:from-slate-950 dark:via-slate-950 dark:to-slate-950 dark:text-slate-100">
+      <MarketingTopNav
         sections={leadSmartMarketingNav}
-        workspaceLabel={marketingNavConfig.sidebarTitle ?? "Tools"}
+        workspaceLabel={marketingNavConfig.sidebarTitle ?? "Menu"}
         user={sidebarUser}
-        onLogout={sidebarUser ? handleLogout : undefined}
-        footer={sidebarUser ? undefined : marketingSidebarFooter}
+        onLogout={handleLogout}
       />
-      <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
-        <MarketingTopChrome user={sidebarUser} onLogout={handleLogout} />
-        <main id="main-content" className="min-w-0 flex-1 overflow-x-hidden p-4 sm:p-8">{children}</main>
-        <Footer />
-        <FloatingCTA />
-      </div>
+      <main id="main-content" className="min-w-0 flex-1 overflow-x-hidden p-4 sm:p-8">
+        {children}
+      </main>
+      <Footer />
+      <FloatingCTA />
     </div>
   );
 }
