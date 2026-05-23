@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { getKeywordPagesForCity, TRAFFIC_CITIES } from "@/lib/trafficSeo";
 import { HELP_GUIDES } from "@/lib/help/guides";
 import { BLOG_POSTS } from "@/lib/blog/posts";
+import { SWITCH_SOURCES } from "@/lib/marketing/switch-from";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -55,6 +56,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // so adding a post is one append + this sitemap re-renders automatically.
   const blogRoutes = ["/blog", ...BLOG_POSTS.map((p) => p.href)];
 
+  // CRM migration landing pages — bottom-of-funnel conversion surface
+  // for agents leaving LionDesk, Follow Up Boss, kvCORE, etc.
+  const switchFromRoutes = [
+    "/switch-from",
+    ...SWITCH_SOURCES.map((s) => `/switch-from/${s.slug}`),
+  ];
+
   const seoRoutes = TRAFFIC_CITIES.flatMap((c) => [
     `/home-value/${c.slug}`,
     `/sell-house/${c.slug}`,
@@ -81,6 +89,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...calculatorRoutes,
     ...helpRoutes,
     ...blogRoutes,
+    ...switchFromRoutes,
     ...seoRoutes,
     ...keywordRoutes,
   ].map((path) => ({
