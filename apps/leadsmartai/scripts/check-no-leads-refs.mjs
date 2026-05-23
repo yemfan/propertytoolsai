@@ -60,17 +60,25 @@ const LEAD_ID_ALLOWLIST = new Set([
 
 /**
  * Tables whose columns still legitimately use `lead_id` per the
- * live DB schema. The guard ignores `.eq("lead_id", …)` calls when
- * they appear within a query against one of these tables.
+ * live DB schema. The guard ignores `.eq("lead_id", …)` calls AND
+ * `{ lead_id: … }` insert/update payloads when they appear within
+ * a query against one of these tables.
  *
  * Detected via a 5-line lookback: if `from("<allowed-table>")`
  * appears within 5 lines before the lead_id reference, it's allowed.
+ *
+ * `lead_sequences` is the AI follow-up table created in the
+ * 20260321 nurturing-system migration. It keyed off `leads.id`
+ * pre-rename and continues to use `lead_id` post-rename — the
+ * value still resolves to the same row in the renamed `contacts`
+ * table because the cluster migration kept ids stable.
  */
 const LEAD_ID_TABLE_ALLOWLIST = [
   "lead_calls",
   "lead_tasks",
   "lead_events",
   "lead_followups",
+  "lead_sequences",
   "message_logs",
 ];
 
@@ -153,6 +161,11 @@ for (const target of TARGETS) {
         // possible in lib/types.ts / column lists.
         if (/^\s*(?:\/\/|\*|\/\*)/.test(line)) continue;
         if (/lead_id\?\s*:/.test(line)) continue; // optional type fields
+        // Honor the same table-context allowlist used for string
+        // literals — an insert/update payload against an allowlisted
+        // table (e.g. lead_sequences) legitimately writes lead_id.
+        const table = tableContextFor(lines, i);
+        if (table && LEAD_ID_TABLE_ALLOWLIST.includes(table)) continue;
         violations.push({
           file: rel,
           line: i + 1,

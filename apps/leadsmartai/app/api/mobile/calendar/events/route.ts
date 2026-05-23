@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const fromIso = url.searchParams.get("from") ?? undefined;
     const toIso = url.searchParams.get("to") ?? undefined;
-    const leadId = url.searchParams.get("lead_id")?.trim() || undefined;
+    const leadId = url.searchParams.get("lead_id")?.trim() || undefined; // allow-leads-ref: legacy URL query param (?lead_id=…) for mobile clients — not a DB column reference
     const events = await listMobileCalendarEvents({
       agentId: auth.ctx.agentId,
       fromIso: fromIso ?? undefined,
