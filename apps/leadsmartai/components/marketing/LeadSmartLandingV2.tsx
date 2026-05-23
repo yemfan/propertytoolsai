@@ -414,9 +414,7 @@ export default function LeadSmartLandingV2() {
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-6 md:gap-x-14">
               <BrokerageWordmark name="RE/MAX" logoSrc="/images/brokerages/Remax.png" />
-              {/* Coldwell Banker logo not yet uploaded — falls back
-                  to the text wordmark until /images/brokerages/ColdwellBanker.png is added. */}
-              <BrokerageWordmark name="COLDWELL BANKER" />
+              <BrokerageWordmark name="COLDWELL BANKER" logoSrc="/images/brokerages/ColdwellBanker.svg" />
               <BrokerageWordmark name="KELLER WILLIAMS" logoSrc="/images/brokerages/KW.png" />
               <BrokerageWordmark name="CENTURY 21" logoSrc="/images/brokerages/Century21.png" />
             </div>
