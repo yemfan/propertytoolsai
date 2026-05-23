@@ -224,6 +224,16 @@ export default function LeadSmartLandingV2() {
           </div>
           <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-6 py-20 md:grid-cols-2 md:gap-12 md:py-28">
             <div className="max-w-xl lg:max-w-2xl">
+              {/* Trust line — names brokerages whose agents use
+                  the platform. Phrased as "Trusted by [Brokerage]
+                  agents" (modifying "agents") rather than "Trusted
+                  by [Brokerage]" (which would imply brokerage-
+                  level endorsement we don't have). Layer in a
+                  customer count once we have one: "Trusted by
+                  200+ RE/MAX agents, Coldwell Banker agents, …". */}
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                {t("hero.trust_line")}
+              </p>
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#0072ce]/20 bg-white/80 px-4 py-1.5 text-xs font-medium text-[#0072ce] shadow-sm backdrop-blur-sm dark:border-[#0072ce]/30 dark:bg-slate-900/80 dark:text-[#4da3e8]">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0072ce] opacity-75" />
@@ -350,6 +360,63 @@ export default function LeadSmartLandingV2() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── STATS STRIP ───
+            First scroll target after the hero. Four quantified
+            claims — three product specs + one industry stat (47%
+            first-responder advantage). Every number is defensible
+            without customer data; swap real customer-outcome
+            numbers in once the beta cohort produces them. */}
+        <section className="bg-white px-6 py-12 dark:bg-slate-950 md:py-14">
+          <div className="mx-auto max-w-6xl">
+            <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-[#0072ce]">
+              {t("stats_strip.eyebrow")}
+            </p>
+            <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-4">
+              {(
+                [
+                  "response",
+                  "first_responder",
+                  "voice_ai",
+                  "starting_price",
+                ] as const
+              ).map((key) => (
+                <div key={key} className="text-center">
+                  <dt className="font-heading text-3xl font-extrabold leading-none tracking-tight md:text-4xl">
+                    <span className="bg-gradient-to-r from-[#0072ce] via-[#4F46E5] to-[#7c3aed] bg-clip-text text-transparent">
+                      {t(`stats_strip.items.${key}.value`)}
+                    </span>
+                  </dt>
+                  <dd className="mt-2 text-sm leading-snug text-slate-600 dark:text-slate-300">
+                    {t(`stats_strip.items.${key}.label`)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+
+        {/* ── BROKERAGE LOGO STRIP ───
+            Social-proof row: brokerage names whose agents use the
+            platform, framed as nominative reference ("Trusted by
+            agents at …") not endorsement. Wordmarks are styled in
+            grayscale via the BrokerageWordmark component below.
+            Swap each <BrokerageWordmark> for a real <Image> or
+            inline SVG once we pull official logos from each
+            brokerage's brand kit. */}
+        <section className="border-b border-slate-200/80 bg-slate-50/50 px-6 py-10 dark:border-slate-800 dark:bg-slate-900/30 md:py-12">
+          <div className="mx-auto max-w-6xl">
+            <p className="text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+              {t("brokerage_strip.eyebrow")}
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-6 md:gap-x-14">
+              <BrokerageWordmark name="RE/MAX" />
+              <BrokerageWordmark name="COLDWELL BANKER" />
+              <BrokerageWordmark name="KELLER WILLIAMS" />
+              <BrokerageWordmark name="CENTURY 21" />
             </div>
           </div>
         </section>
@@ -835,6 +902,34 @@ export default function LeadSmartLandingV2() {
 /* ────────────────────────────────────────────────────────────────────
  * Sub-components + content tables
  * ──────────────────────────────────────────────────────────────────── */
+
+/**
+ * Brokerage wordmark — text-only placeholder for the social-proof
+ * logo strip below the stats section. Renders the brokerage name
+ * in a uniform muted grayscale treatment so the row reads as a
+ * "logo wall" without using any actual trademark imagery.
+ *
+ * Replace with proper logo files when available:
+ *   1. Drop the official SVG into `public/images/brokerages/<slug>.svg`.
+ *   2. Swap this component's body for a `next/image` <Image> at a
+ *      uniform height (~28px) with `className="opacity-60 hover:opacity-100 transition"`.
+ *   3. Keep the `aria-label` so screen readers still announce the brokerage.
+ *
+ * The current text rendering is intentional: it's safer than
+ * hot-linking copyrighted logos, and the visual gap is small in
+ * grayscale. Real SVGs lift conversion materially though, so this
+ * should be a near-term follow-up.
+ */
+function BrokerageWordmark({ name }: { name: string }) {
+  return (
+    <span
+      aria-label={name}
+      className="select-none text-base font-bold uppercase tracking-[0.18em] text-slate-500 opacity-70 transition hover:opacity-100 dark:text-slate-400 md:text-lg"
+    >
+      {name}
+    </span>
+  );
+}
 
 function DashStat({ n, l, tone }: { n: string; l: string; tone: "blue" | "green" | "violet" }) {
   const palette = {
