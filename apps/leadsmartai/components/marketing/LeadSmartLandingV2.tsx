@@ -413,10 +413,12 @@ export default function LeadSmartLandingV2() {
               {t("brokerage_strip.eyebrow")}
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-6 md:gap-x-14">
-              <BrokerageWordmark name="RE/MAX" />
+              <BrokerageWordmark name="RE/MAX" logoSrc="/images/brokerages/Remax.png" />
+              {/* Coldwell Banker logo not yet uploaded — falls back
+                  to the text wordmark until /images/brokerages/ColdwellBanker.png is added. */}
               <BrokerageWordmark name="COLDWELL BANKER" />
-              <BrokerageWordmark name="KELLER WILLIAMS" />
-              <BrokerageWordmark name="CENTURY 21" />
+              <BrokerageWordmark name="KELLER WILLIAMS" logoSrc="/images/brokerages/KW.png" />
+              <BrokerageWordmark name="CENTURY 21" logoSrc="/images/brokerages/Century21.png" />
             </div>
           </div>
         </section>
@@ -904,23 +906,35 @@ export default function LeadSmartLandingV2() {
  * ──────────────────────────────────────────────────────────────────── */
 
 /**
- * Brokerage wordmark — text-only placeholder for the social-proof
- * logo strip below the stats section. Renders the brokerage name
- * in a uniform muted grayscale treatment so the row reads as a
- * "logo wall" without using any actual trademark imagery.
+ * Brokerage wordmark — renders a real logo image when one exists in
+ * `public/images/brokerages/`, falls back to a text wordmark
+ * otherwise. The image render is grayscaled by default with a
+ * full-color hover state so the row reads as a uniform "logo wall."
  *
- * Replace with proper logo files when available:
- *   1. Drop the official SVG into `public/images/brokerages/<slug>.svg`.
- *   2. Swap this component's body for a `next/image` <Image> at a
- *      uniform height (~28px) with `className="opacity-60 hover:opacity-100 transition"`.
- *   3. Keep the `aria-label` so screen readers still announce the brokerage.
- *
- * The current text rendering is intentional: it's safer than
- * hot-linking copyrighted logos, and the visual gap is small in
- * grayscale. Real SVGs lift conversion materially though, so this
- * should be a near-term follow-up.
+ * To add a new brokerage: drop the logo PNG/SVG into
+ * `public/images/brokerages/<filename>` and pass `logoSrc` to this
+ * component. Keep image heights uniform (~32px) so the row stays
+ * visually balanced.
  */
-function BrokerageWordmark({ name }: { name: string }) {
+function BrokerageWordmark({
+  name,
+  logoSrc,
+}: {
+  name: string;
+  /** Optional. Public path to a logo file, e.g. "/images/brokerages/Remax.png". */
+  logoSrc?: string;
+}) {
+  if (logoSrc) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={logoSrc}
+        alt={name}
+        loading="lazy"
+        className="h-8 w-auto max-w-[160px] select-none object-contain opacity-70 grayscale transition hover:opacity-100 hover:grayscale-0 md:h-10"
+      />
+    );
+  }
   return (
     <span
       aria-label={name}

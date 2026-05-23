@@ -1,5 +1,5 @@
 import type { NavConfig } from "@repo/ui";
-import { BookOpen, Calculator, FileText, HelpCircle, Home, LayoutDashboard, LifeBuoy, Mail, MessageCircle, Phone, Search, Sparkles, Users } from "lucide-react";
+import { BookOpen, Calculator, FileText, HelpCircle, Home, LayoutDashboard, LifeBuoy, Mail, MessageCircle, Phone, Plug, Search, Sparkles, Users, Wand2 } from "lucide-react";
 
 /**
  * Public marketing + free tools shell (non-dashboard routes).
@@ -28,6 +28,16 @@ const marketingNavConfig = {
       icon: <Phone size={18} strokeWidth={2} aria-hidden />,
     },
     {
+      // Free tools — replaces the older "Calculators & estimators"
+      // submenu as the primary discoverability surface for our
+      // calculator + analyzer suite. The old submenu stays below
+      // for power-users who jump directly to a specific tool.
+      label: "Free tools",
+      href: "/free-tools",
+      match: ["/free-tools"],
+      icon: <Wand2 size={18} strokeWidth={2} aria-hidden />,
+    },
+    {
       // Blog + Help promoted to top-level so visitors can find them
       // without expanding the Site submenu. Both are major marketing
       // surfaces (blog index has multiple articles, help center
@@ -44,6 +54,12 @@ const marketingNavConfig = {
       href: "/help",
       match: ["/help", "/help/faq", "/help/guides/[slug]"],
       icon: <LifeBuoy size={18} strokeWidth={2} aria-hidden />,
+    },
+    {
+      label: "Integrations",
+      href: "/integrations",
+      match: ["/integrations"],
+      icon: <Plug size={18} strokeWidth={2} aria-hidden />,
     },
     {
       label: "Site",

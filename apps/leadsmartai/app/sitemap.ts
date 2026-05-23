@@ -20,6 +20,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/agent/pricing",
     "/agent/coaching",
     "/agent/compare",
+    "/integrations",
+    "/free-tools",
   ];
 
   // Calculator hub — every public calculator page is indexable
@@ -70,6 +72,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/agent/pricing",
     "/agent/coaching",
     "/agent/compare",
+    "/integrations",
+    "/free-tools",
   ]);
 
   return [
