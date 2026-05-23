@@ -1,1 +1,6 @@
 .vercel
+
+# Capacitor-generated native Android wrapper. The folder is checked into
+# its own .gitignore (see android/.gitignore for build artifacts), but
+# the wrapper itself is regenerated locally and not committed.
+android/
