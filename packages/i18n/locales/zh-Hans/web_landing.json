@@ -7,7 +7,7 @@
     "why": "为何选择我们"
   },
   "hero": {
-    "trust_line": "深受 RE/MAX 经纪人 · Coldwell Banker 经纪人 · 及全美各地独立经纪行信赖",
+    "trust_line": "深受全美各地金牌经纪人信赖",
     "badge": "为房产经纪人打造的 AI 交易引擎",
     "h1_prefix": "把在线流量转化为 ",
     "h1_highlight": "成交订单",
@@ -21,6 +21,9 @@
     "cta_primary": "开启您的 AI 交易引擎",
     "cta_secondary": "了解工作原理",
     "trial_note": "无需设置 · 付费套餐 14 天试用 · 随时可取消"
+  },
+  "brokerage_strip": {
+    "eyebrow": "深受以下经纪行的经纪人信赖"
   },
   "stats_strip": {
     "eyebrow": "交易引擎背后的数字",

@@ -7,7 +7,7 @@
     "why": "Why Us"
   },
   "hero": {
-    "trust_line": "Trusted by RE/MAX agents · Coldwell Banker agents · and independent brokerages coast to coast",
+    "trust_line": "Trusted by top-producing agents coast to coast",
     "badge": "The AI deal engine for real estate agents",
     "h1_prefix": "Turn Online Traffic into ",
     "h1_highlight": "Closed Deals",
@@ -21,6 +21,9 @@
     "cta_primary": "Get Your AI Deal Engine Started",
     "cta_secondary": "See How It Works",
     "trial_note": "No setup required · 14-day trial on paid plans · Cancel anytime"
+  },
+  "brokerage_strip": {
+    "eyebrow": "Trusted by agents at"
   },
   "stats_strip": {
     "eyebrow": "The numbers behind the deal engine",
