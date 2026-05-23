@@ -7,6 +7,7 @@
     "why": "Why Us"
   },
   "hero": {
+    "trust_line": "Trusted by solo agents coast to coast · Built by agents, for agents",
     "badge": "The AI deal engine for real estate agents",
     "h1_prefix": "Turn Online Traffic into ",
     "h1_highlight": "Closed Deals",
@@ -20,6 +21,27 @@
     "cta_primary": "Get Your AI Deal Engine Started",
     "cta_secondary": "See How It Works",
     "trial_note": "No setup required · 14-day trial on paid plans · Cancel anytime"
+  },
+  "stats_strip": {
+    "eyebrow": "The numbers behind the deal engine",
+    "items": {
+      "response": {
+        "value": "<60 sec",
+        "label": "AI response time, 24/7"
+      },
+      "first_responder": {
+        "value": "47%",
+        "label": "of leads go with the agent who responds first"
+      },
+      "voice_ai": {
+        "value": "24/7",
+        "label": "voice AI that answers your phone when you can't"
+      },
+      "starting_price": {
+        "value": "$49/mo",
+        "label": "solo-agent pricing — not $499 like the rest"
+      }
+    }
   },
   "mock": {
     "live_label": "LeadSmart AI — Live",

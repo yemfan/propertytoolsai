@@ -224,6 +224,14 @@ export default function LeadSmartLandingV2() {
           </div>
           <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-6 py-20 md:grid-cols-2 md:gap-12 md:py-28">
             <div className="max-w-xl lg:max-w-2xl">
+              {/* Trust line — soft proof signal above the badge.
+                  Intentionally vague ("solo agents coast to coast")
+                  so it's defensible at any customer count. Swap in
+                  a real customer count ("Trusted by 200+ solo
+                  agents") once we have one. */}
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                {t("hero.trust_line")}
+              </p>
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#0072ce]/20 bg-white/80 px-4 py-1.5 text-xs font-medium text-[#0072ce] shadow-sm backdrop-blur-sm dark:border-[#0072ce]/30 dark:bg-slate-900/80 dark:text-[#4da3e8]">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0072ce] opacity-75" />
@@ -351,6 +359,41 @@ export default function LeadSmartLandingV2() {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* ── STATS STRIP ───
+            First scroll target after the hero. Four quantified
+            claims — three product specs + one industry stat (47%
+            first-responder advantage). Every number is defensible
+            without customer data; swap real customer-outcome
+            numbers in once the beta cohort produces them. */}
+        <section className="border-b border-slate-200/80 bg-white px-6 py-12 dark:border-slate-800 dark:bg-slate-950 md:py-14">
+          <div className="mx-auto max-w-6xl">
+            <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-[#0072ce]">
+              {t("stats_strip.eyebrow")}
+            </p>
+            <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-4">
+              {(
+                [
+                  "response",
+                  "first_responder",
+                  "voice_ai",
+                  "starting_price",
+                ] as const
+              ).map((key) => (
+                <div key={key} className="text-center">
+                  <dt className="font-heading text-3xl font-extrabold leading-none tracking-tight md:text-4xl">
+                    <span className="bg-gradient-to-r from-[#0072ce] via-[#4F46E5] to-[#7c3aed] bg-clip-text text-transparent">
+                      {t(`stats_strip.items.${key}.value`)}
+                    </span>
+                  </dt>
+                  <dd className="mt-2 text-sm leading-snug text-slate-600 dark:text-slate-300">
+                    {t(`stats_strip.items.${key}.label`)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </section>
 

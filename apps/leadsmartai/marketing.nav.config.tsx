@@ -1,5 +1,5 @@
 import type { NavConfig } from "@repo/ui";
-import { BookOpen, Calculator, FileText, Home, LayoutDashboard, Mail, MessageCircle, Phone, Search, Sparkles, Users } from "lucide-react";
+import { BookOpen, Calculator, FileText, HelpCircle, Home, LayoutDashboard, LifeBuoy, Mail, MessageCircle, Phone, Search, Sparkles, Users } from "lucide-react";
 
 /**
  * Public marketing + free tools shell (non-dashboard routes).
@@ -28,13 +28,31 @@ const marketingNavConfig = {
       icon: <Phone size={18} strokeWidth={2} aria-hidden />,
     },
     {
+      // Blog + Help promoted to top-level so visitors can find them
+      // without expanding the Site submenu. Both are major marketing
+      // surfaces (blog index has multiple articles, help center
+      // has 30+ how-to guides), and burying them inside a collapsed
+      // submenu meant they were essentially invisible to first-time
+      // visitors.
+      label: "Blog",
+      href: "/blog",
+      match: ["/blog", "/blog/[slug]"],
+      icon: <BookOpen size={18} strokeWidth={2} aria-hidden />,
+    },
+    {
+      label: "Help center",
+      href: "/help",
+      match: ["/help", "/help/faq", "/help/guides/[slug]"],
+      icon: <LifeBuoy size={18} strokeWidth={2} aria-hidden />,
+    },
+    {
       label: "Site",
       icon: <LayoutDashboard size={18} strokeWidth={2} aria-hidden />,
       items: [
         { label: "About", href: "/about", icon: <FileText size={16} strokeWidth={2} aria-hidden /> },
-        { label: "Blog", href: "/blog", icon: <BookOpen size={16} strokeWidth={2} aria-hidden /> },
         { label: "Contact", href: "/contact", icon: <Mail size={16} strokeWidth={2} aria-hidden /> },
         { label: "Support chat", href: "/support", icon: <MessageCircle size={16} strokeWidth={2} aria-hidden /> },
+        { label: "FAQ", href: "/help/faq", icon: <HelpCircle size={16} strokeWidth={2} aria-hidden /> },
       ],
     },
     {

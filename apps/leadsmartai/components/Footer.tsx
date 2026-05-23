@@ -28,12 +28,8 @@ const companyLinks = [
   { label: "About", href: "/about" },
   { label: "Pricing", href: "/pricing" },
   { label: "Contact", href: "/contact" },
-  // "Blog" link removed until we have a proper `/blog` index page.
-  // Currently only `/blog/<slug>` sub-routes exist (cap-rate content),
-  // and `/blog` itself returns 404 — which is a broken promise on a
-  // credibility page. Restore this link when the index exists AND
-  // the content is LeadSmart-branded (agent CRM) rather than
-  // PropertyTools cap-rate material.
+  { label: "Blog", href: "/blog" },
+  { label: "Help center", href: "/help" },
 ];
 
 const resourceLinks = [

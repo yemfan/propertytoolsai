@@ -7,6 +7,7 @@
     "why": "为何选择我们"
   },
   "hero": {
+    "trust_line": "深受全美各地独立经纪人信赖 · 由经纪人为经纪人打造",
     "badge": "为房产经纪人打造的 AI 交易引擎",
     "h1_prefix": "把在线流量转化为 ",
     "h1_highlight": "成交订单",
@@ -20,6 +21,27 @@
     "cta_primary": "开启您的 AI 交易引擎",
     "cta_secondary": "了解工作原理",
     "trial_note": "无需设置 · 付费套餐 14 天试用 · 随时可取消"
+  },
+  "stats_strip": {
+    "eyebrow": "交易引擎背后的数字",
+    "items": {
+      "response": {
+        "value": "<60 秒",
+        "label": "AI 24/7 全天候响应"
+      },
+      "first_responder": {
+        "value": "47%",
+        "label": "的客户会选择第一个回应他们的经纪人"
+      },
+      "voice_ai": {
+        "value": "24/7",
+        "label": "语音 AI 替您接听电话"
+      },
+      "starting_price": {
+        "value": "$49/月",
+        "label": "为独立经纪人定价 — 而非 $499 起的同行"
+      }
+    }
   },
   "mock": {
     "live_label": "LeadSmart AI — 实时",
