@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getKeywordPagesForCity, TRAFFIC_CITIES } from "@/lib/trafficSeo";
 import { HELP_GUIDES } from "@/lib/help/guides";
+import { BLOG_POSTS } from "@/lib/blog/posts";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -48,6 +49,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...HELP_GUIDES.map((g) => `/help/guides/${g.slug}`),
   ];
 
+  // Blog index + per-post pages. The registry lives in lib/blog/posts.ts
+  // so adding a post is one append + this sitemap re-renders automatically.
+  const blogRoutes = ["/blog", ...BLOG_POSTS.map((p) => p.href)];
+
   const seoRoutes = TRAFFIC_CITIES.flatMap((c) => [
     `/home-value/${c.slug}`,
     `/sell-house/${c.slug}`,
@@ -71,6 +76,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...staticRoutes,
     ...calculatorRoutes,
     ...helpRoutes,
+    ...blogRoutes,
     ...seoRoutes,
     ...keywordRoutes,
   ].map((path) => ({
