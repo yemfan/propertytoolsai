@@ -20,6 +20,7 @@ import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
  */
 const productLinks = [
   { label: "Features", href: "/features" },
+  { label: "Live demo", href: "/try-demo" },
   { label: "Integrations", href: "/integrations" },
   { label: "AI Deal Assistant", href: "/deal-assistant" },
   { label: "AI CMA Analyzer", href: "/ai-cma-analyzer" },

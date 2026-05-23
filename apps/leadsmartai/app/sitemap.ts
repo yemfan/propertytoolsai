@@ -23,6 +23,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/agent/compare",
     "/integrations",
     "/free-tools",
+    "/try-demo",
+    // /demo/* sandbox pages are explicitly `robots: { index: false }`
+    // — keep them out of the sitemap so they don't drain crawl budget.
   ];
 
   // Calculator hub — every public calculator page is indexable
@@ -82,6 +85,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/agent/compare",
     "/integrations",
     "/free-tools",
+    "/try-demo",
   ]);
 
   return [
