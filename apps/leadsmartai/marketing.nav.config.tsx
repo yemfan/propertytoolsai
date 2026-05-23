@@ -1,5 +1,5 @@
 import type { NavConfig } from "@repo/ui";
-import { Calculator, FileText, Home, LayoutDashboard, Mail, MessageCircle, Phone, Search, Sparkles, Users } from "lucide-react";
+import { BookOpen, Calculator, FileText, Home, LayoutDashboard, Mail, MessageCircle, Phone, Search, Sparkles, Users } from "lucide-react";
 
 /**
  * Public marketing + free tools shell (non-dashboard routes).
@@ -32,6 +32,7 @@ const marketingNavConfig = {
       icon: <LayoutDashboard size={18} strokeWidth={2} aria-hidden />,
       items: [
         { label: "About", href: "/about", icon: <FileText size={16} strokeWidth={2} aria-hidden /> },
+        { label: "Blog", href: "/blog", icon: <BookOpen size={16} strokeWidth={2} aria-hidden /> },
         { label: "Contact", href: "/contact", icon: <Mail size={16} strokeWidth={2} aria-hidden /> },
         { label: "Support chat", href: "/support", icon: <MessageCircle size={16} strokeWidth={2} aria-hidden /> },
       ],

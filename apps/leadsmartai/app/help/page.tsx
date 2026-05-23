@@ -6,12 +6,12 @@ import { groupedGuides } from "@/lib/help/guides";
 export const metadata: Metadata = {
   title: "Help center",
   description:
-    "Guides, FAQs, and how-tos for LeadSmart AI. Learn how to set up AI follow-up, import contacts, manage coaching enrollment, send video email, and use the BBA workflow.",
+    "Every how-to guide for LeadSmart AI — AI follow-up, voice AI, missed-call text-back, listings, offers, transactions, CMAs, calculators, and more. Plus FAQs and contact support.",
   alternates: { canonical: "/help" },
   openGraph: {
     title: "Help center — LeadSmart AI",
     description:
-      "Guides, FAQs, and how-tos for LeadSmart AI — set up AI follow-up, import contacts, manage coaching, send video email, and more.",
+      "Every how-to guide for LeadSmart AI — set up, communication, AI, deals, marketing, analytics, calculators, and account.",
     url: "/help",
     type: "website",
   },
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Help center — LeadSmart AI",
     description:
-      "Guides, FAQs, and how-tos for LeadSmart AI.",
+      "Every how-to guide for LeadSmart AI — set up, AI, deals, marketing, analytics, and calculators.",
   },
 };
 
@@ -59,12 +59,34 @@ export default function HelpIndexPage() {
             </p>
           </div>
 
+          <nav aria-label="Browse by category" className="mt-6">
+            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {guideGroups.map((group) => (
+                <li key={group.category}>
+                  <a
+                    href={`#${group.category}`}
+                    className="block rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                  >
+                    {group.label}{" "}
+                    <span className="text-xs font-normal text-slate-500">
+                      ({group.guides.length})
+                    </span>{" "}
+                    →
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
           {guideGroups.map((group) => (
-            <div key={group.category} className="mt-8">
+            <div key={group.category} id={group.category} className="mt-10 scroll-mt-24">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
                 {group.label}
               </h3>
-              <ul className="mt-3 grid gap-3 md:grid-cols-2">
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                {group.description}
+              </p>
+              <ul className="mt-4 grid gap-3 md:grid-cols-2">
                 {group.guides.map((guide) => (
                   <li key={guide.slug}>
                     <Link
