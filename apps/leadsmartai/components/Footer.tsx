@@ -31,6 +31,7 @@ const companyLinks = [
   { label: "Contact", href: "/contact" },
   { label: "Blog", href: "/blog" },
   { label: "Help center", href: "/help" },
+  { label: "Switch your CRM", href: "/switch-from" },
 ];
 
 const resourceLinks = [
