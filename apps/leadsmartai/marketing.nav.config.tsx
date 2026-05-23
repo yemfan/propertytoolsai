@@ -1,5 +1,5 @@
 import type { NavConfig } from "@repo/ui";
-import { BookOpen, Calculator, FileText, HelpCircle, Home, LayoutDashboard, LifeBuoy, Mail, MessageCircle, Phone, Plug, Search, Sparkles, Users, Wand2 } from "lucide-react";
+import { BookOpen, Calculator, FileText, HelpCircle, Home, LayoutDashboard, LifeBuoy, Mail, MessageCircle, MonitorPlay, Phone, Plug, Search, Sparkles, Users, Wand2 } from "lucide-react";
 
 /**
  * Public marketing + free tools shell (non-dashboard routes).
@@ -26,6 +26,16 @@ const marketingNavConfig = {
       href: "/voice-ai-test-drive",
       match: ["/voice-ai-test-drive"],
       icon: <Phone size={18} strokeWidth={2} aria-hidden />,
+    },
+    {
+      // Live read-only sandbox of the dashboard — first competitor in
+      // the category to offer a no-signup interactive demo of the
+      // full workspace. /try-demo is the marketing entry; /demo is
+      // the actual sandbox.
+      label: "Live demo",
+      href: "/try-demo",
+      match: ["/try-demo", "/demo", "/demo/[...rest]"],
+      icon: <MonitorPlay size={18} strokeWidth={2} aria-hidden />,
     },
     {
       // Free tools — replaces the older "Calculators & estimators"
