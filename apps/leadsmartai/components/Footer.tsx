@@ -20,6 +20,7 @@ import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
  */
 const productLinks = [
   { label: "Features", href: "/features" },
+  { label: "Integrations", href: "/integrations" },
   { label: "AI Deal Assistant", href: "/deal-assistant" },
   { label: "AI CMA Analyzer", href: "/ai-cma-analyzer" },
 ];
@@ -30,14 +31,15 @@ const companyLinks = [
   { label: "Contact", href: "/contact" },
   { label: "Blog", href: "/blog" },
   { label: "Help center", href: "/help" },
+  { label: "Switch your CRM", href: "/switch-from" },
 ];
 
 const resourceLinks = [
+  { label: "All free tools", href: "/free-tools" },
   { label: "Mortgage Calculator", href: "/mortgage-calculator" },
   { label: "Cap Rate Calculator", href: "/cap-rate-calculator" },
   { label: "Cash Flow Calculator", href: "/cash-flow-calculator" },
   { label: "ROI Calculator", href: "/roi-calculator" },
-  { label: "Affordability Calculator", href: "/affordability-calculator" },
   { label: "Home Value Estimator", href: "/home-value-estimator" },
 ];
 
