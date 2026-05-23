@@ -312,7 +312,7 @@ export default function IntegrationsPage() {
           <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
             Don&apos;t see what you need?{" "}
             <Link
-              href="/contact"
+              href="/contact?topic=integration-request"
               className="font-semibold text-blue-700 hover:underline dark:text-blue-300"
             >
               Ask us
@@ -382,7 +382,7 @@ export default function IntegrationsPage() {
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-3">
             <Link
-              href="/contact"
+              href="/contact?topic=integration-request"
               className="inline-flex items-center justify-center rounded-md bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
             >
               Request an integration

@@ -32,8 +32,24 @@ import { Send } from "lucide-react";
  * (e.g. the Team pricing card vs. a generic "Contact us" link). Add
  * cases here as new topics get linked from the marketing pages —
  * unrecognized values fall through to the empty default.
+ *
+ * Some topics accept additional query params for personalization:
+ *   ?topic=concierge-migration&from=liondesk   → adds source CRM
+ *   ?topic=integration-request&app=Calendly    → adds app name
  */
-function prefillForTopic(topic: string | null): { subject: string; message: string } {
+const SOURCE_CRM_LABELS: Record<string, string> = {
+  liondesk: "LionDesk",
+  "follow-up-boss": "Follow Up Boss",
+  kvcore: "kvCORE",
+  lofty: "Lofty",
+  boomtown: "BoomTown",
+  sierra: "Sierra Interactive",
+};
+
+function prefillForTopic(
+  topic: string | null,
+  searchParams: URLSearchParams | null,
+): { subject: string; message: string } {
   switch (topic) {
     case "team":
       return {
@@ -41,6 +57,47 @@ function prefillForTopic(topic: string | null): { subject: string; message: stri
         message:
           "Hi LeadSmart team,\n\nI'm interested in the Team plan for my brokerage. We have ___ agents and would like to learn more about pricing, onboarding, and the Top Producer Track for the whole team.\n\n",
       };
+    case "signature":
+      return {
+        subject: "Signature plan — bilingual / high-end inquiry",
+        message:
+          "Hi LeadSmart team,\n\nI'd like to talk through the Signature plan. My focus is ___ (bilingual EN/中文, high-end listings, etc.) and I'd like to understand what's included and how onboarding works.\n\n",
+      };
+    case "brokerage-working-session": {
+      return {
+        subject: "Brokerage working session request",
+        message:
+          "Hi LeadSmart team,\n\nI lead a brokerage with ___ agents and would like to schedule a working session to evaluate LeadSmart for the team. Ideal timing for me is ___.\n\nA few specifics about our setup:\n• Current CRM: ___\n• Top pain points: ___\n• Existing tech stack we'd want to integrate with: ___\n\n",
+      };
+    }
+    case "concierge-migration": {
+      const from = searchParams?.get("from") ?? "";
+      const sourceCrm = SOURCE_CRM_LABELS[from] ?? "";
+      const sourcePhrase = sourceCrm
+        ? `I'm switching from ${sourceCrm} and`
+        : "I'm switching CRMs and";
+      const subject = sourceCrm
+        ? `Concierge migration from ${sourceCrm}`
+        : "Concierge migration request";
+      return {
+        subject,
+        message: `Hi LeadSmart team,\n\n${sourcePhrase} would like the concierge migration service.\n\n• Approximate contact count: ___\n• Active deals to bring over: ___\n• Drip sequences I want re-implemented (just the names is fine): ___\n• Any custom fields we should preserve: ___\n• Target cutover date: ___\n\nI've read the 5-business-day guarantee on /switch-from and the Pro+ commitment requirement.\n\n`,
+      };
+    }
+    case "integration-request": {
+      const app = searchParams?.get("app")?.trim() ?? "";
+      const subject = app
+        ? `Integration request — ${app}`
+        : "Integration request";
+      return {
+        subject,
+        message: `Hi LeadSmart team,\n\nI'd like to request an integration${
+          app ? ` with ${app}` : ""
+        }.\n\n• What I'd use it for: ___\n• How critical it is (nice-to-have / blocker / would-pay-more): ___\n• How many of my contacts / deals would flow through it: ___\n${
+          app ? "" : "• The app I need: ___\n"
+        }\nI've seen the public integrations page at /integrations and don't see this one (or it's listed as Coming soon).\n\n`,
+      };
+    }
     default:
       return { subject: "", message: "" };
   }
@@ -51,7 +108,7 @@ export default function ContactForm() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const prefill = useMemo(
-    () => prefillForTopic(searchParams?.get("topic") ?? null),
+    () => prefillForTopic(searchParams?.get("topic") ?? null, searchParams),
     [searchParams],
   );
 
