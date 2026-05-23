@@ -57,17 +57,11 @@ const ExitIntentPopup = dynamic(
 
 const PRIMARY_CTA_HREF = "/onboarding";
 
-/**
- * In-page anchors surfaced as a jump-link strip above the hero. Labels
- * resolve per-render via `t(\`jump.${key}\`)`; `/features` and
- * `/pricing` are real routes and live in the shared marketing topbar —
- * they don't belong in this strip.
- */
-const JUMP_LINKS: { key: "how" | "results" | "why"; href: string }[] = [
-  { key: "how", href: "#how" },
-  { key: "results", href: "#results" },
-  { key: "why", href: "#why" },
-];
+/* JUMP_LINKS removed — the in-page jump-link strip was deleted when
+ * the marketing chrome switched from a left sidebar to a horizontal
+ * top nav. Restore (with the i18n keys that still exist under
+ * `web_landing.jump.*`) if we re-add a soft in-page TOC inside the
+ * hero. */
 
 /**
  * Scroll-triggered reveal — `motion`'s `whileInView` watches the
@@ -184,29 +178,15 @@ export default function LeadSmartLandingV2() {
   return (
     <>
       <div className="-mx-4 bg-white text-gray-900 sm:-mx-8 dark:bg-slate-950 dark:text-slate-100">
-        {/* ── Jump-link strip ──
-            In-page anchors for the homepage's scroll sections. Real
-            routes (Features, Pricing, etc.) come from the shared
-            marketing topbar. */}
-        <nav
-          className="border-b border-gray-100 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:border-slate-800 dark:bg-slate-950/80"
-          aria-label={t("jump.page_a11y")}
-        >
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-2 text-xs sm:px-6 sm:text-sm">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 sm:text-xs">
-              {t("jump.label")}
-            </span>
-            {JUMP_LINKS.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className="font-medium text-slate-600 transition-colors hover:text-[#0072ce] dark:text-slate-300 dark:hover:text-[#4da3e8]"
-              >
-                {t(`jump.${item.key}`)}
-              </a>
-            ))}
-          </div>
-        </nav>
+        {/* The legacy in-page "Jump to" strip lived here. It was
+            removed when the marketing chrome moved from a left
+            sidebar to a horizontal top nav — the strip now read as
+            a duplicate nav bar stacked under the real one. In-page
+            anchors (#how, #results, #why) still resolve because
+            the sections below set those `id`s. If we want a softer
+            in-page TOC again in the future, render it inline within
+            the hero (not as a top-bar) so it doesn't compete with
+            the global top nav. */}
 
         {/* ── HERO ─── */}
         <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-white dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
