@@ -224,13 +224,13 @@ export default function LeadSmartLandingV2() {
           </div>
           <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-6 py-20 md:grid-cols-2 md:gap-12 md:py-28">
             <div className="max-w-xl lg:max-w-2xl">
-              {/* Trust line — nominative-fair-use proof signal
-                  above the badge. Names brokerages whose agents
-                  use the platform; deliberately avoids "Trusted by
-                  [Brokerage]" wording that would imply
-                  brokerage-level endorsement. As real customer
-                  counts come in, layer them on: "Used by 200+
-                  agents at RE/MAX, Coldwell Banker, and …". */}
+              {/* Trust line — names brokerages whose agents use
+                  the platform. Phrased as "Trusted by [Brokerage]
+                  agents" (modifying "agents") rather than "Trusted
+                  by [Brokerage]" (which would imply brokerage-
+                  level endorsement we don't have). Layer in a
+                  customer count once we have one: "Trusted by
+                  200+ RE/MAX agents, Coldwell Banker agents, …". */}
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                 {t("hero.trust_line")}
               </p>
