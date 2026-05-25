@@ -383,6 +383,48 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
     title: "7. SMS and email compliance",
     body: (
       <>
+        <p className="font-semibold text-slate-900">
+          For end-user SMS recipients (homeowners, leads, and contacts)
+        </p>
+        <p>
+          If you opt in to receive marketing text messages from LeadSmart AI via a
+          consent checkbox on a LeadSmart public surface (for example{" "}
+          <Link href="/contact" className="text-[#0072ce] hover:underline">
+            /contact
+          </Link>
+          ,{" "}
+          <Link href="/home-value-funnel" className="text-[#0072ce] hover:underline">
+            /home-value-funnel
+          </Link>
+          , or{" "}
+          <Link href="/open-house-signup" className="text-[#0072ce] hover:underline">
+            /open-house-signup
+          </Link>
+          ), the mobile phone number you provide and your SMS opt-in record are
+          used solely to deliver the marketing text messages you authorized at the
+          moment of opt-in.
+        </p>
+        <p>
+          We do <strong>not</strong> sell, rent, lease, share, transfer, or
+          otherwise disclose your mobile phone number or SMS opt-in data to any
+          third party or affiliate for their own marketing, promotional, or
+          commercial purposes. Mobile information collected through SMS opt-in is
+          excluded from all data-sharing arrangements with third parties, except
+          where strictly necessary to deliver the messages you requested (e.g. our
+          SMS provider, Twilio) and only for that delivery purpose.
+        </p>
+        <p>
+          You may opt out at any time by replying <strong>STOP</strong> to any text
+          message. For help, reply <strong>HELP</strong>. Message frequency varies.
+          Message and data rates may apply. Consent is not a condition of any
+          purchase. The four-element disclosure shown beneath the consent checkbox
+          on each opt-in surface defines the exact terms at the moment of opt-in;
+          that wording is pinned per surface and stored in our audit log so the
+          exact text shown at the time of opt-in can be reproduced on request.
+        </p>
+        <p className="font-semibold text-slate-900">
+          For LeadSmart customers (agents sending on behalf of their own contacts)
+        </p>
         <p>
           LeadSmart sends SMS and email on your behalf only when consent has been
           established. By using the Service, you represent and warrant that:
