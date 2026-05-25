@@ -263,12 +263,12 @@ export default function ContactForm() {
           />
           <span className="text-sm text-slate-700">
             <span className="font-semibold text-slate-900">
-              Yes, send me text messages from LeadSmart AI.
+              Yes, send me marketing text messages from LeadSmart AI.
             </span>{" "}
             By checking this box and providing my phone number above, I consent to
-            receive text messages from <strong>LeadSmart AI</strong> for{" "}
-            <strong>customer care and marketing</strong> related to real-estate
-            services, account updates, and product information.
+            receive promotional text messages from <strong>LeadSmart AI</strong>{" "}
+            about real-estate services, new listings, market updates, and special
+            offers.
           </span>
         </label>
         <p className="mt-3 pl-7 text-xs leading-relaxed text-slate-500">

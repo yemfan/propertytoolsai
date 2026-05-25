@@ -13,6 +13,23 @@
 /**
  * /contact form (LeadSmart AI marketing site).
  *
+ * v2.0 — 2026-05-25 — narrowed to marketing-only consent in response
+ * to TCR A2P 10DLC campaign rejection citing "marketing consent was
+ * combined with other consents." The v1.0 label bundled "customer
+ * care and marketing" in a single checkbox; v2.0 limits the consent
+ * scope to promotional messaging only. Transactional / account-update
+ * notifications now require separate consent (out of scope for this
+ * checkbox). Disclosure text:
+ *   "Yes, send me marketing text messages from LeadSmart AI. By
+ *    checking this box and providing my phone number above, I consent
+ *    to receive promotional text messages from LeadSmart AI about
+ *    real-estate services, new listings, market updates, and special
+ *    offers.
+ *    Message frequency varies. Message and data rates may apply.
+ *    Reply STOP to opt out at any time, or HELP for help. Consent is
+ *    not a condition of any purchase. See our Privacy Policy and
+ *    Terms of Service for details."
+ *
  * v1.0 — initial — shipped 2026-04-27 in PR #168. Disclosure text:
  *   "Yes, send me text messages from LeadSmart AI. By checking this
  *    box and providing my phone number above, I consent to receive
@@ -24,7 +41,7 @@
  *    not a condition of any purchase. See our Privacy Policy and
  *    Terms of Service for details."
  */
-export const CONTACT_FORM_DISCLOSURE_VERSION = "v1.0_2026-04-27";
+export const CONTACT_FORM_DISCLOSURE_VERSION = "v2.0_2026-05-25";
 
 /**
  * /oh/[slug] open-house sign-in form.
@@ -62,6 +79,19 @@ export const IDX_LEAD_CAPTURE_DISCLOSURE_VERSION = "v1.0_2026-04-27";
  * /open-house-signup public registration page (QR-code-driven from
  * the property flyer at the open house).
  *
+ * v2.0 — 2026-05-25 — narrowed to marketing-only consent in lockstep
+ * with /contact v2.0 and /home-value-funnel v2.0. Same TCR rejection,
+ * same fix. Disclosure text mirrors /contact v2.0 exactly:
+ *   "Yes, send me marketing text messages from LeadSmart AI. By
+ *    checking this box and providing my phone number above, I consent
+ *    to receive promotional text messages from LeadSmart AI about
+ *    real-estate services, new listings, market updates, and special
+ *    offers.
+ *    Message frequency varies. Message and data rates may apply.
+ *    Reply STOP to opt out at any time, or HELP for help. Consent is
+ *    not a condition of any purchase. See our Privacy Policy and
+ *    Terms of Service for details."
+ *
  * v1.0 — initial — shipped 2026-05-11 to support TCR A2P 10DLC
  * campaign re-submission. Disclosure text:
  *   "Yes, send me text messages from LeadSmart AI. By checking this
@@ -74,18 +104,33 @@ export const IDX_LEAD_CAPTURE_DISCLOSURE_VERSION = "v1.0_2026-04-27";
  *    not a condition of any purchase. See our Privacy Policy and
  *    Terms of Service for details."
  *
- * Identical wording to /contact (v1.0_2026-04-27) by design — the
- * TCR campaign description references the same four-element
- * disclosure across all three opt-in surfaces. Bump the version
- * (and snapshot prior text in this comment) on any material change.
+ * Identical wording to /contact by design — the TCR campaign
+ * description references the same four-element disclosure across
+ * all three opt-in surfaces. Bump the version (and snapshot prior
+ * text in this comment) on any material change.
  */
-export const OPEN_HOUSE_SIGNUP_DISCLOSURE_VERSION = "v1.0_2026-05-11";
+export const OPEN_HOUSE_SIGNUP_DISCLOSURE_VERSION = "v2.0_2026-05-25";
 
 /**
- * `/` home value funnel — the highest-volume public capture surface
- * (homepage). Was previously missing TCR-compliant consent UI, which
- * caused A2P 10DLC campaign rejection 30909 because the reviewer
- * landing on the homepage saw no SMS consent checkbox at all.
+ * `/home-value-funnel` (also reachable from `/`) — the highest-volume
+ * public capture surface. Was previously missing TCR-compliant consent
+ * UI, which caused A2P 10DLC campaign rejection 30909 because the
+ * reviewer landing on the homepage saw no SMS consent checkbox at all.
+ * v1.0 fixed that gap; v2.0 narrows the consent scope.
+ *
+ * v2.0 — 2026-05-25 — narrowed to marketing-only consent in lockstep
+ * with /contact v2.0 and /open-house-signup v2.0. TCR resubmission
+ * after rejection citing "marketing consent was combined with other
+ * consents." Disclosure text mirrors /contact v2.0 exactly:
+ *   "Yes, send me marketing text messages from LeadSmart AI. By
+ *    checking this box and providing my phone number above, I consent
+ *    to receive promotional text messages from LeadSmart AI about
+ *    real-estate services, new listings, market updates, and special
+ *    offers.
+ *    Message frequency varies. Message and data rates may apply.
+ *    Reply STOP to opt out at any time, or HELP for help. Consent is
+ *    not a condition of any purchase. See our Privacy Policy and
+ *    Terms of Service for details."
  *
  * v1.0 — initial — shipped 2026-05-19 alongside the same disclosure
  * wording used on /contact and /open-house-signup so the TCR
@@ -104,7 +149,7 @@ export const OPEN_HOUSE_SIGNUP_DISCLOSURE_VERSION = "v1.0_2026-05-11";
  * Bump the version (and snapshot prior text in this comment) on any
  * material change.
  */
-export const HOME_VALUE_FUNNEL_DISCLOSURE_VERSION = "v1.0_2026-05-19";
+export const HOME_VALUE_FUNNEL_DISCLOSURE_VERSION = "v2.0_2026-05-25";
 
 /**
  * Stable source identifiers for the audit table. Keep them
