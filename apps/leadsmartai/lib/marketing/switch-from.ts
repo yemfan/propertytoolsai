@@ -69,7 +69,7 @@ const COMMON_FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "What's the catch with the concierge migration?",
-    a: "Free for agents migrating from LionDesk, Follow Up Boss, or kvCORE through 2026. You commit to a 3-month LeadSmart plan (Pro tier or higher); we commit to a working migration within 5 business days, or you keep the trial credits regardless.",
+    a: "Free for agents migrating from LionDesk, Follow Up Boss, kvCORE, Lofty, BoomTown, or Sierra Interactive through 2026. You commit to a 3-month LeadSmart plan (Pro tier or higher); we commit to a working migration within 5 business days, or you keep the trial credits regardless.",
   },
 ];
 
@@ -193,6 +193,174 @@ export const SWITCH_SOURCES: ReadonlyArray<SwitchSource> = [
         feature: "AI Coaching with peer benchmarks",
         them: "Not available",
         us: "Yes, included on Pro+",
+      },
+    ],
+    migrationSteps: COMMON_MIGRATION_STEPS,
+    faq: COMMON_FAQ,
+  },
+  {
+    slug: "lofty",
+    name: "Lofty",
+    positioning: "Agentic-AI-branded IDX + CRM (formerly Chime).",
+    priceRange: "$499+ / mo",
+    heroHeadline: "Switching from Lofty to LeadSmart AI",
+    heroSubhead:
+      "Lofty's marketing leans hard on \"agentic AI\" but the in-product reality is uneven — and the bill is enterprise-tier. Move to a CRM with the same AI promise actually shipped, at solo-agent pricing.",
+    painPoints: [
+      {
+        title: "AI text-back has noticeable production lag",
+        body: "Demos show sub-minute response; in production agents commonly report multi-minute delays and occasional drops. The whole point of the feature is the sub-60-second response — if it doesn't fire reliably, you're paying for a promise.",
+      },
+      {
+        title: "Off-brand SMS templates trip spam filters",
+        body: "Lofty's AI ships with generic copy that recipients flag as templated, hurting deliverability over time. Custom copy + per-agent style tuning matter more than the AI label.",
+      },
+      {
+        title: "Lead-source attribution is unreliable",
+        body: "Multi-portal leads frequently land with the wrong source set, which corrupts your ROI math. Once you start spending real ad money, that drift becomes expensive.",
+      },
+      {
+        title: "Enterprise pricing, no free trial",
+        body: "Lofty explicitly does not offer a free trial — you commit blind. LeadSmart starts at $49/mo with a 14-day free trial; you can see the AI actually work before paying.",
+      },
+    ],
+    comparisonWins: [
+      {
+        feature: "Free trial before committing",
+        them: "Demo only — no free trial",
+        us: "14-day free trial, no credit card",
+      },
+      {
+        feature: "AI follow-up that ships",
+        them: "Agentic-AI branding, uneven delivery",
+        us: "Native, every plan, sub-60s response",
+      },
+      {
+        feature: "Solo-agent pricing",
+        them: "$499+ / mo",
+        us: "$49 / mo starting",
+      },
+      {
+        feature: "Lead-source attribution",
+        them: "Unreliable across portals",
+        us: "Source-stable, dedupe-aware",
+      },
+      {
+        feature: "Voice AI for inbound calls",
+        them: "Not available",
+        us: "Native + public test-drive",
+      },
+    ],
+    migrationSteps: COMMON_MIGRATION_STEPS,
+    faq: COMMON_FAQ,
+  },
+  {
+    slug: "boomtown",
+    name: "BoomTown",
+    positioning: "Top-end lead-conversion platform for big teams ($1,500+ / mo).",
+    priceRange: "$1,500+ / mo",
+    heroHeadline: "Switching from BoomTown to LeadSmart AI",
+    heroSubhead:
+      "BoomTown is excellent for a 20-agent brokerage with a dedicated CRM admin. If you're a solo agent or small team running your own book, you're paying for a Cadillac to drive to the grocery store. Switch to a CRM priced for solo P&Ls with the same AI follow-up speed.",
+    painPoints: [
+      {
+        title: "Sticker shock and seat lock-in",
+        body: "$1,500+/mo is the starting line — typical mid-size deployments run $3K–$5K. If you're a solo agent or 2–3-person team, you're funding a feature set you'll never use.",
+      },
+      {
+        title: "Designed for an ISA team you don't have",
+        body: "BoomTown's lead routing, queues, and accountability dashboards exist because brokerages run inside sales agents. As a solo, you ARE the ISA — half the surface area is dead weight.",
+      },
+      {
+        title: "Setup requires a Success Assurance team",
+        body: "The product is too complex to self-serve, so it ships with a paid Lead Concierge team. That's a tell — you shouldn't need a managed-services line item to use your CRM.",
+      },
+      {
+        title: "Annual contracts and onboarding fees",
+        body: "BoomTown locks in annual commitments and bills onboarding fees on top. LeadSmart is month-to-month with no setup fee and no commitment beyond the current period.",
+      },
+    ],
+    comparisonWins: [
+      {
+        feature: "Solo-agent pricing",
+        them: "$1,500+ / mo · $3K–$5K typical",
+        us: "$49 / mo starting · month-to-month",
+      },
+      {
+        feature: "Onboarding fee",
+        them: "Yes, in addition to monthly",
+        us: "None · self-serve or concierge included",
+      },
+      {
+        feature: "Contract commitment",
+        them: "Annual",
+        us: "Month-to-month",
+      },
+      {
+        feature: "Native AI follow-up",
+        them: "Predictive CRM branding, basic templates",
+        us: "Sub-60s AI replies + missed-call text-back",
+      },
+      {
+        feature: "Voice AI for inbound calls",
+        them: "Not available",
+        us: "Native + public test-drive",
+      },
+    ],
+    migrationSteps: COMMON_MIGRATION_STEPS,
+    faq: COMMON_FAQ,
+  },
+  {
+    slug: "sierra-interactive",
+    name: "Sierra Interactive",
+    positioning: "IDX-first CRM with strong investor lean ($500+ / mo).",
+    priceRange: "$500+ / mo",
+    heroHeadline: "Switching from Sierra Interactive to LeadSmart AI",
+    heroSubhead:
+      "Sierra has the best IDX site in the category — and the weakest mobile experience. If your day happens off your laptop, you're fighting the product. Switch to a CRM where the mobile and AI surfaces are the main product, not an afterthought.",
+    painPoints: [
+      {
+        title: "Weak mobile experience",
+        body: "Sierra's mobile companion app trails the desktop substantially. If your actual job happens between showings, that's a daily friction tax.",
+      },
+      {
+        title: "SMS automation requires third-party integrations",
+        body: "Sierra punts SMS to add-ons (Twilio, third-party tools you wire yourself). LeadSmart ships A2P-registered SMS native, with AI replies and missed-call text-back included.",
+      },
+      {
+        title: "Pre-AI architecture, retrofitted",
+        body: "Sierra was built before AI follow-up was table stakes. The features exist but feel grafted on; the rest of the CRM hasn't been reimagined around the AI loop.",
+      },
+      {
+        title: "Setup-heavy action plans",
+        body: "Sierra's Action Plans are powerful but require real configuration time. LeadSmart's defaults are designed to work day-one with copy you'd actually send.",
+      },
+    ],
+    comparisonWins: [
+      {
+        feature: "Native SMS pipeline (A2P 10DLC)",
+        them: "Third-party integration",
+        us: "Native, every plan",
+      },
+      {
+        feature: "Mobile-first workflow",
+        them: "Desktop-first, mobile companion lags",
+        us: "Mobile parity — same surface, one tap away",
+      },
+      {
+        feature: "AI follow-up + missed-call recovery",
+        them: "Add-on or third-party",
+        us: "Native on every plan",
+      },
+      {
+        feature: "Voice AI for inbound calls",
+        them: "Not available",
+        us: "Native + public test-drive",
+      },
+      {
+        feature: "Time to first lead handled",
+        them: "Days of action-plan setup",
+        us: "Same afternoon",
       },
     ],
     migrationSteps: COMMON_MIGRATION_STEPS,

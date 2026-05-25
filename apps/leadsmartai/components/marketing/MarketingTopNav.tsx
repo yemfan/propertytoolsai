@@ -49,9 +49,17 @@ export function MarketingTopNav({
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:border-slate-800 dark:bg-slate-950/85 dark:supports-[backdrop-filter]:bg-slate-950/70">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:gap-6">
+      {/* Header layout tuning:
+       *   - Below sm (<640px): hamburger | logo (compact) | Sign in | Sign up
+       *     Hide SupportChatLauncher in the bar (FloatingCTA still surfaces
+       *     chat at the bottom right) and hide the "Start free trial"
+       *     button to make room for Sign in / Sign up.
+       *   - sm and up: also show "Start free trial" + chat launcher in
+       *     the bar.
+       *   - At lg and up: full horizontal nav appears in the middle. */}
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:gap-6">
         {/* Mobile hamburger + logo */}
-        <div className="flex shrink-0 items-center gap-2 lg:gap-3">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
           <div className="lg:hidden">
             <MobileSidebar
               appName="LeadSmart AI"
@@ -66,7 +74,10 @@ export function MarketingTopNav({
             aria-label="LeadSmart AI home"
             className="flex min-w-0 items-center"
           >
-            <LeadSmartLogo className="h-8 w-auto max-w-[180px] sm:h-9 sm:max-w-[220px]" />
+            {/* Logo widths tuned for the narrowest viewport (375px iPhone SE):
+             *   140px below sm leaves ~150px for the right-side actions
+             *   after the hamburger + padding. */}
+            <LeadSmartLogo className="h-7 w-auto max-w-[140px] sm:h-9 sm:max-w-[220px]" />
           </Link>
         </div>
 
@@ -81,7 +92,7 @@ export function MarketingTopNav({
         </nav>
 
         {/* Right-side actions */}
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           <HeaderAuthActions />
           <Link
             href="/start-free"
@@ -89,7 +100,12 @@ export function MarketingTopNav({
           >
             Start free trial
           </Link>
-          <SupportChatLauncher />
+          {/* Chat launcher hidden below sm — FloatingCTA still surfaces
+              support chat as a separate floating button so we don't lose
+              the entry point. */}
+          <div className="hidden sm:block">
+            <SupportChatLauncher />
+          </div>
         </div>
       </div>
     </header>
@@ -113,7 +129,7 @@ function NavLeaf({ item }: { item: NavLeafItem }) {
   return (
     <Link
       href={item.href}
-      className={`inline-flex items-center rounded-lg px-3 py-2 text-sm font-medium transition ${
+      className={`inline-flex items-center rounded-lg px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 ${
         isActive
           ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
           : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
@@ -188,7 +204,7 @@ function NavDropdown({ group }: { group: NavGroupItem }) {
         aria-haspopup="menu"
         aria-controls={menuId}
         onClick={() => setOpen((prev) => !prev)}
-        className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
+        className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 ${
           isActive || open
             ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
             : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
@@ -218,7 +234,7 @@ function NavDropdown({ group }: { group: NavGroupItem }) {
                     href={item.href}
                     role="menuitem"
                     onClick={() => setOpen(false)}
-                    className={`flex items-start gap-3 rounded-xl px-3 py-2 text-sm transition ${
+                    className={`flex items-start gap-3 rounded-xl px-3 py-2 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-1 ${
                       childActive
                         ? "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"
                         : "text-slate-700 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"

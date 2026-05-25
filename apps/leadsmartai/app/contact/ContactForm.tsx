@@ -43,7 +43,8 @@ const SOURCE_CRM_LABELS: Record<string, string> = {
   kvcore: "kvCORE",
   lofty: "Lofty",
   boomtown: "BoomTown",
-  sierra: "Sierra Interactive",
+  // Slug matches lib/marketing/switch-from.ts entry.
+  "sierra-interactive": "Sierra Interactive",
 };
 
 function prefillForTopic(
