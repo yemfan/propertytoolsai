@@ -67,5 +67,13 @@ apps/propertytoolsai/ml/valuation/artifacts/
 # current checkout's index — "tar: ... Cannot open: No such
 # file or directory" flooded PREPARE_PROJECT and errored the
 # build. `.claude/` has no business in a production bundle, so
-# exclude the whole directory.
-.claude/
+# exclude all children of the directory.
+#
+# Exception: `.claude/settings.json` is the project-shared
+# permission allowlist (read-only patterns); the rest of
+# `.claude/` (worktrees, agent-memory, settings.local.json,
+# scheduled_tasks.lock) stays local-only. The `.claude/*`
+# pattern (not `.claude/`) lets Git descend into the directory
+# so the negation below can match.
+.claude/*
+!.claude/settings.json
