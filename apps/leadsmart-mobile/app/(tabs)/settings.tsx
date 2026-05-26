@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -257,6 +258,34 @@ export default function SettingsScreen() {
       </Pressable>
 
       <View style={styles.card}>
+        <Text style={styles.label}>{t("links.legal_section")}</Text>
+        <Pressable
+          onPress={() => {
+            hapticButtonPress();
+            void Linking.openURL("https://leadsmart-ai.com/privacy");
+          }}
+          style={({ pressed }) => [styles.linkRow, pressed && styles.linkRowPressed]}
+          accessibilityRole="link"
+          accessibilityLabel={t("links.privacy_policy")}
+        >
+          <Text style={styles.linkRowText}>{t("links.privacy_policy")}</Text>
+          <Text style={styles.linkRowChevron}>›</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            hapticButtonPress();
+            void Linking.openURL("https://leadsmart-ai.com/terms");
+          }}
+          style={({ pressed }) => [styles.linkRow, pressed && styles.linkRowPressed]}
+          accessibilityRole="link"
+          accessibilityLabel={t("links.terms_of_service")}
+        >
+          <Text style={styles.linkRowText}>{t("links.terms_of_service")}</Text>
+          <Text style={styles.linkRowChevron}>›</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.card}>
         <Text style={styles.label}>{t("app_section.title")}</Text>
         <Text style={styles.meta}>{t("app_section.version", { version })}</Text>
       </View>
@@ -273,6 +302,19 @@ export default function SettingsScreen() {
         ) : (
           <Text style={styles.signOutText}>{t("actions.sign_out", { ns: "common" })}</Text>
         )}
+      </Pressable>
+
+      <Pressable
+        onPress={() => {
+          hapticButtonPress();
+          router.push("/delete-account");
+        }}
+        style={({ pressed }) => [styles.deleteRow, pressed && styles.deleteRowPressed]}
+        accessibilityRole="button"
+        accessibilityLabel={t("delete_account.row_label")}
+      >
+        <Text style={styles.deleteRowText}>{t("delete_account.row_label")}</Text>
+        <Text style={styles.deleteRowHint}>{t("delete_account.row_hint")}</Text>
       </Pressable>
     </ScrollView>
   );
@@ -358,4 +400,28 @@ const createStyles = (theme: ThemeTokens) => StyleSheet.create({
   },
   signOutPressed: { opacity: 0.9 },
   signOutText: { color: theme.textOnAccent, fontSize: 16, fontWeight: "700" },
+  linkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+  },
+  linkRowPressed: { opacity: 0.7 },
+  linkRowText: { fontSize: 15, fontWeight: "600", color: theme.text },
+  linkRowChevron: { fontSize: 18, color: theme.textSubtle, fontWeight: "600" },
+  deleteRow: {
+    marginTop: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
+    alignItems: "center",
+  },
+  deleteRowPressed: { opacity: 0.85 },
+  deleteRowText: { fontSize: 15, fontWeight: "700", color: theme.danger },
+  deleteRowHint: { marginTop: 2, fontSize: 12, color: theme.textMuted },
 });

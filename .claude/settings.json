@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_logs",
+      "mcp__Claude_Preview__preview_console_logs",
+      "mcp__Claude_Preview__preview_screenshot",
+      "mcp__Claude_Preview__preview_snapshot",
+      "mcp__Claude_Preview__preview_list",
+      "mcp__Claude_Preview__preview_inspect",
+      "mcp__Claude_Preview__preview_network",
+      "mcp__Claude_Preview__preview_resize",
+      "mcp__Claude_Preview__preview_stop",
+      "mcp__Claude_Preview__preview_fill",
+      "mcp__Claude_Preview__preview_click",
+      "mcp__c66020ba-3f88-472c-b404-56caf7fab517__get_runtime_logs",
+      "mcp__c66020ba-3f88-472c-b404-56caf7fab517__get_deployment",
+      "mcp__c66020ba-3f88-472c-b404-56caf7fab517__get_deployment_build_logs",
+      "mcp__c66020ba-3f88-472c-b404-56caf7fab517__list_deployments",
+      "mcp__c66020ba-3f88-472c-b404-56caf7fab517__list_projects",
+      "mcp__c66020ba-3f88-472c-b404-56caf7fab517__search_vercel_documentation",
+      "Bash(pnpm --filter * typecheck)"
+    ]
+  }
+}

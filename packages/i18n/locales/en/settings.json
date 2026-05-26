@@ -18,7 +18,10 @@
   },
   "links": {
     "notification_center": "Notification center",
-    "replay_onboarding": "Replay onboarding"
+    "replay_onboarding": "Replay onboarding",
+    "privacy_policy": "Privacy policy",
+    "terms_of_service": "Terms of service",
+    "legal_section": "Legal"
   },
   "app_section": {
     "title": "App",
@@ -26,5 +29,20 @@
   },
   "sign_out_a11y": "Sign out",
   "sign_out_confirm_title": "Sign out?",
-  "sign_out_confirm_body": "You'll be returned to the login screen."
+  "sign_out_confirm_body": "You'll be returned to the login screen.",
+  "delete_account": {
+    "row_label": "Delete account",
+    "row_hint": "Permanently remove your account and data.",
+    "screen_title": "Delete account",
+    "headline": "Are you sure?",
+    "body": "Deleting your account permanently removes your profile, leads, conversations, tasks, and notification tokens. This cannot be undone.",
+    "retention_note": "Billing records and de-identified usage data may be retained as described in the Privacy Policy.",
+    "confirm_prompt": "Type {{token}} below to confirm.",
+    "input_a11y": "Type DELETE to confirm",
+    "confirm_button": "Delete my account",
+    "cancel_button": "Cancel",
+    "deleting": "Deleting…",
+    "error_generic": "Could not delete your account. Please try again or contact support.",
+    "confirm_token": "DELETE"
+  }
 }

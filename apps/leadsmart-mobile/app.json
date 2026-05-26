@@ -11,7 +11,7 @@
     "ios": {
       "bundleIdentifier": "ai.leadsmart.mobile",
       "icon": "./assets/icon.png",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
         "CFBundleDisplayName": "LeadSmart",
         "ITSAppUsesNonExemptEncryption": false,

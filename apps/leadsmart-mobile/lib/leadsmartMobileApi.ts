@@ -221,6 +221,44 @@ async function mobilePut<T extends MobileJsonError>(
   return { ok: true, data };
 }
 
+async function mobileDelete<T extends MobileJsonError>(
+  path: string
+): Promise<MobileApiFailure | { ok: true; data: T }> {
+  const cfg = requireConfig();
+  if (!isMobileConfig(cfg)) return cfg;
+
+  const { base, token } = cfg;
+  const res = await apiFetch<T>(`${base}${path}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+    credentials: "omit",
+  });
+
+  if (!res.ok) {
+    return parseMobileFailure(res.status, res.body, res.error);
+  }
+
+  const data = res.data;
+  if (data && (data.ok === false || data.success === false)) {
+    return parseMobileFailure(res.status, data, "Request failed");
+  }
+
+  return { ok: true, data: (data ?? ({} as T)) };
+}
+
+/**
+ * Delete the signed-in agent's LeadSmart account. Revokes Supabase auth and
+ * marks the agent row for purge. Apple Guideline 5.1.1(v) / Play account
+ * deletion policy — see Settings → Delete account.
+ */
+export async function deleteMobileAccount(): Promise<
+  { ok: true } | MobileApiFailure
+> {
+  const res = await mobileDelete<MobileJsonError>(MOBILE_API_PATHS.account);
+  if (res.ok === false) return res;
+  return { ok: true };
+}
+
 type InboxJson = MobileJsonError & {
   threads?: MobileInboxThreadDto[];
   generatedAt?: string;
