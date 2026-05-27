@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import { createNotification } from "@/lib/actions/notifications";
 import { refreshClientLifetimeValue } from "@/lib/actions/clients";
+import { runAutomations } from "@/lib/automation-engine";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -410,6 +411,15 @@ export async function markInvoicePaid(invoiceId: string, bankAccountId: string) 
     title: `Payment received: $${total.toFixed(2)}`,
     body: `Invoice ${inv.invoice_number} marked as paid`,
     link: `/books/invoices/${invoiceId}`,
+  });
+
+  // Run automation rules
+  await runAutomations("invoice_paid", {
+    orgId,
+    clientId: inv.client_id ?? null,
+    invoiceId,
+    invoiceNumber: inv.invoice_number,
+    amount: total,
   });
 }
 

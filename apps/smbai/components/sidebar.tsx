@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   BookOpen, Users, Inbox, Phone, Calendar,
   Mic, Share2, Settings, Building2, LogOut, Sparkles, LayoutDashboard,
-  CheckSquare, Mail, BarChart2,
+  CheckSquare, Mail, BarChart2, Zap,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 
@@ -21,8 +21,9 @@ const activeModules = [
   { key: "social",     label: "Social",      icon: Share2,          href: "/social" },
   { key: "tasks",      label: "Tasks",       icon: CheckSquare,     href: "/tasks" },
   { key: "marketing",  label: "Marketing",   icon: Mail,            href: "/marketing" },
-  { key: "reports",   label: "Reports",     icon: BarChart2,       href: "/reports" },
-  { key: "ask",       label: "Ask AI",      icon: Sparkles,        href: "/ask" },
+  { key: "reports",      label: "Reports",     icon: BarChart2,       href: "/reports" },
+  { key: "automations", label: "Automations", icon: Zap,             href: "/automations" },
+  { key: "ask",         label: "Ask AI",      icon: Sparkles,        href: "/ask" },
 ];
 
 interface Props {

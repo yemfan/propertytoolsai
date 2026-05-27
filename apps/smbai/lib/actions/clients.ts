@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { runAutomations } from "@/lib/automation-engine";
 
 /**
  * Recalculates and updates a client's lifetime_value from paid invoices.
@@ -67,6 +68,21 @@ export async function createClient_(
   }
 
   revalidatePath("/clients");
+
+  // Fire new_lead automation if status is lead
+  const status = (formData.get("status") as string) || "lead";
+  if (status === "lead") {
+    const lastName = (formData.get("last_name") as string)?.trim();
+    const clientName = [firstName, lastName].filter(Boolean).join(" ");
+    const email = (formData.get("email") as string)?.trim() || null;
+    // Fire and forget — don't await to keep form fast
+    runAutomations("new_lead", {
+      orgId,
+      clientName,
+      clientEmail: email,
+    }).catch((e) => console.error("[automations] new_lead failed:", e));
+  }
+
   return { success: true };
 }
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { Users, Mail, Phone, Building2, Download } from "lucide-react";
+import { Users, Mail, Phone, Building2, Download, Upload } from "lucide-react";
 import { AddClientModal } from "@/components/add-client-modal";
 
 export const metadata: Metadata = { title: "Clients" };
@@ -64,6 +64,13 @@ export default async function ClientsPage({
             {counts.active ?? 0} active · {counts.lead ?? 0} leads · {counts.prospect ?? 0} prospects
           </p>
         </div>
+        <Link
+          href="/clients/import"
+          className="flex items-center gap-2 px-3 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+        >
+          <Upload className="w-4 h-4" />
+          Import
+        </Link>
         <Link
           href="/api/export/clients"
           className="flex items-center gap-2 px-3 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"

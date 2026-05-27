@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { ClientEditForm } from "./client-edit-form";
 import { PortalLinkButton } from "./portal-link-button";
+import { ClientNotesPanel } from "@/components/client-notes-panel";
 
 export const metadata: Metadata = { title: "Client · CRM" };
 
@@ -54,7 +55,7 @@ export default async function ClientDetailPage({
   const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const [clientRes, invoicesRes, messagesRes] = await Promise.all([
+  const [clientRes, invoicesRes, messagesRes, notesRes] = await Promise.all([
     supabase
       .from("clients")
       .select("*, portal_token")
@@ -75,9 +76,17 @@ export default async function ClientDetailPage({
       .eq("organization_id", orgId)
       .order("sent_at", { ascending: false })
       .limit(10),
+    supabase
+      .from("client_notes")
+      .select("id, body, kind, created_at")
+      .eq("client_id", id)
+      .eq("organization_id", orgId)
+      .order("created_at", { ascending: false })
+      .limit(50),
   ]);
 
   if (!clientRes.data) notFound();
+  const notes = notesRes.data ?? [];
   const client = clientRes.data;
   const invoices = invoicesRes.data ?? [];
   const messages = messagesRes.data ?? [];
@@ -249,8 +258,9 @@ export default async function ClientDetailPage({
           </div>
         </div>
 
-        {/* Right column — edit form */}
+        {/* Right column — notes + edit form */}
         <div className="space-y-4">
+          <ClientNotesPanel clientId={client.id} initialNotes={notes} />
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <div className="px-5 py-3.5 border-b border-slate-100">
               <h2 className="text-sm font-semibold text-slate-700">Details</h2>

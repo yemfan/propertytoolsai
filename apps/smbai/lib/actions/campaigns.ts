@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
+import { runAutomations } from "@/lib/automation-engine";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -172,6 +173,13 @@ export async function sendCampaign(campaignId: string) {
 
   revalidatePath("/marketing");
   revalidatePath(`/marketing/${campaignId}`);
+
+  // Run automation rules for campaign_sent
+  await runAutomations("campaign_sent", {
+    orgId,
+    campaignId,
+    campaignName: campaign.name,
+  });
 }
 
 // ─── Delete draft ─────────────────────────────────────────────────────────────

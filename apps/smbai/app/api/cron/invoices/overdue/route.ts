@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createNotificationService } from "@/lib/actions/notifications";
+import { runAutomations } from "@/lib/automation-engine";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,14 @@ export async function GET(request: NextRequest) {
       title: `Invoice overdue: $${Number(inv.total).toFixed(2)}`,
       body: `Invoice ${inv.invoice_number} from ${clientName} is past due`,
       link: `/books/invoices/${inv.id}`,
+    });
+
+    await runAutomations("invoice_overdue", {
+      orgId: inv.organization_id,
+      invoiceId: inv.id,
+      invoiceNumber: inv.invoice_number,
+      amount: Number(inv.total),
+      clientName,
     });
   }
 
