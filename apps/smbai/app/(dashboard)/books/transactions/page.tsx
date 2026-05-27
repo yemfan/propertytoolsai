@@ -1,0 +1,183 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
+import { BooksNav } from "@/components/books-nav";
+import { TransactionReviewRow } from "@/components/transaction-review-row";
+import { Download } from "lucide-react";
+
+export const metadata: Metadata = { title: "Transactions · Books" };
+
+export default async function TransactionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string; page?: string }>;
+}) {
+  const params = await searchParams;
+  const filter = params.filter ?? "pending"; // pending | all | reviewed
+  const page = Math.max(1, Number(params.page ?? 1));
+  const pageSize = 30;
+
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+
+  const supabase = await createClient();
+
+  // Fetch chart of accounts for the category dropdown
+  const { data: coaRaw } = await supabase
+    .from("chart_of_accounts")
+    .select("id, code, name, type")
+    .eq("organization_id", orgId)
+    .eq("is_active", true)
+    .order("code");
+
+  const coa = coaRaw ?? [];
+
+  // Build transaction query
+  let query = supabase
+    .from("bank_transactions")
+    .select(`
+      id, date, name, merchant_name, amount, pending,
+      personal_finance_category, reviewed, memo,
+      ai_category_confidence, ai_suggested_memo,
+      journal_entry_id,
+      coa_account_id,
+      bank_accounts!inner(name, mask, type)
+    `, { count: "exact" })
+    .eq("organization_id", orgId)
+    .order("date", { ascending: false })
+    .range((page - 1) * pageSize, page * pageSize - 1);
+
+  if (filter === "pending") {
+    query = query.eq("reviewed", false).eq("pending", false);
+  } else if (filter === "reviewed") {
+    query = query.eq("reviewed", true);
+  }
+  // "all" = no extra filter
+
+  const { data: txns, count } = await query;
+
+  const totalPages = Math.ceil((count ?? 0) / pageSize);
+  const pendingCount = await getPendingCount(supabase, orgId);
+
+  return (
+    <div className="p-8 max-w-6xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Books</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            AI-powered bookkeeping — cash basis, double-entry
+          </p>
+        </div>
+      </div>
+
+      <BooksNav />
+
+      {/* Filter tabs */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+          {(["pending", "all", "reviewed"] as const).map((f) => (
+            <a
+              key={f}
+              href={`/books/transactions?filter=${f}`}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors capitalize ${
+                filter === f
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {f === "pending" ? (
+                <span className="flex items-center gap-1.5">
+                  Needs review
+                  {pendingCount > 0 && (
+                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold">
+                      {pendingCount > 99 ? "99+" : pendingCount}
+                    </span>
+                  )}
+                </span>
+              ) : f}
+            </a>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-400">
+            {count ?? 0} transaction{count !== 1 ? "s" : ""}
+          </span>
+          <Link
+            href="/api/export/transactions"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export CSV
+          </Link>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        {/* Header */}
+        <div className="grid grid-cols-[90px_1fr_160px_100px_90px] gap-4 px-4 py-2.5 bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wide">
+          <span>Date</span>
+          <span>Description</span>
+          <span>Category</span>
+          <span className="text-right">Amount</span>
+          <span className="text-right">Action</span>
+        </div>
+
+        {!txns?.length ? (
+          <div className="py-16 text-center text-sm text-slate-400">
+            {filter === "pending"
+              ? "No transactions need review 🎉"
+              : "No transactions found."}
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {txns.map((t) => (
+              <TransactionReviewRow key={t.id} transaction={t} coa={coa} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-6">
+          {page > 1 && (
+            <a
+              href={`/books/transactions?filter=${filter}&page=${page - 1}`}
+              className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600"
+            >
+              ← Previous
+            </a>
+          )}
+          <span className="text-sm text-slate-500">
+            Page {page} of {totalPages}
+          </span>
+          {page < totalPages && (
+            <a
+              href={`/books/transactions?filter=${filter}&page=${page + 1}`}
+              className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600"
+            >
+              Next →
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+async function getPendingCount(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  orgId: string
+): Promise<number> {
+  const { count } = await supabase
+    .from("bank_transactions")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", orgId)
+    .eq("reviewed", false)
+    .eq("pending", false);
+  return count ?? 0;
+}

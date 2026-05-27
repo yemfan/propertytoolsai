@@ -1,0 +1,113 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { toggleAutoReply, saveAutoReplyMsg, saveTwilioNumber } from "@/lib/actions/messages";
+import { Phone, Save } from "lucide-react";
+
+interface Props {
+  orgId: string;
+  twilioNumber: string | null;
+  autoReply: boolean;
+  autoReplyMsg: string;
+}
+
+export function ReceptionSettings({ twilioNumber, autoReply, autoReplyMsg }: Props) {
+  const [number, setNumber]  = useState(twilioNumber ?? "");
+  const [enabled, setEnabled] = useState(autoReply);
+  const [msg, setMsg]         = useState(autoReplyMsg);
+  const [saved, setSaved]     = useState(false);
+  const [isPending, start]    = useTransition();
+
+  function handleToggle() {
+    const next = !enabled;
+    setEnabled(next);
+    start(() => toggleAutoReply(next));
+  }
+
+  function handleSave() {
+    start(async () => {
+      await saveTwilioNumber(number);
+      await saveAutoReplyMsg(msg);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    });
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
+      <h2 className="text-sm font-semibold text-slate-800">Auto-reply settings</h2>
+
+      {/* Twilio number */}
+      <div>
+        <label className="block text-xs font-medium text-slate-500 mb-1.5">
+          Twilio phone number
+        </label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="tel"
+              value={number}
+              onChange={(e) => setNumber(e.target.value)}
+              placeholder="+15555550100"
+              className="w-full border border-slate-200 rounded-lg pl-9 pr-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-slate-400 mt-1">
+          Must match the Twilio number pointing to{" "}
+          <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">
+            /api/twilio/voice
+          </code>
+        </p>
+      </div>
+
+      {/* Toggle */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-slate-700">Auto-reply to missed calls</p>
+          <p className="text-xs text-slate-400 mt-0.5">Send an SMS automatically when you don&apos;t answer</p>
+        </div>
+        <button
+          onClick={handleToggle}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+            enabled ? "bg-indigo-600" : "bg-slate-200"
+          }`}
+        >
+          <span
+            className={`inline-block w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform ${
+              enabled ? "translate-x-6" : "translate-x-1"
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* Message */}
+      <div>
+        <label className="block text-xs font-medium text-slate-500 mb-1.5">
+          Auto-reply message
+        </label>
+        <textarea
+          value={msg}
+          onChange={(e) => setMsg(e.target.value)}
+          rows={3}
+          maxLength={160}
+          className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+        />
+        <div className="flex items-center justify-between mt-1">
+          <p className="text-xs text-slate-400">Sent via SMS to the caller&apos;s number</p>
+          <p className="text-xs text-slate-400">{msg.length}/160</p>
+        </div>
+      </div>
+
+      <button
+        onClick={handleSave}
+        disabled={isPending}
+        className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+      >
+        <Save className="w-4 h-4" />
+        {saved ? "Saved!" : "Save changes"}
+      </button>
+    </div>
+  );
+}

@@ -1,0 +1,102 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { Mic, Save, Zap } from "lucide-react";
+import { saveVoiceSettings } from "@/lib/actions/social";
+
+interface Props {
+  enabled: boolean;
+  greeting: string;
+  prompt: string;
+  twilioNumber: string | null;
+}
+
+export function VoiceSettings({ enabled, greeting, prompt, twilioNumber }: Props) {
+  const [isEnabled, setIsEnabled] = useState(enabled);
+  const [greetingText, setGreeting] = useState(greeting);
+  const [promptText, setPrompt] = useState(prompt ?? "");
+  const [saved, setSaved] = useState(false);
+  const [isPending, start] = useTransition();
+
+  function handleSave() {
+    start(async () => {
+      await saveVoiceSettings({ enabled: isEnabled, greeting: greetingText, prompt: promptText });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    });
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center">
+          <Mic className="w-4 h-4 text-indigo-600" />
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold text-slate-800">AI Voice Agent</h2>
+          <p className="text-xs text-slate-500">Answers your calls with Claude when you're unavailable</p>
+        </div>
+        <button
+          onClick={() => setIsEnabled((v) => !v)}
+          className={`ml-auto relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isEnabled ? "bg-indigo-600" : "bg-slate-200"}`}
+        >
+          <span className={`inline-block w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform ${isEnabled ? "translate-x-6" : "translate-x-1"}`} />
+        </button>
+      </div>
+
+      {/* Phone number check */}
+      {!twilioNumber ? (
+        <div className="bg-amber-50 border border-amber-100 rounded-lg px-4 py-3 text-sm text-amber-700">
+          ⚠ Set your Twilio number in <strong>Reception → Settings</strong> first to enable the voice agent.
+        </div>
+      ) : (
+        <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-4 py-3 flex items-center gap-2">
+          <Zap className="w-3.5 h-3.5 text-emerald-600" />
+          <span className="text-sm text-emerald-700">Connected to <strong>{twilioNumber}</strong></span>
+        </div>
+      )}
+
+      {/* Greeting */}
+      <div>
+        <label className="block text-xs font-medium text-slate-500 mb-1.5">Opening greeting</label>
+        <input
+          type="text"
+          value={greetingText}
+          onChange={(e) => setGreeting(e.target.value)}
+          className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Hello! Thank you for calling. How can I help you today?"
+        />
+        <p className="text-xs text-slate-400 mt-1">This is the first thing callers hear.</p>
+      </div>
+
+      {/* Prompt */}
+      <div>
+        <label className="block text-xs font-medium text-slate-500 mb-1.5">
+          Business context <span className="text-slate-400">(what Claude knows about you)</span>
+        </label>
+        <textarea
+          value={promptText}
+          onChange={(e) => setPrompt(e.target.value)}
+          rows={8}
+          className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none font-mono"
+          placeholder={`Business name: Acme Plumbing
+Services: residential plumbing, drain cleaning, water heater installation
+Hours: Mon-Fri 8am-6pm, Sat 9am-2pm, emergency service available 24/7
+Pricing: free estimates, $95 service call fee
+Appointments: available same-day most days, book at least 2 hours ahead
+Owner: Mike Johnson — available for callbacks between 9am-5pm`}
+        />
+        <p className="text-xs text-slate-400 mt-1">Plain text is fine. The more detail, the better the agent performs.</p>
+      </div>
+
+      <button
+        onClick={handleSave}
+        disabled={isPending}
+        className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+      >
+        <Save className="w-4 h-4" />
+        {saved ? "Saved!" : "Save settings"}
+      </button>
+    </div>
+  );
+}

@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+:root {
+  --font-body: '';
+  --font-mono: '';
+}
+
+body {
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+code, pre, .tabular-nums {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}

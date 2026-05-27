@@ -1,0 +1,128 @@
+import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
+import { BooksNav } from "@/components/books-nav";
+import { RecurringInvoiceModal } from "@/components/recurring-invoice-modal";
+import { RecurringRow } from "./recurring-row";
+import { RefreshCcw } from "lucide-react";
+
+export const metadata: Metadata = { title: "Recurring Invoices · Books" };
+
+export default async function RecurringPage() {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const supabase = await createClient();
+
+  const [recurringRes, clientsRes] = await Promise.all([
+    supabase
+      .from("recurring_invoices")
+      .select("id, client_id, frequency, next_invoice_date, last_generated_at, status, title, tax_rate, line_items, clients(first_name, last_name, company)")
+      .eq("organization_id", orgId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("clients")
+      .select("id, first_name, last_name, company")
+      .eq("organization_id", orgId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const recurring = recurringRes.data ?? [];
+  const clients = clientsRes.data ?? [];
+
+  const activeCount = recurring.filter((r) => r.status === "active").length;
+  const pausedCount = recurring.filter((r) => r.status === "paused").length;
+
+  return (
+    <div className="p-8 max-w-6xl mx-auto">
+      {/* Page header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Books</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            AI-powered bookkeeping — cash basis, double-entry
+          </p>
+        </div>
+        <RecurringInvoiceModal
+          clients={
+            clients as {
+              id: string;
+              first_name: string | null;
+              last_name: string | null;
+              company: string | null;
+            }[]
+          }
+        />
+      </div>
+
+      <BooksNav />
+
+      {/* Stat chips */}
+      <div className="flex items-center gap-5 mb-6 text-sm text-slate-500">
+        <span className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          {activeCount} active
+        </span>
+        {pausedCount > 0 && (
+          <span className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-400" />
+            {pausedCount} paused
+          </span>
+        )}
+        <span className="text-xs text-slate-400">
+          Invoices are auto-generated daily at 9 AM UTC
+        </span>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        {!recurring.length ? (
+          /* Empty state */
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mb-3">
+              <RefreshCcw className="w-6 h-6 text-slate-400" />
+            </div>
+            <p className="text-sm font-medium text-slate-600 mb-1">
+              No recurring invoices
+            </p>
+            <p className="text-xs text-slate-400 max-w-xs mb-5">
+              Set up automatic billing for retainers, subscriptions, or any repeating service.
+            </p>
+            <RecurringInvoiceModal
+              clients={
+                clients as {
+                  id: string;
+                  first_name: string | null;
+                  last_name: string | null;
+                  company: string | null;
+                }[]
+              }
+            />
+          </div>
+        ) : (
+          <>
+            {/* Table header */}
+            <div className="grid grid-cols-[1fr_120px_100px_120px_100px] gap-4 px-6 py-3 bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wide">
+              <span>Client / Schedule</span>
+              <span>Frequency</span>
+              <span>Amount</span>
+              <span>Next invoice</span>
+              <span className="text-right">Status</span>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {recurring.map((r) => (
+                <RecurringRow
+                  key={r.id}
+                  recurring={
+                    r as Parameters<typeof RecurringRow>[0]["recurring"]
+                  }
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

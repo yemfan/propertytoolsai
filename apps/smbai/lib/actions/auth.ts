@@ -1,0 +1,66 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+
+export type AuthState = { error: string } | null;
+
+// ── Sign in ──────────────────────────────────────────────────────────────────
+
+export async function signIn(
+  _: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) return { error: error.message };
+
+  redirect("/books");
+}
+
+// ── Sign up ──────────────────────────────────────────────────────────────────
+
+export async function signUp(
+  _: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+
+  if (password.length < 8) {
+    return { error: "Password must be at least 8 characters." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`,
+    },
+  });
+
+  if (error) return { error: error.message };
+
+  // Email confirmation required (Supabase default)
+  if (data.user && !data.session) {
+    return {
+      error:
+        "Check your email for a confirmation link, then sign in to continue.",
+    };
+  }
+
+  redirect("/onboarding");
+}
+
+// ── Sign out ─────────────────────────────────────────────────────────────────
+
+export async function signOut(): Promise<void> {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/login");
+}

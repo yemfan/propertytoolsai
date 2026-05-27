@@ -1,0 +1,195 @@
+"use client";
+
+import { useActionState, useState } from "react";
+import { X, UserPlus } from "lucide-react";
+import { createClient_ } from "@/lib/actions/clients";
+import type { ClientState } from "@/lib/actions/clients";
+
+const STATUS_OPTIONS = [
+  { value: "lead",     label: "Lead" },
+  { value: "prospect", label: "Prospect" },
+  { value: "active",   label: "Active Client" },
+  { value: "inactive", label: "Inactive" },
+];
+
+export function AddClientModal() {
+  const [open, setOpen] = useState(false);
+  const [state, action, isPending] = useActionState<ClientState, FormData>(
+    createClient_,
+    null
+  );
+
+  // Auto-close on success
+  if (state?.success && open) setOpen(false);
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors"
+      >
+        <UserPlus className="w-4 h-4" />
+        Add Client
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 z-10">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold text-slate-900">Add client</h2>
+              <button
+                onClick={() => setOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form action={action} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                    First name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    name="first_name"
+                    type="text"
+                    required
+                    disabled={isPending}
+                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50"
+                    placeholder="Jane"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Last name</label>
+                  <input
+                    name="last_name"
+                    type="text"
+                    disabled={isPending}
+                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50"
+                    placeholder="Smith"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Company</label>
+                <input
+                  name="company"
+                  type="text"
+                  disabled={isPending}
+                  className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50"
+                  placeholder="Acme Inc."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Email</label>
+                  <input
+                    name="email"
+                    type="email"
+                    disabled={isPending}
+                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50"
+                    placeholder="jane@example.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Phone</label>
+                  <input
+                    name="phone"
+                    type="tel"
+                    disabled={isPending}
+                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50"
+                    placeholder="+1 (555) 000-0000"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
+                  <select
+                    name="status"
+                    defaultValue="lead"
+                    disabled={isPending}
+                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50"
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Source</label>
+                  <input
+                    name="source"
+                    type="text"
+                    disabled={isPending}
+                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50"
+                    placeholder="Referral, website…"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  Tags <span className="text-slate-400 font-normal">(comma-separated)</span>
+                </label>
+                <input
+                  name="tags"
+                  type="text"
+                  disabled={isPending}
+                  className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50"
+                  placeholder="vip, contractor, repeat"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Notes</label>
+                <textarea
+                  name="notes"
+                  rows={2}
+                  disabled={isPending}
+                  className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 resize-none"
+                  placeholder="Any additional context…"
+                />
+              </div>
+
+              {state?.error && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {state.error}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  disabled={isPending}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60 transition-colors"
+                >
+                  {isPending ? "Saving…" : "Add client"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

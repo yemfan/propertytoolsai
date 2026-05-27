@@ -1,0 +1,137 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
+import { createClient } from "@/lib/supabase/server";
+import { encrypt } from "@/lib/crypto";
+
+const plaidClient = new PlaidApi(
+  new Configuration({
+    basePath: PlaidEnvironments[process.env.PLAID_ENV as keyof typeof PlaidEnvironments ?? "sandbox"],
+    baseOptions: {
+      headers: {
+        "PLAID-CLIENT-ID": process.env.PLAID_CLIENT_ID!,
+        "PLAID-SECRET": process.env.PLAID_SECRET!,
+      },
+    },
+  })
+);
+
+/**
+ * POST /api/plaid/exchange-token
+ *
+ * Called by the client after Plaid Link succeeds.
+ * Exchanges the short-lived public_token for a permanent access_token,
+ * encrypts it, and stores the connection + accounts in the DB.
+ * Then triggers an initial transaction sync.
+ *
+ * Body: {
+ *   public_token: string,
+ *   institution: { id: string; name: string },
+ *   accounts: Array<{ id: string; name: string; type: string; subtype: string; mask: string }>
+ * }
+ *
+ * Returns: { connection_id: string }
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Resolve org from cookie
+    const orgId = request.cookies.get("smbai-org-id")?.value;
+    if (!orgId) {
+      return NextResponse.json({ error: "No organization found." }, { status: 400 });
+    }
+
+    const body = await request.json() as {
+      public_token: string;
+      institution?: { institution_id?: string; name?: string };
+      accounts?: Array<{
+        id: string;
+        name: string;
+        type: string;
+        subtype?: string;
+        mask?: string;
+        // official_name not sent from Plaid Link metadata; enriched during sync
+      }>;
+    };
+
+    const { public_token, institution, accounts = [] } = body;
+
+    if (!public_token) {
+      return NextResponse.json({ error: "public_token is required." }, { status: 400 });
+    }
+
+    // Exchange public token for access token
+    const exchangeRes = await plaidClient.itemPublicTokenExchange({ public_token });
+    const { access_token, item_id } = exchangeRes.data;
+
+    // Encrypt before storing — NEVER store plaintext access tokens
+    const encryptedToken = encrypt(access_token);
+
+    // Insert bank_connection (service role bypasses RLS so we can write from server)
+    // We use the user-scoped client here — user is an org member so RLS passes.
+    const { data: connection, error: connError } = await supabase
+      .from("bank_connections")
+      .insert({
+        organization_id: orgId,
+        plaid_item_id: item_id,
+        plaid_access_token_enc: encryptedToken,
+        institution_id: institution?.institution_id ?? null,
+        institution_name: institution?.name ?? null,
+        status: "active",
+      })
+      .select("id")
+      .single();
+
+    if (connError || !connection) {
+      console.error("[plaid] insert bank_connection error:", connError);
+      return NextResponse.json(
+        { error: "Failed to save bank connection." },
+        { status: 500 }
+      );
+    }
+
+    // Insert bank_accounts
+    if (accounts.length > 0) {
+      const { error: accError } = await supabase.from("bank_accounts").insert(
+        accounts.map((a) => ({
+          organization_id: orgId,
+          connection_id: connection.id,
+          plaid_account_id: a.id,
+          name: a.name,
+          type: a.type,
+          subtype: a.subtype ?? null,
+          mask: a.mask ?? null,
+          iso_currency_code: "USD",
+        }))
+      );
+
+      if (accError) {
+        console.error("[plaid] insert bank_accounts error:", accError);
+        // Non-fatal — connection exists; sync will handle accounts
+      }
+    }
+
+    // Kick off initial transaction sync (fire-and-forget — client will poll)
+    void fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/plaid/sync`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: `smbai-org-id=${orgId}` },
+      body: JSON.stringify({ connection_id: connection.id }),
+    }).catch((e) => console.error("[plaid] initial sync error:", e));
+
+    return NextResponse.json({ connection_id: connection.id });
+  } catch (err) {
+    console.error("[plaid] exchange-token error:", err);
+    return NextResponse.json(
+      { error: "Failed to exchange Plaid token." },
+      { status: 500 }
+    );
+  }
+}

@@ -1,0 +1,457 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
+import {
+  DollarSign, TrendingUp, TrendingDown, FileText,
+  Users, Plus, RefreshCcw, ArrowRight, Building2,
+} from "lucide-react";
+import { RevenueChart, type ChartMonth } from "@/components/revenue-chart";
+
+export const metadata: Metadata = { title: "Dashboard" };
+
+// ─── Formatting ───────────────────────────────────────────────────────────────
+
+function fmt(n: number | null): string {
+  if (n === null) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+function fmtDate(d: string): string {
+  return new Date(d + "T00:00:00").toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+// ─── Data ─────────────────────────────────────────────────────────────────────
+
+async function getDashboardData(orgId: string) {
+  const supabase = await createClient();
+
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+    .toISOString()
+    .slice(0, 10);
+
+  // 6-month window for chart
+  const sixMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 5, 1)
+    .toISOString()
+    .slice(0, 10);
+
+  const [
+    bankRes,
+    mtdTxnRes,
+    invoiceRes,
+    clientsRes,
+    chartTxnRes,
+    recentInvRes,
+    recentClientsRes,
+  ] = await Promise.all([
+    // Bank balances
+    supabase
+      .from("bank_accounts")
+      .select("current_balance, type")
+      .eq("organization_id", orgId)
+      .eq("is_active", true),
+
+    // MTD transactions
+    supabase
+      .from("bank_transactions")
+      .select("amount")
+      .eq("organization_id", orgId)
+      .eq("pending", false)
+      .gte("date", monthStart)
+      .lte("date", todayStr),
+
+    // Outstanding invoices
+    supabase
+      .from("invoices")
+      .select("total, status, due_date")
+      .eq("organization_id", orgId)
+      .in("status", ["sent", "overdue"]),
+
+    // Client counts
+    supabase
+      .from("clients")
+      .select("status", { count: "exact" })
+      .eq("organization_id", orgId),
+
+    // 6-month transactions for chart
+    supabase
+      .from("bank_transactions")
+      .select("date, amount")
+      .eq("organization_id", orgId)
+      .eq("pending", false)
+      .gte("date", sixMonthsAgo)
+      .lte("date", todayStr),
+
+    // Recent invoices
+    supabase
+      .from("invoices")
+      .select("id, invoice_number, status, total, due_date, clients(first_name, last_name, company)")
+      .eq("organization_id", orgId)
+      .neq("status", "void")
+      .order("created_at", { ascending: false })
+      .limit(5),
+
+    // Recent clients
+    supabase
+      .from("clients")
+      .select("id, first_name, last_name, company, status, created_at")
+      .eq("organization_id", orgId)
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
+
+  // Bank balance
+  const accounts = bankRes.data ?? [];
+  const bankBalance = accounts.length
+    ? accounts.reduce((s, a) => {
+        const b = a.current_balance ?? 0;
+        return a.type === "credit" ? s - b : s + b;
+      }, 0)
+    : null;
+
+  // MTD figures
+  const mtdTxns = mtdTxnRes.data ?? [];
+  let mtdRevenue = 0;
+  let mtdExpenses = 0;
+  for (const t of mtdTxns) {
+    if (t.amount < 0) mtdRevenue += Math.abs(t.amount);
+    else mtdExpenses += t.amount;
+  }
+
+  // Outstanding invoices
+  const outstanding = invoiceRes.data ?? [];
+  const totalOutstanding = outstanding.reduce((s, i) => s + Number(i.total), 0);
+  const overdueCount = outstanding.filter(
+    (i) => i.status === "overdue" || (i.status === "sent" && i.due_date < todayStr)
+  ).length;
+
+  // Client counts
+  const clients = clientsRes.data ?? [];
+  const activeClients = clients.filter((c) => c.status === "active").length;
+  const totalClients = clients.length;
+
+  // Chart data — group by YYYY-MM, then build 6-month labels
+  const chartTxns = chartTxnRes.data ?? [];
+  const monthMap = new Map<string, { revenue: number; expenses: number }>();
+  for (const t of chartTxns) {
+    const key = t.date.slice(0, 7); // YYYY-MM
+    const cur = monthMap.get(key) ?? { revenue: 0, expenses: 0 };
+    if (t.amount < 0) cur.revenue += Math.abs(t.amount);
+    else cur.expenses += t.amount;
+    monthMap.set(key, cur);
+  }
+
+  const chartData: ChartMonth[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleDateString("en-US", { month: "short" });
+    const { revenue = 0, expenses = 0 } = monthMap.get(key) ?? {};
+    chartData.push({ month: label, revenue, expenses });
+  }
+
+  return {
+    bankBalance,
+    mtdRevenue: mtdTxns.length ? mtdRevenue : null,
+    mtdExpenses: mtdTxns.length ? mtdExpenses : null,
+    totalOutstanding,
+    overdueCount,
+    outstandingCount: outstanding.length,
+    activeClients,
+    totalClients,
+    chartData,
+    recentInvoices: recentInvRes.data ?? [],
+    recentClients: recentClientsRes.data ?? [],
+  };
+}
+
+// ─── Status colors (invoices) ─────────────────────────────────────────────────
+
+const INV_STATUS: Record<string, string> = {
+  draft:   "bg-slate-100 text-slate-600",
+  sent:    "bg-blue-100 text-blue-700",
+  paid:    "bg-emerald-100 text-emerald-700",
+  overdue: "bg-rose-100 text-rose-700",
+};
+
+const CLIENT_STATUS: Record<string, string> = {
+  lead:     "bg-slate-100 text-slate-600",
+  prospect: "bg-blue-100 text-blue-700",
+  active:   "bg-emerald-100 text-emerald-700",
+  inactive: "bg-amber-100 text-amber-700",
+};
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default async function HomePage() {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+
+  const {
+    bankBalance,
+    mtdRevenue,
+    mtdExpenses,
+    totalOutstanding,
+    overdueCount,
+    outstandingCount,
+    activeClients,
+    totalClients,
+    chartData,
+    recentInvoices,
+    recentClients,
+  } = await getDashboardData(orgId);
+
+  const today = new Date();
+  const hour = today.getHours();
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  const kpis = [
+    {
+      label: "Bank Balance",
+      value: fmt(bankBalance),
+      icon: DollarSign,
+      sub: bankBalance === null ? "Link a bank account" : "All connected accounts",
+      color: "text-slate-400",
+      href: "/books",
+    },
+    {
+      label: "Revenue (MTD)",
+      value: fmt(mtdRevenue),
+      icon: TrendingUp,
+      sub: today.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+      color: "text-emerald-500",
+      href: "/books",
+    },
+    {
+      label: "Expenses (MTD)",
+      value: fmt(mtdExpenses),
+      icon: TrendingDown,
+      sub: today.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+      color: "text-rose-500",
+      href: "/books",
+    },
+    {
+      label: "Outstanding",
+      value: fmt(totalOutstanding),
+      icon: FileText,
+      sub: `${outstandingCount} invoice${outstandingCount !== 1 ? "s" : ""}${overdueCount > 0 ? ` · ${overdueCount} overdue` : ""}`,
+      color: overdueCount > 0 ? "text-rose-500" : "text-amber-500",
+      href: "/books/invoices",
+    },
+  ];
+
+  return (
+    <div className="p-8 max-w-6xl mx-auto space-y-8">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">{greeting} 👋</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {activeClients} active client{activeClients !== 1 ? "s" : ""} · {totalClients} total
+          </p>
+        </div>
+
+        {/* Quick actions */}
+        <div className="flex items-center gap-2">
+          <Link
+            href="/books/invoices/new"
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New invoice
+          </Link>
+          <Link
+            href="/clients"
+            className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+          >
+            <Users className="w-4 h-4" />
+            Clients
+          </Link>
+        </div>
+      </div>
+
+      {/* ── KPI cards ── */}
+      <div className="grid grid-cols-4 gap-4">
+        {kpis.map(({ label, value, icon: Icon, sub, color, href }) => (
+          <Link
+            key={label}
+            href={href}
+            className="bg-white rounded-xl border border-slate-200 p-5 hover:border-indigo-200 hover:shadow-sm transition-all group"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                {label}
+              </span>
+              <Icon className={`w-4 h-4 ${color}`} />
+            </div>
+            <div className="text-2xl font-semibold text-slate-800 font-mono mb-1">
+              {value}
+            </div>
+            <div className="text-xs text-slate-400">{sub}</div>
+          </Link>
+        ))}
+      </div>
+
+      {/* ── Revenue chart ── */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-800">Revenue vs Expenses</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Last 6 months</p>
+          </div>
+          <Link
+            href="/books/reports"
+            className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+          >
+            Full report
+            <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+        <div className="h-48">
+          <RevenueChart data={chartData} />
+        </div>
+      </div>
+
+      {/* ── Recent activity ── */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Recent invoices */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <h2 className="text-sm font-semibold text-slate-800">Recent Invoices</h2>
+            <Link
+              href="/books/invoices"
+              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
+            >
+              View all <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {!recentInvoices.length ? (
+            <div className="py-10 text-center">
+              <FileText className="w-7 h-7 text-slate-200 mx-auto mb-2" />
+              <p className="text-xs text-slate-400">No invoices yet</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {recentInvoices.map((inv) => {
+                const clientRaw = inv.clients;
+                const client = (
+                  Array.isArray(clientRaw) ? clientRaw[0] : clientRaw
+                ) as {
+                  first_name: string | null;
+                  last_name: string | null;
+                  company: string | null;
+                } | null;
+                const clientName = client
+                  ? [client.first_name, client.last_name].filter(Boolean).join(" ") ||
+                    client.company ||
+                    "—"
+                  : "—";
+
+                const todayStr = new Date().toISOString().slice(0, 10);
+                const effectiveStatus =
+                  inv.status === "sent" && inv.due_date < todayStr
+                    ? "overdue"
+                    : inv.status;
+
+                return (
+                  <Link
+                    key={inv.id}
+                    href={`/books/invoices/${inv.id}`}
+                    className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">
+                        {clientName}
+                      </p>
+                      <p className="text-xs text-slate-400 font-mono">
+                        {inv.invoice_number} · {fmtDate(inv.due_date)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-sm font-semibold text-slate-800 tabular-nums">
+                        {fmt(Number(inv.total))}
+                      </span>
+                      <span
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${
+                          INV_STATUS[effectiveStatus] ?? INV_STATUS.draft
+                        }`}
+                      >
+                        {effectiveStatus}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Recent clients */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <h2 className="text-sm font-semibold text-slate-800">Recent Clients</h2>
+            <Link
+              href="/clients"
+              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
+            >
+              View all <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {!recentClients.length ? (
+            <div className="py-10 text-center">
+              <Users className="w-7 h-7 text-slate-200 mx-auto mb-2" />
+              <p className="text-xs text-slate-400">No clients yet</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {recentClients.map((client) => {
+                const name =
+                  [client.first_name, client.last_name].filter(Boolean).join(" ") ||
+                  client.company ||
+                  "—";
+                return (
+                  <Link
+                    key={client.id}
+                    href={`/clients/${client.id}`}
+                    className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="w-4 h-4 text-indigo-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">
+                        {name}
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        Added {fmtDate(client.created_at.slice(0, 10))}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize flex-shrink-0 ${
+                        CLIENT_STATUS[client.status] ?? CLIENT_STATUS.lead
+                      }`}
+                    >
+                      {client.status}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
