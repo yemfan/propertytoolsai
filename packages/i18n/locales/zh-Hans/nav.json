@@ -1,6 +1,10 @@
 {
   "tabs": {
     "home": "首页",
+    "work": "工作",
+    "engage": "互动",
+    "analyze": "分析",
+    "manage": "管理",
     "inbox": "消息",
     "leads": "客户",
     "calendar": "日历",

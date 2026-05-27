@@ -357,12 +357,12 @@ export default function HomeScreen() {
 
         <SectionRule color={tokens.border} />
 
-        {/* v1.6 Home redesign — supercategory tile grid (Work/Engage/Analyze/Manage)
-         * mirrors the web `PremiumSidebarV2` organization. Replaces the
-         * legacy chip row that had every feature in one flat unordered
-         * pill list. See `docs/HOME_REDESIGN_PLAN.md` for the mapping
-         * and the trade-offs (hot-leads / unread / appointments quick
-         * filters dropped — those are one bottom-tab tap away). */}
+        {/* v1.6: comprehensive feature launcher — all 17 features
+         * grouped by supercategory (Work / Engage / Analyze / Manage).
+         * Duplicates the per-tab tile grids so agents can either tap
+         * Home and see everything in one scroll, or tap a supercategory
+         * tab and see just that section. Both navigation paths land on
+         * the same downstream screens. */}
         <HomeFeatureSections />
 
         <SectionRule color={tokens.border} />
