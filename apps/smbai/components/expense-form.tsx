@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createExpense } from "@/lib/actions/expenses";
-import { DollarSign } from "lucide-react";
+import { DollarSign, ScanLine, X, Loader2, ImagePlus, CheckCircle2 } from "lucide-react";
 
 interface CoAAccount {
   id: string;
@@ -22,17 +22,95 @@ interface Props {
   bankAccounts: BankAccount[];
 }
 
+// Map AI category → CoA account name fragment (case-insensitive partial match)
+const CATEGORY_HINTS: Record<string, string[]> = {
+  "Advertising & Marketing": ["advertising", "marketing"],
+  "Bank Fees":               ["bank fee", "bank charge"],
+  "Computer & Software":    ["computer", "software", "tech"],
+  "Dues & Subscriptions":   ["subscription", "dues", "membership"],
+  "Equipment":              ["equipment", "machinery"],
+  "Insurance":              ["insurance"],
+  "Meals & Entertainment":  ["meals", "entertainment", "food"],
+  "Office Supplies":        ["office"],
+  "Professional Services":  ["professional", "consulting", "legal", "accounting"],
+  "Rent & Utilities":       ["rent", "utilities", "utility"],
+  "Repairs & Maintenance":  ["repairs", "maintenance"],
+  "Shipping & Delivery":    ["shipping", "freight", "delivery"],
+  "Travel":                 ["travel"],
+  "Vehicle":                ["vehicle", "auto", "car", "fuel"],
+};
+
+function findBestAccount(category: string | null, accounts: CoAAccount[]): string {
+  if (!category) return accounts[0]?.id ?? "";
+  const hints = CATEGORY_HINTS[category] ?? [];
+  for (const hint of hints) {
+    const match = accounts.find((a) => a.name.toLowerCase().includes(hint));
+    if (match) return match.id;
+  }
+  return accounts[0]?.id ?? "";
+}
+
 export function ExpenseForm({ expenseAccounts, bankAccounts }: Props) {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const [date, setDate]                 = useState(today);
   const [amount, setAmount]             = useState("");
   const [description, setDescription]   = useState("");
   const [expenseAccountId, setExpenseAccountId] = useState(expenseAccounts[0]?.id ?? "");
-  const [paymentSourceId, setPaymentSourceId]   = useState<string>(""); // "" = Accounts Payable
+  const [paymentSourceId, setPaymentSourceId]   = useState<string>("");
   const [error, setError]               = useState("");
   const [pending, start]                = useTransition();
+
+  // Receipt scanning state
+  const [scanning, setScanning]         = useState(false);
+  const [scanError, setScanError]       = useState("");
+  const [scannedFile, setScannedFile]   = useState<string | null>(null); // filename
+  const [scanConfidence, setScanConfidence] = useState<string | null>(null);
+
+  async function handleReceiptUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setScanError("");
+    setScanConfidence(null);
+    setScanning(true);
+    setScannedFile(file.name);
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch("/api/expenses/scan", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Scan failed" }));
+        throw new Error(data.error ?? "Scan failed");
+      }
+
+      const data = await res.json();
+
+      // Auto-fill fields with extracted data
+      if (data.date)        setDate(data.date);
+      if (data.amount)      setAmount(String(data.amount));
+      if (data.description) setDescription(data.description);
+      if (data.vendor_name && !data.description) setDescription(data.vendor_name);
+      if (data.category)    setExpenseAccountId(findBestAccount(data.category, expenseAccounts));
+      if (data.confidence)  setScanConfidence(data.confidence);
+
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : "Failed to scan receipt");
+      setScannedFile(null);
+    } finally {
+      setScanning(false);
+      // Reset file input so the same file can be re-selected
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
 
   function handleSubmit() {
     const amt = parseFloat(amount);
@@ -60,6 +138,67 @@ export function ExpenseForm({ expenseAccounts, bankAccounts }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Receipt scanner card */}
+      <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+            <ScanLine className="w-4.5 h-4.5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-slate-800 mb-0.5">Scan a receipt</p>
+            <p className="text-xs text-slate-500 mb-3">
+              Upload a receipt image and AI will fill in the details automatically.
+            </p>
+
+            {scanning ? (
+              <div className="flex items-center gap-2 text-sm text-indigo-600">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Extracting receipt data…
+              </div>
+            ) : scannedFile ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-emerald-700">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span className="truncate max-w-[160px]">{scannedFile}</span>
+                  {scanConfidence && (
+                    <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${
+                      scanConfidence === "high" ? "bg-emerald-100 text-emerald-700"
+                      : scanConfidence === "medium" ? "bg-amber-100 text-amber-700"
+                      : "bg-slate-100 text-slate-600"
+                    }`}>
+                      {scanConfidence} confidence
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setScannedFile(null); setScanConfidence(null); }}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-white transition-colors"
+                  title="Clear scan"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <label className="inline-flex items-center gap-2 cursor-pointer px-4 py-2 bg-white border border-indigo-200 hover:border-indigo-400 text-indigo-700 text-sm font-medium rounded-lg transition-colors">
+                <ImagePlus className="w-4 h-4" />
+                Upload receipt
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handleReceiptUpload}
+                  className="sr-only"
+                />
+              </label>
+            )}
+
+            {scanError && (
+              <p className="text-xs text-rose-600 mt-2">{scanError}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
         <h2 className="text-sm font-semibold text-slate-800">Expense details</h2>
 
