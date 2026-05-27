@@ -4,7 +4,8 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import {
   DollarSign, TrendingUp, TrendingDown, FileText,
-  Users, Plus, RefreshCcw, ArrowRight, Building2,
+  Users, Plus, ArrowRight, Building2,
+  CheckSquare, Clock, CalendarDays, AlertCircle,
 } from "lucide-react";
 import { RevenueChart, type ChartMonth } from "@/components/revenue-chart";
 
@@ -44,6 +45,11 @@ async function getDashboardData(orgId: string) {
     .toISOString()
     .slice(0, 10);
 
+  // Upcoming window: today → 7 days out
+  const sevenDaysOut = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7)
+    .toISOString()
+    .slice(0, 10);
+
   const [
     bankRes,
     mtdTxnRes,
@@ -52,6 +58,8 @@ async function getDashboardData(orgId: string) {
     chartTxnRes,
     recentInvRes,
     recentClientsRes,
+    openTasksRes,
+    upcomingEventsRes,
   ] = await Promise.all([
     // Bank balances
     supabase
@@ -107,6 +115,27 @@ async function getDashboardData(orgId: string) {
       .eq("organization_id", orgId)
       .order("created_at", { ascending: false })
       .limit(5),
+
+    // Open tasks (overdue + due this week)
+    supabase
+      .from("tasks")
+      .select("id, title, due_date, priority, status, client_id, clients(first_name, last_name, company)")
+      .eq("organization_id", orgId)
+      .eq("status", "open")
+      .lte("due_date", sevenDaysOut)
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .limit(6),
+
+    // Upcoming calendar events (next 7 days)
+    supabase
+      .from("events")
+      .select("id, title, type, color, start_at, all_day, clients(first_name, last_name)")
+      .eq("organization_id", orgId)
+      .eq("completed", false)
+      .gte("start_at", new Date().toISOString())
+      .lte("start_at", new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7, 23, 59).toISOString())
+      .order("start_at", { ascending: true })
+      .limit(6),
   ]);
 
   // Bank balance
@@ -171,6 +200,9 @@ async function getDashboardData(orgId: string) {
     chartData,
     recentInvoices: recentInvRes.data ?? [],
     recentClients: recentClientsRes.data ?? [],
+    openTasks: openTasksRes.data ?? [],
+    upcomingEvents: upcomingEventsRes.data ?? [],
+    todayStr,
   };
 }
 
@@ -208,6 +240,9 @@ export default async function HomePage() {
     chartData,
     recentInvoices,
     recentClients,
+    openTasks,
+    upcomingEvents,
+    todayStr,
   } = await getDashboardData(orgId);
 
   const today = new Date();
@@ -445,6 +480,149 @@ export default async function HomePage() {
                     >
                       {client.status}
                     </span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+      {/* ── Tasks + Events ── */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Open tasks due this week */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <CheckSquare className="w-4 h-4 text-indigo-500" />
+              <h2 className="text-sm font-semibold text-slate-800">Upcoming Tasks</h2>
+            </div>
+            <Link
+              href="/tasks"
+              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
+            >
+              View all <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {openTasks.length === 0 ? (
+            <div className="py-10 text-center">
+              <CheckSquare className="w-7 h-7 text-slate-200 mx-auto mb-2" />
+              <p className="text-xs text-slate-400">No tasks due this week</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {openTasks.map((task) => {
+                const clientRaw = task.clients;
+                const client = (Array.isArray(clientRaw) ? clientRaw[0] : clientRaw) as {
+                  first_name: string | null; last_name: string | null; company: string | null;
+                } | null;
+                const clientName = client
+                  ? [client.first_name, client.last_name].filter(Boolean).join(" ") || client.company
+                  : null;
+
+                const isOverdue = task.due_date && task.due_date < todayStr;
+                const isToday = task.due_date === todayStr;
+
+                return (
+                  <Link
+                    key={task.id}
+                    href="/tasks"
+                    className="flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded border-2 ${
+                      task.priority === "urgent" ? "border-rose-400" :
+                      task.priority === "high"   ? "border-amber-400" :
+                      "border-slate-300"
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-800 truncate">{task.title}</p>
+                      {clientName && (
+                        <p className="text-xs text-slate-400 truncate">{clientName}</p>
+                      )}
+                    </div>
+                    {task.due_date && (
+                      <div className={`flex-shrink-0 flex items-center gap-1 text-xs font-medium ${
+                        isOverdue ? "text-rose-600" : isToday ? "text-amber-600" : "text-slate-400"
+                      }`}>
+                        {isOverdue
+                          ? <AlertCircle className="w-3 h-3" />
+                          : <Clock className="w-3 h-3" />
+                        }
+                        {isOverdue ? "Overdue" : isToday ? "Today" : fmtDate(task.due_date)}
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Upcoming calendar events */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-indigo-500" />
+              <h2 className="text-sm font-semibold text-slate-800">Upcoming Events</h2>
+            </div>
+            <Link
+              href="/calendar"
+              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
+            >
+              Calendar <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {upcomingEvents.length === 0 ? (
+            <div className="py-10 text-center">
+              <CalendarDays className="w-7 h-7 text-slate-200 mx-auto mb-2" />
+              <p className="text-xs text-slate-400">No events in the next 7 days</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {upcomingEvents.map((evt) => {
+                const clientRaw = evt.clients;
+                const client = (Array.isArray(clientRaw) ? clientRaw[0] : clientRaw) as {
+                  first_name: string | null; last_name: string | null;
+                } | null;
+                const clientName = client
+                  ? [client.first_name, client.last_name].filter(Boolean).join(" ")
+                  : null;
+
+                const evtDate = new Date(evt.start_at);
+                const evtDateStr = evtDate.toISOString().slice(0, 10);
+                const isEvtToday = evtDateStr === todayStr;
+                const timeStr = evt.all_day
+                  ? "All day"
+                  : evtDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+                const COLOR_DOT: Record<string, string> = {
+                  indigo:  "bg-indigo-500",
+                  emerald: "bg-emerald-500",
+                  rose:    "bg-rose-500",
+                  amber:   "bg-amber-500",
+                  slate:   "bg-slate-400",
+                };
+
+                return (
+                  <Link
+                    key={evt.id}
+                    href="/calendar"
+                    className="flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${COLOR_DOT[evt.color as string] ?? "bg-indigo-500"}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-800 truncate">{evt.title}</p>
+                      {clientName && (
+                        <p className="text-xs text-slate-400 truncate">{clientName}</p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      <p className={`text-xs font-medium ${isEvtToday ? "text-amber-600" : "text-slate-500"}`}>
+                        {isEvtToday ? "Today" : fmtDate(evtDateStr)}
+                      </p>
+                      <p className="text-[10px] text-slate-400">{timeStr}</p>
+                    </div>
                   </Link>
                 );
               })}

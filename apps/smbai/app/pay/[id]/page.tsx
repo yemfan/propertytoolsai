@@ -10,6 +10,7 @@ import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/server";
 import { Building2, CheckCircle2, CreditCard, Calendar, FileText } from "lucide-react";
 import { PayButton } from "./pay-button";
+import { StripeResultBanner } from "@/components/stripe-result-banner";
 
 export const metadata: Metadata = { title: "Invoice Payment" };
 
@@ -19,10 +20,15 @@ function fmt(n: number) {
 
 export default async function PayInvoicePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ success?: string; cancelled?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
+  const stripeResult: "success" | "cancelled" | null =
+    sp.success === "1" ? "success" : sp.cancelled === "1" ? "cancelled" : null;
   const supabase = createServiceClient();
 
   const { data: inv } = await supabase
@@ -82,6 +88,11 @@ export default async function PayInvoicePage({
 
       <main className="flex-1 px-6 py-10">
         <div className="max-w-2xl mx-auto space-y-6">
+
+          {/* Stripe redirect result banner */}
+          {stripeResult && !isPaid && (
+            <StripeResultBanner result={stripeResult} />
+          )}
 
           {/* Paid banner */}
           {isPaid && (
