@@ -23,12 +23,16 @@ export async function updateOrg(
   const name = (formData.get("name") as string)?.trim();
   if (!name) return { error: "Business name is required." };
 
+  const rateRaw = (formData.get("default_hourly_rate") as string)?.trim();
+  const defaultHourlyRate = rateRaw && !isNaN(parseFloat(rateRaw)) ? parseFloat(rateRaw) : null;
+
   const { error } = await supabase
     .from("organizations")
     .update({
       name,
       timezone: (formData.get("timezone") as string) || "America/New_York",
       fiscal_year_end_month: Number(formData.get("fiscal_year_end_month")) || 12,
+      default_hourly_rate: defaultHourlyRate,
     })
     .eq("id", orgId);
 

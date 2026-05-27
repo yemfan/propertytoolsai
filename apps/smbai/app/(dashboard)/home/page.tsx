@@ -6,6 +6,7 @@ import {
   DollarSign, TrendingUp, TrendingDown, FileText,
   Users, Plus, ArrowRight, Building2,
   CheckSquare, Clock, CalendarDays, AlertCircle,
+  FolderOpen, Timer,
 } from "lucide-react";
 import { RevenueChart, type ChartMonth } from "@/components/revenue-chart";
 
@@ -27,6 +28,14 @@ function fmtDate(d: string): string {
     month: "short",
     day: "numeric",
   });
+}
+
+function fmtHours(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -60,6 +69,8 @@ async function getDashboardData(orgId: string) {
     recentClientsRes,
     openTasksRes,
     upcomingEventsRes,
+    activeProjectsRes,
+    uninvoicedTimeRes,
   ] = await Promise.all([
     // Bank balances
     supabase
@@ -136,6 +147,24 @@ async function getDashboardData(orgId: string) {
       .lte("start_at", new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7, 23, 59).toISOString())
       .order("start_at", { ascending: true })
       .limit(6),
+
+    // Active projects (top 6)
+    supabase
+      .from("projects")
+      .select("id, name, color, status, budget_hours, start_date, end_date")
+      .eq("organization_id", orgId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(6),
+
+    // Uninvoiced billable time (all time)
+    supabase
+      .from("time_entries")
+      .select("duration_minutes, hourly_rate")
+      .eq("organization_id", orgId)
+      .eq("billable", true)
+      .eq("invoiced", false)
+      .not("ended_at", "is", null),
   ]);
 
   // Bank balance
@@ -188,6 +217,16 @@ async function getDashboardData(orgId: string) {
     chartData.push({ month: label, revenue, expenses });
   }
 
+  // Uninvoiced time totals
+  const uninvEntries = uninvoicedTimeRes.data ?? [];
+  let uninvoicedMinutes = 0;
+  let uninvoicedAmount = 0;
+  for (const e of uninvEntries) {
+    const mins = e.duration_minutes ?? 0;
+    uninvoicedMinutes += mins;
+    uninvoicedAmount += (mins / 60) * Number(e.hourly_rate ?? 0);
+  }
+
   return {
     bankBalance,
     mtdRevenue: mtdTxns.length ? mtdRevenue : null,
@@ -202,11 +241,14 @@ async function getDashboardData(orgId: string) {
     recentClients: recentClientsRes.data ?? [],
     openTasks: openTasksRes.data ?? [],
     upcomingEvents: upcomingEventsRes.data ?? [],
+    activeProjects: activeProjectsRes.data ?? [],
+    uninvoicedMinutes,
+    uninvoicedAmount,
     todayStr,
   };
 }
 
-// ─── Status colors (invoices) ─────────────────────────────────────────────────
+// ─── Status colors ────────────────────────────────────────────────────────────
 
 const INV_STATUS: Record<string, string> = {
   draft:   "bg-slate-100 text-slate-600",
@@ -220,6 +262,15 @@ const CLIENT_STATUS: Record<string, string> = {
   prospect: "bg-blue-100 text-blue-700",
   active:   "bg-emerald-100 text-emerald-700",
   inactive: "bg-amber-100 text-amber-700",
+};
+
+const COLOR_DOTS: Record<string, string> = {
+  indigo:  "bg-indigo-500",
+  emerald: "bg-emerald-500",
+  rose:    "bg-rose-500",
+  amber:   "bg-amber-500",
+  violet:  "bg-violet-500",
+  slate:   "bg-slate-400",
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -242,6 +293,9 @@ export default async function HomePage() {
     recentClients,
     openTasks,
     upcomingEvents,
+    activeProjects,
+    uninvoicedMinutes,
+    uninvoicedAmount,
     todayStr,
   } = await getDashboardData(orgId);
 
@@ -345,7 +399,7 @@ export default async function HomePage() {
             <p className="text-xs text-slate-400 mt-0.5">Last 6 months</p>
           </div>
           <Link
-            href="/books/reports"
+            href="/reports"
             className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
           >
             Full report
@@ -354,6 +408,124 @@ export default async function HomePage() {
         </div>
         <div className="h-48">
           <RevenueChart data={chartData} />
+        </div>
+      </div>
+
+      {/* ── Active Projects + Uninvoiced Time ── */}
+      <div className="grid grid-cols-3 gap-6">
+        {/* Active projects — spans 2 cols */}
+        <div className="col-span-2 bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <FolderOpen className="w-4 h-4 text-indigo-500" />
+              <h2 className="text-sm font-semibold text-slate-800">Active Projects</h2>
+            </div>
+            <Link
+              href="/projects"
+              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
+            >
+              View all <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {activeProjects.length === 0 ? (
+            <div className="py-10 text-center">
+              <FolderOpen className="w-7 h-7 text-slate-200 mx-auto mb-2" />
+              <p className="text-xs text-slate-400 mb-3">No active projects</p>
+              <Link
+                href="/projects"
+                className="text-xs text-indigo-600 font-medium hover:text-indigo-800"
+              >
+                Create a project →
+              </Link>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {activeProjects.map((proj) => {
+                const daysLeft = proj.end_date
+                  ? Math.ceil((new Date(proj.end_date + "T00:00:00").getTime() - Date.now()) / 86400000)
+                  : null;
+                const isOverdue = daysLeft !== null && daysLeft < 0;
+                const isDueSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
+
+                return (
+                  <Link
+                    key={proj.id}
+                    href={`/projects/${proj.id}`}
+                    className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${COLOR_DOTS[proj.color as string] ?? "bg-indigo-500"}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">{proj.name}</p>
+                      {proj.budget_hours && (
+                        <p className="text-xs text-slate-400 mt-0.5">{proj.budget_hours}h budget</p>
+                      )}
+                    </div>
+                    {daysLeft !== null && (
+                      <span className={`text-xs font-medium flex-shrink-0 ${
+                        isOverdue ? "text-rose-600" : isDueSoon ? "text-amber-600" : "text-slate-400"
+                      }`}>
+                        {isOverdue
+                          ? `${Math.abs(daysLeft)}d overdue`
+                          : daysLeft === 0
+                          ? "Due today"
+                          : `${daysLeft}d left`
+                        }
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Uninvoiced time widget */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col">
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
+            <Timer className="w-4 h-4 text-indigo-500" />
+            <h2 className="text-sm font-semibold text-slate-800">Uninvoiced Time</h2>
+          </div>
+
+          <div className="flex-1 flex flex-col items-center justify-center px-5 py-6 text-center">
+            {uninvoicedMinutes === 0 ? (
+              <>
+                <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
+                  <CheckSquare className="w-5 h-5 text-emerald-500" />
+                </div>
+                <p className="text-sm font-medium text-slate-700">All time invoiced</p>
+                <p className="text-xs text-slate-400 mt-1">No billable hours waiting to be billed.</p>
+              </>
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-slate-800 tabular-nums mb-1">
+                  {fmt(uninvoicedAmount)}
+                </p>
+                <p className="text-sm text-slate-500 mb-1">
+                  {fmtHours(uninvoicedMinutes)} billable
+                </p>
+                <p className="text-xs text-slate-400 mb-4">not yet invoiced</p>
+                <Link
+                  href="/timesheets"
+                  className="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                >
+                  Go to Timesheets <ArrowRight className="w-3 h-3" />
+                </Link>
+              </>
+            )}
+          </div>
+
+          {uninvoicedMinutes > 0 && (
+            <div className="px-5 pb-4">
+              <Link
+                href="/books/invoices/new"
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Create invoice
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
@@ -393,7 +565,6 @@ export default async function HomePage() {
                     "—"
                   : "—";
 
-                const todayStr = new Date().toISOString().slice(0, 10);
                 const effectiveStatus =
                   inv.status === "sent" && inv.due_date < todayStr
                     ? "overdue"
@@ -487,6 +658,7 @@ export default async function HomePage() {
           )}
         </div>
       </div>
+
       {/* ── Tasks + Events ── */}
       <div className="grid grid-cols-2 gap-6">
         {/* Open tasks due this week */}
@@ -596,21 +768,13 @@ export default async function HomePage() {
                   ? "All day"
                   : evtDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
-                const COLOR_DOT: Record<string, string> = {
-                  indigo:  "bg-indigo-500",
-                  emerald: "bg-emerald-500",
-                  rose:    "bg-rose-500",
-                  amber:   "bg-amber-500",
-                  slate:   "bg-slate-400",
-                };
-
                 return (
                   <Link
                     key={evt.id}
                     href="/calendar"
                     className="flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition-colors"
                   >
-                    <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${COLOR_DOT[evt.color as string] ?? "bg-indigo-500"}`} />
+                    <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${COLOR_DOTS[evt.color as string] ?? "bg-indigo-500"}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-slate-800 truncate">{evt.title}</p>
                       {clientName && (
