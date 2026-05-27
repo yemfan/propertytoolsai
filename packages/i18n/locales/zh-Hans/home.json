@@ -45,5 +45,31 @@
     "dashboard_unavailable_body": "未收到数据,请稍后重试。",
     "dashboard_update_failed": "概览更新失败",
     "agenda_unavailable": "今日日程无法加载"
+  },
+  "v2": {
+    "sections": {
+      "work": "工作",
+      "engage": "互动",
+      "analyze": "分析",
+      "manage": "管理"
+    },
+    "tiles": {
+      "tasks": "任务",
+      "showings": "看房",
+      "quick_post": "快速发帖",
+      "postcards": "明信片",
+      "scheduled": "已排程",
+      "recurring": "定期发布",
+      "post_history": "发布历史",
+      "cma": "比较市场分析",
+      "sphere": "人脉圈",
+      "coaching": "辅导",
+      "briefings": "每日简报",
+      "notifications": "通知设置",
+      "connect_platforms": "连接平台"
+    },
+    "web_link": {
+      "label": "在网页端打开完整工作台"
+    }
   }
 }

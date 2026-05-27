@@ -22,6 +22,7 @@ import { DailyAgendaList } from "../../components/home/DailyAgendaList";
 import { EngagementCard } from "../../components/home/EngagementCard";
 import { NextPostSuggestionCard } from "../../components/home/NextPostSuggestionCard";
 import { PriorityAlertCard } from "../../components/home/PriorityAlertCard";
+import { HomeFeatureSections } from "../../components/home/v2/HomeFeatureSections";
 import { Skeleton } from "../../components/Skeleton";
 import { FadeIn } from "../../components/Reveal";
 import {
@@ -356,104 +357,13 @@ export default function HomeScreen() {
 
         <SectionRule color={tokens.border} />
 
-        <View style={styles.chipRow}>
-          <Pressable
-            onPress={() => router.push({ pathname: "/(tabs)/leads", params: { filter: "hot" } })}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-          >
-            <Text style={styles.chipText}>{t("chips.hot_leads")}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/(tabs)/inbox")}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-          >
-            <Text style={styles.chipText}>{t("chips.unread")}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/tasks")}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-          >
-            <Text style={styles.chipText}>{t("chips.tasks")}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/(tabs)/calendar")}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-          >
-            <Text style={styles.chipText}>{t("chips.appointments")}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/cma" as never)}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-          >
-            <Text style={styles.chipText}>{t("chips.cma")}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/postcards" as never)}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-          >
-            <Text style={styles.chipText}>{t("chips.postcards")}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/quick-post" as never)}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-          >
-            <Text style={styles.chipText}>{t("chips.quick_post")}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/sphere" as never)}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-          >
-            <Text style={styles.chipText}>{t("chips.sphere")}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/scheduled" as never)}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-          >
-            <Text style={styles.chipText}>
-              {t("chips.scheduled")}
-              {scheduledCounts.upcoming > 0
-                ? ` · ${scheduledCounts.upcoming}`
-                : ""}
-            </Text>
-            {scheduledCounts.failed > 0 ? (
-              <View style={styles.chipBadge}>
-                <Text style={styles.chipBadgeText}>
-                  {scheduledCounts.failed}
-                </Text>
-              </View>
-            ) : null}
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/recurring" as never)}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-          >
-            <Text style={styles.chipText}>{t("chips.recurring")}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/post-history" as never)}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-          >
-            <Text style={styles.chipText}>{t("chips.posts")}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/showings" as never)}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-          >
-            <Text style={styles.chipText}>{t("chips.showings")}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/coaching" as never)}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-          >
-            <Text style={styles.chipText}>{t("chips.coaching")}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/notifications")}
-            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-          >
-            <Text style={styles.chipText}>{t("chips.alerts")}</Text>
-          </Pressable>
-        </View>
+        {/* v1.6 Home redesign — supercategory tile grid (Work/Engage/Analyze/Manage)
+         * mirrors the web `PremiumSidebarV2` organization. Replaces the
+         * legacy chip row that had every feature in one flat unordered
+         * pill list. See `docs/HOME_REDESIGN_PLAN.md` for the mapping
+         * and the trade-offs (hot-leads / unread / appointments quick
+         * filters dropped — those are one bottom-tab tap away). */}
+        <HomeFeatureSections />
 
         <SectionRule color={tokens.border} />
 

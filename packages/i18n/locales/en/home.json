@@ -45,5 +45,31 @@
     "dashboard_unavailable_body": "Unexpected empty response.",
     "dashboard_update_failed": "Dashboard update failed",
     "agenda_unavailable": "Agenda unavailable"
+  },
+  "v2": {
+    "sections": {
+      "work": "Work",
+      "engage": "Engage",
+      "analyze": "Analyze",
+      "manage": "Manage"
+    },
+    "tiles": {
+      "tasks": "Tasks",
+      "showings": "Showings",
+      "quick_post": "Quick Post",
+      "postcards": "Postcards",
+      "scheduled": "Scheduled",
+      "recurring": "Recurring",
+      "post_history": "Post History",
+      "cma": "CMA",
+      "sphere": "Sphere",
+      "coaching": "Coaching",
+      "briefings": "Briefings",
+      "notifications": "Notifications",
+      "connect_platforms": "Connect Platforms"
+    },
+    "web_link": {
+      "label": "Open full dashboard on the web"
+    }
   }
 }
