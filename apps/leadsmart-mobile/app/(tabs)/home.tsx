@@ -22,6 +22,7 @@ import { DailyAgendaList } from "../../components/home/DailyAgendaList";
 import { EngagementCard } from "../../components/home/EngagementCard";
 import { NextPostSuggestionCard } from "../../components/home/NextPostSuggestionCard";
 import { PriorityAlertCard } from "../../components/home/PriorityAlertCard";
+import { HomeFeatureSections } from "../../components/home/v2/HomeFeatureSections";
 import { Skeleton } from "../../components/Skeleton";
 import { FadeIn } from "../../components/Reveal";
 import {
@@ -356,12 +357,13 @@ export default function HomeScreen() {
 
         <SectionRule color={tokens.border} />
 
-        {/* v1.6: the legacy chip row was replaced by per-tab tile
-         * grids (work.tsx / engage.tsx / analyze.tsx / manage.tsx).
-         * Home tab keeps the dashboard cards above + the agenda +
-         * alerts + quick actions below — no feature tiles here so
-         * agents have one less thing to scroll through on their daily
-         * landing screen. */}
+        {/* v1.6: comprehensive feature launcher — all 17 features
+         * grouped by supercategory (Work / Engage / Analyze / Manage).
+         * Duplicates the per-tab tile grids so agents can either tap
+         * Home and see everything in one scroll, or tap a supercategory
+         * tab and see just that section. Both navigation paths land on
+         * the same downstream screens. */}
+        <HomeFeatureSections />
 
         <SectionRule color={tokens.border} />
 
