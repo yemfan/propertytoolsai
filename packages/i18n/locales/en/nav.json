@@ -1,6 +1,10 @@
 {
   "tabs": {
     "home": "Home",
+    "work": "Work",
+    "engage": "Engage",
+    "analyze": "Analyze",
+    "manage": "Manage",
     "inbox": "Inbox",
     "leads": "Leads",
     "calendar": "Calendar",

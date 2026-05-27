@@ -54,9 +54,12 @@
       "manage": "Manage"
     },
     "tiles": {
+      "leads": "Leads",
       "tasks": "Tasks",
+      "calendar": "Calendar",
       "showings": "Showings",
       "quick_post": "Quick Post",
+      "inbox": "Inbox",
       "postcards": "Postcards",
       "scheduled": "Scheduled",
       "recurring": "Recurring",
@@ -65,8 +68,15 @@
       "sphere": "Sphere",
       "coaching": "Coaching",
       "briefings": "Briefings",
+      "settings": "Settings",
       "notifications": "Notifications",
       "connect_platforms": "Connect Platforms"
+    },
+    "tab_subtitle": {
+      "work": "Leads, tasks, calendar, showings, and posting.",
+      "engage": "Conversations and outbound campaigns.",
+      "analyze": "Calculators, coaching, and daily insights.",
+      "manage": "Settings, notifications, and integrations."
     },
     "web_link": {
       "label": "Open full dashboard on the web"

@@ -22,7 +22,6 @@ import { DailyAgendaList } from "../../components/home/DailyAgendaList";
 import { EngagementCard } from "../../components/home/EngagementCard";
 import { NextPostSuggestionCard } from "../../components/home/NextPostSuggestionCard";
 import { PriorityAlertCard } from "../../components/home/PriorityAlertCard";
-import { HomeFeatureSections } from "../../components/home/v2/HomeFeatureSections";
 import { Skeleton } from "../../components/Skeleton";
 import { FadeIn } from "../../components/Reveal";
 import {
@@ -357,13 +356,12 @@ export default function HomeScreen() {
 
         <SectionRule color={tokens.border} />
 
-        {/* v1.6 Home redesign — supercategory tile grid (Work/Engage/Analyze/Manage)
-         * mirrors the web `PremiumSidebarV2` organization. Replaces the
-         * legacy chip row that had every feature in one flat unordered
-         * pill list. See `docs/HOME_REDESIGN_PLAN.md` for the mapping
-         * and the trade-offs (hot-leads / unread / appointments quick
-         * filters dropped — those are one bottom-tab tap away). */}
-        <HomeFeatureSections />
+        {/* v1.6: the legacy chip row was replaced by per-tab tile
+         * grids (work.tsx / engage.tsx / analyze.tsx / manage.tsx).
+         * Home tab keeps the dashboard cards above + the agenda +
+         * alerts + quick actions below — no feature tiles here so
+         * agents have one less thing to scroll through on their daily
+         * landing screen. */}
 
         <SectionRule color={tokens.border} />
 

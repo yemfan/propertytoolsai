@@ -54,9 +54,12 @@
       "manage": "管理"
     },
     "tiles": {
+      "leads": "客户",
       "tasks": "任务",
+      "calendar": "日历",
       "showings": "看房",
       "quick_post": "快速发帖",
+      "inbox": "消息",
       "postcards": "明信片",
       "scheduled": "已排程",
       "recurring": "定期发布",
@@ -65,8 +68,15 @@
       "sphere": "人脉圈",
       "coaching": "辅导",
       "briefings": "每日简报",
+      "settings": "设置",
       "notifications": "通知设置",
       "connect_platforms": "连接平台"
+    },
+    "tab_subtitle": {
+      "work": "客户、任务、日历、看房与发帖。",
+      "engage": "对话沟通与外发推广活动。",
+      "analyze": "计算工具、辅导建议与每日简报。",
+      "manage": "设置、通知与平台集成。"
     },
     "web_link": {
       "label": "在网页端打开完整工作台"
