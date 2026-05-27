@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   BookOpen, Users, Inbox, Phone, Calendar,
   Mic, Share2, Settings, Building2, LogOut, Sparkles, LayoutDashboard,
-  CheckSquare, Mail, BarChart2, Zap, Clock,
+  CheckSquare, Mail, BarChart2, Zap, Clock, TrendingUp,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 
@@ -14,6 +14,7 @@ const activeModules = [
   { key: "home",       label: "Dashboard",   icon: LayoutDashboard, href: "/home" },
   { key: "books",      label: "Books",       icon: BookOpen,        href: "/books" },
   { key: "clients",    label: "Clients",     icon: Users,           href: "/clients" },
+  { key: "pipeline",   label: "Pipeline",    icon: TrendingUp,      href: "/pipeline" },
   { key: "inbox",      label: "Inbox",       icon: Inbox,           href: "/inbox" },
   { key: "reception",  label: "Reception",   icon: Phone,           href: "/reception" },
   { key: "calendar",   label: "Calendar",    icon: Calendar,        href: "/calendar" },

@@ -124,6 +124,45 @@ export async function updateClient(
   return { success: true };
 }
 
+// ── Patch (lightweight field update) ─────────────────────────────────────────
+// Used by pipeline board and other components that need to update specific fields
+// without going through the full FormData flow.
+
+export async function patchClient(
+  clientId: string,
+  patch: Partial<{
+    pipeline_stage: string;
+    expected_value: number | null;
+    pipeline_note: string | null;
+    status: string;
+    stage_changed_at: string;
+  }>
+): Promise<void> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value;
+  if (!orgId) throw new Error("No org");
+
+  const supabase = await createClient();
+
+  // Auto-set stage_changed_at when stage changes
+  const dbPatch: Record<string, unknown> = {
+    ...patch,
+    updated_at: new Date().toISOString(),
+  };
+  if (patch.pipeline_stage) {
+    dbPatch.stage_changed_at = new Date().toISOString();
+  }
+
+  await supabase
+    .from("clients")
+    .update(dbPatch)
+    .eq("id", clientId)
+    .eq("organization_id", orgId);
+
+  revalidatePath("/pipeline");
+  revalidatePath(`/clients/${clientId}`);
+}
+
 // ── Delete ────────────────────────────────────────────────────────────────────
 
 export async function deleteClient(clientId: string): Promise<{ error?: string }> {
