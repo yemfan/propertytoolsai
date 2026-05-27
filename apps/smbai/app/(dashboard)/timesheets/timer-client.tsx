@@ -1,0 +1,641 @@
+"use client";
+
+import { useState, useEffect, useTransition, useRef } from "react";
+import {
+  Play, Square, Plus, Trash2, Clock, DollarSign,
+  ChevronDown, Check, AlertCircle, FileText,
+} from "lucide-react";
+import {
+  startTimer, stopTimer, createTimeEntry, deleteTimeEntry, updateTimeEntry,
+  type TimeEntry,
+} from "@/lib/actions/time-entries";
+import { useRouter } from "next/navigation";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function fmtDuration(minutes: number | null, live?: number): string {
+  const total = live !== undefined ? live : (minutes ?? 0);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m}m`;
+  return `${h}h ${m}m`;
+}
+
+function fmtMoney(n: number): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+}
+
+function dayLabel(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+}
+
+function groupByDay(entries: TimeEntry[]): { day: string; entries: TimeEntry[] }[] {
+  const map = new Map<string, TimeEntry[]>();
+  for (const e of entries) {
+    const day = e.started_at.slice(0, 10);
+    if (!map.has(day)) map.set(day, []);
+    map.get(day)!.push(e);
+  }
+  return Array.from(map.entries()).map(([day, entries]) => ({ day, entries }));
+}
+
+function clientLabel(
+  entry: TimeEntry,
+  clients: { id: string; first_name: string | null; last_name: string | null; company: string | null }[]
+): string {
+  const c = entry.clients
+    ? entry.clients
+    : clients.find((cl) => cl.id === entry.client_id);
+  if (!c) return "No client";
+  return [c.first_name, c.last_name].filter(Boolean).join(" ") || c.company || "Client";
+}
+
+// ─── Add entry modal ──────────────────────────────────────────────────────────
+
+function AddEntryModal({
+  clients,
+  defaultHourlyRate,
+  onClose,
+  onCreated,
+}: {
+  clients: { id: string; first_name: string | null; last_name: string | null; company: string | null }[];
+  defaultHourlyRate: number | null;
+  onClose: () => void;
+  onCreated: (entry: Partial<TimeEntry>) => void;
+}) {
+  const [description, setDescription] = useState("");
+  const [clientId, setClientId] = useState("");
+  const [project, setProject] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [hours, setHours] = useState("0");
+  const [minutes, setMinutes] = useState("0");
+  const [billable, setBillable] = useState(true);
+  const [hourlyRate, setHourlyRate] = useState(defaultHourlyRate?.toString() ?? "");
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState("");
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const totalMins = parseInt(hours || "0") * 60 + parseInt(minutes || "0");
+    if (totalMins <= 0) { setError("Duration must be > 0"); return; }
+    if (!description.trim()) { setError("Description is required"); return; }
+
+    startTransition(async () => {
+      try {
+        await createTimeEntry({
+          description: description.trim(),
+          clientId: clientId || null,
+          project: project.trim() || null,
+          startedAt: date + "T09:00:00",
+          durationMinutes: totalMins,
+          billable,
+          hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
+        });
+        onCreated({
+          description: description.trim(),
+          client_id: clientId || null,
+          project: project.trim() || null,
+          started_at: date + "T09:00:00.000Z",
+          duration_minutes: totalMins,
+          billable,
+          hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+          invoiced: false,
+          ended_at: new Date(new Date(date + "T09:00:00").getTime() + totalMins * 60000).toISOString(),
+        });
+        onClose();
+      } catch {
+        setError("Failed to save entry");
+      }
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <form
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={submit}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4"
+      >
+        <h2 className="text-base font-semibold text-slate-800">Add time entry</h2>
+
+        {error && (
+          <p className="text-xs text-rose-600 flex items-center gap-1">
+            <AlertCircle className="w-3.5 h-3.5" />{error}
+          </p>
+        )}
+
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Description *</label>
+          <input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What did you work on?"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Client</label>
+            <select
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            >
+              <option value="">No client</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {[c.first_name, c.last_name].filter(Boolean).join(" ") || c.company}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Project</label>
+            <input
+              value={project}
+              onChange={(e) => setProject(e.target.value)}
+              placeholder="Optional"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Date</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Hours</label>
+            <input
+              type="number"
+              min="0"
+              max="24"
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Minutes</label>
+            <input
+              type="number"
+              min="0"
+              max="59"
+              value={minutes}
+              onChange={(e) => setMinutes(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={billable}
+              onChange={(e) => setBillable(e.target.checked)}
+              className="rounded accent-indigo-600"
+            />
+            <span className="text-sm text-slate-700">Billable</span>
+          </label>
+          {billable && (
+            <div className="flex-1">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={hourlyRate}
+                  onChange={(e) => setHourlyRate(e.target.value)}
+                  placeholder="Hourly rate"
+                  className="w-full rounded-lg border border-slate-200 pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="flex-1 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            {isPending ? "Saving…" : "Add entry"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ─── Timer bar ────────────────────────────────────────────────────────────────
+
+function TimerBar({
+  activeTimer,
+  clients,
+  defaultHourlyRate,
+  onTimerStopped,
+  onTimerStarted,
+}: {
+  activeTimer: TimeEntry | null;
+  clients: { id: string; first_name: string | null; last_name: string | null; company: string | null }[];
+  defaultHourlyRate: number | null;
+  onTimerStopped: () => void;
+  onTimerStarted: (id: string) => void;
+}) {
+  const [description, setDescription] = useState(activeTimer?.description ?? "");
+  const [clientId, setClientId] = useState(activeTimer?.client_id ?? "");
+  const [liveSeconds, setLiveSeconds] = useState(0);
+  const [isPending, startTransition] = useTransition();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Sync elapsed time when active timer is mounted
+  useEffect(() => {
+    if (activeTimer) {
+      const elapsed = Math.floor((Date.now() - new Date(activeTimer.started_at).getTime()) / 1000);
+      setLiveSeconds(elapsed);
+      intervalRef.current = setInterval(() => setLiveSeconds((s) => s + 1), 1000);
+    } else {
+      setLiveSeconds(0);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [activeTimer?.id]);
+
+  function fmtLive(s: number): string {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+    return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  }
+
+  function handleStart() {
+    startTransition(async () => {
+      const id = await startTimer({
+        description: description.trim() || "Working…",
+        clientId: clientId || null,
+        billable: true,
+        hourlyRate: defaultHourlyRate,
+      });
+      onTimerStarted(id);
+    });
+  }
+
+  function handleStop() {
+    if (!activeTimer) return;
+    startTransition(async () => {
+      await stopTimer(activeTimer.id);
+      onTimerStopped();
+    });
+  }
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+      {/* Description */}
+      <input
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter" && !activeTimer) handleStart(); }}
+        placeholder={activeTimer ? "What are you working on?" : "What are you working on?"}
+        disabled={!!activeTimer}
+        className="flex-1 text-sm text-slate-800 placeholder-slate-400 bg-transparent focus:outline-none disabled:cursor-default"
+      />
+
+      {/* Client dropdown */}
+      <div className="relative">
+        <select
+          value={clientId}
+          onChange={(e) => setClientId(e.target.value)}
+          disabled={!!activeTimer}
+          className="appearance-none text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg pl-3 pr-7 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-default"
+        >
+          <option value="">No client</option>
+          {clients.map((c) => (
+            <option key={c.id} value={c.id}>
+              {[c.first_name, c.last_name].filter(Boolean).join(" ") || c.company}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+      </div>
+
+      {/* Live clock */}
+      {activeTimer && (
+        <span className="font-mono text-base text-indigo-600 font-semibold tabular-nums min-w-[70px] text-right">
+          {fmtLive(liveSeconds)}
+        </span>
+      )}
+
+      {/* Start / Stop */}
+      {activeTimer ? (
+        <button
+          onClick={handleStop}
+          disabled={isPending}
+          className="w-9 h-9 rounded-full bg-rose-100 hover:bg-rose-200 text-rose-600 flex items-center justify-center transition-colors disabled:opacity-50"
+          title="Stop timer"
+        >
+          <Square className="w-4 h-4 fill-rose-600" />
+        </button>
+      ) : (
+        <button
+          onClick={handleStart}
+          disabled={isPending}
+          className="w-9 h-9 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-colors disabled:opacity-50"
+          title="Start timer"
+        >
+          <Play className="w-4 h-4 fill-white ml-0.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+interface Props {
+  initialEntries: TimeEntry[];
+  initialActiveTimer: TimeEntry | null;
+  initialStats: {
+    totalMinutes: number;
+    billableMinutes: number;
+    billableAmount: number;
+    uninvoicedAmount: number;
+  };
+  clients: { id: string; first_name: string | null; last_name: string | null; company: string | null }[];
+  defaultHourlyRate: number | null;
+  weekFrom: string;
+  weekTo: string;
+}
+
+export function TimerClient({
+  initialEntries,
+  initialActiveTimer,
+  initialStats,
+  clients,
+  defaultHourlyRate,
+  weekFrom,
+  weekTo,
+}: Props) {
+  const router = useRouter();
+  const [entries, setEntries] = useState<TimeEntry[]>(initialEntries);
+  const [activeTimer, setActiveTimer] = useState<TimeEntry | null>(initialActiveTimer);
+  const [stats, setStats] = useState(initialStats);
+  const [showAdd, setShowAdd] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  const grouped = groupByDay(entries.filter((e) => e.ended_at));
+
+  function handleTimerStopped() {
+    setActiveTimer(null);
+    router.refresh();
+  }
+
+  function handleTimerStarted(id: string) {
+    router.refresh();
+  }
+
+  function handleDelete(entryId: string) {
+    setDeletingId(entryId);
+    startTransition(async () => {
+      await deleteTimeEntry(entryId);
+      setEntries((prev) => prev.filter((e) => e.id !== entryId));
+      setDeletingId(null);
+    });
+  }
+
+  function handleCreated(partial: Partial<TimeEntry>) {
+    const fake: TimeEntry = {
+      id: crypto.randomUUID(),
+      client_id: partial.client_id ?? null,
+      project: partial.project ?? null,
+      description: partial.description ?? "",
+      started_at: partial.started_at ?? new Date().toISOString(),
+      ended_at: partial.ended_at ?? null,
+      duration_minutes: partial.duration_minutes ?? 0,
+      billable: partial.billable ?? true,
+      hourly_rate: partial.hourly_rate ?? null,
+      invoiced: false,
+      invoice_id: null,
+      created_at: new Date().toISOString(),
+      clients: clients.find((c) => c.id === partial.client_id) ?? null,
+    };
+    setEntries((prev) => [fake, ...prev]);
+    // Update stats optimistically
+    if (fake.duration_minutes) {
+      const added = fake.billable ? (fake.duration_minutes / 60) * (fake.hourly_rate ?? 0) : 0;
+      setStats((s) => ({
+        totalMinutes: s.totalMinutes + fake.duration_minutes!,
+        billableMinutes: fake.billable ? s.billableMinutes + fake.duration_minutes! : s.billableMinutes,
+        billableAmount: s.billableAmount + added,
+        uninvoicedAmount: s.uninvoicedAmount + added,
+      }));
+    }
+  }
+
+  const weekLabel = (() => {
+    const f = new Date(weekFrom + "T00:00:00");
+    const t = new Date(weekTo   + "T00:00:00");
+    return `${f.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${t.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  })();
+
+  return (
+    <div className="p-8 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Timesheets</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Track billable time and import to invoices</p>
+        </div>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Add entry
+        </button>
+      </div>
+
+      {/* Timer bar */}
+      <div className="mb-6">
+        <TimerBar
+          activeTimer={activeTimer}
+          clients={clients}
+          defaultHourlyRate={defaultHourlyRate}
+          onTimerStopped={handleTimerStopped}
+          onTimerStarted={handleTimerStarted}
+        />
+      </div>
+
+      {/* Stats — this week */}
+      <div className="grid grid-cols-4 gap-4 mb-8">
+        {[
+          {
+            label: "This week",
+            value: weekLabel,
+            sub: "",
+            icon: <Clock className="w-4 h-4 text-slate-400" />,
+          },
+          {
+            label: "Total hours",
+            value: fmtDuration(stats.totalMinutes),
+            sub: `${fmtDuration(stats.billableMinutes)} billable`,
+            icon: <Clock className="w-4 h-4 text-indigo-400" />,
+          },
+          {
+            label: "Billable amount",
+            value: fmtMoney(stats.billableAmount),
+            sub: "at tracked rates",
+            icon: <DollarSign className="w-4 h-4 text-emerald-400" />,
+          },
+          {
+            label: "Uninvoiced",
+            value: fmtMoney(stats.uninvoicedAmount),
+            sub: stats.uninvoicedAmount > 0 ? "ready to invoice" : "all invoiced",
+            icon: <FileText className="w-4 h-4 text-amber-400" />,
+          },
+        ].map(({ label, value, sub, icon }) => (
+          <div key={label} className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
+              {icon}
+            </div>
+            <p className="text-lg font-semibold text-slate-800 tabular-nums">{value}</p>
+            {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+          </div>
+        ))}
+      </div>
+
+      {/* Entry list */}
+      {grouped.length === 0 ? (
+        <div className="bg-white rounded-xl border border-dashed border-slate-300 flex flex-col items-center justify-center py-16 text-center">
+          <Clock className="w-10 h-10 text-slate-300 mb-3" />
+          <p className="text-sm font-medium text-slate-500 mb-1">No time entries this week</p>
+          <p className="text-xs text-slate-400">
+            Hit the play button to start a timer, or add a manual entry.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {grouped.map(({ day, entries: dayEntries }) => {
+            const dayMins = dayEntries.reduce((s, e) => s + (e.duration_minutes ?? 0), 0);
+            return (
+              <div key={day}>
+                {/* Day header */}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    {dayLabel(dayEntries[0].started_at)}
+                  </span>
+                  <span className="text-xs text-slate-400 tabular-nums font-mono">
+                    {fmtDuration(dayMins)}
+                  </span>
+                </div>
+
+                {/* Entries for this day */}
+                <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-50 overflow-hidden">
+                  {dayEntries.map((entry) => {
+                    const billableAmt = entry.billable && entry.hourly_rate && entry.duration_minutes
+                      ? (entry.duration_minutes / 60) * entry.hourly_rate
+                      : null;
+
+                    return (
+                      <div
+                        key={entry.id}
+                        className="flex items-center gap-4 px-5 py-3.5 group"
+                      >
+                        {/* Billable dot */}
+                        <div
+                          className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                            entry.billable ? "bg-emerald-400" : "bg-slate-300"
+                          }`}
+                          title={entry.billable ? "Billable" : "Non-billable"}
+                        />
+
+                        {/* Description + meta */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-800 truncate">
+                            {entry.description || <span className="italic text-slate-400">No description</span>}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {entry.client_id ? clientLabel(entry, clients) : "No client"}
+                            {entry.project && <> · {entry.project}</>}
+                          </p>
+                        </div>
+
+                        {/* Amount */}
+                        {billableAmt !== null && (
+                          <span className="text-xs font-medium text-emerald-700 tabular-nums flex-shrink-0">
+                            {fmtMoney(billableAmt)}
+                          </span>
+                        )}
+
+                        {/* Duration */}
+                        <span className="text-sm font-mono text-slate-600 tabular-nums flex-shrink-0 w-14 text-right">
+                          {fmtDuration(entry.duration_minutes)}
+                        </span>
+
+                        {/* Invoiced badge */}
+                        {entry.invoiced && (
+                          <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full flex-shrink-0 flex items-center gap-0.5">
+                            <Check className="w-2.5 h-2.5" />
+                            Invoiced
+                          </span>
+                        )}
+
+                        {/* Delete */}
+                        <button
+                          onClick={() => handleDelete(entry.id)}
+                          disabled={deletingId === entry.id}
+                          className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-500 transition-all rounded-lg hover:bg-rose-50 flex-shrink-0 disabled:opacity-30"
+                          title="Delete entry"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Add entry modal */}
+      {showAdd && (
+        <AddEntryModal
+          clients={clients}
+          defaultHourlyRate={defaultHourlyRate}
+          onClose={() => setShowAdd(false)}
+          onCreated={(partial) => {
+            handleCreated(partial);
+            setShowAdd(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}

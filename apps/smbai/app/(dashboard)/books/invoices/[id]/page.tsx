@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ArrowLeft, Printer } from "lucide-react";
 import { InvoiceActions } from "@/components/invoice-actions";
 import { StripeResultBanner } from "@/components/stripe-result-banner";
+import { InvoiceTimesheetImport } from "@/components/invoice-timesheet-import";
 
 export const metadata: Metadata = { title: "Invoice · Books" };
 
@@ -54,6 +55,25 @@ export default async function InvoiceDetailPage({
 
   if (!inv) notFound();
 
+  // Load uninvoiced time entries for this client (only for editable statuses)
+  const clientRawEarly = inv.clients;
+  const clientIdForEntries = (
+    Array.isArray(clientRawEarly) ? clientRawEarly[0] : clientRawEarly
+  )?.id ?? null;
+
+  const uninvoicedEntries = (inv.status === "draft" || inv.status === "sent") && clientIdForEntries
+    ? await supabase
+        .from("time_entries")
+        .select("id, description, project, started_at, duration_minutes, billable, hourly_rate, invoiced, ended_at, client_id, invoice_id, created_at")
+        .eq("organization_id", orgId)
+        .eq("client_id", clientIdForEntries)
+        .eq("invoiced", false)
+        .not("ended_at", "is", null)
+        .order("started_at", { ascending: false })
+        .limit(50)
+        .then((r) => r.data ?? [])
+    : [];
+
   const clientRaw = inv.clients;
   const client = (Array.isArray(clientRaw) ? clientRaw[0] : clientRaw) as {
     first_name: string | null; last_name: string | null;
@@ -98,6 +118,12 @@ export default async function InvoiceDetailPage({
           </div>
           <p className="text-sm text-slate-500 mt-0.5">{clientName}</p>
         </div>
+        {/* Import from timesheets */}
+        <InvoiceTimesheetImport
+          invoiceId={inv.id}
+          uninvoicedEntries={uninvoicedEntries as Parameters<typeof InvoiceTimesheetImport>[0]["uninvoicedEntries"]}
+        />
+
         {/* Print / PDF */}
         <Link
           href={`/books/invoices/${inv.id}/print`}
