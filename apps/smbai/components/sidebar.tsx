@@ -6,24 +6,25 @@ import { usePathname } from "next/navigation";
 import {
   BookOpen, Users, Inbox, Phone, Calendar,
   Mic, Share2, Settings, Building2, LogOut, Sparkles, LayoutDashboard,
-  CheckSquare, Mail, BarChart2, Zap, Clock, TrendingUp,
+  CheckSquare, Mail, BarChart2, Zap, Clock, TrendingUp, FolderOpen,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 
 const activeModules = [
-  { key: "home",       label: "Dashboard",   icon: LayoutDashboard, href: "/home" },
-  { key: "books",      label: "Books",       icon: BookOpen,        href: "/books" },
-  { key: "clients",    label: "Clients",     icon: Users,           href: "/clients" },
-  { key: "pipeline",   label: "Pipeline",    icon: TrendingUp,      href: "/pipeline" },
-  { key: "inbox",      label: "Inbox",       icon: Inbox,           href: "/inbox" },
-  { key: "reception",  label: "Reception",   icon: Phone,           href: "/reception" },
-  { key: "calendar",   label: "Calendar",    icon: Calendar,        href: "/calendar" },
-  { key: "voice",      label: "Voice Agent", icon: Mic,             href: "/voice" },
-  { key: "social",     label: "Social",      icon: Share2,          href: "/social" },
+  { key: "home",        label: "Dashboard",   icon: LayoutDashboard, href: "/home" },
+  { key: "books",       label: "Books",       icon: BookOpen,        href: "/books" },
+  { key: "clients",     label: "Clients",     icon: Users,           href: "/clients" },
+  { key: "pipeline",    label: "Pipeline",    icon: TrendingUp,      href: "/pipeline" },
+  { key: "inbox",       label: "Inbox",       icon: Inbox,           href: "/inbox" },
+  { key: "reception",   label: "Reception",   icon: Phone,           href: "/reception" },
+  { key: "calendar",    label: "Calendar",    icon: Calendar,        href: "/calendar" },
+  { key: "voice",       label: "Voice Agent", icon: Mic,             href: "/voice" },
+  { key: "social",      label: "Social",      icon: Share2,          href: "/social" },
   { key: "tasks",       label: "Tasks",       icon: CheckSquare,     href: "/tasks" },
   { key: "timesheets",  label: "Timesheets",  icon: Clock,           href: "/timesheets" },
+  { key: "projects",    label: "Projects",    icon: FolderOpen,      href: "/projects" },
   { key: "marketing",   label: "Marketing",   icon: Mail,            href: "/marketing" },
-  { key: "reports",      label: "Reports",     icon: BarChart2,       href: "/reports" },
+  { key: "reports",     label: "Reports",     icon: BarChart2,       href: "/reports" },
   { key: "automations", label: "Automations", icon: Zap,             href: "/automations" },
   { key: "ask",         label: "Ask AI",      icon: Sparkles,        href: "/ask" },
 ];
