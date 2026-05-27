@@ -162,3 +162,109 @@ export async function getCashFlowSummary(from: string, to: string): Promise<Cash
 
   return { from, to, totalIn, totalOut, net: totalIn - totalOut, byCategory };
 }
+
+// ─── Time report ──────────────────────────────────────────────────────────────
+
+export interface TimeByProject {
+  project_id: string | null;
+  project_name: string;
+  color: string;
+  totalMinutes: number;
+  billableMinutes: number;
+  billableAmount: number;
+}
+
+export interface TimeByClient {
+  client_id: string | null;
+  client_name: string;
+  totalMinutes: number;
+  billableMinutes: number;
+  billableAmount: number;
+}
+
+export interface TimeReport {
+  from: string;
+  to: string;
+  totalMinutes: number;
+  billableMinutes: number;
+  billableAmount: number;
+  uninvoicedAmount: number;
+  byProject: TimeByProject[];
+  byClient: TimeByClient[];
+}
+
+export async function getTimeReport(from: string, to: string): Promise<TimeReport> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  if (!orgId) throw new Error("Not authenticated");
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("time_entries")
+    .select(
+      "duration_minutes, billable, hourly_rate, invoiced, " +
+      "project_id, project, client_id, " +
+      "projects(name, color), " +
+      "clients(first_name, last_name, company)"
+    )
+    .eq("organization_id", orgId)
+    .not("ended_at", "is", null)
+    .gte("started_at", from)
+    .lte("started_at", to + "T23:59:59.999Z");
+
+  if (error) throw new Error(error.message);
+
+  const entries = data ?? [];
+  let totalMinutes = 0, billableMinutes = 0, billableAmount = 0, uninvoicedAmount = 0;
+
+  type ProjAgg = { project_id: string | null; project_name: string; color: string; totalMinutes: number; billableMinutes: number; billableAmount: number };
+  type ClientAgg = { client_id: string | null; client_name: string; totalMinutes: number; billableMinutes: number; billableAmount: number };
+
+  const projectMap = new Map<string, ProjAgg>();
+  const clientMap  = new Map<string, ClientAgg>();
+
+  for (const e of entries) {
+    const mins = e.duration_minutes ?? 0;
+    totalMinutes += mins;
+
+    const amt = e.billable ? (mins / 60) * Number(e.hourly_rate ?? 0) : 0;
+    if (e.billable) {
+      billableMinutes += mins;
+      billableAmount  += amt;
+      if (!e.invoiced) uninvoicedAmount += amt;
+    }
+
+    // ── by project ──
+    const projRaw = Array.isArray(e.projects) ? (e.projects as unknown[])[0] : e.projects;
+    const proj = projRaw as { name?: string; color?: string } | null;
+    const projId   = e.project_id as string | null;
+    const projKey  = projId ?? ("legacy:" + (e.project ?? "none"));
+    const projName = proj?.name ?? (e.project as string | null) ?? "No project";
+    const projColor = proj?.color ?? "slate";
+
+    const pa = projectMap.get(projKey) ?? { project_id: projId, project_name: projName, color: projColor, totalMinutes: 0, billableMinutes: 0, billableAmount: 0 };
+    pa.totalMinutes    += mins;
+    if (e.billable) { pa.billableMinutes += mins; pa.billableAmount += amt; }
+    projectMap.set(projKey, pa);
+
+    // ── by client ──
+    const clientRaw = Array.isArray(e.clients) ? (e.clients as unknown[])[0] : e.clients;
+    const client = clientRaw as { first_name?: string | null; last_name?: string | null; company?: string | null } | null;
+    const clientId  = e.client_id as string | null;
+    const clientKey = clientId ?? "none";
+    const clientName = client
+      ? ([client.first_name, client.last_name].filter(Boolean).join(" ") || client.company || "Unknown")
+      : "No client";
+
+    const ca = clientMap.get(clientKey) ?? { client_id: clientId, client_name: clientName, totalMinutes: 0, billableMinutes: 0, billableAmount: 0 };
+    ca.totalMinutes    += mins;
+    if (e.billable) { ca.billableMinutes += mins; ca.billableAmount += amt; }
+    clientMap.set(clientKey, ca);
+  }
+
+  const byProject = Array.from(projectMap.values()).sort((a, b) => b.totalMinutes - a.totalMinutes);
+  const byClient  = Array.from(clientMap.values()).sort((a, b) => b.billableAmount - a.billableAmount);
+
+  return { from, to, totalMinutes, billableMinutes, billableAmount, uninvoicedAmount, byProject, byClient };
+}

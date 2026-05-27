@@ -8,7 +8,8 @@ import { revalidatePath } from "next/cache";
 export type TimeEntry = {
   id: string;
   client_id: string | null;
-  project: string | null;
+  project: string | null;       // legacy free-text field (kept for backward compat)
+  project_id: string | null;    // FK to projects table
   description: string;
   started_at: string;
   ended_at: string | null;
@@ -19,7 +20,21 @@ export type TimeEntry = {
   invoice_id: string | null;
   created_at: string;
   clients?: { first_name: string | null; last_name: string | null; company: string | null } | null;
+  projects?: { name: string; color: string } | null;  // joined from projects table
 };
+
+const ENTRY_SELECT =
+  "id, client_id, project, project_id, description, started_at, ended_at, " +
+  "duration_minutes, billable, hourly_rate, invoiced, invoice_id, created_at, " +
+  "clients(first_name, last_name, company), projects(name, color)";
+
+function normalizeEntry(row: Record<string, unknown>): TimeEntry {
+  return {
+    ...row,
+    clients: (Array.isArray(row.clients) ? (row.clients as unknown[])[0] : row.clients) ?? null,
+    projects: (Array.isArray(row.projects) ? (row.projects as unknown[])[0] : row.projects) ?? null,
+  } as TimeEntry;
+}
 
 async function getOrgId(): Promise<string> {
   const cookieStore = await cookies();
@@ -32,6 +47,7 @@ async function getOrgId(): Promise<string> {
 
 export async function listTimeEntries(opts?: {
   clientId?: string;
+  projectId?: string;
   from?: string;   // ISO date
   to?: string;     // ISO date
   invoiced?: boolean;
@@ -41,23 +57,21 @@ export async function listTimeEntries(opts?: {
 
   let query = supabase
     .from("time_entries")
-    .select("id, client_id, project, description, started_at, ended_at, duration_minutes, billable, hourly_rate, invoiced, invoice_id, created_at, clients(first_name, last_name, company)")
+    .select(ENTRY_SELECT)
     .eq("organization_id", orgId)
     .order("started_at", { ascending: false })
     .limit(200);
 
-  if (opts?.clientId) query = query.eq("client_id", opts.clientId);
-  if (opts?.from)     query = query.gte("started_at", opts.from);
-  if (opts?.to)       query = query.lte("started_at", opts.to + "T23:59:59.999Z");
+  if (opts?.clientId)            query = query.eq("client_id", opts.clientId);
+  if (opts?.projectId)           query = query.eq("project_id", opts.projectId);
+  if (opts?.from)                query = query.gte("started_at", opts.from);
+  if (opts?.to)                  query = query.lte("started_at", opts.to + "T23:59:59.999Z");
   if (opts?.invoiced !== undefined) query = query.eq("invoiced", opts.invoiced);
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map((row) => ({
-    ...row,
-    clients: (Array.isArray(row.clients) ? row.clients[0] : row.clients) ?? null,
-  })) as TimeEntry[];
+  return (data ?? []).map((row) => normalizeEntry(row as Record<string, unknown>));
 }
 
 // ─── Get active timer ─────────────────────────────────────────────────────────
@@ -68,7 +82,7 @@ export async function getActiveTimer(): Promise<TimeEntry | null> {
 
   const { data } = await supabase
     .from("time_entries")
-    .select("id, client_id, project, description, started_at, ended_at, duration_minutes, billable, hourly_rate, invoiced, invoice_id, created_at, clients(first_name, last_name, company)")
+    .select(ENTRY_SELECT)
     .eq("organization_id", orgId)
     .is("ended_at", null)
     .order("started_at", { ascending: false })
@@ -76,10 +90,7 @@ export async function getActiveTimer(): Promise<TimeEntry | null> {
     .maybeSingle();
 
   if (!data) return null;
-  return {
-    ...data,
-    clients: (Array.isArray(data.clients) ? data.clients[0] : data.clients) ?? null,
-  } as TimeEntry;
+  return normalizeEntry(data as Record<string, unknown>);
 }
 
 // ─── Start timer ──────────────────────────────────────────────────────────────
@@ -87,7 +98,7 @@ export async function getActiveTimer(): Promise<TimeEntry | null> {
 export async function startTimer(data: {
   description?: string;
   clientId?: string | null;
-  project?: string | null;
+  projectId?: string | null;
   billable?: boolean;
   hourlyRate?: number | null;
 }): Promise<string> {
@@ -99,7 +110,7 @@ export async function startTimer(data: {
     .from("time_entries")
     .update({
       ended_at: new Date().toISOString(),
-      duration_minutes: 0, // will be treated as negligible
+      duration_minutes: 0,
       updated_at: new Date().toISOString(),
     })
     .eq("organization_id", orgId)
@@ -110,7 +121,7 @@ export async function startTimer(data: {
     .insert({
       organization_id: orgId,
       client_id: data.clientId ?? null,
-      project: data.project ?? null,
+      project_id: data.projectId ?? null,
       description: data.description ?? "",
       started_at: new Date().toISOString(),
       billable: data.billable ?? true,
@@ -161,7 +172,8 @@ export async function stopTimer(entryId: string): Promise<void> {
 export async function createTimeEntry(data: {
   description: string;
   clientId?: string | null;
-  project?: string | null;
+  projectId?: string | null;
+  project?: string | null;     // legacy text — deprecated, prefer projectId
   startedAt: string;
   durationMinutes: number;
   billable: boolean;
@@ -176,6 +188,7 @@ export async function createTimeEntry(data: {
   const { error } = await supabase.from("time_entries").insert({
     organization_id: orgId,
     client_id: data.clientId ?? null,
+    project_id: data.projectId ?? null,
     project: data.project ?? null,
     description: data.description,
     started_at: startedAt.toISOString(),
@@ -196,7 +209,8 @@ export async function updateTimeEntry(
   data: Partial<{
     description: string;
     clientId: string | null;
-    project: string | null;
+    projectId: string | null;
+    project: string | null;    // legacy
     durationMinutes: number;
     billable: boolean;
     hourlyRate: number | null;
@@ -208,10 +222,10 @@ export async function updateTimeEntry(
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (data.description !== undefined)    patch.description     = data.description;
   if (data.clientId    !== undefined)    patch.client_id       = data.clientId;
+  if (data.projectId   !== undefined)    patch.project_id      = data.projectId;
   if (data.project     !== undefined)    patch.project         = data.project;
   if (data.durationMinutes !== undefined) {
     patch.duration_minutes = data.durationMinutes;
-    // Re-compute ended_at based on current started_at
     const { data: row } = await supabase
       .from("time_entries")
       .select("started_at")
@@ -270,10 +284,10 @@ export async function importTimeEntriesToInvoice(
     .single();
   if (!inv) throw new Error("Invoice not found");
 
-  // Fetch entries
+  // Fetch entries with project join for label
   const { data: entries } = await db
     .from("time_entries")
-    .select("id, description, project, duration_minutes, hourly_rate, billable")
+    .select("id, description, project, project_id, duration_minutes, hourly_rate, billable, projects(name)")
     .in("id", entryIds)
     .eq("organization_id", orgId)
     .eq("invoiced", false);
@@ -290,11 +304,13 @@ export async function importTimeEntriesToInvoice(
 
   let sortOrder = (existingLines?.[0]?.sort_order ?? 0) + 1;
 
-  // Build invoice lines
+  // Build invoice lines — prefer FK project name over legacy text field
   const lines = entries.map((e) => {
     const hours = (e.duration_minutes ?? 0) / 60;
     const rate = e.hourly_rate ?? 0;
-    const label = [e.project, e.description].filter(Boolean).join(" — ") || "Billable time";
+    const projectsData = Array.isArray(e.projects) ? e.projects[0] : e.projects;
+    const projectName = (projectsData as { name?: string } | null)?.name ?? e.project ?? null;
+    const label = [projectName, e.description].filter(Boolean).join(" — ") || "Billable time";
     return {
       invoice_id: invoiceId,
       description: label,

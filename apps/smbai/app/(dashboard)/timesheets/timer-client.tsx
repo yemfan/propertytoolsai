@@ -3,18 +3,33 @@
 import { useState, useEffect, useTransition, useRef } from "react";
 import {
   Play, Square, Plus, Trash2, Clock, DollarSign,
-  ChevronDown, Check, AlertCircle, FileText,
+  ChevronDown, Check, AlertCircle, FileText, FolderOpen,
 } from "lucide-react";
 import {
-  startTimer, stopTimer, createTimeEntry, deleteTimeEntry, updateTimeEntry,
+  startTimer, stopTimer, createTimeEntry, deleteTimeEntry,
   type TimeEntry,
 } from "@/lib/actions/time-entries";
 import { useRouter } from "next/navigation";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type ProjectOption = { id: string; name: string; color: string };
+
+// ─── Color dot map ────────────────────────────────────────────────────────────
+
+const COLOR_DOTS: Record<string, string> = {
+  indigo:  "bg-indigo-500",
+  emerald: "bg-emerald-500",
+  rose:    "bg-rose-500",
+  amber:   "bg-amber-500",
+  violet:  "bg-violet-500",
+  slate:   "bg-slate-400",
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmtDuration(minutes: number | null, live?: number): string {
-  const total = live !== undefined ? live : (minutes ?? 0);
+function fmtDuration(minutes: number | null): string {
+  const total = minutes ?? 0;
   const h = Math.floor(total / 60);
   const m = total % 60;
   if (h === 0) return `${m}m`;
@@ -56,29 +71,36 @@ function clientLabel(
   return [c.first_name, c.last_name].filter(Boolean).join(" ") || c.company || "Client";
 }
 
+function projectLabel(entry: TimeEntry): string | null {
+  // Prefer FK-joined project name, fall back to legacy text field
+  return entry.projects?.name ?? entry.project ?? null;
+}
+
 // ─── Add entry modal ──────────────────────────────────────────────────────────
 
 function AddEntryModal({
   clients,
+  projects,
   defaultHourlyRate,
   onClose,
   onCreated,
 }: {
   clients: { id: string; first_name: string | null; last_name: string | null; company: string | null }[];
+  projects: ProjectOption[];
   defaultHourlyRate: number | null;
   onClose: () => void;
   onCreated: (entry: Partial<TimeEntry>) => void;
 }) {
   const [description, setDescription] = useState("");
-  const [clientId, setClientId] = useState("");
-  const [project, setProject] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [hours, setHours] = useState("0");
-  const [minutes, setMinutes] = useState("0");
-  const [billable, setBillable] = useState(true);
-  const [hourlyRate, setHourlyRate] = useState(defaultHourlyRate?.toString() ?? "");
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState("");
+  const [clientId, setClientId]       = useState("");
+  const [projectId, setProjectId]     = useState("");
+  const [date, setDate]               = useState(new Date().toISOString().slice(0, 10));
+  const [hours, setHours]             = useState("0");
+  const [minutes, setMinutes]         = useState("0");
+  const [billable, setBillable]       = useState(true);
+  const [hourlyRate, setHourlyRate]   = useState(defaultHourlyRate?.toString() ?? "");
+  const [isPending, startTransition]  = useTransition();
+  const [error, setError]             = useState("");
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -91,16 +113,18 @@ function AddEntryModal({
         await createTimeEntry({
           description: description.trim(),
           clientId: clientId || null,
-          project: project.trim() || null,
+          projectId: projectId || null,
           startedAt: date + "T09:00:00",
           durationMinutes: totalMins,
           billable,
           hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
         });
+        const proj = projects.find((p) => p.id === projectId);
         onCreated({
           description: description.trim(),
           client_id: clientId || null,
-          project: project.trim() || null,
+          project_id: projectId || null,
+          projects: proj ? { name: proj.name, color: proj.color } : null,
           started_at: date + "T09:00:00.000Z",
           duration_minutes: totalMins,
           billable,
@@ -158,12 +182,16 @@ function AddEntryModal({
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Project</label>
-            <input
-              value={project}
-              onChange={(e) => setProject(e.target.value)}
-              placeholder="Optional"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            >
+              <option value="">No project</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -255,20 +283,23 @@ function AddEntryModal({
 function TimerBar({
   activeTimer,
   clients,
+  projects,
   defaultHourlyRate,
   onTimerStopped,
   onTimerStarted,
 }: {
   activeTimer: TimeEntry | null;
   clients: { id: string; first_name: string | null; last_name: string | null; company: string | null }[];
+  projects: ProjectOption[];
   defaultHourlyRate: number | null;
   onTimerStopped: () => void;
   onTimerStarted: (id: string) => void;
 }) {
   const [description, setDescription] = useState(activeTimer?.description ?? "");
-  const [clientId, setClientId] = useState(activeTimer?.client_id ?? "");
+  const [clientId, setClientId]       = useState(activeTimer?.client_id ?? "");
+  const [projectId, setProjectId]     = useState(activeTimer?.project_id ?? "");
   const [liveSeconds, setLiveSeconds] = useState(0);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startTransition]  = useTransition();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Sync elapsed time when active timer is mounted
@@ -297,6 +328,7 @@ function TimerBar({
       const id = await startTimer({
         description: description.trim() || "Working…",
         clientId: clientId || null,
+        projectId: projectId || null,
         billable: true,
         hourlyRate: defaultHourlyRate,
       });
@@ -312,17 +344,45 @@ function TimerBar({
     });
   }
 
+  const activeProjectColor = activeTimer?.projects?.color
+    ?? projects.find((p) => p.id === activeTimer?.project_id)?.color;
+
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+      {/* Active project color indicator */}
+      {(activeTimer?.project_id || projectId) && (
+        <div
+          className={`w-2 h-2 rounded-full flex-shrink-0 ${
+            COLOR_DOTS[activeProjectColor ?? projects.find((p) => p.id === projectId)?.color ?? "slate"] ?? "bg-slate-400"
+          }`}
+        />
+      )}
+
       {/* Description */}
       <input
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && !activeTimer) handleStart(); }}
-        placeholder={activeTimer ? "What are you working on?" : "What are you working on?"}
+        placeholder="What are you working on?"
         disabled={!!activeTimer}
         className="flex-1 text-sm text-slate-800 placeholder-slate-400 bg-transparent focus:outline-none disabled:cursor-default"
       />
+
+      {/* Project dropdown */}
+      <div className="relative">
+        <select
+          value={projectId}
+          onChange={(e) => setProjectId(e.target.value)}
+          disabled={!!activeTimer}
+          className="appearance-none text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg pl-3 pr-7 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-default max-w-[120px]"
+        >
+          <option value="">No project</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+        <FolderOpen className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+      </div>
 
       {/* Client dropdown */}
       <div className="relative">
@@ -385,6 +445,7 @@ interface Props {
     uninvoicedAmount: number;
   };
   clients: { id: string; first_name: string | null; last_name: string | null; company: string | null }[];
+  projects: ProjectOption[];
   defaultHourlyRate: number | null;
   weekFrom: string;
   weekTo: string;
@@ -395,6 +456,7 @@ export function TimerClient({
   initialActiveTimer,
   initialStats,
   clients,
+  projects,
   defaultHourlyRate,
   weekFrom,
   weekTo,
@@ -414,7 +476,7 @@ export function TimerClient({
     router.refresh();
   }
 
-  function handleTimerStarted(id: string) {
+  function handleTimerStarted(_id: string) {
     router.refresh();
   }
 
@@ -432,6 +494,7 @@ export function TimerClient({
       id: crypto.randomUUID(),
       client_id: partial.client_id ?? null,
       project: partial.project ?? null,
+      project_id: partial.project_id ?? null,
       description: partial.description ?? "",
       started_at: partial.started_at ?? new Date().toISOString(),
       ended_at: partial.ended_at ?? null,
@@ -442,9 +505,9 @@ export function TimerClient({
       invoice_id: null,
       created_at: new Date().toISOString(),
       clients: clients.find((c) => c.id === partial.client_id) ?? null,
+      projects: partial.projects ?? null,
     };
     setEntries((prev) => [fake, ...prev]);
-    // Update stats optimistically
     if (fake.duration_minutes) {
       const added = fake.billable ? (fake.duration_minutes / 60) * (fake.hourly_rate ?? 0) : 0;
       setStats((s) => ({
@@ -484,6 +547,7 @@ export function TimerClient({
         <TimerBar
           activeTimer={activeTimer}
           clients={clients}
+          projects={projects}
           defaultHourlyRate={defaultHourlyRate}
           onTimerStopped={handleTimerStopped}
           onTimerStarted={handleTimerStarted}
@@ -560,6 +624,8 @@ export function TimerClient({
                     const billableAmt = entry.billable && entry.hourly_rate && entry.duration_minutes
                       ? (entry.duration_minutes / 60) * entry.hourly_rate
                       : null;
+                    const projName = projectLabel(entry);
+                    const projColor = entry.projects?.color ?? "slate";
 
                     return (
                       <div
@@ -579,10 +645,20 @@ export function TimerClient({
                           <p className="text-sm font-medium text-slate-800 truncate">
                             {entry.description || <span className="italic text-slate-400">No description</span>}
                           </p>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            {entry.client_id ? clientLabel(entry, clients) : "No client"}
-                            {entry.project && <> · {entry.project}</>}
-                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-xs text-slate-400 truncate">
+                              {entry.client_id ? clientLabel(entry, clients) : "No client"}
+                            </p>
+                            {projName && (
+                              <>
+                                <span className="text-slate-300">·</span>
+                                <span className="flex items-center gap-1 text-xs text-slate-500">
+                                  <div className={`w-1.5 h-1.5 rounded-full ${COLOR_DOTS[projColor] ?? "bg-slate-400"}`} />
+                                  {projName}
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
 
                         {/* Amount */}
@@ -628,6 +704,7 @@ export function TimerClient({
       {showAdd && (
         <AddEntryModal
           clients={clients}
+          projects={projects}
           defaultHourlyRate={defaultHourlyRate}
           onClose={() => setShowAdd(false)}
           onCreated={(partial) => {

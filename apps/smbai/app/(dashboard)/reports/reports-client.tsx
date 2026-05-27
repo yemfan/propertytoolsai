@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Download, ChevronDown, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
-import type { PnLReport, CashFlowSummary } from "@/lib/actions/reports";
+import { Download, TrendingUp, TrendingDown, DollarSign, Clock, Users, FolderOpen } from "lucide-react";
+import type { PnLReport, CashFlowSummary, TimeReport } from "@/lib/actions/reports";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -44,10 +44,18 @@ const PRESETS = [
   { label: "Last year",    fn: lastYear },
 ];
 
-// ─── Currency formatter ───────────────────────────────────────────────────────
+// ─── Formatters ───────────────────────────────────────────────────────────────
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(n);
+
+function fmtHours(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 
@@ -56,11 +64,13 @@ function StatCard({
   value,
   sub,
   positive,
+  money = true,
 }: {
   label: string;
   value: number;
   sub?: string;
   positive?: boolean;
+  money?: boolean;
 }) {
   const color =
     positive === undefined
@@ -72,8 +82,21 @@ function StatCard({
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-5">
       <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">{label}</p>
-      <p className={`text-2xl font-semibold tabular-nums ${color}`}>{fmt(value)}</p>
+      <p className={`text-2xl font-semibold tabular-nums ${color}`}>
+        {money ? fmt(value) : fmtHours(value)}
+      </p>
       {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+// ─── Mini bar ─────────────────────────────────────────────────────────────────
+
+function MiniBar({ value, max, color = "bg-indigo-500" }: { value: number; max: number; color?: string }) {
+  const pct = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
+  return (
+    <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+      <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }
@@ -101,23 +124,64 @@ function exportPnLCsv(report: PnLReport) {
   URL.revokeObjectURL(url);
 }
 
+function exportTimeCsv(report: TimeReport) {
+  const rows: string[] = [
+    "Category,Name,Total Hours,Billable Hours,Billable Amount",
+    ...report.byProject.map((p) =>
+      `Project,"${p.project_name}",${(p.totalMinutes / 60).toFixed(2)},${(p.billableMinutes / 60).toFixed(2)},${p.billableAmount.toFixed(2)}`
+    ),
+    "",
+    ...report.byClient.map((c) =>
+      `Client,"${c.client_name}",${(c.totalMinutes / 60).toFixed(2)},${(c.billableMinutes / 60).toFixed(2)},${c.billableAmount.toFixed(2)}`
+    ),
+  ];
+  const csv = rows.join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `time_report_${report.from}_to_${report.to}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── Color dot map ────────────────────────────────────────────────────────────
+
+const COLOR_DOTS: Record<string, string> = {
+  indigo:  "bg-indigo-500",
+  emerald: "bg-emerald-500",
+  rose:    "bg-rose-500",
+  amber:   "bg-amber-500",
+  violet:  "bg-violet-500",
+  slate:   "bg-slate-400",
+};
+
 // ─── Main client component ────────────────────────────────────────────────────
 
 interface Props {
   initialPnL: PnLReport;
   initialCashFlow: CashFlowSummary;
+  initialTimeReport: TimeReport;
   fetchPnL: (from: string, to: string) => Promise<PnLReport>;
   fetchCashFlow: (from: string, to: string) => Promise<CashFlowSummary>;
+  fetchTimeReport: (from: string, to: string) => Promise<TimeReport>;
 }
 
-export function ReportsClient({ initialPnL, initialCashFlow, fetchPnL, fetchCashFlow }: Props) {
-  const preset = PRESETS[2]; // default: this year
-  const [from, setFrom] = useState(initialPnL.from);
-  const [to, setTo]     = useState(initialPnL.to);
-  const [pnl, setPnl]   = useState(initialPnL);
-  const [cash, setCash] = useState(initialCashFlow);
-  const [tab, setTab]   = useState<"pnl" | "cash">("pnl");
-  const [pending, start] = useTransition();
+export function ReportsClient({
+  initialPnL,
+  initialCashFlow,
+  initialTimeReport,
+  fetchPnL,
+  fetchCashFlow,
+  fetchTimeReport,
+}: Props) {
+  const [from, setFrom]     = useState(initialPnL.from);
+  const [to, setTo]         = useState(initialPnL.to);
+  const [pnl, setPnl]       = useState(initialPnL);
+  const [cash, setCash]     = useState(initialCashFlow);
+  const [time, setTime]     = useState(initialTimeReport);
+  const [tab, setTab]       = useState<"pnl" | "cash" | "time">("pnl");
+  const [pending, start]    = useTransition();
 
   function applyPreset(fn: () => { from: string; to: string }) {
     const r = fn();
@@ -128,11 +192,15 @@ export function ReportsClient({ initialPnL, initialCashFlow, fetchPnL, fetchCash
 
   function runFetch(f: string, t: string) {
     start(async () => {
-      const [p, c] = await Promise.all([fetchPnL(f, t), fetchCashFlow(f, t)]);
+      const [p, c, tr] = await Promise.all([fetchPnL(f, t), fetchCashFlow(f, t), fetchTimeReport(f, t)]);
       setPnl(p);
       setCash(c);
+      setTime(tr);
     });
   }
+
+  const maxProjectMins = Math.max(...time.byProject.map((p) => p.totalMinutes), 1);
+  const maxClientAmt   = Math.max(...time.byClient.map((c) => c.billableAmount), 1);
 
   return (
     <div className="space-y-6">
@@ -179,7 +247,7 @@ export function ReportsClient({ initialPnL, initialCashFlow, fetchPnL, fetchCash
 
       {/* Tab selector */}
       <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
-        {(["pnl", "cash"] as const).map((t) => (
+        {(["pnl", "cash", "time"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -187,7 +255,7 @@ export function ReportsClient({ initialPnL, initialCashFlow, fetchPnL, fetchCash
               tab === t ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            {t === "pnl" ? "Profit & Loss" : "Cash Flow"}
+            {t === "pnl" ? "Profit & Loss" : t === "cash" ? "Cash Flow" : "Time Tracking"}
           </button>
         ))}
       </div>
@@ -195,7 +263,6 @@ export function ReportsClient({ initialPnL, initialCashFlow, fetchPnL, fetchCash
       {/* P&L Report */}
       {tab === "pnl" && (
         <div className={`space-y-6 ${pending ? "opacity-60 pointer-events-none" : ""}`}>
-          {/* KPI cards */}
           <div className="grid grid-cols-3 gap-4">
             <StatCard label="Total Revenue" value={pnl.grossRevenue} positive={true} />
             <StatCard label="Total Expenses" value={pnl.totalExpenses} positive={false} />
@@ -279,9 +346,7 @@ export function ReportsClient({ initialPnL, initialCashFlow, fetchPnL, fetchCash
             <div className="flex items-center gap-2">
               <DollarSign className={`w-5 h-5 ${pnl.netIncome >= 0 ? "text-emerald-600" : "text-rose-600"}`} />
               <span className="text-sm font-semibold text-slate-800">Net Income</span>
-              <span className="text-xs text-slate-500">
-                {pnl.from} – {pnl.to}
-              </span>
+              <span className="text-xs text-slate-500">{pnl.from} – {pnl.to}</span>
             </div>
             <span className={`text-xl font-bold tabular-nums ${pnl.netIncome >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
               {fmt(pnl.netIncome)}
@@ -293,7 +358,6 @@ export function ReportsClient({ initialPnL, initialCashFlow, fetchPnL, fetchCash
       {/* Cash Flow Report */}
       {tab === "cash" && (
         <div className={`space-y-6 ${pending ? "opacity-60 pointer-events-none" : ""}`}>
-          {/* KPI cards */}
           <div className="grid grid-cols-3 gap-4">
             <StatCard label="Money In" value={cash.totalIn} positive={true} sub="Deposits & credits" />
             <StatCard label="Money Out" value={cash.totalOut} positive={false} sub="Withdrawals & debits" />
@@ -305,7 +369,6 @@ export function ReportsClient({ initialPnL, initialCashFlow, fetchPnL, fetchCash
             />
           </div>
 
-          {/* By category */}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100">
               <h2 className="text-sm font-semibold text-slate-800">By Category</h2>
@@ -334,6 +397,123 @@ export function ReportsClient({ initialPnL, initialCashFlow, fetchPnL, fetchCash
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Time Tracking Report */}
+      {tab === "time" && (
+        <div className={`space-y-6 ${pending ? "opacity-60 pointer-events-none" : ""}`}>
+          {/* KPI cards */}
+          <div className="grid grid-cols-4 gap-4">
+            <StatCard label="Total Hours"    value={time.totalMinutes}    money={false} />
+            <StatCard label="Billable Hours" value={time.billableMinutes} money={false} positive={true} />
+            <StatCard label="Billable Amount" value={time.billableAmount} positive={true} />
+            <StatCard
+              label="Uninvoiced"
+              value={time.uninvoicedAmount}
+              positive={time.uninvoicedAmount === 0}
+              sub={time.uninvoicedAmount > 0 ? "ready to invoice" : "fully invoiced"}
+            />
+          </div>
+
+          {/* Hours by project */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <FolderOpen className="w-4 h-4 text-indigo-500" />
+                <h2 className="text-sm font-semibold text-slate-800">Hours by project</h2>
+              </div>
+              <button
+                onClick={() => exportTimeCsv(time)}
+                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
+              </button>
+            </div>
+            {time.byProject.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-8">No time entries in this period</p>
+            ) : (
+              <div className="divide-y divide-slate-50">
+                {time.byProject.map((p, i) => (
+                  <div key={p.project_id ?? `proj-${i}`} className="flex items-center gap-4 px-6 py-3">
+                    <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${COLOR_DOTS[p.color] ?? "bg-slate-400"}`} />
+                    <span className="text-sm text-slate-700 w-48 truncate flex-shrink-0">{p.project_name}</span>
+                    <MiniBar value={p.totalMinutes} max={maxProjectMins} color={COLOR_DOTS[p.color] ?? "bg-indigo-500"} />
+                    <span className="text-xs text-slate-500 w-16 text-right tabular-nums flex-shrink-0">
+                      {fmtHours(p.totalMinutes)}
+                    </span>
+                    {p.billableAmount > 0 && (
+                      <span className="text-xs font-medium text-emerald-600 w-24 text-right tabular-nums flex-shrink-0">
+                        {fmt(p.billableAmount)}
+                      </span>
+                    )}
+                  </div>
+                ))}
+                <div className="flex items-center justify-between px-6 py-3 bg-slate-50">
+                  <span className="text-sm font-semibold text-slate-700">Total</span>
+                  <div className="flex items-center gap-6">
+                    <span className="text-sm font-medium text-slate-700 tabular-nums">
+                      {fmtHours(time.totalMinutes)}
+                    </span>
+                    {time.billableAmount > 0 && (
+                      <span className="text-sm font-bold text-emerald-700 tabular-nums">
+                        {fmt(time.billableAmount)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Billable revenue by client */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="flex items-center gap-2 px-6 py-4 border-b border-slate-100">
+              <Users className="w-4 h-4 text-indigo-500" />
+              <h2 className="text-sm font-semibold text-slate-800">Billable revenue by client</h2>
+            </div>
+            {time.byClient.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-8">No time entries in this period</p>
+            ) : (
+              <div className="divide-y divide-slate-50">
+                {time.byClient.map((c, i) => (
+                  <div key={c.client_id ?? `client-${i}`} className="flex items-center gap-4 px-6 py-3">
+                    <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-semibold flex-shrink-0">
+                      {c.client_name[0]?.toUpperCase() ?? "?"}
+                    </div>
+                    <span className="text-sm text-slate-700 w-44 truncate flex-shrink-0">{c.client_name}</span>
+                    <MiniBar value={c.billableAmount} max={maxClientAmt} color="bg-indigo-500" />
+                    <span className="text-xs text-slate-500 w-16 text-right tabular-nums flex-shrink-0">
+                      {fmtHours(c.totalMinutes)}
+                    </span>
+                    <span className="text-xs font-medium text-emerald-600 w-24 text-right tabular-nums flex-shrink-0">
+                      {c.billableAmount > 0 ? fmt(c.billableAmount) : "—"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Time summary footer */}
+          <div className="flex items-center justify-between px-6 py-4 rounded-xl border-2 border-indigo-100 bg-indigo-50">
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-indigo-600" />
+              <span className="text-sm font-semibold text-slate-800">Period summary</span>
+              <span className="text-xs text-slate-500">{time.from} – {time.to}</span>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <p className="text-xs text-slate-500">Billable hours</p>
+                <p className="text-base font-bold text-indigo-700 tabular-nums">{fmtHours(time.billableMinutes)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-slate-500">Earned</p>
+                <p className="text-base font-bold text-emerald-700 tabular-nums">{fmt(time.billableAmount)}</p>
+              </div>
+            </div>
           </div>
         </div>
       )}

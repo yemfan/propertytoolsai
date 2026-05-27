@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { listTimeEntries, getActiveTimer, getTimeStats } from "@/lib/actions/time-entries";
+import { listProjects } from "@/lib/actions/projects";
 import { TimerClient } from "./timer-client";
 
 export const metadata: Metadata = { title: "Timesheets" };
@@ -28,7 +29,7 @@ export default async function TimesheetsPage() {
 
   const { from, to } = weekBounds();
 
-  const [entries, activeTimer, stats, clientsRes, orgRes] = await Promise.all([
+  const [entries, activeTimer, stats, clientsRes, orgRes, projects] = await Promise.all([
     listTimeEntries({ from, to }),
     getActiveTimer(),
     getTimeStats(from, to),
@@ -42,6 +43,7 @@ export default async function TimesheetsPage() {
       .select("default_hourly_rate")
       .eq("id", orgId)
       .single(),
+    listProjects("active"),
   ]);
 
   const clients = (clientsRes.data ?? []) as {
@@ -59,6 +61,7 @@ export default async function TimesheetsPage() {
       initialActiveTimer={activeTimer}
       initialStats={stats}
       clients={clients}
+      projects={projects.map((p) => ({ id: p.id, name: p.name, color: p.color }))}
       defaultHourlyRate={defaultHourlyRate}
       weekFrom={from}
       weekTo={to}
