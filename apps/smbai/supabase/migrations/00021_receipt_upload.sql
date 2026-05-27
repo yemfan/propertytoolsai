@@ -1,7 +1,8 @@
 -- Week 23: Expense receipt attachment
+-- Expenses live in journal_entries (source_type = 'expense'), not a separate table.
 -- ─────────────────────────────────────────────────────────────────────────────
 
-ALTER TABLE expenses
+ALTER TABLE journal_entries
   ADD COLUMN IF NOT EXISTS receipt_url       TEXT,
   ADD COLUMN IF NOT EXISTS receipt_filename  TEXT;
 
