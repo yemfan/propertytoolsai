@@ -54,7 +54,8 @@ and verified end-to-end by
 - **2FA / OTP**: none — email/password sign-in.
 - **`auth.users.id`**: `03762a82-d1d1-4ddd-bab7-0519f4a11d6c`
 - **`agents.id`**: `31` — `plan_type: pro`, brand "LeadSmart Demo", 3 demo
-  leads (Sarah Chen, Marcus Reyes, Priya Iyer).
+  contacts (Sarah Chen — rated `hot`, Marcus Reyes, Priya Iyer) with 6
+  SMS messages across them so the Inbox tab is populated.
 
 > History: Apple rejected build 1.0.0 (1) on **2026-04-02** under
 > **Guideline 2.1** because the reviewer could not sign in — the demo
@@ -78,10 +79,12 @@ and verified end-to-end by
 > Suggested walk-through:
 > 1. Tap **Sign in with email** on the welcome screen.
 > 2. Enter `demo@leadsmart.ai` / `Demo123!` and tap **Continue**.
-> 3. **Inbox** tab — sample lead threads load (may be empty on first
->    submission; the **Leads** tab below shows the seeded content).
-> 4. **Leads** tab — three demo leads. Tap any lead to view detail,
->    pipeline stage, and AI-reply controls.
+> 3. **Inbox** tab — three SMS conversations load, sorted most-recent
+>    first. The top thread is from Sarah Chen ("Saturday afternoon works.
+>    Around 2pm?") — tap it to see the full message history.
+> 4. **Leads** tab — three demo leads. Sarah Chen is flagged as a hot
+>    lead. Tap any lead to view detail, pipeline stage, and AI-reply
+>    controls.
 > 5. **Settings** tab — verify **Privacy policy** and **Terms of
 >    service** open in the browser. **Delete account** routes to a
 >    typed-confirmation screen; do NOT confirm (it permanently deletes
@@ -106,9 +109,23 @@ destroying the canonical demo account (`demo@leadsmart.ai` / `Demo123!`):
    returns `deleted_at` set and `auth_user_id` null.
 5. Confirm `auth.users` no longer contains that row.
 
-If the reviewer accidentally deletes the demo account, re-provision with
-`node ./apps/leadsmartai/scripts/seed-app-review-demo-account.mjs`
-(idempotent — restores password and seeds leads).
+If the reviewer accidentally deletes the demo account, re-provision in
+two steps (both idempotent):
+
+```bash
+node ./apps/leadsmartai/scripts/seed-app-review-demo-account.mjs   # user + agent + 3 contacts
+node ./apps/leadsmartai/scripts/seed-app-review-demo-messages.mjs  # 6 SMS messages so Inbox isn't empty
+```
+
+Then run the gate before resubmitting:
+
+```bash
+node ./apps/leadsmartai/scripts/verify-app-review-demo-signin.mjs
+# Must print all three ✓:
+#   ✓ Sign-in OK
+#   ✓ first lead: Sarah Chen
+#   ✓ top thread: Sarah Chen — "Saturday afternoon works…"
+```
 
 ## App Store listing copy (US English)
 
