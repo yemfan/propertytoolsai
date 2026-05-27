@@ -110,6 +110,112 @@ If the reviewer accidentally deletes the demo account, re-provision with
 `node ./apps/leadsmartai/scripts/seed-app-review-demo-account.mjs`
 (idempotent — restores password and seeds leads).
 
+## App Store listing copy (US English)
+
+Paste each block into the matching App Store Connect field. All values
+sized to fit Apple's character limits with margin to spare.
+
+### App Name (30 chars)
+
+```
+LeadSmart
+```
+
+### Subtitle (30 chars)
+
+```
+AI assistant for real estate
+```
+
+### Promotional Text (170 chars) — updateable without re-review
+
+```
+Hot lead replied? You'll know in seconds. LeadSmart drafts your SMS and email follow-ups, tracks every prospect, and helps you close more deals — all from your iPhone.
+```
+
+### Description (4000 chars)
+
+```
+Stop losing leads to slow follow-up.
+
+LeadSmart is the mobile CRM built for licensed real estate agents who need to reply to every prospect — fast — without sitting at a desk. AI drafts your SMS and email follow-ups in your voice, so you spend less time typing and more time closing.
+
+⚡ REPLY FASTER
+• Push notifications the moment a lead texts you back
+• AI-drafted SMS and email replies you can send with one tap
+• Inbox view of every active conversation, sorted by urgency
+• Missed-call follow-ups handled automatically
+
+📋 NEVER DROP A LEAD
+• Pipeline view of every prospect from new to closed
+• Drag-and-drop pipeline stages so you always know what's next
+• Smart task reminders for the follow-ups you said you'd do
+• Daily agenda surfaces what matters today, not what's overdue
+
+📅 SHOWINGS + CALENDAR
+• Schedule showings and tie them to a specific lead
+• Booking link to share with prospects so they self-schedule
+• Post-showing feedback forms to capture buyer intent
+• Reminders for tomorrow's appointments delivered at the right time
+
+📷 QUICK POST
+• Snap a listing photo and post it to your social channels in seconds
+• Schedule posts to LinkedIn and Meta from your phone
+• Templates for new-listing, just-sold, open-house, and price-drop posts
+• Track which posts drive the most engagement and inbound leads
+
+🤝 SPHERE OF INFLUENCE
+• Stay in front of past clients and referral sources
+• Buyers and sellers organized by life-stage signals
+• Smart prompts when it's time to reach out
+• Built-in postcards and digital touches that feel personal
+
+🔒 BUILT FOR PROFESSIONAL USE
+• Sign in with Apple, Google, or email — your choice
+• Your data stays yours: delete your account and all data anytime from Settings
+• No ads, ever. We work for you, not for advertisers.
+• Compliant outbound SMS designed for TCPA-aware workflows
+
+LeadSmart is built and supported by a small team in the United States. We listen to working agents and ship updates every few weeks based on what you tell us.
+
+Active subscription required for the AI features. Sign up at leadsmart-ai.com to start a free trial.
+
+Privacy policy: https://leadsmart-ai.com/privacy
+Terms of service: https://leadsmart-ai.com/terms
+Account deletion: https://leadsmart-ai.com/delete-account
+Support: contact@leadsmart-ai.com
+```
+
+### Keywords (100 chars, comma-separated, NO spaces around commas)
+
+```
+follow up,pipeline,sphere,showings,listing,broker,sales,closing,referrals,SMS,prospecting
+```
+
+We deliberately skip "real estate", "agent", "CRM", "AI" — already
+indexed from App Name + Subtitle, so duplicating them wastes the
+100-char budget. We also skip "Realtor" — trademark of the National
+Association of Realtors, risky to claim in App Store metadata.
+
+### What's New (4000 chars) — v1 release notes
+
+```
+Welcome to LeadSmart for iPhone.
+
+Reply to every lead in seconds with AI-drafted SMS and email, track every deal through your pipeline, and get push alerts the moment a hot lead comes in. Built by working real estate professionals for working real estate professionals — no fluff, no ads, no upsells.
+```
+
+### Category
+
+- **Primary**: Business
+- **Secondary** (optional): Productivity
+
+### Support URLs
+
+- **Support URL**: `https://leadsmart-ai.com/contact`
+- **Marketing URL**: `https://leadsmart-ai.com`
+- **Privacy Policy URL**: `https://leadsmart-ai.com/privacy`
+
 ## Open items before first submit
 
 - [ ] Fill `eas.json` submit IDs (see above).
