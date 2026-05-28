@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, X, AlertCircle, Receipt, Trash2, CheckCircle2, Banknote } from "lucide-react";
+import { Plus, X, AlertCircle, Receipt, Trash2, CheckCircle2, Banknote, Repeat } from "lucide-react";
 import { createBill, payBill, deleteBill, type Bill } from "@/lib/actions/bills";
 
 type ExpenseAccount = { id: string; code: string; name: string };
@@ -377,13 +378,22 @@ export function BillsClient({ initialBills, expenseAccounts, bankAccounts }: Pro
             Track what you owe vendors. Expenses post to your books when paid.
           </p>
         </div>
-        <button
-          onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          New bill
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/books/bills/recurring"
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-indigo-700 transition-colors"
+          >
+            <Repeat className="w-4 h-4" />
+            Recurring
+          </Link>
+          <button
+            onClick={() => setShowNew(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New bill
+          </button>
+        </div>
       </div>
 
       {/* A/P KPIs */}
