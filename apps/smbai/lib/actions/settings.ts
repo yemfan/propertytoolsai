@@ -40,7 +40,10 @@ export async function updateOrg(
     })
     .eq("id", orgId);
 
-  if (error) return { error: "Failed to update organization." };
+  if (error) {
+    console.error("updateOrg failed:", error);
+    return { error: `Couldn't save: ${error.message}` };
+  }
 
   revalidatePath("/settings");
   return { success: true };
