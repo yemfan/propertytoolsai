@@ -19,6 +19,10 @@
     {
       "path": "/api/cron/bills/recurring",
       "schedule": "20 9 * * *"
+    },
+    {
+      "path": "/api/cron/tasks/recurring",
+      "schedule": "25 9 * * *"
     }
   ]
 }

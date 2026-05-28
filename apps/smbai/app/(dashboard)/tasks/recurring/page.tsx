@@ -1,0 +1,31 @@
+import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
+import { listRecurringTasks } from "@/lib/actions/recurring-tasks";
+import { RecurringTasksClient } from "./recurring-tasks-client";
+
+export const metadata: Metadata = { title: "Recurring Tasks" };
+
+export default async function RecurringTasksPage() {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const supabase = await createClient();
+
+  const [recurring, clientsRes] = await Promise.all([
+    listRecurringTasks(),
+    supabase
+      .from("clients")
+      .select("id, first_name, last_name, company")
+      .eq("organization_id", orgId)
+      .order("first_name"),
+  ]);
+
+  const clients = (clientsRes.data ?? []) as {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    company: string | null;
+  }[];
+
+  return <RecurringTasksClient initialRecurring={recurring} clients={clients} />;
+}

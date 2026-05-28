@@ -3,7 +3,8 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { AddTaskModal } from "@/components/add-task-modal";
 import { TaskRow } from "@/components/task-row";
-import { CheckSquare, Filter } from "lucide-react";
+import Link from "next/link";
+import { CheckSquare, Filter, Repeat } from "lucide-react";
 
 export const metadata: Metadata = { title: "Tasks" };
 
@@ -82,14 +83,23 @@ export default async function TasksPage({
             )}
           </p>
         </div>
-        <AddTaskModal
-          clients={clients as {
-            id: string;
-            first_name: string | null;
-            last_name: string | null;
-            company: string | null;
-          }[]}
-        />
+        <div className="flex items-center gap-3">
+          <Link
+            href="/tasks/recurring"
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-indigo-700 transition-colors"
+          >
+            <Repeat className="w-4 h-4" />
+            Recurring
+          </Link>
+          <AddTaskModal
+            clients={clients as {
+              id: string;
+              first_name: string | null;
+              last_name: string | null;
+              company: string | null;
+            }[]}
+          />
+        </div>
       </div>
 
       {/* Status tabs */}
