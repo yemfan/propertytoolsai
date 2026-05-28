@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { createEstimate, type EstimateLine } from "@/lib/actions/estimates";
+import { createEstimateTemplate, type EstimateTemplate } from "@/lib/actions/estimate-templates";
 
 interface Client {
   id: string;
@@ -16,6 +17,7 @@ interface Client {
 interface Props {
   clients: Client[];
   preselectedClientId?: string;
+  templates: EstimateTemplate[];
 }
 
 function emptyLine(): EstimateLine & { key: string } {
@@ -34,7 +36,7 @@ function defaultExpiryDate(): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function EstimateBuilder({ clients, preselectedClientId }: Props) {
+export function EstimateBuilder({ clients, preselectedClientId, templates }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +48,7 @@ export function EstimateBuilder({ clients, preselectedClientId }: Props) {
   const [lines, setLines] = useState<(EstimateLine & { key: string })[]>([
     emptyLine(),
   ]);
+  const [templateSaved, setTemplateSaved] = useState(false);
 
   const subtotal = lines.reduce((s, l) => s + l.amount, 0);
   const taxAmount = +(subtotal * (taxRate / 100)).toFixed(2);
@@ -99,8 +102,80 @@ export function EstimateBuilder({ clients, preselectedClientId }: Props) {
     });
   }
 
+  function loadTemplate(templateId: string) {
+    const tpl = templates.find((t) => t.id === templateId);
+    if (!tpl) return;
+    setError(null);
+    const src = tpl.lines.length
+      ? tpl.lines
+      : [{ description: "", quantity: 1, unit_price: 0, amount: 0 }];
+    setLines(
+      src.map((l) => ({
+        key: crypto.randomUUID(),
+        description: l.description,
+        quantity: l.quantity,
+        unit_price: l.unit_price,
+        amount: l.amount,
+      }))
+    );
+    setTaxRate((tpl.tax_rate ?? 0) * 100);
+    setNotes(tpl.notes ?? "");
+  }
+
+  function saveAsTemplate() {
+    const validLines = lines.filter((l) => l.description.trim());
+    if (!validLines.length) {
+      setError("Add line items before saving a template");
+      return;
+    }
+    const name = window.prompt("Save these line items as a template. Template name:");
+    if (!name?.trim()) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        await createEstimateTemplate({
+          name: name.trim(),
+          taxRate: taxRate / 100,
+          notes: notes || null,
+          lines: validLines.map((l) => ({
+            description: l.description,
+            quantity: l.quantity,
+            unit_price: l.unit_price,
+            amount: l.amount,
+          })),
+        });
+        setTemplateSaved(true);
+        setTimeout(() => setTemplateSaved(false), 2500);
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to save template");
+      }
+    });
+  }
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-6">
+      {templates.length > 0 && (
+        <div className="mb-6 pb-6 border-b border-slate-100">
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            Start from template
+          </label>
+          <select
+            defaultValue=""
+            onChange={(e) => {
+              if (e.target.value) loadTemplate(e.target.value);
+            }}
+            className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">— Blank estimate —</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-6 mb-6">
         {/* Client */}
         <div>
@@ -284,7 +359,15 @@ export function EstimateBuilder({ clients, preselectedClientId }: Props) {
       )}
 
       {/* Action */}
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={saveAsTemplate}
+          disabled={isPending}
+          className="text-sm font-medium text-slate-500 hover:text-indigo-600 disabled:opacity-50 transition-colors"
+        >
+          {templateSaved ? "Template saved" : "Save as template"}
+        </button>
         <button
           type="button"
           onClick={submit}

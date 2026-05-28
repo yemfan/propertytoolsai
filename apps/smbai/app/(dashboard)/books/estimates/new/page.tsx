@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BooksNav } from "@/components/books-nav";
 import { EstimateBuilder } from "@/components/estimate-builder";
+import { listEstimateTemplates } from "@/lib/actions/estimate-templates";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = { title: "New Estimate · Books" };
@@ -18,11 +19,14 @@ export default async function NewEstimatePage({
   const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const { data: clients } = await supabase
-    .from("clients")
-    .select("id, first_name, last_name, company, email")
-    .eq("organization_id", orgId)
-    .order("created_at", { ascending: false });
+  const [{ data: clients }, templates] = await Promise.all([
+    supabase
+      .from("clients")
+      .select("id, first_name, last_name, company, email")
+      .eq("organization_id", orgId)
+      .order("created_at", { ascending: false }),
+    listEstimateTemplates(),
+  ]);
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -44,9 +48,15 @@ export default async function NewEstimatePage({
 
       <BooksNav />
 
-      <h2 className="text-base font-semibold text-slate-800 mb-4">
-        New Estimate
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-base font-semibold text-slate-800">New Estimate</h2>
+        <Link
+          href="/books/estimates/templates"
+          className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+        >
+          Manage templates →
+        </Link>
+      </div>
 
       <EstimateBuilder
         clients={
@@ -59,6 +69,7 @@ export default async function NewEstimatePage({
           }[]
         }
         preselectedClientId={clientParam}
+        templates={templates}
       />
     </div>
   );
