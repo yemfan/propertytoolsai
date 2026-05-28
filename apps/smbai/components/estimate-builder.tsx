@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
-import { createEstimate, type EstimateLine } from "@/lib/actions/estimates";
+import { Plus, Trash2, Sparkles } from "lucide-react";
+import { createEstimate, generateEstimateLines, type EstimateLine } from "@/lib/actions/estimates";
 import { createEstimateTemplate, type EstimateTemplate } from "@/lib/actions/estimate-templates";
 
 interface Client {
@@ -49,6 +49,9 @@ export function EstimateBuilder({ clients, preselectedClientId, templates }: Pro
     emptyLine(),
   ]);
   const [templateSaved, setTemplateSaved] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
 
   const subtotal = lines.reduce((s, l) => s + l.amount, 0);
   const taxAmount = +(subtotal * (taxRate / 100)).toFixed(2);
@@ -153,8 +156,63 @@ export function EstimateBuilder({ clients, preselectedClientId, templates }: Pro
     });
   }
 
+  function generateDraft() {
+    if (!aiPrompt.trim()) return;
+    setAiError("");
+    setAiLoading(true);
+    (async () => {
+      try {
+        const result = await generateEstimateLines({ prompt: aiPrompt.trim() });
+        setLines(
+          result.lines.map((l) => ({
+            key: crypto.randomUUID(),
+            description: l.description,
+            quantity: l.quantity,
+            unit_price: l.unit_price,
+            amount: +(l.quantity * l.unit_price).toFixed(2),
+          }))
+        );
+        if (result.note) setNotes(result.note);
+        setError(null);
+      } catch (e) {
+        setAiError(e instanceof Error ? e.message : "Failed to draft estimate");
+      } finally {
+        setAiLoading(false);
+      }
+    })();
+  }
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-6">
+      {/* AI draft */}
+      <div className="mb-6 pb-6 border-b border-slate-100">
+        <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600 mb-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+          Draft with AI
+        </label>
+        <div className="flex gap-2">
+          <input
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            placeholder="Describe the job — e.g. Airport transfer for 6, round trip with 1hr wait"
+            className="flex-1 text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <button
+            type="button"
+            onClick={generateDraft}
+            disabled={aiLoading || !aiPrompt.trim()}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+          >
+            <Sparkles className="w-4 h-4" />
+            {aiLoading ? "Drafting…" : "Draft"}
+          </button>
+        </div>
+        {aiError && <p className="text-xs text-rose-600 mt-1.5">{aiError}</p>}
+        <p className="text-[11px] text-slate-400 mt-1.5">
+          AI fills in line items and a scope note — review and edit before sending.
+        </p>
+      </div>
+
       {templates.length > 0 && (
         <div className="mb-6 pb-6 border-b border-slate-100">
           <label className="block text-xs font-medium text-slate-600 mb-1.5">

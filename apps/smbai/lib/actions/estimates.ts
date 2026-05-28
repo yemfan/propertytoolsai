@@ -4,8 +4,10 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
+import Anthropic from "@anthropic-ai/sdk";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -419,4 +421,71 @@ export async function convertEstimateToProject(
   revalidatePath("/projects");
 
   return proj.id;
+}
+
+// ─── AI estimate drafter (Week 53) ────────────────────────────────────────────
+
+export interface GeneratedEstimate {
+  lines: { description: string; quantity: number; unit_price: number }[];
+  note: string;
+}
+
+function parseEstimate(raw: string): GeneratedEstimate {
+  let t = raw.trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) t = fence[1].trim();
+  const start = t.indexOf("{");
+  const end = t.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) t = t.slice(start, end + 1);
+  try {
+    const obj = JSON.parse(t) as { lines?: unknown; note?: unknown };
+    const rawLines = Array.isArray(obj.lines) ? obj.lines : [];
+    const lines = rawLines
+      .map((l) => {
+        const o = l as { description?: unknown; quantity?: unknown; unit_price?: unknown };
+        return {
+          description: String(o.description ?? "").trim(),
+          quantity: Number(o.quantity) || 1,
+          unit_price: Number(o.unit_price) || 0,
+        };
+      })
+      .filter((l) => l.description);
+    return { lines, note: String(obj.note ?? "").trim() };
+  } catch {
+    return { lines: [], note: "" };
+  }
+}
+
+export async function generateEstimateLines(input: { prompt: string }): Promise<GeneratedEstimate> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value;
+  if (!orgId) throw new Error("No org");
+  if (!input.prompt.trim()) throw new Error("Describe the job to estimate");
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("name").eq("id", orgId).single();
+  const orgName = org?.name ?? "our business";
+
+  const prompt = `You are preparing a price estimate for the business "${orgName}".
+Job description: ${input.prompt}
+
+Produce a clear, itemized estimate. Respond with ONLY a JSON object — no markdown, no commentary:
+{"lines":[{"description":"...","quantity":1,"unit_price":0}],"note":"..."}
+
+Rules:
+- 1–8 line items. Each has a short description, a quantity (number), and a unit_price in USD (number, no currency symbol).
+- Price realistically for a US small business; round to sensible amounts.
+- "note" is a brief one-sentence scope/assumptions caption (or an empty string).
+- quantity and unit_price MUST be plain numbers — no strings, no "$".`;
+
+  const response = await anthropic.messages.create({
+    model: "claude-opus-4-5",
+    max_tokens: 800,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const text = (response.content[0] as { type: string; text: string }).text ?? "";
+  const parsed = parseEstimate(text);
+  if (!parsed.lines.length) throw new Error("Couldn't draft an estimate — try adding more detail");
+  return parsed;
 }
