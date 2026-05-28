@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Sparkles, Send, Calendar, Copy, Check, Trash2, ExternalLink, Clock } from "lucide-react";
-import { generateSocialPost, createSocialPost, updateSocialPost, deleteSocialPost } from "@/lib/actions/social";
+import { generateSocialPost, generateSocialVariants, refineSocialPost, createSocialPost, updateSocialPost, deleteSocialPost, type SocialRefineMode } from "@/lib/actions/social";
 
 type Platform = "x" | "linkedin" | "facebook" | "instagram";
 type Tone = "professional" | "casual" | "witty" | "promotional" | "educational";
@@ -49,6 +49,14 @@ const STATUS_STYLE: Record<PostStatus, string> = {
   failed:    "bg-rose-100 text-rose-700",
 };
 
+const SOCIAL_REFINE_MODES: { mode: SocialRefineMode; label: string }[] = [
+  { mode: "shorter",  label: "Shorter" },
+  { mode: "punchier", label: "Punchier" },
+  { mode: "cta",      label: "Add CTA" },
+  { mode: "hashtags", label: "Hashtags" },
+  { mode: "grammar",  label: "Grammar" },
+];
+
 function timeLabel(iso: string | null) {
   if (!iso) return null;
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -65,6 +73,10 @@ export function SocialComposer({ posts: initialPosts, orgName }: Props) {
   const [tab, setTab]         = useState<"compose" | "queue">("compose");
   const [isPending, start]    = useTransition();
   const [generating, setGenerating] = useState(false);
+  const [variants, setVariants] = useState<string[]>([]);
+  const [variantsLoading, setVariantsLoading] = useState(false);
+  const [refineLoading, setRefineLoading] = useState(false);
+  const [refineMode, setRefineMode] = useState<SocialRefineMode | null>(null);
 
   const limit = PLATFORM_META[activePlatform].limit;
   const isOverLimit = content.length > limit;
@@ -78,6 +90,34 @@ export function SocialComposer({ posts: initialPosts, orgName }: Props) {
         setContent(generated);
       } finally {
         setGenerating(false);
+      }
+    });
+  }
+
+  async function handleGenerateVariants() {
+    if (!topic.trim()) return;
+    setVariantsLoading(true);
+    start(async () => {
+      try {
+        const v = await generateSocialVariants(activePlatform, tone, topic, orgName);
+        setVariants(v);
+      } finally {
+        setVariantsLoading(false);
+      }
+    });
+  }
+
+  function handleRefine(mode: SocialRefineMode) {
+    if (!content.trim()) return;
+    setRefineMode(mode);
+    setRefineLoading(true);
+    start(async () => {
+      try {
+        const out = await refineSocialPost(activePlatform, tone, content, mode, orgName);
+        if (out) setContent(out);
+      } finally {
+        setRefineLoading(false);
+        setRefineMode(null);
       }
     });
   }
@@ -215,6 +255,29 @@ export function SocialComposer({ posts: initialPosts, orgName }: Props) {
                     {generating ? "Writing…" : "Generate"}
                   </button>
                 </div>
+                <button
+                  onClick={handleGenerateVariants}
+                  disabled={isPending || variantsLoading || !topic.trim()}
+                  className="mt-1.5 text-xs text-indigo-600 hover:text-indigo-800 disabled:opacity-50 flex items-center gap-1 transition-colors"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  {variantsLoading ? "Generating options…" : "Generate 3 options"}
+                </button>
+                {variants.length > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    <p className="text-[11px] text-slate-400">Pick a variant:</p>
+                    {variants.map((v, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => { setContent(v); setVariants([]); }}
+                        className="w-full text-left text-sm text-slate-700 border border-slate-200 rounded-lg px-3 py-2 hover:border-indigo-300 hover:bg-indigo-50/40 transition-colors line-clamp-3"
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Tone */}
@@ -254,6 +317,24 @@ export function SocialComposer({ posts: initialPosts, orgName }: Props) {
                     {content.length.toLocaleString()} / {limit.toLocaleString()}
                   </p>
                 </div>
+                {content.trim() && (
+                  <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                    <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />Refine
+                    </span>
+                    {SOCIAL_REFINE_MODES.map((m) => (
+                      <button
+                        key={m.mode}
+                        type="button"
+                        onClick={() => handleRefine(m.mode)}
+                        disabled={isPending || refineLoading}
+                        className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-50 transition-colors"
+                      >
+                        {refineLoading && refineMode === m.mode ? "…" : m.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Schedule */}

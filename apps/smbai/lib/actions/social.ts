@@ -63,6 +63,100 @@ ${platform === "x" ? "- X posts should be punchy and direct — get to the point
   return text.slice(0, limit);
 }
 
+// ─── Generate variants (Week 54) ──────────────────────────────────────────────
+
+function parseStringArray(raw: string, max: number): string[] {
+  let t = raw.trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) t = fence[1].trim();
+  const start = t.indexOf("[");
+  const end = t.lastIndexOf("]");
+  if (start !== -1 && end !== -1 && end > start) t = t.slice(start, end + 1);
+  try {
+    const arr = JSON.parse(t);
+    if (Array.isArray(arr)) return arr.map((s) => String(s).trim()).filter(Boolean).slice(0, max);
+  } catch {
+    // fall through to paragraph splitting
+  }
+  return raw.split(/\n{2,}/).map((s) => s.replace(/^\s*[-*\d.)]+\s*/, "").trim()).filter(Boolean).slice(0, max);
+}
+
+export async function generateSocialVariants(
+  platform: Platform,
+  tone: Tone,
+  topic: string,
+  orgName: string,
+  count = 3
+): Promise<string[]> {
+  const limit = CHAR_LIMITS[platform];
+  const platformLabel = platform === "x" ? "X (Twitter)" : platform.charAt(0).toUpperCase() + platform.slice(1);
+
+  const prompt = `Write ${count} DISTINCT ${platformLabel} post options for "${orgName}" about: ${topic}
+
+Tone: ${TONE_DESC[tone]}
+Each option MUST stay under ${limit} characters.
+Make the ${count} genuinely different angles (e.g. a hook, a question, a benefit, a short story).
+No hashtag spam; no surrounding quotes.
+
+Respond with ONLY a JSON array of ${count} strings: ["option one", "option two", "option three"]`;
+
+  const response = await anthropic.messages.create({
+    model: "claude-opus-4-5",
+    max_tokens: 800,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const text = (response.content[0] as { type: string; text: string }).text ?? "";
+  return parseStringArray(text, count).map((s) => s.slice(0, limit));
+}
+
+// ─── Refine post (Week 54) ────────────────────────────────────────────────────
+
+export type SocialRefineMode = "shorter" | "punchier" | "cta" | "hashtags" | "grammar";
+
+const SOCIAL_REFINE: Record<SocialRefineMode, string> = {
+  shorter:  "Make it more concise and punchy without losing the core message.",
+  punchier: "Strengthen the opening hook and make the writing more engaging.",
+  cta:      "Add a clear, natural call to action.",
+  hashtags: "Add 1–3 relevant, non-spammy hashtags (tidy any existing ones).",
+  grammar:  "Fix spelling, grammar, and clarity without changing the meaning or tone.",
+};
+
+export async function refineSocialPost(
+  platform: Platform,
+  tone: Tone,
+  content: string,
+  mode: SocialRefineMode,
+  orgName: string
+): Promise<string> {
+  if (!content.trim()) throw new Error("Nothing to refine yet");
+  const limit = CHAR_LIMITS[platform];
+  const platformLabel = platform === "x" ? "X (Twitter)" : platform.charAt(0).toUpperCase() + platform.slice(1);
+
+  const prompt = `Revise this ${platformLabel} post for "${orgName}".
+Instruction: ${SOCIAL_REFINE[mode] ?? SOCIAL_REFINE.grammar}
+Tone: ${TONE_DESC[tone]}
+
+Rules:
+- Stay under ${limit} characters.
+- Return ONLY the revised post text — no quotes, no markdown, no commentary.
+
+Post:
+${content}`;
+
+  const response = await anthropic.messages.create({
+    model: "claude-opus-4-5",
+    max_tokens: 600,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  let text = (response.content[0] as { type: string; text: string }).text ?? "";
+  text = text.trim();
+  const fence = text.match(/```(?:\w+)?\s*([\s\S]*?)```/);
+  if (fence) text = fence[1].trim();
+  return text.slice(0, limit);
+}
+
 // ─── Create draft ─────────────────────────────────────────────────────────────
 
 export async function createSocialPost(data: {
