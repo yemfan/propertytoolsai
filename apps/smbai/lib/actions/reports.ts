@@ -374,3 +374,110 @@ export async function getReceivablesAging(): Promise<ReceivablesAging> {
 
   return { asOf: today, rows, totals, totalOutstanding: totals.total, overdueAmount };
 }
+
+// ─── Cash-flow forecast (Week 39) ─────────────────────────────────────────────
+// Projects cash position forward by combining open invoices (money in) and open
+// bills (money out) against the current bank balance, bucketed by due date.
+// As-of today — independent of the report date range.
+
+type ForecastBucket = "now" | "d1_30" | "d31_60" | "d61_90" | "later";
+
+const FORECAST_LABELS: Record<ForecastBucket, string> = {
+  now: "Overdue / now",
+  d1_30: "1–30 days",
+  d31_60: "31–60 days",
+  d61_90: "61–90 days",
+  later: "90+ days",
+};
+
+const FORECAST_ORDER: ForecastBucket[] = ["now", "d1_30", "d31_60", "d61_90", "later"];
+
+export interface ForecastPeriod {
+  key: ForecastBucket;
+  label: string;
+  inflow: number;
+  outflow: number;
+  net: number;
+  projectedBalance: number;
+}
+
+export interface CashFlowForecast {
+  asOf: string;
+  hasBank: boolean;
+  startingBalance: number;
+  periods: ForecastPeriod[];
+  totalInflow: number;
+  totalOutflow: number;
+  endingBalance: number;
+  lowestBalance: number;
+}
+
+function forecastBucket(daysUntilDue: number): ForecastBucket {
+  if (daysUntilDue <= 0) return "now";
+  if (daysUntilDue <= 30) return "d1_30";
+  if (daysUntilDue <= 60) return "d31_60";
+  if (daysUntilDue <= 90) return "d61_90";
+  return "later";
+}
+
+export async function getCashFlowForecast(): Promise<CashFlowForecast> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const today = new Date().toISOString().slice(0, 10);
+
+  const emptyPeriods: ForecastPeriod[] = FORECAST_ORDER.map((k) => ({
+    key: k, label: FORECAST_LABELS[k], inflow: 0, outflow: 0, net: 0, projectedBalance: 0,
+  }));
+
+  if (!orgId) {
+    return { asOf: today, hasBank: false, startingBalance: 0, periods: emptyPeriods, totalInflow: 0, totalOutflow: 0, endingBalance: 0, lowestBalance: 0 };
+  }
+
+  const supabase = await createClient();
+
+  const [banksRes, invoicesRes, billsRes] = await Promise.all([
+    supabase.from("bank_accounts").select("current_balance, type, is_active").eq("organization_id", orgId).eq("is_active", true),
+    supabase.from("invoices").select("total, due_date, status").eq("organization_id", orgId).in("status", ["sent", "overdue"]),
+    supabase.from("bills").select("amount, due_date, status").eq("organization_id", orgId).eq("status", "open"),
+  ]);
+
+  const banks = banksRes.data ?? [];
+  const hasBank = banks.length > 0;
+  const startingBalance = banks.reduce((sum, a) => {
+    const bal = Number(a.current_balance ?? 0);
+    return a.type === "credit" ? sum - bal : sum + bal;
+  }, 0);
+
+  const todayMs = new Date(today + "T00:00:00").getTime();
+  const DAY = 86_400_000;
+
+  const inflow: Record<ForecastBucket, number> = { now: 0, d1_30: 0, d31_60: 0, d61_90: 0, later: 0 };
+  const outflow: Record<ForecastBucket, number> = { now: 0, d1_30: 0, d31_60: 0, d61_90: 0, later: 0 };
+
+  for (const inv of invoicesRes.data ?? []) {
+    const amt = Number(inv.total) || 0;
+    if (amt === 0) continue;
+    const days = Math.floor((new Date((inv.due_date as string) + "T00:00:00").getTime() - todayMs) / DAY);
+    inflow[forecastBucket(days)] += amt;
+  }
+  for (const bill of billsRes.data ?? []) {
+    const amt = Number(bill.amount) || 0;
+    if (amt === 0) continue;
+    const days = Math.floor((new Date((bill.due_date as string) + "T00:00:00").getTime() - todayMs) / DAY);
+    outflow[forecastBucket(days)] += amt;
+  }
+
+  let running = startingBalance;
+  let lowestBalance = startingBalance;
+  const periods: ForecastPeriod[] = FORECAST_ORDER.map((k) => {
+    const net = inflow[k] - outflow[k];
+    running += net;
+    if (running < lowestBalance) lowestBalance = running;
+    return { key: k, label: FORECAST_LABELS[k], inflow: inflow[k], outflow: outflow[k], net, projectedBalance: running };
+  });
+
+  const totalInflow = FORECAST_ORDER.reduce((s, k) => s + inflow[k], 0);
+  const totalOutflow = FORECAST_ORDER.reduce((s, k) => s + outflow[k], 0);
+
+  return { asOf: today, hasBank, startingBalance, periods, totalInflow, totalOutflow, endingBalance: running, lowestBalance };
+}

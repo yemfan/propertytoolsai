@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Download, TrendingUp, TrendingDown, DollarSign, Clock, Users, FolderOpen, Receipt } from "lucide-react";
-import type { PnLReport, CashFlowSummary, TimeReport, ReceivablesAging } from "@/lib/actions/reports";
+import { Download, TrendingUp, TrendingDown, DollarSign, Clock, Users, FolderOpen, Receipt, Wallet, AlertTriangle } from "lucide-react";
+import type { PnLReport, CashFlowSummary, TimeReport, ReceivablesAging, CashFlowForecast } from "@/lib/actions/reports";
 import type { ProjectWithPnL, ClientPnL } from "@/lib/actions/projects";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -206,6 +206,24 @@ function exportAgingCsv(aging: ReceivablesAging) {
   URL.revokeObjectURL(url);
 }
 
+function exportForecastCsv(f: CashFlowForecast) {
+  const rows: string[] = [
+    "Period,Expected In,Expected Out,Net,Projected Balance",
+    `Starting balance,,,,${f.startingBalance.toFixed(2)}`,
+    ...f.periods.map((p) =>
+      `"${p.label}",${p.inflow.toFixed(2)},${p.outflow.toFixed(2)},${p.net.toFixed(2)},${p.projectedBalance.toFixed(2)}`
+    ),
+  ];
+  const csv = rows.join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `cash_forecast_${f.asOf}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Color dot map ────────────────────────────────────────────────────────────
 
 const COLOR_DOTS: Record<string, string> = {
@@ -226,6 +244,7 @@ interface Props {
   initialProjects: ProjectWithPnL[];
   initialClients: ClientPnL[];
   initialReceivables: ReceivablesAging;
+  initialForecast: CashFlowForecast;
   fetchPnL: (from: string, to: string) => Promise<PnLReport>;
   fetchCashFlow: (from: string, to: string) => Promise<CashFlowSummary>;
   fetchTimeReport: (from: string, to: string) => Promise<TimeReport>;
@@ -238,6 +257,7 @@ export function ReportsClient({
   initialProjects,
   initialClients,
   initialReceivables,
+  initialForecast,
   fetchPnL,
   fetchCashFlow,
   fetchTimeReport,
@@ -247,7 +267,7 @@ export function ReportsClient({
   const [pnl, setPnl]       = useState(initialPnL);
   const [cash, setCash]     = useState(initialCashFlow);
   const [time, setTime]     = useState(initialTimeReport);
-  const [tab, setTab]       = useState<"pnl" | "cash" | "time" | "projects" | "clients" | "receivables">("pnl");
+  const [tab, setTab]       = useState<"pnl" | "cash" | "time" | "projects" | "clients" | "receivables" | "forecast">("pnl");
   const [pending, start]    = useTransition();
 
   function applyPreset(fn: () => { from: string; to: string }) {
@@ -339,8 +359,8 @@ export function ReportsClient({
       </div>
 
       {/* Tab selector */}
-      <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
-        {(["pnl", "cash", "time", "projects", "clients", "receivables"] as const).map((t) => (
+      <div className="flex flex-wrap gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+        {(["pnl", "cash", "time", "projects", "clients", "receivables", "forecast"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -348,7 +368,7 @@ export function ReportsClient({
               tab === t ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            {t === "pnl" ? "Profit & Loss" : t === "cash" ? "Cash Flow" : t === "time" ? "Time Tracking" : t === "projects" ? "Projects" : t === "clients" ? "Clients" : "Receivables"}
+            {t === "pnl" ? "Profit & Loss" : t === "cash" ? "Cash Flow" : t === "time" ? "Time Tracking" : t === "projects" ? "Projects" : t === "clients" ? "Clients" : t === "receivables" ? "Receivables" : "Forecast"}
           </button>
         ))}
       </div>
@@ -865,6 +885,107 @@ export function ReportsClient({
 
           <p className="text-xs text-slate-400">
             Unpaid invoices (sent or overdue) bucketed by days past their due date, as of today. Independent of the date range above.
+          </p>
+        </div>
+      )}
+
+      {/* Cash-flow Forecast (Week 39) */}
+      {tab === "forecast" && (
+        <div className="space-y-6">
+          {initialForecast.lowestBalance < 0 && (
+            <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl border border-rose-200 bg-rose-50">
+              <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-rose-700">
+                Projected cash dips to{" "}
+                <span className="font-semibold tabular-nums">{fmt(initialForecast.lowestBalance)}</span>{" "}
+                within 90 days. Consider prioritizing collections on overdue invoices or delaying non-urgent bills.
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-4 gap-4">
+            <StatCard
+              label="Cash on hand"
+              value={initialForecast.startingBalance}
+              sub={initialForecast.hasBank ? "Linked accounts" : "Link a bank for accuracy"}
+            />
+            <StatCard label="Expected in" value={initialForecast.totalInflow} positive={true} sub="Open invoices" />
+            <StatCard label="Expected out" value={initialForecast.totalOutflow} positive={false} sub="Open bills" />
+            <StatCard
+              label="Projected (90d)"
+              value={initialForecast.endingBalance}
+              positive={initialForecast.endingBalance >= 0}
+              sub="After all open items"
+            />
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-indigo-500" />
+                <h2 className="text-sm font-semibold text-slate-800">Projected cash flow</h2>
+                <span className="text-xs text-slate-400">· as of {initialForecast.asOf}</span>
+              </div>
+              <button
+                onClick={() => exportForecastCsv(initialForecast)}
+                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
+              </button>
+            </div>
+
+            <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr] gap-3 px-6 py-2.5 bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wide">
+              <span>Period</span>
+              <span className="text-right">Expected in</span>
+              <span className="text-right">Expected out</span>
+              <span className="text-right">Net</span>
+              <span className="text-right">Projected balance</span>
+            </div>
+
+            <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr] gap-3 px-6 py-3 items-center border-b border-slate-50">
+              <span className="text-sm text-slate-500">Starting balance</span>
+              <span className="text-sm text-right tabular-nums text-slate-300">—</span>
+              <span className="text-sm text-right tabular-nums text-slate-300">—</span>
+              <span className="text-sm text-right tabular-nums text-slate-300">—</span>
+              <span className="text-sm font-medium text-slate-700 text-right tabular-nums">{fmt(initialForecast.startingBalance)}</span>
+            </div>
+
+            <div className="divide-y divide-slate-50">
+              {initialForecast.periods.map((p) => (
+                <div key={p.key} className="grid grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr] gap-3 px-6 py-3 items-center">
+                  <span className="text-sm text-slate-700">{p.label}</span>
+                  <span className={`text-sm text-right tabular-nums ${p.inflow > 0 ? "text-emerald-600" : "text-slate-300"}`}>
+                    {p.inflow > 0 ? fmt(p.inflow) : "—"}
+                  </span>
+                  <span className={`text-sm text-right tabular-nums ${p.outflow > 0 ? "text-rose-600" : "text-slate-300"}`}>
+                    {p.outflow > 0 ? fmt(p.outflow) : "—"}
+                  </span>
+                  <span className={`text-sm font-medium text-right tabular-nums ${p.net >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                    {fmt(p.net)}
+                  </span>
+                  <span className={`text-sm font-semibold text-right tabular-nums ${p.projectedBalance < 0 ? "text-rose-600" : "text-slate-700"}`}>
+                    {fmt(p.projectedBalance)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr] gap-3 px-6 py-3 bg-slate-50 border-t border-slate-100 items-center">
+              <span className="text-sm font-semibold text-slate-700">Total</span>
+              <span className="text-sm font-semibold text-emerald-600 text-right tabular-nums">{fmt(initialForecast.totalInflow)}</span>
+              <span className="text-sm font-semibold text-rose-600 text-right tabular-nums">{fmt(initialForecast.totalOutflow)}</span>
+              <span className={`text-sm font-bold text-right tabular-nums ${initialForecast.totalInflow - initialForecast.totalOutflow >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                {fmt(initialForecast.totalInflow - initialForecast.totalOutflow)}
+              </span>
+              <span className={`text-sm font-bold text-right tabular-nums ${initialForecast.endingBalance < 0 ? "text-rose-700" : "text-slate-800"}`}>
+                {fmt(initialForecast.endingBalance)}
+              </span>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-400">
+            Projection combines open invoices (money in) and open bills (money out) against your current bank balance, bucketed by due date as of today. It doesn&apos;t include recurring items not yet invoiced or billed, payroll, or taxes.
           </p>
         </div>
       )}
