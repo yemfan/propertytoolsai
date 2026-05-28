@@ -238,6 +238,7 @@ const COLOR_DOTS: Record<string, string> = {
 // ─── Main client component ────────────────────────────────────────────────────
 
 interface Props {
+  initialTab?: string;
   initialPnL: PnLReport;
   initialCashFlow: CashFlowSummary;
   initialTimeReport: TimeReport;
@@ -251,6 +252,7 @@ interface Props {
 }
 
 export function ReportsClient({
+  initialTab,
   initialPnL,
   initialCashFlow,
   initialTimeReport,
@@ -267,7 +269,12 @@ export function ReportsClient({
   const [pnl, setPnl]       = useState(initialPnL);
   const [cash, setCash]     = useState(initialCashFlow);
   const [time, setTime]     = useState(initialTimeReport);
-  const [tab, setTab]       = useState<"pnl" | "cash" | "time" | "projects" | "clients" | "receivables" | "forecast">("pnl");
+  const allowedTabs = ["pnl", "cash", "time", "projects", "clients", "receivables", "forecast"] as const;
+  const [tab, setTab]       = useState<(typeof allowedTabs)[number]>(
+    (allowedTabs as readonly string[]).includes(initialTab ?? "")
+      ? (initialTab as (typeof allowedTabs)[number])
+      : "pnl"
+  );
   const [pending, start]    = useTransition();
 
   function applyPreset(fn: () => { from: string; to: string }) {

@@ -5,7 +5,12 @@ import { ReportsClient } from "./reports-client";
 
 export const metadata: Metadata = { title: "Reports" };
 
-export default async function ReportsPage() {
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
   // Default: current calendar year
   const y = new Date().getFullYear();
   const from = `${y}-01-01`;
@@ -32,6 +37,7 @@ export default async function ReportsPage() {
       </div>
 
       <ReportsClient
+        initialTab={tab}
         initialPnL={pnl}
         initialCashFlow={cashFlow}
         initialTimeReport={timeReport}

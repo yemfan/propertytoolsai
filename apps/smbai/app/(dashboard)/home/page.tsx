@@ -7,9 +7,10 @@ import {
   DollarSign, TrendingUp, TrendingDown, FileText,
   Users, Plus, ArrowRight, Building2,
   CheckSquare, Clock, CalendarDays, AlertCircle,
-  FolderOpen, Timer,
+  FolderOpen, Timer, Wallet, AlertTriangle,
 } from "lucide-react";
 import { RevenueChart, type ChartMonth } from "@/components/revenue-chart";
+import { getReceivablesAging, getCashFlowForecast } from "@/lib/actions/reports";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -72,6 +73,8 @@ async function getDashboardData(orgId: string) {
     upcomingEventsRes,
     activeProjectsPnL,
     uninvoicedTimeRes,
+    receivables,
+    forecast,
   ] = await Promise.all([
     // Bank balances
     supabase
@@ -160,6 +163,10 @@ async function getDashboardData(orgId: string) {
       .eq("billable", true)
       .eq("invoiced", false)
       .not("ended_at", "is", null),
+
+    // A/R aging + cash-flow forecast (Weeks 37–40)
+    getReceivablesAging(),
+    getCashFlowForecast(),
   ]);
 
   // Bank balance
@@ -247,6 +254,8 @@ async function getDashboardData(orgId: string) {
     activeProjectsHasPnL,
     uninvoicedMinutes,
     uninvoicedAmount,
+    receivables,
+    forecast,
     todayStr,
   };
 }
@@ -301,8 +310,19 @@ export default async function HomePage() {
     activeProjectsHasPnL,
     uninvoicedMinutes,
     uninvoicedAmount,
+    receivables,
+    forecast,
     todayStr,
   } = await getDashboardData(orgId);
+
+  const cashOnHand      = forecast.startingBalance;
+  const expectedIn      = forecast.totalInflow;
+  const expectedOut     = forecast.totalOutflow;
+  const projected90     = forecast.endingBalance;
+  const lowestProjected = forecast.lowestBalance;
+  const overdueAR       = receivables.overdueAmount;
+  const dueNowAP        = forecast.periods[0]?.outflow ?? 0;
+  const showCashFlow    = forecast.hasBank || expectedIn > 0 || expectedOut > 0;
 
   const today = new Date();
   const hour = today.getHours();
@@ -415,6 +435,71 @@ export default async function HomePage() {
           <RevenueChart data={chartData} />
         </div>
       </div>
+
+      {/* ── Cash Flow Outlook (Week 41) ── */}
+      {showCashFlow && (
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-indigo-500" />
+              <h2 className="text-sm font-semibold text-slate-800">Cash Flow Outlook</h2>
+            </div>
+            <Link
+              href="/reports?tab=forecast"
+              className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+            >
+              View forecast <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-4 gap-4">
+            {/* Cash on hand */}
+            <div>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Cash on hand</p>
+              <p className="text-xl font-semibold text-slate-800 tabular-nums">{fmt(cashOnHand)}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{forecast.hasBank ? "Linked accounts" : "Link a bank"}</p>
+            </div>
+
+            {/* Expected in (A/R) */}
+            <Link href="/reports?tab=receivables" className="block hover:opacity-80 transition-opacity">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Expected in</p>
+              <p className="text-xl font-semibold text-emerald-600 tabular-nums">{fmt(expectedIn)}</p>
+              <p className={`text-xs mt-0.5 ${overdueAR > 0 ? "text-rose-500" : "text-slate-400"}`}>
+                {overdueAR > 0 ? `${fmt(overdueAR)} overdue` : "Open invoices"}
+              </p>
+            </Link>
+
+            {/* Expected out (A/P) */}
+            <Link href="/books/bills" className="block hover:opacity-80 transition-opacity">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Expected out</p>
+              <p className="text-xl font-semibold text-rose-600 tabular-nums">{fmt(expectedOut)}</p>
+              <p className={`text-xs mt-0.5 ${dueNowAP > 0 ? "text-amber-600" : "text-slate-400"}`}>
+                {dueNowAP > 0 ? `${fmt(dueNowAP)} due now` : "Open bills"}
+              </p>
+            </Link>
+
+            {/* Projected 90-day */}
+            <div>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Projected (90d)</p>
+              <p className={`text-xl font-semibold tabular-nums ${projected90 >= 0 ? "text-slate-800" : "text-rose-600"}`}>
+                {fmt(projected90)}
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">After open items</p>
+            </div>
+          </div>
+
+          {lowestProjected < 0 && (
+            <div className="flex items-start gap-2 mt-4 px-3 py-2 rounded-lg border border-rose-200 bg-rose-50">
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-rose-700">
+                Projected cash dips to{" "}
+                <span className="font-semibold tabular-nums">{fmt(lowestProjected)}</span>{" "}
+                within 90 days. Prioritize collections on overdue invoices or delay non-urgent bills.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Active Projects + Uninvoiced Time ── */}
       <div className="grid grid-cols-3 gap-6">
