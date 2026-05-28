@@ -333,3 +333,51 @@ Respond with ONLY a JSON array of 5 strings, e.g.:
   if (!ideas.length) throw new Error("Couldn't generate subject lines — try again");
   return ideas;
 }
+
+export type RefineMode = "shorten" | "persuasive" | "casual" | "formal" | "grammar";
+
+const REFINE_INSTRUCTION: Record<RefineMode, string> = {
+  shorten: "Make it more concise — cut to the essential message while keeping a clear call to action.",
+  persuasive: "Make it more persuasive and compelling — strengthen the value proposition and the call to action.",
+  casual: "Make the tone warmer, friendlier, and more conversational.",
+  formal: "Make the tone more polished and professional.",
+  grammar: "Fix spelling, grammar, and punctuation and improve clarity, without changing the meaning or tone.",
+};
+
+export async function refineCampaignBody(input: { body: string; mode: RefineMode }): Promise<string> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  if (!orgId) throw new Error("Not authenticated");
+  if (!input.body.trim()) throw new Error("Nothing to refine yet");
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("name").eq("id", orgId).single();
+  const orgName = org?.name ?? "our business";
+  const instruction = REFINE_INSTRUCTION[input.mode] ?? REFINE_INSTRUCTION.grammar;
+
+  const prompt = `You are an expert email copy editor for the business "${orgName}". Revise the marketing email body below.
+
+Instruction: ${instruction}
+
+Rules:
+- Return ONLY the revised body as plain text — no preamble, no quotes, no markdown fences.
+- Keep paragraphs separated by a blank line.
+- Do NOT add a greeting like "Hi [name]" — the system adds one automatically.
+- Do NOT leave bracketed placeholders; if a sign-off is present, sign off as ${orgName}.
+
+Email body:
+${input.body.trim()}`;
+
+  const response = await anthropic.messages.create({
+    model: "claude-opus-4-5",
+    max_tokens: 900,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  let text = (response.content[0] as { type: string; text: string }).text ?? "";
+  text = text.trim();
+  const fence = text.match(/```(?:\w+)?\s*([\s\S]*?)```/);
+  if (fence) text = fence[1].trim();
+  if (!text) throw new Error("Couldn't refine — try again");
+  return text;
+}

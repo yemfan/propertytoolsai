@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Eye, EyeOff, Sparkles } from "lucide-react";
-import { createCampaign, sendCampaign, generateCampaignCopy, generateSubjectLines, type CampaignTone } from "@/lib/actions/campaigns";
+import { createCampaign, sendCampaign, generateCampaignCopy, generateSubjectLines, refineCampaignBody, type CampaignTone, type RefineMode } from "@/lib/actions/campaigns";
 
 type RecipientFilter = "all" | "active" | "leads" | "prospects" | "inactive";
 
@@ -13,6 +13,14 @@ const SEGMENTS: { value: RecipientFilter; label: string; desc: string }[] = [
   { value: "leads",     label: "Leads",         desc: "New leads" },
   { value: "prospects", label: "Prospects",     desc: "Qualified prospects" },
   { value: "inactive",  label: "Inactive",      desc: "Lapsed clients" },
+];
+
+const REFINE_MODES: { mode: RefineMode; label: string }[] = [
+  { mode: "shorten",    label: "Shorten" },
+  { mode: "persuasive", label: "Persuade" },
+  { mode: "casual",     label: "Casual" },
+  { mode: "formal",     label: "Formal" },
+  { mode: "grammar",    label: "Grammar" },
 ];
 
 export function CampaignForm() {
@@ -34,6 +42,25 @@ export function CampaignForm() {
   const [subjectIdeas, setSubjectIdeas]     = useState<string[]>([]);
   const [subjectLoading, setSubjectLoading] = useState(false);
   const [subjectError, setSubjectError]     = useState("");
+
+  const [refineLoading, setRefineLoading] = useState(false);
+  const [refineMode, setRefineMode]       = useState<RefineMode | null>(null);
+
+  async function refine(mode: RefineMode) {
+    if (!body.trim()) return;
+    setRefineMode(mode);
+    setRefineLoading(true);
+    setError("");
+    try {
+      const improved = await refineCampaignBody({ body: body.trim(), mode });
+      if (improved) { setBody(improved); setPreview(false); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to refine");
+    } finally {
+      setRefineLoading(false);
+      setRefineMode(null);
+    }
+  }
 
   async function suggestSubjects() {
     const context = body.trim() || aiPrompt.trim();
@@ -231,20 +258,36 @@ export function CampaignForm() {
 
       {/* Body */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
           <h2 className="text-sm font-semibold text-slate-800">Message</h2>
-          <button
-            type="button"
-            onClick={() => setPreview((v) => !v)}
-            className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors"
-          >
-            {preview ? (
-              <EyeOff className="w-3.5 h-3.5" />
-            ) : (
-              <Eye className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {body.trim() && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-slate-400 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />Refine
+                </span>
+                {REFINE_MODES.map((m) => (
+                  <button
+                    key={m.mode}
+                    type="button"
+                    disabled={refineLoading}
+                    onClick={() => refine(m.mode)}
+                    className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-50 transition-colors"
+                  >
+                    {refineLoading && refineMode === m.mode ? "…" : m.label}
+                  </button>
+                ))}
+              </div>
             )}
-            {preview ? "Edit" : "Preview"}
-          </button>
+            <button
+              type="button"
+              onClick={() => setPreview((v) => !v)}
+              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              {preview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              {preview ? "Edit" : "Preview"}
+            </button>
+          </div>
         </div>
 
         {preview ? (
