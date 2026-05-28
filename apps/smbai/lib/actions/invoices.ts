@@ -7,6 +7,7 @@ import { Resend } from "resend";
 import { createNotification } from "@/lib/actions/notifications";
 import { refreshClientLifetimeValue } from "@/lib/actions/clients";
 import { runAutomations } from "@/lib/automation-engine";
+import { sendReminderForInvoice, type ReminderInvoice } from "@/lib/invoice-reminders";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -273,6 +274,32 @@ export async function sendInvoice(invoiceId: string) {
     .from("invoices")
     .update({ status: "sent", updated_at: new Date().toISOString() })
     .eq("id", invoiceId);
+
+  revalidatePath("/books/invoices");
+  revalidatePath(`/books/invoices/${invoiceId}`);
+}
+
+// ─── Send payment reminder (manual) ───────────────────────────────────────────
+
+export async function sendInvoiceReminder(invoiceId: string) {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value;
+  if (!orgId) throw new Error("No org");
+
+  const supabase = await createClient();
+  const { data: inv } = await supabase
+    .from("invoices")
+    .select(
+      "id, invoice_number, total, due_date, client_id, reminder_count, organization_id, clients(first_name, last_name, email)"
+    )
+    .eq("id", invoiceId)
+    .eq("organization_id", orgId)
+    .single();
+
+  if (!inv) throw new Error("Invoice not found");
+
+  const res = await sendReminderForInvoice(supabase, inv as ReminderInvoice);
+  if (!res.sent) throw new Error(res.reason ?? "Could not send reminder");
 
   revalidatePath("/books/invoices");
   revalidatePath(`/books/invoices/${invoiceId}`);

@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Send, CheckCircle2, XCircle, ChevronDown, CreditCard } from "lucide-react";
-import { sendInvoice, markInvoicePaid, voidInvoice } from "@/lib/actions/invoices";
+import { Send, CheckCircle2, XCircle, ChevronDown, CreditCard, Bell } from "lucide-react";
+import { sendInvoice, markInvoicePaid, voidInvoice, sendInvoiceReminder } from "@/lib/actions/invoices";
 
 interface BankAccount {
   id: string;
@@ -24,6 +24,7 @@ export function InvoiceActions({ invoiceId, status, clientEmail, bankAccounts }:
   const [error, setError] = useState<string | null>(null);
   const [showPaidModal, setShowPaidModal] = useState(false);
   const [selectedBank, setSelectedBank] = useState(bankAccounts[0]?.id ?? "");
+  const [reminderSent, setReminderSent] = useState(false);
 
   function handleSend() {
     if (!clientEmail) { setError("Client has no email address"); return; }
@@ -33,6 +34,20 @@ export function InvoiceActions({ invoiceId, status, clientEmail, bankAccounts }:
         await sendInvoice(invoiceId);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "Failed to send");
+      }
+    });
+  }
+
+  function handleReminder() {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await sendInvoiceReminder(invoiceId);
+        setReminderSent(true);
+        setTimeout(() => setReminderSent(false), 2500);
+        router.refresh();
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Failed to send reminder");
       }
     });
   }
@@ -152,6 +167,14 @@ export function InvoiceActions({ invoiceId, status, clientEmail, bankAccounts }:
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               Mark paid
+            </button>
+            <button
+              onClick={handleReminder}
+              disabled={isPending}
+              className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors"
+            >
+              <Bell className="w-3.5 h-3.5" />
+              {reminderSent ? "Reminder sent" : "Send reminder"}
             </button>
           </>
         )}
