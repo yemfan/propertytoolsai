@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { listClientsPnL } from "@/lib/actions/projects";
 import {
   ArrowLeft, Mail, Phone, Building2, Calendar,
-  FileText, MessageSquare, Tag, DollarSign, Receipt,
+  FileText, MessageSquare, Tag, DollarSign, Receipt, Printer,
 } from "lucide-react";
 import { ClientEditForm } from "./client-edit-form";
 import { PortalLinkButton } from "./portal-link-button";
@@ -184,6 +184,13 @@ export default async function ClientDetailPage({
           {client.portal_token && (
             <PortalLinkButton portalToken={client.portal_token} />
           )}
+          <Link
+            href={`/clients/${id}/statement`}
+            target="_blank"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
+          >
+            <Printer className="w-3.5 h-3.5" /> Statement
+          </Link>
           <Link
             href={`/books/expenses/new`}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
