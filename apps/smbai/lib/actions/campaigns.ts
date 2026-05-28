@@ -5,8 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import { runAutomations } from "@/lib/automation-engine";
+import Anthropic from "@anthropic-ai/sdk";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 type RecipientFilter = "all" | "active" | "leads" | "prospects" | "inactive";
 
@@ -199,4 +201,71 @@ export async function deleteCampaign(campaignId: string) {
 
   if (error) throw new Error(error.message);
   revalidatePath("/marketing");
+}
+
+// ─── AI copywriter (Week 44) ──────────────────────────────────────────────────
+
+export type CampaignTone = "promotional" | "friendly" | "professional" | "announcement";
+
+const CAMPAIGN_TONE: Record<CampaignTone, string> = {
+  promotional: "persuasive and action-oriented, highlighting the offer with a sense of urgency",
+  friendly: "warm, casual, and personable",
+  professional: "polished, credible, and concise",
+  announcement: "clear and informative, sharing news or an update",
+};
+
+function parseCopy(raw: string): { subject: string; body: string } {
+  let t = raw.trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) t = fence[1].trim();
+  const start = t.indexOf("{");
+  const end = t.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) t = t.slice(start, end + 1);
+  try {
+    const obj = JSON.parse(t) as { subject?: unknown; body?: unknown };
+    return { subject: String(obj.subject ?? "").trim(), body: String(obj.body ?? "").trim() };
+  } catch {
+    return { subject: "", body: raw.trim() };
+  }
+}
+
+export async function generateCampaignCopy(input: {
+  prompt: string;
+  tone: CampaignTone;
+}): Promise<{ subject: string; body: string }> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  if (!orgId) throw new Error("Not authenticated");
+  if (!input.prompt.trim()) throw new Error("Describe what the campaign is about");
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("name").eq("id", orgId).single();
+  const orgName = org?.name ?? "our business";
+  const toneDesc = CAMPAIGN_TONE[input.tone] ?? CAMPAIGN_TONE.friendly;
+
+  const prompt = `You are an expert email marketer writing a campaign email for the business "${orgName}".
+
+Campaign goal / topic: ${input.prompt}
+Tone: ${toneDesc}
+
+Respond with ONLY a JSON object — no markdown, no commentary — in exactly this shape:
+{"subject": "<subject line>", "body": "<email body>"}
+
+Rules:
+- Subject: compelling, under 60 characters, no emoji spam.
+- Body: plain text, 2–4 short paragraphs separated by a blank line. Warm opening, a clear value proposition, and one clear call to action.
+- Do NOT include a greeting like "Hi [name]" — the system adds a personalized greeting automatically, so start with the first sentence of the message.
+- Do NOT leave bracketed placeholders like "[Your name]"; sign off naturally as ${orgName}.
+- Write specifically and naturally for ${orgName}; avoid generic filler.`;
+
+  const response = await anthropic.messages.create({
+    model: "claude-opus-4-5",
+    max_tokens: 900,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const text = (response.content[0] as { type: string; text: string }).text ?? "";
+  const parsed = parseCopy(text);
+  if (!parsed.body) throw new Error("Couldn't generate copy — try rephrasing your prompt");
+  return parsed;
 }

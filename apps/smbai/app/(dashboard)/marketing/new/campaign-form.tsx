@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Eye, EyeOff } from "lucide-react";
-import { createCampaign, sendCampaign } from "@/lib/actions/campaigns";
+import { Send, Eye, EyeOff, Sparkles } from "lucide-react";
+import { createCampaign, sendCampaign, generateCampaignCopy, type CampaignTone } from "@/lib/actions/campaigns";
 
 type RecipientFilter = "all" | "active" | "leads" | "prospects" | "inactive";
 
@@ -25,6 +25,28 @@ export function CampaignForm() {
   const [loading, setLoading] = useState(false);
   const [action, setAction] = useState<"draft" | "send" | null>(null);
   const [error, setError] = useState("");
+
+  const [aiPrompt, setAiPrompt]   = useState("");
+  const [aiTone, setAiTone]       = useState<CampaignTone>("promotional");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError]     = useState("");
+
+  async function generateCopy() {
+    if (!aiPrompt.trim()) return;
+    setAiError("");
+    setAiLoading(true);
+    try {
+      const { subject: s, body: b } = await generateCampaignCopy({ prompt: aiPrompt.trim(), tone: aiTone });
+      if (s) setSubject(s);
+      if (b) setBody(b);
+      if (!name.trim() && s) setName(s);
+      setPreview(false);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Failed to generate");
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   async function handleSubmit(sendNow: boolean) {
     if (!name.trim() || !subject.trim() || !body.trim()) {
@@ -59,6 +81,51 @@ export function CampaignForm() {
 
   return (
     <div className="space-y-6">
+      {/* AI copywriter */}
+      <div className="bg-gradient-to-br from-indigo-50 to-white rounded-xl border border-indigo-100 p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-indigo-500" />
+          <h2 className="text-sm font-semibold text-slate-800">Write with AI</h2>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            What&rsquo;s this campaign about?
+          </label>
+          <textarea
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            rows={2}
+            placeholder="e.g. Spring promotion — 15% off airport transfers booked in May"
+            className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={aiTone}
+            onChange={(e) => setAiTone(e.target.value as CampaignTone)}
+            className="text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="promotional">Promotional</option>
+            <option value="friendly">Friendly</option>
+            <option value="professional">Professional</option>
+            <option value="announcement">Announcement</option>
+          </select>
+          <button
+            type="button"
+            onClick={generateCopy}
+            disabled={aiLoading || !aiPrompt.trim()}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            <Sparkles className="w-4 h-4" />
+            {aiLoading ? "Writing…" : "Generate"}
+          </button>
+          {aiError && <span className="text-xs text-rose-600">{aiError}</span>}
+        </div>
+        <p className="text-[11px] text-slate-400">
+          AI drafts the subject and message below — review and edit before sending.
+        </p>
+      </div>
+
       {/* Campaign name */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
         <h2 className="text-sm font-semibold text-slate-800">Campaign details</h2>
