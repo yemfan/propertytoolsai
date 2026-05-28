@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BooksNav } from "@/components/books-nav";
 import { listRecurringBills } from "@/lib/actions/recurring-bills";
+import { listVendorNames } from "@/lib/actions/vendors";
 import { RecurringBillsClient } from "./recurring-bills-client";
 
 export const metadata: Metadata = { title: "Recurring Bills · Books" };
@@ -12,7 +13,7 @@ export default async function RecurringBillsPage() {
   const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const [recurring, expenseAccountsRes] = await Promise.all([
+  const [recurring, expenseAccountsRes, vendorNames] = await Promise.all([
     listRecurringBills(),
     supabase
       .from("chart_of_accounts")
@@ -21,6 +22,7 @@ export default async function RecurringBillsPage() {
       .eq("type", "expense")
       .eq("is_active", true)
       .order("code"),
+    listVendorNames(),
   ]);
 
   return (
@@ -37,6 +39,7 @@ export default async function RecurringBillsPage() {
       <RecurringBillsClient
         initialRecurring={recurring}
         expenseAccounts={(expenseAccountsRes.data ?? []) as { id: string; code: string; name: string }[]}
+        vendorNames={vendorNames}
       />
     </div>
   );

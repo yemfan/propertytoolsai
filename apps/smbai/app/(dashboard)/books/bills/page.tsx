@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BooksNav } from "@/components/books-nav";
 import { listBills } from "@/lib/actions/bills";
+import { listVendorNames } from "@/lib/actions/vendors";
 import { BillsClient } from "./bills-client";
 
 export const metadata: Metadata = { title: "Bills · Books" };
@@ -12,7 +13,7 @@ export default async function BillsPage() {
   const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const [bills, expenseAccountsRes, bankAccountsRes] = await Promise.all([
+  const [bills, expenseAccountsRes, bankAccountsRes, vendorNames] = await Promise.all([
     listBills(),
     supabase
       .from("chart_of_accounts")
@@ -26,6 +27,7 @@ export default async function BillsPage() {
       .select("id, name, mask, coa_account_id")
       .eq("organization_id", orgId)
       .eq("is_active", true),
+    listVendorNames(),
   ]);
 
   return (
@@ -43,6 +45,7 @@ export default async function BillsPage() {
         initialBills={bills}
         expenseAccounts={(expenseAccountsRes.data ?? []) as { id: string; code: string; name: string }[]}
         bankAccounts={(bankAccountsRes.data ?? []) as { id: string; name: string; mask: string | null; coa_account_id: string | null }[]}
+        vendorNames={vendorNames}
       />
     </div>
   );

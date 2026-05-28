@@ -40,10 +40,12 @@ function dueBadge(due: string): { label: string; cls: string } {
 
 function NewBillModal({
   expenseAccounts,
+  vendorNames,
   onClose,
   onSaved,
 }: {
   expenseAccounts: ExpenseAccount[];
+  vendorNames: string[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -100,7 +102,12 @@ function NewBillModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Vendor *</label>
-            <input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="Acme Supplies" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="Acme Supplies" list="bill-vendor-names" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            {vendorNames.length > 0 && (
+              <datalist id="bill-vendor-names">
+                {vendorNames.map((n) => <option key={n} value={n} />)}
+              </datalist>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Bill # <span className="text-slate-400 font-normal">(optional)</span></label>
@@ -341,9 +348,10 @@ interface Props {
   initialBills: Bill[];
   expenseAccounts: ExpenseAccount[];
   bankAccounts: BankAccount[];
+  vendorNames: string[];
 }
 
-export function BillsClient({ initialBills, expenseAccounts, bankAccounts }: Props) {
+export function BillsClient({ initialBills, expenseAccounts, bankAccounts, vendorNames }: Props) {
   const router = useRouter();
   const [filter, setFilter]       = useState<"open" | "paid" | "all">("open");
   const [showNew, setShowNew]     = useState(false);
@@ -440,7 +448,7 @@ export function BillsClient({ initialBills, expenseAccounts, bankAccounts }: Pro
       )}
 
       {showNew && (
-        <NewBillModal expenseAccounts={expenseAccounts} onClose={() => setShowNew(false)} onSaved={refresh} />
+        <NewBillModal expenseAccounts={expenseAccounts} vendorNames={vendorNames} onClose={() => setShowNew(false)} onSaved={refresh} />
       )}
       {payTarget && (
         <PayBillModal bill={payTarget} banks={mappedBanks} onClose={() => setPayTarget(null)} onPaid={refresh} />

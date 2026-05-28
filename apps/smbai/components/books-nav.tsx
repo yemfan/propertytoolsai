@@ -11,6 +11,7 @@ const TABS = [
   { label: "Estimates",    href: "/books/estimates" },
   { label: "Expenses",     href: "/books/expenses" },
   { label: "Bills",        href: "/books/bills" },
+  { label: "Vendors",      href: "/books/vendors" },
   { label: "Journal",      href: "/books/journal" },
   { label: "Accounts",     href: "/books/accounts" },
   { label: "Reports",      href: "/books/reports" },

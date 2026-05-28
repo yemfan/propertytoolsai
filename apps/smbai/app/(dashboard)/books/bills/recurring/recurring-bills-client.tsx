@@ -38,10 +38,12 @@ function defaultNextRun(): string {
 
 function NewRecurringBillModal({
   expenseAccounts,
+  vendorNames,
   onClose,
   onSaved,
 }: {
   expenseAccounts: ExpenseAccount[];
+  vendorNames: string[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -98,7 +100,12 @@ function NewRecurringBillModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Vendor *</label>
-            <input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="Landlord LLC" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="Landlord LLC" list="recurring-bill-vendor-names" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            {vendorNames.length > 0 && (
+              <datalist id="recurring-bill-vendor-names">
+                {vendorNames.map((n) => <option key={n} value={n} />)}
+              </datalist>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Amount ($) *</label>
@@ -236,9 +243,10 @@ function RecurringRow({
 interface Props {
   initialRecurring: RecurringBill[];
   expenseAccounts: ExpenseAccount[];
+  vendorNames: string[];
 }
 
-export function RecurringBillsClient({ initialRecurring, expenseAccounts }: Props) {
+export function RecurringBillsClient({ initialRecurring, expenseAccounts, vendorNames }: Props) {
   const [recurring, setRecurring] = useState<RecurringBill[]>(initialRecurring);
   const [showNew, setShowNew]     = useState(false);
 
@@ -304,6 +312,7 @@ export function RecurringBillsClient({ initialRecurring, expenseAccounts }: Prop
       {showNew && (
         <NewRecurringBillModal
           expenseAccounts={expenseAccounts}
+          vendorNames={vendorNames}
           onClose={() => setShowNew(false)}
           onSaved={() => {
             setShowNew(false);
