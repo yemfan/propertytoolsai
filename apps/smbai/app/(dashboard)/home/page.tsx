@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { listProjectsPnL } from "@/lib/actions/projects";
 import {
   DollarSign, TrendingUp, TrendingDown, FileText,
   Users, Plus, ArrowRight, Building2,
@@ -69,7 +70,7 @@ async function getDashboardData(orgId: string) {
     recentClientsRes,
     openTasksRes,
     upcomingEventsRes,
-    activeProjectsRes,
+    activeProjectsPnL,
     uninvoicedTimeRes,
   ] = await Promise.all([
     // Bank balances
@@ -148,14 +149,8 @@ async function getDashboardData(orgId: string) {
       .order("start_at", { ascending: true })
       .limit(6),
 
-    // Active projects (top 6)
-    supabase
-      .from("projects")
-      .select("id, name, color, status, budget_hours, start_date, end_date")
-      .eq("organization_id", orgId)
-      .eq("status", "active")
-      .order("created_at", { ascending: false })
-      .limit(6),
+    // Active projects with P&L (Week 32)
+    listProjectsPnL("active"),
 
     // Uninvoiced billable time (all time)
     supabase
@@ -227,6 +222,12 @@ async function getDashboardData(orgId: string) {
     uninvoicedAmount += (mins / 60) * Number(e.hourly_rate ?? 0);
   }
 
+  // Active-project profit (Week 32)
+  const activeProfit = activeProjectsPnL.reduce((s, p) => s + p.pnl.profit, 0);
+  const activeProjectsHasPnL = activeProjectsPnL.some(
+    (p) => p.pnl.revenue > 0 || p.pnl.profit !== 0
+  );
+
   return {
     bankBalance,
     mtdRevenue: mtdTxns.length ? mtdRevenue : null,
@@ -241,7 +242,9 @@ async function getDashboardData(orgId: string) {
     recentClients: recentClientsRes.data ?? [],
     openTasks: openTasksRes.data ?? [],
     upcomingEvents: upcomingEventsRes.data ?? [],
-    activeProjects: activeProjectsRes.data ?? [],
+    activeProjects: activeProjectsPnL.slice(0, 6),
+    activeProfit,
+    activeProjectsHasPnL,
     uninvoicedMinutes,
     uninvoicedAmount,
     todayStr,
@@ -294,6 +297,8 @@ export default async function HomePage() {
     openTasks,
     upcomingEvents,
     activeProjects,
+    activeProfit,
+    activeProjectsHasPnL,
     uninvoicedMinutes,
     uninvoicedAmount,
     todayStr,
@@ -418,7 +423,14 @@ export default async function HomePage() {
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <FolderOpen className="w-4 h-4 text-indigo-500" />
-              <h2 className="text-sm font-semibold text-slate-800">Active Projects</h2>
+              <div>
+                <h2 className="text-sm font-semibold text-slate-800">Active Projects</h2>
+                {activeProjectsHasPnL && (
+                  <p className={`text-xs font-medium ${activeProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                    {fmt(activeProfit)} profit
+                  </p>
+                )}
+              </div>
             </div>
             <Link
               href="/projects"
@@ -457,22 +469,34 @@ export default async function HomePage() {
                     <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${COLOR_DOTS[proj.color as string] ?? "bg-indigo-500"}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-800 truncate">{proj.name}</p>
-                      {proj.budget_hours && (
-                        <p className="text-xs text-slate-400 mt-0.5">{proj.budget_hours}h budget</p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {proj.budget_hours ? `${proj.budget_hours}h budget` : "No budget"}
+                        {proj.pnl.profit !== 0 && (
+                          <span className={proj.pnl.profit >= 0 ? "text-emerald-600" : "text-rose-600"}>
+                            {" · "}{fmt(proj.pnl.profit)} profit
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end flex-shrink-0 gap-0.5">
+                      {proj.pnl.margin !== null && (
+                        <span className={`text-xs font-semibold ${proj.pnl.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                          {(proj.pnl.margin * 100).toFixed(0)}%
+                        </span>
+                      )}
+                      {daysLeft !== null && (
+                        <span className={`text-xs font-medium ${
+                          isOverdue ? "text-rose-600" : isDueSoon ? "text-amber-600" : "text-slate-400"
+                        }`}>
+                          {isOverdue
+                            ? `${Math.abs(daysLeft)}d overdue`
+                            : daysLeft === 0
+                            ? "Due today"
+                            : `${daysLeft}d left`
+                          }
+                        </span>
                       )}
                     </div>
-                    {daysLeft !== null && (
-                      <span className={`text-xs font-medium flex-shrink-0 ${
-                        isOverdue ? "text-rose-600" : isDueSoon ? "text-amber-600" : "text-slate-400"
-                      }`}>
-                        {isOverdue
-                          ? `${Math.abs(daysLeft)}d overdue`
-                          : daysLeft === 0
-                          ? "Due today"
-                          : `${daysLeft}d left`
-                        }
-                      </span>
-                    )}
                   </Link>
                 );
               })}
