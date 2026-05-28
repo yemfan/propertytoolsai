@@ -131,8 +131,7 @@ export async function getCashFlowSummary(from: string, to: string): Promise<Cash
     .select("amount, personal_finance_category")
     .eq("organization_id", orgId)
     .gte("date", from)
-    .lte("date", to)
-    .eq("excluded", false);
+    .lte("date", to);
 
   if (error) throw new Error(error.message);
 
