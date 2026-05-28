@@ -3,12 +3,13 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Send, CheckCircle2, XCircle, FileText, Loader2,
+  Send, CheckCircle2, XCircle, FileText, FolderOpen, Loader2,
 } from "lucide-react";
 import {
   sendEstimate,
   setEstimateStatus,
   convertEstimateToInvoice,
+  convertEstimateToProject,
 } from "@/lib/actions/estimates";
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
   status: string;
   hasClientEmail: boolean;
   convertedInvoiceId: string | null;
+  convertedProjectId: string | null;
 }
 
 export function EstimateActions({
@@ -23,21 +25,25 @@ export function EstimateActions({
   status,
   hasClientEmail,
   convertedInvoiceId,
+  convertedProjectId,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function run(action: string, fn: () => Promise<void | string>) {
+  function run(
+    action: string,
+    fn: () => Promise<void | string>,
+    redirectTo?: (id: string) => string
+  ) {
     setActiveAction(action);
     setError(null);
     startTransition(async () => {
       try {
         const result = await fn();
-        if (typeof result === "string") {
-          // Result is the new invoice ID — navigate to it
-          router.push(`/books/invoices/${result}`);
+        if (typeof result === "string" && redirectTo) {
+          router.push(redirectTo(result));
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong");
@@ -121,7 +127,7 @@ export function EstimateActions({
       {/* Convert to invoice */}
       {status === "accepted" && !convertedInvoiceId && (
         <button
-          onClick={() => run("convert", () => convertEstimateToInvoice(estimateId))}
+          onClick={() => run("convert", () => convertEstimateToInvoice(estimateId), (id) => `/books/invoices/${id}`)}
           disabled={loading}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
         >
@@ -131,6 +137,22 @@ export function EstimateActions({
             <FileText className="w-4 h-4" />
           )}
           Convert to invoice
+        </button>
+      )}
+
+      {/* Create project */}
+      {status === "accepted" && !convertedProjectId && (
+        <button
+          onClick={() => run("convert-project", () => convertEstimateToProject(estimateId), (id) => `/projects/${id}`)}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-indigo-200 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-50 disabled:opacity-50 transition-colors"
+        >
+          {loading && activeAction === "convert-project" ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <FolderOpen className="w-4 h-4" />
+          )}
+          Create project
         </button>
       )}
     </div>

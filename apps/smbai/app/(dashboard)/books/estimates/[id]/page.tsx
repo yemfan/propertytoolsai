@@ -7,7 +7,7 @@ import { BooksNav } from "@/components/books-nav";
 import { EstimateActions } from "./estimate-actions";
 import {
   ArrowLeft, Building2, Mail, FileSignature,
-  CheckCircle2, Send, XCircle, Clock, FileText,
+  CheckCircle2, Send, XCircle, Clock, FileText, FolderOpen,
 } from "lucide-react";
 
 export const metadata: Metadata = { title: "Estimate · Books" };
@@ -295,6 +295,22 @@ export default async function EstimateDetailPage({
               </Link>
             </div>
           )}
+
+          {/* Converted project link */}
+          {est.converted_project_id && (
+            <div className="flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
+              <FolderOpen className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+              <div className="flex-1 text-sm text-indigo-800">
+                A project was created from this estimate
+              </div>
+              <Link
+                href={`/projects/${est.converted_project_id}`}
+                className="text-sm font-medium text-indigo-700 hover:text-indigo-900 transition-colors"
+              >
+                View project →
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Right: actions panel */}
@@ -308,6 +324,7 @@ export default async function EstimateDetailPage({
               status={effectiveStatus}
               hasClientEmail={!!client?.email}
               convertedInvoiceId={est.converted_invoice_id}
+              convertedProjectId={est.converted_project_id}
             />
           </div>
 

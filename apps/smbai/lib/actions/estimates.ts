@@ -353,3 +353,70 @@ export async function convertEstimateToInvoice(
 
   return inv.id;
 }
+
+// ─── Convert to project ───────────────────────────────────────────────────────
+// Spins up a delivery project from a won estimate: budget = estimate total,
+// same client, name from the first line item. Idempotent — returns the existing
+// project id if the estimate was already converted.
+
+export async function convertEstimateToProject(
+  estimateId: string
+): Promise<string> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value;
+  if (!orgId) throw new Error("No org");
+
+  const supabase = await createClient();
+
+  const { data: est } = await supabase
+    .from("estimates")
+    .select("*, estimate_lines(description, sort_order)")
+    .eq("id", estimateId)
+    .eq("organization_id", orgId)
+    .single();
+
+  if (!est) throw new Error("Estimate not found");
+  if (est.converted_project_id) return est.converted_project_id as string;
+
+  const lines = (
+    Array.isArray(est.estimate_lines) ? est.estimate_lines : []
+  ) as { description: string; sort_order: number }[];
+  const firstLine = [...lines].sort(
+    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+  )[0];
+  const projectName = (
+    firstLine?.description?.trim() || `Project ${est.estimate_number}`
+  ).slice(0, 120);
+
+  const { data: proj, error } = await supabase
+    .from("projects")
+    .insert({
+      organization_id: orgId,
+      client_id: est.client_id,
+      name: projectName,
+      description: est.notes ?? null,
+      status: "active",
+      color: "indigo",
+      budget_amount: est.total,
+    })
+    .select("id")
+    .single();
+
+  if (error || !proj) throw new Error(error?.message ?? "Failed to create project");
+
+  await supabase
+    .from("estimates")
+    .update({
+      status: "accepted",
+      converted_project_id: proj.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", estimateId)
+    .eq("organization_id", orgId);
+
+  revalidatePath("/books/estimates");
+  revalidatePath(`/books/estimates/${estimateId}`);
+  revalidatePath("/projects");
+
+  return proj.id;
+}
