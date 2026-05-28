@@ -10,6 +10,7 @@ export type Vendor = {
   email: string | null;
   phone: string | null;
   notes: string | null;
+  is_1099: boolean;
   created_at: string;
 };
 
@@ -86,6 +87,7 @@ export async function createVendor(input: {
   email: string | null;
   phone: string | null;
   notes: string | null;
+  is1099: boolean;
 }): Promise<void> {
   const orgId = await getOrgId();
   if (!orgId) throw new Error("No org");
@@ -98,6 +100,7 @@ export async function createVendor(input: {
     email: input.email,
     phone: input.phone,
     notes: input.notes,
+    is_1099: input.is1099,
   });
   if (error) throw new Error(error.message);
   revalidatePath("/books/vendors");
@@ -105,7 +108,7 @@ export async function createVendor(input: {
 
 export async function updateVendor(
   id: string,
-  input: { name: string; email: string | null; phone: string | null; notes: string | null }
+  input: { name: string; email: string | null; phone: string | null; notes: string | null; is1099: boolean }
 ): Promise<void> {
   const orgId = await getOrgId();
   if (!orgId) throw new Error("No org");
@@ -119,11 +122,74 @@ export async function updateVendor(
       email: input.email,
       phone: input.phone,
       notes: input.notes,
+      is_1099: input.is1099,
     })
     .eq("id", id)
     .eq("organization_id", orgId);
   if (error) throw new Error(error.message);
   revalidatePath("/books/vendors");
+}
+
+// ─── 1099 year-end report (Week 47) ───────────────────────────────────────────
+
+export type Vendor1099Row = {
+  id: string;
+  name: string;
+  email: string | null;
+  paidThisYear: number;
+  meetsThreshold: boolean; // >= $600 IRS reporting threshold
+};
+
+export type Report1099 = {
+  year: number;
+  rows: Vendor1099Row[];
+  totalPaid: number;
+  reportableCount: number;
+};
+
+/** Per-1099-vendor total PAID within the tax year (bills matched by name). */
+export async function get1099Report(year: number): Promise<Report1099> {
+  const orgId = await getOrgId();
+  if (!orgId) return { year, rows: [], totalPaid: 0, reportableCount: 0 };
+
+  const supabase = await createClient();
+  const from = `${year}-01-01T00:00:00`;
+  const to = `${year}-12-31T23:59:59.999Z`;
+
+  const [vendorsRes, billsRes] = await Promise.all([
+    supabase
+      .from("vendors")
+      .select("id, name, email, is_1099")
+      .eq("organization_id", orgId)
+      .eq("is_1099", true)
+      .order("name"),
+    supabase
+      .from("bills")
+      .select("vendor, amount, status, paid_at")
+      .eq("organization_id", orgId)
+      .eq("status", "paid")
+      .gte("paid_at", from)
+      .lte("paid_at", to),
+  ]);
+
+  const paid = new Map<string, number>();
+  for (const b of billsRes.data ?? []) {
+    const key = (b.vendor ?? "").trim().toLowerCase();
+    if (!key) continue;
+    paid.set(key, (paid.get(key) ?? 0) + (Number(b.amount) || 0));
+  }
+
+  const rows: Vendor1099Row[] = (vendorsRes.data ?? [])
+    .map((v) => {
+      const amt = paid.get((v.name ?? "").trim().toLowerCase()) ?? 0;
+      return { id: v.id, name: v.name, email: v.email, paidThisYear: amt, meetsThreshold: amt >= 600 };
+    })
+    .sort((a, b) => b.paidThisYear - a.paidThisYear);
+
+  const totalPaid = rows.reduce((s, r) => s + r.paidThisYear, 0);
+  const reportableCount = rows.filter((r) => r.meetsThreshold).length;
+
+  return { year, rows, totalPaid, reportableCount };
 }
 
 export async function deleteVendor(id: string): Promise<void> {

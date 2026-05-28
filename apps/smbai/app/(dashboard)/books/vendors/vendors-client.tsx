@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, X, AlertCircle, Building2, Pencil, Trash2 } from "lucide-react";
+import { Plus, X, AlertCircle, Building2, Pencil, Trash2, FileText } from "lucide-react";
 import { createVendor, updateVendor, deleteVendor, type VendorWithSpend } from "@/lib/actions/vendors";
 
 const fmt = (n: number) =>
@@ -24,6 +25,7 @@ function VendorModal({
   const [email, setEmail] = useState(vendor?.email ?? "");
   const [phone, setPhone] = useState(vendor?.phone ?? "");
   const [notes, setNotes] = useState(vendor?.notes ?? "");
+  const [is1099, setIs1099] = useState(vendor?.is_1099 ?? false);
   const [error, setError] = useState("");
   const [isPending, start] = useTransition();
 
@@ -38,6 +40,7 @@ function VendorModal({
           email: email.trim() || null,
           phone: phone.trim() || null,
           notes: notes.trim() || null,
+          is1099,
         };
         if (editing) await updateVendor(vendor!.id, payload);
         else await createVendor(payload);
@@ -85,6 +88,12 @@ function VendorModal({
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Account number, payment terms, contact…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
 
+        <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+          <input type="checkbox" checked={is1099} onChange={(e) => setIs1099(e.target.checked)} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+          1099 contractor
+          <span className="text-xs text-slate-400">— include in year-end 1099 report</span>
+        </label>
+
         <div className="flex gap-3 pt-1">
           <button type="button" onClick={onClose} className="flex-1 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
           <button type="submit" disabled={isPending} className="flex-1 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
@@ -123,7 +132,12 @@ function VendorRow({
   return (
     <div className="grid grid-cols-[1.7fr_60px_1fr_1fr_1fr_64px] gap-3 px-5 py-3.5 items-center group">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-slate-800 truncate">{vendor.name}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium text-slate-800 truncate">{vendor.name}</p>
+          {vendor.is_1099 && (
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-50 text-violet-700 flex-shrink-0">1099</span>
+          )}
+        </div>
         {contact && <p className="text-xs text-slate-400 truncate">{contact}</p>}
       </div>
       <span className="text-sm text-slate-500 text-right tabular-nums">{vendor.billCount}</span>
@@ -178,13 +192,22 @@ export function VendorsClient({ initialVendors }: { initialVendors: VendorWithSp
             {totalOpen > 0 ? ` · ${fmt(totalOpen)} open` : ""}
           </p>
         </div>
-        <button
-          onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          New vendor
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/books/vendors/1099"
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-indigo-700 transition-colors"
+          >
+            <FileText className="w-4 h-4" />
+            1099 report
+          </Link>
+          <button
+            onClick={() => setShowNew(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New vendor
+          </button>
+        </div>
       </div>
 
       {initialVendors.length === 0 ? (
