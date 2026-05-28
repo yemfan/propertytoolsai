@@ -128,11 +128,10 @@ export async function getCashFlowSummary(from: string, to: string): Promise<Cash
 
   const { data, error } = await supabase
     .from("bank_transactions")
-    .select("amount, category")
+    .select("amount, personal_finance_category")
     .eq("organization_id", orgId)
     .gte("date", from)
-    .lte("date", to)
-    .eq("excluded", false);
+    .lte("date", to);
 
   if (error) throw new Error(error.message);
 
@@ -143,7 +142,7 @@ export async function getCashFlowSummary(from: string, to: string): Promise<Cash
 
   for (const tx of data ?? []) {
     const amt = Number(tx.amount);
-    const cat = tx.category ?? "Uncategorized";
+    const cat = tx.personal_finance_category ?? "Uncategorized";
     const cur = catMap.get(cat) ?? { totalIn: 0, totalOut: 0 };
 
     if (amt < 0) {

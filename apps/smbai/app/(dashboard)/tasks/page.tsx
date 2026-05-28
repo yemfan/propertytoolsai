@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { AddTaskModal } from "@/components/add-task-modal";
 import { TaskRow } from "@/components/task-row";
+import { PriorityFilter } from "./priority-filter";
 import Link from "next/link";
 import { CheckSquare, Filter, Repeat } from "lucide-react";
 
@@ -127,24 +128,7 @@ export default async function TasksPage({
         {/* Priority filter */}
         <div className="flex items-center gap-2">
           <Filter className="w-3.5 h-3.5 text-slate-400" />
-          <select
-            defaultValue={priorityFilter}
-            onChange={(e) => {
-              const p = e.target.value;
-              const base = statusFilter ? `?status=${statusFilter}` : "?";
-              const sep = statusFilter ? "&" : "";
-              window.location.href = p
-                ? `/tasks${base}${sep}priority=${p}`
-                : `/tasks${statusFilter ? `?status=${statusFilter}` : ""}`;
-            }}
-            className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">All priorities</option>
-            <option value="urgent">Urgent</option>
-            <option value="high">High</option>
-            <option value="normal">Normal</option>
-            <option value="low">Low</option>
-          </select>
+          <PriorityFilter statusFilter={statusFilter} priorityFilter={priorityFilter} />
         </div>
       </div>
 
