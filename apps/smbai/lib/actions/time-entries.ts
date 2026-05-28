@@ -72,7 +72,7 @@ export async function listTimeEntries(opts?: {
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map((row) => normalizeEntry(row as Record<string, unknown>));
+  return (data ?? []).map((row) => normalizeEntry(row as unknown as Record<string, unknown>));
 }
 
 // ─── Get active timer ─────────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ export async function getActiveTimer(): Promise<TimeEntry | null> {
     .maybeSingle();
 
   if (!data) return null;
-  return normalizeEntry(data as Record<string, unknown>);
+  return normalizeEntry(data as unknown as Record<string, unknown>);
 }
 
 // ─── Start timer ──────────────────────────────────────────────────────────────
