@@ -11,6 +11,8 @@ export interface ExpenseInput {
   expenseAccountId: string;  // CoA account (type = expense)
   /** Bank account ID → CR that bank. Null → CR Accounts Payable */
   paymentSourceId: string | null;
+  /** Optional project to attribute this expense to (for project P&L). */
+  projectId?: string | null;
 }
 
 export async function createExpense(input: ExpenseInput) {
@@ -65,6 +67,7 @@ export async function createExpense(input: ExpenseInput) {
       date: input.date,
       memo: input.description,
       source_type: "expense",
+      project_id: input.projectId ?? null,
     })
     .select("id")
     .single();
@@ -93,6 +96,10 @@ export async function createExpense(input: ExpenseInput) {
   revalidatePath("/books/journal");
   revalidatePath("/books/reports");
   revalidatePath("/reports");
+  if (input.projectId) {
+    revalidatePath(`/projects/${input.projectId}`);
+    revalidatePath("/projects");
+  }
 }
 
 // ─── List expense journal entries ─────────────────────────────────────────────
@@ -149,4 +156,66 @@ export async function listExpenses(limit = 100) {
       accountCode: acct?.code ?? "",
     };
   });
+}
+
+// ─── Project expenses (for project P&L) ───────────────────────────────────────
+
+export type ProjectExpense = {
+  id: string;
+  date: string;
+  memo: string | null;
+  amount: number;
+  accountName: string;
+};
+
+/** Expense journal entries attributed to a given project. */
+export async function listProjectExpenses(projectId: string): Promise<ProjectExpense[]> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value;
+  if (!orgId) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("journal_entries")
+    .select(`
+      id,
+      date,
+      memo,
+      journal_lines (
+        debit,
+        account:account_id ( name, type )
+      )
+    `)
+    .eq("organization_id", orgId)
+    .eq("project_id", projectId)
+    .eq("source_type", "expense")
+    .order("date", { ascending: false });
+
+  type LineShape = {
+    debit: number;
+    account: { name: string; type: string } | { name: string; type: string }[] | null;
+  };
+  return (data ?? []).map((je) => {
+    const lines = (je.journal_lines ?? []) as unknown as LineShape[];
+    const debitLine = lines.find((l) => {
+      const acct = Array.isArray(l.account) ? l.account[0] : l.account;
+      return Number(l.debit) > 0 && acct?.type === "expense";
+    });
+    const acct = debitLine
+      ? (Array.isArray(debitLine.account) ? debitLine.account[0] : debitLine.account)
+      : null;
+    return {
+      id: je.id as string,
+      date: je.date as string,
+      memo: je.memo as string | null,
+      amount: debitLine ? Number(debitLine.debit) : 0,
+      accountName: acct?.name ?? "—",
+    };
+  });
+}
+
+/** Total expense amount attributed to a project. */
+export async function getProjectExpenseTotal(projectId: string): Promise<number> {
+  const rows = await listProjectExpenses(projectId);
+  return rows.reduce((sum, r) => sum + r.amount, 0);
 }

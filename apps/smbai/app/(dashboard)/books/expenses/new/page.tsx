@@ -13,7 +13,7 @@ export default async function NewExpensePage() {
   const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const [{ data: expenseAccounts }, { data: bankAccounts }] = await Promise.all([
+  const [{ data: expenseAccounts }, { data: bankAccounts }, { data: projects }] = await Promise.all([
     supabase
       .from("chart_of_accounts")
       .select("id, code, name")
@@ -27,6 +27,12 @@ export default async function NewExpensePage() {
       .eq("organization_id", orgId)
       .eq("is_active", true)
       .order("name"),
+    supabase
+      .from("projects")
+      .select("id, name")
+      .eq("organization_id", orgId)
+      .in("status", ["active", "paused"])
+      .order("created_at", { ascending: false }),
   ]);
 
   return (
@@ -50,6 +56,7 @@ export default async function NewExpensePage() {
       <ExpenseForm
         expenseAccounts={expenseAccounts ?? []}
         bankAccounts={bankAccounts ?? []}
+        projects={projects ?? []}
       />
     </div>
   );

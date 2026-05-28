@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { getProject, updateProject, type ProjectStatus } from "@/lib/actions/projects";
+import { getProject, type ProjectStatus } from "@/lib/actions/projects";
+import { listProjectExpenses } from "@/lib/actions/expenses";
 import {
   ArrowLeft, Clock, DollarSign, CheckSquare, TrendingUp, CalendarDays,
 } from "lucide-react";
@@ -64,6 +65,9 @@ export default async function ProjectDetailPage({
     .eq("project_id", id)
     .order("created_at", { ascending: false })
     .limit(50);
+
+  // Load expenses tagged to this project (Week 27 — project P&L)
+  const projectExpenses = await listProjectExpenses(id);
 
   const clientName = project.clients
     ? [project.clients.first_name, project.clients.last_name].filter(Boolean).join(" ") || project.clients.company || "Client"
@@ -200,6 +204,55 @@ export default async function ProjectDetailPage({
         </div>
       )}
 
+      {/* Profitability / P&L (Week 27) */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-slate-700">Profitability</h2>
+          {stats.margin !== null && (
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+              stats.profit >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+            }`}>
+              {(stats.margin * 100).toFixed(0)}% margin
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Revenue</p>
+            <p className="text-lg font-semibold text-slate-800 mt-1">{fmt(stats.revenue)}</p>
+            {stats.billableAmount > stats.invoicedAmount && (
+              <p className="text-xs text-amber-600 mt-0.5">
+                {fmt(stats.billableAmount - stats.invoicedAmount)} unbilled
+              </p>
+            )}
+          </div>
+          <div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Labor cost</p>
+            <p className="text-lg font-semibold text-slate-600 mt-1">−{fmt(stats.laborCost)}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Expenses</p>
+            <p className="text-lg font-semibold text-slate-600 mt-1">−{fmt(stats.expensesTotal)}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Profit</p>
+            <p className={`text-lg font-semibold mt-1 ${stats.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+              {fmt(stats.profit)}
+            </p>
+          </div>
+        </div>
+        <p className="text-xs text-slate-400 mt-4">
+          Revenue counts invoiced billable time. Profit nets labor cost and tagged expenses.
+          {stats.laborCost === 0 && (
+            <>
+              {" "}Set a default labor cost rate in{" "}
+              <Link href="/settings" className="text-indigo-600 hover:underline">Settings</Link>
+              {" "}to factor labor in.
+            </>
+          )}
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Time entries */}
         <div className="bg-white rounded-xl border border-slate-200">
@@ -282,6 +335,37 @@ export default async function ProjectDetailPage({
             </div>
           )}
         </div>
+      </div>
+
+      {/* Project expenses (Week 27) */}
+      <div className="bg-white rounded-xl border border-slate-200 mt-6">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h2 className="text-sm font-semibold text-slate-700">Expenses</h2>
+          <Link href="/books/expenses/new" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+            Add expense →
+          </Link>
+        </div>
+        {!projectExpenses.length ? (
+          <div className="flex flex-col items-center py-10 text-center px-6">
+            <DollarSign className="w-7 h-7 text-slate-300 mb-2" />
+            <p className="text-xs text-slate-400">No expenses tagged to this project yet.</p>
+            <p className="text-xs text-slate-400 mt-1">Pick this project when recording an expense.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-50">
+            {projectExpenses.map((ex) => (
+              <div key={ex.id} className="flex items-center gap-3 px-5 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-700 truncate">{ex.memo || ex.accountName}</p>
+                  <p className="text-xs text-slate-400">
+                    {new Date(ex.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {ex.accountName}
+                  </p>
+                </div>
+                <span className="text-sm font-medium text-slate-700 flex-shrink-0">{fmt(ex.amount)}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

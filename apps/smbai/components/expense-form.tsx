@@ -17,9 +17,15 @@ interface BankAccount {
   mask: string | null;
 }
 
+interface ProjectOption {
+  id: string;
+  name: string;
+}
+
 interface Props {
   expenseAccounts: CoAAccount[];
   bankAccounts: BankAccount[];
+  projects: ProjectOption[];
 }
 
 // Map AI category → CoA account name fragment (case-insensitive partial match)
@@ -50,7 +56,7 @@ function findBestAccount(category: string | null, accounts: CoAAccount[]): strin
   return accounts[0]?.id ?? "";
 }
 
-export function ExpenseForm({ expenseAccounts, bankAccounts }: Props) {
+export function ExpenseForm({ expenseAccounts, bankAccounts, projects }: Props) {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -60,6 +66,7 @@ export function ExpenseForm({ expenseAccounts, bankAccounts }: Props) {
   const [description, setDescription]   = useState("");
   const [expenseAccountId, setExpenseAccountId] = useState(expenseAccounts[0]?.id ?? "");
   const [paymentSourceId, setPaymentSourceId]   = useState<string>("");
+  const [projectId, setProjectId]       = useState<string>("");
   const [error, setError]               = useState("");
   const [pending, start]                = useTransition();
 
@@ -127,6 +134,7 @@ export function ExpenseForm({ expenseAccounts, bankAccounts }: Props) {
           description: description.trim(),
           expenseAccountId,
           paymentSourceId: paymentSourceId || null,
+          projectId: projectId || null,
         });
         router.push("/books/expenses");
         router.refresh();
@@ -279,6 +287,24 @@ export function ExpenseForm({ expenseAccounts, bankAccounts }: Props) {
           </select>
           <p className="text-xs text-slate-400 mt-1">Credited (cash or liability increases)</p>
         </div>
+
+        {/* Project (optional) — attributes this expense to a project's P&L */}
+        {projects.length > 0 && (
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">Project <span className="text-slate-400 font-normal">(optional)</span></label>
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            >
+              <option value="">No project (general expense)</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-400 mt-1">Counts against the project&apos;s profit</p>
+          </div>
+        )}
       </div>
 
       {error && (

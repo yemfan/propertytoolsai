@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getProjectExpenseTotal } from "./expenses";
 
 export type ProjectStatus = "active" | "paused" | "completed" | "cancelled";
 export type ProjectColor  = "indigo" | "emerald" | "rose" | "amber" | "violet" | "slate";
@@ -65,12 +66,18 @@ export async function getProject(projectId: string): Promise<{
     invoicedAmount: number;
     openTasks: number;
     completedTasks: number;
+    // Profitability (Week 27)
+    laborCost: number;
+    expensesTotal: number;
+    revenue: number;        // realized = invoiced billable time
+    profit: number;         // revenue − laborCost − expensesTotal
+    margin: number | null;  // profit / revenue (null when no revenue yet)
   };
 } | null> {
   const orgId = await getOrgId();
   const supabase = await createClient();
 
-  const [{ data: project }, { data: entries }, { data: tasks }] = await Promise.all([
+  const [{ data: project }, { data: entries }, { data: tasks }, { data: org }, expensesTotal] = await Promise.all([
     supabase
       .from("projects")
       .select("id, client_id, name, description, status, color, budget_hours, budget_amount, hourly_rate, start_date, end_date, created_at, clients(first_name, last_name, company)")
@@ -79,7 +86,7 @@ export async function getProject(projectId: string): Promise<{
       .single(),
     supabase
       .from("time_entries")
-      .select("duration_minutes, billable, hourly_rate, invoiced, ended_at")
+      .select("duration_minutes, billable, hourly_rate, cost_rate, invoiced, ended_at")
       .eq("organization_id", orgId)
       .eq("project_id", projectId)
       .not("ended_at", "is", null),
@@ -88,14 +95,25 @@ export async function getProject(projectId: string): Promise<{
       .select("id, completed")
       .eq("organization_id", orgId)
       .eq("project_id", projectId),
+    supabase
+      .from("organizations")
+      .select("default_labor_cost_rate")
+      .eq("id", orgId)
+      .single(),
+    getProjectExpenseTotal(projectId),
   ]);
 
   if (!project) return null;
 
-  let totalMinutes = 0, billableMinutes = 0, billableAmount = 0, invoicedAmount = 0;
+  const defaultLaborRate = Number(org?.default_labor_cost_rate ?? 0);
+
+  let totalMinutes = 0, billableMinutes = 0, billableAmount = 0, invoicedAmount = 0, laborCost = 0;
   for (const e of entries ?? []) {
     const mins = e.duration_minutes ?? 0;
     totalMinutes += mins;
+    // Labor cost accrues on all worked time, billable or not.
+    const costRate = Number(e.cost_rate ?? defaultLaborRate);
+    laborCost += (mins / 60) * costRate;
     if (e.billable) {
       billableMinutes += mins;
       const amt = (mins / 60) * Number(e.hourly_rate ?? 0);
@@ -107,12 +125,21 @@ export async function getProject(projectId: string): Promise<{
   const openTasks      = (tasks ?? []).filter((t) => !t.completed).length;
   const completedTasks = (tasks ?? []).filter((t) => t.completed).length;
 
+  // Revenue = realized (invoiced) billable time. Profit nets labor + expenses.
+  const revenue = invoicedAmount;
+  const profit  = revenue - laborCost - expensesTotal;
+  const margin  = revenue > 0 ? profit / revenue : null;
+
   return {
     project: {
       ...project,
       clients: (Array.isArray(project.clients) ? project.clients[0] : project.clients) ?? null,
     } as Project,
-    stats: { totalMinutes, billableMinutes, billableAmount, invoicedAmount, openTasks, completedTasks },
+    stats: {
+      totalMinutes, billableMinutes, billableAmount, invoicedAmount,
+      openTasks, completedTasks,
+      laborCost, expensesTotal, revenue, profit, margin,
+    },
   };
 }
 

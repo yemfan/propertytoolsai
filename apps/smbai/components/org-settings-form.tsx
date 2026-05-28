@@ -14,9 +14,10 @@ interface Props {
   timezones: string[];
   months: string[];
   defaultHourlyRate?: number | null;
+  defaultLaborCostRate?: number | null;
 }
 
-export function OrgSettingsForm({ org, timezones, months, defaultHourlyRate }: Props) {
+export function OrgSettingsForm({ org, timezones, months, defaultHourlyRate, defaultLaborCostRate }: Props) {
   const [state, action, isPending] = useActionState<SettingsState, FormData>(
     updateOrg,
     null
@@ -95,6 +96,24 @@ export function OrgSettingsForm({ org, timezones, months, defaultHourlyRate }: P
           </div>
           <p className="text-[10px] text-slate-400 mt-1">Applied automatically when starting a timer.</p>
         </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-slate-600 mb-1">Default labor cost rate</label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+          <input
+            name="default_labor_cost_rate"
+            type="number"
+            min="0"
+            step="0.01"
+            disabled={isPending}
+            defaultValue={defaultLaborCostRate ?? ""}
+            placeholder="e.g. 45"
+            className="w-full text-sm border border-slate-300 rounded-lg pl-7 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50"
+          />
+        </div>
+        <p className="text-[10px] text-slate-400 mt-1">What an hour of work costs you (wages/contractor pay). Used for project profit — separate from the billable rate above.</p>
       </div>
 
       {state?.error && (
