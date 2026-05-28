@@ -153,6 +153,80 @@ export async function listProjectsPnL(status?: ProjectStatus): Promise<ProjectWi
   });
 }
 
+// ─── Client profitability (roll-up) ───────────────────────────────────────────
+
+export type ClientPnL = {
+  clientId: string;
+  name: string;
+  revenue: number;        // total invoiced to the client (non-draft, non-void)
+  laborCost: number;      // labor on their projects
+  expensesTotal: number;  // expenses tagged to their projects
+  profit: number;         // revenue − laborCost − expensesTotal
+  margin: number | null;
+};
+
+/**
+ * Per-client P&L: revenue is everything billed to the client (their invoices),
+ * cost is the labor + expenses tracked against their projects. Built on top of
+ * listProjectsPnL() plus one invoices query and one clients query — no N+1.
+ *
+ * Note: cost only reflects work tracked via projects; flat-fee clients with no
+ * projects will show their billings as ~100% margin.
+ */
+export async function listClientsPnL(): Promise<ClientPnL[]> {
+  const orgId = await getOrgId();
+  const supabase = await createClient();
+
+  const [projects, { data: invoices }, { data: clients }] = await Promise.all([
+    listProjectsPnL(),
+    supabase
+      .from("invoices")
+      .select("client_id, total, status")
+      .eq("organization_id", orgId)
+      .not("status", "in", "(draft,void)"),
+    supabase
+      .from("clients")
+      .select("id, first_name, last_name, company")
+      .eq("organization_id", orgId),
+  ]);
+
+  // Cost per client, summed from their projects
+  const costByClient = new Map<string, { laborCost: number; expensesTotal: number }>();
+  for (const p of projects) {
+    if (!p.client_id) continue;
+    const c = costByClient.get(p.client_id) ?? { laborCost: 0, expensesTotal: 0 };
+    c.laborCost += p.pnl.laborCost;
+    c.expensesTotal += p.pnl.expensesTotal;
+    costByClient.set(p.client_id, c);
+  }
+
+  // Revenue per client, from issued invoices
+  const revenueByClient = new Map<string, number>();
+  for (const inv of invoices ?? []) {
+    const cid = (inv as { client_id: string | null }).client_id;
+    if (!cid) continue;
+    revenueByClient.set(cid, (revenueByClient.get(cid) ?? 0) + Number(inv.total));
+  }
+
+  return (clients ?? []).map((c) => {
+    const name =
+      [c.first_name, c.last_name].filter(Boolean).join(" ") || c.company || "Unnamed client";
+    const cost = costByClient.get(c.id) ?? { laborCost: 0, expensesTotal: 0 };
+    const revenue = revenueByClient.get(c.id) ?? 0;
+    const profit = revenue - cost.laborCost - cost.expensesTotal;
+    const margin = revenue > 0 ? profit / revenue : null;
+    return {
+      clientId: c.id,
+      name,
+      revenue,
+      laborCost: cost.laborCost,
+      expensesTotal: cost.expensesTotal,
+      profit,
+      margin,
+    };
+  });
+}
+
 // ─── Get single project + stats ───────────────────────────────────────────────
 
 export async function getProject(projectId: string): Promise<{

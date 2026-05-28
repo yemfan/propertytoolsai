@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { listClientsPnL } from "@/lib/actions/projects";
 import {
   ArrowLeft, Mail, Phone, Building2, Calendar,
   FileText, MessageSquare, Tag, DollarSign, Receipt,
@@ -55,7 +56,7 @@ export default async function ClientDetailPage({
   const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const [clientRes, invoicesRes, messagesRes, notesRes] = await Promise.all([
+  const [clientRes, invoicesRes, messagesRes, notesRes, clientsPnL] = await Promise.all([
     supabase
       .from("clients")
       .select("*, portal_token")
@@ -83,6 +84,7 @@ export default async function ClientDetailPage({
       .eq("organization_id", orgId)
       .order("created_at", { ascending: false })
       .limit(50),
+    listClientsPnL(),
   ]);
 
   if (!clientRes.data) notFound();
@@ -90,6 +92,7 @@ export default async function ClientDetailPage({
   const client = clientRes.data;
   const invoices = invoicesRes.data ?? [];
   const messages = messagesRes.data ?? [];
+  const pnl = clientsPnL.find((c) => c.clientId === id) ?? null;
 
   const today = new Date().toISOString().slice(0, 10);
   const fullName = [client.first_name, client.last_name].filter(Boolean).join(" ");
@@ -173,6 +176,41 @@ export default async function ClientDetailPage({
               </div>
             ))}
           </div>
+
+          {/* Profitability (Week 33) */}
+          {pnl && (pnl.revenue > 0 || pnl.laborCost > 0 || pnl.expensesTotal > 0) && (
+            <div className="bg-white rounded-xl border border-slate-200 p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-slate-700">Profitability</h2>
+                {pnl.margin !== null && (
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${pnl.profit >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                    {(pnl.margin * 100).toFixed(0)}% margin
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-4 gap-4">
+                <div>
+                  <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Revenue</p>
+                  <p className="text-lg font-semibold text-slate-800 mt-1 tabular-nums">{fmt(pnl.revenue)}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Labor</p>
+                  <p className="text-lg font-semibold text-slate-600 mt-1 tabular-nums">−{fmt(pnl.laborCost)}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Expenses</p>
+                  <p className="text-lg font-semibold text-slate-600 mt-1 tabular-nums">−{fmt(pnl.expensesTotal)}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Profit</p>
+                  <p className={`text-lg font-semibold mt-1 tabular-nums ${pnl.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{fmt(pnl.profit)}</p>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-3">
+                Revenue = all invoiced to this client; cost = labor and expenses tracked on their projects.
+              </p>
+            </div>
+          )}
 
           {/* Invoices */}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">

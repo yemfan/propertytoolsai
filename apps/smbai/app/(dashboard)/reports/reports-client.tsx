@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Download, TrendingUp, TrendingDown, DollarSign, Clock, Users, FolderOpen } from "lucide-react";
 import type { PnLReport, CashFlowSummary, TimeReport } from "@/lib/actions/reports";
-import type { ProjectWithPnL } from "@/lib/actions/projects";
+import type { ProjectWithPnL, ClientPnL } from "@/lib/actions/projects";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -163,6 +163,23 @@ function exportProjectsCsv(projects: ProjectWithPnL[]) {
   URL.revokeObjectURL(url);
 }
 
+function exportClientsCsv(clients: ClientPnL[]) {
+  const rows: string[] = [
+    "Client,Revenue,Labor Cost,Expenses,Profit,Margin %",
+    ...clients.map((c) =>
+      `"${c.name}",${c.revenue.toFixed(2)},${c.laborCost.toFixed(2)},${c.expensesTotal.toFixed(2)},${c.profit.toFixed(2)},${c.margin !== null ? (c.margin * 100).toFixed(1) : ""}`
+    ),
+  ];
+  const csv = rows.join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "client_profitability.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Color dot map ────────────────────────────────────────────────────────────
 
 const COLOR_DOTS: Record<string, string> = {
@@ -181,6 +198,7 @@ interface Props {
   initialCashFlow: CashFlowSummary;
   initialTimeReport: TimeReport;
   initialProjects: ProjectWithPnL[];
+  initialClients: ClientPnL[];
   fetchPnL: (from: string, to: string) => Promise<PnLReport>;
   fetchCashFlow: (from: string, to: string) => Promise<CashFlowSummary>;
   fetchTimeReport: (from: string, to: string) => Promise<TimeReport>;
@@ -191,6 +209,7 @@ export function ReportsClient({
   initialCashFlow,
   initialTimeReport,
   initialProjects,
+  initialClients,
   fetchPnL,
   fetchCashFlow,
   fetchTimeReport,
@@ -200,7 +219,7 @@ export function ReportsClient({
   const [pnl, setPnl]       = useState(initialPnL);
   const [cash, setCash]     = useState(initialCashFlow);
   const [time, setTime]     = useState(initialTimeReport);
-  const [tab, setTab]       = useState<"pnl" | "cash" | "time" | "projects">("pnl");
+  const [tab, setTab]       = useState<"pnl" | "cash" | "time" | "projects" | "clients">("pnl");
   const [pending, start]    = useTransition();
 
   function applyPreset(fn: () => { from: string; to: string }) {
@@ -234,6 +253,19 @@ export function ReportsClient({
     { revenue: 0, laborCost: 0, expensesTotal: 0, profit: 0 }
   );
   const projBlendedMargin = projTotals.revenue > 0 ? projTotals.profit / projTotals.revenue : null;
+
+  // Client profitability (Week 33; lifetime to date)
+  const sortedClients = [...initialClients].sort((a, b) => b.profit - a.profit);
+  const clientTotals = initialClients.reduce(
+    (acc, c) => ({
+      revenue:       acc.revenue + c.revenue,
+      laborCost:     acc.laborCost + c.laborCost,
+      expensesTotal: acc.expensesTotal + c.expensesTotal,
+      profit:        acc.profit + c.profit,
+    }),
+    { revenue: 0, laborCost: 0, expensesTotal: 0, profit: 0 }
+  );
+  const clientBlendedMargin = clientTotals.revenue > 0 ? clientTotals.profit / clientTotals.revenue : null;
 
   return (
     <div className="space-y-6">
@@ -280,7 +312,7 @@ export function ReportsClient({
 
       {/* Tab selector */}
       <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
-        {(["pnl", "cash", "time", "projects"] as const).map((t) => (
+        {(["pnl", "cash", "time", "projects", "clients"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -288,7 +320,7 @@ export function ReportsClient({
               tab === t ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            {t === "pnl" ? "Profit & Loss" : t === "cash" ? "Cash Flow" : t === "time" ? "Time Tracking" : "Projects"}
+            {t === "pnl" ? "Profit & Loss" : t === "cash" ? "Cash Flow" : t === "time" ? "Time Tracking" : t === "projects" ? "Projects" : "Clients"}
           </button>
         ))}
       </div>
@@ -627,6 +659,82 @@ export function ReportsClient({
           <p className="text-xs text-slate-400">
             Revenue is invoiced billable time. Profit nets labor cost (from your default labor rate) and tagged expenses.
             Figures are lifetime-to-date per project and aren&apos;t affected by the date range above.
+          </p>
+        </div>
+      )}
+
+      {/* Client Profitability Report (Week 33) */}
+      {tab === "clients" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-4 gap-4">
+            <StatCard label="Revenue" value={clientTotals.revenue} positive={true} />
+            <StatCard label="Labor cost" value={clientTotals.laborCost} positive={false} />
+            <StatCard label="Expenses" value={clientTotals.expensesTotal} positive={false} />
+            <StatCard
+              label="Profit"
+              value={clientTotals.profit}
+              positive={clientTotals.profit >= 0}
+              sub={clientBlendedMargin !== null ? `${(clientBlendedMargin * 100).toFixed(0)}% blended margin` : undefined}
+            />
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-indigo-500" />
+                <h2 className="text-sm font-semibold text-slate-800">Profit by client</h2>
+                <span className="text-xs text-slate-400">· lifetime to date</span>
+              </div>
+              <button
+                onClick={() => exportClientsCsv(sortedClients)}
+                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
+              </button>
+            </div>
+            {sortedClients.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-8">No clients yet</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-[1fr_104px_104px_104px_104px_64px] gap-3 px-6 py-2.5 bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <span>Client</span>
+                  <span className="text-right">Revenue</span>
+                  <span className="text-right">Labor</span>
+                  <span className="text-right">Expenses</span>
+                  <span className="text-right">Profit</span>
+                  <span className="text-right">Margin</span>
+                </div>
+                <div className="divide-y divide-slate-50">
+                  {sortedClients.map((c) => (
+                    <div key={c.clientId} className="grid grid-cols-[1fr_104px_104px_104px_104px_64px] gap-3 px-6 py-3 items-center">
+                      <span className="text-sm text-slate-700 truncate">{c.name}</span>
+                      <span className="text-sm text-slate-600 text-right tabular-nums">{c.revenue > 0 ? fmt(c.revenue) : "—"}</span>
+                      <span className="text-sm text-slate-500 text-right tabular-nums">{c.laborCost > 0 ? fmt(c.laborCost) : "—"}</span>
+                      <span className="text-sm text-slate-500 text-right tabular-nums">{c.expensesTotal > 0 ? fmt(c.expensesTotal) : "—"}</span>
+                      <span className={`text-sm font-medium text-right tabular-nums ${c.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{fmt(c.profit)}</span>
+                      <span className={`text-xs text-right tabular-nums ${c.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {c.margin !== null ? `${(c.margin * 100).toFixed(0)}%` : "—"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-[1fr_104px_104px_104px_104px_64px] gap-3 px-6 py-3 bg-slate-50 border-t border-slate-100 items-center">
+                  <span className="text-sm font-semibold text-slate-700">Total</span>
+                  <span className="text-sm font-semibold text-slate-700 text-right tabular-nums">{fmt(clientTotals.revenue)}</span>
+                  <span className="text-sm font-semibold text-slate-600 text-right tabular-nums">{fmt(clientTotals.laborCost)}</span>
+                  <span className="text-sm font-semibold text-slate-600 text-right tabular-nums">{fmt(clientTotals.expensesTotal)}</span>
+                  <span className={`text-sm font-bold text-right tabular-nums ${clientTotals.profit >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{fmt(clientTotals.profit)}</span>
+                  <span className={`text-xs font-bold text-right tabular-nums ${clientTotals.profit >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                    {clientBlendedMargin !== null ? `${(clientBlendedMargin * 100).toFixed(0)}%` : "—"}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <p className="text-xs text-slate-400">
+            Revenue is everything invoiced to the client. Cost is the labor and expenses tracked against their projects — a client billed by flat fee with no project tracking will show a high margin.
           </p>
         </div>
       )}

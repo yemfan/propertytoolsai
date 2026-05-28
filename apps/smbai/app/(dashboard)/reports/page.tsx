@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getPnLReport, getCashFlowSummary, getTimeReport } from "@/lib/actions/reports";
-import { listProjectsPnL } from "@/lib/actions/projects";
+import { listProjectsPnL, listClientsPnL } from "@/lib/actions/projects";
 import { ReportsClient } from "./reports-client";
 
 export const metadata: Metadata = { title: "Reports" };
@@ -11,11 +11,12 @@ export default async function ReportsPage() {
   const from = `${y}-01-01`;
   const to   = `${y}-12-31`;
 
-  const [pnl, cashFlow, timeReport, projects] = await Promise.all([
+  const [pnl, cashFlow, timeReport, projects, clients] = await Promise.all([
     getPnLReport(from, to),
     getCashFlowSummary(from, to),
     getTimeReport(from, to),
     listProjectsPnL(),
+    listClientsPnL(),
   ]);
 
   return (
@@ -33,6 +34,7 @@ export default async function ReportsPage() {
         initialCashFlow={cashFlow}
         initialTimeReport={timeReport}
         initialProjects={projects}
+        initialClients={clients}
         fetchPnL={getPnLReport}
         fetchCashFlow={getCashFlowSummary}
         fetchTimeReport={getTimeReport}
