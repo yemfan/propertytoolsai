@@ -15,9 +15,10 @@ interface Props {
   months: string[];
   defaultHourlyRate?: number | null;
   defaultLaborCostRate?: number | null;
+  weeklyDigestEnabled?: boolean;
 }
 
-export function OrgSettingsForm({ org, timezones, months, defaultHourlyRate, defaultLaborCostRate }: Props) {
+export function OrgSettingsForm({ org, timezones, months, defaultHourlyRate, defaultLaborCostRate, weeklyDigestEnabled }: Props) {
   const [state, action, isPending] = useActionState<SettingsState, FormData>(
     updateOrg,
     null
@@ -114,6 +115,22 @@ export function OrgSettingsForm({ org, timezones, months, defaultHourlyRate, def
           />
         </div>
         <p className="text-[10px] text-slate-400 mt-1">What an hour of work costs you (wages/contractor pay). Used for project profit — separate from the billable rate above.</p>
+      </div>
+
+      <div className="border-t border-slate-100 pt-4">
+        <label className="flex items-center gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            name="weekly_digest_enabled"
+            defaultChecked={weeklyDigestEnabled ?? true}
+            disabled={isPending}
+            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          <span className="text-sm text-slate-700">Weekly digest email</span>
+        </label>
+        <p className="text-[10px] text-slate-400 mt-1 ml-6">
+          A Monday summary of cash, receivables, bills, and tasks — emailed to owners &amp; admins.
+        </p>
       </div>
 
       {state?.error && (

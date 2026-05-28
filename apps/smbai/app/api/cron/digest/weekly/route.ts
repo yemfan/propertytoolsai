@@ -38,13 +38,14 @@ export async function GET(request: NextRequest) {
   const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@smbai.app";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
-  const { data: orgs } = await db.from("organizations").select("id, name");
+  const { data: orgs } = await db.from("organizations").select("id, name, weekly_digest_enabled");
 
   let sent = 0;
   const errors: string[] = [];
 
   for (const org of orgs ?? []) {
     try {
+      if (org.weekly_digest_enabled === false) continue;
       // Recipients: owners + admins
       const { data: members } = await db
         .from("organization_members")

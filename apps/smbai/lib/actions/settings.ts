@@ -37,6 +37,7 @@ export async function updateOrg(
       fiscal_year_end_month: Number(formData.get("fiscal_year_end_month")) || 12,
       default_hourly_rate: defaultHourlyRate,
       default_labor_cost_rate: defaultLaborCostRate,
+      weekly_digest_enabled: formData.get("weekly_digest_enabled") === "on",
     })
     .eq("id", orgId);
 
