@@ -215,7 +215,18 @@ export async function getTimeReport(from: string, to: string): Promise<TimeRepor
 
   if (error) throw new Error(error.message);
 
-  const entries = data ?? [];
+  type TimeRow = {
+    duration_minutes: number | null;
+    billable: boolean;
+    hourly_rate: number | null;
+    invoiced: boolean;
+    project_id: string | null;
+    project: string | null;
+    client_id: string | null;
+    projects: unknown;
+    clients: unknown;
+  };
+  const entries = (data ?? []) as unknown as TimeRow[];
   let totalMinutes = 0, billableMinutes = 0, billableAmount = 0, uninvoicedAmount = 0;
 
   type ProjAgg = { project_id: string | null; project_name: string; color: string; totalMinutes: number; billableMinutes: number; billableAmount: number };
