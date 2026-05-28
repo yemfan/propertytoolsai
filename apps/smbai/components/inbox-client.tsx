@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef } from "react";
-import { MessageSquarePlus, Send, Mail, MessageSquare, RefreshCw } from "lucide-react";
-import { markThreadRead, sendEmail, sendSms } from "@/lib/actions/messages";
+import { MessageSquarePlus, Send, Mail, MessageSquare, RefreshCw, Sparkles } from "lucide-react";
+import { markThreadRead, sendEmail, sendSms, draftReply } from "@/lib/actions/messages";
 import { InboxCompose } from "./inbox-compose";
 
 type Channel = "all" | "email" | "sms";
@@ -58,6 +58,7 @@ export function InboxClient({ threads: initialThreads, clients }: Props) {
   );
   const [composing, setComposing] = useState(false);
   const [replyBody, setReplyBody] = useState("");
+  const [drafting, setDrafting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -110,6 +111,19 @@ export function InboxClient({ threads: initialThreads, clients }: Props) {
         )
       );
     });
+  }
+
+  async function handleDraft() {
+    if (!selected) return;
+    setDrafting(true);
+    try {
+      const draft = await draftReply(selected.clientId, selected.lastMessage.channel);
+      if (draft) setReplyBody(draft);
+    } catch {
+      // ignore — leave the reply box as-is
+    } finally {
+      setDrafting(false);
+    }
   }
 
   return (
@@ -264,6 +278,16 @@ export function InboxClient({ threads: initialThreads, clients }: Props) {
 
             {/* Reply box */}
             <div className="px-6 py-4 bg-white border-t border-slate-200">
+              <div className="flex items-center justify-end mb-2">
+                <button
+                  onClick={handleDraft}
+                  disabled={drafting || isPending}
+                  className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {drafting ? "Drafting…" : "Draft with AI"}
+                </button>
+              </div>
               <div className="flex items-end gap-3">
                 <textarea
                   value={replyBody}
