@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Eye, EyeOff, Sparkles } from "lucide-react";
-import { createCampaign, sendCampaign, generateCampaignCopy, type CampaignTone } from "@/lib/actions/campaigns";
+import { createCampaign, sendCampaign, generateCampaignCopy, generateSubjectLines, type CampaignTone } from "@/lib/actions/campaigns";
 
 type RecipientFilter = "all" | "active" | "leads" | "prospects" | "inactive";
 
@@ -30,6 +30,25 @@ export function CampaignForm() {
   const [aiTone, setAiTone]       = useState<CampaignTone>("promotional");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError]     = useState("");
+
+  const [subjectIdeas, setSubjectIdeas]     = useState<string[]>([]);
+  const [subjectLoading, setSubjectLoading] = useState(false);
+  const [subjectError, setSubjectError]     = useState("");
+
+  async function suggestSubjects() {
+    const context = body.trim() || aiPrompt.trim();
+    if (!context) { setSubjectError("Write a message or describe the campaign first"); return; }
+    setSubjectError("");
+    setSubjectLoading(true);
+    try {
+      const ideas = await generateSubjectLines({ context, tone: aiTone });
+      setSubjectIdeas(ideas);
+    } catch (err) {
+      setSubjectError(err instanceof Error ? err.message : "Failed to suggest subject lines");
+    } finally {
+      setSubjectLoading(false);
+    }
+  }
 
   async function generateCopy() {
     if (!aiPrompt.trim()) return;
@@ -144,9 +163,18 @@ export function CampaignForm() {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">
-            Subject line
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-medium text-slate-600">Subject line</label>
+            <button
+              type="button"
+              onClick={suggestSubjects}
+              disabled={subjectLoading}
+              className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors"
+            >
+              <Sparkles className="w-3 h-3" />
+              {subjectLoading ? "Thinking…" : "Suggest"}
+            </button>
+          </div>
           <input
             type="text"
             value={subject}
@@ -154,6 +182,22 @@ export function CampaignForm() {
             placeholder="An engaging subject line…"
             className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
+          {subjectError && <p className="text-xs text-rose-600 mt-1">{subjectError}</p>}
+          {subjectIdeas.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {subjectIdeas.map((s, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => { setSubject(s); setSubjectIdeas([]); }}
+                  title="Use this subject line"
+                  className="text-xs px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
           <p className="text-xs text-slate-400 mt-1">
             {subject.length} characters · Keep under 60 for best open rates
           </p>

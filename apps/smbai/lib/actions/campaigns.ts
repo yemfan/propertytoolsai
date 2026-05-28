@@ -269,3 +269,67 @@ Rules:
   if (!parsed.body) throw new Error("Couldn't generate copy — try rephrasing your prompt");
   return parsed;
 }
+
+function parseSubjectLines(raw: string): string[] {
+  let t = raw.trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) t = fence[1].trim();
+  const start = t.indexOf("[");
+  const end = t.lastIndexOf("]");
+  if (start !== -1 && end !== -1 && end > start) t = t.slice(start, end + 1);
+  try {
+    const arr = JSON.parse(t);
+    if (Array.isArray(arr)) {
+      return arr.map((s) => String(s).trim()).filter(Boolean).slice(0, 5);
+    }
+  } catch {
+    // fall through to line-based parsing
+  }
+  return raw
+    .split("\n")
+    .map((l) => l.replace(/^[\s\-*\d.)"]+/, "").replace(/"\s*,?\s*$/, "").trim())
+    .filter(Boolean)
+    .slice(0, 5);
+}
+
+export async function generateSubjectLines(input: {
+  context: string;
+  tone: CampaignTone;
+}): Promise<string[]> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  if (!orgId) throw new Error("Not authenticated");
+  if (!input.context.trim()) throw new Error("Write a message or describe the campaign first");
+
+  const supabase = await createClient();
+  const { data: org } = await supabase.from("organizations").select("name").eq("id", orgId).single();
+  const orgName = org?.name ?? "our business";
+  const toneDesc = CAMPAIGN_TONE[input.tone] ?? CAMPAIGN_TONE.friendly;
+
+  const prompt = `You are an expert email marketer for the business "${orgName}".
+Generate 5 high-performing subject lines for this campaign.
+
+Campaign content / topic:
+${input.context.trim().slice(0, 1500)}
+
+Tone: ${toneDesc}
+
+Rules:
+- Each subject line under 55 characters.
+- Make the 5 genuinely different angles (e.g. benefit, curiosity, urgency, question, personal).
+- No emoji spam (at most one, only if it fits the tone). No surrounding quotes.
+
+Respond with ONLY a JSON array of 5 strings, e.g.:
+["First option", "Second option", "Third option", "Fourth option", "Fifth option"]`;
+
+  const response = await anthropic.messages.create({
+    model: "claude-opus-4-5",
+    max_tokens: 400,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const text = (response.content[0] as { type: string; text: string }).text ?? "";
+  const ideas = parseSubjectLines(text);
+  if (!ideas.length) throw new Error("Couldn't generate subject lines — try again");
+  return ideas;
+}
