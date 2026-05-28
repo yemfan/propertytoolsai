@@ -1,28 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/invoices/overdue",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/invoices/recurring",
-      "schedule": "5 9 * * *"
-    },
-    {
-      "path": "/api/cron/invoices/reminders",
+      "path": "/api/cron/daily",
       "schedule": "10 9 * * *"
-    },
-    {
-      "path": "/api/cron/projects/recurring",
-      "schedule": "15 9 * * *"
-    },
-    {
-      "path": "/api/cron/bills/recurring",
-      "schedule": "20 9 * * *"
-    },
-    {
-      "path": "/api/cron/tasks/recurring",
-      "schedule": "25 9 * * *"
     }
   ]
 }
