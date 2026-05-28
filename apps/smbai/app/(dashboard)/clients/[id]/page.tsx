@@ -30,6 +30,23 @@ const INV_STATUS_COLORS: Record<string, string> = {
   void:    "bg-slate-100 text-slate-400",
 };
 
+const EST_STATUS_COLORS: Record<string, string> = {
+  draft:    "bg-slate-100 text-slate-500",
+  sent:     "bg-blue-100 text-blue-700",
+  accepted: "bg-emerald-100 text-emerald-700",
+  declined: "bg-rose-100 text-rose-700",
+  expired:  "bg-amber-100 text-amber-700",
+};
+
+const PROJECT_COLOR_DOTS: Record<string, string> = {
+  indigo: "bg-indigo-500", emerald: "bg-emerald-500", rose: "bg-rose-500",
+  amber: "bg-amber-500", violet: "bg-violet-500", slate: "bg-slate-400",
+};
+
+const TASK_PRIORITY_DOTS: Record<string, string> = {
+  urgent: "bg-rose-500", high: "bg-amber-500", normal: "bg-slate-300", low: "bg-slate-200",
+};
+
 function fmt(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 }
@@ -56,7 +73,7 @@ export default async function ClientDetailPage({
   const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const [clientRes, invoicesRes, messagesRes, notesRes, clientsPnL] = await Promise.all([
+  const [clientRes, invoicesRes, messagesRes, notesRes, clientsPnL, estimatesRes, projectsRes, tasksRes] = await Promise.all([
     supabase
       .from("clients")
       .select("*, portal_token")
@@ -85,6 +102,28 @@ export default async function ClientDetailPage({
       .order("created_at", { ascending: false })
       .limit(50),
     listClientsPnL(),
+    supabase
+      .from("estimates")
+      .select("id, estimate_number, status, issue_date, expiry_date, total")
+      .eq("client_id", id)
+      .eq("organization_id", orgId)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("projects")
+      .select("id, name, status, color")
+      .eq("client_id", id)
+      .eq("organization_id", orgId)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("tasks")
+      .select("id, title, due_date, status, priority")
+      .eq("client_id", id)
+      .eq("organization_id", orgId)
+      .in("status", ["open", "in_progress"])
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .limit(10),
   ]);
 
   if (!clientRes.data) notFound();
@@ -92,6 +131,9 @@ export default async function ClientDetailPage({
   const client = clientRes.data;
   const invoices = invoicesRes.data ?? [];
   const messages = messagesRes.data ?? [];
+  const estimates = estimatesRes.data ?? [];
+  const projects = projectsRes.data ?? [];
+  const tasks = tasksRes.data ?? [];
   const pnl = clientsPnL.find((c) => c.clientId === id) ?? null;
 
   const today = new Date().toISOString().slice(0, 10);
@@ -248,6 +290,95 @@ export default async function ClientDetailPage({
                         {fmt(Number(inv.total))}
                       </span>
                     </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Estimates */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+              <h2 className="text-sm font-semibold text-slate-700">Estimates</h2>
+              <Link href="/books/estimates/new" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                + New
+              </Link>
+            </div>
+            {estimates.length === 0 ? (
+              <div className="py-10 text-center text-xs text-slate-400">No estimates yet</div>
+            ) : (
+              <div className="divide-y divide-slate-50">
+                {estimates.map((est) => (
+                  <Link
+                    key={est.id}
+                    href={`/books/estimates/${est.id}`}
+                    className="flex items-center gap-4 px-5 py-3 hover:bg-slate-50 transition-colors"
+                  >
+                    <span className="font-mono text-xs text-slate-500 w-24 flex-shrink-0">{est.estimate_number}</span>
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full flex-shrink-0 capitalize ${EST_STATUS_COLORS[est.status] ?? ""}`}>
+                      {est.status}
+                    </span>
+                    <span className="flex-1 text-xs text-slate-400">
+                      {new Date(est.issue_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </span>
+                    <span className="text-sm font-semibold text-slate-700 tabular-nums flex-shrink-0">
+                      {fmt(Number(est.total))}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Projects */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-slate-100">
+              <h2 className="text-sm font-semibold text-slate-700">Projects</h2>
+            </div>
+            {projects.length === 0 ? (
+              <div className="py-10 text-center text-xs text-slate-400">No projects yet</div>
+            ) : (
+              <div className="divide-y divide-slate-50">
+                {projects.map((proj) => (
+                  <Link
+                    key={proj.id}
+                    href={`/projects/${proj.id}`}
+                    className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors"
+                  >
+                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${PROJECT_COLOR_DOTS[proj.color as string] ?? "bg-slate-400"}`} />
+                    <span className="flex-1 text-sm text-slate-700 truncate">{proj.name}</span>
+                    <span className="text-[11px] text-slate-400 capitalize flex-shrink-0">{proj.status}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Open tasks */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+              <h2 className="text-sm font-semibold text-slate-700">Open tasks</h2>
+              <Link href="/tasks" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                View all →
+              </Link>
+            </div>
+            {tasks.length === 0 ? (
+              <div className="py-10 text-center text-xs text-slate-400">No open tasks</div>
+            ) : (
+              <div className="divide-y divide-slate-50">
+                {tasks.map((task) => {
+                  const overdue = task.due_date && task.due_date < today;
+                  return (
+                    <div key={task.id} className="flex items-center gap-3 px-5 py-3">
+                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${TASK_PRIORITY_DOTS[task.priority] ?? "bg-slate-300"}`} />
+                      <span className="flex-1 text-sm text-slate-700 truncate">{task.title}</span>
+                      {task.due_date && (
+                        <span className={`text-[11px] flex-shrink-0 ${overdue ? "text-rose-600 font-medium" : "text-slate-400"}`}>
+                          {overdue ? "Overdue · " : ""}
+                          {new Date(task.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </span>
+                      )}
+                    </div>
                   );
                 })}
               </div>
