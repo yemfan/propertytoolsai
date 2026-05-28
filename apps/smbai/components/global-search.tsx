@@ -2,16 +2,19 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Users, FileText, ArrowRight, MessageSquare, CreditCard, X } from "lucide-react";
+import { Search, Users, FileText, ArrowRight, MessageSquare, CreditCard, X, FolderOpen, CheckSquare } from "lucide-react";
 
 interface SearchResults {
   clients: { id: string; first_name: string | null; last_name: string | null; company: string | null; email: string | null }[];
   invoices: { id: string; invoice_number: string; status: string; total: number; client_name: string | null }[];
   transactions: { id: string; date: string; name: string; merchant_name: string | null; amount: number }[];
   messages: { id: string; channel: string; body: string; client_name: string | null }[];
+  estimates: { id: string; estimate_number: string; status: string; total: number }[];
+  projects: { id: string; name: string; status: string; color: string }[];
+  tasks: { id: string; title: string; status: string; due_date: string | null }[];
 }
 
-const EMPTY: SearchResults = { clients: [], invoices: [], transactions: [], messages: [] };
+const EMPTY: SearchResults = { clients: [], invoices: [], transactions: [], messages: [], estimates: [], projects: [], tasks: [] };
 
 const STATUS_COLOR: Record<string, string> = {
   draft:   "text-slate-500",
@@ -76,7 +79,8 @@ export function GlobalSearch() {
 
   const hasResults =
     results.clients.length + results.invoices.length +
-    results.transactions.length + results.messages.length > 0;
+    results.transactions.length + results.messages.length +
+    results.estimates.length + results.projects.length + results.tasks.length > 0;
 
   if (!open) {
     return (
@@ -138,7 +142,7 @@ export function GlobalSearch() {
                 return (
                   <button
                     key={c.id}
-                    onClick={() => navigate("/clients")}
+                    onClick={() => navigate(`/clients/${c.id}`)}
                     className="flex items-center gap-3 w-full px-4 py-3 hover:bg-slate-50 transition-colors"
                   >
                     <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-bold flex-shrink-0">
@@ -233,6 +237,83 @@ export function GlobalSearch() {
                     <p className="text-sm text-slate-700 truncate">{m.body}</p>
                   </div>
                   <span className="text-xs text-slate-400 flex-shrink-0 uppercase">{m.channel}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Estimates */}
+          {results.estimates.length > 0 && (
+            <div>
+              <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+                <FileText className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Estimates</span>
+              </div>
+              {results.estimates.map((e) => (
+                <button
+                  key={e.id}
+                  onClick={() => navigate(`/books/estimates/${e.id}`)}
+                  className="flex items-center gap-3 w-full px-4 py-3 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-3.5 h-3.5 text-slate-500" />
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-slate-800 font-mono">{e.estimate_number}</p>
+                      <span className={`text-xs font-medium ${STATUS_COLOR[e.status] ?? "text-slate-500"}`}>{e.status}</span>
+                    </div>
+                  </div>
+                  <span className="text-sm font-semibold text-slate-700 tabular-nums flex-shrink-0">${Number(e.total).toFixed(2)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Projects */}
+          {results.projects.length > 0 && (
+            <div>
+              <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+                <FolderOpen className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Projects</span>
+              </div>
+              {results.projects.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => navigate(`/projects/${p.id}`)}
+                  className="flex items-center gap-3 w-full px-4 py-3 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                    <FolderOpen className="w-3.5 h-3.5 text-slate-500" />
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">{p.name}</p>
+                    <p className="text-xs text-slate-400 capitalize">{p.status}</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Tasks */}
+          {results.tasks.length > 0 && (
+            <div>
+              <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+                <CheckSquare className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Tasks</span>
+              </div>
+              {results.tasks.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => navigate("/tasks")}
+                  className="flex items-center gap-3 w-full px-4 py-3 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="text-sm text-slate-700 truncate">{t.title}</p>
+                    <p className="text-xs text-slate-400 capitalize">{t.status.replace("_", " ")}</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
                 </button>
               ))}
             </div>

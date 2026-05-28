@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(Number(request.nextUrl.searchParams.get("limit") ?? "5"), 10);
 
   if (q.length < 2) {
-    return NextResponse.json({ clients: [], invoices: [], transactions: [], messages: [] });
+    return NextResponse.json({ clients: [], invoices: [], transactions: [], messages: [], estimates: [], projects: [], tasks: [] });
   }
 
   const cookieStore = await cookies();
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const like = `%${q}%`;
 
-  const [clientsRes, invoicesRes, transactionsRes, messagesRes] = await Promise.all([
+  const [clientsRes, invoicesRes, transactionsRes, messagesRes, estimatesRes, projectsRes, tasksRes] = await Promise.all([
     // Clients
     supabase
       .from("clients")
@@ -57,6 +57,30 @@ export async function GET(request: NextRequest) {
       .eq("organization_id", orgId)
       .ilike("body", like)
       .order("sent_at", { ascending: false })
+      .limit(limit),
+
+    // Estimates
+    supabase
+      .from("estimates")
+      .select("id, estimate_number, status, total")
+      .eq("organization_id", orgId)
+      .ilike("estimate_number", like)
+      .limit(limit),
+
+    // Projects
+    supabase
+      .from("projects")
+      .select("id, name, status, color")
+      .eq("organization_id", orgId)
+      .ilike("name", like)
+      .limit(limit),
+
+    // Tasks
+    supabase
+      .from("tasks")
+      .select("id, title, status, due_date")
+      .eq("organization_id", orgId)
+      .ilike("title", like)
       .limit(limit),
   ]);
 
@@ -92,5 +116,8 @@ export async function GET(request: NextRequest) {
     invoices,
     transactions: transactionsRes.data ?? [],
     messages,
+    estimates:    estimatesRes.data ?? [],
+    projects:     projectsRes.data ?? [],
+    tasks:        tasksRes.data ?? [],
   });
 }
