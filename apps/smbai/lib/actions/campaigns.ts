@@ -19,6 +19,7 @@ export async function createCampaign(data: {
   subject: string;
   body: string;
   recipient_filter: RecipientFilter;
+  recipient_tag?: string | null;
 }): Promise<string> {
   const cookieStore = await cookies();
   const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
@@ -34,6 +35,7 @@ export async function createCampaign(data: {
       subject: data.subject,
       body: data.body,
       recipient_filter: data.recipient_filter,
+      recipient_tag: data.recipient_tag ?? null,
       status: "draft",
     })
     .select("id")
@@ -82,6 +84,10 @@ export async function sendCampaign(campaignId: string) {
     };
     const status = statusMap[campaign.recipient_filter];
     if (status) clientQuery = clientQuery.eq("status", status);
+  }
+
+  if (campaign.recipient_tag) {
+    clientQuery = clientQuery.contains("tags", [campaign.recipient_tag]);
   }
 
   const { data: clients } = await clientQuery;

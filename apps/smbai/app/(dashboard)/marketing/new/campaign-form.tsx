@@ -23,12 +23,13 @@ const REFINE_MODES: { mode: RefineMode; label: string }[] = [
   { mode: "grammar",    label: "Grammar" },
 ];
 
-export function CampaignForm() {
+export function CampaignForm({ availableTags }: { availableTags: string[] }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [filter, setFilter] = useState<RecipientFilter>("active");
+  const [recipientTag, setRecipientTag] = useState("");
   const [preview, setPreview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [action, setAction] = useState<"draft" | "send" | null>(null);
@@ -109,6 +110,7 @@ export function CampaignForm() {
         subject: subject.trim(),
         body: body.trim(),
         recipient_filter: filter,
+        recipient_tag: recipientTag || null,
       });
 
       if (sendNow) {
@@ -251,6 +253,24 @@ export function CampaignForm() {
             </button>
           ))}
         </div>
+
+        {availableTags.length > 0 && (
+          <div className="mt-4 flex items-center gap-2 flex-wrap">
+            <label className="text-xs font-medium text-slate-600">Also tagged</label>
+            <select
+              value={recipientTag}
+              onChange={(e) => setRecipientTag(e.target.value)}
+              className="text-sm border border-slate-300 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Any tag</option>
+              {availableTags.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            {recipientTag && (
+              <span className="text-xs text-slate-400">— only clients tagged &ldquo;{recipientTag}&rdquo;</span>
+            )}
+          </div>
+        )}
+
         <p className="text-xs text-slate-400 mt-3">
           Only clients with an email address will receive this campaign.
         </p>
