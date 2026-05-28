@@ -19,6 +19,7 @@ import { GET as invoicesReminders } from "../invoices/reminders/route";
 import { GET as projectsRecurring } from "../projects/recurring/route";
 import { GET as billsRecurring } from "../bills/recurring/route";
 import { GET as tasksRecurring } from "../tasks/recurring/route";
+import { GET as weeklyDigest } from "../digest/weekly/route";
 
 export const dynamic = "force-dynamic";
 // Allow more time — six jobs run sequentially in one invocation.
@@ -31,6 +32,7 @@ const JOBS: { name: string; run: (req: NextRequest) => Promise<Response> }[] = [
   { name: "projects/recurring", run: projectsRecurring },
   { name: "bills/recurring",    run: billsRecurring },
   { name: "tasks/recurring",    run: tasksRecurring },
+  { name: "digest/weekly",      run: weeklyDigest },
 ];
 
 export async function GET(request: NextRequest) {
