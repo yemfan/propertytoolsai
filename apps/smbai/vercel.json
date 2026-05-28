@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/invoices/reminders",
       "schedule": "10 9 * * *"
+    },
+    {
+      "path": "/api/cron/projects/recurring",
+      "schedule": "15 9 * * *"
     }
   ]
 }

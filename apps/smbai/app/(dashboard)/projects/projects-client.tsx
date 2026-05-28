@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Plus, Folder, X, ChevronRight, Clock, DollarSign, CheckSquare, AlertCircle } from "lucide-react";
+import { Plus, Folder, X, ChevronRight, Clock, DollarSign, CheckSquare, AlertCircle, Repeat } from "lucide-react";
 import { createProject, deleteProject, type Project, type ProjectColor, type ProjectWithPnL } from "@/lib/actions/projects";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -314,13 +314,22 @@ export function ProjectsClient({ initialProjects, clients }: Props) {
             {activeCount} active · {completedCount} completed
           </p>
         </div>
-        <button
-          onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          New project
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/projects/recurring"
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-indigo-700 transition-colors"
+          >
+            <Repeat className="w-4 h-4" />
+            Recurring
+          </Link>
+          <button
+            onClick={() => setShowNew(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New project
+          </button>
+        </div>
       </div>
 
       {/* Status filter tabs */}
