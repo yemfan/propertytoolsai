@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { checkProjectBudgetAlert } from "./budget-alerts";
 
 export type TimeEntry = {
   id: string;
@@ -143,7 +144,7 @@ export async function stopTimer(entryId: string): Promise<void> {
 
   const { data: entry } = await supabase
     .from("time_entries")
-    .select("started_at")
+    .select("started_at, project_id")
     .eq("id", entryId)
     .eq("organization_id", orgId)
     .single();
@@ -165,6 +166,7 @@ export async function stopTimer(entryId: string): Promise<void> {
     .eq("organization_id", orgId);
 
   revalidatePath("/timesheets");
+  if (entry.project_id) await checkProjectBudgetAlert(entry.project_id);
 }
 
 // ─── Create manual entry ──────────────────────────────────────────────────────
@@ -200,6 +202,7 @@ export async function createTimeEntry(data: {
 
   if (error) throw new Error(error.message);
   revalidatePath("/timesheets");
+  if (data.projectId) await checkProjectBudgetAlert(data.projectId);
 }
 
 // ─── Update entry ─────────────────────────────────────────────────────────────

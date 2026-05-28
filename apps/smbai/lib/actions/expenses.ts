@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { checkProjectBudgetAlert } from "./budget-alerts";
 
 export interface ExpenseInput {
   date: string;              // YYYY-MM-DD
@@ -99,6 +100,7 @@ export async function createExpense(input: ExpenseInput) {
   if (input.projectId) {
     revalidatePath(`/projects/${input.projectId}`);
     revalidatePath("/projects");
+    await checkProjectBudgetAlert(input.projectId);
   }
 }
 

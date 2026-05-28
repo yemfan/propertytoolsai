@@ -307,6 +307,10 @@ export async function updateProject(
   if (data.color       !== undefined) patch.color        = data.color;
   if (data.budgetHours !== undefined) patch.budget_hours = data.budgetHours;
   if (data.budgetAmount!== undefined) patch.budget_amount= data.budgetAmount;
+  // Re-arm budget alerts when the budget itself changes.
+  if (data.budgetHours !== undefined || data.budgetAmount !== undefined) {
+    patch.budget_alert_level = 0;
+  }
   if (data.hourlyRate  !== undefined) patch.hourly_rate  = data.hourlyRate;
   if (data.startDate   !== undefined) patch.start_date   = data.startDate;
   if (data.endDate     !== undefined) patch.end_date     = data.endDate;
