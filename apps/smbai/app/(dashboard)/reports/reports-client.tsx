@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Download, TrendingUp, TrendingDown, DollarSign, Clock, Users, FolderOpen } from "lucide-react";
-import type { PnLReport, CashFlowSummary, TimeReport } from "@/lib/actions/reports";
+import { Download, TrendingUp, TrendingDown, DollarSign, Clock, Users, FolderOpen, Receipt } from "lucide-react";
+import type { PnLReport, CashFlowSummary, TimeReport, ReceivablesAging } from "@/lib/actions/reports";
 import type { ProjectWithPnL, ClientPnL } from "@/lib/actions/projects";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -102,6 +102,14 @@ function MiniBar({ value, max, color = "bg-indigo-500" }: { value: number; max: 
   );
 }
 
+// ─── Aging cell ───────────────────────────────────────────────────────────────
+
+function AgingCell({ value, tone = "slate" }: { value: number; tone?: "slate" | "warn" | "danger" }) {
+  if (value <= 0) return <span className="text-sm text-right tabular-nums text-slate-300">—</span>;
+  const color = tone === "danger" ? "text-rose-600 font-medium" : tone === "warn" ? "text-amber-600" : "text-slate-600";
+  return <span className={`text-sm text-right tabular-nums ${color}`}>{fmt(value)}</span>;
+}
+
 // ─── CSV export ───────────────────────────────────────────────────────────────
 
 function exportPnLCsv(report: PnLReport) {
@@ -180,6 +188,24 @@ function exportClientsCsv(clients: ClientPnL[]) {
   URL.revokeObjectURL(url);
 }
 
+function exportAgingCsv(aging: ReceivablesAging) {
+  const rows: string[] = [
+    "Client,Invoices,Current,1-30,31-60,61-90,90+,Total",
+    ...aging.rows.map((r) =>
+      `"${r.client_name}",${r.invoiceCount},${r.current.toFixed(2)},${r.d1_30.toFixed(2)},${r.d31_60.toFixed(2)},${r.d61_90.toFixed(2)},${r.d90_plus.toFixed(2)},${r.total.toFixed(2)}`
+    ),
+    `Total,,${aging.totals.current.toFixed(2)},${aging.totals.d1_30.toFixed(2)},${aging.totals.d31_60.toFixed(2)},${aging.totals.d61_90.toFixed(2)},${aging.totals.d90_plus.toFixed(2)},${aging.totals.total.toFixed(2)}`,
+  ];
+  const csv = rows.join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ar_aging_${aging.asOf}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Color dot map ────────────────────────────────────────────────────────────
 
 const COLOR_DOTS: Record<string, string> = {
@@ -199,6 +225,7 @@ interface Props {
   initialTimeReport: TimeReport;
   initialProjects: ProjectWithPnL[];
   initialClients: ClientPnL[];
+  initialReceivables: ReceivablesAging;
   fetchPnL: (from: string, to: string) => Promise<PnLReport>;
   fetchCashFlow: (from: string, to: string) => Promise<CashFlowSummary>;
   fetchTimeReport: (from: string, to: string) => Promise<TimeReport>;
@@ -210,6 +237,7 @@ export function ReportsClient({
   initialTimeReport,
   initialProjects,
   initialClients,
+  initialReceivables,
   fetchPnL,
   fetchCashFlow,
   fetchTimeReport,
@@ -219,7 +247,7 @@ export function ReportsClient({
   const [pnl, setPnl]       = useState(initialPnL);
   const [cash, setCash]     = useState(initialCashFlow);
   const [time, setTime]     = useState(initialTimeReport);
-  const [tab, setTab]       = useState<"pnl" | "cash" | "time" | "projects" | "clients">("pnl");
+  const [tab, setTab]       = useState<"pnl" | "cash" | "time" | "projects" | "clients" | "receivables">("pnl");
   const [pending, start]    = useTransition();
 
   function applyPreset(fn: () => { from: string; to: string }) {
@@ -312,7 +340,7 @@ export function ReportsClient({
 
       {/* Tab selector */}
       <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
-        {(["pnl", "cash", "time", "projects", "clients"] as const).map((t) => (
+        {(["pnl", "cash", "time", "projects", "clients", "receivables"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -320,7 +348,7 @@ export function ReportsClient({
               tab === t ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            {t === "pnl" ? "Profit & Loss" : t === "cash" ? "Cash Flow" : t === "time" ? "Time Tracking" : t === "projects" ? "Projects" : "Clients"}
+            {t === "pnl" ? "Profit & Loss" : t === "cash" ? "Cash Flow" : t === "time" ? "Time Tracking" : t === "projects" ? "Projects" : t === "clients" ? "Clients" : "Receivables"}
           </button>
         ))}
       </div>
@@ -735,6 +763,108 @@ export function ReportsClient({
 
           <p className="text-xs text-slate-400">
             Revenue is everything invoiced to the client. Cost is the labor and expenses tracked against their projects — a client billed by flat fee with no project tracking will show a high margin.
+          </p>
+        </div>
+      )}
+
+      {/* Accounts Receivable Aging (Week 37) */}
+      {tab === "receivables" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-4 gap-4">
+            <StatCard label="Outstanding" value={initialReceivables.totalOutstanding} />
+            <StatCard label="Current" value={initialReceivables.totals.current} positive={true} sub="Not yet due" />
+            <StatCard
+              label="Overdue"
+              value={initialReceivables.overdueAmount}
+              positive={initialReceivables.overdueAmount === 0}
+              sub="Past due date"
+            />
+            <StatCard
+              label="90+ days"
+              value={initialReceivables.totals.d90_plus}
+              positive={initialReceivables.totals.d90_plus === 0}
+              sub="At risk"
+            />
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-indigo-500" />
+                <h2 className="text-sm font-semibold text-slate-800">Receivables by client</h2>
+                <span className="text-xs text-slate-400">· as of {initialReceivables.asOf}</span>
+              </div>
+              <button
+                onClick={() => exportAgingCsv(initialReceivables)}
+                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
+              </button>
+            </div>
+            {initialReceivables.rows.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-8">
+                No outstanding invoices — you&apos;re all paid up.
+              </p>
+            ) : (
+              <>
+                <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr_1.1fr] gap-3 px-6 py-2.5 bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <span>Client</span>
+                  <span className="text-right">Current</span>
+                  <span className="text-right">1–30</span>
+                  <span className="text-right">31–60</span>
+                  <span className="text-right">61–90</span>
+                  <span className="text-right">90+</span>
+                  <span className="text-right">Total</span>
+                </div>
+                <div className="divide-y divide-slate-50">
+                  {initialReceivables.rows.map((r) => (
+                    <div
+                      key={r.client_id ?? "none"}
+                      className="grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr_1.1fr] gap-3 px-6 py-3 items-center"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm text-slate-700 truncate">{r.client_name}</p>
+                        <p className="text-xs text-slate-400">
+                          {r.invoiceCount} invoice{r.invoiceCount === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                      <AgingCell value={r.current} />
+                      <AgingCell value={r.d1_30} tone="warn" />
+                      <AgingCell value={r.d31_60} tone="warn" />
+                      <AgingCell value={r.d61_90} tone="warn" />
+                      <AgingCell value={r.d90_plus} tone="danger" />
+                      <span className="text-sm font-medium text-slate-700 text-right tabular-nums">{fmt(r.total)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr_1.1fr] gap-3 px-6 py-3 bg-slate-50 border-t border-slate-100 items-center">
+                  <span className="text-sm font-semibold text-slate-700">Total</span>
+                  <span className="text-sm font-semibold text-slate-600 text-right tabular-nums">
+                    {initialReceivables.totals.current > 0 ? fmt(initialReceivables.totals.current) : "—"}
+                  </span>
+                  <span className="text-sm font-semibold text-amber-600 text-right tabular-nums">
+                    {initialReceivables.totals.d1_30 > 0 ? fmt(initialReceivables.totals.d1_30) : "—"}
+                  </span>
+                  <span className="text-sm font-semibold text-amber-600 text-right tabular-nums">
+                    {initialReceivables.totals.d31_60 > 0 ? fmt(initialReceivables.totals.d31_60) : "—"}
+                  </span>
+                  <span className="text-sm font-semibold text-amber-600 text-right tabular-nums">
+                    {initialReceivables.totals.d61_90 > 0 ? fmt(initialReceivables.totals.d61_90) : "—"}
+                  </span>
+                  <span className="text-sm font-semibold text-rose-600 text-right tabular-nums">
+                    {initialReceivables.totals.d90_plus > 0 ? fmt(initialReceivables.totals.d90_plus) : "—"}
+                  </span>
+                  <span className="text-sm font-bold text-slate-800 text-right tabular-nums">
+                    {fmt(initialReceivables.totals.total)}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <p className="text-xs text-slate-400">
+            Unpaid invoices (sent or overdue) bucketed by days past their due date, as of today. Independent of the date range above.
           </p>
         </div>
       )}

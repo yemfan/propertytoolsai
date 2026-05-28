@@ -268,3 +268,109 @@ export async function getTimeReport(from: string, to: string): Promise<TimeRepor
 
   return { from, to, totalMinutes, billableMinutes, billableAmount, uninvoicedAmount, byProject, byClient };
 }
+
+// ─── Accounts Receivable aging (Week 37) ──────────────────────────────────────
+// "Who owes me money, and how overdue is it?" Buckets each unpaid invoice
+// (status sent/overdue) by days past its due date, grouped by client. As-of
+// today — independent of the report date range.
+
+type AgingDayBucket = "current" | "d1_30" | "d31_60" | "d61_90" | "d90_plus";
+
+export interface AgingRow {
+  client_id: string | null;
+  client_name: string;
+  current: number;   // not yet due
+  d1_30: number;
+  d31_60: number;
+  d61_90: number;
+  d90_plus: number;
+  total: number;
+  invoiceCount: number;
+  oldestDueDate: string | null;
+}
+
+export interface AgingTotals {
+  current: number;
+  d1_30: number;
+  d31_60: number;
+  d61_90: number;
+  d90_plus: number;
+  total: number;
+}
+
+export interface ReceivablesAging {
+  asOf: string;             // YYYY-MM-DD (today)
+  rows: AgingRow[];
+  totals: AgingTotals;
+  totalOutstanding: number;
+  overdueAmount: number;    // sum of all past-due buckets (excludes current)
+}
+
+export async function getReceivablesAging(): Promise<ReceivablesAging> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const today = new Date().toISOString().slice(0, 10);
+  const emptyTotals: AgingTotals = { current: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90_plus: 0, total: 0 };
+
+  if (!orgId) {
+    return { asOf: today, rows: [], totals: emptyTotals, totalOutstanding: 0, overdueAmount: 0 };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("id, client_id, total, due_date, status, clients(first_name, last_name, company)")
+    .eq("organization_id", orgId)
+    .in("status", ["sent", "overdue"]);
+
+  if (error) throw new Error(error.message);
+
+  const todayMs = new Date(today + "T00:00:00").getTime();
+  const DAY = 86_400_000;
+
+  const map = new Map<string, AgingRow>();
+  const totals: AgingTotals = { current: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90_plus: 0, total: 0 };
+
+  for (const inv of data ?? []) {
+    const amt = Number(inv.total) || 0;
+    if (amt === 0) continue;
+
+    const clientRaw = Array.isArray(inv.clients) ? (inv.clients as unknown[])[0] : inv.clients;
+    const client = clientRaw as { first_name?: string | null; last_name?: string | null; company?: string | null } | null;
+    const clientId = (inv.client_id as string | null) ?? null;
+    const clientKey = clientId ?? "none";
+    const clientName = client
+      ? ([client.first_name, client.last_name].filter(Boolean).join(" ") || client.company || "Unknown client")
+      : "No client";
+
+    const due = inv.due_date as string;
+    const daysPast = Math.floor((todayMs - new Date(due + "T00:00:00").getTime()) / DAY);
+
+    let bucket: AgingDayBucket;
+    if (daysPast <= 0) bucket = "current";
+    else if (daysPast <= 30) bucket = "d1_30";
+    else if (daysPast <= 60) bucket = "d31_60";
+    else if (daysPast <= 90) bucket = "d61_90";
+    else bucket = "d90_plus";
+
+    const row = map.get(clientKey) ?? {
+      client_id: clientId,
+      client_name: clientName,
+      current: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90_plus: 0,
+      total: 0, invoiceCount: 0, oldestDueDate: null,
+    };
+    row[bucket] += amt;
+    row.total += amt;
+    row.invoiceCount += 1;
+    if (!row.oldestDueDate || due < row.oldestDueDate) row.oldestDueDate = due;
+    map.set(clientKey, row);
+
+    totals[bucket] += amt;
+    totals.total += amt;
+  }
+
+  const rows = Array.from(map.values()).sort((a, b) => b.total - a.total);
+  const overdueAmount = totals.d1_30 + totals.d31_60 + totals.d61_90 + totals.d90_plus;
+
+  return { asOf: today, rows, totals, totalOutstanding: totals.total, overdueAmount };
+}
