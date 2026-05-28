@@ -1,0 +1,49 @@
+import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
+import { BooksNav } from "@/components/books-nav";
+import { listBills } from "@/lib/actions/bills";
+import { BillsClient } from "./bills-client";
+
+export const metadata: Metadata = { title: "Bills · Books" };
+
+export default async function BillsPage() {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const supabase = await createClient();
+
+  const [bills, expenseAccountsRes, bankAccountsRes] = await Promise.all([
+    listBills(),
+    supabase
+      .from("chart_of_accounts")
+      .select("id, code, name")
+      .eq("organization_id", orgId)
+      .eq("type", "expense")
+      .eq("is_active", true)
+      .order("code"),
+    supabase
+      .from("bank_accounts")
+      .select("id, name, mask, coa_account_id")
+      .eq("organization_id", orgId)
+      .eq("is_active", true),
+  ]);
+
+  return (
+    <div className="p-8 max-w-5xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-slate-900">Books</h1>
+        <p className="text-sm text-slate-500 mt-0.5">
+          AI-powered bookkeeping — cash basis, double-entry
+        </p>
+      </div>
+
+      <BooksNav />
+
+      <BillsClient
+        initialBills={bills}
+        expenseAccounts={(expenseAccountsRes.data ?? []) as { id: string; code: string; name: string }[]}
+        bankAccounts={(bankAccountsRes.data ?? []) as { id: string; name: string; mask: string | null; coa_account_id: string | null }[]}
+      />
+    </div>
+  );
+}

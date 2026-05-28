@@ -10,6 +10,7 @@ const TABS = [
   { label: "Recurring",    href: "/books/invoices/recurring" },
   { label: "Estimates",    href: "/books/estimates" },
   { label: "Expenses",     href: "/books/expenses" },
+  { label: "Bills",        href: "/books/bills" },
   { label: "Journal",      href: "/books/journal" },
   { label: "Accounts",     href: "/books/accounts" },
   { label: "Reports",      href: "/books/reports" },
