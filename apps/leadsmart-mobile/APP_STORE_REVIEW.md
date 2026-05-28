@@ -76,19 +76,21 @@ and verified end-to-end by
 > above is a seeded test agent with three sample leads. Email/password
 > sign-in only — no OTP, no SMS verification.
 >
-> Suggested walk-through:
+> Suggested walk-through (bottom-tab labels in v1.6+: Home / Work /
+> Engage / Analyze / Manage):
 > 1. Tap **Sign in with email** on the welcome screen.
 > 2. Enter `demo@leadsmart.ai` / `Demo123!` and tap **Continue**.
-> 3. **Inbox** tab — three SMS conversations load, sorted most-recent
->    first. The top thread is from Sarah Chen ("Saturday afternoon works.
->    Around 2pm?") — tap it to see the full message history.
-> 4. **Leads** tab — three demo leads. Sarah Chen is flagged as a hot
->    lead. Tap any lead to view detail, pipeline stage, and AI-reply
->    controls.
-> 5. **Settings** tab — verify **Privacy policy** and **Terms of
->    service** open in the browser. **Delete account** routes to a
->    typed-confirmation screen; do NOT confirm (it permanently deletes
->    the demo account).
+> 3. **Engage** tab → tap **Inbox** tile — three SMS conversations
+>    load, sorted most-recent first. The top thread is from Sarah Chen
+>    ("Saturday afternoon works. Around 2pm?") — tap it to see the
+>    full message history.
+> 4. **Work** tab → tap **Leads** tile — three demo leads. Sarah Chen
+>    is flagged as a hot lead. Tap any lead to view detail, pipeline
+>    stage, and AI-reply controls.
+> 5. **Manage** tab → tap **Settings** tile — verify **Privacy policy**
+>    and **Terms of service** open in the browser. **Delete account**
+>    routes to a typed-confirmation screen; do NOT confirm (it
+>    permanently deletes the demo account).
 >
 > The app does not handle in-app purchases, child users, or sensitive
 > medical / financial data. SMS and email features are sent on behalf of

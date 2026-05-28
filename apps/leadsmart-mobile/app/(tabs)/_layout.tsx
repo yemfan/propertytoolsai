@@ -76,6 +76,14 @@ export default function TabsLayout() {
           tabBarLabelStyle: type.tabLabel,
         }}
       >
+        {/* v1.6 supercategory tab bar — mirrors the web PremiumSidebarV2
+         * sections (Home / Work / Engage / Analyze / Manage). The legacy
+         * inbox / leads / calendar / settings tabs are kept as routes
+         * (so deep links like router.push("/(tabs)/inbox") still resolve
+         * from push notifications + the Home alert cards) but hidden
+         * from the tab bar via href: null. Users reach those screens
+         * by tapping the corresponding tile inside a supercategory tab.
+         * See apps/leadsmart-mobile/docs/HOME_REDESIGN_PLAN.md. */}
         <Tabs.Screen
           name="home"
           options={{
@@ -87,44 +95,62 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
-          name="inbox"
+          name="work"
           options={{
-            title: t("tabs.inbox"),
-            tabBarLabel: t("tabs.inbox"),
+            title: t("tabs.work"),
+            tabBarLabel: t("tabs.work"),
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="chatbubble-outline" size={size} color={color} />
+              <Ionicons name="briefcase-outline" size={size} color={color} />
             ),
           }}
         />
         <Tabs.Screen
-          name="leads"
+          name="engage"
           options={{
-            title: t("tabs.leads"),
-            tabBarLabel: t("tabs.leads"),
+            title: t("tabs.engage"),
+            tabBarLabel: t("tabs.engage"),
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="people-outline" size={size} color={color} />
+              <Ionicons name="megaphone-outline" size={size} color={color} />
             ),
           }}
         />
         <Tabs.Screen
-          name="calendar"
+          name="analyze"
           options={{
-            title: t("tabs.calendar"),
-            tabBarLabel: t("tabs.calendar"),
+            title: t("tabs.analyze"),
+            tabBarLabel: t("tabs.analyze"),
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="calendar-outline" size={size} color={color} />
+              <Ionicons name="bar-chart-outline" size={size} color={color} />
             ),
           }}
         />
         <Tabs.Screen
-          name="settings"
+          name="manage"
           options={{
-            title: t("tabs.settings"),
-            tabBarLabel: t("tabs.settings"),
+            title: t("tabs.manage"),
+            tabBarLabel: t("tabs.manage"),
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="settings-outline" size={size} color={color} />
             ),
           }}
+        />
+
+        {/* Hidden-from-tab-bar routes — still navigable via router.push */}
+        <Tabs.Screen
+          name="inbox"
+          options={{ title: t("tabs.inbox"), href: null }}
+        />
+        <Tabs.Screen
+          name="leads"
+          options={{ title: t("tabs.leads"), href: null }}
+        />
+        <Tabs.Screen
+          name="calendar"
+          options={{ title: t("tabs.calendar"), href: null }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{ title: t("tabs.settings"), href: null }}
         />
       </Tabs>
     </>
