@@ -2,10 +2,12 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Routes that require an authenticated user + an org
+// Routes that require an authenticated user + an org.
+// Keep in sync with the (dashboard) route group in app/(dashboard)/*.
 const DASHBOARD_SEGMENTS = [
-  "/books", "/clients", "/inbox", "/reception",
-  "/calendar", "/voice", "/social", "/settings",
+  "/ask", "/automations", "/books", "/calendar", "/clients", "/home",
+  "/inbox", "/marketing", "/pipeline", "/projects", "/reception", "/reports",
+  "/settings", "/social", "/tasks", "/timesheets", "/voice",
 ];
 
 // Routes only accessible when logged OUT
