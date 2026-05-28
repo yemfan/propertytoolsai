@@ -481,3 +481,81 @@ export async function getCashFlowForecast(): Promise<CashFlowForecast> {
 
   return { asOf: today, hasBank, startingBalance, periods, totalInflow, totalOutflow, endingBalance: running, lowestBalance };
 }
+
+// ─── Sales-tax liability report (Week 42) ─────────────────────────────────────
+// Cash-basis: "tax collected" = tax on invoices PAID within the period (by
+// paid_at), grouped by rate — what you'd report on a sales-tax return.
+
+export interface SalesTaxRateRow {
+  rate: number;          // e.g. 0.0875
+  taxableSales: number;  // pre-tax base
+  taxCollected: number;
+  invoiceCount: number;
+}
+
+export interface SalesTaxReport {
+  from: string;
+  to: string;
+  taxableSales: number;
+  nonTaxableSales: number;
+  totalSales: number;       // pre-tax base across all paid invoices
+  taxCollected: number;
+  taxedInvoiceCount: number;
+  byRate: SalesTaxRateRow[];
+}
+
+export async function getSalesTaxReport(from: string, to: string): Promise<SalesTaxReport> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  if (!orgId) throw new Error("Not authenticated");
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("subtotal, tax_rate, tax_amount, paid_at, status")
+    .eq("organization_id", orgId)
+    .eq("status", "paid")
+    .gte("paid_at", from + "T00:00:00")
+    .lte("paid_at", to + "T23:59:59.999Z");
+
+  if (error) throw new Error(error.message);
+
+  let taxableSales = 0;
+  let nonTaxableSales = 0;
+  let taxCollected = 0;
+  let taxedInvoiceCount = 0;
+  const rateMap = new Map<string, SalesTaxRateRow>();
+
+  for (const inv of data ?? []) {
+    const subtotal = Number(inv.subtotal) || 0;
+    const tax = Number(inv.tax_amount) || 0;
+    const rate = Number(inv.tax_rate) || 0;
+
+    if (tax > 0 && rate > 0) {
+      taxableSales += subtotal;
+      taxCollected += tax;
+      taxedInvoiceCount += 1;
+      const key = rate.toFixed(4);
+      const row = rateMap.get(key) ?? { rate, taxableSales: 0, taxCollected: 0, invoiceCount: 0 };
+      row.taxableSales += subtotal;
+      row.taxCollected += tax;
+      row.invoiceCount += 1;
+      rateMap.set(key, row);
+    } else {
+      nonTaxableSales += subtotal;
+    }
+  }
+
+  const byRate = Array.from(rateMap.values()).sort((a, b) => b.taxCollected - a.taxCollected);
+
+  return {
+    from,
+    to,
+    taxableSales,
+    nonTaxableSales,
+    totalSales: taxableSales + nonTaxableSales,
+    taxCollected,
+    taxedInvoiceCount,
+    byRate,
+  };
+}

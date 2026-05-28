@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Download, TrendingUp, TrendingDown, DollarSign, Clock, Users, FolderOpen, Receipt, Wallet, AlertTriangle } from "lucide-react";
-import type { PnLReport, CashFlowSummary, TimeReport, ReceivablesAging, CashFlowForecast } from "@/lib/actions/reports";
+import type { PnLReport, CashFlowSummary, TimeReport, ReceivablesAging, CashFlowForecast, SalesTaxReport } from "@/lib/actions/reports";
 import type { ProjectWithPnL, ClientPnL } from "@/lib/actions/projects";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -224,6 +224,23 @@ function exportForecastCsv(f: CashFlowForecast) {
   URL.revokeObjectURL(url);
 }
 
+function exportSalesTaxCsv(r: SalesTaxReport) {
+  const rows: string[] = [
+    "Tax Rate,Taxable Sales,Tax Collected,Invoices",
+    ...r.byRate.map((x) => `${(x.rate * 100).toFixed(2)}%,${x.taxableSales.toFixed(2)},${x.taxCollected.toFixed(2)},${x.invoiceCount}`),
+    `Total,${r.taxableSales.toFixed(2)},${r.taxCollected.toFixed(2)},${r.taxedInvoiceCount}`,
+    `Non-taxable sales,${r.nonTaxableSales.toFixed(2)},,`,
+  ];
+  const csv = rows.join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `sales_tax_${r.from}_to_${r.to}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Color dot map ────────────────────────────────────────────────────────────
 
 const COLOR_DOTS: Record<string, string> = {
@@ -246,9 +263,11 @@ interface Props {
   initialClients: ClientPnL[];
   initialReceivables: ReceivablesAging;
   initialForecast: CashFlowForecast;
+  initialSalesTax: SalesTaxReport;
   fetchPnL: (from: string, to: string) => Promise<PnLReport>;
   fetchCashFlow: (from: string, to: string) => Promise<CashFlowSummary>;
   fetchTimeReport: (from: string, to: string) => Promise<TimeReport>;
+  fetchSalesTax: (from: string, to: string) => Promise<SalesTaxReport>;
 }
 
 export function ReportsClient({
@@ -260,16 +279,19 @@ export function ReportsClient({
   initialClients,
   initialReceivables,
   initialForecast,
+  initialSalesTax,
   fetchPnL,
   fetchCashFlow,
   fetchTimeReport,
+  fetchSalesTax,
 }: Props) {
   const [from, setFrom]     = useState(initialPnL.from);
   const [to, setTo]         = useState(initialPnL.to);
   const [pnl, setPnl]       = useState(initialPnL);
   const [cash, setCash]     = useState(initialCashFlow);
   const [time, setTime]     = useState(initialTimeReport);
-  const allowedTabs = ["pnl", "cash", "time", "projects", "clients", "receivables", "forecast"] as const;
+  const [salesTax, setSalesTax] = useState(initialSalesTax);
+  const allowedTabs = ["pnl", "cash", "time", "projects", "clients", "receivables", "forecast", "tax"] as const;
   const [tab, setTab]       = useState<(typeof allowedTabs)[number]>(
     (allowedTabs as readonly string[]).includes(initialTab ?? "")
       ? (initialTab as (typeof allowedTabs)[number])
@@ -286,10 +308,11 @@ export function ReportsClient({
 
   function runFetch(f: string, t: string) {
     start(async () => {
-      const [p, c, tr] = await Promise.all([fetchPnL(f, t), fetchCashFlow(f, t), fetchTimeReport(f, t)]);
+      const [p, c, tr, st] = await Promise.all([fetchPnL(f, t), fetchCashFlow(f, t), fetchTimeReport(f, t), fetchSalesTax(f, t)]);
       setPnl(p);
       setCash(c);
       setTime(tr);
+      setSalesTax(st);
     });
   }
 
@@ -367,7 +390,7 @@ export function ReportsClient({
 
       {/* Tab selector */}
       <div className="flex flex-wrap gap-1 bg-slate-100 rounded-lg p-1 w-fit">
-        {(["pnl", "cash", "time", "projects", "clients", "receivables", "forecast"] as const).map((t) => (
+        {(["pnl", "cash", "time", "projects", "clients", "receivables", "forecast", "tax"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -375,7 +398,7 @@ export function ReportsClient({
               tab === t ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            {t === "pnl" ? "Profit & Loss" : t === "cash" ? "Cash Flow" : t === "time" ? "Time Tracking" : t === "projects" ? "Projects" : t === "clients" ? "Clients" : t === "receivables" ? "Receivables" : "Forecast"}
+            {t === "pnl" ? "Profit & Loss" : t === "cash" ? "Cash Flow" : t === "time" ? "Time Tracking" : t === "projects" ? "Projects" : t === "clients" ? "Clients" : t === "receivables" ? "Receivables" : t === "forecast" ? "Forecast" : "Sales Tax"}
           </button>
         ))}
       </div>
@@ -993,6 +1016,66 @@ export function ReportsClient({
 
           <p className="text-xs text-slate-400">
             Projection combines open invoices (money in) and open bills (money out) against your current bank balance, bucketed by due date as of today. It doesn&apos;t include recurring items not yet invoiced or billed, payroll, or taxes.
+          </p>
+        </div>
+      )}
+
+      {/* Sales Tax Liability (Week 42) */}
+      {tab === "tax" && (
+        <div className={`space-y-6 ${pending ? "opacity-60 pointer-events-none" : ""}`}>
+          <div className="grid grid-cols-4 gap-4">
+            <StatCard label="Tax collected" value={salesTax.taxCollected} sub="To remit" />
+            <StatCard label="Taxable sales" value={salesTax.taxableSales} />
+            <StatCard label="Non-taxable sales" value={salesTax.nonTaxableSales} />
+            <StatCard label="Total sales" value={salesTax.totalSales} sub="Pre-tax" />
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-indigo-500" />
+                <h2 className="text-sm font-semibold text-slate-800">Tax collected by rate</h2>
+              </div>
+              <button
+                onClick={() => exportSalesTaxCsv(salesTax)}
+                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
+              </button>
+            </div>
+            {salesTax.byRate.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-8">No taxed invoices paid in this period</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-[1fr_1fr_1fr_100px] gap-3 px-6 py-2.5 bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <span>Rate</span>
+                  <span className="text-right">Taxable sales</span>
+                  <span className="text-right">Tax collected</span>
+                  <span className="text-right">Invoices</span>
+                </div>
+                <div className="divide-y divide-slate-50">
+                  {salesTax.byRate.map((r) => (
+                    <div key={r.rate} className="grid grid-cols-[1fr_1fr_1fr_100px] gap-3 px-6 py-3 items-center">
+                      <span className="text-sm text-slate-700 tabular-nums">{(r.rate * 100).toFixed(2)}%</span>
+                      <span className="text-sm text-slate-600 text-right tabular-nums">{fmt(r.taxableSales)}</span>
+                      <span className="text-sm font-medium text-slate-800 text-right tabular-nums">{fmt(r.taxCollected)}</span>
+                      <span className="text-sm text-slate-500 text-right tabular-nums">{r.invoiceCount}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-[1fr_1fr_1fr_100px] gap-3 px-6 py-3 bg-slate-50 border-t border-slate-100 items-center">
+                  <span className="text-sm font-semibold text-slate-700">Total</span>
+                  <span className="text-sm font-semibold text-slate-600 text-right tabular-nums">{fmt(salesTax.taxableSales)}</span>
+                  <span className="text-sm font-bold text-slate-800 text-right tabular-nums">{fmt(salesTax.taxCollected)}</span>
+                  <span className="text-sm font-semibold text-slate-500 text-right tabular-nums">{salesTax.taxedInvoiceCount}</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <p className="text-xs text-slate-400">
+            Cash-basis: sales tax on invoices <span className="font-medium">paid</span> between {salesTax.from} and {salesTax.to}, grouped by rate. Non-taxable sales are paid invoices with no tax applied. Use the date range above to match your filing period.
           </p>
         </div>
       )}
