@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Download, TrendingUp, TrendingDown, DollarSign, Clock, Users, FolderOpen } from "lucide-react";
 import type { PnLReport, CashFlowSummary, TimeReport } from "@/lib/actions/reports";
+import type { ProjectWithPnL } from "@/lib/actions/projects";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -145,6 +146,23 @@ function exportTimeCsv(report: TimeReport) {
   URL.revokeObjectURL(url);
 }
 
+function exportProjectsCsv(projects: ProjectWithPnL[]) {
+  const rows: string[] = [
+    "Project,Status,Revenue,Labor Cost,Expenses,Profit,Margin %",
+    ...projects.map((p) =>
+      `"${p.name}",${p.status},${p.pnl.revenue.toFixed(2)},${p.pnl.laborCost.toFixed(2)},${p.pnl.expensesTotal.toFixed(2)},${p.pnl.profit.toFixed(2)},${p.pnl.margin !== null ? (p.pnl.margin * 100).toFixed(1) : ""}`
+    ),
+  ];
+  const csv = rows.join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "project_profitability.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Color dot map ────────────────────────────────────────────────────────────
 
 const COLOR_DOTS: Record<string, string> = {
@@ -162,6 +180,7 @@ interface Props {
   initialPnL: PnLReport;
   initialCashFlow: CashFlowSummary;
   initialTimeReport: TimeReport;
+  initialProjects: ProjectWithPnL[];
   fetchPnL: (from: string, to: string) => Promise<PnLReport>;
   fetchCashFlow: (from: string, to: string) => Promise<CashFlowSummary>;
   fetchTimeReport: (from: string, to: string) => Promise<TimeReport>;
@@ -171,6 +190,7 @@ export function ReportsClient({
   initialPnL,
   initialCashFlow,
   initialTimeReport,
+  initialProjects,
   fetchPnL,
   fetchCashFlow,
   fetchTimeReport,
@@ -180,7 +200,7 @@ export function ReportsClient({
   const [pnl, setPnl]       = useState(initialPnL);
   const [cash, setCash]     = useState(initialCashFlow);
   const [time, setTime]     = useState(initialTimeReport);
-  const [tab, setTab]       = useState<"pnl" | "cash" | "time">("pnl");
+  const [tab, setTab]       = useState<"pnl" | "cash" | "time" | "projects">("pnl");
   const [pending, start]    = useTransition();
 
   function applyPreset(fn: () => { from: string; to: string }) {
@@ -201,6 +221,19 @@ export function ReportsClient({
 
   const maxProjectMins = Math.max(...time.byProject.map((p) => p.totalMinutes), 1);
   const maxClientAmt   = Math.max(...time.byClient.map((c) => c.billableAmount), 1);
+
+  // Project profitability (lifetime to date; not affected by the date range)
+  const sortedProjects = [...initialProjects].sort((a, b) => b.pnl.profit - a.pnl.profit);
+  const projTotals = initialProjects.reduce(
+    (acc, p) => ({
+      revenue:       acc.revenue + p.pnl.revenue,
+      laborCost:     acc.laborCost + p.pnl.laborCost,
+      expensesTotal: acc.expensesTotal + p.pnl.expensesTotal,
+      profit:        acc.profit + p.pnl.profit,
+    }),
+    { revenue: 0, laborCost: 0, expensesTotal: 0, profit: 0 }
+  );
+  const projBlendedMargin = projTotals.revenue > 0 ? projTotals.profit / projTotals.revenue : null;
 
   return (
     <div className="space-y-6">
@@ -247,7 +280,7 @@ export function ReportsClient({
 
       {/* Tab selector */}
       <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
-        {(["pnl", "cash", "time"] as const).map((t) => (
+        {(["pnl", "cash", "time", "projects"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -255,7 +288,7 @@ export function ReportsClient({
               tab === t ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            {t === "pnl" ? "Profit & Loss" : t === "cash" ? "Cash Flow" : "Time Tracking"}
+            {t === "pnl" ? "Profit & Loss" : t === "cash" ? "Cash Flow" : t === "time" ? "Time Tracking" : "Projects"}
           </button>
         ))}
       </div>
@@ -515,6 +548,86 @@ export function ReportsClient({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Project Profitability Report (Week 29) */}
+      {tab === "projects" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-4 gap-4">
+            <StatCard label="Revenue" value={projTotals.revenue} positive={true} />
+            <StatCard label="Labor cost" value={projTotals.laborCost} positive={false} />
+            <StatCard label="Expenses" value={projTotals.expensesTotal} positive={false} />
+            <StatCard
+              label="Profit"
+              value={projTotals.profit}
+              positive={projTotals.profit >= 0}
+              sub={projBlendedMargin !== null ? `${(projBlendedMargin * 100).toFixed(0)}% blended margin` : undefined}
+            />
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <FolderOpen className="w-4 h-4 text-indigo-500" />
+                <h2 className="text-sm font-semibold text-slate-800">Profit by project</h2>
+                <span className="text-xs text-slate-400">· lifetime to date</span>
+              </div>
+              <button
+                onClick={() => exportProjectsCsv(sortedProjects)}
+                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
+              </button>
+            </div>
+            {sortedProjects.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-8">No projects yet</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-[1fr_104px_104px_104px_104px_64px] gap-3 px-6 py-2.5 bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  <span>Project</span>
+                  <span className="text-right">Revenue</span>
+                  <span className="text-right">Labor</span>
+                  <span className="text-right">Expenses</span>
+                  <span className="text-right">Profit</span>
+                  <span className="text-right">Margin</span>
+                </div>
+                <div className="divide-y divide-slate-50">
+                  {sortedProjects.map((p) => (
+                    <div key={p.id} className="grid grid-cols-[1fr_104px_104px_104px_104px_64px] gap-3 px-6 py-3 items-center">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${COLOR_DOTS[p.color] ?? "bg-slate-400"}`} />
+                        <span className="text-sm text-slate-700 truncate">{p.name}</span>
+                      </div>
+                      <span className="text-sm text-slate-600 text-right tabular-nums">{p.pnl.revenue > 0 ? fmt(p.pnl.revenue) : "—"}</span>
+                      <span className="text-sm text-slate-500 text-right tabular-nums">{p.pnl.laborCost > 0 ? fmt(p.pnl.laborCost) : "—"}</span>
+                      <span className="text-sm text-slate-500 text-right tabular-nums">{p.pnl.expensesTotal > 0 ? fmt(p.pnl.expensesTotal) : "—"}</span>
+                      <span className={`text-sm font-medium text-right tabular-nums ${p.pnl.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{fmt(p.pnl.profit)}</span>
+                      <span className={`text-xs text-right tabular-nums ${p.pnl.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {p.pnl.margin !== null ? `${(p.pnl.margin * 100).toFixed(0)}%` : "—"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-[1fr_104px_104px_104px_104px_64px] gap-3 px-6 py-3 bg-slate-50 border-t border-slate-100 items-center">
+                  <span className="text-sm font-semibold text-slate-700">Total</span>
+                  <span className="text-sm font-semibold text-slate-700 text-right tabular-nums">{fmt(projTotals.revenue)}</span>
+                  <span className="text-sm font-semibold text-slate-600 text-right tabular-nums">{fmt(projTotals.laborCost)}</span>
+                  <span className="text-sm font-semibold text-slate-600 text-right tabular-nums">{fmt(projTotals.expensesTotal)}</span>
+                  <span className={`text-sm font-bold text-right tabular-nums ${projTotals.profit >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{fmt(projTotals.profit)}</span>
+                  <span className={`text-xs font-bold text-right tabular-nums ${projTotals.profit >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                    {projBlendedMargin !== null ? `${(projBlendedMargin * 100).toFixed(0)}%` : "—"}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <p className="text-xs text-slate-400">
+            Revenue is invoiced billable time. Profit nets labor cost (from your default labor rate) and tagged expenses.
+            Figures are lifetime-to-date per project and aren&apos;t affected by the date range above.
+          </p>
         </div>
       )}
     </div>
