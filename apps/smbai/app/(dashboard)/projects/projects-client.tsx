@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Plus, Folder, X, ChevronRight, Clock, DollarSign, CheckSquare, AlertCircle } from "lucide-react";
-import { createProject, deleteProject, type Project, type ProjectColor } from "@/lib/actions/projects";
+import { createProject, deleteProject, type Project, type ProjectColor, type ProjectWithPnL } from "@/lib/actions/projects";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,10 @@ function fmtMoney(n: number | null) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
 
+function fmtSigned(n: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+}
+
 // ─── New project modal ────────────────────────────────────────────────────────
 
 function NewProjectModal({
@@ -39,7 +43,7 @@ function NewProjectModal({
 }: {
   clients: { id: string; first_name: string | null; last_name: string | null; company: string | null }[];
   onClose: () => void;
-  onCreated: (p: Project) => void;
+  onCreated: (p: ProjectWithPnL) => void;
 }) {
   const [name, setName]           = useState("");
   const [description, setDesc]    = useState("");
@@ -84,6 +88,7 @@ function NewProjectModal({
           end_date: endDate || null,
           created_at: new Date().toISOString(),
           clients: clients.find((c) => c.id === clientId) ?? null,
+          pnl: { revenue: 0, laborCost: 0, expensesTotal: 0, profit: 0, margin: null },
         });
         onClose();
       } catch (e) {
@@ -174,7 +179,7 @@ function ProjectCard({
   project,
   onDelete,
 }: {
-  project: Project;
+  project: ProjectWithPnL;
   onDelete: (id: string) => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -232,6 +237,27 @@ function ProjectCard({
         )}
       </div>
 
+      {/* Profitability (Week 28) */}
+      {(project.pnl.revenue > 0 || project.pnl.profit !== 0) && (
+        <div className="flex items-center justify-between mb-3 pt-2 border-t border-slate-50">
+          <span className="text-xs text-slate-500">
+            {project.pnl.revenue > 0 ? "Profit" : "Cost so far"}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-semibold ${project.pnl.profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+              {fmtSigned(project.pnl.profit)}
+            </span>
+            {project.pnl.margin !== null && (
+              <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded-full ${
+                project.pnl.profit >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+              }`}>
+                {(project.pnl.margin * 100).toFixed(0)}%
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <Link
           href={`/projects/${project.id}`}
@@ -258,12 +284,12 @@ function ProjectCard({
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 interface Props {
-  initialProjects: Project[];
+  initialProjects: ProjectWithPnL[];
   clients: { id: string; first_name: string | null; last_name: string | null; company: string | null }[];
 }
 
 export function ProjectsClient({ initialProjects, clients }: Props) {
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [projects, setProjects] = useState<ProjectWithPnL[]>(initialProjects);
   const [showNew, setShowNew]   = useState(false);
   const [filter, setFilter]     = useState<string>("active");
 
@@ -271,6 +297,12 @@ export function ProjectsClient({ initialProjects, clients }: Props) {
 
   const activeCount    = projects.filter((p) => p.status === "active").length;
   const completedCount = projects.filter((p) => p.status === "completed").length;
+
+  // Portfolio P&L across the currently shown projects (Week 28)
+  const totalRevenue  = filtered.reduce((s, p) => s + p.pnl.revenue, 0);
+  const totalProfit   = filtered.reduce((s, p) => s + p.pnl.profit, 0);
+  const blendedMargin = totalRevenue > 0 ? totalProfit / totalRevenue : null;
+  const hasPnL        = filtered.some((p) => p.pnl.revenue > 0 || p.pnl.profit !== 0);
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
@@ -305,6 +337,33 @@ export function ProjectsClient({ initialProjects, clients }: Props) {
           </button>
         ))}
       </div>
+
+      {/* Portfolio profitability summary (Week 28) */}
+      {hasPnL && (
+        <div className="flex flex-wrap items-center gap-6 mb-6 bg-white border border-slate-200 rounded-xl px-5 py-4">
+          <div>
+            <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Revenue</p>
+            <p className="text-lg font-semibold text-slate-800">{fmtSigned(totalRevenue)}</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Profit</p>
+            <p className={`text-lg font-semibold ${totalProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+              {fmtSigned(totalProfit)}
+            </p>
+          </div>
+          {blendedMargin !== null && (
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">Blended margin</p>
+              <p className={`text-lg font-semibold ${totalProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                {(blendedMargin * 100).toFixed(0)}%
+              </p>
+            </div>
+          )}
+          <p className="text-xs text-slate-400 ml-auto">
+            Across {filtered.length} {filter !== "all" ? filter : ""} project{filtered.length === 1 ? "" : "s"}
+          </p>
+        </div>
+      )}
 
       {/* Grid */}
       {filtered.length === 0 ? (

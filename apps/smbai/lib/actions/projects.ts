@@ -55,6 +55,104 @@ export async function listProjects(status?: ProjectStatus): Promise<Project[]> {
   })) as Project[];
 }
 
+// ─── List with P&L (portfolio profitability) ──────────────────────────────────
+
+export type ProjectPnL = {
+  revenue: number;        // invoiced billable time
+  laborCost: number;      // Σ hours × (cost_rate ?? org default)
+  expensesTotal: number;  // tagged expenses
+  profit: number;
+  margin: number | null;  // profit / revenue (null when no revenue yet)
+};
+
+export type ProjectWithPnL = Project & { pnl: ProjectPnL };
+
+/**
+ * Per-project P&L for the whole org, computed in a fixed number of queries
+ * (projects + all time entries + all project expense JEs + org labor rate),
+ * aggregated in memory — no N+1 per project.
+ */
+export async function listProjectsPnL(status?: ProjectStatus): Promise<ProjectWithPnL[]> {
+  const orgId = await getOrgId();
+  const supabase = await createClient();
+
+  let projectQuery = supabase
+    .from("projects")
+    .select("id, client_id, name, description, status, color, budget_hours, budget_amount, hourly_rate, start_date, end_date, created_at, clients(first_name, last_name, company)")
+    .eq("organization_id", orgId)
+    .order("created_at", { ascending: false });
+  if (status) projectQuery = projectQuery.eq("status", status);
+
+  const [
+    { data: projectRows, error },
+    { data: entries },
+    { data: expenseJEs },
+    { data: org },
+  ] = await Promise.all([
+    projectQuery,
+    supabase
+      .from("time_entries")
+      .select("project_id, duration_minutes, billable, hourly_rate, cost_rate, invoiced")
+      .eq("organization_id", orgId)
+      .not("project_id", "is", null)
+      .not("ended_at", "is", null),
+    supabase
+      .from("journal_entries")
+      .select("project_id, journal_lines(debit, account:account_id(type))")
+      .eq("organization_id", orgId)
+      .eq("source_type", "expense")
+      .not("project_id", "is", null),
+    supabase.from("organizations").select("default_labor_cost_rate").eq("id", orgId).single(),
+  ]);
+
+  if (error) throw new Error(error.message);
+
+  const defaultLaborRate = Number(org?.default_labor_cost_rate ?? 0);
+
+  // Time → revenue (invoiced) + labor cost (all worked time) per project
+  const timeByProject = new Map<string, { revenue: number; laborCost: number }>();
+  for (const e of entries ?? []) {
+    const pid = e.project_id as string | null;
+    if (!pid) continue;
+    const mins = e.duration_minutes ?? 0;
+    const costRate = Number(e.cost_rate ?? defaultLaborRate);
+    const agg = timeByProject.get(pid) ?? { revenue: 0, laborCost: 0 };
+    agg.laborCost += (mins / 60) * costRate;
+    if (e.billable && e.invoiced) {
+      agg.revenue += (mins / 60) * Number(e.hourly_rate ?? 0);
+    }
+    timeByProject.set(pid, agg);
+  }
+
+  // Expenses → sum expense-type debit lines per project
+  type LineShape = { debit: number; account: { type: string } | { type: string }[] | null };
+  const expenseByProject = new Map<string, number>();
+  for (const je of expenseJEs ?? []) {
+    const pid = (je as { project_id: string | null }).project_id;
+    if (!pid) continue;
+    const lines = ((je as { journal_lines?: LineShape[] }).journal_lines ?? []);
+    let sum = 0;
+    for (const l of lines) {
+      const acct = Array.isArray(l.account) ? l.account[0] : l.account;
+      if (Number(l.debit) > 0 && acct?.type === "expense") sum += Number(l.debit);
+    }
+    expenseByProject.set(pid, (expenseByProject.get(pid) ?? 0) + sum);
+  }
+
+  return (projectRows ?? []).map((row) => {
+    const t = timeByProject.get(row.id) ?? { revenue: 0, laborCost: 0 };
+    const expensesTotal = expenseByProject.get(row.id) ?? 0;
+    const revenue = t.revenue;
+    const profit = revenue - t.laborCost - expensesTotal;
+    const margin = revenue > 0 ? profit / revenue : null;
+    return {
+      ...row,
+      clients: (Array.isArray(row.clients) ? row.clients[0] : row.clients) ?? null,
+      pnl: { revenue, laborCost: t.laborCost, expensesTotal, profit, margin },
+    } as ProjectWithPnL;
+  });
+}
+
 // ─── Get single project + stats ───────────────────────────────────────────────
 
 export async function getProject(projectId: string): Promise<{

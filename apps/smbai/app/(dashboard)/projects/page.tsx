@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { listProjects } from "@/lib/actions/projects";
+import { listProjectsPnL } from "@/lib/actions/projects";
 import { ProjectsClient } from "./projects-client";
 
 export const metadata: Metadata = { title: "Projects" };
@@ -12,7 +12,7 @@ export default async function ProjectsPage() {
   const supabase = await createClient();
 
   const [projects, clientsRes] = await Promise.all([
-    listProjects(),
+    listProjectsPnL(),
     supabase
       .from("clients")
       .select("id, first_name, last_name, company")
