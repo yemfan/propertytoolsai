@@ -140,3 +140,19 @@ export async function deleteKnowledgeEntry(id: string): Promise<{ error?: string
   revalidatePath("/voice");
   return {};
 }
+
+// ─── Google Calendar ────────────────────────────────────────────────────────────
+
+export async function disconnectGoogleCalendar(): Promise<{ error?: string }> {
+  const { orgId, supabase, user } = await ctx();
+  if (!orgId || !user) return { error: "Unauthorized." };
+
+  const { error } = await supabase
+    .from("org_oauth_tokens")
+    .delete()
+    .eq("organization_id", orgId)
+    .eq("provider", "google");
+  if (error) return { error: "Couldn't disconnect Google Calendar." };
+  revalidatePath("/voice");
+  return {};
+}

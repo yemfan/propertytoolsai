@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Clock, CalendarClock, BookOpen, Plus, Trash2, Check } from "lucide-react";
+import { Clock, CalendarClock, BookOpen, Plus, Trash2, Check, CalendarCheck } from "lucide-react";
 import {
   saveBusinessHours,
   upsertAppointmentType,
   deleteAppointmentType,
   upsertKnowledgeEntry,
   deleteKnowledgeEntry,
+  disconnectGoogleCalendar,
 } from "@/lib/actions/receptionist";
 import {
   DAY_KEYS,
@@ -21,14 +22,62 @@ interface Props {
   hours: BusinessHours;
   appointmentTypes: AppointmentType[];
   knowledge: KnowledgeEntry[];
+  googleConfigured: boolean;
+  googleConnected: boolean;
+  googleEmail: string | null;
 }
 
-export function ReceptionistConfig({ hours, appointmentTypes, knowledge }: Props) {
+export function ReceptionistConfig({ hours, appointmentTypes, knowledge, googleConfigured, googleConnected, googleEmail }: Props) {
   return (
     <div className="space-y-6">
+      <CalendarConnectCard configured={googleConfigured} connected={googleConnected} email={googleEmail} />
       <BusinessHoursCard initial={hours} />
       <AppointmentTypesCard initial={appointmentTypes} />
       <KnowledgeCard initial={knowledge} />
+    </div>
+  );
+}
+
+// ─── Google Calendar connect ────────────────────────────────────────────────────
+
+function CalendarConnectCard({ configured, connected, email }: { configured: boolean; connected: boolean; email: string | null }) {
+  const [isConnected, setConnected] = useState(connected);
+  const [pending, start] = useTransition();
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="flex items-center gap-2 mb-1">
+        <CalendarCheck className="w-4 h-4 text-indigo-500" />
+        <h2 className="text-sm font-semibold text-slate-800">Calendar</h2>
+      </div>
+      <p className="text-xs text-slate-500 mb-4">
+        Connect Google Calendar so the receptionist books into your real calendar and only offers times you&apos;re actually free.
+      </p>
+      {!configured ? (
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+          Google Calendar isn&apos;t configured on the server yet. Until it is, bookings use smbai&apos;s built-in calendar.
+        </p>
+      ) : isConnected ? (
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-1.5">
+            <CalendarCheck className="w-3.5 h-3.5" /> Connected{email ? ` · ${email}` : ""}
+          </span>
+          <button
+            onClick={() => start(async () => { const r = await disconnectGoogleCalendar(); if (!r.error) setConnected(false); })}
+            disabled={pending}
+            className="text-xs font-medium text-slate-500 hover:text-rose-600 disabled:opacity-50"
+          >
+            {pending ? "Disconnecting…" : "Disconnect"}
+          </button>
+        </div>
+      ) : (
+        <a
+          href="/api/auth/google-calendar"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          <CalendarCheck className="w-4 h-4" /> Connect Google Calendar
+        </a>
+      )}
     </div>
   );
 }

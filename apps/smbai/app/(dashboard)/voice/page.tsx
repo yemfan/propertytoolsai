@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { VoiceSettings } from "@/components/voice-settings";
 import { ReceptionistConfig } from "@/components/receptionist-config";
 import { defaultBusinessHours, type BusinessHours, type AppointmentType, type KnowledgeEntry } from "@/lib/receptionist";
+import { isGoogleCalendarConfigured, isGoogleCalendarConnected, getConnectedGoogleAccount } from "@/lib/google-calendar";
 import { Phone, MessageSquare, Calendar, Bot } from "lucide-react";
 
 export const metadata: Metadata = { title: "Voice Agent" };
@@ -46,6 +47,11 @@ export default async function VoicePage() {
       .eq("organization_id", orgId)
       .order("sort"),
   ]);
+
+  const googleConfigured = isGoogleCalendarConfigured();
+  const [googleConnected, googleEmail] = googleConfigured
+    ? await Promise.all([isGoogleCalendarConnected(orgId), getConnectedGoogleAccount(orgId)])
+    : [false, null];
 
   const totalSessions = sessions?.length ?? 0;
   const booked  = (sessions ?? []).filter((s) => s.booked_event_id).length;
@@ -106,6 +112,9 @@ export default async function VoicePage() {
           hours={(org?.business_hours as BusinessHours | null) ?? defaultBusinessHours()}
           appointmentTypes={(apptTypes ?? []) as AppointmentType[]}
           knowledge={(knowledge ?? []) as KnowledgeEntry[]}
+          googleConfigured={googleConfigured}
+          googleConnected={googleConnected}
+          googleEmail={googleEmail}
         />
       </div>
 
