@@ -9,7 +9,7 @@ import { Phone, MessageSquare, Calendar, Bot, Clock, DollarSign, Mic } from "luc
 
 export const metadata: Metadata = { title: "Voice Agent" };
 
-const RETELL_COST_PER_MINUTE = 0.07; // USD — update if your Retell plan differs
+const RETELL_COST_PER_MINUTE = 0.10; // USD — placeholder; billing to customers at $0.10/min (Retell cost ~$0.07)
 
 function formatDuration(seconds: number | null | undefined): string {
   if (!seconds) return "—";
@@ -126,7 +126,7 @@ export default async function VoicePage() {
           <p className="text-2xl font-semibold text-slate-800 font-mono">
             ${estCost.toFixed(2)}
           </p>
-          <p className="text-xs text-slate-400 mt-0.5">~$0.07/min (Retell)</p>
+          <p className="text-xs text-slate-400 mt-0.5">@ $0.10/min</p>
         </div>
       </div>
 
