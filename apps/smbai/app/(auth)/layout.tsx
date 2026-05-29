@@ -11,7 +11,7 @@ export default function AuthLayout({
         {/* Logo / wordmark */}
         <div className="mb-8 text-center">
           <span className="text-2xl font-bold text-slate-900 tracking-tight">
-            SMB<span className="text-indigo-600">ai</span>
+            Helm<span className="text-indigo-600">Smart</span>
           </span>
           <p className="mt-1 text-sm text-slate-500">Your all-in-one business suite</p>
         </div>
