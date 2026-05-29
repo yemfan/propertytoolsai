@@ -2,6 +2,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createServiceClient } from "@/lib/supabase/server";
+import { normalizePayee } from "@/lib/payee";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -86,13 +87,43 @@ export async function categorizeTransactions(
 
   if (!txns?.length) return { categorized: 0 };
 
+  // 3b. Payee memory — auto-apply categories the owner has already confirmed for
+  // these payees, so repeat vendors skip the AI (and the owner skips re-review).
+  const { data: memory } = await service
+    .from("payee_categories")
+    .select("payee_key, coa_account_id")
+    .eq("organization_id", orgId);
+  const payeeMap = new Map(
+    (memory ?? []).map((m) => [m.payee_key as string, m.coa_account_id as string])
+  );
+
+  let memoryMatched = 0;
+  const toAi: RawTxn[] = [];
+  for (const t of txns as RawTxn[]) {
+    const key = normalizePayee(t.merchant_name ?? t.name);
+    const remembered = key ? payeeMap.get(key) : undefined;
+    if (remembered) {
+      const { error } = await service
+        .from("bank_transactions")
+        .update({ coa_account_id: remembered, ai_category_confidence: 1, ai_suggested_memo: null })
+        .eq("id", t.id)
+        .eq("organization_id", orgId);
+      if (!error) memoryMatched++;
+    } else {
+      toAi.push(t);
+    }
+  }
+
+  // Everything matched memory — no AI call needed.
+  if (!toAi.length) return { categorized: memoryMatched };
+
   // 4. Build CoA reference string
   const coaText = (coa as CoaRow[])
     .map((a) => `${a.code} | ${a.name} | ${a.type}`)
     .join("\n");
 
-  // 5. Build transaction list
-  const txnText = (txns as RawTxn[])
+  // 5. Build transaction list (only the payees memory didn't already handle)
+  const txnText = toAi
     .map((t) => {
       const direction = t.amount > 0 ? "DEBIT (money out)" : "CREDIT (money in)";
       const merchant = t.merchant_name ?? t.name;
@@ -172,5 +203,5 @@ ${txnText}`;
     if (!error) categorized++;
   }
 
-  return { categorized };
+  return { categorized: categorized + memoryMatched };
 }

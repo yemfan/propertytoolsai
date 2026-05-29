@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { postTransaction } from "@/lib/actions/ledger";
+import { normalizePayee } from "@/lib/payee";
 
 export type ApproveState = { error?: string; success?: boolean } | null;
 
@@ -34,6 +35,23 @@ export async function approveTransaction(
     .eq("id", transactionId);
 
   if (updateError) return { error: "Failed to approve transaction." };
+
+  // Remember this payee → category so the same vendor auto-categorizes next time
+  // (and a correction overwrites the old mapping).
+  if (coaAccountId) {
+    const { data: txn } = await supabase
+      .from("bank_transactions")
+      .select("organization_id, merchant_name, name")
+      .eq("id", transactionId)
+      .single();
+    const key = txn ? normalizePayee(txn.merchant_name ?? txn.name) : "";
+    if (txn && key) {
+      await supabase.from("payee_categories").upsert(
+        { organization_id: txn.organization_id, payee_key: key, coa_account_id: coaAccountId },
+        { onConflict: "organization_id,payee_key" }
+      );
+    }
+  }
 
   // Post to journal (non-fatal if it fails — transaction is still marked reviewed)
   await postTransaction(transactionId).catch((e) =>
