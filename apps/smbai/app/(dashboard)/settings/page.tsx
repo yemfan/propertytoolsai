@@ -24,7 +24,7 @@ const MONTHS = [
 
 export default async function SettingsPage() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const [{ data: org }, { data: bankAccounts }, { data: coaAccounts }] = await Promise.all([

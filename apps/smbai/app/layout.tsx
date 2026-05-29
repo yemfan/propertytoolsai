@@ -16,8 +16,8 @@ const fontMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "SMB AI",
-    template: "%s | SMB AI",
+    default: "HelmSmart",
+    template: "%s | HelmSmart",
   },
   description:
     "AI-powered suite for small businesses — bookkeeping, CRM, inbox, and more.",

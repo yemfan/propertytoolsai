@@ -22,7 +22,7 @@ export async function createCampaign(data: {
   recipient_tag?: string | null;
 }): Promise<string> {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) throw new Error("Not authenticated");
 
   const supabase = await createClient();
@@ -51,7 +51,7 @@ export async function createCampaign(data: {
 
 export async function sendCampaign(campaignId: string) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) throw new Error("Not authenticated");
 
   const supabase = await createClient();
@@ -109,7 +109,7 @@ export async function sendCampaign(campaignId: string) {
     .select("name")
     .eq("id", orgId)
     .single();
-  const orgName = orgNameRes.data?.name ?? "SMB AI";
+  const orgName = orgNameRes.data?.name ?? "HelmSmart";
 
   // HTML template
   function buildHtml(clientName: string): string {
@@ -136,7 +136,7 @@ export async function sendCampaign(campaignId: string) {
           ${bodyHtml}
         </td></tr>
         <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 40px;text-align:center">
-          <p style="margin:0;font-size:12px;color:#94a3b8">Sent by ${orgName} · Powered by SMB AI</p>
+          <p style="margin:0;font-size:12px;color:#94a3b8">Sent by ${orgName} · Powered by HelmSmart</p>
         </td></tr>
       </table>
     </td></tr>
@@ -194,7 +194,7 @@ export async function sendCampaign(campaignId: string) {
 
 export async function deleteCampaign(campaignId: string) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) throw new Error("Not authenticated");
 
   const supabase = await createClient();
@@ -240,7 +240,7 @@ export async function generateCampaignCopy(input: {
   tone: CampaignTone;
 }): Promise<{ subject: string; body: string }> {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) throw new Error("Not authenticated");
   if (!input.prompt.trim()) throw new Error("Describe what the campaign is about");
 
@@ -303,7 +303,7 @@ export async function generateSubjectLines(input: {
   tone: CampaignTone;
 }): Promise<string[]> {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) throw new Error("Not authenticated");
   if (!input.context.trim()) throw new Error("Write a message or describe the campaign first");
 
@@ -352,7 +352,7 @@ const REFINE_INSTRUCTION: Record<RefineMode, string> = {
 
 export async function refineCampaignBody(input: { body: string; mode: RefineMode }): Promise<string> {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) throw new Error("Not authenticated");
   if (!input.body.trim()) throw new Error("Nothing to refine yet");
 

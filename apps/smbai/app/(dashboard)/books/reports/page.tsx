@@ -177,7 +177,7 @@ export default async function ReportsPage({
   const period = params.period ?? "current_month";
 
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
 
   const { label, start, end } = getPeriod(period);
   const balances = await getBalances(orgId, start, end);

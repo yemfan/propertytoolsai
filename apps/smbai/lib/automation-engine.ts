@@ -90,7 +90,7 @@ async function executeRule(
         .select("name")
         .eq("id", ctx.orgId)
         .single();
-      const orgName = (orgRow as { name?: string } | null)?.name ?? "SMB AI";
+      const orgName = (orgRow as { name?: string } | null)?.name ?? "HelmSmart";
 
       await resend.emails.send({
         from: `${orgName} <${fromEmail}>`,

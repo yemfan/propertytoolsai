@@ -168,7 +168,7 @@ export async function createSocialPost(data: {
   generatedByAi: boolean;
 }) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -196,7 +196,7 @@ export async function updateSocialPost(postId: string, data: {
   publishedUrl?: string | null;
 }) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -215,7 +215,7 @@ export async function updateSocialPost(postId: string, data: {
 
 export async function deleteSocialPost(postId: string) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -231,7 +231,7 @@ export async function saveVoiceSettings(data: {
   prompt: string;
 }) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();

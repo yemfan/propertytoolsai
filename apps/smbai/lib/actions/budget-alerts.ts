@@ -17,7 +17,7 @@ import { createNotification } from "./notifications";
  */
 export async function checkProjectBudgetAlert(projectId: string): Promise<void> {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return;
 
   const supabase = await createClient();

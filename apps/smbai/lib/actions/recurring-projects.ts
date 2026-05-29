@@ -24,7 +24,7 @@ export type RecurringProject = {
 
 async function getOrgId(): Promise<string | null> {
   const cookieStore = await cookies();
-  return cookieStore.get("smbai-org-id")?.value ?? null;
+  return cookieStore.get("helmsmart-org-id")?.value ?? null;
 }
 
 export async function listRecurringProjects(): Promise<RecurringProject[]> {

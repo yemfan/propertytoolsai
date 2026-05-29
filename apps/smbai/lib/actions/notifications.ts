@@ -40,7 +40,7 @@ export async function createNotification(data: {
   link?: string;
 }) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return;
   await createNotificationService(orgId, data);
 }
@@ -49,7 +49,7 @@ export async function createNotification(data: {
 
 export async function markNotificationsRead(ids?: string[]) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return;
 
   const supabase = await createClient();

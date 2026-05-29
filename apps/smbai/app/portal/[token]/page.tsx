@@ -57,7 +57,7 @@ export default async function ClientPortalPage({
     .select("name")
     .eq("id", client.organization_id)
     .single();
-  const orgName = org?.name ?? "SMB AI";
+  const orgName = org?.name ?? "HelmSmart";
 
   // Load invoices
   const { data: invoicesRaw } = await sb
@@ -230,7 +230,7 @@ export default async function ClientPortalPage({
         )}
 
         <p style={{ textAlign: "center", fontSize: 12, color: "#cbd5e1", marginTop: 40 }}>
-          Powered by SMB AI · {orgName}
+          Powered by HelmSmart · {orgName}
         </p>
       </div>
     </div>

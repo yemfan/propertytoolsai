@@ -18,7 +18,7 @@ export interface ExpenseInput {
 
 export async function createExpense(input: ExpenseInput) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -108,7 +108,7 @@ export async function createExpense(input: ExpenseInput) {
 
 export async function listExpenses(limit = 100) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return [];
 
   const supabase = await createClient();
@@ -173,7 +173,7 @@ export type ProjectExpense = {
 /** Expense journal entries attributed to a given project. */
 export async function listProjectExpenses(projectId: string): Promise<ProjectExpense[]> {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return [];
 
   const supabase = await createClient();

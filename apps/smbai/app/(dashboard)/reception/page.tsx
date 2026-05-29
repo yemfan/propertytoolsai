@@ -18,7 +18,7 @@ function timeAgo(iso: string) {
 
 export default async function ReceptionPage() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   // Load org settings

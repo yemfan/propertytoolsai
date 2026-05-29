@@ -18,7 +18,7 @@ export function AcceptButton({ token, orgName }: { token: string; orgName: strin
         const { orgId } = await acceptInvitation(token);
         setDone(true);
         // Set org cookie then redirect to home
-        document.cookie = `smbai-org-id=${orgId}; path=/; max-age=${60 * 60 * 24 * 365}`;
+        document.cookie = `helmsmart-org-id=${orgId}; path=/; max-age=${60 * 60 * 24 * 365}`;
         setTimeout(() => router.push("/home"), 1500);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to accept invitation");

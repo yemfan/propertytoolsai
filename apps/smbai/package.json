@@ -1,8 +1,8 @@
 {
-  "name": "smbai",
+  "name": "helmsmart",
   "version": "0.1.0",
   "private": true,
-  "description": "SMB AI Suite — AI-powered bookkeeping, CRM, inbox, and front office for small businesses.",
+  "description": "HelmSmart — AI-powered front office for small businesses — AI-powered bookkeeping, CRM, inbox, and front office for small businesses.",
   "type": "module",
   "engines": {
     "node": "20.x"

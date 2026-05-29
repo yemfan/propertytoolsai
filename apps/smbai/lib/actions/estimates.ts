@@ -41,7 +41,7 @@ export async function createEstimate(data: {
   lines: EstimateLine[];
 }) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -92,7 +92,7 @@ export async function createEstimate(data: {
 
 export async function sendEstimate(estimateId: string) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -255,7 +255,7 @@ export async function setEstimateStatus(
   status: "accepted" | "declined" | "expired"
 ) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -275,7 +275,7 @@ export async function convertEstimateToInvoice(
   estimateId: string
 ): Promise<string> {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -365,7 +365,7 @@ export async function convertEstimateToProject(
   estimateId: string
 ): Promise<string> {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -458,7 +458,7 @@ function parseEstimate(raw: string): GeneratedEstimate {
 
 export async function generateEstimateLines(input: { prompt: string }): Promise<GeneratedEstimate> {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
   if (!input.prompt.trim()) throw new Error("Describe the job to estimate");
 

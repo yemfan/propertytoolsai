@@ -385,7 +385,7 @@ export default async function AcceptEstimatePage({
             color: "#94a3b8",
           }}
         >
-          {est.estimate_number} · Powered by SMB AI
+          {est.estimate_number} · Powered by HelmSmart
         </div>
       </div>
     </div>

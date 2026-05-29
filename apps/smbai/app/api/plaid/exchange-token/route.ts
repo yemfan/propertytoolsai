@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Resolve org from cookie
-    const orgId = request.cookies.get("smbai-org-id")?.value;
+    const orgId = request.cookies.get("helmsmart-org-id")?.value;
     if (!orgId) {
       return NextResponse.json({ error: "No organization found." }, { status: 400 });
     }
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     // Kick off initial transaction sync (fire-and-forget — client will poll)
     void fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/plaid/sync`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Cookie: `smbai-org-id=${orgId}` },
+      headers: { "Content-Type": "application/json", Cookie: `helmsmart-org-id=${orgId}` },
       body: JSON.stringify({ connection_id: connection.id }),
     }).catch((e) => console.error("[plaid] initial sync error:", e));
 

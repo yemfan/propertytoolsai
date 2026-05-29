@@ -72,7 +72,7 @@ export function Sidebar({ unreadCount = 0, notificationsSlot, userEmail }: Props
           <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
             <Building2 className="w-4 h-4 text-white" />
           </div>
-          <span className="text-white font-semibold text-sm tracking-tight">SMB AI</span>
+          <span className="text-white font-semibold text-sm tracking-tight">HelmSmart</span>
         </div>
         {notificationsSlot}
       </div>

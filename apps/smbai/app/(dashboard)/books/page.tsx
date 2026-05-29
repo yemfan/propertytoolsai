@@ -84,7 +84,7 @@ export default async function BooksPage({
 }) {
   const { month: monthParam } = await searchParams;
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
 
   const now = new Date();
   const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;

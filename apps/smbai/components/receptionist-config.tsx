@@ -55,7 +55,7 @@ function CalendarConnectCard({ configured, connected, email }: { configured: boo
       </p>
       {!configured ? (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-          Google Calendar isn&apos;t configured on the server yet. Until it is, bookings use smbai&apos;s built-in calendar.
+          Google Calendar isn&apos;t configured on the server yet. Until it is, bookings use HelmSmart's built-in calendar.
         </p>
       ) : isConnected ? (
         <div className="flex items-center gap-3">

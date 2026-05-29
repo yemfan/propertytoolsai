@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Calendar" };
 
 export default async function CalendarPage() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   // Load events for ±1 month before + 3 months after now

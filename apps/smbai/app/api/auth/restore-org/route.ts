@@ -3,10 +3,10 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const ORG_COOKIE = "smbai-org-id";
+const ORG_COOKIE = "helmsmart-org-id";
 
 /**
- * Restores the smbai-org-id cookie when it's missing but the user has an
+ * Restores the helmsmart-org-id cookie when it's missing but the user has an
  * existing org membership in the DB.  Called by the onboarding server
  * component when it detects the cookie is absent.
  *

@@ -27,7 +27,7 @@ export async function sendEmail(
   body: string
 ) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -63,7 +63,7 @@ export async function sendEmail(
 
 export async function sendSms(clientId: string | null, toNumber: string, body: string) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -103,7 +103,7 @@ export async function sendSms(clientId: string | null, toNumber: string, body: s
 
 export async function markThreadRead(clientId: string | null, address?: string | null) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return;
 
   const supabase = await createClient();
@@ -125,7 +125,7 @@ export async function markThreadRead(clientId: string | null, address?: string |
 
 export async function toggleAutoReply(enabled: boolean) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return;
 
   const supabase = await createClient();
@@ -137,7 +137,7 @@ export async function toggleAutoReply(enabled: boolean) {
 
 export async function saveAutoReplyMsg(msg: string) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return;
 
   const supabase = await createClient();
@@ -149,7 +149,7 @@ export async function saveAutoReplyMsg(msg: string) {
 
 export async function saveTwilioNumber(number: string) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return;
 
   const supabase = await createClient();
@@ -167,7 +167,7 @@ export async function draftReply(
   address?: string | null
 ): Promise<string> {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -263,7 +263,7 @@ export async function createClientFromConversation(opts: {
   lastName?: string | null;
 }): Promise<{ error?: string; clientId?: string }> {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return { error: "No organization." };
 
   const firstName = opts.firstName.trim();

@@ -20,14 +20,14 @@ export default async function JoinPage({
     .single();
 
   // Determine org name
-  let orgName = "SMB AI";
+  let orgName = "HelmSmart";
   if (invite?.organization_id) {
     const { data: org } = await serviceSb
       .from("organizations")
       .select("name")
       .eq("id", invite.organization_id)
       .single();
-    orgName = org?.name ?? "SMB AI";
+    orgName = org?.name ?? "HelmSmart";
   }
 
   // Error states

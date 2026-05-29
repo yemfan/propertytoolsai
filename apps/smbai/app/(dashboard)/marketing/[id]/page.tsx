@@ -32,7 +32,7 @@ export default async function CampaignDetailPage({
 }) {
   const { id } = await params;
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const { data: campaign } = await supabase

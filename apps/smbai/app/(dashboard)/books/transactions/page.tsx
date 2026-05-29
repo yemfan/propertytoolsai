@@ -19,7 +19,7 @@ export default async function TransactionsPage({
   const pageSize = 30;
 
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
 
   const supabase = await createClient();
 

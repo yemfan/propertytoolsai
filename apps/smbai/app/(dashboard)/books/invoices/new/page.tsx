@@ -14,7 +14,7 @@ export default async function NewInvoicePage({
 }) {
   const { client: preselectedClientId } = await searchParams;
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const [{ data: clients }, { data: revenueAccounts }] = await Promise.all([

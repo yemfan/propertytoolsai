@@ -53,7 +53,7 @@ export async function proxy(request: NextRequest) {
 
     // Use cookie for fast org check — avoids DB on every request.
     // Cookie is set by createOrg() server action and onboarding page fallback.
-    const orgId = request.cookies.get("smbai-org-id")?.value;
+    const orgId = request.cookies.get("helmsmart-org-id")?.value;
     if (!orgId) {
       return NextResponse.redirect(new URL("/onboarding", request.url));
     }
@@ -66,7 +66,7 @@ export async function proxy(request: NextRequest) {
 
   // ── Auth routes (login / signup) ─────────────────────────────────────────
   if (isAuth && user) {
-    const orgId = request.cookies.get("smbai-org-id")?.value;
+    const orgId = request.cookies.get("helmsmart-org-id")?.value;
     return NextResponse.redirect(
       new URL(orgId ? "/books" : "/onboarding", request.url)
     );

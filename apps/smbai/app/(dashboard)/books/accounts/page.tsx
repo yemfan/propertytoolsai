@@ -23,7 +23,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default async function AccountsPage() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const { data: accounts } = await supabase

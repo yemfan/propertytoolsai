@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Social" };
 
 export default async function SocialPage() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const [{ data: posts }, { data: org }] = await Promise.all([

@@ -15,7 +15,7 @@ const STATUS_CONFIG = {
 
 export default async function MarketingPage() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const { data: campaigns } = await supabase

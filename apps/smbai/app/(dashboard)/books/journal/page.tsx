@@ -26,7 +26,7 @@ export default async function JournalPage({
   const pageSize = 40;
 
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const { data: entries, count } = await supabase

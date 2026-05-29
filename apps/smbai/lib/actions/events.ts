@@ -16,7 +16,7 @@ export async function createEvent(data: {
   clientId?: string | null;
 }) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -53,7 +53,7 @@ export async function updateEvent(
   }>
 ) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -68,7 +68,7 @@ export async function updateEvent(
 
 export async function deleteEvent(eventId: string) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -83,7 +83,7 @@ export async function deleteEvent(eventId: string) {
 
 export async function toggleEventComplete(eventId: string, completed: boolean) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();

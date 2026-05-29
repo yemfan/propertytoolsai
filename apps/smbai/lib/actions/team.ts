@@ -14,7 +14,7 @@ type Role = "admin" | "bookkeeper" | "viewer";
 
 async function getOrgAndUser() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!orgId || !user) throw new Error("Not authenticated");
@@ -68,7 +68,7 @@ export async function inviteMember(email: string, role: Role) {
     .select("name")
     .eq("id", orgId)
     .single();
-  const orgName = org?.name ?? "SMB AI";
+  const orgName = org?.name ?? "HelmSmart";
 
   // Check for existing active invite
   const { data: existing } = await supabase
@@ -96,15 +96,15 @@ export async function inviteMember(email: string, role: Role) {
 
   if (error || !invite) throw new Error(error?.message ?? "Failed to create invitation");
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.smbai.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://helmsmart.ai";
   const acceptUrl = `${appUrl}/join/${invite.token}`;
   const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@smbai.app";
 
   // Send invitation email
   await resend.emails.send({
-    from: `${orgName} via SMB AI <${fromEmail}>`,
+    from: `${orgName} via HelmSmart <${fromEmail}>`,
     to: email,
-    subject: `You've been invited to join ${orgName} on SMB AI`,
+    subject: `You've been invited to join ${orgName} on HelmSmart`,
     html: `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
@@ -112,12 +112,12 @@ export async function inviteMember(email: string, role: Role) {
     <tr><td align="center">
       <table width="520" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)">
         <tr><td style="background:#4f46e5;padding:20px 40px">
-          <span style="font-size:16px;font-weight:700;color:#fff">SMB AI</span>
+          <span style="font-size:16px;font-weight:700;color:#fff">HelmSmart</span>
         </td></tr>
         <tr><td style="padding:32px 40px">
           <p style="margin:0 0 16px;font-size:18px;font-weight:600;color:#1e293b">You're invited!</p>
           <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6">
-            <strong>${orgName}</strong> has invited you to join their workspace on SMB AI as a <strong>${role}</strong>.
+            <strong>${orgName}</strong> has invited you to join their workspace on HelmSmart as a <strong>${role}</strong>.
           </p>
           <a href="${acceptUrl}" style="display:inline-block;padding:12px 28px;background:#4f46e5;color:#fff;font-size:14px;font-weight:600;text-decoration:none;border-radius:10px">
             Accept invitation
@@ -127,13 +127,13 @@ export async function inviteMember(email: string, role: Role) {
           </p>
         </td></tr>
         <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 40px;text-align:center">
-          <p style="margin:0;font-size:12px;color:#94a3b8">Powered by SMB AI</p>
+          <p style="margin:0;font-size:12px;color:#94a3b8">Powered by HelmSmart</p>
         </td></tr>
       </table>
     </td></tr>
   </table>
 </body></html>`,
-    text: `You've been invited to join ${orgName} on SMB AI as a ${role}.\n\nAccept here: ${acceptUrl}\n\nThis link expires in 7 days.`,
+    text: `You've been invited to join ${orgName} on HelmSmart as a ${role}.\n\nAccept here: ${acceptUrl}\n\nThis link expires in 7 days.`,
   });
 
   revalidatePath("/settings/team");
@@ -260,5 +260,5 @@ export async function acceptInvitation(token: string): Promise<{ orgId: string; 
     .eq("id", invite.organization_id)
     .single();
 
-  return { orgId: invite.organization_id, orgName: org?.name ?? "SMB AI" };
+  return { orgId: invite.organization_id, orgName: org?.name ?? "HelmSmart" };
 }

@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const orgId = request.cookies.get("smbai-org-id")?.value;
+    const orgId = request.cookies.get("helmsmart-org-id")?.value;
     if (!orgId) {
       return NextResponse.json({ error: "No organization found." }, { status: 400 });
     }

@@ -15,7 +15,7 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
-const ORG_COOKIE = "smbai-org-id";
+const ORG_COOKIE = "helmsmart-org-id";
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
@@ -26,7 +26,7 @@ const COOKIE_OPTS = {
 /**
  * Create a new organization for the authenticated user.
  * Seeds the chart of accounts based on entity type.
- * Sets the smbai-org-id cookie so middleware can route without a DB call.
+ * Sets the helmsmart-org-id cookie so middleware can route without a DB call.
  */
 export async function createOrg(
   _: OrgState,

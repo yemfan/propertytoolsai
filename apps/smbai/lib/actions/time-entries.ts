@@ -39,7 +39,7 @@ function normalizeEntry(row: Record<string, unknown>): TimeEntry {
 
 async function getOrgId(): Promise<string> {
   const cookieStore = await cookies();
-  const id = cookieStore.get("smbai-org-id")?.value;
+  const id = cookieStore.get("helmsmart-org-id")?.value;
   if (!id) throw new Error("No org");
   return id;
 }

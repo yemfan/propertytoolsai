@@ -6,7 +6,7 @@ import { NotificationsBell } from "@/components/notifications-bell";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
 
   const supabase = await createClient();
 

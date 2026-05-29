@@ -24,7 +24,7 @@ function fmt(n: number) {
 
 export default async function EstimatesPage() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const today = new Date().toISOString().slice(0, 10);

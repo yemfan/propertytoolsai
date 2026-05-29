@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     if (oauthError) return back(`gcal_error=${encodeURIComponent(oauthError)}`);
 
     const cookieStore = await cookies();
-    const orgId = cookieStore.get("smbai-org-id")?.value;
+    const orgId = cookieStore.get("helmsmart-org-id")?.value;
     const stateCookie = cookieStore.get("gcal_oauth_state")?.value;
     const supabase = await createClient();
     const {

@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Projects" };
 
 export default async function ProjectsPage() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const [projects, clientsRes] = await Promise.all([

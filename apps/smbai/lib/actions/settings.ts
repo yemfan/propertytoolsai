@@ -13,7 +13,7 @@ export async function updateOrg(
   formData: FormData
 ): Promise<SettingsState> {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return { error: "No organization found." };
 
   const supabase = await createClient();

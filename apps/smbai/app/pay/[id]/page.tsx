@@ -81,7 +81,7 @@ export default async function PayInvoicePage({
             <Building2 className="w-4 h-4 text-white" />
           </div>
           <span className="text-sm font-semibold text-slate-800">
-            {org?.name ?? "SMB AI"}
+            {org?.name ?? "HelmSmart"}
           </span>
         </div>
       </header>

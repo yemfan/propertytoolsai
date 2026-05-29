@@ -25,7 +25,7 @@ export default async function TasksPage({
   const priorityFilter = params.priority ?? "";
 
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const [tasksRes, clientsRes] = await Promise.all([

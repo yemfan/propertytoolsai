@@ -27,7 +27,7 @@ function row(...cols: (string | number | null | undefined)[]): string {
 
 export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
   const { searchParams } = request.nextUrl;

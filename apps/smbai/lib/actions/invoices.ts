@@ -44,7 +44,7 @@ export async function createInvoice(data: {
   lines: InvoiceLine[];
 }) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -97,7 +97,7 @@ export async function createInvoice(data: {
 
 export async function sendInvoice(invoiceId: string) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -283,7 +283,7 @@ export async function sendInvoice(invoiceId: string) {
 
 export async function sendInvoiceReminder(invoiceId: string) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -309,7 +309,7 @@ export async function sendInvoiceReminder(invoiceId: string) {
 
 export async function markInvoicePaid(invoiceId: string, bankAccountId: string) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
@@ -454,7 +454,7 @@ export async function markInvoicePaid(invoiceId: string, bankAccountId: string) 
 
 export async function voidInvoice(invoiceId: string) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();

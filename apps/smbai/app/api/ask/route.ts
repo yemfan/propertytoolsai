@@ -105,7 +105,7 @@ ${topCats ? `\n  Top expense categories:\n${topCats}` : ""}`;
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) return new NextResponse("Unauthorized", { status: 401 });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;

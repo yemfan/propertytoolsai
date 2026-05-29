@@ -14,7 +14,7 @@ import { OnboardingForm } from "@/components/onboarding-form";
 export default async function OnboardingPage() {
   // Fast-path: cookie already set means org exists
   const cookieStore = await cookies();
-  const orgCookie = cookieStore.get("smbai-org-id")?.value;
+  const orgCookie = cookieStore.get("helmsmart-org-id")?.value;
   if (orgCookie) {
     redirect("/books");
   }

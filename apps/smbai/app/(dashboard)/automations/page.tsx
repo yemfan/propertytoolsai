@@ -3,7 +3,7 @@ import { Zap } from "lucide-react";
 import { listAutomationRules } from "@/lib/actions/automations";
 import { AutomationsList } from "./automations-list";
 
-export const metadata: Metadata = { title: "Automations · SMB AI" };
+export const metadata: Metadata = { title: "Automations · HelmSmart" };
 
 export default async function AutomationsPage() {
   const rules = await listAutomationRules();

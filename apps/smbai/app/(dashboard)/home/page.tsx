@@ -306,7 +306,7 @@ const COLOR_DOTS: Record<string, string> = {
 
 export default async function HomePage() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
 
   const {
     bankBalance,

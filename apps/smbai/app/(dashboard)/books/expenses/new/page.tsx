@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "New Expense · Books" };
 
 export default async function NewExpensePage() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const [{ data: expenseAccounts }, { data: bankAccounts }, { data: projects }] = await Promise.all([

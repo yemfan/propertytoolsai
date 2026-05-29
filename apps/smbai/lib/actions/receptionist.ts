@@ -7,7 +7,7 @@ import type { BusinessHours } from "@/lib/receptionist";
 
 async function ctx() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? null;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? null;
   const supabase = await createClient();
   const {
     data: { user },

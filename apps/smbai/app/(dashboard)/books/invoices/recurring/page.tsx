@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Recurring Invoices · Books" };
 
 export default async function RecurringPage() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const [recurringRes, clientsRes] = await Promise.all([

@@ -39,7 +39,7 @@ export async function createClient_(
   if (!firstName) return { error: "First name is required." };
 
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return { error: "No organization found." };
 
   const supabase = await createClient();
@@ -139,7 +139,7 @@ export async function patchClient(
   }>
 ): Promise<void> {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();

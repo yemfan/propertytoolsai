@@ -70,7 +70,7 @@ export default async function ClientDetailPage({
 }) {
   const { id } = await params;
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const [clientRes, invoicesRes, messagesRes, notesRes, clientsPnL, estimatesRes, projectsRes, tasksRes] = await Promise.all([

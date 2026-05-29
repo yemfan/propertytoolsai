@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Recurring Tasks" };
 
 export default async function RecurringTasksPage() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const [recurring, clientsRes] = await Promise.all([

@@ -26,7 +26,7 @@ export interface CreateRecurringInput {
 
 export async function createRecurringInvoice(input: CreateRecurringInput) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) throw new Error("Not authenticated");
 
   const supabase = await createClient();
@@ -54,7 +54,7 @@ export async function setRecurringStatus(
   newStatus: "active" | "paused"
 ) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) throw new Error("Not authenticated");
 
   const supabase = await createClient();
@@ -72,7 +72,7 @@ export async function setRecurringStatus(
 
 export async function deleteRecurringInvoice(id: string) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) throw new Error("Not authenticated");
 
   const supabase = await createClient();

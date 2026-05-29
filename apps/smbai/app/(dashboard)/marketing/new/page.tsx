@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "New Campaign · Marketing" };
 
 export default async function NewCampaignPage() {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
   const { data: rows } = await supabase
     .from("clients")

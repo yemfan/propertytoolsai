@@ -31,7 +31,7 @@ export default async function InvoiceDetailPage({
 }) {
   const [{ id }, { stripe }] = await Promise.all([params, searchParams]);
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const [{ data: inv }, { data: bankAccounts }] = await Promise.all([

@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
           <a href="${appUrl}/reports?tab=forecast" style="display:inline-block;margin-left:8px;color:#4f46e5;font-size:14px;font-weight:600;text-decoration:none;padding:12px 8px">View cash-flow forecast</a>
         </td></tr>
         <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px;text-align:center">
-          <p style="margin:0;font-size:12px;color:#94a3b8">Weekly digest · Powered by SMB AI</p>
+          <p style="margin:0;font-size:12px;color:#94a3b8">Weekly digest · Powered by HelmSmart</p>
         </td></tr>
       </table>
     </td></tr>
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
       const text = `${org.name} — your week ahead\n\nCash on hand: ${fmt(cash)}\nOutstanding: ${fmt(outstanding)}${overdueAmt > 0 ? ` (${fmt(overdueAmt)} overdue)` : ""}\nBills to pay: ${fmt(owed)}${billsDueSoonAmt > 0 ? ` (${fmt(billsDueSoonAmt)} due this week)` : ""}\nOpen tasks: ${openTasks}${overdueTasks > 0 ? ` (${overdueTasks} overdue)` : ""}\n\nDashboard: ${appUrl}/home`;
 
       await resend.emails.send({
-        from: `${org.name} via SMB AI <${fromEmail}>`,
+        from: `${org.name} via HelmSmart <${fromEmail}>`,
         to: emails,
         subject: `Your week at ${org.name}: ${fmt(outstanding)} outstanding`,
         html,

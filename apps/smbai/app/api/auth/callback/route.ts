@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Check whether user already has an org (cookie set by createOrg server action)
-  const orgId = cookieStore.get("smbai-org-id")?.value;
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
 
   return NextResponse.redirect(`${origin}${orgId ? "/books" : "/onboarding"}`);
 }

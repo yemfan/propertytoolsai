@@ -17,7 +17,7 @@ export async function createTask(data: {
   priority?: TaskPriority;
 }) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) throw new Error("Not authenticated");
 
   const supabase = await createClient();
@@ -40,7 +40,7 @@ export async function createTask(data: {
 
 export async function updateTaskStatus(taskId: string, status: TaskStatus) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) throw new Error("Not authenticated");
 
   const supabase = await createClient();
@@ -60,7 +60,7 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus) {
 
 export async function deleteTask(taskId: string) {
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) throw new Error("Not authenticated");
 
   const supabase = await createClient();

@@ -16,7 +16,7 @@ export default async function NewEstimatePage({
 }) {
   const { client: clientParam } = await searchParams;
   const cookieStore = await cookies();
-  const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
   const [{ data: clients }, templates] = await Promise.all([
