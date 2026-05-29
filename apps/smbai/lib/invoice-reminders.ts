@@ -7,7 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // argument and be shared by both the manual server action (cookie client) and
 // the dunning cron (service client).
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY ?? "");
 
 export type ReminderInvoice = {
   id: string;

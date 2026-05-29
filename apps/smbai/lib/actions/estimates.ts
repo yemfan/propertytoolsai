@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import Anthropic from "@anthropic-ai/sdk";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY ?? "");
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ─── Types ────────────────────────────────────────────────────────────────────

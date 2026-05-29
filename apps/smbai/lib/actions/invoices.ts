@@ -9,7 +9,7 @@ import { refreshClientLifetimeValue } from "@/lib/actions/clients";
 import { runAutomations } from "@/lib/automation-engine";
 import { sendReminderForInvoice, type ReminderInvoice } from "@/lib/invoice-reminders";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY ?? "");
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
