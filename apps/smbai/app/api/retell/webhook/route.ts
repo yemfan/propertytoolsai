@@ -10,10 +10,11 @@
  *   https://<app>/api/retell/webhook
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import Retell from "retell-sdk";
 import { createServiceClient } from "@/lib/supabase/server";
 import { findOrgIdByNumber } from "@/lib/receptionist-agent";
+import { billVoiceCall } from "@/lib/voice-billing";
 
 type Utterance = { role?: string; content?: string };
 
@@ -85,9 +86,11 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     };
     if (summary) update.summary = summary;
-    if (durationMs !== null) update.duration_seconds = Math.round(durationMs / 1000);
+    const durationSeconds = durationMs !== null ? Math.round(durationMs / 1000) : null;
+    if (durationSeconds !== null) update.duration_seconds = durationSeconds;
     if (recordingUrl) update.recording_url = recordingUrl;
     await db.from("voice_sessions").upsert(update, { onConflict: "call_sid" });
+    if (durationSeconds) after(() => billVoiceCall(callId, durationSeconds));
   }
 
   return new NextResponse(null, { status: 204 });

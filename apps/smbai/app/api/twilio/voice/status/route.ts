@@ -3,14 +3,16 @@
  *
  * Receives the final call status from Twilio after a call ends. Captures
  * CallDuration (seconds) and RecordingUrl (if recording is enabled on the
- * Twilio phone number) and persists them to voice_sessions.
+ * Twilio phone number) and persists them to voice_sessions, then bills the
+ * org via Stripe invoice item (active subscriptions only).
  *
  * Setup: in the Twilio console, set the "Call Status Changes" webhook on your
  * phone number to: https://<app>/api/twilio/voice/status
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { billVoiceCall } from "@/lib/voice-billing";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -21,13 +23,16 @@ export async function POST(request: NextRequest) {
   if (!callSid) return new NextResponse(null, { status: 204 });
 
   const update: Record<string, unknown> = {};
-  if (callDuration) update.duration_seconds = parseInt(callDuration, 10);
+  const durationSeconds = callDuration ? parseInt(callDuration, 10) : null;
+  if (durationSeconds) update.duration_seconds = durationSeconds;
   if (recordingUrl) update.recording_url = recordingUrl;
 
   if (Object.keys(update).length > 0) {
     const db = createServiceClient();
     await db.from("voice_sessions").update(update).eq("call_sid", callSid);
   }
+
+  if (durationSeconds) after(() => billVoiceCall(callSid, durationSeconds));
 
   return new NextResponse(null, { status: 204 });
 }
