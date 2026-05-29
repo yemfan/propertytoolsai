@@ -14,7 +14,7 @@ export default async function InboxPage() {
   const { data: rawMessages } = await supabase
     .from("messages")
     .select(`
-      id, channel, direction, subject, body, sent_at, read, client_id,
+      id, channel, direction, subject, body, sent_at, read, client_id, from_address, to_address, translation_en, intent, priority,
       clients(id, first_name, last_name, email, phone)
     `)
     .eq("organization_id", orgId)
@@ -37,9 +37,14 @@ export default async function InboxPage() {
     body: string;
     sent_at: string;
     read: boolean;
+    translationEn: string | null;
+    intent: string | null;
+    priority: string | null;
   };
   type Thread = {
-    clientId: string;
+    key: string;
+    clientId: string | null;
+    contactAddress: string | null;
     clientName: string;
     clientEmail: string | null;
     clientPhone: string | null;
@@ -51,12 +56,18 @@ export default async function InboxPage() {
   const threadMap = new Map<string, Thread>();
 
   for (const msg of rawMessages ?? []) {
-    const clientId = msg.client_id ?? "unknown";
     const clientsRaw = msg.clients;
     const clientRaw = (Array.isArray(clientsRaw) ? clientsRaw[0] : clientsRaw) as { id: string; first_name: string | null; last_name: string | null; email: string | null; phone: string | null } | null;
+
+    // The external party's address — used to group senders not linked to a client,
+    // so distinct unmatched senders no longer collapse into one "Unknown" thread.
+    const contactAddress = (msg.direction === "inbound" ? msg.from_address : msg.to_address) ?? null;
+    const key = msg.client_id ?? (contactAddress ? `addr:${contactAddress}` : "unknown");
+    const isEmailAddr = !!contactAddress && contactAddress.includes("@");
+
     const clientName = clientRaw
       ? [clientRaw.first_name, clientRaw.last_name].filter(Boolean).join(" ") || "Unknown"
-      : "Unknown";
+      : contactAddress ?? "Unknown";
 
     const m: MsgForThread = {
       id: msg.id,
@@ -66,19 +77,24 @@ export default async function InboxPage() {
       body: msg.body,
       sent_at: msg.sent_at,
       read: msg.read,
+      translationEn: msg.translation_en,
+      intent: msg.intent,
+      priority: msg.priority,
     };
 
-    const existing = threadMap.get(clientId);
+    const existing = threadMap.get(key);
     if (existing) {
       existing.messages.push(m);
       existing.lastMessage = m;
       if (!m.read && m.direction === "inbound") existing.unreadCount++;
     } else {
-      threadMap.set(clientId, {
-        clientId,
+      threadMap.set(key, {
+        key,
+        clientId: msg.client_id ?? null,
+        contactAddress: clientRaw ? null : contactAddress,
         clientName,
-        clientEmail: clientRaw?.email ?? null,
-        clientPhone: clientRaw?.phone ?? null,
+        clientEmail: clientRaw?.email ?? (isEmailAddr ? contactAddress : null),
+        clientPhone: clientRaw?.phone ?? (isEmailAddr ? null : contactAddress),
         lastMessage: m,
         unreadCount: !m.read && m.direction === "inbound" ? 1 : 0,
         messages: [m],
@@ -95,6 +111,7 @@ export default async function InboxPage() {
     <InboxClient
       threads={threads}
       clients={(clients ?? []) as { id: string; first_name: string | null; last_name: string | null; email: string | null; phone: string | null }[]}
+      orgId={orgId}
     />
   );
 }

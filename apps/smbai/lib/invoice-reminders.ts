@@ -1,4 +1,6 @@
 import { Resend } from "resend";
+import twilio from "twilio";
+import { localizeOutbound, type Lang } from "@/lib/language";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Plain server module (NOT "use server") so it can take a Supabase client
@@ -16,8 +18,8 @@ export type ReminderInvoice = {
   reminder_count: number | null;
   organization_id: string;
   clients:
-    | { first_name: string | null; last_name: string | null; email: string | null }
-    | { first_name: string | null; last_name: string | null; email: string | null }[]
+    | { first_name: string | null; last_name: string | null; email: string | null; phone: string | null; preferred_language: string | null }
+    | { first_name: string | null; last_name: string | null; email: string | null; phone: string | null; preferred_language: string | null }[]
     | null;
 };
 
@@ -92,7 +94,23 @@ export async function sendReminderForInvoice(
 
   const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@smbai.app";
 
-  await resend.emails.send({ from: fromEmail, to: client.email, subject, html, text });
+  // Org context (Twilio sender + owner English-assist) and the client's language.
+  const { data: orgRow } = await db
+    .from("organizations")
+    .select("twilio_number, owner_english_assist")
+    .eq("id", inv.organization_id)
+    .single();
+  const assist = !!orgRow?.owner_english_assist;
+  const lang: Lang = (client.preferred_language as Lang | null) ?? "en";
+
+  // English clients keep the rich HTML email; non-English get a localized text
+  // email (bilingual when owner English-assist is on).
+  const emailText = lang === "en" ? text : await localizeOutbound(text, lang, assist);
+  if (lang === "en") {
+    await resend.emails.send({ from: fromEmail, to: client.email, subject, html, text });
+  } else {
+    await resend.emails.send({ from: fromEmail, to: client.email, subject, text: emailText });
+  }
 
   await db.from("messages").insert({
     organization_id: inv.organization_id,
@@ -102,10 +120,38 @@ export async function sendReminderForInvoice(
     from_address: fromEmail,
     to_address: client.email,
     subject,
-    body: text,
+    body: emailText,
     read: true,
     sent_at: new Date().toISOString(),
   });
+
+  // Also nudge by SMS when the client has a phone and the org has a Twilio
+  // number. Texts get read far faster than email — the real "get paid faster"
+  // lever. Failure here is non-fatal; the email reminder already went out.
+  if (client.phone && orgRow?.twilio_number) {
+    const smsFrom = orgRow.twilio_number;
+    const smsEnglish = `Hi ${clientName}, invoice ${inv.invoice_number} for $${amount} is ${
+      overdue > 0 ? `${overdue} day${overdue === 1 ? "" : "s"} past due` : "due soon"
+    }. Pay online: ${payUrl}`;
+    const smsBody = lang === "en" ? smsEnglish : await localizeOutbound(smsEnglish, lang, assist);
+    try {
+      const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
+      await twilioClient.messages.create({ from: smsFrom, to: client.phone, body: smsBody });
+      await db.from("messages").insert({
+        organization_id: inv.organization_id,
+        client_id: inv.client_id,
+        channel: "sms",
+        direction: "outbound",
+        from_address: smsFrom,
+        to_address: client.phone,
+        body: smsBody,
+        read: true,
+        sent_at: new Date().toISOString(),
+      });
+    } catch {
+      // SMS failed — email reminder already sent, so not fatal.
+    }
+  }
 
   await db
     .from("invoices")

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef } from "react";
-import { MessageSquarePlus, Send, Mail, MessageSquare, RefreshCw, Sparkles } from "lucide-react";
-import { markThreadRead, sendEmail, sendSms, draftReply } from "@/lib/actions/messages";
+import { useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
+import { MessageSquarePlus, Send, Mail, MessageSquare, RefreshCw, Sparkles, UserPlus } from "lucide-react";
+import { markThreadRead, sendEmail, sendSms, draftReply, createClientFromConversation } from "@/lib/actions/messages";
 import { InboxCompose } from "./inbox-compose";
 
 type Channel = "all" | "email" | "sms";
@@ -15,10 +17,15 @@ interface Message {
   body: string;
   sent_at: string;
   read: boolean;
+  translationEn: string | null;
+  intent: string | null;
+  priority: string | null;
 }
 
 interface Thread {
-  clientId: string;
+  key: string;
+  clientId: string | null;
+  contactAddress: string | null;
   clientName: string;
   clientEmail: string | null;
   clientPhone: string | null;
@@ -38,6 +45,7 @@ interface Client {
 interface Props {
   threads: Thread[];
   clients: Client[];
+  orgId: string;
 }
 
 function timeAgo(iso: string) {
@@ -50,36 +58,72 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export function InboxClient({ threads: initialThreads, clients }: Props) {
+/** Guess a client name from an email/phone when creating one from a thread. */
+function deriveClientName(address: string): string {
+  if (!address.includes("@")) return address;
+  const local = address.split("@")[0];
+  const parts = local.split(/[._-]+/).filter(Boolean);
+  return parts.length
+    ? parts.map((p) => p[0].toUpperCase() + p.slice(1)).join(" ")
+    : local;
+}
+
+export function InboxClient({ threads: initialThreads, clients, orgId }: Props) {
+  const router = useRouter();
   const [threads, setThreads] = useState(initialThreads);
   const [channel, setChannel] = useState<Channel>("all");
-  const [selectedId, setSelectedId] = useState<string | null>(
-    initialThreads[0]?.clientId ?? null
+  const [selectedKey, setSelectedKey] = useState<string | null>(
+    initialThreads[0]?.key ?? null
   );
   const [composing, setComposing] = useState(false);
   const [replyBody, setReplyBody] = useState("");
   const [drafting, setDrafting] = useState(false);
+  const [addingClient, setAddingClient] = useState(false);
   const [isPending, startTransition] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom when thread changes
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [selectedId]);
+  }, [selectedKey]);
+
+  // Keep local threads in sync when the server re-renders (e.g. after router.refresh()).
+  useEffect(() => {
+    setThreads(initialThreads);
+  }, [initialThreads]);
+
+  // Supabase Realtime — pull in new messages live, no manual refresh.
+  useEffect(() => {
+    if (!orgId) return;
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY!
+    );
+    const rtChannel = supabase
+      .channel("inbox-messages")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `organization_id=eq.${orgId}` },
+        () => router.refresh()
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(rtChannel); };
+  }, [orgId, router]);
 
   const filtered = threads.filter(
     (t) => channel === "all" || t.lastMessage.channel === channel
   );
-  const selected = threads.find((t) => t.clientId === selectedId);
+  const selected = threads.find((t) => t.key === selectedKey);
   const totalUnread = threads.reduce((s, t) => s + t.unreadCount, 0);
 
-  function selectThread(id: string) {
-    setSelectedId(id);
+  function selectThread(key: string) {
+    setSelectedKey(key);
+    const t = threads.find((x) => x.key === key);
     // Mark read optimistically
     setThreads((prev) =>
-      prev.map((t) => (t.clientId === id ? { ...t, unreadCount: 0 } : t))
+      prev.map((x) => (x.key === key ? { ...x, unreadCount: 0 } : x))
     );
-    startTransition(() => markThreadRead(id));
+    startTransition(() => markThreadRead(t?.clientId ?? null, t?.contactAddress ?? null));
   }
 
   function sendReply() {
@@ -102,10 +146,13 @@ export function InboxClient({ threads: initialThreads, clients }: Props) {
         body,
         sent_at: new Date().toISOString(),
         read: true,
+        translationEn: null,
+        intent: null,
+        priority: null,
       };
       setThreads((prev) =>
         prev.map((t) =>
-          t.clientId === selected.clientId
+          t.key === selected.key
             ? { ...t, lastMessage: newMsg, messages: [...t.messages, newMsg] }
             : t
         )
@@ -117,12 +164,28 @@ export function InboxClient({ threads: initialThreads, clients }: Props) {
     if (!selected) return;
     setDrafting(true);
     try {
-      const draft = await draftReply(selected.clientId, selected.lastMessage.channel);
+      const draft = await draftReply(selected.clientId, selected.lastMessage.channel, selected.contactAddress);
       if (draft) setReplyBody(draft);
     } catch {
       // ignore — leave the reply box as-is
     } finally {
       setDrafting(false);
+    }
+  }
+
+  async function addAsClient() {
+    if (!selected || !selected.contactAddress) return;
+    const isEmail = selected.contactAddress.includes("@");
+    setAddingClient(true);
+    const res = await createClientFromConversation({
+      address: selected.contactAddress,
+      channel: isEmail ? "email" : "sms",
+      firstName: deriveClientName(selected.contactAddress),
+    });
+    setAddingClient(false);
+    if (!res.error) {
+      if (res.clientId) setSelectedKey(res.clientId);
+      router.refresh();
     }
   }
 
@@ -133,8 +196,8 @@ export function InboxClient({ threads: initialThreads, clients }: Props) {
           clients={clients}
           onClose={() => setComposing(false)}
           onSent={() => {
-            // Simple: reload after send to pick up new thread
-            window.location.reload();
+            setComposing(false);
+            router.refresh();
           }}
         />
       )}
@@ -190,10 +253,10 @@ export function InboxClient({ threads: initialThreads, clients }: Props) {
             ) : (
               filtered.map((t) => (
                 <button
-                  key={t.clientId}
-                  onClick={() => selectThread(t.clientId)}
+                  key={t.key}
+                  onClick={() => selectThread(t.key)}
                   className={`w-full text-left px-4 py-3.5 border-b border-slate-50 hover:bg-slate-50 transition-colors ${
-                    selectedId === t.clientId ? "bg-indigo-50" : ""
+                    selectedKey === t.key ? "bg-indigo-50" : ""
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -223,6 +286,16 @@ export function InboxClient({ threads: initialThreads, clients }: Props) {
                           {t.lastMessage.body}
                         </p>
                       </div>
+                      {(t.lastMessage.priority === "high" || (t.lastMessage.intent && t.lastMessage.intent !== "other")) && (
+                        <div className="flex items-center gap-1 mt-1">
+                          {t.lastMessage.priority === "high" && (
+                            <span className="text-[10px] font-semibold text-rose-600 bg-rose-50 rounded px-1.5 py-0.5">Urgent</span>
+                          )}
+                          {t.lastMessage.intent && t.lastMessage.intent !== "other" && (
+                            <span className="text-[10px] font-medium text-slate-500 bg-slate-100 rounded px-1.5 py-0.5 capitalize">{t.lastMessage.intent}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </button>
@@ -242,12 +315,25 @@ export function InboxClient({ threads: initialThreads, clients }: Props) {
                   {selected.lastMessage.channel === "email" ? selected.clientEmail : selected.clientPhone}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                {selected.lastMessage.channel === "email"
-                  ? <Mail className="w-4 h-4 text-slate-400" />
-                  : <MessageSquare className="w-4 h-4 text-slate-400" />
-                }
-                <span className="text-xs text-slate-400 capitalize">{selected.lastMessage.channel}</span>
+              <div className="flex items-center gap-3">
+                {!selected.clientId && selected.contactAddress && (
+                  <button
+                    onClick={addAsClient}
+                    disabled={addingClient}
+                    className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors"
+                    title="Create a client from this conversation"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    {addingClient ? "Adding…" : "Add as client"}
+                  </button>
+                )}
+                <div className="flex items-center gap-2">
+                  {selected.lastMessage.channel === "email"
+                    ? <Mail className="w-4 h-4 text-slate-400" />
+                    : <MessageSquare className="w-4 h-4 text-slate-400" />
+                  }
+                  <span className="text-xs text-slate-400 capitalize">{selected.lastMessage.channel}</span>
+                </div>
               </div>
             </div>
 
@@ -266,6 +352,11 @@ export function InboxClient({ threads: initialThreads, clients }: Props) {
                         <p className="text-xs font-semibold mb-1 text-slate-500">{msg.subject}</p>
                       )}
                       <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                      {!isOut && msg.translationEn && (
+                        <p className="text-xs mt-1.5 pt-1.5 border-t border-slate-200/70 text-slate-500 italic whitespace-pre-wrap">
+                          EN: {msg.translationEn}
+                        </p>
+                      )}
                       <p className={`text-xs mt-1 ${isOut ? "text-indigo-200" : "text-slate-400"}`}>
                         {timeAgo(msg.sent_at)}
                       </p>

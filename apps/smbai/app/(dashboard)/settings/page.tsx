@@ -30,7 +30,7 @@ export default async function SettingsPage() {
   const [{ data: org }, { data: bankAccounts }, { data: coaAccounts }] = await Promise.all([
     supabase
       .from("organizations")
-      .select("id, name, entity_type, accounting_basis, currency, timezone, fiscal_year_end_month, default_hourly_rate, default_labor_cost_rate, weekly_digest_enabled, plan, subscription_status, trial_ends_at")
+      .select("id, slug, name, entity_type, accounting_basis, currency, timezone, fiscal_year_end_month, default_hourly_rate, default_labor_cost_rate, weekly_digest_enabled, plan, subscription_status, trial_ends_at")
       .eq("id", orgId)
       .single(),
     supabase
@@ -141,6 +141,30 @@ export default async function SettingsPage() {
                     </code>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Email (Resend inbound) */}
+            <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+              <p className="text-xs font-semibold text-slate-700 mb-3">Email (Resend inbound)</p>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Webhook endpoint — event: email.received</p>
+                  <code className="block text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 text-indigo-700 font-mono truncate">
+                    {process.env.NEXT_PUBLIC_APP_URL}/api/resend/inbound
+                  </code>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">Forward your inbox to this address</p>
+                  <code className="block text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 text-indigo-700 font-mono truncate">
+                    {process.env.INBOUND_EMAIL_DOMAIN
+                      ? `${org?.slug ?? "your-org"}@${process.env.INBOUND_EMAIL_DOMAIN}`
+                      : "Set INBOUND_EMAIL_DOMAIN to enable inbound email"}
+                  </code>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  In Gmail: Settings → Forwarding → add this address, then forward incoming mail to it. Set <code className="bg-slate-200 px-1 py-0.5 rounded text-[11px]">RESEND_INBOUND_WEBHOOK_SECRET</code> to verify inbound webhooks.
+                </p>
               </div>
             </div>
 
