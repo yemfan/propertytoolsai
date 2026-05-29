@@ -5,9 +5,18 @@ import { VoiceSettings } from "@/components/voice-settings";
 import { ReceptionistConfig } from "@/components/receptionist-config";
 import { defaultBusinessHours, type BusinessHours, type AppointmentType, type KnowledgeEntry } from "@/lib/receptionist";
 import { isGoogleCalendarConfigured, isGoogleCalendarConnected, getConnectedGoogleAccount } from "@/lib/google-calendar";
-import { Phone, MessageSquare, Calendar, Bot } from "lucide-react";
+import { Phone, MessageSquare, Calendar, Bot, Clock, DollarSign, Mic } from "lucide-react";
 
 export const metadata: Metadata = { title: "Voice Agent" };
+
+const RETELL_COST_PER_MINUTE = 0.07; // USD — update if your Retell plan differs
+
+function formatDuration(seconds: number | null | undefined): string {
+  if (!seconds) return "—";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -32,7 +41,7 @@ export default async function VoicePage() {
       .single(),
     supabase
       .from("voice_sessions")
-      .select("id, from_number, messages, status, booked_event_id, summary, created_at")
+      .select("id, from_number, messages, status, booked_event_id, summary, duration_seconds, recording_url, created_at")
       .eq("organization_id", orgId)
       .order("created_at", { ascending: false })
       .limit(20),
@@ -58,6 +67,9 @@ export default async function VoicePage() {
   const msgLeft = (sessions ?? []).filter(
     (s) => (s.messages as { role: string }[]).some((m) => m.role === "user") && !s.booked_event_id
   ).length;
+  const totalSeconds = (sessions ?? []).reduce((sum, s) => sum + (s.duration_seconds ?? 0), 0);
+  const totalMinutes = totalSeconds / 60;
+  const estCost = totalMinutes * RETELL_COST_PER_MINUTE;
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -69,7 +81,7 @@ export default async function VoicePage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         <div className="bg-white rounded-xl border border-slate-200 p-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Calls Handled</span>
@@ -93,6 +105,28 @@ export default async function VoicePage() {
           </div>
           <p className="text-2xl font-semibold text-slate-800 font-mono">{msgLeft}</p>
           <p className="text-xs text-slate-400 mt-0.5">Saved to Inbox</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Minutes Used</span>
+            <Clock className="w-4 h-4 text-violet-400" />
+          </div>
+          <p className="text-2xl font-semibold text-slate-800 font-mono">
+            {totalMinutes >= 60
+              ? `${(totalMinutes / 60).toFixed(1)}h`
+              : `${totalMinutes.toFixed(1)}m`}
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5">Talk time</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Est. AI Cost</span>
+            <DollarSign className="w-4 h-4 text-rose-400" />
+          </div>
+          <p className="text-2xl font-semibold text-slate-800 font-mono">
+            ${estCost.toFixed(2)}
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5">~$0.07/min (Retell)</p>
         </div>
       </div>
 
@@ -121,14 +155,21 @@ export default async function VoicePage() {
       {/* Webhook info */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-8">
         <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Twilio webhook (basic)</h3>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500">Voice webhook URL:</span>
-          <code className="text-xs bg-white border border-slate-200 rounded px-2.5 py-1 text-indigo-700 font-mono">
-            {process.env.NEXT_PUBLIC_APP_URL}/api/twilio/voice
-          </code>
+        <div className="space-y-2">
+          {[
+            { label: "A call comes in", url: `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/voice` },
+            { label: "Call status changes (for duration + recording)", url: `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/voice/status` },
+          ].map((row) => (
+            <div key={row.url} className="flex flex-col gap-1">
+              <span className="text-xs text-slate-500">{row.label}</span>
+              <code className="text-xs bg-white border border-slate-200 rounded px-2.5 py-1 text-indigo-700 font-mono break-all">
+                {row.url}
+              </code>
+            </div>
+          ))}
         </div>
         <p className="text-xs text-slate-400 mt-2">
-          Set this as the "A call comes in" webhook on your Twilio number. For local testing, use ngrok.
+          Set both webhooks on your Twilio number. The status callback captures call duration and recording URL (enable recording on the number to get recordings).
         </p>
       </div>
 
@@ -197,6 +238,23 @@ export default async function VoicePage() {
                       {session.booked_event_id && (
                         <span className="text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">Appointment booked</span>
                       )}
+                      {session.duration_seconds ? (
+                        <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-mono">
+                          {formatDuration(session.duration_seconds)}
+                        </span>
+                      ) : null}
+                      {session.recording_url ? (
+                        <a
+                          href={session.recording_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700"
+                        >
+                          <Mic className="w-3 h-3" />
+                          Recording
+                        </a>
+                      ) : null}
                       <span className="text-xs text-slate-400">{timeAgo(session.created_at)}</span>
                       <span className="text-slate-300 group-open:rotate-90 transition-transform">›</span>
                     </div>

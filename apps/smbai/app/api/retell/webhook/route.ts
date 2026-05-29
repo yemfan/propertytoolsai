@@ -73,6 +73,8 @@ export async function POST(req: NextRequest) {
   } else if (event === "call_ended" || event === "call_analyzed") {
     const analysis = (call.call_analysis ?? {}) as Record<string, unknown>;
     const summary = typeof analysis.call_summary === "string" ? (analysis.call_summary as string).trim() : "";
+    const durationMs = typeof call.duration_ms === "number" ? (call.duration_ms as number) : null;
+    const recordingUrl = typeof call.recording_url === "string" ? (call.recording_url as string) : null;
     const update: Record<string, unknown> = {
       organization_id: orgId,
       call_sid: callId,
@@ -83,6 +85,8 @@ export async function POST(req: NextRequest) {
       updated_at: new Date().toISOString(),
     };
     if (summary) update.summary = summary;
+    if (durationMs !== null) update.duration_seconds = Math.round(durationMs / 1000);
+    if (recordingUrl) update.recording_url = recordingUrl;
     await db.from("voice_sessions").upsert(update, { onConflict: "call_sid" });
   }
 
