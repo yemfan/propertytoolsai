@@ -29,9 +29,13 @@ export async function createClient() {
 
 /** Service-role client for server-side mutations (bypasses RLS). */
 export function createServiceClient() {
+  const serviceKey =
+    process.env.SMBAI_SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    "";
   return createServerClient(
-    process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL!,
-    process.env.SMBAI_SUPABASE_SERVICE_ROLE_KEY!,
+    "https://vpmwsnoosuiknyzdxgtk.supabase.co",
+    serviceKey,
     {
       cookies: { getAll: () => [], setAll: () => {} },
     }
