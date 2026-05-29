@@ -2,7 +2,7 @@
 
 import { useState, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, X, Sparkles } from "lucide-react";
 
 type Status = "lead" | "prospect" | "active" | "inactive";
 
@@ -82,6 +82,33 @@ function parseRows(text: string): ParsedRow[] {
   });
 }
 
+// ─── AI-extracted contact → preview row ───────────────────────────────────────
+
+type ExtractedContact = {
+  first_name: string;
+  last_name: string;
+  company: string;
+  email: string;
+  phone: string;
+  notes: string;
+};
+
+function toRow(c: ExtractedContact): ParsedRow {
+  const valid = !!(c.first_name || c.company);
+  return {
+    first_name: c.first_name,
+    last_name: c.last_name,
+    company: c.company,
+    email: c.email,
+    phone: c.phone,
+    status: "lead",
+    tags: "",
+    notes: c.notes,
+    _valid: valid,
+    _error: valid ? undefined : "first_name or company required",
+  };
+}
+
 // ─── Template download ────────────────────────────────────────────────────────
 
 function downloadTemplate() {
@@ -104,11 +131,15 @@ Bob,Jones,,bob@example.com,,lead,,Met at conference
 export function ImportForm() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const imgRef  = useRef<HTMLInputElement>(null);
   const [rows, setRows]         = useState<ParsedRow[]>([]);
   const [fileName, setFileName] = useState("");
   const [result, setResult]     = useState<{ inserted: number; failed: number } | null>(null);
   const [error, setError]       = useState("");
   const [pending, start]        = useTransition();
+  const [aiText, setAiText]       = useState("");
+  const [aiImage, setAiImage]     = useState<File | null>(null);
+  const [aiPending, setAiPending] = useState(false);
 
   function handleFile(file: File) {
     setFileName(file.name);
@@ -152,11 +183,79 @@ export function ImportForm() {
     });
   }
 
+  async function handleExtract() {
+    setError("");
+    setResult(null);
+    setAiPending(true);
+    try {
+      const fd = new FormData();
+      if (aiText.trim()) fd.append("text", aiText.trim());
+      if (aiImage) fd.append("image", aiImage);
+      const res = await fetch("/api/clients/extract", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Extraction failed");
+      const mapped = ((data.contacts ?? []) as ExtractedContact[]).map(toRow);
+      if (mapped.length === 0) { setError("No contacts found in that input."); return; }
+      setRows(mapped);
+      setAiText("");
+      setAiImage(null);
+      setFileName(`AI · ${mapped.length} contact${mapped.length !== 1 ? "s" : ""}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Extraction failed");
+    } finally {
+      setAiPending(false);
+    }
+  }
+
   const validCount   = rows.filter((r) => r._valid).length;
   const invalidCount = rows.filter((r) => !r._valid).length;
 
   return (
     <div className="space-y-6">
+      {/* Add with AI */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-indigo-500" />
+          <p className="text-sm font-semibold text-slate-800">Add with AI</p>
+        </div>
+        <p className="text-xs text-slate-500">
+          Paste a list, an email signature, or anything with names &amp; emails — or snap a business card.
+          We&apos;ll pull out the contacts for you to review before importing.
+        </p>
+        <textarea
+          value={aiText}
+          onChange={(e) => setAiText(e.target.value)}
+          rows={4}
+          placeholder="Paste contacts here…"
+          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+        />
+        <div className="flex items-center gap-3">
+          <input
+            ref={imgRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => setAiImage(e.target.files?.[0] ?? null)}
+          />
+          <button
+            type="button"
+            onClick={() => imgRef.current?.click()}
+            className="text-xs font-medium text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors max-w-[200px] truncate"
+          >
+            {aiImage ? aiImage.name : "Upload a photo"}
+          </button>
+          <button
+            type="button"
+            onClick={handleExtract}
+            disabled={aiPending || (!aiText.trim() && !aiImage)}
+            className="ml-auto flex items-center gap-1.5 text-sm font-medium bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-60 transition-colors"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {aiPending ? "Extracting…" : "Extract with AI"}
+          </button>
+        </div>
+      </div>
+
       {/* Instructions + template */}
       <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5 flex items-start gap-4">
         <FileSpreadsheet className="w-5 h-5 text-indigo-500 flex-shrink-0 mt-0.5" />
