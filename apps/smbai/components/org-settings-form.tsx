@@ -16,9 +16,10 @@ interface Props {
   defaultHourlyRate?: number | null;
   defaultLaborCostRate?: number | null;
   weeklyDigestEnabled?: boolean;
+  ownerEnglishAssist?: boolean;
 }
 
-export function OrgSettingsForm({ org, timezones, months, defaultHourlyRate, defaultLaborCostRate, weeklyDigestEnabled }: Props) {
+export function OrgSettingsForm({ org, timezones, months, defaultHourlyRate, defaultLaborCostRate, weeklyDigestEnabled, ownerEnglishAssist }: Props) {
   const [state, action, isPending] = useActionState<SettingsState, FormData>(
     updateOrg,
     null
@@ -130,6 +131,22 @@ export function OrgSettingsForm({ org, timezones, months, defaultHourlyRate, def
         </label>
         <p className="text-[10px] text-slate-400 mt-1 ml-6">
           A Monday summary of cash, receivables, bills, and tasks — emailed to owners &amp; admins.
+        </p>
+      </div>
+
+      <div className="border-t border-slate-100 pt-4">
+        <label className="flex items-center gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            name="owner_english_assist"
+            defaultChecked={ownerEnglishAssist ?? true}
+            disabled={isPending}
+            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          <span className="text-sm text-slate-700">Show me English (multi-language assist)</span>
+        </label>
+        <p className="text-[10px] text-slate-400 mt-1 ml-6">
+          Translate non-English customer messages to English in your inbox, and send replies &amp; reminders bilingually (their language + English) so you can read what went out.
         </p>
       </div>
 
