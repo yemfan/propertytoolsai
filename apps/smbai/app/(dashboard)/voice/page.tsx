@@ -32,7 +32,7 @@ export default async function VoicePage() {
       .single(),
     supabase
       .from("voice_sessions")
-      .select("id, from_number, messages, status, booked_event_id, created_at")
+      .select("id, from_number, messages, status, booked_event_id, summary, created_at")
       .eq("organization_id", orgId)
       .order("created_at", { ascending: false })
       .limit(20),
@@ -158,7 +158,11 @@ export default async function VoicePage() {
                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${session.status === "completed" ? "bg-slate-300" : "bg-emerald-400"}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-800">{session.from_number}</p>
-                      <p className="text-xs text-slate-400">{turns} turn{turns !== 1 ? "s" : ""}</p>
+                      {session.summary ? (
+                        <p className="text-xs text-slate-500 truncate">{session.summary}</p>
+                      ) : (
+                        <p className="text-xs text-slate-400">{turns} turn{turns !== 1 ? "s" : ""}</p>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
                       {session.booked_event_id && (

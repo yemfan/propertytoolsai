@@ -10,7 +10,7 @@
  * platform is wired, it calls these same tools/endpoints.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createNotificationService } from "@/lib/actions/notifications";
 import { getAvailability, bookAppointment, matchOrCreateClient } from "@/lib/booking";
@@ -21,6 +21,38 @@ import twilio from "twilio";
 const VoiceResponse = twilio.twiml.VoiceResponse;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = "claude-sonnet-4-6"; // fast enough for a live call, reliable tool-use
+const SUMMARY_MODEL = "claude-haiku-4-5"; // cheap post-call recap, runs after the hangup
+
+/** 1–2 sentence recap of a finished call, for the owner's call log. */
+async function summarizeCall(
+  transcript: { role: string; content: string }[],
+  orgName: string
+): Promise<string | null> {
+  const dialogue = transcript
+    .map((m) => `${m.role === "user" ? "Caller" : "Receptionist"}: ${m.content}`)
+    .join("\n");
+  if (!dialogue.trim()) return null;
+  try {
+    const res = await anthropic.messages.create({
+      model: SUMMARY_MODEL,
+      max_tokens: 150,
+      messages: [
+        {
+          role: "user",
+          content:
+            `This is a phone call handled by the AI receptionist for ${orgName}. ` +
+            `In 1–2 sentences, summarize for the business owner what the caller wanted and the outcome ` +
+            `(booked an appointment, left a message, got a question answered). Return ONLY the summary.\n\n${dialogue}`,
+        },
+      ],
+    });
+    const block = res.content[0];
+    return block?.type === "text" ? block.text.trim() : null;
+  } catch (e) {
+    console.error("[voice/respond] summarize error:", e);
+    return null;
+  }
+}
 
 function xml(body: string) {
   return new NextResponse(body, { headers: { "Content-Type": "text/xml" } });
@@ -104,7 +136,7 @@ async function runTool(
   name: string,
   input: unknown,
   ctx: ToolCtx
-): Promise<{ text: string; bookedEventId?: string; bookedNote?: string }> {
+): Promise<{ text: string; bookedEventId?: string; bookedNote?: string; bookedLabel?: string }> {
   const args = (input ?? {}) as Record<string, unknown>;
 
   if (name === "check_availability") {
@@ -131,6 +163,7 @@ async function runTool(
       text: `Booked: ${res.title} on ${res.label}. Confirm this back to the caller.`,
       bookedEventId: res.eventId,
       bookedNote: `${res.title} on ${res.label} (from ${ctx.fromNumber})`,
+      bookedLabel: res.label,
     };
   }
 
@@ -182,12 +215,13 @@ export async function POST(request: NextRequest) {
   const fromNumber = session.from_number as string;
 
   const [{ data: org }, { data: types }, { data: knowledge }] = await Promise.all([
-    db.from("organizations").select("name, voice_agent_prompt, timezone, business_hours").eq("id", orgId).single(),
+    db.from("organizations").select("name, twilio_number, voice_agent_prompt, timezone, business_hours").eq("id", orgId).single(),
     db.from("appointment_types").select("name, duration_minutes, description").eq("organization_id", orgId).eq("active", true).order("sort"),
     db.from("knowledge_base").select("title, content").eq("organization_id", orgId).eq("active", true).order("sort"),
   ]);
 
   const orgName = (org?.name as string) || "this business";
+  const twilioNumber = (org?.twilio_number as string | null) ?? null;
   const timezone = (org?.timezone as string) || "America/New_York";
   const todayISO = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const todayLabel = new Intl.DateTimeFormat("en-US", { timeZone: timezone, weekday: "long", month: "long", day: "numeric" }).format(new Date());
@@ -224,6 +258,7 @@ ${knowledgeText ? `What you know about ${orgName} — answer ONLY from this (and
   let ended = false;
   let bookedEventId: string | null = null;
   let bookedNote: string | null = null;
+  let bookedLabel: string | null = null;
 
   try {
     for (let i = 0; i < 5; i++) {
@@ -250,6 +285,7 @@ ${knowledgeText ? `What you know about ${orgName} — answer ONLY from this (and
         if (out.bookedEventId) {
           bookedEventId = out.bookedEventId;
           bookedNote = out.bookedNote ?? null;
+          bookedLabel = out.bookedLabel ?? null;
         }
         results.push({ type: "tool_result", tool_use_id: tu.id, content: out.text });
       }
@@ -279,6 +315,39 @@ ${knowledgeText ? `What you know about ${orgName} — answer ONLY from this (and
       title: "Appointment booked by the receptionist",
       body: bookedNote,
       link: "/calendar",
+    });
+
+    // Text the caller a confirmation (best-effort) and log it to the inbox.
+    if (twilioNumber && bookedLabel) {
+      try {
+        const body = `You're confirmed for ${bookedLabel}. See you then! — ${orgName}`;
+        const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
+        const sms = await twilioClient.messages.create({ from: twilioNumber, to: fromNumber, body });
+        const clientId = await matchOrCreateClient(orgId, fromNumber);
+        await db.from("messages").insert({
+          organization_id: orgId,
+          client_id: clientId,
+          channel: "sms",
+          direction: "outbound",
+          from_address: twilioNumber,
+          to_address: fromNumber,
+          body,
+          read: true,
+          external_id: sms.sid,
+          sent_at: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.error("[voice/respond] confirmation SMS error:", e);
+      }
+    }
+  }
+
+  // When the call wraps up, recap it for the owner — after the response, so the
+  // caller never waits on the summary model.
+  if (ended) {
+    after(async () => {
+      const summary = await summarizeCall(transcript, orgName);
+      if (summary) await db.from("voice_sessions").update({ summary }).eq("call_sid", callSid);
     });
   }
 
