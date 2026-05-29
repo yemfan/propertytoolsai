@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
   const { data: invoices, error } = await db
     .from("invoices")
     .select(
-      "id, invoice_number, total, due_date, client_id, reminder_count, last_reminder_sent_at, organization_id, clients(first_name, last_name, email)"
+      "id, invoice_number, total, due_date, client_id, reminder_count, last_reminder_sent_at, organization_id, clients(first_name, last_name, email, phone, preferred_language)"
     )
     .in("status", ["sent", "overdue"])
     .lt("due_date", today)
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     await createNotificationService(inv.organization_id, {
       type: "invoice_overdue",
       title: `Reminder sent: Invoice ${inv.invoice_number}`,
-      body: `Payment reminder emailed — ${daysOverdue(inv.due_date)} days overdue, $${Number(inv.total).toFixed(2)}`,
+      body: `Payment reminder sent — ${daysOverdue(inv.due_date)} days overdue, $${Number(inv.total).toFixed(2)}`,
       link: `/books/invoices/${inv.id}`,
     });
   }
