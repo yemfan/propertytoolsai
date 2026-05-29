@@ -38,6 +38,7 @@ export async function updateOrg(
       default_hourly_rate: defaultHourlyRate,
       default_labor_cost_rate: defaultLaborCostRate,
       weekly_digest_enabled: formData.get("weekly_digest_enabled") === "on",
+      owner_english_assist: formData.get("owner_english_assist") === "on",
     })
     .eq("id", orgId);
 

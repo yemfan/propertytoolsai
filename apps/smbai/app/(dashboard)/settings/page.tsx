@@ -30,7 +30,7 @@ export default async function SettingsPage() {
   const [{ data: org }, { data: bankAccounts }, { data: coaAccounts }] = await Promise.all([
     supabase
       .from("organizations")
-      .select("id, slug, name, entity_type, accounting_basis, currency, timezone, fiscal_year_end_month, default_hourly_rate, default_labor_cost_rate, weekly_digest_enabled, plan, subscription_status, trial_ends_at")
+      .select("id, slug, name, entity_type, accounting_basis, currency, timezone, fiscal_year_end_month, default_hourly_rate, default_labor_cost_rate, weekly_digest_enabled, owner_english_assist, plan, subscription_status, trial_ends_at")
       .eq("id", orgId)
       .single(),
     supabase
@@ -67,6 +67,7 @@ export default async function SettingsPage() {
             defaultHourlyRate={Number(org?.default_hourly_rate ?? 0) || null}
             defaultLaborCostRate={Number(org?.default_labor_cost_rate ?? 0) || null}
             weeklyDigestEnabled={org?.weekly_digest_enabled ?? true}
+            ownerEnglishAssist={org?.owner_english_assist ?? true}
           />
         </section>
 

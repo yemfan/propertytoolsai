@@ -106,10 +106,11 @@ export async function sendReminderForInvoice(
   // English clients keep the rich HTML email; non-English get a localized text
   // email (bilingual when owner English-assist is on).
   const emailText = lang === "en" ? text : await localizeOutbound(text, lang, assist);
+  const emailSubject = lang === "en" ? subject : await localizeOutbound(subject, lang, false);
   if (lang === "en") {
     await resend.emails.send({ from: fromEmail, to: client.email, subject, html, text });
   } else {
-    await resend.emails.send({ from: fromEmail, to: client.email, subject, text: emailText });
+    await resend.emails.send({ from: fromEmail, to: client.email, subject: emailSubject, text: emailText });
   }
 
   await db.from("messages").insert({
@@ -119,7 +120,7 @@ export async function sendReminderForInvoice(
     direction: "outbound",
     from_address: fromEmail,
     to_address: client.email,
-    subject,
+    subject: emailSubject,
     body: emailText,
     read: true,
     sent_at: new Date().toISOString(),
