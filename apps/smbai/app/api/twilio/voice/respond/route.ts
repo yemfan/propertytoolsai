@@ -1,216 +1,230 @@
 /**
  * Twilio Voice Gather Callback — POST /api/twilio/voice/respond
  *
- * Called by Twilio after caller speaks.
- * 1. Load conversation session
- * 2. Append caller's speech to history
- * 3. Call Claude with business context + history
- * 4. Parse Claude's structured response (speech + intent)
- * 5. Execute intent (book appointment / take message / end call)
- * 6. Save updated session
- * 7. Return TwiML: Say + Gather (or Hangup)
+ * The AI receptionist's turn handler for the INTERIM transport (Twilio gather/say).
+ * Claude drives the call with real tool-use: check_availability / book_appointment
+ * (booking engine) · create_callback (Task + owner notify) · end_call. The brain
+ * (context, prompt, tools, booking side-effects) lives in lib/receptionist-agent so
+ * this and the realtime Retell path share one implementation.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { createNotificationService } from "@/lib/actions/notifications";
+import {
+  loadReceptionistContext,
+  buildVoiceSystemPrompt,
+  runReceptionistTool,
+  notifyBooking,
+} from "@/lib/receptionist-agent";
 import Anthropic from "@anthropic-ai/sdk";
 import twilio from "twilio";
 
 const VoiceResponse = twilio.twiml.VoiceResponse;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const MODEL = "claude-sonnet-4-6"; // fast enough for a live call, reliable tool-use
+const SUMMARY_MODEL = "claude-haiku-4-5"; // cheap post-call recap, runs after the hangup
 
-interface VoiceIntent {
-  speech: string;
-  intent: "continue" | "book_appointment" | "take_message" | "end_call";
-  details?: {
-    appointment_title?: string;
-    appointment_date?: string;   // YYYY-MM-DD
-    appointment_time?: string;   // HH:MM (24h)
-    message_body?: string;
-  };
+/** 1–2 sentence recap of a finished call, for the owner's call log. */
+async function summarizeCall(
+  transcript: { role: string; content: string }[],
+  orgName: string
+): Promise<string | null> {
+  const dialogue = transcript
+    .map((m) => `${m.role === "user" ? "Caller" : "Receptionist"}: ${m.content}`)
+    .join("\n");
+  if (!dialogue.trim()) return null;
+  try {
+    const res = await anthropic.messages.create({
+      model: SUMMARY_MODEL,
+      max_tokens: 150,
+      messages: [
+        {
+          role: "user",
+          content:
+            `This is a phone call handled by the AI receptionist for ${orgName}. ` +
+            `In 1–2 sentences, summarize for the business owner what the caller wanted and the outcome ` +
+            `(booked an appointment, left a message, got a question answered). Return ONLY the summary.\n\n${dialogue}`,
+        },
+      ],
+    });
+    const block = res.content[0];
+    return block?.type === "text" ? block.text.trim() : null;
+  } catch (e) {
+    console.error("[voice/respond] summarize error:", e);
+    return null;
+  }
 }
 
 function xml(body: string) {
   return new NextResponse(body, { headers: { "Content-Type": "text/xml" } });
 }
 
-function endCall(reason: string): Response {
-  const twiml = new VoiceResponse();
-  twiml.say({ voice: "Polly.Joanna", language: "en-US" }, reason);
-  twiml.hangup();
-  return xml(twiml.toString());
+function endCall(text: string): Response {
+  const t = new VoiceResponse();
+  t.say({ voice: "Polly.Joanna", language: "en-US" }, text);
+  t.hangup();
+  return xml(t.toString());
 }
 
-function continueConversation(agentSpeech: string, respondUrl: string): Response {
-  const twiml = new VoiceResponse();
-  twiml.say({ voice: "Polly.Joanna", language: "en-US" }, agentSpeech);
-  const gather = twiml.gather({
+function continueCall(text: string): Response {
+  const t = new VoiceResponse();
+  t.say({ voice: "Polly.Joanna", language: "en-US" }, text);
+  const gather = t.gather({
     input: ["speech"],
-    action: respondUrl,
+    action: `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/voice/respond`,
     method: "POST",
     speechTimeout: "3",
     timeout: 6,
     language: "en-US",
   });
   gather.say({ voice: "Polly.Joanna" }, "");
-  twiml.say({ voice: "Polly.Joanna" }, "I'll let you go. Have a great day!");
-  twiml.hangup();
-  return xml(twiml.toString());
+  t.say({ voice: "Polly.Joanna" }, "I'll let you go. Have a great day!");
+  t.hangup();
+  return xml(t.toString());
 }
 
+const TOOLS: Anthropic.Tool[] = [
+  {
+    name: "check_availability",
+    description:
+      "Find open appointment slots for an appointment type on a date. ALWAYS call this before offering or booking a time. Returns real openings only — never invent times.",
+    input_schema: {
+      type: "object",
+      properties: {
+        appointment_type: { type: "string", description: "The appointment type the caller wants." },
+        date: { type: "string", description: "Date to check, formatted YYYY-MM-DD." },
+      },
+      required: ["appointment_type", "date"],
+    },
+  },
+  {
+    name: "book_appointment",
+    description:
+      "Book a specific open slot. Use only a `start` value returned by check_availability, after confirming the time and the caller's name out loud.",
+    input_schema: {
+      type: "object",
+      properties: {
+        appointment_type: { type: "string" },
+        start: { type: "string", description: "Exact ISO start time from check_availability." },
+        caller_name: { type: "string", description: "The caller's name." },
+      },
+      required: ["appointment_type", "start", "caller_name"],
+    },
+  },
+  {
+    name: "create_callback",
+    description:
+      "Log a request for the team to call the caller back. Use when you can't answer something or the caller wants a person.",
+    input_schema: {
+      type: "object",
+      properties: {
+        reason: { type: "string", description: "Why they want a callback / the message to pass on." },
+        caller_name: { type: "string", description: "The caller's name, if given." },
+      },
+      required: ["reason"],
+    },
+  },
+  {
+    name: "end_call",
+    description: "End the call politely when the caller is done.",
+    input_schema: { type: "object", properties: {} },
+  },
+];
+
 export async function POST(request: NextRequest) {
-  const formData     = await request.formData();
-  const callSid      = formData.get("CallSid")      as string | null;
+  const formData = await request.formData();
+  const callSid = formData.get("CallSid") as string | null;
   const speechResult = formData.get("SpeechResult") as string | null;
-  const confidence   = formData.get("Confidence")   as string | null;
 
   if (!callSid || !speechResult) {
-    return endCall("Sorry, I didn't hear anything. Please call back anytime. Goodbye!");
+    return endCall("Sorry, I didn't catch that. Please call back anytime. Goodbye!");
   }
 
-  const supabase = createServiceClient();
-
-  // Load session
-  const { data: session } = await supabase
+  const db = createServiceClient();
+  const { data: session } = await db
     .from("voice_sessions")
     .select("id, organization_id, from_number, messages")
     .eq("call_sid", callSid)
     .single();
-
   if (!session) {
     return endCall("I'm having trouble with this call. Please try again later. Goodbye!");
   }
 
-  // Load org context
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("name, entity_type, voice_agent_prompt")
-    .eq("id", session.organization_id)
-    .single();
+  const orgId = session.organization_id as string;
+  const fromNumber = session.from_number as string;
 
-  const orgName   = org?.name ?? "this business";
-  const orgPrompt = org?.voice_agent_prompt ?? "";
+  const ctx = await loadReceptionistContext(db, orgId);
+  const systemPrompt = buildVoiceSystemPrompt(ctx);
 
-  // Build conversation history
-  const history = (session.messages as { role: "user" | "assistant"; content: string }[]) ?? [];
-  history.push({ role: "user", content: speechResult });
+  const prior = (session.messages as { role: "user" | "assistant"; content: string }[]) ?? [];
+  const messages: Anthropic.MessageParam[] = prior.map((m) => ({ role: m.role, content: m.content }));
+  messages.push({ role: "user", content: speechResult });
 
-  const systemPrompt = `You are an AI phone receptionist for ${orgName}. Speak naturally and concisely — this is a live phone call.
-
-${orgPrompt ? `Business info:\n${orgPrompt}\n` : ""}
-Your capabilities:
-- Answer questions about the business
-- Book appointments (ask for preferred date/time, then confirm)
-- Take messages to pass to the team
-- End the call politely when the caller is done
-
-Rules:
-- Keep every response SHORT — 1 to 3 sentences max.
-- Never use lists, markdown, or bullet points.
-- Only ask ONE question at a time.
-- When you need today's date, it is ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}.
-
-ALWAYS respond with valid JSON in this exact format:
-{
-  "speech": "What you say out loud to the caller",
-  "intent": "continue" | "book_appointment" | "take_message" | "end_call",
-  "details": {
-    "appointment_title": "...",
-    "appointment_date": "YYYY-MM-DD",
-    "appointment_time": "HH:MM",
-    "message_body": "..."
-  }
-}
-
-Only include "details" when intent is "book_appointment" or "take_message".`;
-
-  let parsed: VoiceIntent;
+  let speech = "";
+  let ended = false;
+  let bookedEventId: string | null = null;
+  let bookedNote: string | null = null;
+  let bookedLabel: string | null = null;
 
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-opus-4-5",
-      max_tokens: 300,
-      system: systemPrompt,
-      messages: history.map((m) => ({ role: m.role, content: m.content })),
-    });
+    for (let i = 0; i < 5; i++) {
+      const resp = await anthropic.messages.create({ model: MODEL, max_tokens: 400, system: systemPrompt, tools: TOOLS, messages });
+      const textPart = resp.content
+        .filter((b): b is Anthropic.TextBlock => b.type === "text")
+        .map((b) => b.text)
+        .join(" ")
+        .trim();
+      if (textPart) speech = textPart;
 
-    const raw = (response.content[0] as { type: string; text: string }).text ?? "{}";
-    // Extract JSON (Claude sometimes wraps in ```json)
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { speech: "I'll have someone follow up with you shortly.", intent: "end_call" };
-  } catch (_) {
-    parsed = { speech: "I'm having a bit of trouble right now. Someone from our team will call you back soon.", intent: "end_call" };
-  }
+      const toolUses = resp.content.filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
+      if (toolUses.length === 0) break;
 
-  // Append assistant reply to history
-  history.push({ role: "assistant", content: parsed.speech });
-
-  // Execute intents
-  if (parsed.intent === "book_appointment" && parsed.details?.appointment_title) {
-    const startDate = parsed.details.appointment_date ?? new Date().toISOString().slice(0, 10);
-    const startTime = parsed.details.appointment_time ?? "09:00";
-    const startAt   = `${startDate}T${startTime}:00`;
-
-    const { data: evt } = await supabase
-      .from("events")
-      .insert({
-        organization_id: session.organization_id,
-        title: `${parsed.details.appointment_title} — ${session.from_number}`,
-        type: "appointment",
-        color: "indigo",
-        start_at: startAt,
-        end_at: null,
-        all_day: false,
-        completed: false,
-      })
-      .select("id")
-      .single();
-
-    if (evt) {
-      await supabase.from("voice_sessions").update({ booked_event_id: evt.id }).eq("call_sid", callSid);
-      await createNotificationService(session.organization_id, {
-        type: "booking",
-        title: "Appointment booked via Voice Agent",
-        body: `${parsed.details.appointment_title} on ${parsed.details.appointment_date ?? "TBD"} from ${session.from_number}`,
-        link: "/calendar",
-      });
+      messages.push({ role: "assistant", content: resp.content as Anthropic.ContentBlockParam[] });
+      const results: Anthropic.ToolResultBlockParam[] = [];
+      for (const tu of toolUses) {
+        if (tu.name === "end_call") {
+          ended = true;
+          results.push({ type: "tool_result", tool_use_id: tu.id, content: "Call ended." });
+          continue;
+        }
+        const out = await runReceptionistTool(tu.name, tu.input, { db, orgId, fromNumber });
+        if (out.bookedEventId) {
+          bookedEventId = out.bookedEventId;
+          bookedNote = out.bookedNote ?? null;
+          bookedLabel = out.bookedLabel ?? null;
+        }
+        results.push({ type: "tool_result", tool_use_id: tu.id, content: out.text });
+      }
+      messages.push({ role: "user", content: results });
+      if (ended) break;
     }
+  } catch (e) {
+    console.error("[voice/respond] loop error:", e);
+    speech = "I'm having a little trouble right now — let me have someone call you back. Thanks for calling!";
+    ended = true;
   }
 
-  if (parsed.intent === "take_message" && parsed.details?.message_body) {
-    await supabase.from("messages").insert({
-      organization_id: session.organization_id,
-      channel: "sms",
-      direction: "inbound",
-      from_address: session.from_number,
-      to_address: "voice-agent",
-      body: `📞 Voicemail message from ${session.from_number}: ${parsed.details.message_body}`,
-      read: false,
-      sent_at: new Date().toISOString(),
-    });
-    await createNotificationService(session.organization_id, {
-      type: "new_message",
-      title: "Message taken via Voice Agent",
-      body: parsed.details.message_body.length > 80
-        ? parsed.details.message_body.slice(0, 77) + "…"
-        : parsed.details.message_body,
-      link: "/inbox",
-    });
-  }
+  if (!speech) speech = ended ? "Thank you for calling. Goodbye!" : "Sorry, could you say that again?";
 
-  // Save updated session
-  const isEnded = parsed.intent === "end_call";
-  await supabase.from("voice_sessions").update({
-    messages: history,
-    status: isEnded ? "completed" : "active",
+  const transcript = [...prior, { role: "user", content: speechResult }, { role: "assistant", content: speech }];
+  const update: Record<string, unknown> = {
+    messages: transcript,
+    status: ended ? "completed" : "active",
     updated_at: new Date().toISOString(),
-  }).eq("call_sid", callSid);
+  };
+  if (bookedEventId) update.booked_event_id = bookedEventId;
+  await db.from("voice_sessions").update(update).eq("call_sid", callSid);
 
-  if (parsed.intent === "end_call") {
-    return endCall(parsed.speech);
-  }
+  // Post-response work: booking notify + caller SMS, and a recap when the call ends.
+  after(async () => {
+    if (bookedEventId) {
+      await notifyBooking(db, { orgId, orgName: ctx.orgName, twilioNumber: ctx.twilioNumber }, fromNumber, { bookedNote, bookedLabel });
+    }
+    if (ended) {
+      const summary = await summarizeCall(transcript, ctx.orgName);
+      if (summary) await db.from("voice_sessions").update({ summary }).eq("call_sid", callSid);
+    }
+  });
 
-  const respondUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/voice/respond`;
-  return continueConversation(parsed.speech, respondUrl);
+  return ended ? endCall(speech) : continueCall(speech);
 }

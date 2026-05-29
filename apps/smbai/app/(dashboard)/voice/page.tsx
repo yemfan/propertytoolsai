@@ -2,6 +2,9 @@ import { Metadata } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { VoiceSettings } from "@/components/voice-settings";
+import { ReceptionistConfig } from "@/components/receptionist-config";
+import { defaultBusinessHours, type BusinessHours, type AppointmentType, type KnowledgeEntry } from "@/lib/receptionist";
+import { isGoogleCalendarConfigured, isGoogleCalendarConnected, getConnectedGoogleAccount } from "@/lib/google-calendar";
 import { Phone, MessageSquare, Calendar, Bot } from "lucide-react";
 
 export const metadata: Metadata = { title: "Voice Agent" };
@@ -21,19 +24,34 @@ export default async function VoicePage() {
   const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const [{ data: org }, { data: sessions }] = await Promise.all([
+  const [{ data: org }, { data: sessions }, { data: apptTypes }, { data: knowledge }] = await Promise.all([
     supabase
       .from("organizations")
-      .select("twilio_number, voice_agent_enabled, voice_agent_greeting, voice_agent_prompt")
+      .select("twilio_number, voice_agent_enabled, voice_agent_greeting, voice_agent_prompt, business_hours")
       .eq("id", orgId)
       .single(),
     supabase
       .from("voice_sessions")
-      .select("id, from_number, messages, status, booked_event_id, created_at")
+      .select("id, from_number, messages, status, booked_event_id, summary, created_at")
       .eq("organization_id", orgId)
       .order("created_at", { ascending: false })
       .limit(20),
+    supabase
+      .from("appointment_types")
+      .select("id, name, duration_minutes, description, active, sort")
+      .eq("organization_id", orgId)
+      .order("sort"),
+    supabase
+      .from("knowledge_base")
+      .select("id, title, content, active, sort")
+      .eq("organization_id", orgId)
+      .order("sort"),
   ]);
+
+  const googleConfigured = isGoogleCalendarConfigured();
+  const [googleConnected, googleEmail] = googleConfigured
+    ? await Promise.all([isGoogleCalendarConnected(orgId), getConnectedGoogleAccount(orgId)])
+    : [false, null];
 
   const totalSessions = sessions?.length ?? 0;
   const booked  = (sessions ?? []).filter((s) => s.booked_event_id).length;
@@ -88,9 +106,21 @@ export default async function VoicePage() {
         />
       </div>
 
+      {/* Receptionist brain: hours, appointment types, knowledge */}
+      <div className="mb-8">
+        <ReceptionistConfig
+          hours={(org?.business_hours as BusinessHours | null) ?? defaultBusinessHours()}
+          appointmentTypes={(apptTypes ?? []) as AppointmentType[]}
+          knowledge={(knowledge ?? []) as KnowledgeEntry[]}
+          googleConfigured={googleConfigured}
+          googleConnected={googleConnected}
+          googleEmail={googleEmail}
+        />
+      </div>
+
       {/* Webhook info */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-8">
-        <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Twilio webhook</h3>
+        <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Twilio webhook (basic)</h3>
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-500">Voice webhook URL:</span>
           <code className="text-xs bg-white border border-slate-200 rounded px-2.5 py-1 text-indigo-700 font-mono">
@@ -99,6 +129,35 @@ export default async function VoicePage() {
         </div>
         <p className="text-xs text-slate-400 mt-2">
           Set this as the "A call comes in" webhook on your Twilio number. For local testing, use ngrok.
+        </p>
+      </div>
+
+      {/* Retell (realtime voice) setup */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-8">
+        <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Retell (realtime voice)</h3>
+        <p className="text-xs text-slate-500 mb-3">
+          For natural, low-latency calls, point a Retell agent at these endpoints. The agent&apos;s prompt and tools are
+          fed each business&apos;s hours, services and knowledge automatically.
+        </p>
+        <div className="space-y-2">
+          {[
+            { label: "Inbound (dynamic variables) — on the phone number", url: `${process.env.NEXT_PUBLIC_APP_URL}/api/retell/inbound?k=<RETELL_FUNCTION_SECRET>` },
+            { label: "Custom functions — Bearer <RETELL_FUNCTION_SECRET>", url: `${process.env.NEXT_PUBLIC_APP_URL}/api/retell/function` },
+            { label: "Call webhook — on the agent", url: `${process.env.NEXT_PUBLIC_APP_URL}/api/retell/webhook` },
+          ].map((row) => (
+            <div key={row.url} className="flex flex-col gap-1">
+              <span className="text-xs text-slate-500">{row.label}</span>
+              <code className="text-xs bg-white border border-slate-200 rounded px-2.5 py-1 text-indigo-700 font-mono break-all">
+                {row.url}
+              </code>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-slate-400 mt-3">
+          Set <code className="font-mono">RETELL_API_KEY</code> and <code className="font-mono">RETELL_FUNCTION_SECRET</code> in
+          the server environment. Tools: <code className="font-mono">check_availability</code>,{" "}
+          <code className="font-mono">book_appointment</code>, <code className="font-mono">create_callback</code> (plus Retell&apos;s
+          built-in <code className="font-mono">end_call</code>).
         </p>
       </div>
 
@@ -128,7 +187,11 @@ export default async function VoicePage() {
                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${session.status === "completed" ? "bg-slate-300" : "bg-emerald-400"}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-800">{session.from_number}</p>
-                      <p className="text-xs text-slate-400">{turns} turn{turns !== 1 ? "s" : ""}</p>
+                      {session.summary ? (
+                        <p className="text-xs text-slate-500 truncate">{session.summary}</p>
+                      ) : (
+                        <p className="text-xs text-slate-400">{turns} turn{turns !== 1 ? "s" : ""}</p>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
                       {session.booked_event_id && (

@@ -296,7 +296,7 @@ importers:
         version: 9.39.4(jiti@2.6.1)
       eslint-config-next:
         specifier: ^16.2.0
-        version: 16.2.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+        version: 16.2.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
       tsx:
         specifier: ^4.19.3
         version: 4.21.0
@@ -490,6 +490,9 @@ importers:
       resend:
         specifier: ^6.9.4
         version: 6.9.4
+      retell-sdk:
+        specifier: ^5.31.0
+        version: 5.31.0
       stripe:
         specifier: ^18.5.0
         version: 18.5.0(@types/node@20.19.37)
@@ -517,7 +520,7 @@ importers:
         version: 9.39.4(jiti@2.6.1)
       eslint-config-next:
         specifier: ^16.2.0
-        version: 16.2.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+        version: 16.2.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
       typescript:
         specifier: ^5.1.6
         version: 5.9.3
@@ -5897,6 +5900,9 @@ packages:
   restore-cursor@2.0.0:
     resolution: {integrity: sha512-6IzJLuGi4+R14vwagDHX+JrXmPVtPpn4mffDJ1UdR7/Edm87fl6yi8mMBIVvFtJaNTUvjughmW4hwLhRG7gC1Q==}
     engines: {node: '>=4'}
+
+  retell-sdk@5.31.0:
+    resolution: {integrity: sha512-to3U5VENc8A6pe8buJoG7U6w3hBGy6VX5bIM7ave8VJLTChOB6cYQNhcNfzASDhssWvjfi14VeMbX8rzFQhJKQ==}
 
   reusify@1.1.0:
     resolution: {integrity: sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw==}
@@ -12892,6 +12898,8 @@ snapshots:
     dependencies:
       onetime: 2.0.1
       signal-exit: 3.0.7
+
+  retell-sdk@5.31.0: {}
 
   reusify@1.1.0: {}
 
