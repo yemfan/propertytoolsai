@@ -120,7 +120,7 @@ export default async function VoicePage() {
 
       {/* Webhook info */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-8">
-        <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Twilio webhook</h3>
+        <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Twilio webhook (basic)</h3>
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-500">Voice webhook URL:</span>
           <code className="text-xs bg-white border border-slate-200 rounded px-2.5 py-1 text-indigo-700 font-mono">
@@ -129,6 +129,35 @@ export default async function VoicePage() {
         </div>
         <p className="text-xs text-slate-400 mt-2">
           Set this as the "A call comes in" webhook on your Twilio number. For local testing, use ngrok.
+        </p>
+      </div>
+
+      {/* Retell (realtime voice) setup */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-8">
+        <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Retell (realtime voice)</h3>
+        <p className="text-xs text-slate-500 mb-3">
+          For natural, low-latency calls, point a Retell agent at these endpoints. The agent&apos;s prompt and tools are
+          fed each business&apos;s hours, services and knowledge automatically.
+        </p>
+        <div className="space-y-2">
+          {[
+            { label: "Inbound (dynamic variables) — on the phone number", url: `${process.env.NEXT_PUBLIC_APP_URL}/api/retell/inbound?k=<RETELL_FUNCTION_SECRET>` },
+            { label: "Custom functions — Bearer <RETELL_FUNCTION_SECRET>", url: `${process.env.NEXT_PUBLIC_APP_URL}/api/retell/function` },
+            { label: "Call webhook — on the agent", url: `${process.env.NEXT_PUBLIC_APP_URL}/api/retell/webhook` },
+          ].map((row) => (
+            <div key={row.url} className="flex flex-col gap-1">
+              <span className="text-xs text-slate-500">{row.label}</span>
+              <code className="text-xs bg-white border border-slate-200 rounded px-2.5 py-1 text-indigo-700 font-mono break-all">
+                {row.url}
+              </code>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-slate-400 mt-3">
+          Set <code className="font-mono">RETELL_API_KEY</code> and <code className="font-mono">RETELL_FUNCTION_SECRET</code> in
+          the server environment. Tools: <code className="font-mono">check_availability</code>,{" "}
+          <code className="font-mono">book_appointment</code>, <code className="font-mono">create_callback</code> (plus Retell&apos;s
+          built-in <code className="font-mono">end_call</code>).
         </p>
       </div>
 
