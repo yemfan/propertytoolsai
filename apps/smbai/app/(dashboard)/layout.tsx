@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/sidebar";
-import { GlobalSearch } from "@/components/global-search";
 import { getUnreadCount, getRecentNotifications } from "@/lib/actions/notifications";
 import { NotificationsBell } from "@/components/notifications-bell";
 
@@ -30,7 +29,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
             initialNotifications={notifications as Parameters<typeof NotificationsBell>[0]["initialNotifications"]}
           />
         }
-        searchSlot={<GlobalSearch />}
       />
       <main id="main-content" className="flex-1 overflow-auto">
         {children}
