@@ -7,10 +7,11 @@ import {
   DollarSign, TrendingUp, TrendingDown, FileText,
   Users, Plus, ArrowRight, Building2,
   CheckSquare, Clock, CalendarDays, AlertCircle,
-  FolderOpen, Timer, Wallet, AlertTriangle,
+  FolderOpen, Timer, Wallet, AlertTriangle, Sparkles,
 } from "lucide-react";
 import { RevenueChart, type ChartMonth } from "@/components/revenue-chart";
 import { getReceivablesAging, getCashFlowForecast } from "@/lib/actions/reports";
+import { getOrCreateDailyBriefing } from "@/lib/briefing";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -75,6 +76,7 @@ async function getDashboardData(orgId: string) {
     uninvoicedTimeRes,
     receivables,
     forecast,
+    unreadMsgRes,
   ] = await Promise.all([
     // Bank balances
     supabase
@@ -167,6 +169,14 @@ async function getDashboardData(orgId: string) {
     // A/R aging + cash-flow forecast (Weeks 37–40)
     getReceivablesAging(),
     getCashFlowForecast(),
+
+    // Unread inbound messages (for the daily briefing)
+    supabase
+      .from("messages")
+      .select("priority")
+      .eq("organization_id", orgId)
+      .eq("direction", "inbound")
+      .eq("read", false),
   ]);
 
   // Bank balance
@@ -235,6 +245,11 @@ async function getDashboardData(orgId: string) {
     (p) => p.pnl.revenue > 0 || p.pnl.profit !== 0
   );
 
+  // Unread / urgent inbound messages (for the daily briefing)
+  const unreadMsgs = unreadMsgRes.data ?? [];
+  const unreadMessages = unreadMsgs.length;
+  const urgentMessages = unreadMsgs.filter((m) => m.priority === "high").length;
+
   return {
     bankBalance,
     mtdRevenue: mtdTxns.length ? mtdRevenue : null,
@@ -254,6 +269,8 @@ async function getDashboardData(orgId: string) {
     activeProjectsHasPnL,
     uninvoicedMinutes,
     uninvoicedAmount,
+    unreadMessages,
+    urgentMessages,
     receivables,
     forecast,
     todayStr,
@@ -310,6 +327,8 @@ export default async function HomePage() {
     activeProjectsHasPnL,
     uninvoicedMinutes,
     uninvoicedAmount,
+    unreadMessages,
+    urgentMessages,
     receivables,
     forecast,
     todayStr,
@@ -323,6 +342,19 @@ export default async function HomePage() {
   const overdueAR       = receivables.overdueAmount;
   const dueNowAP        = forecast.periods[0]?.outflow ?? 0;
   const showCashFlow    = forecast.hasBank || expectedIn > 0 || expectedOut > 0;
+
+  const tasksOverdue  = openTasks.filter((t) => t.due_date && t.due_date < todayStr).length;
+  const tasksDueToday = openTasks.filter((t) => t.due_date === todayStr).length;
+  const briefing = await getOrCreateDailyBriefing(orgId, {
+    overdueCount,
+    overdueAmount: overdueAR,
+    unreadMessages,
+    urgentMessages,
+    tasksOverdue,
+    tasksDueToday,
+    lowestProjectedCash: showCashFlow ? lowestProjected : null,
+    uninvoicedAmount,
+  });
 
   const today = new Date();
   const hour = today.getHours();
@@ -392,6 +424,25 @@ export default async function HomePage() {
             Clients
           </Link>
         </div>
+      </div>
+
+      {/* ── Daily briefing ── */}
+      <div className="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl p-5 text-white">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="w-4 h-4 text-indigo-100" />
+          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-100">Your day</p>
+        </div>
+        <p className="text-sm font-medium">{briefing.headline}</p>
+        {briefing.actions.length > 0 && (
+          <ul className="mt-3 space-y-1.5">
+            {briefing.actions.map((a, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-indigo-50">
+                <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-indigo-200 flex-shrink-0" />
+                <span>{a}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* ── KPI cards ── */}
