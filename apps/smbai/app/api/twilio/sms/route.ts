@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createNotificationService } from "@/lib/actions/notifications";
-import { detectLanguage, translateToEnglish, localizeOutbound, type Lang } from "@/lib/language";
+import { analyzeInbound, translateToEnglish, localizeOutbound, intentLabel, type Lang } from "@/lib/language";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -44,9 +44,10 @@ export async function POST(request: NextRequest) {
       .eq("phone", from)
       .maybeSingle();
 
-    // Language: reuse the client's known preference, else detect once and store it.
+    // One Haiku call classifies language + intent + urgency together.
     const assist = !!org.owner_english_assist;
-    const lang: Lang = (client?.preferred_language as Lang | null) ?? (await detectLanguage(body));
+    const analysis = await analyzeInbound(body);
+    const lang: Lang = (client?.preferred_language as Lang | null) ?? analysis.lang;
     if (client && !client.preferred_language) {
       await supabase.from("clients").update({ preferred_language: lang }).eq("id", client.id);
     }
@@ -62,10 +63,25 @@ export async function POST(request: NextRequest) {
       to_address: to,
       body,
       translation_en: translationEn,
+      intent: analysis.intent,
+      priority: analysis.priority,
       read: false,
       external_id: sid,
       sent_at: new Date().toISOString(),
     });
+
+    // Triage: auto-create a task for messages that need the owner to act.
+    if (analysis.priority === "high" || ["booking", "billing", "complaint"].includes(analysis.intent)) {
+      await supabase.from("tasks").insert({
+        organization_id: org.id,
+        client_id: client?.id ?? null,
+        title: `${intentLabel(analysis.intent)} from ${from} — reply needed`,
+        notes: (translationEn || body).slice(0, 500),
+        due_date: new Date().toISOString().slice(0, 10),
+        priority: analysis.priority === "high" ? "high" : "normal",
+        status: "open",
+      });
+    }
 
     // Notify the dashboard
     await createNotificationService(org.id, {

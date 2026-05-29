@@ -18,6 +18,8 @@ interface Message {
   sent_at: string;
   read: boolean;
   translationEn: string | null;
+  intent: string | null;
+  priority: string | null;
 }
 
 interface Thread {
@@ -145,6 +147,8 @@ export function InboxClient({ threads: initialThreads, clients, orgId }: Props) 
         sent_at: new Date().toISOString(),
         read: true,
         translationEn: null,
+        intent: null,
+        priority: null,
       };
       setThreads((prev) =>
         prev.map((t) =>
@@ -282,6 +286,16 @@ export function InboxClient({ threads: initialThreads, clients, orgId }: Props) 
                           {t.lastMessage.body}
                         </p>
                       </div>
+                      {(t.lastMessage.priority === "high" || (t.lastMessage.intent && t.lastMessage.intent !== "other")) && (
+                        <div className="flex items-center gap-1 mt-1">
+                          {t.lastMessage.priority === "high" && (
+                            <span className="text-[10px] font-semibold text-rose-600 bg-rose-50 rounded px-1.5 py-0.5">Urgent</span>
+                          )}
+                          {t.lastMessage.intent && t.lastMessage.intent !== "other" && (
+                            <span className="text-[10px] font-medium text-slate-500 bg-slate-100 rounded px-1.5 py-0.5 capitalize">{t.lastMessage.intent}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </button>

@@ -14,7 +14,7 @@ export default async function InboxPage() {
   const { data: rawMessages } = await supabase
     .from("messages")
     .select(`
-      id, channel, direction, subject, body, sent_at, read, client_id, from_address, to_address, translation_en,
+      id, channel, direction, subject, body, sent_at, read, client_id, from_address, to_address, translation_en, intent, priority,
       clients(id, first_name, last_name, email, phone)
     `)
     .eq("organization_id", orgId)
@@ -38,6 +38,8 @@ export default async function InboxPage() {
     sent_at: string;
     read: boolean;
     translationEn: string | null;
+    intent: string | null;
+    priority: string | null;
   };
   type Thread = {
     key: string;
@@ -76,6 +78,8 @@ export default async function InboxPage() {
       sent_at: msg.sent_at,
       read: msg.read,
       translationEn: msg.translation_en,
+      intent: msg.intent,
+      priority: msg.priority,
     };
 
     const existing = threadMap.get(key);

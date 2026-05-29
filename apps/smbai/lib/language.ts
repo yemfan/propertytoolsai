@@ -103,3 +103,70 @@ export async function localizeOutbound(
     return englishMessage; // fall back to English rather than fail the send
   }
 }
+
+// ─── Inbound triage ─────────────────────────────────────────────────────────────
+
+export type Intent = "question" | "booking" | "billing" | "complaint" | "other";
+export type Priority = "low" | "normal" | "high";
+
+const INTENTS: Intent[] = ["question", "booking", "billing", "complaint", "other"];
+const PRIORITIES: Priority[] = ["low", "normal", "high"];
+
+const INTENT_LABEL: Record<Intent, string> = {
+  question: "Question",
+  booking: "Scheduling request",
+  billing: "Billing",
+  complaint: "Complaint",
+  other: "Message",
+};
+
+export function intentLabel(i: Intent): string {
+  return INTENT_LABEL[i];
+}
+
+/**
+ * One Haiku call that classifies an inbound message's language, intent, and
+ * urgency together — so the inbox can badge/sort it and auto-create tasks for
+ * actionable messages, at the cost of a single cheap call.
+ */
+export async function analyzeInbound(
+  text: string
+): Promise<{ lang: Lang; intent: Intent; priority: Priority }> {
+  const t = text.trim();
+  const fallback = {
+    lang: (looksChinese(t) ? "zh" : "en") as Lang,
+    intent: "other" as Intent,
+    priority: "normal" as Priority,
+  };
+  if (!t) return fallback;
+  try {
+    const res = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 60,
+      messages: [
+        {
+          role: "user",
+          content: `Classify this customer message. Return ONLY compact JSON:
+{"lang":"en|es|zh","intent":"question|booking|billing|complaint|other","priority":"low|normal|high"}
+
+- lang: the message language ("en" if it is not Spanish or Chinese).
+- intent: booking = wants to schedule an appointment; billing = about payment, invoice, or pricing; complaint = unhappy or reporting a problem; question = a general question; other = none of these.
+- priority: high = urgent, time-sensitive, or upset; normal = typical; low = FYI, no action needed.
+
+Message:
+${t.slice(0, 800)}`,
+        },
+      ],
+    });
+    const m = firstText(res).match(/\{[\s\S]*\}/);
+    if (!m) return fallback;
+    const p = JSON.parse(m[0]) as { lang?: string; intent?: string; priority?: string };
+    return {
+      lang: (SUPPORTED_LANGS as string[]).includes(p.lang ?? "") ? (p.lang as Lang) : fallback.lang,
+      intent: (INTENTS as string[]).includes(p.intent ?? "") ? (p.intent as Intent) : "other",
+      priority: (PRIORITIES as string[]).includes(p.priority ?? "") ? (p.priority as Priority) : "normal",
+    };
+  } catch {
+    return fallback;
+  }
+}
