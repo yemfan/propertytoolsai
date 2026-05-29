@@ -2,6 +2,8 @@ import { Metadata } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { VoiceSettings } from "@/components/voice-settings";
+import { ReceptionistConfig } from "@/components/receptionist-config";
+import { defaultBusinessHours, type BusinessHours, type AppointmentType, type KnowledgeEntry } from "@/lib/receptionist";
 import { Phone, MessageSquare, Calendar, Bot } from "lucide-react";
 
 export const metadata: Metadata = { title: "Voice Agent" };
@@ -21,10 +23,10 @@ export default async function VoicePage() {
   const orgId = cookieStore.get("smbai-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const [{ data: org }, { data: sessions }] = await Promise.all([
+  const [{ data: org }, { data: sessions }, { data: apptTypes }, { data: knowledge }] = await Promise.all([
     supabase
       .from("organizations")
-      .select("twilio_number, voice_agent_enabled, voice_agent_greeting, voice_agent_prompt")
+      .select("twilio_number, voice_agent_enabled, voice_agent_greeting, voice_agent_prompt, business_hours")
       .eq("id", orgId)
       .single(),
     supabase
@@ -33,6 +35,16 @@ export default async function VoicePage() {
       .eq("organization_id", orgId)
       .order("created_at", { ascending: false })
       .limit(20),
+    supabase
+      .from("appointment_types")
+      .select("id, name, duration_minutes, description, active, sort")
+      .eq("organization_id", orgId)
+      .order("sort"),
+    supabase
+      .from("knowledge_base")
+      .select("id, title, content, active, sort")
+      .eq("organization_id", orgId)
+      .order("sort"),
   ]);
 
   const totalSessions = sessions?.length ?? 0;
@@ -85,6 +97,15 @@ export default async function VoicePage() {
           greeting={org?.voice_agent_greeting ?? "Hello! Thank you for calling. How can I help you today?"}
           prompt={org?.voice_agent_prompt ?? ""}
           twilioNumber={org?.twilio_number ?? null}
+        />
+      </div>
+
+      {/* Receptionist brain: hours, appointment types, knowledge */}
+      <div className="mb-8">
+        <ReceptionistConfig
+          hours={(org?.business_hours as BusinessHours | null) ?? defaultBusinessHours()}
+          appointmentTypes={(apptTypes ?? []) as AppointmentType[]}
+          knowledge={(knowledge ?? []) as KnowledgeEntry[]}
         />
       </div>
 
