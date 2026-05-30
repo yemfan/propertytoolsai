@@ -73,7 +73,7 @@ export default function RootPage() {
         <section id="features" className="py-20 sm:py-28">
           <div className="mx-auto max-w-5xl px-6">
             <div className="text-center">
-              <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Everything your front office needs</h2>
+              <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Everything you need to run your business</h2>
               <p className="mt-3 text-lg text-gray-500">Six powerful tools, one simple platform.</p>
             </div>
             <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
