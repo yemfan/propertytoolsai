@@ -17,10 +17,27 @@ import twilio from "twilio";
 const VoiceResponse = twilio.twiml.VoiceResponse;
 
 async function handleRequest(request: NextRequest) {
-  const formData = await request.formData();
-  const from    = formData.get("From")    as string | null;
-  const to      = formData.get("To")      as string | null;
-  const callSid = formData.get("CallSid") as string | null;
+  let from: string | null = null;
+  let to: string | null = null;
+  let callSid: string | null = null;
+
+  try {
+    if (request.method === "POST") {
+      const formData = await request.formData();
+      from = formData.get("From") as string | null;
+      to = formData.get("To") as string | null;
+      callSid = formData.get("CallSid") as string | null;
+    } else {
+      // GET request — extract from URL params (for health checks)
+      const url = new URL(request.url);
+      from = url.searchParams.get("From");
+      to = url.searchParams.get("To");
+      callSid = url.searchParams.get("CallSid");
+    }
+  } catch {
+    // If form parsing fails, return empty response
+    return xml("<Response/>");
+  }
 
   if (!from || !to) {
     return xml("<Response/>");

@@ -15,10 +15,27 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { billVoiceCall } from "@/lib/voice-billing";
 
 async function handleRequest(request: NextRequest) {
-  const formData = await request.formData();
-  const callSid      = formData.get("CallSid")      as string | null;
-  const callDuration = formData.get("CallDuration") as string | null; // seconds as string
-  const recordingUrl = formData.get("RecordingUrl") as string | null;
+  let callSid: string | null = null;
+  let callDuration: string | null = null;
+  let recordingUrl: string | null = null;
+
+  try {
+    if (request.method === "POST") {
+      const formData = await request.formData();
+      callSid = formData.get("CallSid") as string | null;
+      callDuration = formData.get("CallDuration") as string | null; // seconds as string
+      recordingUrl = formData.get("RecordingUrl") as string | null;
+    } else {
+      // GET request — extract from URL params (for health checks)
+      const url = new URL(request.url);
+      callSid = url.searchParams.get("CallSid");
+      callDuration = url.searchParams.get("CallDuration");
+      recordingUrl = url.searchParams.get("RecordingUrl");
+    }
+  } catch {
+    // If form parsing fails, return empty response
+    return new NextResponse(null, { status: 204 });
+  }
 
   if (!callSid) return new NextResponse(null, { status: 204 });
 
