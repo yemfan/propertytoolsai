@@ -9,6 +9,7 @@ import {
   CheckSquare, Mail, BarChart2, Zap, Clock, TrendingUp, FolderOpen,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
+import { HelmLogo } from "@/components/logo";
 
 const navSections = [
   {
@@ -69,9 +70,7 @@ export function Sidebar({ unreadCount = 0, notificationsSlot, userEmail }: Props
       {/* Logo + notification bell */}
       <div className="px-4 py-4 border-b border-slate-800 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Building2 className="w-4 h-4 text-white" />
-          </div>
+          <HelmLogo size={28} variant="white" />
           <span className="text-white font-semibold text-sm tracking-tight">HelmSmart</span>
         </div>
         {notificationsSlot}
