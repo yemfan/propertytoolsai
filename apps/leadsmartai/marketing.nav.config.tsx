@@ -113,6 +113,13 @@ const marketingNavConfig = {
       match: ["/agent/pricing", "/pricing"],
       icon: <Calculator size={16} strokeWidth={2} aria-hidden />,
     },
+
+    /* ── Schedule a Demo ── call-to-action for booking ── */
+    {
+      label: "Schedule a Demo",
+      href: "/login?next=/book",
+      icon: <Phone size={16} strokeWidth={2} aria-hidden />,
+    },
   ],
 } satisfies NavConfig;
 

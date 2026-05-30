@@ -8,6 +8,7 @@ import { HelmLogo } from "@/components/logo";
 const navLinks = [
   { label: "Product", href: "/features" },
   { label: "Pricing", href: "/pricing" },
+  { label: "Schedule", href: "/login?next=/calendar/book" },
   { label: "FAQ", href: "/faq" },
   { label: "Blog", href: "/blog" },
 ];

@@ -240,7 +240,7 @@ export function CalendarGrid({ events, clients }: { events: CalEvent[]; clients:
                 const eDate = new Date(e.start_at);
                 return eDate.getFullYear() === year && eDate.getMonth() === month;
               })
-              .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
+              .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
               .map((ev) => {
                 const startDate = new Date(ev.start_at);
                 const endDate = ev.end_at ? new Date(ev.end_at) : null;

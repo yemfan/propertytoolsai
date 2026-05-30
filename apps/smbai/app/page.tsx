@@ -36,6 +36,9 @@ export default function RootPage() {
               <Link href="/signup" className="inline-flex items-center rounded-xl bg-indigo-600 px-7 py-3.5 text-base font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors">
                 Start free trial
               </Link>
+              <Link href="/login?next=/calendar/book" className="inline-flex items-center rounded-xl border border-gray-300 bg-white px-7 py-3.5 text-base font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
+                Schedule Appointment
+              </Link>
               <a href="#features" className="inline-flex items-center rounded-xl border border-gray-200 bg-white px-7 py-3.5 text-base font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
                 See how it works
               </a>

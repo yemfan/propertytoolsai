@@ -263,6 +263,13 @@ export default function LeadSmartLandingV2() {
                 </MagneticButton>
                 <Button
                   variant="outline"
+                  href="/login?next=/book"
+                  className="min-h-11 px-6 text-base"
+                >
+                  Schedule a Demo
+                </Button>
+                <Button
+                  variant="outline"
                   href="#how"
                   className="min-h-11 px-6 text-base"
                 >
