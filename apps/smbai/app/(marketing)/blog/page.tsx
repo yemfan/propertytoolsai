@@ -16,7 +16,50 @@ interface BlogPost {
   href: string;
 }
 
+const pains = [
+  {
+    pain: "Missed calls while on the job",
+    solution: "AI Voice Receptionist answers every call 24/7 — books appointments and takes messages while you work.",
+    icon: "📞",
+  },
+  {
+    pain: "Expensive after-hours answering services",
+    solution: "Replace costly on-call staff and third-party call centres with an AI that costs a fraction of the price.",
+    icon: "💸",
+  },
+  {
+    pain: "10+ hours a week on admin",
+    solution: "Smart Inbox triages emails and SMS, drafts replies, and flags what actually needs your attention.",
+    icon: "⏰",
+  },
+  {
+    pain: "Invoices that go out late — or not at all",
+    solution: "Automated invoicing sends bills the moment a job is done and follows up on overdue payments.",
+    icon: "📄",
+  },
+  {
+    pain: "Double-bookings and scheduling chaos",
+    solution: "Calendar sync and AI booking mean appointments land in the right slot — automatically.",
+    icon: "📅",
+  },
+  {
+    pain: "Leads slipping through the cracks",
+    solution: "Client CRM and pipeline tracking keep every prospect and customer visible in one place.",
+    icon: "🎯",
+  },
+];
+
 const posts: BlogPost[] = [
+  {
+    title: "Small Business Pains — And How HelmSmart Solves Them",
+    excerpt:
+      "Missed calls, admin overload, late invoices, expensive after-hours services — sound familiar? Here's exactly how HelmSmart addresses the six biggest headaches small business owners face every day.",
+    category: "Strategy",
+    date: "May 22, 2025",
+    readTime: "6 min read",
+    color: "indigo",
+    href: "/blog/smb-pains-and-solutions",
+  },
   {
     title: "How AI Receptionists Are Helping Small Businesses Never Miss a Call",
     excerpt:
@@ -140,6 +183,29 @@ export default function BlogPage() {
         <p className="mt-4 text-lg text-gray-500">
           Tips, guides, and insights for small business owners.
         </p>
+      </section>
+
+      {/* Pains & Solutions */}
+      <section className="bg-slate-50 border-y border-slate-100 py-16">
+        <div className="mx-auto max-w-5xl px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+              Small business pains — solved
+            </h2>
+            <p className="mt-3 text-gray-500 text-base max-w-xl mx-auto">
+              Every feature in HelmSmart was built around a real pain that small business owners told us about.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {pains.map((item) => (
+              <div key={item.pain} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <span className="text-3xl mb-4 block">{item.icon}</span>
+                <h3 className="font-semibold text-gray-900 mb-2">{item.pain}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{item.solution}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* post grid */}
