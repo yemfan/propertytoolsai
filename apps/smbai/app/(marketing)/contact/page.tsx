@@ -91,12 +91,16 @@ export default function ContactPage() {
           <ContactFormComponent />
         </div>
 
-        <p className="mt-6 text-center text-sm text-gray-400">
-          Also check out our{" "}
-          <Link href="/faq" className="text-indigo-600 hover:text-indigo-700 font-medium">
+        <p className="mt-6 text-center text-sm text-gray-500">
+          Looking to schedule a demo?{" "}
+          <Link href="/contact/sales" className="font-medium text-indigo-600 hover:text-indigo-700">
+            Get a personalized quote
+          </Link>
+          {" "}or check our{" "}
+          <Link href="/faq" className="font-medium text-indigo-600 hover:text-indigo-700">
             FAQ
           </Link>
-          {" "}— most questions are answered there.
+          .
         </p>
       </section>
     </div>
