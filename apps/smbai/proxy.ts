@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Routes that require an authenticated user + an org.
-// Keep in sync with the (dashboard) route group in app/(dashboard)/*.
 const DASHBOARD_SEGMENTS = [
   "/ask", "/automations", "/books", "/calendar", "/clients", "/home",
   "/inbox", "/marketing", "/pipeline", "/projects", "/reception", "/reports",
@@ -16,12 +15,12 @@ const AUTH_SEGMENTS = ["/login", "/signup"];
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Start with a passthrough response so Supabase can refresh cookies
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY!,
+    "https://vpmwsnoosuiknyzdxgtk.supabase.co",
+    process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY ||
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwbXdzbm9vc3Vpa255emR4Z3RrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NDU5MTgsImV4cCI6MjA5NTQyMTkxOH0.eAn1vPTAHXj_4OMd9T50LcazrxnvMxkcfFs-de98SNg",
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
@@ -36,27 +35,21 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // Validate session with Supabase (also refreshes expired tokens)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   const isDashboard = DASHBOARD_SEGMENTS.some((seg) => pathname.startsWith(seg));
-  const isAuth = AUTH_SEGMENTS.some((seg) => pathname.startsWith(seg));
+  const isAuth      = AUTH_SEGMENTS.some((seg) => pathname.startsWith(seg));
   const isOnboarding = pathname.startsWith("/onboarding");
+
+  // Accept both old (smbai-org-id) and new (helmsmart-org-id) cookie names
+  const orgId =
+    request.cookies.get("helmsmart-org-id")?.value ||
+    request.cookies.get("smbai-org-id")?.value;
 
   // ── Dashboard routes ─────────────────────────────────────────────────────
   if (isDashboard) {
-    if (!user) {
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
-
-    // Use cookie for fast org check — avoids DB on every request.
-    // Cookie is set by createOrg() server action and onboarding page fallback.
-    const orgId = request.cookies.get("helmsmart-org-id")?.value;
-    if (!orgId) {
-      return NextResponse.redirect(new URL("/onboarding", request.url));
-    }
+    if (!user) return NextResponse.redirect(new URL("/login", request.url));
+    if (!orgId) return NextResponse.redirect(new URL("/onboarding", request.url));
   }
 
   // ── Onboarding route ─────────────────────────────────────────────────────
@@ -66,16 +59,12 @@ export async function proxy(request: NextRequest) {
 
   // ── Auth routes (login / signup) ─────────────────────────────────────────
   if (isAuth && user) {
-    const orgId = request.cookies.get("helmsmart-org-id")?.value;
-    return NextResponse.redirect(
-      new URL(orgId ? "/books" : "/onboarding", request.url)
-    );
+    return NextResponse.redirect(new URL(orgId ? "/home" : "/onboarding", request.url));
   }
 
   return response;
 }
 
 export const config = {
-  // Skip static assets, images, and API routes
   matcher: ["/((?!api|_next/static|_next/image|favicon\\.ico|.*\\.(?:png|svg|jpg|jpeg|webp)$).*)"],
 };
