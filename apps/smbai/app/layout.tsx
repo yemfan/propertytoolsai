@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s | HelmSmart",
   },
   description:
-    "AI-powered suite for small businesses — bookkeeping, CRM, inbox, and more.",
+    "More control, less effort — AI-powered front office for small businesses.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

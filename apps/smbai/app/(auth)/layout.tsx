@@ -13,7 +13,7 @@ export default function AuthLayout({
           <span className="text-2xl font-bold text-slate-900 tracking-tight">
             Helm<span className="text-indigo-600">Smart</span>
           </span>
-          <p className="mt-1 text-sm text-slate-500">Your all-in-one business suite</p>
+          <p className="mt-1 text-sm text-slate-500">More control, less effort</p>
         </div>
 
         {children}
