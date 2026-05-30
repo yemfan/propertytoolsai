@@ -19,7 +19,8 @@ export async function signIn(
 
   if (error) return { error: error.message };
 
-  redirect("/books");
+  const next = formData.get("next") as string | null;
+  redirect(next?.startsWith("/") ? next : "/home");
 }
 
 // ── Sign up ──────────────────────────────────────────────────────────────────

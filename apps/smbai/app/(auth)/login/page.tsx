@@ -30,9 +30,11 @@ export default function LoginPage() {
     null
   );
 
-  const oauthError = typeof window !== "undefined"
-    ? new URLSearchParams(window.location.search).get("error")
-    : null;
+  const searchParams = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search)
+    : new URLSearchParams();
+  const oauthError = searchParams.get("error");
+  const next = searchParams.get("next") ?? "";
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
@@ -74,6 +76,7 @@ export default function LoginPage() {
       )}
 
       <form action={action} className="space-y-4">
+        {next && <input type="hidden" name="next" value={next} />}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
             Email

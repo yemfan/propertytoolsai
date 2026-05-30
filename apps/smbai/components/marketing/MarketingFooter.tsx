@@ -4,9 +4,8 @@ const footerLinks = {
   Product: [
     { label: "Features", href: "/features" },
     { label: "Pricing", href: "/pricing" },
-    { label: "Voice Agent", href: "/voice-agent" },
-    { label: "Inbox", href: "/inbox" },
-    { label: "Bookkeeping", href: "/bookkeeping" },
+    { label: "Schedule Demo", href: "/contact/sales" },
+    { label: "Start Free Trial", href: "/signup" },
   ],
   Company: [
     { label: "About", href: "/about" },
@@ -15,8 +14,8 @@ const footerLinks = {
   ],
   Resources: [
     { label: "FAQ", href: "/faq" },
-    { label: "Help", href: "/help" },
-    { label: "Status", href: "/status" },
+    { label: "Sign In", href: "/login" },
+    { label: "Get Started", href: "/signup" },
   ],
   Legal: [
     { label: "Privacy Policy", href: "/privacy" },

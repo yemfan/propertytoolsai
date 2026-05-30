@@ -205,7 +205,7 @@ export default function FeaturesPage() {
         </p>
         <div className="mt-8">
           <Link
-            href="/sign-up"
+            href="/signup"
             className="inline-block bg-white text-gray-900 font-semibold text-base px-8 py-3.5 rounded-lg hover:bg-gray-100 transition-colors"
           >
             Get started for free
