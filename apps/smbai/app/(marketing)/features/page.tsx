@@ -38,6 +38,7 @@ const features: Feature[] = [
     subheadline: "Never miss a call again",
     bullets: [
       "Answers calls 24/7 — even when you're on the job",
+      "Cuts the cost of after-hours answering services and on-call staff",
       "Books appointments directly to your Google Calendar",
       "Takes messages and routes them to the right person",
       "Handles FAQs so you don't have to repeat yourself",
