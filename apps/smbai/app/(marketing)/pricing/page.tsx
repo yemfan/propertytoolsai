@@ -65,7 +65,7 @@ const faqs = [
   {
     question: "Is the voice AI really available 24/7?",
     answer:
-      "Yes. The AI Voice Receptionist is powered by Retell AI and answers calls around the clock — nights, weekends, and holidays — so you never miss a customer.",
+      "Yes. The AI Voice Receptionist is powered by Retell AI and answers calls around the clock — nights, weekends, and holidays — so you never miss a customer. It also cuts the cost of after-hours answering services, replacing expensive on-call staff or third-party call centers.",
   },
   {
     question: "Do you offer refunds?",
