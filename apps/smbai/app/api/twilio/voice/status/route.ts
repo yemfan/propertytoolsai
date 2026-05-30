@@ -14,7 +14,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { billVoiceCall } from "@/lib/voice-billing";
 
-export async function POST(request: NextRequest) {
+async function handleRequest(request: NextRequest) {
   const formData = await request.formData();
   const callSid      = formData.get("CallSid")      as string | null;
   const callDuration = formData.get("CallDuration") as string | null; // seconds as string
@@ -35,4 +35,12 @@ export async function POST(request: NextRequest) {
   if (durationSeconds) after(() => billVoiceCall(callSid, durationSeconds));
 
   return new NextResponse(null, { status: 204 });
+}
+
+export async function POST(request: NextRequest) {
+  return handleRequest(request);
+}
+
+export async function GET(request: NextRequest) {
+  return handleRequest(request);
 }

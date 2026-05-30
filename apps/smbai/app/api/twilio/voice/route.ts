@@ -16,7 +16,7 @@ import twilio from "twilio";
 
 const VoiceResponse = twilio.twiml.VoiceResponse;
 
-export async function POST(request: NextRequest) {
+async function handleRequest(request: NextRequest) {
   const formData = await request.formData();
   const from    = formData.get("From")    as string | null;
   const to      = formData.get("To")      as string | null;
@@ -117,6 +117,14 @@ export async function POST(request: NextRequest) {
   twiml.say({ voice: "Polly.Joanna", language: "en-US" }, "Thanks for calling. We missed you but will be in touch shortly.");
   twiml.hangup();
   return xml(twiml.toString());
+}
+
+export async function POST(request: NextRequest) {
+  return handleRequest(request);
+}
+
+export async function GET(request: NextRequest) {
+  return handleRequest(request);
 }
 
 function xml(body: string) {
