@@ -46,8 +46,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=callback_failed`);
   }
 
+  // `next` param lets callers override the post-auth destination (e.g. /reset-password)
+  const next = searchParams.get("next");
+  if (next?.startsWith("/")) {
+    return NextResponse.redirect(`${origin}${next}`);
+  }
+
   // Check whether user already has an org (cookie set by createOrg server action)
   const orgId = cookieStore.get("helmsmart-org-id")?.value;
 
-  return NextResponse.redirect(`${origin}${orgId ? "/books" : "/onboarding"}`);
+  return NextResponse.redirect(`${origin}${orgId ? "/home" : "/onboarding"}`);
 }
