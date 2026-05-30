@@ -134,6 +134,75 @@ export async function deleteGoogleEvent(orgId: string, googleEventId: string): P
   }).catch(() => {});
 }
 
+/** Sync a HelmSmart event to Google Calendar (create or update).
+ *  Converts all_day and ISO datetime formats. Returns google_event_id or null if not synced. */
+export async function syncEventToGoogle(params: {
+  orgId: string;
+  googleEventId?: string | null;
+  title: string;
+  description?: string;
+  startAt: string; // ISO datetime or date
+  endAt?: string | null; // ISO datetime or date
+  allDay: boolean;
+}): Promise<{ googleEventId: string | null }> {
+  const accessToken = await getValidToken(params.orgId);
+  if (!accessToken) return { googleEventId: params.googleEventId || null };
+
+  const tz = "America/New_York";
+
+  // Convert all_day events to Google's date format (YYYY-MM-DD)
+  // For all_day events, endAt should be exclusive (next day)
+  let startSpec: Record<string, string>;
+  let endSpec: Record<string, string>;
+
+  if (params.allDay) {
+    // Extract date part from ISO string (handles both YYYY-MM-DD and YYYY-MM-DDTHH:MM:SS)
+    const dateStr = params.startAt.split("T")[0];
+    startSpec = { date: dateStr };
+
+    // For all-day events, end date should be the day after
+    const startDate = new Date(dateStr);
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 1);
+    endSpec = { date: endDate.toISOString().split("T")[0] };
+  } else {
+    startSpec = { dateTime: params.startAt, timeZone: tz };
+    endSpec = { dateTime: params.endAt || params.startAt, timeZone: tz };
+  }
+
+  const eventBody = {
+    summary: params.title,
+    description: params.description || "",
+    start: startSpec,
+    end: endSpec,
+    reminders: { useDefault: true },
+  };
+
+  const existing = params.googleEventId;
+  const url = existing
+    ? `https://www.googleapis.com/calendar/v3/calendars/primary/events/${existing}`
+    : "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+
+  try {
+    const res = await fetch(url, {
+      method: existing ? "PUT" : "POST",
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify(eventBody),
+    });
+
+    if (!res.ok) {
+      console.error("[gcal] event sync error:", res.status, await res.text().catch(() => ""));
+      return { googleEventId: existing ?? null };
+    }
+
+    const result = await res.json();
+    return { googleEventId: result.id || existing || null };
+  } catch (error) {
+    console.error("[gcal] event sync exception:", error);
+    return { googleEventId: existing ?? null };
+  }
+}
+
 export type BusyInterval = { start: string; end: string };
 
 /** Busy intervals on the org's primary calendar between timeMin/timeMax (ISO).

@@ -18,7 +18,7 @@ export default async function CalendarPage() {
   const [{ data: events }, { data: clients }] = await Promise.all([
     supabase
       .from("events")
-      .select(`id, title, type, color, start_at, end_at, all_day, completed, client_id,
+      .select(`id, title, type, color, start_at, end_at, all_day, completed, client_id, google_event_id,
                clients(first_name, last_name)`)
       .eq("organization_id", orgId)
       .gte("start_at", start)
@@ -41,6 +41,7 @@ export default async function CalendarPage() {
     all_day: boolean;
     completed: boolean;
     client_id: string | null;
+    google_event_id: string | null;
     clients: { first_name: string | null; last_name: string | null } | null;
   };
 
@@ -59,6 +60,7 @@ export default async function CalendarPage() {
       all_day: e.all_day,
       completed: e.completed,
       client_id: e.client_id,
+      google_event_id: e.google_event_id,
       clients: client,
     };
   });

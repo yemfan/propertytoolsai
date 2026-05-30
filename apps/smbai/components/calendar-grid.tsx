@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronLeft, ChevronRight, Plus, X, Check, Trash2, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, Check, Trash2, ChevronDown, Grid3x3, List } from "lucide-react";
 import { createEvent, toggleEventComplete, deleteEvent } from "@/lib/actions/events";
 
 type EventType = "appointment" | "task" | "meeting" | "reminder";
@@ -45,6 +45,7 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function CalendarGrid({ events, clients }: { events: CalEvent[]; clients: Client[] }) {
   const now  = new Date();
+  const [viewMode, setViewMode] = useState<"month" | "list">("month");
   const [year, setYear]   = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [creating, setCreating] = useState<string | null>(null); // ISO date string
@@ -129,78 +130,182 @@ export function CalendarGrid({ events, clients }: { events: CalEvent[]; clients:
           <button onClick={() => navigate(1)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
             <ChevronRight className="w-4 h-4" />
           </button>
+
+          {/* View toggle */}
+          <div className="ml-2 flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode("month")}
+              className={`p-1.5 rounded transition-colors ${
+                viewMode === "month"
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+              title="Month view"
+            >
+              <Grid3x3 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded transition-colors ${
+                viewMode === "list"
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+              title="List view"
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Day headers */}
-      <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
-        {DAYS.map((d) => (
-          <div key={d} className="py-2.5 text-center text-xs font-semibold text-slate-400 uppercase tracking-wide">
-            {d}
+      {viewMode === "month" ? (
+        <>
+          {/* Day headers */}
+          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
+            {DAYS.map((d) => (
+              <div key={d} className="py-2.5 text-center text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                {d}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Grid */}
-      <div className="flex-1 grid grid-cols-7 overflow-auto bg-white"
-           style={{ gridTemplateRows: `repeat(${rows}, minmax(120px, 1fr))` }}>
-        {Array.from({ length: rows * 7 }, (_, i) => {
-          const day = i - startPad + 1;
-          const isValid = day >= 1 && day <= lastDay.getDate();
-          const isToday = isValid && year === now.getFullYear() && month === now.getMonth() && day === now.getDate();
-          const dayEvents = isValid ? eventsForDay(day) : [];
+          {/* Month Grid */}
+          <div className="flex-1 grid grid-cols-7 overflow-auto bg-white"
+               style={{ gridTemplateRows: `repeat(${rows}, minmax(120px, 1fr))` }}>
+            {Array.from({ length: rows * 7 }, (_, i) => {
+              const day = i - startPad + 1;
+              const isValid = day >= 1 && day <= lastDay.getDate();
+              const isToday = isValid && year === now.getFullYear() && month === now.getMonth() && day === now.getDate();
+              const dayEvents = isValid ? eventsForDay(day) : [];
 
-          return (
-            <div
-              key={i}
-              className={`border-b border-r border-slate-100 p-2 min-h-0 flex flex-col group ${!isValid ? "bg-slate-50/50" : "hover:bg-slate-50/50"}`}
-            >
-              {isValid && (
-                <>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full ${
-                      isToday ? "bg-indigo-600 text-white" : "text-slate-500"
-                    }`}>
-                      {day}
-                    </span>
-                    <button
-                      onClick={() => handleCreate(day)}
-                      className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+              return (
+                <div
+                  key={i}
+                  className={`border-b border-r border-slate-100 p-2 min-h-0 flex flex-col group ${!isValid ? "bg-slate-50/50" : "hover:bg-slate-50/50"}`}
+                >
+                  {isValid && (
+                    <>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full ${
+                          isToday ? "bg-indigo-600 text-white" : "text-slate-500"
+                        }`}>
+                          {day}
+                        </span>
+                        <button
+                          onClick={() => handleCreate(day)}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
 
-                  <div className="space-y-0.5 flex-1 overflow-hidden">
-                    {dayEvents.slice(0, 3).map((ev) => (
-                      <button
-                        key={ev.id}
-                        onClick={() => setSelectedEvent(ev)}
-                        className={`w-full text-left px-1.5 py-0.5 rounded text-xs truncate ${COLOR_CLASSES[ev.color]} ${ev.completed ? "opacity-50 line-through" : ""}`}
-                      >
-                        {!ev.all_day && (
-                          <span className="opacity-70 mr-1">
-                            {new Date(ev.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-                          </span>
+                      <div className="space-y-0.5 flex-1 overflow-hidden">
+                        {dayEvents.slice(0, 3).map((ev) => (
+                          <button
+                            key={ev.id}
+                            onClick={() => setSelectedEvent(ev)}
+                            className={`w-full text-left px-1.5 py-0.5 rounded text-xs truncate ${COLOR_CLASSES[ev.color]} ${ev.completed ? "opacity-50 line-through" : ""}`}
+                          >
+                            {!ev.all_day && (
+                              <span className="opacity-70 mr-1">
+                                {new Date(ev.start_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                              </span>
+                            )}
+                            {ev.title}
+                          </button>
+                        ))}
+                        {dayEvents.length > 3 && (
+                          <button
+                            onClick={() => setSelectedEvent(dayEvents[3])}
+                            className="w-full text-left text-xs text-slate-400 px-1.5 hover:text-slate-600"
+                          >
+                            +{dayEvents.length - 3} more
+                          </button>
                         )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        // List View
+        <div className="flex-1 flex flex-col overflow-hidden bg-white">
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+            {events
+              .filter((e) => {
+                const eDate = new Date(e.start_at);
+                return eDate.getFullYear() === year && eDate.getMonth() === month;
+              })
+              .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
+              .map((ev) => {
+                const startDate = new Date(ev.start_at);
+                const endDate = ev.end_at ? new Date(ev.end_at) : null;
+                const durationMs = endDate ? endDate.getTime() - startDate.getTime() : 0;
+                const durationHours = Math.floor(durationMs / 3600000);
+                const durationMins = Math.floor((durationMs % 3600000) / 60000);
+                const durationStr = ev.all_day
+                  ? "All day"
+                  : durationHours > 0
+                    ? `${durationHours}h ${durationMins}m`
+                    : `${durationMins}m`;
+                const timeStr = ev.all_day
+                  ? "All day"
+                  : startDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+                return (
+                  <button
+                    key={ev.id}
+                    onClick={() => setSelectedEvent(ev)}
+                    className="flex items-start gap-3 px-6 py-3.5 hover:bg-slate-50 transition-colors text-left w-full group"
+                  >
+                    <div className="pt-0.5">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded inline-block ${COLOR_CLASSES[ev.color]}`}>
+                        {TYPE_LABELS[ev.type]}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium text-slate-900 ${ev.completed ? "line-through opacity-50" : ""}`}>
                         {ev.title}
-                      </button>
-                    ))}
-                    {dayEvents.length > 3 && (
-                      <button
-                        onClick={() => setSelectedEvent(dayEvents[3])}
-                        className="w-full text-left text-xs text-slate-400 px-1.5 hover:text-slate-600"
-                      >
-                        +{dayEvents.length - 3} more
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                      </p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {startDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · {timeStr}
+                      </p>
+                      {ev.clients && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          {[ev.clients.first_name, ev.clients.last_name].filter(Boolean).join(" ")}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-xs text-slate-400 flex-shrink-0 pt-0.5">
+                      {durationStr}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCreate(startDate.getDate());
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </button>
+                );
+              })}
+            {events.filter((e) => {
+              const eDate = new Date(e.start_at);
+              return eDate.getFullYear() === year && eDate.getMonth() === month;
+            }).length === 0 && (
+              <div className="flex-1 flex items-center justify-center text-slate-400">
+                <p className="text-sm">No events this month</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Create event modal */}
       {creating && (
