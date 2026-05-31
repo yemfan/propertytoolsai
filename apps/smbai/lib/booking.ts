@@ -242,19 +242,35 @@ export async function bookAppointment(
     return { ok: false, reason: "That time isn't valid or is in the past." };
   }
   const endMs = startMs + duration * 60_000;
-
-  const busy = await busyIntervals(orgId, new Date(startMs - 1), new Date(endMs + 1));
-  if (overlapsBusy(startMs, endMs, busy)) return { ok: false, reason: "That time was just taken." };
-
   const title = `${type?.name ?? "Appointment"}${input.callerName ? ` — ${input.callerName}` : ""}`;
   const startISO = new Date(startMs).toISOString();
   const endISO = new Date(endMs).toISOString();
+  const db = createServiceClient();
+  const fmtLabel = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone, weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit",
+  });
+
+  // Idempotency: the agent (or Retell) sometimes calls book_appointment more than
+  // once in a call. If THIS caller already holds this exact slot, treat the repeat
+  // as success rather than "that time was just taken".
+  if (input.clientId) {
+    const { data: dupe } = await db
+      .from("events")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("client_id", input.clientId)
+      .eq("start_at", startISO)
+      .maybeSingle();
+    if (dupe) return { ok: true, startISO, label: fmtLabel.format(new Date(startMs)), eventId: dupe.id as string, title };
+  }
+
+  const busy = await busyIntervals(orgId, new Date(startMs - 1), new Date(endMs + 1));
+  if (overlapsBusy(startMs, endMs, busy)) return { ok: false, reason: "That time was just taken." };
 
   // Owner's real calendar (no-op if not connected).
   await upsertGoogleEvent({ orgId, title, startAt: startISO, endAt: endISO, timezone });
 
   // smbai's internal calendar (always — so the booking shows in the app).
-  const db = createServiceClient();
   const { data: evt } = await db
     .from("events")
     .insert({
@@ -271,10 +287,7 @@ export async function bookAppointment(
     .select("id")
     .single();
 
-  const fmt = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone, weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit",
-  });
-  return { ok: true, startISO, label: fmt.format(new Date(startMs)), eventId: evt?.id, title };
+  return { ok: true, startISO, label: fmtLabel.format(new Date(startMs)), eventId: evt?.id, title };
 }
 
 /** Match a caller to a client by phone, creating a lightweight one if new. */
