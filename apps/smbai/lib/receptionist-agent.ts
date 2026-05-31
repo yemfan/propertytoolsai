@@ -191,11 +191,15 @@ export function buildReceptionistDynamicVariables(ctx: ReceptionistContext): Rec
 /** What an outbound AI call is trying to accomplish. */
 export type OutboundPurpose = "follow_up" | "appointment_reminder";
 
-/** First line the AI speaks when the lead answers — discloses it's an AI (compliance). */
+/** First line the AI speaks when the lead answers — bilingual (English + Chinese),
+ *  disclosing it's an AI in both (compliance). The agent then continues in
+ *  whichever language the contact replies in. */
 export function buildOutboundGreeting(ctx: ReceptionistContext, leadName: string): string {
   const lead = leadName.trim();
   const who = ctx.agentName || "an assistant";
-  return `Hi${lead ? ` ${lead}` : " there"}, this is ${who}, an AI assistant calling on behalf of ${ctx.orgName}. Is now a quick okay time to talk?`;
+  const en = `Hi${lead ? ` ${lead}` : " there"}, this is ${who}, an AI assistant calling on behalf of ${ctx.orgName}. Is now a quick okay time to talk?`;
+  const zh = `您好${lead}，我是${ctx.orgName}的AI助理${ctx.agentName || ""}，请问现在方便讲几句话吗？`;
+  return `${en} ${zh}`;
 }
 
 /** Per-purpose system prompt for an outbound call. Reuses the business's hours,
