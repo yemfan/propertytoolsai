@@ -29,12 +29,13 @@ export function SettingsTabs({
 }) {
   const [tab, setTab] = useState<TabKey>("general");
 
-  // Deep-link: /settings#voice-agent (e.g. the Voice page's Settings link) opens
-  // the Voice AI tab directly.
+  // Deep-link from other pages: /settings#voice-agent opens Voice AI,
+  // /settings#operations opens Operations.
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.hash === "#voice-agent") {
-      setTab("voice");
-    }
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash;
+    if (hash === "#voice-agent") setTab("voice");
+    else if (hash === "#operations") setTab("operations");
   }, []);
 
   const slots: Record<TabKey, ReactNode> = { general, financial, voice, operations };

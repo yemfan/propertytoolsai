@@ -1,8 +1,7 @@
 import { Metadata } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { Phone, PhoneMissed, MessageSquare, CheckCircle2 } from "lucide-react";
-import { ReceptionSettings } from "@/components/reception-settings";
+import { Phone, PhoneMissed, MessageSquare, CheckCircle2, Settings } from "lucide-react";
 
 export const metadata: Metadata = { title: "Reception" };
 
@@ -54,13 +53,20 @@ export default async function ReceptionPage() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Reception</h1>
           <p className="text-sm text-slate-500 mt-0.5">
             Missed call text-back — never lose a lead to voicemail
           </p>
         </div>
+        <a
+          href="/settings#operations"
+          className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg px-3 py-2 hover:bg-slate-50 transition-colors shrink-0"
+        >
+          <Settings className="w-4 h-4" />
+          Auto-reply settings
+        </a>
       </div>
 
       {/* Status cards */}
@@ -94,44 +100,6 @@ export default async function ReceptionPage() {
           </div>
           <p className="text-2xl font-semibold text-slate-800 font-mono">{repliesThisWeek}</p>
           <p className="text-xs text-slate-400 mt-0.5">This week</p>
-        </div>
-      </div>
-
-      {/* Settings form */}
-      <div className="mb-8">
-        <ReceptionSettings
-          orgId={orgId}
-          twilioNumber={org?.twilio_number ?? null}
-          autoReply={org?.auto_reply ?? false}
-          autoReplyMsg={org?.auto_reply_msg ?? "Hey! We missed your call. We'll get back to you shortly."}
-        />
-      </div>
-
-      {/* Webhook info */}
-      <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5 mb-8 flex items-start gap-4">
-        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-          <Phone className="w-4 h-4 text-white" />
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-slate-800 mb-1">
-            Twilio webhook configuration
-          </h3>
-          <p className="text-xs text-slate-600 leading-relaxed mb-2">
-            In your Twilio console, set these webhooks on your phone number:
-          </p>
-          <div className="space-y-1">
-            {[
-              ["Voice (call comes in)", "/api/twilio/voice"],
-              ["Messaging (message comes in)", "/api/twilio/sms"],
-            ].map(([label, path]) => (
-              <div key={path} className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 w-44">{label}:</span>
-                <code className="text-xs bg-white border border-indigo-100 rounded px-2 py-0.5 text-indigo-700">
-                  {process.env.NEXT_PUBLIC_APP_URL}{path}
-                </code>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 

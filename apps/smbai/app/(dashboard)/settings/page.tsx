@@ -8,6 +8,7 @@ import { VoiceAgentSettingsSection } from "@/components/voice-agent-settings-sec
 import { SettingsTabs } from "@/components/settings-tabs";
 import { PlaidLink } from "@/components/plaid-link";
 import { BillingRatesForm } from "@/components/billing-rates-form";
+import { ReceptionSettings } from "@/components/reception-settings";
 import { Users, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -36,7 +37,7 @@ export default async function SettingsPage() {
   const [{ data: org }, { data: bankAccounts }, { data: coaAccounts }] = await Promise.all([
     supabase
       .from("organizations")
-      .select("id, slug, name, entity_type, accounting_basis, currency, timezone, fiscal_year_end_month, default_hourly_rate, default_labor_cost_rate, weekly_digest_enabled, owner_english_assist, plan, subscription_status, trial_ends_at")
+      .select("id, slug, name, entity_type, accounting_basis, currency, timezone, fiscal_year_end_month, default_hourly_rate, default_labor_cost_rate, weekly_digest_enabled, owner_english_assist, plan, subscription_status, trial_ends_at, twilio_number, auto_reply, auto_reply_msg")
       .eq("id", orgId)
       .single(),
     supabase
@@ -149,7 +150,15 @@ export default async function SettingsPage() {
           </section>
         }
         operations={
-          <section>
+          <>
+            <ReceptionSettings
+              orgId={org?.id ?? ""}
+              twilioNumber={org?.twilio_number ?? null}
+              autoReply={org?.auto_reply ?? false}
+              autoReplyMsg={org?.auto_reply_msg ?? "Hey! We missed your call. We'll get back to you shortly."}
+            />
+
+            <section>
             <h2 className="text-sm font-semibold text-slate-700 mb-1 pb-2 border-b border-slate-200">
               Integrations & webhooks
             </h2>
@@ -231,6 +240,7 @@ export default async function SettingsPage() {
               </div>
             </div>
           </section>
+          </>
         }
       />
     </div>
