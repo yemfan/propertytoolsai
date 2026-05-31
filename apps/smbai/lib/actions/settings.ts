@@ -23,20 +23,12 @@ export async function updateOrg(
   const name = (formData.get("name") as string)?.trim();
   if (!name) return { error: "Business name is required." };
 
-  const rateRaw = (formData.get("default_hourly_rate") as string)?.trim();
-  const defaultHourlyRate = rateRaw && !isNaN(parseFloat(rateRaw)) ? parseFloat(rateRaw) : null;
-
-  const laborRaw = (formData.get("default_labor_cost_rate") as string)?.trim();
-  const defaultLaborCostRate = laborRaw && !isNaN(parseFloat(laborRaw)) ? parseFloat(laborRaw) : null;
-
   const { error } = await supabase
     .from("organizations")
     .update({
       name,
       timezone: (formData.get("timezone") as string) || "America/New_York",
       fiscal_year_end_month: Number(formData.get("fiscal_year_end_month")) || 12,
-      default_hourly_rate: defaultHourlyRate,
-      default_labor_cost_rate: defaultLaborCostRate,
       weekly_digest_enabled: formData.get("weekly_digest_enabled") === "on",
       owner_english_assist: formData.get("owner_english_assist") === "on",
     })
@@ -46,6 +38,34 @@ export async function updateOrg(
     console.error("updateOrg failed:", error);
     return { error: `Couldn't save: ${error.message}` };
   }
+
+  revalidatePath("/settings");
+  return { success: true };
+}
+
+// ── Billing rates (Financial tab) ─────────────────────────────────────────────
+
+export async function saveBillingRates(input: {
+  hourlyRate: number | null;
+  laborCostRate: number | null;
+}): Promise<SettingsState> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
+  if (!orgId) return { error: "No organization found." };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized." };
+
+  const { error } = await supabase
+    .from("organizations")
+    .update({
+      default_hourly_rate: input.hourlyRate,
+      default_labor_cost_rate: input.laborCostRate,
+    })
+    .eq("id", orgId);
+
+  if (error) return { error: `Couldn't save: ${error.message}` };
 
   revalidatePath("/settings");
   return { success: true };

@@ -13,13 +13,11 @@ interface Props {
   } | null;
   timezones: string[];
   months: string[];
-  defaultHourlyRate?: number | null;
-  defaultLaborCostRate?: number | null;
   weeklyDigestEnabled?: boolean;
   ownerEnglishAssist?: boolean;
 }
 
-export function OrgSettingsForm({ org, timezones, months, defaultHourlyRate, defaultLaborCostRate, weeklyDigestEnabled, ownerEnglishAssist }: Props) {
+export function OrgSettingsForm({ org, timezones, months, weeklyDigestEnabled, ownerEnglishAssist }: Props) {
   const [state, action, isPending] = useActionState<SettingsState, FormData>(
     updateOrg,
     null
@@ -69,53 +67,15 @@ export function OrgSettingsForm({ org, timezones, months, defaultHourlyRate, def
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Entity type</label>
-          <input
-            type="text"
-            disabled
-            value={org?.entity_type?.replace("_", " ").toUpperCase() ?? "—"}
-            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 text-slate-500 cursor-not-allowed"
-          />
-          <p className="text-[10px] text-slate-400 mt-1">Contact support to change entity type.</p>
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Default hourly rate</label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
-            <input
-              name="default_hourly_rate"
-              type="number"
-              min="0"
-              step="0.01"
-              disabled={isPending}
-              defaultValue={defaultHourlyRate ?? ""}
-              placeholder="e.g. 125"
-              className="w-full text-sm border border-slate-300 rounded-lg pl-7 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50"
-            />
-          </div>
-          <p className="text-[10px] text-slate-400 mt-1">Applied automatically when starting a timer.</p>
-        </div>
-      </div>
-
       <div>
-        <label className="block text-xs font-medium text-slate-600 mb-1">Default labor cost rate</label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
-          <input
-            name="default_labor_cost_rate"
-            type="number"
-            min="0"
-            step="0.01"
-            disabled={isPending}
-            defaultValue={defaultLaborCostRate ?? ""}
-            placeholder="e.g. 45"
-            className="w-full text-sm border border-slate-300 rounded-lg pl-7 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50"
-          />
-        </div>
-        <p className="text-[10px] text-slate-400 mt-1">What an hour of work costs you (wages/contractor pay). Used for project profit — separate from the billable rate above.</p>
+        <label className="block text-xs font-medium text-slate-600 mb-1">Entity type</label>
+        <input
+          type="text"
+          disabled
+          value={org?.entity_type?.replace("_", " ").toUpperCase() ?? "—"}
+          className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 text-slate-500 cursor-not-allowed"
+        />
+        <p className="text-[10px] text-slate-400 mt-1">Contact support to change entity type. Billing rates are under the <strong>Financial</strong> tab.</p>
       </div>
 
       <div className="border-t border-slate-100 pt-4">

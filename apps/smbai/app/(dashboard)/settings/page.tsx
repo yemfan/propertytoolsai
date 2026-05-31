@@ -6,6 +6,8 @@ import { OrgSettingsForm } from "@/components/org-settings-form";
 import { BankAccountMappingForm } from "@/components/bank-account-mapping-form";
 import { VoiceAgentSettingsSection } from "@/components/voice-agent-settings-section";
 import { SettingsTabs } from "@/components/settings-tabs";
+import { PlaidLink } from "@/components/plaid-link";
+import { BillingRatesForm } from "@/components/billing-rates-form";
 import { Users, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -67,8 +69,6 @@ export default async function SettingsPage() {
                 org={org}
                 timezones={TIMEZONES}
                 months={MONTHS}
-                defaultHourlyRate={Number(org?.default_hourly_rate ?? 0) || null}
-                defaultLaborCostRate={Number(org?.default_labor_cost_rate ?? 0) || null}
                 weeklyDigestEnabled={org?.weekly_digest_enabled ?? true}
                 ownerEnglishAssist={org?.owner_english_assist ?? true}
               />
@@ -110,27 +110,37 @@ export default async function SettingsPage() {
           </>
         }
         financial={
-          <section>
-            <h2 className="text-sm font-semibold text-slate-700 mb-1 pb-2 border-b border-slate-200">
-              Bank account mapping
-            </h2>
-            <p className="text-xs text-slate-500 mb-4">
-              Link each bank account to a chart of accounts entry. This is required for transactions
-              to be posted to the double-entry journal automatically.
-            </p>
-            {bankAccounts?.length ? (
-              <div className="space-y-3">
-                {bankAccounts.map((ba) => (
-                  <BankAccountMappingForm key={ba.id} bankAccount={ba} coaAccounts={coaAccounts ?? []} />
-                ))}
+          <>
+            <section>
+              <h2 className={SECTION_H2}>Bank accounts</h2>
+              <p className="text-xs text-slate-500 mb-4">
+                Link a bank via Plaid to import the last 90 days of transactions (AI-categorized), then map
+                each account to a chart-of-accounts entry so it posts to the double-entry journal.
+              </p>
+              <div className="mb-4">
+                <PlaidLink />
               </div>
-            ) : (
-              <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-400">
-                No bank accounts linked yet. Connect a bank from the{" "}
-                <a href="/books" className="text-indigo-600 hover:underline">Books</a> page.
-              </div>
-            )}
-          </section>
+              {bankAccounts?.length ? (
+                <div className="space-y-3">
+                  {bankAccounts.map((ba) => (
+                    <BankAccountMappingForm key={ba.id} bankAccount={ba} coaAccounts={coaAccounts ?? []} />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-400">
+                  No bank accounts linked yet — click <strong>Link Bank</strong> above to connect one.
+                </div>
+              )}
+            </section>
+
+            <section>
+              <h2 className={SECTION_H2}>Billing rates</h2>
+              <BillingRatesForm
+                hourlyRate={Number(org?.default_hourly_rate ?? 0) || null}
+                laborCostRate={Number(org?.default_labor_cost_rate ?? 0) || null}
+              />
+            </section>
+          </>
         }
         voice={
           <section id="voice-agent" className="scroll-mt-8">
