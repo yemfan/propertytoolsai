@@ -96,6 +96,15 @@ export async function findOrgIdByNumber(db: ServiceClient, toNumber: string): Pr
 
 // ─── System prompt (per-business, HelmSmart-owned) ────────────────────────────────
 
+/** Resolve {{agent_name}} / {{business_name}} placeholders a business may use in
+ *  their greeting or business-context text. Done server-side because Retell does
+ *  not recursively expand placeholders nested inside a dynamic variable. */
+function fillPlaceholders(text: string, ctx: ReceptionistContext): string {
+  return (text || "")
+    .replace(/\{\{\s*agent_name\s*\}\}/gi, ctx.agentName.trim())
+    .replace(/\{\{\s*business_name\s*\}\}/gi, ctx.orgName);
+}
+
 /**
  * The full per-business system prompt, assembled from the org's brain (hours,
  * services, knowledge base, business context) plus the standard receptionist
@@ -123,7 +132,7 @@ What you know about ${ctx.orgName} — answer the caller's questions ONLY from t
 ${ctx.knowledgeText || "(no knowledge base yet — if you don't know the answer, take a message instead of guessing)"}
 
 About the business:
-${ctx.extraNotes || "(none)"}
+${fillPlaceholders(ctx.extraNotes, ctx) || "(none)"}
 
 How to behave:
 - If the caller has an EMERGENCY: do not book an appointment. Take their name and phone number, tell them "I'll have someone call you right back," and use create_callback noting that it is an emergency.
@@ -152,10 +161,7 @@ export function buildReceptionistDynamicVariables(ctx: ReceptionistContext): Rec
   // placeholders nested inside a dynamic variable, so they must be resolved
   // before we hand the greeting over. Auto-prepend the business name only if the
   // resolved greeting doesn't already name it.
-  const agentName = ctx.agentName.trim();
-  const g = (ctx.greeting || "Hello! Thank you for calling. How can I help you today?")
-    .replace(/\{\{\s*agent_name\s*\}\}/gi, agentName)
-    .replace(/\{\{\s*business_name\s*\}\}/gi, ctx.orgName)
+  const g = fillPlaceholders(ctx.greeting || "Hello! Thank you for calling. How can I help you today?", ctx)
     .replace(/[ \t]{2,}/g, " ")
     .trim();
   const greeting = g.includes(ctx.orgName) ? g : `${ctx.orgName}. ${g}`;
