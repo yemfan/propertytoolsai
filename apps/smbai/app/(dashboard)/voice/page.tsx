@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { VoiceSettings } from "@/components/voice-settings";
 import { ReceptionistConfig } from "@/components/receptionist-config";
+import { ReceptionistSetup } from "@/components/receptionist-setup";
 import { defaultBusinessHours, type BusinessHours, type AppointmentType, type KnowledgeEntry } from "@/lib/receptionist";
 import { isGoogleCalendarConfigured, isGoogleCalendarConnected, getConnectedGoogleAccount } from "@/lib/google-calendar";
 import { Phone, MessageSquare, Calendar, Bot, Clock, DollarSign, Mic } from "lucide-react";
@@ -70,6 +71,26 @@ export default async function VoicePage() {
   const totalSeconds = (sessions ?? []).reduce((sum, s) => sum + (s.duration_seconds ?? 0), 0);
   const totalMinutes = totalSeconds / 60;
   const estCost = totalMinutes * RETELL_COST_PER_MINUTE;
+
+  // Guided setup status. Canonicalize the host to www so we never hand out the
+  // bare domain (which 302-redirects and breaks Retell's POST webhooks).
+  const canonicalBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.helmsmart.ai").replace(
+    /:\/\/helmsmart\.ai/,
+    "://www.helmsmart.ai"
+  );
+  const businessHours = (org?.business_hours as BusinessHours | null) ?? null;
+  const setupStatus = {
+    numberOk: Boolean(org?.twilio_number),
+    number: (org?.twilio_number as string | null) ?? null,
+    hoursOk: businessHours ? Object.values(businessHours).some(Boolean) : false,
+    typesOk: (apptTypes?.length ?? 0) > 0,
+    typesCount: apptTypes?.length ?? 0,
+    agentEnabled: Boolean(org?.voice_agent_enabled),
+    googleConfigured,
+    googleConnected,
+    inboundUrl: `${canonicalBase}/api/retell/inbound?k=<RETELL_FUNCTION_SECRET>`,
+    functionUrl: `${canonicalBase}/api/retell/function`,
+  };
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -152,55 +173,8 @@ export default async function VoicePage() {
         />
       </div>
 
-      {/* Webhook info */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-8">
-        <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Twilio webhook (basic)</h3>
-        <div className="space-y-2">
-          {[
-            { label: "A call comes in", url: `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/voice` },
-            { label: "Call status changes (for duration + recording)", url: `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/voice/status` },
-          ].map((row) => (
-            <div key={row.url} className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">{row.label}</span>
-              <code className="text-xs bg-white border border-slate-200 rounded px-2.5 py-1 text-indigo-700 font-mono break-all">
-                {row.url}
-              </code>
-            </div>
-          ))}
-        </div>
-        <p className="text-xs text-slate-400 mt-2">
-          Set both webhooks on your Twilio number. The status callback captures call duration and recording URL (enable recording on the number to get recordings).
-        </p>
-      </div>
-
-      {/* Retell (realtime voice) setup */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-8">
-        <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Retell (realtime voice)</h3>
-        <p className="text-xs text-slate-500 mb-3">
-          For natural, low-latency calls, point a Retell agent at these endpoints. The agent&apos;s prompt and tools are
-          fed each business&apos;s hours, services and knowledge automatically.
-        </p>
-        <div className="space-y-2">
-          {[
-            { label: "Inbound (dynamic variables) — on the phone number", url: `${process.env.NEXT_PUBLIC_APP_URL}/api/retell/inbound?k=<RETELL_FUNCTION_SECRET>` },
-            { label: "Custom functions — Bearer <RETELL_FUNCTION_SECRET>", url: `${process.env.NEXT_PUBLIC_APP_URL}/api/retell/function` },
-            { label: "Call webhook — on the agent", url: `${process.env.NEXT_PUBLIC_APP_URL}/api/retell/webhook` },
-          ].map((row) => (
-            <div key={row.url} className="flex flex-col gap-1">
-              <span className="text-xs text-slate-500">{row.label}</span>
-              <code className="text-xs bg-white border border-slate-200 rounded px-2.5 py-1 text-indigo-700 font-mono break-all">
-                {row.url}
-              </code>
-            </div>
-          ))}
-        </div>
-        <p className="text-xs text-slate-400 mt-3">
-          Set <code className="font-mono">RETELL_API_KEY</code> and <code className="font-mono">RETELL_FUNCTION_SECRET</code> in
-          the server environment. Tools: <code className="font-mono">check_availability</code>,{" "}
-          <code className="font-mono">book_appointment</code>, <code className="font-mono">create_callback</code> (plus Retell&apos;s
-          built-in <code className="font-mono">end_call</code>).
-        </p>
-      </div>
+      {/* Guided setup checklist + Retell wiring */}
+      <ReceptionistSetup status={setupStatus} />
 
       {/* Call transcript log */}
       <div className="bg-white rounded-xl border border-slate-200">
