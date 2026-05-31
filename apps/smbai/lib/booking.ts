@@ -32,6 +32,52 @@ function weekdayKey(dateStr: string): DayKey {
   return day === 0 ? "sun" : DAY_KEYS[day - 1];
 }
 
+const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** Add `days` to a YYYY-MM-DD calendar date (UTC-anchored, tz-neutral). */
+function addDaysISO(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Best-effort: turn whatever the agent passes into a YYYY-MM-DD calendar date.
+ * The LLM is told to send YYYY-MM-DD, but in practice it also sends weekday
+ * names ("Monday"), relative terms ("tomorrow"), and natural dates
+ * ("June 1, 2026"). Anything but strict ISO used to hit `new Date("Monday"…)`
+ * → NaN → falsely "closed", so availability silently failed. Falls back to
+ * `todayISO` when truly unparseable.
+ */
+export function normalizeDateStr(input: string, todayISO: string): string {
+  const s = (input || "").trim();
+  if (!s) return todayISO;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  const lower = s.toLowerCase();
+  if (lower === "today" || lower === "now") return todayISO;
+  if (lower === "tomorrow") return addDaysISO(todayISO, 1);
+  if (lower === "day after tomorrow" || lower === "overmorrow") return addDaysISO(todayISO, 2);
+
+  // Weekday name (optionally "next …"): soonest date on/after today that matches.
+  const wd = WEEKDAYS.findIndex((d) => new RegExp(`(^|\\b)(next\\s+)?${d}(\\b|$)`).test(lower));
+  if (wd >= 0) {
+    const todayDow = new Date(`${todayISO}T12:00:00Z`).getUTCDay();
+    let delta = (wd - todayDow + 7) % 7;
+    if (delta === 0 && /\bnext\b/.test(lower)) delta = 7; // "next Monday" while it's Monday
+    return addDaysISO(todayISO, delta);
+  }
+
+  // Natural-language / numeric dates ("June 1, 2026", "06/01/2026", "Jun 1").
+  const parsed = new Date(s);
+  if (!Number.isNaN(parsed.getTime())) {
+    return `${parsed.getFullYear()}-${pad2(parsed.getMonth() + 1)}-${pad2(parsed.getDate())}`;
+  }
+
+  return todayISO; // unparseable → today; the agent can re-ask
+}
+
 function overlapsBusy(startMs: number, endMs: number, busy: BusyInterval[]): boolean {
   return busy.some((b) => startMs < new Date(b.end).getTime() && endMs > new Date(b.start).getTime());
 }
@@ -89,11 +135,23 @@ export async function getAvailability(orgId: string, appointmentTypeName: string
   const type = await findType(orgId, appointmentTypeName);
   const duration = type?.duration_minutes ?? 30;
 
-  const dayHours = hours?.[weekdayKey(dateStr)] ?? null;
+  // Normalize whatever the agent sent (weekday name, natural date, …) to a real
+  // calendar date, then roll forward past closed days (weekends/holidays) to the
+  // next open day so the caller is always offered real times.
+  const todayISO = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
+  let date = normalizeDateStr(dateStr, todayISO);
+
+  let dayHours = hours?.[weekdayKey(date)] ?? null;
+  for (let guard = 0; !dayHours && guard < 14; guard++) {
+    date = addDaysISO(date, 1);
+    dayHours = hours?.[weekdayKey(date)] ?? null;
+  }
   if (!dayHours) return { closed: true, durationMinutes: duration, slots: [] };
 
-  const openUtc = zonedToUtc(dateStr, dayHours.open, timezone);
-  const closeUtc = zonedToUtc(dateStr, dayHours.close, timezone);
+  const openUtc = zonedToUtc(date, dayHours.open, timezone);
+  const closeUtc = zonedToUtc(date, dayHours.close, timezone);
   const busy = await busyIntervals(orgId, openUtc, closeUtc);
   const now = Date.now();
   const durMs = duration * 60_000;
