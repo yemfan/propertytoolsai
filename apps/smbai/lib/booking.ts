@@ -299,11 +299,11 @@ export async function bookAppointment(
   const busy = await busyIntervals(orgId, new Date(startMs - 1), new Date(endMs + 1));
   if (overlapsBusy(startMs, endMs, busy)) return { ok: false, reason: "That time was just taken." };
 
-  // Owner's real calendar (no-op if not connected).
-  await upsertGoogleEvent({ orgId, title, startAt: startISO, endAt: endISO, timezone });
-
-  // smbai's internal calendar (always — so the booking shows in the app).
-  const { data: evt } = await db
+  // smbai's internal calendar first. The unique index on (organization_id,
+  // start_at) for appointments makes a same-slot double-booking impossible even
+  // under a race — the Retell agent fires book_appointment several times per call.
+  // Insert before the Google sync so a race-loser doesn't orphan a Google event.
+  const { data: evt, error: insErr } = await db
     .from("events")
     .insert({
       organization_id: orgId,
@@ -318,6 +318,28 @@ export async function bookAppointment(
     })
     .select("id")
     .single();
+
+  if (insErr) {
+    // 23505 = unique violation: a concurrent booking already took this exact slot.
+    if (insErr.code === "23505") {
+      const { data: held } = await db
+        .from("events")
+        .select("id, client_id")
+        .eq("organization_id", orgId)
+        .eq("type", "appointment")
+        .eq("start_at", startISO)
+        .maybeSingle();
+      // Same caller racing themselves → return the booking they wanted (idempotent).
+      if (held && held.client_id === (input.clientId ?? null)) {
+        return { ok: true, startISO, label: speakTime(fmtLabel.format(new Date(startMs))), eventId: held.id as string, title };
+      }
+      return { ok: false, reason: "That time was just taken." };
+    }
+    return { ok: false, reason: "I couldn't save that booking — let's try another time." };
+  }
+
+  // Owner's real calendar (no-op if not connected) — only after the slot is ours.
+  await upsertGoogleEvent({ orgId, title, startAt: startISO, endAt: endISO, timezone });
 
   return { ok: true, startISO, label: speakTime(fmtLabel.format(new Date(startMs))), eventId: evt?.id, title };
 }
