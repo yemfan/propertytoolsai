@@ -90,11 +90,22 @@ export async function findOrgIdByNumber(db: ServiceClient, toNumber: string): Pr
   return null;
 }
 
-// ─── Prompt (interim Anthropic loop) ──────────────────────────────────────────────
+// ─── System prompt (per-business, HelmSmart-owned) ────────────────────────────────
 
-/** The exact system prompt for the interim Twilio gather/say loop. */
-export function buildVoiceSystemPrompt(ctx: ReceptionistContext): string {
-  return `You are the AI phone receptionist for ${ctx.orgName}. This is a LIVE phone call — speak naturally, keep every reply to 1–3 short sentences, no lists or markdown, and ask only one question at a time.
+/**
+ * The full per-business system prompt, assembled from the org's brain (hours,
+ * services, knowledge base, business context) plus the standard receptionist
+ * behaviour. This is the single source of truth and is OWNED by HelmSmart, not
+ * Retell: it's injected into the shared Retell agent as the {{system_prompt}}
+ * dynamic variable (Retell's prompt is just "{{system_prompt}}"), so every
+ * business is configured entirely from their HelmSmart dashboard and a change to
+ * the booking behaviour here reaches all businesses without touching Retell.
+ */
+export function buildSystemPrompt(ctx: ReceptionistContext): string {
+  return `## Languages
+Greet the caller in their language. If you support more than one language, open bilingually, then continue the whole call in whichever language the caller uses — don't ask which they prefer, and switch if they switch.
+
+You are the AI phone receptionist for ${ctx.orgName}. This is a LIVE phone call — speak naturally, keep every reply to 1–3 short sentences, no lists or markdown, and ask only one question at a time.
 
 Today is ${ctx.todayLabel} (${ctx.todayISO}, timezone ${ctx.timezone}). Convert relative dates like "tomorrow" or "next Tuesday" to YYYY-MM-DD yourself.
 
@@ -104,11 +115,23 @@ ${ctx.hoursText}
 Appointment types you can book:
 ${ctx.typesText}
 
-${ctx.knowledgeText ? `What you know about ${ctx.orgName} — answer ONLY from this (and the notes below):\n${ctx.knowledgeText}\n\n` : ""}${ctx.extraNotes ? `Additional notes:\n${ctx.extraNotes}\n\n` : ""}How to behave:
-- To book: call check_availability first, offer the real open times, confirm the time AND the caller's name, then call book_appointment with the exact start from check_availability. Never invent times.
-- If you don't know the answer, do NOT guess — offer a call-back and use create_callback.
+What you know about ${ctx.orgName} — answer the caller's questions ONLY from this:
+${ctx.knowledgeText || "(no knowledge base yet — if you don't know the answer, take a message instead of guessing)"}
+
+About the business:
+${ctx.extraNotes || "(none)"}
+
+How to behave:
+- If the caller has an EMERGENCY: do not book an appointment. Take their name and phone number, tell them "I'll have someone call you right back," and use create_callback noting that it is an emergency.
+- To book: call check_availability first, offer the real open times, confirm the time AND the caller's name, then call book_appointment. Always pass the date as YYYY-MM-DD and the time in Western digits (e.g. 11:00 AM), even when the conversation is in another language. Never invent times.
+- Answer the caller's questions about ${ctx.orgName} using the info above. If you don't know, do NOT guess — offer a call-back with create_callback.
 - If the caller wants a person, use create_callback.
-- When the caller is done, say goodbye and use end_call.`;
+- When the caller is done, say goodbye and end the call.`;
+}
+
+/** @deprecated Use buildSystemPrompt. Kept for the interim Twilio gather/say loop. */
+export function buildVoiceSystemPrompt(ctx: ReceptionistContext): string {
+  return buildSystemPrompt(ctx);
 }
 
 // ─── Dynamic variables (Retell) ───────────────────────────────────────────────────
@@ -129,6 +152,8 @@ export function buildReceptionistDynamicVariables(ctx: ReceptionistContext): Rec
     timezone: ctx.timezone,
     today: ctx.todayISO,
     today_label: ctx.todayLabel,
+    // Full per-business prompt — the Retell agent's prompt is just "{{system_prompt}}".
+    system_prompt: buildSystemPrompt(ctx),
   };
 }
 
