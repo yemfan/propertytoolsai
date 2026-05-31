@@ -28,15 +28,28 @@ export function withinCallingHours(timezone: string): boolean {
   return hour >= 8 && hour < 21;
 }
 
+// Cache the number -> agentId resolution so we don't hit Retell's API on every
+// outbound call. The binding rarely changes; a warm function instance reuses it.
+const AGENT_ID_TTL_MS = 10 * 60_000;
+const agentIdCache = new Map<string, { id: string; expires: number }>();
+
 /** The agent that places the call: the configured shared agent, else the one
- *  already bound to the number for inbound (so outbound needs no extra env). */
+ *  already bound to the number for inbound (so outbound needs no extra env).
+ *  The number->agent lookup is cached to keep call placement fast. */
 export async function resolveOutboundAgentId(ctx: ReceptionistContext): Promise<string | null> {
-  let agentId = process.env.RETELL_AGENT_ID;
-  if (!agentId && ctx.twilioNumber) {
-    const wiring = await getRetellNumber(ctx.twilioNumber);
-    agentId = wiring.agentIds[0];
-  }
-  return agentId || null;
+  const envAgent = process.env.RETELL_AGENT_ID;
+  if (envAgent) return envAgent;
+
+  const num = ctx.twilioNumber;
+  if (!num) return null;
+
+  const cached = agentIdCache.get(num);
+  if (cached && cached.expires > Date.now()) return cached.id;
+
+  const wiring = await getRetellNumber(num);
+  const id = wiring.agentIds[0];
+  if (id) agentIdCache.set(num, { id, expires: Date.now() + AGENT_ID_TTL_MS });
+  return id ?? null;
 }
 
 /** Place one outbound call and log it as a voice_session. Assumes calling hours

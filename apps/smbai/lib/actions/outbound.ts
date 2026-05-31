@@ -33,16 +33,18 @@ export async function callLead(input: { clientId: string; purpose: OutboundPurpo
 
   const db = createServiceClient();
 
-  const { data: client } = await db
-    .from("clients")
-    .select("id, first_name, last_name, phone")
-    .eq("id", input.clientId)
-    .eq("organization_id", orgId)
-    .single();
+  // Load the contact and the org context in parallel (they only need orgId).
+  const [{ data: client }, ctx] = await Promise.all([
+    db
+      .from("clients")
+      .select("id, first_name, last_name, phone")
+      .eq("id", input.clientId)
+      .eq("organization_id", orgId)
+      .single(),
+    loadReceptionistContext(db, orgId),
+  ]);
   if (!client) return { ok: false, error: "Contact not found." };
   if (!client.phone) return { ok: false, error: "This contact has no phone number." };
-
-  const ctx = await loadReceptionistContext(db, orgId);
   if (!ctx.twilioNumber) return { ok: false, error: "Connect a phone number first in Settings → AI Voice agent." };
   if (!withinCallingHours(ctx.timezone)) return { ok: false, error: "Outside calling hours (8am–9pm local). Try again later." };
   const agentId = await resolveOutboundAgentId(ctx);
