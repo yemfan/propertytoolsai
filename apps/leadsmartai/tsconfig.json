@@ -31,7 +31,9 @@
       "@repo/lead-marketplace": ["../../packages/lead-marketplace/src/index.ts"],
       "@repo/lead-marketplace/scoring": ["../../packages/lead-marketplace/src/scoring.ts"],
       "@repo/lead-marketplace/pricing": ["../../packages/lead-marketplace/src/pricing.ts"],
-      "@repo/lead-marketplace/engine": ["../../packages/lead-marketplace/src/engine.ts"]
+      "@repo/lead-marketplace/engine": ["../../packages/lead-marketplace/src/engine.ts"],
+      "@repo/voice": ["../../packages/voice/src/index.ts"],
+      "@repo/voice/*": ["../../packages/voice/src/*"]
     },
     "target": "ES2017"
   },
