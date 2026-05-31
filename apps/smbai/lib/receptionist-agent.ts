@@ -20,6 +20,7 @@ type ServiceClient = ReturnType<typeof createServiceClient>;
 export type ReceptionistContext = {
   orgId: string;
   orgName: string;
+  orgNameZh: string;
   agentName: string;
   twilioNumber: string | null;
   timezone: string;
@@ -35,7 +36,7 @@ export type ReceptionistContext = {
 /** Load the structured brain (hours, appointment types, knowledge) for an org. */
 export async function loadReceptionistContext(db: ServiceClient, orgId: string): Promise<ReceptionistContext> {
   const [{ data: org }, { data: types }, { data: knowledge }] = await Promise.all([
-    db.from("organizations").select("name, twilio_number, voice_agent_prompt, voice_agent_greeting, voice_agent_name, voice_agent_business_name, timezone, business_hours").eq("id", orgId).single(),
+    db.from("organizations").select("name, twilio_number, voice_agent_prompt, voice_agent_greeting, voice_agent_name, voice_agent_business_name, voice_agent_business_name_zh, timezone, business_hours").eq("id", orgId).single(),
     db.from("appointment_types").select("name, duration_minutes, description").eq("organization_id", orgId).eq("active", true).order("sort"),
     db.from("knowledge_base").select("title, content").eq("organization_id", orgId).eq("active", true).order("sort"),
   ]);
@@ -52,12 +53,17 @@ export async function loadReceptionistContext(db: ServiceClient, orgId: string):
     : "";
   const hoursText = describeHours((org?.business_hours as BusinessHours | null) ?? null);
 
+  // The business name the agent SAYS — a per-business override (brand/DBA) that
+  // falls back to the legal org name. The Chinese name is used when the agent
+  // speaks Chinese, falling back to the English/display name. (The legal name
+  // stays in Settings for invoices, etc.)
+  const displayName = (org?.voice_agent_business_name as string)?.trim() || (org?.name as string) || "this business";
+  const displayNameZh = (org?.voice_agent_business_name_zh as string)?.trim() || displayName;
+
   return {
     orgId,
-    // The business name the agent SAYS — a per-business override (brand/DBA name)
-    // that falls back to the legal org name. Drives the greeting, prompt, and the
-    // {{business_name}} variable; the legal name stays in Settings (invoices, etc.).
-    orgName: ((org?.voice_agent_business_name as string)?.trim() || (org?.name as string) || "this business"),
+    orgName: displayName,
+    orgNameZh: displayNameZh,
     agentName: ((org?.voice_agent_name as string) || "").trim(),
     twilioNumber: (org?.twilio_number as string | null) ?? null,
     timezone,
@@ -105,6 +111,7 @@ export async function findOrgIdByNumber(db: ServiceClient, toNumber: string): Pr
 function fillPlaceholders(text: string, ctx: ReceptionistContext): string {
   return (text || "")
     .replace(/\{\{\s*agent_name\s*\}\}/gi, ctx.agentName.trim())
+    .replace(/\{\{\s*business_name_zh\s*\}\}/gi, ctx.orgNameZh)
     .replace(/\{\{\s*business_name\s*\}\}/gi, ctx.orgName);
 }
 
@@ -119,7 +126,7 @@ function fillPlaceholders(text: string, ctx: ReceptionistContext): string {
  */
 export function buildSystemPrompt(ctx: ReceptionistContext): string {
   return `## Languages
-Your opening greeting has ALREADY been played to the caller automatically. Do NOT greet again, do NOT re-introduce yourself, and do NOT repeat the business name — just respond to what the caller says. Speak in whichever language the caller uses, and switch the moment they switch. Never ask which language they prefer.
+Your opening greeting has ALREADY been played to the caller automatically. Do NOT greet again, do NOT re-introduce yourself, and do NOT repeat the business name — just respond to what the caller says. Speak in whichever language the caller uses, and switch the moment they switch. Never ask which language they prefer.${ctx.orgNameZh !== ctx.orgName ? ` When you speak Chinese, call the business "${ctx.orgNameZh}"; in English call it "${ctx.orgName}".` : ""}
 
 You are ${ctx.agentName ? `${ctx.agentName}, ` : ""}the AI phone receptionist for ${ctx.orgName}. This is a LIVE phone call — speak naturally, keep every reply to 1–3 short sentences, no lists or markdown, and ask only one question at a time.${ctx.agentName ? ` If the caller asks your name, you're ${ctx.agentName}.` : ""}
 
@@ -174,6 +181,7 @@ export function buildReceptionistDynamicVariables(ctx: ReceptionistContext): Rec
     org_id: ctx.orgId,
     greeting,
     business_name: ctx.orgName,
+    business_name_zh: ctx.orgNameZh,
     agent_name: ctx.agentName,
     business_hours: ctx.hoursText,
     appointment_types: ctx.typesText,
@@ -199,7 +207,7 @@ export function buildOutboundGreeting(ctx: ReceptionistContext, leadName: string
   const lead = leadName.trim();
   const who = ctx.agentName || "an assistant";
   const en = `Hi${lead ? ` ${lead}` : " there"}, this is ${who}, an AI assistant calling on behalf of ${ctx.orgName}. Is now a quick okay time to talk?`;
-  const zh = `您好${lead}，我是${ctx.orgName}的AI助理${ctx.agentName || ""}，请问现在方便讲几句话吗？`;
+  const zh = `您好${lead}，我是${ctx.orgNameZh}的AI助理${ctx.agentName || ""}，请问现在方便讲几句话吗？`;
   return `${en} ${zh}`;
 }
 
@@ -237,7 +245,7 @@ About the business:
 ${fillPlaceholders(ctx.extraNotes, ctx) || "(none)"}
 
 How to behave:
-- Keep every reply to one or two short sentences, one question at a time. Speak in whichever language the caller uses, and switch if they switch.
+- Keep every reply to one or two short sentences, one question at a time. Speak in whichever language the caller uses, and switch if they switch.${ctx.orgNameZh !== ctx.orgName ? ` When you speak Chinese, call the business "${ctx.orgNameZh}".` : ""}
 - To book or reschedule: call check_availability first, offer the real open times, confirm the time AND their name, then call book_appointment. Always pass dates as YYYY-MM-DD and times in Western digits (e.g. 11:00 AM).
 - Say dates and times in the CALLER'S language. The tools return them in English (e.g. "Monday, June 2 at 11 AM") — translate them when you speak: to a Chinese caller say "6月2号星期一上午11点". Never mix English words into a Chinese sentence.
 - Never invent times or facts. If unsure, or they want a person, use create_callback.

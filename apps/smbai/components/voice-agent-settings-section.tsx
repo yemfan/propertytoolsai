@@ -21,7 +21,7 @@ export async function VoiceAgentSettingsSection() {
   const [{ data: org }, { data: apptTypes }, { data: knowledge }] = await Promise.all([
     supabase
       .from("organizations")
-      .select("name, twilio_number, voice_agent_enabled, voice_agent_greeting, voice_agent_prompt, voice_agent_name, voice_agent_business_name, business_hours")
+      .select("name, twilio_number, voice_agent_enabled, voice_agent_greeting, voice_agent_prompt, voice_agent_name, voice_agent_business_name, voice_agent_business_name_zh, business_hours")
       .eq("id", orgId)
       .single(),
     supabase
@@ -67,6 +67,7 @@ export async function VoiceAgentSettingsSection() {
         enabled={org?.voice_agent_enabled ?? false}
         agentName={org?.voice_agent_name ?? ""}
         businessName={org?.voice_agent_business_name ?? ""}
+        businessNameZh={org?.voice_agent_business_name_zh ?? ""}
         orgName={org?.name ?? ""}
         greeting={org?.voice_agent_greeting ?? "Hello! Thank you for calling. How can I help you today?"}
         prompt={org?.voice_agent_prompt ?? ""}

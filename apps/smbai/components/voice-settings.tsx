@@ -8,16 +8,18 @@ interface Props {
   enabled: boolean;
   agentName: string;
   businessName: string;
+  businessNameZh: string;
   orgName: string;
   greeting: string;
   prompt: string;
   twilioNumber: string | null;
 }
 
-export function VoiceSettings({ enabled, agentName, businessName, orgName, greeting, prompt, twilioNumber }: Props) {
+export function VoiceSettings({ enabled, agentName, businessName, businessNameZh, orgName, greeting, prompt, twilioNumber }: Props) {
   const [isEnabled, setIsEnabled] = useState(enabled);
   const [agentNameText, setAgentName] = useState(agentName ?? "");
   const [businessNameText, setBusinessName] = useState(businessName ?? "");
+  const [businessNameZhText, setBusinessNameZh] = useState(businessNameZh ?? "");
   const [greetingText, setGreeting] = useState(greeting);
   const [promptText, setPrompt] = useState(prompt ?? "");
   const [saved, setSaved] = useState(false);
@@ -25,7 +27,7 @@ export function VoiceSettings({ enabled, agentName, businessName, orgName, greet
 
   function handleSave() {
     start(async () => {
-      await saveVoiceSettings({ enabled: isEnabled, agentName: agentNameText, businessName: businessNameText, greeting: greetingText, prompt: promptText });
+      await saveVoiceSettings({ enabled: isEnabled, agentName: agentNameText, businessName: businessNameText, businessNameZh: businessNameZhText, greeting: greetingText, prompt: promptText });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     });
@@ -90,6 +92,24 @@ export function VoiceSettings({ enabled, agentName, businessName, orgName, greet
         />
         <p className="text-xs text-slate-400 mt-1">
           The trade name the receptionist announces. Leave blank to use your account name{orgName ? <> (<span className="font-medium text-slate-500">{orgName}</span>)</> : null} — billing &amp; invoices always keep the account name.
+        </p>
+      </div>
+
+      {/* Chinese business name — used when the agent speaks Chinese */}
+      <div>
+        <label className="block text-xs font-medium text-slate-500 mb-1.5">
+          Chinese name <span className="text-slate-400">(中文名称 — optional)</span>
+        </label>
+        <input
+          type="text"
+          value={businessNameZhText}
+          onChange={(e) => setBusinessNameZh(e.target.value)}
+          className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="例如：宏图投资"
+        />
+        <p className="text-xs text-slate-400 mt-1">
+          What the agent calls the business when speaking Chinese. Leave blank to use the name above. In your greeting, use{" "}
+          <code className="text-slate-500">{"{{business_name_zh}}"}</code> for the Chinese part.
         </p>
       </div>
 
