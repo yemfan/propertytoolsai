@@ -269,31 +269,34 @@ export async function bookAppointment(
   const type = await findType(orgId, input.appointmentTypeName);
   const duration = type?.duration_minutes ?? 30;
 
-  const startMs = resolveStartMs(input.startISO, input.dateStr, input.timeStr, timezone);
+  let startMs = resolveStartMs(input.startISO, input.dateStr, input.timeStr, timezone);
   if (startMs === null || startMs < Date.now()) {
     return { ok: false, reason: "That time isn't valid or is in the past." };
   }
-  const endMs = startMs + duration * 60_000;
 
-  // No appointments outside the business's configured open hours. check_availability
-  // only offers in-hours slots, but a caller can still ask the agent for a specific
-  // out-of-hours time, so the rule is enforced here at booking. (After-hours
-  // emergencies are handled live by the agent — connect or take a message — not
-  // booked as appointments.)
+  // Keep appointments inside business hours. A closed-day request rolls forward to
+  // the next open day (same as check_availability) so the booking lands on a real
+  // open day; the time of day must then sit inside that day's open–close window.
+  // (After-hours emergencies are handled live by the agent, not booked.)
+  const fmtDate = (ms: number) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
   if (hours) {
-    const slotDate = new Intl.DateTimeFormat("en-CA", {
-      timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
-    }).format(new Date(startMs));
-    const dayHours = hours[weekdayKey(slotDate)] ?? null;
-    if (!dayHours) {
-      return { ok: false, reason: "We're closed that day. Offer a day within business hours." };
+    let dayHours = hours[weekdayKey(fmtDate(startMs))] ?? null;
+    for (let guard = 0; !dayHours && guard < 14; guard++) {
+      startMs += 24 * 60 * 60_000; // advance one day, keeping the time of day
+      dayHours = hours[weekdayKey(fmtDate(startMs))] ?? null;
     }
+    if (!dayHours) {
+      return { ok: false, reason: "We're closed then. Offer a day within business hours." };
+    }
+    const slotDate = fmtDate(startMs);
     const openMs = zonedToUtc(slotDate, dayHours.open, timezone).getTime();
     const closeMs = zonedToUtc(slotDate, dayHours.close, timezone).getTime();
-    if (startMs < openMs || endMs > closeMs) {
+    if (startMs < openMs || startMs + duration * 60_000 > closeMs) {
       return { ok: false, reason: `That time is outside business hours (${dayHours.open}–${dayHours.close}). Offer a time within hours.` };
     }
   }
+  const endMs = startMs + duration * 60_000;
   const title = `${type?.name ?? "Appointment"}${input.callerName ? ` — ${input.callerName}` : ""}`;
   const startISO = new Date(startMs).toISOString();
   const endISO = new Date(endMs).toISOString();
