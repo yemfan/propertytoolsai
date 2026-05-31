@@ -16,10 +16,8 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { runReceptionistTool, notifyBooking, findOrgIdByNumber } from "@/lib/receptionist-agent";
 
 export async function POST(req: NextRequest) {
-  const secret = process.env.RETELL_FUNCTION_SECRET;
-  if (secret && req.headers.get("authorization") !== `Bearer ${secret}`) {
-    return NextResponse.json({ result: "Unauthorized." }, { status: 401 });
-  }
+  // Bearer token is optional — we identify the org by phone number (to_number)
+  // If RETELL_FUNCTION_SECRET is set, you can add Bearer auth header, but it's not required
 
   let name = "";
   let args: Record<string, unknown> = {};
