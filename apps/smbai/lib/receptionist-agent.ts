@@ -64,11 +64,30 @@ export async function loadReceptionistContext(db: ServiceClient, orgId: string):
   };
 }
 
-/** Resolve an org by the dialed (business) phone number. */
+/** Resolve an org by the dialed (business) phone number.
+ *
+ * Tries an exact match first, then falls back to matching on the last 10 digits
+ * so differences in formatting (+1 prefix, spaces, dashes) never silently break
+ * booking — a phone-format mismatch used to make the agent say it couldn't reach
+ * the booking system. */
 export async function findOrgIdByNumber(db: ServiceClient, toNumber: string): Promise<string | null> {
   if (!toNumber) return null;
+
   const { data } = await db.from("organizations").select("id").eq("twilio_number", toNumber).maybeSingle();
-  return (data?.id as string | undefined) ?? null;
+  if (data?.id) return data.id as string;
+
+  // Fallback: normalize to the last 10 digits and suffix-match.
+  const last10 = toNumber.replace(/\D/g, "").slice(-10);
+  if (last10.length === 10) {
+    const { data: rows } = await db
+      .from("organizations")
+      .select("id")
+      .ilike("twilio_number", `%${last10}`)
+      .limit(1);
+    if (rows?.[0]?.id) return rows[0].id as string;
+  }
+
+  return null;
 }
 
 // ─── Prompt (interim Anthropic loop) ──────────────────────────────────────────────
