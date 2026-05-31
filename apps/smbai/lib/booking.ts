@@ -87,19 +87,47 @@ export function normalizeDateStr(input: string, todayISO: string): string {
   return todayISO; // unparseable → today; the agent can re-ask
 }
 
-/** Parse a spoken/written time into "HH:MM" (24h). Handles "10:00 AM", "10am",
- *  "2 pm", "5:30pm", "17:00", "10". Returns null if unparseable. */
+const WORD_HOURS: Record<string, number> = {
+  twelve: 12, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6,
+  seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11,
+};
+
+/** Parse a spoken/written time into "HH:MM" (24h). Handles digit forms
+ *  ("10:00 AM", "10am", "2 pm", "5:30pm", "17:00", "10") AND spoken forms a
+ *  voice caller actually uses ("eleven", "eleven thirty", "half past two",
+ *  "quarter to twelve", "noon", "midnight"). Returns null if unparseable. */
 function parseTimeToHHMM(input: string): string | null {
-  const s = (input || "").trim().toLowerCase().replace(/\./g, "");
-  const m = s.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
-  if (!m) return null;
-  let h = parseInt(m[1], 10);
-  const min = m[2] ? parseInt(m[2], 10) : 0;
-  const ap = m[3];
-  if (ap === "pm" && h < 12) h += 12;
-  if (ap === "am" && h === 12) h = 0;
-  if (h > 23 || min > 59) return null;
-  return `${pad2(h)}:${pad2(min)}`;
+  const raw = (input || "").trim().toLowerCase().replace(/\./g, "");
+  if (!raw) return null;
+  if (raw === "noon" || raw === "midday") return "12:00";
+  if (raw === "midnight") return "00:00";
+
+  // Digit form first.
+  const m = raw.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+  if (m) {
+    let h = parseInt(m[1], 10);
+    const min = m[2] ? parseInt(m[2], 10) : 0;
+    if (m[3] === "pm" && h < 12) h += 12;
+    if (m[3] === "am" && h === 12) h = 0;
+    return h > 23 || min > 59 ? null : `${pad2(h)}:${pad2(min)}`;
+  }
+
+  // Spoken form: find the hour word, then minutes/meridiem modifiers.
+  const hourWord = Object.keys(WORD_HOURS).find((w) => new RegExp(`\\b${w}\\b`).test(raw));
+  if (!hourWord) return null;
+  let h = WORD_HOURS[hourWord];
+
+  let min = 0;
+  if (/\b(thirty|half)\b/.test(raw)) min = 30;
+  else if (/\bforty[\s-]?five\b/.test(raw)) min = 45;
+  else if (/\b(fifteen|quarter)\b/.test(raw)) min = 15;
+
+  if (min > 0 && /\bto\b/.test(raw)) { min = 60 - min; h = h === 1 ? 12 : h - 1; } // "quarter to twelve"
+
+  if (/\bpm\b|afternoon|evening|tonight/.test(raw) && h < 12) h += 12;
+  else if (/\bam\b|morning/.test(raw) && h === 12) h = 0;
+
+  return h > 23 || min > 59 ? null : `${pad2(h)}:${pad2(min)}`;
 }
 
 /**
