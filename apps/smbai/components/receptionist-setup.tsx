@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { CheckCircle2, AlertCircle, Copy, Check, PhoneCall } from "lucide-react";
+import { useState, useTransition } from "react";
+import { CheckCircle2, AlertCircle, Copy, Check, PhoneCall, ShieldCheck, Loader2 } from "lucide-react";
+import { ReceptionistNumberWizard } from "@/components/receptionist-number-wizard";
+import { verifyNumberWiring } from "@/lib/actions/voice-setup";
 
 export type SetupStatus = {
   numberOk: boolean;
@@ -60,6 +62,23 @@ function Item({ ok, label, fix }: { ok: boolean; label: string; fix: string }) {
 export function ReceptionistSetup({ status }: { status: SetupStatus }) {
   const appReady = status.numberOk && status.hoursOk && status.typesOk && status.agentEnabled;
 
+  const [verifying, startVerify] = useTransition();
+  const [verifyMsg, setVerifyMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  function handleVerify() {
+    setVerifyMsg(null);
+    startVerify(async () => {
+      const r = await verifyNumberWiring();
+      if (r.ok) {
+        setVerifyMsg({ ok: true, text: "Wired correctly — agent + inbound webhook confirmed in Retell." });
+      } else if (!r.numberFound) {
+        setVerifyMsg({ ok: false, text: r.error ?? "Retell doesn't recognize this number." });
+      } else {
+        const missing = [!r.webhookOk && "inbound webhook", !r.agentOk && "agent binding"].filter(Boolean).join(" + ");
+        setVerifyMsg({ ok: false, text: `Number found, but ${missing} isn't set right in Retell.` });
+      }
+    });
+  }
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6 mb-8">
       <div className="flex items-center gap-2 mb-1">
@@ -73,12 +92,15 @@ export function ReceptionistSetup({ status }: { status: SetupStatus }) {
       </div>
       <p className="text-xs text-slate-500 mb-4">Everything below must be set for the agent to answer and book.</p>
 
+      {/* No number yet → guided buy/import that auto-wires Retell */}
+      {!status.numberOk && <ReceptionistNumberWizard />}
+
       {/* What the app controls */}
       <ul className="divide-y divide-slate-100 mb-5">
         <Item
           ok={status.numberOk}
           label={status.numberOk ? `Phone number connected — ${status.number}` : "Phone number not set"}
-          fix="Add your number under Reception → Auto-reply settings (saved as +1XXXXXXXXXX)."
+          fix="Use “Buy a number” or “Connect existing” above — it wires everything for you."
         />
         <Item
           ok={status.hoursOk}
@@ -102,23 +124,45 @@ export function ReceptionistSetup({ status }: { status: SetupStatus }) {
         />
       </ul>
 
-      {/* What you wire in Retell */}
-      <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-        <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Connect the number in Retell</h4>
-        <ol className="text-xs text-slate-600 space-y-1.5 mb-3 list-decimal list-inside">
-          <li>Open your number in Retell → <strong>Inbound Call Agent</strong>.</li>
-          <li>Set the call agent to your shared receptionist agent.</li>
-          <li>Check <strong>“Add an inbound webhook”</strong> and paste the URL below (replace the key with your <code className="font-mono">RETELL_FUNCTION_SECRET</code>).</li>
-          <li>Point each custom function (check_availability, book_appointment, create_callback) at the function URL.</li>
-        </ol>
-        <div className="space-y-2.5">
-          <CopyField label="Inbound webhook (on the phone number)" value={status.inboundUrl} />
-          <CopyField label="Custom functions endpoint" value={status.functionUrl} />
+      {status.numberOk ? (
+        /* Connected → let them confirm the wiring is actually right in Retell */
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={handleVerify}
+              disabled={verifying}
+              className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 hover:border-slate-300 disabled:opacity-50 text-sm text-slate-700 rounded-lg transition-colors"
+            >
+              {verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4 text-indigo-500" />}
+              {verifying ? "Checking Retell…" : "Verify wiring"}
+            </button>
+            {verifyMsg && (
+              <span className={`text-xs flex items-center gap-1.5 ${verifyMsg.ok ? "text-emerald-700" : "text-amber-700"}`}>
+                {verifyMsg.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                {verifyMsg.text}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-400 mt-2">Confirms Retell has your number bound to the agent with the inbound webhook.</p>
         </div>
-        <p className="text-xs text-slate-400 mt-2">
-          Use the <strong>www</strong> URLs exactly as shown — the bare domain redirects and Retell won’t follow it on a POST.
-        </p>
-      </div>
+      ) : (
+        /* No number → manual fallback for operators wiring Retell by hand */
+        <details className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <summary className="text-xs font-semibold text-slate-600 uppercase tracking-wide cursor-pointer">Prefer to wire Retell manually?</summary>
+          <ol className="text-xs text-slate-600 space-y-1.5 my-3 list-decimal list-inside">
+            <li>On your Retell number → <strong>Inbound Call Agent</strong>, set the shared agent.</li>
+            <li>Check <strong>“Add an inbound webhook”</strong> and paste the URL below (replace the key with your <code className="font-mono">RETELL_FUNCTION_SECRET</code>).</li>
+            <li>Point each custom function at the function URL.</li>
+          </ol>
+          <div className="space-y-2.5">
+            <CopyField label="Inbound webhook (on the phone number)" value={status.inboundUrl} />
+            <CopyField label="Custom functions endpoint" value={status.functionUrl} />
+          </div>
+          <p className="text-xs text-slate-400 mt-2">
+            Use the <strong>www</strong> URLs exactly as shown — the bare domain redirects and Retell won’t follow it on a POST.
+          </p>
+        </details>
+      )}
     </div>
   );
 }

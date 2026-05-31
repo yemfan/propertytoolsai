@@ -52,15 +52,10 @@ async function handleRequest(request: NextRequest) {
     .eq("twilio_number", to)
     .single();
 
-  // Return quick response to Twilio immediately
+  // Return quick response to Twilio immediately. This is the basic/fallback
+  // webhook — the realtime AI agent answers on the Retell-owned number, not here.
   const twiml = new VoiceResponse();
-  if (org?.voice_agent_enabled) {
-    // Say connecting message while Retell agent connects
-    twiml.say({ voice: "Polly.Joanna", language: "en-US" }, "Please hold while I connect you to an agent.");
-  } else {
-    // Passive mode
-    twiml.say({ voice: "Polly.Joanna", language: "en-US" }, "Thanks for calling. We missed you but will be in touch shortly.");
-  }
+  twiml.say({ voice: "Polly.Joanna", language: "en-US" }, "Thanks for calling. We missed you but will be in touch shortly.");
   twiml.hangup();
 
   const response = xml(twiml.toString());
@@ -95,52 +90,9 @@ async function handleRequest(request: NextRequest) {
           link: "/reception",
         });
 
-        // If voice agent enabled, initiate Retell call
-        if (org.voice_agent_enabled) {
-          const retellApiKey = process.env.RETELL_API_KEY;
-          const agentId = process.env.RETELL_AGENT_ID;
-
-          if (retellApiKey && agentId) {
-            try {
-              // Call Retell API to create outbound call
-              const retellResponse = await fetch("https://api.retell.ai/v2/create-phone-call", {
-                method: "POST",
-                headers: {
-                  "Authorization": `Bearer ${retellApiKey}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  agent_id: agentId,
-                  phone_number: from,
-                  retell_llm_dynamic_variables: {
-                    org_id: org.id,
-                    business_name: org.name,
-                    twilio_call_sid: callSid,
-                  },
-                }),
-              });
-
-              if (retellResponse.ok) {
-                const retellData = await retellResponse.json();
-                // Create voice session for Retell call
-                await supabase.from("voice_sessions").insert({
-                  organization_id: org.id,
-                  call_sid: callSid,
-                  from_number: from,
-                  to_number: to,
-                  messages: [],
-                  status: "active",
-                });
-                console.log("Retell call initiated:", retellData);
-              } else {
-                console.error("Failed to initiate Retell call:", retellResponse.status);
-              }
-            } catch (retellErr) {
-              console.error("Retell API error:", retellErr);
-            }
-          }
-        } else if (org.auto_reply && org.auto_reply_msg) {
-          // Handle SMS auto-reply in passive mode
+        // Passive SMS auto-reply. The realtime voice agent runs on the
+        // Retell-owned number directly, so this fallback route only handles SMS.
+        if (org.auto_reply && org.auto_reply_msg) {
           const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
           try {
             await twilioClient.messages.create({ from: to, to: from, body: org.auto_reply_msg });
