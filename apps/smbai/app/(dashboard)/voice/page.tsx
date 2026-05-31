@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { Phone, MessageSquare, Calendar, Bot, Clock, DollarSign, Mic, Settings } from "lucide-react";
+import { OutboundCalls } from "@/components/outbound-calls";
 
 export const metadata: Metadata = { title: "Voice Agent" };
 
@@ -29,12 +30,49 @@ export default async function VoicePage() {
   const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const { data: sessions } = await supabase
-    .from("voice_sessions")
-    .select("id, from_number, messages, status, booked_event_id, summary, duration_seconds, recording_url, created_at")
-    .eq("organization_id", orgId)
-    .order("created_at", { ascending: false })
-    .limit(20);
+  const nowISO = new Date().toISOString();
+  const [{ data: org }, { data: sessions }, { data: followUpRaw }, { data: apptRaw }] = await Promise.all([
+    supabase.from("organizations").select("twilio_number").eq("id", orgId).single(),
+    supabase
+      .from("voice_sessions")
+      .select("id, from_number, messages, status, booked_event_id, summary, duration_seconds, recording_url, created_at")
+      .eq("organization_id", orgId)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("clients")
+      .select("id, first_name, last_name, company, phone, pipeline_stage")
+      .eq("organization_id", orgId)
+      .not("phone", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("events")
+      .select("id, start_at, clients!inner(id, first_name, last_name, phone)")
+      .eq("organization_id", orgId)
+      .eq("type", "appointment")
+      .gt("start_at", nowISO)
+      .order("start_at", { ascending: true })
+      .limit(50),
+  ]);
+
+  const followUp = (followUpRaw ?? []).map((c) => ({
+    id: c.id as string,
+    name: `${c.first_name}${c.last_name ? ` ${c.last_name}` : ""}`.trim(),
+    phone: (c.phone as string | null) ?? null,
+    company: (c.company as string | null) ?? null,
+    stage: (c.pipeline_stage as string) ?? "lead",
+  }));
+
+  type ApptRow = { id: string; start_at: string; clients: { id: string; first_name: string; last_name: string | null; phone: string | null } | null };
+  const appointments = ((apptRaw ?? []) as unknown as ApptRow[])
+    .filter((e) => e.clients?.phone)
+    .map((e) => ({
+      clientId: e.clients!.id,
+      name: `${e.clients!.first_name}${e.clients!.last_name ? ` ${e.clients!.last_name}` : ""}`.trim(),
+      phone: e.clients!.phone,
+      startAt: e.start_at,
+    }));
 
   const totalSessions = sessions?.length ?? 0;
   const booked  = (sessions ?? []).filter((s) => s.booked_event_id).length;
@@ -111,6 +149,11 @@ export default async function VoicePage() {
           </p>
           <p className="text-xs text-slate-400 mt-0.5">@ $0.10/min</p>
         </div>
+      </div>
+
+      {/* Outbound calling */}
+      <div className="mb-8">
+        <OutboundCalls followUp={followUp} appointments={appointments} hasNumber={Boolean(org?.twilio_number)} />
       </div>
 
       {/* Call transcript log */}

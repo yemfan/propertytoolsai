@@ -119,3 +119,29 @@ export async function getRetellNumber(phoneNumber: string): Promise<{
     return { found: false, inboundWebhookUrl: null, agentIds: [] };
   }
 }
+
+/**
+ * Place an outbound call from a Retell-registered number, driven by an agent.
+ * Dynamic variables are passed at creation (no inbound webhook), so the agent
+ * gets the lead's context + outbound prompt for this specific call.
+ * Docs: https://docs.retellai.com/api-references/create-phone-call
+ */
+export async function createPhoneCall(input: {
+  fromNumber: string; // E.164 — must be registered in Retell
+  toNumber: string; // E.164
+  agentId: string;
+  dynamicVariables: Record<string, string>;
+  metadata?: Record<string, unknown>;
+}): Promise<{ callId: string }> {
+  const data = await retellFetch<{ call_id: string }>("/v2/create-phone-call", {
+    method: "POST",
+    body: {
+      from_number: input.fromNumber,
+      to_number: input.toNumber,
+      override_agent_id: input.agentId,
+      retell_llm_dynamic_variables: input.dynamicVariables,
+      metadata: input.metadata,
+    },
+  });
+  return { callId: data.call_id };
+}

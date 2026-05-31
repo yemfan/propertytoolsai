@@ -186,6 +186,73 @@ export function buildReceptionistDynamicVariables(ctx: ReceptionistContext): Rec
   };
 }
 
+// ─── Outbound calls (HelmSmart-initiated) ─────────────────────────────────────────
+
+/** What an outbound AI call is trying to accomplish. */
+export type OutboundPurpose = "follow_up" | "appointment_reminder";
+
+/** First line the AI speaks when the lead answers — discloses it's an AI (compliance). */
+export function buildOutboundGreeting(ctx: ReceptionistContext, leadName: string): string {
+  const lead = leadName.trim();
+  const who = ctx.agentName || "an assistant";
+  return `Hi${lead ? ` ${lead}` : " there"}, this is ${who}, an AI assistant calling on behalf of ${ctx.orgName}. Is now a quick okay time to talk?`;
+}
+
+/** Per-purpose system prompt for an outbound call. Reuses the business's hours,
+ *  services, and knowledge, reframed as a call the agent initiated. */
+export function buildOutboundSystemPrompt(
+  ctx: ReceptionistContext,
+  opts: { leadName: string; purpose: OutboundPurpose }
+): string {
+  const lead = opts.leadName.trim() || "the customer";
+  const goal =
+    opts.purpose === "appointment_reminder"
+      ? `Your goal: remind ${lead} about their upcoming appointment with ${ctx.orgName} and confirm they can still make it. If they want to reschedule, use check_availability then book_appointment for a new time. If they want to cancel or need a person, use create_callback.`
+      : `Your goal: follow up with ${lead} about their interest in ${ctx.orgName}. Re-engage warmly, answer their questions, and if there is interest, book a meeting with book_appointment. If they are not interested, thank them politely and end the call.`;
+
+  return `## Outbound call — YOU placed this call
+You are ${ctx.agentName ? `${ctx.agentName}, ` : ""}an AI assistant calling on behalf of ${ctx.orgName}. This is a LIVE outbound call that you initiated, and your opening line already greeted them and disclosed that you are an AI.
+
+After they respond, first make sure it is a good time. If it is a bad time, apologize, offer to call back later with create_callback, and end the call. Never be pushy and never repeat yourself.
+
+${goal}
+
+Today is ${ctx.todayLabel} (${ctx.todayISO}, timezone ${ctx.timezone}). Convert relative dates like "tomorrow" or "next Tuesday" to YYYY-MM-DD yourself.
+
+Business hours:
+${ctx.hoursText}
+
+Appointment types you can book:
+${ctx.typesText}
+
+What you know about ${ctx.orgName} — answer questions ONLY from this:
+${ctx.knowledgeText || "(no knowledge base yet — if you don't know, offer a call-back instead of guessing)"}
+
+About the business:
+${fillPlaceholders(ctx.extraNotes, ctx) || "(none)"}
+
+How to behave:
+- Keep every reply to one or two short sentences, one question at a time. Speak in whichever language the caller uses, and switch if they switch.
+- To book or reschedule: call check_availability first, offer the real open times, confirm the time AND their name, then call book_appointment. Always pass dates as YYYY-MM-DD and times in Western digits (e.g. 11:00 AM).
+- Never invent times or facts. If unsure, or they want a person, use create_callback.
+- When finished, thank them and end the call.`;
+}
+
+/** Dynamic variables for an outbound call: the inbound set with the greeting and
+ *  system prompt swapped for the outbound versions, plus lead context. */
+export function buildOutboundDynamicVariables(
+  ctx: ReceptionistContext,
+  opts: { leadName: string; purpose: OutboundPurpose }
+): Record<string, string> {
+  return {
+    ...buildReceptionistDynamicVariables(ctx),
+    greeting: buildOutboundGreeting(ctx, opts.leadName),
+    system_prompt: buildOutboundSystemPrompt(ctx, opts),
+    lead_name: opts.leadName || "",
+    call_purpose: opts.purpose,
+  };
+}
+
 /**
  * The prompt to paste into the Retell agent (single-prompt mode). It mirrors the
  * interim prompt but uses Retell {{dynamic_variables}} and Retell's built-in
