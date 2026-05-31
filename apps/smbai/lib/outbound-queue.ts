@@ -59,7 +59,8 @@ export async function placeOutboundCall(
   ctx: ReceptionistContext,
   client: QueueClient,
   purpose: OutboundPurpose,
-  agentId: string
+  agentId: string,
+  detail?: string
 ): Promise<string> {
   if (!ctx.twilioNumber) throw new Error("No phone number connected.");
   if (!client.phone) throw new Error("No phone number.");
@@ -68,7 +69,7 @@ export async function placeOutboundCall(
   const to = toResult.value;
 
   const leadName = `${client.first_name}${client.last_name ? ` ${client.last_name}` : ""}`.trim();
-  const dynamicVariables = buildOutboundDynamicVariables(ctx, { leadName, purpose });
+  const dynamicVariables = buildOutboundDynamicVariables(ctx, { leadName, purpose, detail });
 
   const { callId } = await createPhoneCall({
     fromNumber: ctx.twilioNumber,
@@ -133,7 +134,7 @@ export async function drainOutboundQueue(
 
   const { data: rows } = await db
     .from("outbound_call_queue")
-    .select("id, client_id, purpose")
+    .select("id, client_id, purpose, event_id")
     .eq("organization_id", orgId)
     .eq("status", "queued")
     .order("created_at", { ascending: true })
@@ -157,7 +158,22 @@ export async function drainOutboundQueue(
 
     try {
       if (!client) throw new Error("Contact not found.");
-      const callId = await placeOutboundCall(db, ctx, client as QueueClient, row.purpose as OutboundPurpose, agentId);
+      // For appointment reminders, tell the agent the exact appointment time.
+      let detail: string | undefined;
+      if (row.event_id) {
+        const { data: evt } = await db.from("events").select("start_at").eq("id", row.event_id as string).single();
+        if (evt?.start_at) {
+          detail = new Intl.DateTimeFormat("en-US", {
+            timeZone: ctx.timezone,
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          }).format(new Date(evt.start_at as string));
+        }
+      }
+      const callId = await placeOutboundCall(db, ctx, client as QueueClient, row.purpose as OutboundPurpose, agentId, detail);
       await db
         .from("outbound_call_queue")
         .update({ status: "done", call_sid: callId, updated_at: new Date().toISOString() })
@@ -178,4 +194,54 @@ export async function drainOutboundQueue(
   }
 
   return { placed, failed };
+}
+
+/**
+ * Enqueue reminder calls for appointments that have entered the org's lead window
+ * and don't already have a reminder. Idempotent (one queue row per event via the
+ * event_id partial unique index), so it's safe to run every few minutes. Returns
+ * how many reminders were newly scheduled.
+ */
+export async function scheduleDueReminders(
+  db: ServiceClient,
+  orgId: string,
+  leadMinutes: number
+): Promise<number> {
+  const now = new Date();
+  const windowEnd = new Date(now.getTime() + Math.max(0, leadMinutes) * 60_000);
+
+  // Future appointments now within the lead window, that have a contact.
+  const { data: appts } = await db
+    .from("events")
+    .select("id, client_id")
+    .eq("organization_id", orgId)
+    .eq("type", "appointment")
+    .gt("start_at", now.toISOString())
+    .lte("start_at", windowEnd.toISOString())
+    .not("client_id", "is", null);
+  if (!appts?.length) return 0;
+
+  // Skip appointments that already have a reminder queued/placed.
+  const eventIds = appts.map((a) => a.id as string);
+  const { data: existing } = await db
+    .from("outbound_call_queue")
+    .select("event_id")
+    .eq("purpose", "appointment_reminder")
+    .in("event_id", eventIds);
+  const already = new Set((existing ?? []).map((r) => r.event_id as string));
+
+  const toInsert = appts
+    .filter((a) => !already.has(a.id as string))
+    .map((a) => ({
+      organization_id: orgId,
+      client_id: a.client_id as string,
+      event_id: a.id as string,
+      purpose: "appointment_reminder",
+      status: "queued",
+    }));
+  if (!toInsert.length) return 0;
+
+  const { error } = await db.from("outbound_call_queue").insert(toInsert);
+  if (error) return 0; // unique-index race — another run already scheduled it
+  return toInsert.length;
 }

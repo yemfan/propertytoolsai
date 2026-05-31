@@ -215,12 +215,13 @@ export function buildOutboundGreeting(ctx: ReceptionistContext, leadName: string
  *  services, and knowledge, reframed as a call the agent initiated. */
 export function buildOutboundSystemPrompt(
   ctx: ReceptionistContext,
-  opts: { leadName: string; purpose: OutboundPurpose }
+  opts: { leadName: string; purpose: OutboundPurpose; detail?: string }
 ): string {
   const lead = opts.leadName.trim() || "the customer";
+  const appt = opts.detail ? ` Their appointment is on ${opts.detail}.` : "";
   const goal =
     opts.purpose === "appointment_reminder"
-      ? `Your goal: remind ${lead} about their upcoming appointment with ${ctx.orgName} and confirm they can still make it. If they want to reschedule, use check_availability then book_appointment for a new time. If they want to cancel or need a person, use create_callback.`
+      ? `Your goal: remind ${lead} about their upcoming appointment with ${ctx.orgName} and confirm they can still make it.${appt} If they want to reschedule, use check_availability then book_appointment for a new time. If they want to cancel or need a person, use create_callback.`
       : `Your goal: follow up with ${lead} about their interest in ${ctx.orgName}. Re-engage warmly, answer their questions, and if there is interest, book a meeting with book_appointment. If they are not interested, thank them politely and end the call.`;
 
   return `## Outbound call — YOU placed this call
@@ -256,7 +257,7 @@ How to behave:
  *  system prompt swapped for the outbound versions, plus lead context. */
 export function buildOutboundDynamicVariables(
   ctx: ReceptionistContext,
-  opts: { leadName: string; purpose: OutboundPurpose }
+  opts: { leadName: string; purpose: OutboundPurpose; detail?: string }
 ): Record<string, string> {
   return {
     ...buildReceptionistDynamicVariables(ctx),

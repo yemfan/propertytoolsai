@@ -2,6 +2,7 @@
 
 import { after } from "next/server";
 import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { loadReceptionistContext, type OutboundPurpose } from "@/lib/receptionist-agent";
 import {
@@ -100,4 +101,25 @@ export async function callAll(input: { purpose: OutboundPurpose; clientIds: stri
   });
 
   return { ok: true, queued };
+}
+
+/** Enable/disable automatic appointment-reminder calls and set how long before
+ *  the appointment to call (stored as minutes; clamped to 15 min .. 30 days). */
+export async function saveReminderSettings(input: {
+  enabled: boolean;
+  leadMinutes: number;
+}): Promise<{ ok: boolean; error?: string }> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
+  if (!orgId) return { ok: false, error: "No organization." };
+
+  const lead = Math.max(15, Math.min(43200, Math.round(input.leadMinutes || 0)));
+  const db = createServiceClient();
+  await db
+    .from("organizations")
+    .update({ voice_reminder_enabled: input.enabled, voice_reminder_lead_minutes: lead })
+    .eq("id", orgId);
+
+  revalidatePath("/voice");
+  return { ok: true };
 }

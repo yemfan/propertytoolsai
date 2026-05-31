@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { Phone, MessageSquare, Calendar, Bot, Clock, DollarSign, Mic, Settings } from "lucide-react";
 import { OutboundCalls } from "@/components/outbound-calls";
+import { AppointmentReminders } from "@/components/appointment-reminders";
 
 export const metadata: Metadata = { title: "Voice Agent" };
 
@@ -32,7 +33,7 @@ export default async function VoicePage() {
 
   const nowISO = new Date().toISOString();
   const [{ data: org }, { data: sessions }, { data: followUpRaw }, { data: apptRaw }] = await Promise.all([
-    supabase.from("organizations").select("twilio_number").eq("id", orgId).single(),
+    supabase.from("organizations").select("twilio_number, voice_reminder_enabled, voice_reminder_lead_minutes").eq("id", orgId).single(),
     supabase
       .from("voice_sessions")
       .select("id, from_number, messages, status, booked_event_id, summary, duration_seconds, recording_url, created_at")
@@ -72,6 +73,28 @@ export default async function VoicePage() {
       name: `${e.clients!.first_name}${e.clients!.last_name ? ` ${e.clients!.last_name}` : ""}`.trim(),
       phone: e.clients!.phone,
       startAt: e.start_at,
+    }));
+
+  // Automatic appointment reminders: upcoming appointments + each one's reminder status.
+  const leadMinutes = (org?.voice_reminder_lead_minutes as number) || 1440;
+  const apptIds = ((apptRaw ?? []) as unknown as ApptRow[]).map((e) => e.id);
+  const { data: reminderRows } = apptIds.length
+    ? await supabase
+        .from("outbound_call_queue")
+        .select("event_id, status")
+        .eq("purpose", "appointment_reminder")
+        .in("event_id", apptIds)
+    : { data: [] as { event_id: string; status: string }[] };
+  const reminderStatus = new Map((reminderRows ?? []).map((r) => [r.event_id as string, r.status as string]));
+  const reminders = ((apptRaw ?? []) as unknown as ApptRow[])
+    .filter((e) => e.clients?.phone)
+    .map((e) => ({
+      key: e.id,
+      name: `${e.clients!.first_name}${e.clients!.last_name ? ` ${e.clients!.last_name}` : ""}`.trim(),
+      phone: e.clients!.phone,
+      startAt: e.start_at,
+      reminderAt: new Date(new Date(e.start_at).getTime() - leadMinutes * 60_000).toISOString(),
+      status: reminderStatus.get(e.id) ?? "pending",
     }));
 
   const totalSessions = sessions?.length ?? 0;
@@ -154,6 +177,16 @@ export default async function VoicePage() {
       {/* Outbound calling */}
       <div className="mb-8">
         <OutboundCalls followUp={followUp} appointments={appointments} hasNumber={Boolean(org?.twilio_number)} />
+      </div>
+
+      {/* Automatic appointment reminders */}
+      <div className="mb-8">
+        <AppointmentReminders
+          enabled={org?.voice_reminder_enabled ?? false}
+          leadMinutes={leadMinutes}
+          reminders={reminders}
+          hasNumber={Boolean(org?.twilio_number)}
+        />
       </div>
 
       {/* Call transcript log */}
