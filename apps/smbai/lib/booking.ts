@@ -73,6 +73,18 @@ export function normalizeDateStr(input: string, todayISO: string): string {
     return addDaysISO(todayISO, delta);
   }
 
+  // Chinese relative + numeric dates: 今天/明天/后天, "6月2日", "2026年6月2日".
+  if (/今天|今日/.test(s)) return todayISO;
+  if (/明天|明日/.test(s)) return addDaysISO(todayISO, 1);
+  if (/后天/.test(s)) return addDaysISO(todayISO, 2);
+  const cn = s.match(/(?:(\d{4})年)?(\d{1,2})月(\d{1,2})[日号]/);
+  if (cn) {
+    const curYear = parseInt(todayISO.slice(0, 4), 10);
+    const y = cn[1] ? parseInt(cn[1], 10) : curYear;
+    const iso = `${y}-${pad2(parseInt(cn[2], 10))}-${pad2(parseInt(cn[3], 10))}`;
+    return cn[1] || iso >= todayISO ? iso : `${y + 1}-${iso.slice(5)}`;
+  }
+
   // Natural-language / numeric dates ("June 1, 2026", "06/01/2026", "Jun 1", "6/2").
   const parsed = new Date(s);
   if (!Number.isNaN(parsed.getTime())) {
@@ -103,16 +115,22 @@ const WORD_HOURS: Record<string, number> = {
 function parseTimeToHHMM(input: string): string | null {
   const raw = (input || "").trim().toLowerCase().replace(/\./g, "");
   if (!raw) return null;
-  if (raw === "noon" || raw === "midday") return "12:00";
-  if (raw === "midnight") return "00:00";
+  if (raw === "noon" || raw === "midday" || /中午/.test(raw)) return "12:00";
+  if (raw === "midnight" || /午夜/.test(raw)) return "00:00";
 
-  // Digit form first.
-  const m = raw.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+  // Meridiem from English OR Chinese markers (上午/早上 = AM, 下午/晚上 = PM).
+  const isPM = /\bpm\b|afternoon|evening|tonight|下午|晚上|傍晚/.test(raw);
+  const isAM = /\bam\b|morning|上午|早上|早晨|凌晨/.test(raw);
+
+  // Pull the first H:MM from anywhere in the string, so Chinese times like
+  // "上午11点" or "11点半" parse as well as "11:00 am" / "11am" / "11".
+  const m = raw.match(/(\d{1,2})(?::(\d{2}))?/);
   if (m) {
     let h = parseInt(m[1], 10);
-    const min = m[2] ? parseInt(m[2], 10) : 0;
-    if (m[3] === "pm" && h < 12) h += 12;
-    if (m[3] === "am" && h === 12) h = 0;
+    let min = m[2] ? parseInt(m[2], 10) : 0;
+    if (!m[2] && /半/.test(raw)) min = 30; // "11点半" = 11:30
+    if (isPM && h < 12) h += 12;
+    if (isAM && h === 12) h = 0;
     return h > 23 || min > 59 ? null : `${pad2(h)}:${pad2(min)}`;
   }
 
@@ -128,8 +146,8 @@ function parseTimeToHHMM(input: string): string | null {
 
   if (min > 0 && /\bto\b/.test(raw)) { min = 60 - min; h = h === 1 ? 12 : h - 1; } // "quarter to twelve"
 
-  if (/\bpm\b|afternoon|evening|tonight/.test(raw) && h < 12) h += 12;
-  else if (/\bam\b|morning/.test(raw) && h === 12) h = 0;
+  if (isPM && h < 12) h += 12;
+  else if (isAM && h === 12) h = 0;
 
   return h > 23 || min > 59 ? null : `${pad2(h)}:${pad2(min)}`;
 }
