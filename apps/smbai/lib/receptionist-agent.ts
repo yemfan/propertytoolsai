@@ -28,12 +28,13 @@ export type ReceptionistContext = {
   typesText: string;
   knowledgeText: string;
   extraNotes: string;
+  greeting: string;
 };
 
 /** Load the structured brain (hours, appointment types, knowledge) for an org. */
 export async function loadReceptionistContext(db: ServiceClient, orgId: string): Promise<ReceptionistContext> {
   const [{ data: org }, { data: types }, { data: knowledge }] = await Promise.all([
-    db.from("organizations").select("name, twilio_number, voice_agent_prompt, timezone, business_hours").eq("id", orgId).single(),
+    db.from("organizations").select("name, twilio_number, voice_agent_prompt, voice_agent_greeting, timezone, business_hours").eq("id", orgId).single(),
     db.from("appointment_types").select("name, duration_minutes, description").eq("organization_id", orgId).eq("active", true).order("sort"),
     db.from("knowledge_base").select("title, content").eq("organization_id", orgId).eq("active", true).order("sort"),
   ]);
@@ -61,6 +62,7 @@ export async function loadReceptionistContext(db: ServiceClient, orgId: string):
     typesText,
     knowledgeText,
     extraNotes: (org?.voice_agent_prompt as string) || "",
+    greeting: (org?.voice_agent_greeting as string) || "",
   };
 }
 
@@ -142,8 +144,17 @@ export function buildVoiceSystemPrompt(ctx: ReceptionistContext): string {
  * function/webhook endpoints resolve the tenant without a second lookup.
  */
 export function buildReceptionistDynamicVariables(ctx: ReceptionistContext): Record<string, string> {
+  // Greeting comes from the org's "Opening greeting" field; auto-prepend the
+  // business name unless the greeting already names it. Retell's Welcome Message
+  // (begin_message) is set to {{greeting}} so the greeting is per-business too.
+  const g = (ctx.greeting || "Hello! Thank you for calling. How can I help you today?")
+    .replace(/\{\{business_name\}\}/g, ctx.orgName)
+    .trim();
+  const greeting = g.includes(ctx.orgName) ? g : `${ctx.orgName}. ${g}`;
+
   return {
     org_id: ctx.orgId,
+    greeting,
     business_name: ctx.orgName,
     business_hours: ctx.hoursText,
     appointment_types: ctx.typesText,
