@@ -265,7 +265,7 @@ export async function bookAppointment(
     callerName?: string | null;
   }
 ): Promise<BookResult> {
-  const { timezone } = await loadOrg(orgId);
+  const { timezone, hours } = await loadOrg(orgId);
   const type = await findType(orgId, input.appointmentTypeName);
   const duration = type?.duration_minutes ?? 30;
 
@@ -274,6 +274,26 @@ export async function bookAppointment(
     return { ok: false, reason: "That time isn't valid or is in the past." };
   }
   const endMs = startMs + duration * 60_000;
+
+  // Emergency appointments may be booked any time; every other service type must
+  // fall inside the business's configured open hours. check_availability only
+  // offers in-hours slots, but a caller can still ask for a specific out-of-hours
+  // time, so the rule is enforced here at booking.
+  const isEmergency = /emergenc/i.test(type?.name ?? "") || /emergenc/i.test(input.appointmentTypeName ?? "");
+  if (!isEmergency && hours) {
+    const slotDate = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date(startMs));
+    const dayHours = hours[weekdayKey(slotDate)] ?? null;
+    if (!dayHours) {
+      return { ok: false, reason: "We're closed that day. Offer a day within business hours." };
+    }
+    const openMs = zonedToUtc(slotDate, dayHours.open, timezone).getTime();
+    const closeMs = zonedToUtc(slotDate, dayHours.close, timezone).getTime();
+    if (startMs < openMs || endMs > closeMs) {
+      return { ok: false, reason: `That time is outside business hours (${dayHours.open}–${dayHours.close}). Offer a time within hours.` };
+    }
+  }
   const title = `${type?.name ?? "Appointment"}${input.callerName ? ` — ${input.callerName}` : ""}`;
   const startISO = new Date(startMs).toISOString();
   const endISO = new Date(endMs).toISOString();
