@@ -69,10 +69,19 @@ export function normalizeDateStr(input: string, todayISO: string): string {
     return addDaysISO(todayISO, delta);
   }
 
-  // Natural-language / numeric dates ("June 1, 2026", "06/01/2026", "Jun 1").
+  // Natural-language / numeric dates ("June 1, 2026", "06/01/2026", "Jun 1", "6/2").
   const parsed = new Date(s);
   if (!Number.isNaN(parsed.getTime())) {
-    return `${parsed.getFullYear()}-${pad2(parsed.getMonth() + 1)}-${pad2(parsed.getDate())}`;
+    const md = `${pad2(parsed.getMonth() + 1)}-${pad2(parsed.getDate())}`;
+    // If the string has no explicit 4-digit year, `new Date` defaults to a bogus
+    // (often past) year → every slot reads as "in the past". Anchor month/day to
+    // the current year, rolling to next year if that date has already passed.
+    if (!/\b\d{4}\b/.test(s)) {
+      const curYear = parseInt(todayISO.slice(0, 4), 10);
+      const thisYear = `${curYear}-${md}`;
+      return thisYear >= todayISO ? thisYear : `${curYear + 1}-${md}`;
+    }
+    return `${parsed.getFullYear()}-${md}`;
   }
 
   return todayISO; // unparseable → today; the agent can re-ask
