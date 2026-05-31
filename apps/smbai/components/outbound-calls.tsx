@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Bot, Loader2, PhoneOutgoing, Users, CalendarClock } from "lucide-react";
-import { callLead } from "@/lib/actions/outbound";
+import { callLead, callAll } from "@/lib/actions/outbound";
 
 type FollowUpContact = { id: string; name: string; phone: string | null; company: string | null; stage: string };
 type ApptContact = { clientId: string; name: string; phone: string | null; startAt: string };
@@ -29,6 +29,7 @@ export function OutboundCalls({
   const [purpose, setPurpose] = useState<Purpose>("follow_up");
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [bulkPending, setBulkPending] = useState(false);
   const [, startTransition] = useTransition();
 
   function call(clientId: string, name: string, phone: string | null) {
@@ -47,6 +48,24 @@ export function OutboundCalls({
     purpose === "appointment_reminder"
       ? appointments.map((a) => ({ key: `${a.clientId}-${a.startAt}`, id: a.clientId, name: a.name, phone: a.phone, meta: formatWhen(a.startAt) }))
       : followUp.map((c) => ({ key: c.id, id: c.id, name: c.name, phone: c.phone, meta: c.company || "" }));
+
+  function callEveryone() {
+    const ids = Array.from(new Set(rows.map((r) => r.id)));
+    if (!ids.length || bulkPending || pendingId) return;
+    const n = Math.min(ids.length, 15);
+    if (!window.confirm(`Place AI calls to ${n} contact${n !== 1 ? "s" : ""}?\n\nThey'll be dialed in the background — staggered and only within calling hours.`)) return;
+    setBulkPending(true);
+    setMsg(null);
+    startTransition(async () => {
+      const res = await callAll({ purpose, clientIds: ids });
+      setBulkPending(false);
+      setMsg(
+        res.ok
+          ? { ok: true, text: `📞 Queued ${res.queued} call${res.queued !== 1 ? "s" : ""} — dialing now, staggered and within calling hours.` }
+          : { ok: false, text: res.error }
+      );
+    });
+  }
 
   return (
     <div className="bg-white rounded-xl border border-slate-200">
@@ -89,6 +108,21 @@ export function OutboundCalls({
             </div>
           )}
 
+          {/* Call all */}
+          {rows.length > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500">{rows.length} contact{rows.length !== 1 ? "s" : ""}</span>
+              <button
+                onClick={callEveryone}
+                disabled={bulkPending || pendingId !== null}
+                className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 transition-colors"
+              >
+                {bulkPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PhoneOutgoing className="w-3.5 h-3.5" />}
+                Call all{rows.length > 15 ? " (first 15)" : ` (${rows.length})`}
+              </button>
+            </div>
+          )}
+
           {/* Contact list */}
           {rows.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
@@ -108,7 +142,7 @@ export function OutboundCalls({
                   </div>
                   <button
                     onClick={() => call(r.id, r.name || "this contact", r.phone)}
-                    disabled={!r.phone || pendingId !== null}
+                    disabled={!r.phone || pendingId !== null || bulkPending}
                     className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors shrink-0"
                   >
                     {pendingId === r.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bot className="w-3.5 h-3.5" />}
