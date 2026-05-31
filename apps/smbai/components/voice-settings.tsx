@@ -76,10 +76,10 @@ export function VoiceSettings({ enabled, agentName, businessName, orgName, greet
         <p className="text-xs text-slate-400 mt-1">Used when the agent introduces itself. Leave blank to stay unnamed.</p>
       </div>
 
-      {/* Business name the agent says (brand / DBA override, falls back to account name) */}
+      {/* DBA name — trade name the agent announces; falls back to the account name */}
       <div>
         <label className="block text-xs font-medium text-slate-500 mb-1.5">
-          Business name the agent says <span className="text-slate-400">(optional)</span>
+          DBA name <span className="text-slate-400">(Doing Business As — optional)</span>
         </label>
         <input
           type="text"
@@ -89,7 +89,7 @@ export function VoiceSettings({ enabled, agentName, businessName, orgName, greet
           placeholder={orgName || "Your business name"}
         />
         <p className="text-xs text-slate-400 mt-1">
-          Defaults to your account name{orgName ? <> (<span className="font-medium text-slate-500">{orgName}</span>)</> : null}. Set a brand or DBA name if the receptionist should announce something different — billing &amp; invoices keep the account name.
+          The trade name the receptionist announces. Leave blank to use your account name{orgName ? <> (<span className="font-medium text-slate-500">{orgName}</span>)</> : null} — billing &amp; invoices always keep the account name.
         </p>
       </div>
 
