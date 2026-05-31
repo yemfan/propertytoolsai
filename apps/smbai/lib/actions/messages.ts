@@ -7,6 +7,7 @@ import { Resend } from "resend";
 import twilio from "twilio";
 import Anthropic from "@anthropic-ai/sdk";
 import { detectLanguage, languageName, type Lang } from "@/lib/language";
+import { normalizePhoneE164 } from "@/lib/phone";
 
 const resend = new Resend(process.env.RESEND_API_KEY ?? "");
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -147,16 +148,27 @@ export async function saveAutoReplyMsg(msg: string) {
     .eq("id", orgId);
 }
 
-export async function saveTwilioNumber(number: string) {
+export async function saveTwilioNumber(
+  number: string
+): Promise<{ ok: boolean; value?: string; error?: string }> {
   const cookieStore = await cookies();
   const orgId = cookieStore.get("helmsmart-org-id")?.value;
-  if (!orgId) return;
+  if (!orgId) return { ok: false, error: "No organization selected." };
 
   const supabase = await createClient();
-  await supabase
-    .from("organizations")
-    .update({ twilio_number: number })
-    .eq("id", orgId);
+
+  // Blank clears the number (lets a user save other settings without one).
+  if (!number.trim()) {
+    await supabase.from("organizations").update({ twilio_number: null }).eq("id", orgId);
+    return { ok: true, value: "" };
+  }
+
+  // Validate + normalize to E.164 so a typo can't silently break call routing.
+  const result = normalizePhoneE164(number);
+  if (!result.ok) return { ok: false, error: result.error };
+
+  await supabase.from("organizations").update({ twilio_number: result.value }).eq("id", orgId);
+  return { ok: true, value: result.value };
 }
 
 // ─── AI reply draft (Week 57) ─────────────────────────────────────────────────

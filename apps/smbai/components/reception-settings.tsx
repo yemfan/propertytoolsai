@@ -16,6 +16,7 @@ export function ReceptionSettings({ twilioNumber, autoReply, autoReplyMsg }: Pro
   const [enabled, setEnabled] = useState(autoReply);
   const [msg, setMsg]         = useState(autoReplyMsg);
   const [saved, setSaved]     = useState(false);
+  const [numberError, setNumberError] = useState<string | null>(null);
   const [isPending, start]    = useTransition();
 
   function handleToggle() {
@@ -26,7 +27,13 @@ export function ReceptionSettings({ twilioNumber, autoReply, autoReplyMsg }: Pro
 
   function handleSave() {
     start(async () => {
-      await saveTwilioNumber(number);
+      setNumberError(null);
+      const res = await saveTwilioNumber(number);
+      if (!res.ok) {
+        setNumberError(res.error ?? "Invalid phone number.");
+        return; // fix the number before saving the rest
+      }
+      if (res.value !== undefined) setNumber(res.value); // reflect the normalized form
       await saveAutoReplyMsg(msg);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -48,18 +55,24 @@ export function ReceptionSettings({ twilioNumber, autoReply, autoReplyMsg }: Pro
             <input
               type="tel"
               value={number}
-              onChange={(e) => setNumber(e.target.value)}
+              onChange={(e) => { setNumber(e.target.value); setNumberError(null); }}
               placeholder="+15555550100"
-              className="w-full border border-slate-200 rounded-lg pl-9 pr-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              aria-invalid={numberError ? true : undefined}
+              className={`w-full border rounded-lg pl-9 pr-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 ${
+                numberError
+                  ? "border-rose-300 focus:ring-rose-500"
+                  : "border-slate-200 focus:ring-indigo-500"
+              }`}
             />
           </div>
         </div>
-        <p className="text-xs text-slate-400 mt-1">
-          Must match the Twilio number pointing to{" "}
-          <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">
-            /api/twilio/voice
-          </code>
-        </p>
+        {numberError ? (
+          <p className="text-xs text-rose-600 mt-1">{numberError}</p>
+        ) : (
+          <p className="text-xs text-slate-400 mt-1">
+            Saved in E.164 format (e.g. <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">+16265551234</code>). Must match the Twilio number routing to the agent.
+          </p>
+        )}
       </div>
 
       {/* Toggle */}
