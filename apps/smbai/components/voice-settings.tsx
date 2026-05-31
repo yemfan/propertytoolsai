@@ -7,14 +7,17 @@ import { saveVoiceSettings } from "@/lib/actions/social";
 interface Props {
   enabled: boolean;
   agentName: string;
+  businessName: string;
+  orgName: string;
   greeting: string;
   prompt: string;
   twilioNumber: string | null;
 }
 
-export function VoiceSettings({ enabled, agentName, greeting, prompt, twilioNumber }: Props) {
+export function VoiceSettings({ enabled, agentName, businessName, orgName, greeting, prompt, twilioNumber }: Props) {
   const [isEnabled, setIsEnabled] = useState(enabled);
   const [agentNameText, setAgentName] = useState(agentName ?? "");
+  const [businessNameText, setBusinessName] = useState(businessName ?? "");
   const [greetingText, setGreeting] = useState(greeting);
   const [promptText, setPrompt] = useState(prompt ?? "");
   const [saved, setSaved] = useState(false);
@@ -22,7 +25,7 @@ export function VoiceSettings({ enabled, agentName, greeting, prompt, twilioNumb
 
   function handleSave() {
     start(async () => {
-      await saveVoiceSettings({ enabled: isEnabled, agentName: agentNameText, greeting: greetingText, prompt: promptText });
+      await saveVoiceSettings({ enabled: isEnabled, agentName: agentNameText, businessName: businessNameText, greeting: greetingText, prompt: promptText });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     });
@@ -71,6 +74,23 @@ export function VoiceSettings({ enabled, agentName, greeting, prompt, twilioNumb
           placeholder="e.g. Maria"
         />
         <p className="text-xs text-slate-400 mt-1">Used when the agent introduces itself. Leave blank to stay unnamed.</p>
+      </div>
+
+      {/* Business name the agent says (brand / DBA override, falls back to account name) */}
+      <div>
+        <label className="block text-xs font-medium text-slate-500 mb-1.5">
+          Business name the agent says <span className="text-slate-400">(optional)</span>
+        </label>
+        <input
+          type="text"
+          value={businessNameText}
+          onChange={(e) => setBusinessName(e.target.value)}
+          className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder={orgName || "Your business name"}
+        />
+        <p className="text-xs text-slate-400 mt-1">
+          Defaults to your account name{orgName ? <> (<span className="font-medium text-slate-500">{orgName}</span>)</> : null}. Set a brand or DBA name if the receptionist should announce something different — billing &amp; invoices keep the account name.
+        </p>
       </div>
 
       {/* Greeting */}

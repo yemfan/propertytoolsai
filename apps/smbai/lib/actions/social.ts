@@ -228,6 +228,7 @@ export async function deleteSocialPost(postId: string) {
 export async function saveVoiceSettings(data: {
   enabled: boolean;
   agentName: string;
+  businessName: string;
   greeting: string;
   prompt: string;
 }) {
@@ -239,6 +240,7 @@ export async function saveVoiceSettings(data: {
   await supabase.from("organizations").update({
     voice_agent_enabled: data.enabled,
     voice_agent_name: data.agentName.trim(),
+    voice_agent_business_name: data.businessName.trim(),
     voice_agent_greeting: data.greeting,
     voice_agent_prompt: data.prompt,
   }).eq("id", orgId);

@@ -35,7 +35,7 @@ export type ReceptionistContext = {
 /** Load the structured brain (hours, appointment types, knowledge) for an org. */
 export async function loadReceptionistContext(db: ServiceClient, orgId: string): Promise<ReceptionistContext> {
   const [{ data: org }, { data: types }, { data: knowledge }] = await Promise.all([
-    db.from("organizations").select("name, twilio_number, voice_agent_prompt, voice_agent_greeting, voice_agent_name, timezone, business_hours").eq("id", orgId).single(),
+    db.from("organizations").select("name, twilio_number, voice_agent_prompt, voice_agent_greeting, voice_agent_name, voice_agent_business_name, timezone, business_hours").eq("id", orgId).single(),
     db.from("appointment_types").select("name, duration_minutes, description").eq("organization_id", orgId).eq("active", true).order("sort"),
     db.from("knowledge_base").select("title, content").eq("organization_id", orgId).eq("active", true).order("sort"),
   ]);
@@ -54,7 +54,10 @@ export async function loadReceptionistContext(db: ServiceClient, orgId: string):
 
   return {
     orgId,
-    orgName: (org?.name as string) || "this business",
+    // The business name the agent SAYS — a per-business override (brand/DBA name)
+    // that falls back to the legal org name. Drives the greeting, prompt, and the
+    // {{business_name}} variable; the legal name stays in Settings (invoices, etc.).
+    orgName: ((org?.voice_agent_business_name as string)?.trim() || (org?.name as string) || "this business"),
     agentName: ((org?.voice_agent_name as string) || "").trim(),
     twilioNumber: (org?.twilio_number as string | null) ?? null,
     timezone,
