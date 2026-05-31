@@ -30,6 +30,12 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@repo/voice": [
+        "../../packages/voice/src/index.ts"
+      ],
+      "@repo/voice/*": [
+        "../../packages/voice/src/*"
       ]
     }
   },
