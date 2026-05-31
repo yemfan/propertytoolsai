@@ -13,7 +13,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { loadReceptionistContext, buildReceptionistDynamicVariables } from "@/lib/receptionist-agent";
+import { loadReceptionistContext, buildReceptionistDynamicVariables, findOrgIdByNumber } from "@/lib/receptionist-agent";
 
 export async function POST(req: NextRequest) {
   const secret = process.env.RETELL_FUNCTION_SECRET;
@@ -31,13 +31,14 @@ export async function POST(req: NextRequest) {
 
   const db = createServiceClient();
   let dynamic_variables: Record<string, string> = {};
-  if (toNumber) {
-    const { data: org } = await db.from("organizations").select("id").eq("twilio_number", toNumber).maybeSingle();
-    if (org?.id) {
-      const ctx = await loadReceptionistContext(db, org.id as string);
-      dynamic_variables = buildReceptionistDynamicVariables(ctx);
-    }
+  // findOrgIdByNumber tolerates phone-format differences (+1 prefix, spacing).
+  const orgId = await findOrgIdByNumber(db, toNumber);
+  if (orgId) {
+    const ctx = await loadReceptionistContext(db, orgId);
+    dynamic_variables = buildReceptionistDynamicVariables(ctx);
   }
+
+  console.log("[retell/inbound]", JSON.stringify({ toNumber, orgResolved: Boolean(orgId), today: dynamic_variables.today ?? null }));
 
   return NextResponse.json({ call_inbound: { dynamic_variables } });
 }
