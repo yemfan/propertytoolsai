@@ -275,12 +275,12 @@ export async function bookAppointment(
   }
   const endMs = startMs + duration * 60_000;
 
-  // Emergency appointments may be booked any time; every other service type must
-  // fall inside the business's configured open hours. check_availability only
-  // offers in-hours slots, but a caller can still ask for a specific out-of-hours
-  // time, so the rule is enforced here at booking.
-  const isEmergency = /emergenc/i.test(type?.name ?? "") || /emergenc/i.test(input.appointmentTypeName ?? "");
-  if (!isEmergency && hours) {
+  // No appointments outside the business's configured open hours. check_availability
+  // only offers in-hours slots, but a caller can still ask the agent for a specific
+  // out-of-hours time, so the rule is enforced here at booking. (After-hours
+  // emergencies are handled live by the agent — connect or take a message — not
+  // booked as appointments.)
+  if (hours) {
     const slotDate = new Intl.DateTimeFormat("en-CA", {
       timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
     }).format(new Date(startMs));
