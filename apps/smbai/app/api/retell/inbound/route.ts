@@ -38,7 +38,5 @@ export async function POST(req: NextRequest) {
     dynamic_variables = buildReceptionistDynamicVariables(ctx);
   }
 
-  console.log("[retell/inbound]", JSON.stringify({ toNumber, orgResolved: Boolean(orgId), today: dynamic_variables.today ?? null }));
-
   return NextResponse.json({ call_inbound: { dynamic_variables } });
 }

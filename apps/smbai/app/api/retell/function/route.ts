@@ -38,18 +38,11 @@ export async function POST(req: NextRequest) {
 
   const db = createServiceClient();
   const orgId = dynVars.org_id || (await findOrgIdByNumber(db, toNumber));
-
-  // Diagnostic: surface exactly what the agent asked for and whether the org resolved.
-  console.log("[retell/function]", JSON.stringify({ name, args, toNumber, fromNumber, orgIdResolved: Boolean(orgId), orgIdSource: dynVars.org_id ? "dynVar" : "lookup" }));
-
   if (!orgId) {
     return NextResponse.json({ result: "I can't reach the booking system right now — please take a message instead." });
   }
 
   const out = await runReceptionistTool(name, args, { db, orgId, fromNumber });
-
-  // Diagnostic: surface the result the agent receives.
-  console.log("[retell/function] result", JSON.stringify({ name, resultPreview: out.text.slice(0, 200), booked: Boolean(out.bookedEventId) }));
 
   if (out.bookedEventId) {
     const orgName = dynVars.business_name || "your appointment";
