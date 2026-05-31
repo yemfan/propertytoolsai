@@ -1,16 +1,11 @@
 import { Metadata } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { VoiceSettings } from "@/components/voice-settings";
-import { ReceptionistConfig } from "@/components/receptionist-config";
-import { ReceptionistSetup } from "@/components/receptionist-setup";
-import { defaultBusinessHours, type BusinessHours, type AppointmentType, type KnowledgeEntry } from "@/lib/receptionist";
-import { isGoogleCalendarConfigured, isGoogleCalendarConnected, getConnectedGoogleAccount } from "@/lib/google-calendar";
-import { Phone, MessageSquare, Calendar, Bot, Clock, DollarSign, Mic } from "lucide-react";
+import { Phone, MessageSquare, Calendar, Bot, Clock, DollarSign, Mic, Settings } from "lucide-react";
 
 export const metadata: Metadata = { title: "Voice Agent" };
 
-const RETELL_COST_PER_MINUTE = 0.10; // USD — placeholder; billing to customers at $0.10/min (Retell cost ~$0.07)
+const RETELL_COST_PER_MINUTE = 0.10; // USD — billed to customers at $0.10/min (Retell cost ~$0.07)
 
 function formatDuration(seconds: number | null | undefined): string {
   if (!seconds) return "—";
@@ -34,34 +29,12 @@ export default async function VoicePage() {
   const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const [{ data: org }, { data: sessions }, { data: apptTypes }, { data: knowledge }] = await Promise.all([
-    supabase
-      .from("organizations")
-      .select("name, twilio_number, voice_agent_enabled, voice_agent_greeting, voice_agent_prompt, voice_agent_name, voice_agent_business_name, business_hours")
-      .eq("id", orgId)
-      .single(),
-    supabase
-      .from("voice_sessions")
-      .select("id, from_number, messages, status, booked_event_id, summary, duration_seconds, recording_url, created_at")
-      .eq("organization_id", orgId)
-      .order("created_at", { ascending: false })
-      .limit(20),
-    supabase
-      .from("appointment_types")
-      .select("id, name, duration_minutes, description, active, sort")
-      .eq("organization_id", orgId)
-      .order("sort"),
-    supabase
-      .from("knowledge_base")
-      .select("id, title, content, active, sort")
-      .eq("organization_id", orgId)
-      .order("sort"),
-  ]);
-
-  const googleConfigured = isGoogleCalendarConfigured();
-  const [googleConnected, googleEmail] = googleConfigured
-    ? await Promise.all([isGoogleCalendarConnected(orgId), getConnectedGoogleAccount(orgId)])
-    : [false, null];
+  const { data: sessions } = await supabase
+    .from("voice_sessions")
+    .select("id, from_number, messages, status, booked_event_id, summary, duration_seconds, recording_url, created_at")
+    .eq("organization_id", orgId)
+    .order("created_at", { ascending: false })
+    .limit(20);
 
   const totalSessions = sessions?.length ?? 0;
   const booked  = (sessions ?? []).filter((s) => s.booked_event_id).length;
@@ -72,33 +45,22 @@ export default async function VoicePage() {
   const totalMinutes = totalSeconds / 60;
   const estCost = totalMinutes * RETELL_COST_PER_MINUTE;
 
-  // Guided setup status. Canonicalize the host to www so we never hand out the
-  // bare domain (which 302-redirects and breaks Retell's POST webhooks).
-  const canonicalBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.helmsmart.ai").replace(
-    /:\/\/helmsmart\.ai/,
-    "://www.helmsmart.ai"
-  );
-  const businessHours = (org?.business_hours as BusinessHours | null) ?? null;
-  const setupStatus = {
-    numberOk: Boolean(org?.twilio_number),
-    number: (org?.twilio_number as string | null) ?? null,
-    hoursOk: businessHours ? Object.values(businessHours).some(Boolean) : false,
-    typesOk: (apptTypes?.length ?? 0) > 0,
-    typesCount: apptTypes?.length ?? 0,
-    agentEnabled: Boolean(org?.voice_agent_enabled),
-    googleConfigured,
-    googleConnected,
-    inboundUrl: `${canonicalBase}/api/retell/inbound?k=<RETELL_FUNCTION_SECRET>`,
-    functionUrl: `${canonicalBase}/api/retell/function`,
-  };
-
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-slate-900">Voice Agent</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
-          Claude answers your calls 24/7 — books appointments, takes messages, handles FAQs
-        </p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Voice Agent</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Claude answers your calls 24/7 — books appointments, takes messages, handles FAQs
+          </p>
+        </div>
+        <a
+          href="/settings#voice-agent"
+          className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg px-3 py-2 hover:bg-slate-50 transition-colors shrink-0"
+        >
+          <Settings className="w-4 h-4" />
+          Settings
+        </a>
       </div>
 
       {/* Stats */}
@@ -150,34 +112,6 @@ export default async function VoicePage() {
           <p className="text-xs text-slate-400 mt-0.5">@ $0.10/min</p>
         </div>
       </div>
-
-      {/* Settings */}
-      <div className="mb-8">
-        <VoiceSettings
-          enabled={org?.voice_agent_enabled ?? false}
-          agentName={org?.voice_agent_name ?? ""}
-          businessName={org?.voice_agent_business_name ?? ""}
-          orgName={org?.name ?? ""}
-          greeting={org?.voice_agent_greeting ?? "Hello! Thank you for calling. How can I help you today?"}
-          prompt={org?.voice_agent_prompt ?? ""}
-          twilioNumber={org?.twilio_number ?? null}
-        />
-      </div>
-
-      {/* Receptionist brain: hours, appointment types, knowledge */}
-      <div className="mb-8">
-        <ReceptionistConfig
-          hours={(org?.business_hours as BusinessHours | null) ?? defaultBusinessHours()}
-          appointmentTypes={(apptTypes ?? []) as AppointmentType[]}
-          knowledge={(knowledge ?? []) as KnowledgeEntry[]}
-          googleConfigured={googleConfigured}
-          googleConnected={googleConnected}
-          googleEmail={googleEmail}
-        />
-      </div>
-
-      {/* Guided setup checklist + Retell wiring */}
-      <ReceptionistSetup status={setupStatus} />
 
       {/* Call transcript log */}
       <div className="bg-white rounded-xl border border-slate-200">

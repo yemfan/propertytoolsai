@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { OrgSettingsForm } from "@/components/org-settings-form";
 import { BankAccountMappingForm } from "@/components/bank-account-mapping-form";
+import { VoiceAgentSettingsSection } from "@/components/voice-agent-settings-section";
 import { Users, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -69,6 +70,14 @@ export default async function SettingsPage() {
             weeklyDigestEnabled={org?.weekly_digest_enabled ?? true}
             ownerEnglishAssist={org?.owner_english_assist ?? true}
           />
+        </section>
+
+        {/* AI Voice agent — all voice config consolidated here */}
+        <section id="voice-agent" className="scroll-mt-8">
+          <h2 className="text-sm font-semibold text-slate-700 mb-4 pb-2 border-b border-slate-200">
+            AI Voice agent
+          </h2>
+          <VoiceAgentSettingsSection />
         </section>
 
         {/* Bank account → CoA mapping */}
