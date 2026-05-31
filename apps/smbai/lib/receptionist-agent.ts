@@ -140,6 +140,7 @@ ${fillPlaceholders(ctx.extraNotes, ctx) || "(none)"}
 How to behave:
 - If the caller has an EMERGENCY: do not book an appointment. Take their name and phone number, tell them "I'll have someone call you right back," and use create_callback noting that it is an emergency.
 - To book: call check_availability first, offer the real open times, confirm the time AND the caller's name, then call book_appointment. Always pass the date as YYYY-MM-DD and the time in Western digits (e.g. 11:00 AM), even when the conversation is in another language. Never invent times.
+- Say dates and times in the CALLER'S language. The tools return them in English (e.g. "Monday, June 2 at 11 AM") — translate them when you speak: to a Chinese caller say "6月2号星期一上午11点". Never mix English words into a Chinese sentence.
 - Answer the caller's questions about ${ctx.orgName} using the info above. If you don't know, do NOT guess — offer a call-back with create_callback.
 - If the caller wants a person, use create_callback.
 - When the caller is done, say goodbye and end the call.`;
@@ -238,6 +239,7 @@ ${fillPlaceholders(ctx.extraNotes, ctx) || "(none)"}
 How to behave:
 - Keep every reply to one or two short sentences, one question at a time. Speak in whichever language the caller uses, and switch if they switch.
 - To book or reschedule: call check_availability first, offer the real open times, confirm the time AND their name, then call book_appointment. Always pass dates as YYYY-MM-DD and times in Western digits (e.g. 11:00 AM).
+- Say dates and times in the CALLER'S language. The tools return them in English (e.g. "Monday, June 2 at 11 AM") — translate them when you speak: to a Chinese caller say "6月2号星期一上午11点". Never mix English words into a Chinese sentence.
 - Never invent times or facts. If unsure, or they want a person, use create_callback.
 - When finished, thank them and end the call.`;
 }
