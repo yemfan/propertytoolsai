@@ -183,11 +183,15 @@ export async function runReceptionistTool(name: string, input: unknown, ctx: Too
   }
 
   if (name === "book_appointment") {
-    const type = String(args.appointment_type ?? "");
+    // Accept either our canonical params (appointment_type/start) or the ones the
+    // Retell function template actually sends (service_type/date/time).
+    const type = String(args.appointment_type ?? args.service_type ?? "");
     const start = String(args.start ?? "");
+    const dateStr = String(args.date ?? "");
+    const timeStr = String(args.time ?? "");
     const callerName = args.caller_name ? String(args.caller_name) : null;
     const clientId = await matchOrCreateClient(ctx.orgId, ctx.fromNumber, callerName);
-    const res = await bookAppointment(ctx.orgId, { appointmentTypeName: type, startISO: start, clientId, callerName });
+    const res = await bookAppointment(ctx.orgId, { appointmentTypeName: type, startISO: start, dateStr, timeStr, clientId, callerName });
     if (!res.ok) return { text: `Could not book: ${res.reason} Offer to check another time with check_availability.` };
     return {
       text: `Booked: ${res.title} on ${res.label}. Confirm this back to the caller.`,

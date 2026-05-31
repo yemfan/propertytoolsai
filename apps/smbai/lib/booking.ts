@@ -78,6 +78,47 @@ export function normalizeDateStr(input: string, todayISO: string): string {
   return todayISO; // unparseable → today; the agent can re-ask
 }
 
+/** Parse a spoken/written time into "HH:MM" (24h). Handles "10:00 AM", "10am",
+ *  "2 pm", "5:30pm", "17:00", "10". Returns null if unparseable. */
+function parseTimeToHHMM(input: string): string | null {
+  const s = (input || "").trim().toLowerCase().replace(/\./g, "");
+  const m = s.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  const min = m[2] ? parseInt(m[2], 10) : 0;
+  const ap = m[3];
+  if (ap === "pm" && h < 12) h += 12;
+  if (ap === "am" && h === 12) h = 0;
+  if (h > 23 || min > 59) return null;
+  return `${pad2(h)}:${pad2(min)}`;
+}
+
+/**
+ * Resolve the appointment start instant (epoch ms) from whatever the agent sent.
+ * Prefers an explicit ISO `startISO`; otherwise reconstructs from `dateStr` +
+ * `timeStr` in the org timezone. The Retell function template sends date/time
+ * (not a single ISO `start`), so this keeps booking working either way.
+ */
+export function resolveStartMs(
+  startISO: string | undefined,
+  dateStr: string | undefined,
+  timeStr: string | undefined,
+  timezone: string
+): number | null {
+  if (startISO) {
+    const ms = new Date(startISO).getTime();
+    if (!Number.isNaN(ms)) return ms; // already a clean ISO timestamp
+  }
+  const todayISO = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
+  // Fall back to the start string for the date/time if those args are absent.
+  const date = normalizeDateStr(dateStr || startISO || "", todayISO);
+  const hhmm = parseTimeToHHMM(timeStr || startISO || "");
+  if (!hhmm) return null;
+  return zonedToUtc(date, hhmm, timezone).getTime();
+}
+
 function overlapsBusy(startMs: number, endMs: number, busy: BusyInterval[]): boolean {
   return busy.some((b) => startMs < new Date(b.end).getTime() && endMs > new Date(b.start).getTime());
 }
@@ -174,14 +215,21 @@ export type BookResult = { ok: boolean; reason?: string; startISO?: string; labe
 /** Book a specific slot — re-validates, writes to Google Calendar (if connected) + the internal calendar. */
 export async function bookAppointment(
   orgId: string,
-  input: { appointmentTypeName: string; startISO: string; clientId?: string | null; callerName?: string | null }
+  input: {
+    appointmentTypeName: string;
+    startISO?: string;
+    dateStr?: string;
+    timeStr?: string;
+    clientId?: string | null;
+    callerName?: string | null;
+  }
 ): Promise<BookResult> {
   const { timezone } = await loadOrg(orgId);
   const type = await findType(orgId, input.appointmentTypeName);
   const duration = type?.duration_minutes ?? 30;
 
-  const startMs = new Date(input.startISO).getTime();
-  if (Number.isNaN(startMs) || startMs < Date.now()) {
+  const startMs = resolveStartMs(input.startISO, input.dateStr, input.timeStr, timezone);
+  if (startMs === null || startMs < Date.now()) {
     return { ok: false, reason: "That time isn't valid or is in the past." };
   }
   const endMs = startMs + duration * 60_000;
