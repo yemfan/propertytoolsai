@@ -35,6 +35,10 @@ function weekdayKey(dateStr: string): DayKey {
 const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
+/** Drop ":00" on whole-hour times so the agent says "eleven AM", not the
+ *  literal "eleven zero zero AM" that text-to-speech reads from "11:00 AM". */
+const speakTime = (label: string) => label.replace(/:00(\s*[AP]M)/, "$1");
+
 /** Add `days` to a YYYY-MM-DD calendar date (UTC-anchored, tz-neutral). */
 function addDaysISO(iso: string, days: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
@@ -241,7 +245,7 @@ export async function getAvailability(orgId: string, appointmentTypeName: string
   for (let t = openUtc.getTime(); t + durMs <= closeUtc.getTime(); t += SLOT_STEP_MS) {
     if (t < now) continue;
     if (overlapsBusy(t, t + durMs, busy)) continue;
-    slots.push({ startISO: new Date(t).toISOString(), label: fmt.format(new Date(t)) });
+    slots.push({ startISO: new Date(t).toISOString(), label: speakTime(fmt.format(new Date(t))) });
     if (slots.length >= 5) break;
   }
   return { closed: false, durationMinutes: duration, slots };
@@ -289,7 +293,7 @@ export async function bookAppointment(
       .eq("client_id", input.clientId)
       .eq("start_at", startISO)
       .maybeSingle();
-    if (dupe) return { ok: true, startISO, label: fmtLabel.format(new Date(startMs)), eventId: dupe.id as string, title };
+    if (dupe) return { ok: true, startISO, label: speakTime(fmtLabel.format(new Date(startMs))), eventId: dupe.id as string, title };
   }
 
   const busy = await busyIntervals(orgId, new Date(startMs - 1), new Date(endMs + 1));
@@ -315,7 +319,7 @@ export async function bookAppointment(
     .select("id")
     .single();
 
-  return { ok: true, startISO, label: fmtLabel.format(new Date(startMs)), eventId: evt?.id, title };
+  return { ok: true, startISO, label: speakTime(fmtLabel.format(new Date(startMs))), eventId: evt?.id, title };
 }
 
 /** Match a caller to a client by phone, creating a lightweight one if new. */
