@@ -20,6 +20,7 @@ type ServiceClient = ReturnType<typeof createServiceClient>;
 export type ReceptionistContext = {
   orgId: string;
   orgName: string;
+  agentName: string;
   twilioNumber: string | null;
   timezone: string;
   todayISO: string;
@@ -34,7 +35,7 @@ export type ReceptionistContext = {
 /** Load the structured brain (hours, appointment types, knowledge) for an org. */
 export async function loadReceptionistContext(db: ServiceClient, orgId: string): Promise<ReceptionistContext> {
   const [{ data: org }, { data: types }, { data: knowledge }] = await Promise.all([
-    db.from("organizations").select("name, twilio_number, voice_agent_prompt, voice_agent_greeting, timezone, business_hours").eq("id", orgId).single(),
+    db.from("organizations").select("name, twilio_number, voice_agent_prompt, voice_agent_greeting, voice_agent_name, timezone, business_hours").eq("id", orgId).single(),
     db.from("appointment_types").select("name, duration_minutes, description").eq("organization_id", orgId).eq("active", true).order("sort"),
     db.from("knowledge_base").select("title, content").eq("organization_id", orgId).eq("active", true).order("sort"),
   ]);
@@ -54,6 +55,7 @@ export async function loadReceptionistContext(db: ServiceClient, orgId: string):
   return {
     orgId,
     orgName: (org?.name as string) || "this business",
+    agentName: ((org?.voice_agent_name as string) || "").trim(),
     twilioNumber: (org?.twilio_number as string | null) ?? null,
     timezone,
     todayISO,
@@ -107,7 +109,7 @@ export function buildSystemPrompt(ctx: ReceptionistContext): string {
   return `## Languages
 Greet the caller in their language. If you support more than one language, open bilingually, then continue the whole call in whichever language the caller uses — don't ask which they prefer, and switch if they switch.
 
-You are the AI phone receptionist for ${ctx.orgName}. This is a LIVE phone call — speak naturally, keep every reply to 1–3 short sentences, no lists or markdown, and ask only one question at a time.
+You are ${ctx.agentName ? `${ctx.agentName}, ` : ""}the AI phone receptionist for ${ctx.orgName}. This is a LIVE phone call — speak naturally, keep every reply to 1–3 short sentences, no lists or markdown, and ask only one question at a time.${ctx.agentName ? ` If the caller asks your name, you're ${ctx.agentName}.` : ""}
 
 Today is ${ctx.todayLabel} (${ctx.todayISO}, timezone ${ctx.timezone}). Convert relative dates like "tomorrow" or "next Tuesday" to YYYY-MM-DD yourself.
 
@@ -144,11 +146,17 @@ export function buildVoiceSystemPrompt(ctx: ReceptionistContext): string {
  * function/webhook endpoints resolve the tenant without a second lookup.
  */
 export function buildReceptionistDynamicVariables(ctx: ReceptionistContext): Record<string, string> {
-  // Greeting comes from the org's "Opening greeting" field; auto-prepend the
-  // business name unless the greeting already names it. Retell's Welcome Message
-  // (begin_message) is set to {{greeting}} so the greeting is per-business too.
+  // Greeting comes from the org's "Opening greeting" field. Resolve the
+  // {{agent_name}} / {{business_name}} placeholders HERE (server-side): Retell
+  // sets its Welcome Message to {{greeting}} and does NOT recursively expand
+  // placeholders nested inside a dynamic variable, so they must be resolved
+  // before we hand the greeting over. Auto-prepend the business name only if the
+  // resolved greeting doesn't already name it.
+  const agentName = ctx.agentName.trim();
   const g = (ctx.greeting || "Hello! Thank you for calling. How can I help you today?")
-    .replace(/\{\{business_name\}\}/g, ctx.orgName)
+    .replace(/\{\{\s*agent_name\s*\}\}/gi, agentName)
+    .replace(/\{\{\s*business_name\s*\}\}/gi, ctx.orgName)
+    .replace(/[ \t]{2,}/g, " ")
     .trim();
   const greeting = g.includes(ctx.orgName) ? g : `${ctx.orgName}. ${g}`;
 
@@ -156,6 +164,7 @@ export function buildReceptionistDynamicVariables(ctx: ReceptionistContext): Rec
     org_id: ctx.orgId,
     greeting,
     business_name: ctx.orgName,
+    agent_name: ctx.agentName,
     business_hours: ctx.hoursText,
     appointment_types: ctx.typesText,
     knowledge: ctx.knowledgeText || "(no knowledge base provided — take a message instead of guessing)",

@@ -37,7 +37,7 @@ export default async function VoicePage() {
   const [{ data: org }, { data: sessions }, { data: apptTypes }, { data: knowledge }] = await Promise.all([
     supabase
       .from("organizations")
-      .select("twilio_number, voice_agent_enabled, voice_agent_greeting, voice_agent_prompt, business_hours")
+      .select("twilio_number, voice_agent_enabled, voice_agent_greeting, voice_agent_prompt, voice_agent_name, business_hours")
       .eq("id", orgId)
       .single(),
     supabase
@@ -155,6 +155,7 @@ export default async function VoicePage() {
       <div className="mb-8">
         <VoiceSettings
           enabled={org?.voice_agent_enabled ?? false}
+          agentName={org?.voice_agent_name ?? ""}
           greeting={org?.voice_agent_greeting ?? "Hello! Thank you for calling. How can I help you today?"}
           prompt={org?.voice_agent_prompt ?? ""}
           twilioNumber={org?.twilio_number ?? null}

@@ -6,13 +6,15 @@ import { saveVoiceSettings } from "@/lib/actions/social";
 
 interface Props {
   enabled: boolean;
+  agentName: string;
   greeting: string;
   prompt: string;
   twilioNumber: string | null;
 }
 
-export function VoiceSettings({ enabled, greeting, prompt, twilioNumber }: Props) {
+export function VoiceSettings({ enabled, agentName, greeting, prompt, twilioNumber }: Props) {
   const [isEnabled, setIsEnabled] = useState(enabled);
+  const [agentNameText, setAgentName] = useState(agentName ?? "");
   const [greetingText, setGreeting] = useState(greeting);
   const [promptText, setPrompt] = useState(prompt ?? "");
   const [saved, setSaved] = useState(false);
@@ -20,7 +22,7 @@ export function VoiceSettings({ enabled, greeting, prompt, twilioNumber }: Props
 
   function handleSave() {
     start(async () => {
-      await saveVoiceSettings({ enabled: isEnabled, greeting: greetingText, prompt: promptText });
+      await saveVoiceSettings({ enabled: isEnabled, agentName: agentNameText, greeting: greetingText, prompt: promptText });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     });
@@ -56,6 +58,21 @@ export function VoiceSettings({ enabled, greeting, prompt, twilioNumber }: Props
         </div>
       )}
 
+      {/* Agent name */}
+      <div>
+        <label className="block text-xs font-medium text-slate-500 mb-1.5">
+          Agent name <span className="text-slate-400">(what the receptionist calls itself)</span>
+        </label>
+        <input
+          type="text"
+          value={agentNameText}
+          onChange={(e) => setAgentName(e.target.value)}
+          className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="e.g. Maria"
+        />
+        <p className="text-xs text-slate-400 mt-1">Used when the agent introduces itself. Leave blank to stay unnamed.</p>
+      </div>
+
       {/* Greeting */}
       <div>
         <label className="block text-xs font-medium text-slate-500 mb-1.5">Opening greeting</label>
@@ -66,7 +83,11 @@ export function VoiceSettings({ enabled, greeting, prompt, twilioNumber }: Props
           className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           placeholder="Hello! Thank you for calling. How can I help you today?"
         />
-        <p className="text-xs text-slate-400 mt-1">This is the first thing callers hear.</p>
+        <p className="text-xs text-slate-400 mt-1">
+          First thing callers hear. Use{" "}
+          <code className="text-slate-500">{"{{agent_name}}"}</code> and{" "}
+          <code className="text-slate-500">{"{{business_name}}"}</code> as placeholders.
+        </p>
       </div>
 
       {/* Prompt */}
