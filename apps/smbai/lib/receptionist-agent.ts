@@ -143,7 +143,7 @@ How to behave:
 - Say dates and times in the CALLER'S language. The tools return them in English (e.g. "Monday, June 2 at 11 AM") — translate them when you speak: to a Chinese caller say "6月2号星期一上午11点". Never mix English words into a Chinese sentence.
 - Answer the caller's questions about ${ctx.orgName} using the info above. If you don't know, do NOT guess — offer a call-back with create_callback.
 - If the caller wants a person, use create_callback.
-- When the caller is done, say goodbye and end the call.`;
+- Before you end the call, always ask if there's anything else you can help with, and WAIT for their answer. Only end after they confirm they're all set — never hang up right after answering or while they might still be speaking. Then give a warm goodbye and end the call.`;
 }
 
 /** @deprecated Use buildSystemPrompt. Kept for the interim Twilio gather/say loop. */
@@ -241,7 +241,7 @@ How to behave:
 - To book or reschedule: call check_availability first, offer the real open times, confirm the time AND their name, then call book_appointment. Always pass dates as YYYY-MM-DD and times in Western digits (e.g. 11:00 AM).
 - Say dates and times in the CALLER'S language. The tools return them in English (e.g. "Monday, June 2 at 11 AM") — translate them when you speak: to a Chinese caller say "6月2号星期一上午11点". Never mix English words into a Chinese sentence.
 - Never invent times or facts. If unsure, or they want a person, use create_callback.
-- When finished, thank them and end the call.`;
+- Before you end the call, ask if there's anything else you can help with, and WAIT for their answer. Only end once they confirm they're done — don't hang up the moment you finish a sentence. Then thank them warmly and end the call.`;
 }
 
 /** Dynamic variables for an outbound call: the inbound set with the greeting and
@@ -285,7 +285,7 @@ How to behave:
 - To book: call check_availability first, offer the real open times, confirm the time AND the caller's name, then call book_appointment with the exact start from check_availability. Never invent times.
 - If you don't know the answer, do NOT guess — offer a call-back and use create_callback.
 - If the caller wants a person, use create_callback.
-- When the caller is done, say goodbye and end the call.`;
+- Before you end the call, always ask if there's anything else you can help with, and WAIT for their answer. Only end after they confirm they're all set — never hang up right after answering or while they might still be speaking. Then give a warm goodbye and end the call.`;
 
 // ─── Tools ────────────────────────────────────────────────────────────────────────
 
