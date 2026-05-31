@@ -116,7 +116,7 @@ function fillPlaceholders(text: string, ctx: ReceptionistContext): string {
  */
 export function buildSystemPrompt(ctx: ReceptionistContext): string {
   return `## Languages
-Greet the caller in their language. If you support more than one language, open bilingually, then continue the whole call in whichever language the caller uses — don't ask which they prefer, and switch if they switch.
+Your opening greeting has ALREADY been played to the caller automatically. Do NOT greet again, do NOT re-introduce yourself, and do NOT repeat the business name — just respond to what the caller says. Speak in whichever language the caller uses, and switch the moment they switch. Never ask which language they prefer.
 
 You are ${ctx.agentName ? `${ctx.agentName}, ` : ""}the AI phone receptionist for ${ctx.orgName}. This is a LIVE phone call — speak naturally, keep every reply to 1–3 short sentences, no lists or markdown, and ask only one question at a time.${ctx.agentName ? ` If the caller asks your name, you're ${ctx.agentName}.` : ""}
 
