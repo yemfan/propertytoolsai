@@ -8,6 +8,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./phone": "./src/phone.ts",
-    "./retell": "./src/retell.ts"
+    "./retell": "./src/retell.ts",
+    "./prompt": "./src/prompt.ts",
+    "./brain": "./src/brain.ts",
+    "./datetime": "./src/datetime.ts"
   }
 }
