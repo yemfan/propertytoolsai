@@ -11,9 +11,11 @@
  *   https://<app>/api/retell/inbound?k=<RETELL_FUNCTION_SECRET>
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { loadReceptionistContext, buildReceptionistDynamicVariables, findOrgIdByNumber } from "@/lib/receptionist-agent";
+import { matchOrCreateClient } from "@/lib/booking";
+import { normalizePhoneE164 } from "@/lib/phone";
 
 export async function POST(req: NextRequest) {
   const secret = process.env.RETELL_FUNCTION_SECRET;
@@ -22,9 +24,11 @@ export async function POST(req: NextRequest) {
   }
 
   let toNumber = "";
+  let fromNumber = "";
   try {
     const body = await req.json();
     toNumber = String(body?.call_inbound?.to_number ?? "");
+    fromNumber = String(body?.call_inbound?.from_number ?? "");
   } catch {
     /* malformed body — fall through to empty vars */
   }
@@ -36,6 +40,15 @@ export async function POST(req: NextRequest) {
   if (orgId) {
     const ctx = await loadReceptionistContext(db, orgId);
     dynamic_variables = buildReceptionistDynamicVariables(ctx);
+
+    // Capture the caller as a contact: match the caller ID to an existing client,
+    // or create a lead if it's new — so every inbound caller becomes a follow-up-
+    // able contact (and appears in outbound "Call all"). Runs in the background so
+    // it never slows Retell's inbound response (which must return within ~10s).
+    const caller = normalizePhoneE164(fromNumber);
+    if (caller.ok) {
+      after(() => matchOrCreateClient(orgId, caller.value));
+    }
   }
 
   return NextResponse.json({ call_inbound: { dynamic_variables } });
