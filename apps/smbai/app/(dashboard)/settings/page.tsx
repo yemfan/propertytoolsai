@@ -75,40 +75,33 @@ export default async function SettingsPage() {
             </section>
 
             <section>
-              <h2 className={SECTION_H2}>Team</h2>
-              <Link
-                href="/settings/team"
-                className="flex items-center justify-between bg-slate-50 rounded-xl border border-slate-200 p-5 hover:bg-white hover:border-slate-300 transition-colors group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <h2 className={SECTION_H2}>Team &amp; plan</h2>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Link
+                  href="/settings/team"
+                  className="flex items-center gap-3 bg-slate-50 rounded-xl border border-slate-200 p-4 hover:bg-white hover:border-slate-300 transition-colors group"
+                >
+                  <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
                     <Users className="w-4 h-4 text-indigo-600" />
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">Manage team members</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Invite colleagues, set roles, revoke access</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800">Team members</p>
+                    <p className="text-xs text-slate-500">Invite, roles, access</p>
                   </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
-              </Link>
-            </section>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors shrink-0" />
+                </Link>
 
-            <section>
-              <h2 className={SECTION_H2}>Plan & billing</h2>
-              <div className="bg-slate-50 rounded-xl border border-slate-200 p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800 capitalize">
-                      {org?.plan ?? "Starter"} plan
-                    </p>
-                    <p className="text-xs text-slate-500 mt-0.5 capitalize">
+                <div className="flex items-center gap-3 bg-slate-50 rounded-xl border border-slate-200 p-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 capitalize">{org?.plan ?? "Starter"} plan</p>
+                    <p className="text-xs text-slate-500 capitalize truncate">
                       {org?.subscription_status ?? "trialing"}
                       {org?.trial_ends_at && (
-                        <> · Trial ends {new Date(org.trial_ends_at).toLocaleDateString("en-US", { month: "long", day: "numeric" })}</>
+                        <> · ends {new Date(org.trial_ends_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</>
                       )}
                     </p>
                   </div>
-                  <span className="inline-block px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-full">
+                  <span className="inline-block px-2.5 py-1 text-[11px] font-semibold text-indigo-700 bg-indigo-100 rounded-full shrink-0">
                     Free during beta
                   </span>
                 </div>
