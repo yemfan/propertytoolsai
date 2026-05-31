@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { createServiceClient } from "@/lib/supabase/server";
-import { createPhoneCall } from "@/lib/retell";
+import { createPhoneCall, getRetellNumber } from "@/lib/retell";
 import {
   loadReceptionistContext,
   buildOutboundDynamicVariables,
@@ -43,13 +43,19 @@ export async function callLead(input: {
   if (!toResult.ok) return { ok: false, error: toResult.error };
   const to = toResult.value;
 
-  const agentId = process.env.RETELL_AGENT_ID;
-  if (!agentId) return { ok: false, error: "Voice agent is not configured (RETELL_AGENT_ID)." };
-
   const ctx = await loadReceptionistContext(db, orgId);
   if (!ctx.twilioNumber) {
     return { ok: false, error: "Connect a phone number first in Settings → AI Voice agent." };
   }
+
+  // The agent that places the call: prefer the configured shared agent, else the
+  // one already bound to this number for inbound — so outbound needs no extra env.
+  let agentId = process.env.RETELL_AGENT_ID;
+  if (!agentId) {
+    const wiring = await getRetellNumber(ctx.twilioNumber);
+    agentId = wiring.agentIds[0];
+  }
+  if (!agentId) return { ok: false, error: "No voice agent is connected to your number yet." };
 
   // Calling-hours guard: only 8am–9pm in the business's timezone.
   const hourStr = new Intl.DateTimeFormat("en-US", {
