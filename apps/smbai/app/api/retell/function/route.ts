@@ -44,16 +44,6 @@ export async function POST(req: NextRequest) {
 
   const out = await runReceptionistTool(name, args, { db, orgId, fromNumber });
 
-  // Temporary diagnostic (no PII): what the agent asked for + the outcome.
-  console.log("[fn]", JSON.stringify({
-    name,
-    date: args.date ?? null,
-    time: args.time ?? null,
-    start: args.start ?? null,
-    type: args.appointment_type ?? args.service_type ?? null,
-    result: out.text.slice(0, 120),
-  }));
-
   if (out.bookedEventId) {
     const orgName = dynVars.business_name || "your appointment";
     after(async () => {
