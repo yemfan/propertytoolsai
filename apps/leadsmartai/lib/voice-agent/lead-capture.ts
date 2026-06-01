@@ -1,0 +1,214 @@
+import "server-only";
+
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getOpenAIConfig } from "@/lib/ai/openaiClient";
+import { findContactByPhone, toUsDisplayPhone } from "@/lib/missed-call/service";
+import { hasOpenVoiceFollowUpForCall } from "@/lib/ai-call/hot-call-task";
+
+/**
+ * Turn a completed inbound AI receptionist call into CRM value:
+ *   1. Extract the caller's lead details from Lucy's call summary (OpenAI).
+ *   2. Upsert a contact by phone (agent-scoped) — never duplicates a known caller.
+ *   3. Create a follow-up task (crm_tasks) linked to the contact, idempotent per
+ *      call so a re-delivered webhook won't double-task.
+ *
+ * Best-effort throughout: a failure in any step is logged, never thrown, so the
+ * call-events webhook always returns 200.
+ */
+
+type PartyType = "buyer" | "seller" | "renter" | "other";
+
+type Extracted = {
+  name: string;
+  partyType: PartyType;
+  interest: string;
+  location: string;
+  timeline: string;
+};
+
+/** Pull structured lead fields from the call summary + transcript. Degrades to a
+ *  phone-only contact (no name) when OpenAI is unavailable. */
+async function extractLead(summary: string, transcript: string): Promise<Extracted> {
+  const fallback: Extracted = {
+    name: "",
+    partyType: "other",
+    interest: summary.slice(0, 200),
+    location: "",
+    timeline: "",
+  };
+
+  const { apiKey, model } = getOpenAIConfig();
+  if (!apiKey) return fallback;
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        temperature: 0,
+        max_tokens: 250,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              'Extract the caller\'s lead details from a real-estate AI receptionist phone call. ' +
+              'Return ONLY a JSON object with keys: name (caller\'s full name, or "" if not given), ' +
+              'party_type (one of "buyer","seller","renter","other"), interest (one short phrase, ' +
+              'e.g. "buying in Alhambra, ~$1M"), location (city/area, or ""), timeline ' +
+              '(e.g. "2 months", or ""). Use "" when unknown. Never invent details.',
+          },
+          {
+            role: "user",
+            content: `Summary:\n${summary}\n\nTranscript (may be partial):\n${transcript.slice(0, 2000)}`,
+          },
+        ],
+      }),
+    });
+    if (!res.ok) return fallback;
+    const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const parsed = JSON.parse(json.choices?.[0]?.message?.content ?? "{}") as Record<string, unknown>;
+    const pt = String(parsed.party_type ?? "other").toLowerCase();
+    return {
+      name: String(parsed.name ?? "").trim().slice(0, 120),
+      partyType: (["buyer", "seller", "renter", "other"].includes(pt) ? pt : "other") as PartyType,
+      interest: String(parsed.interest ?? "").trim().slice(0, 200),
+      location: String(parsed.location ?? "").trim().slice(0, 120),
+      timeline: String(parsed.timeline ?? "").trim().slice(0, 80),
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export async function captureLeadFromInboundCall(args: {
+  agentId: string;
+  fromPhone: string; // E.164 caller
+  summary: string;
+  transcript?: string;
+  providerCallId: string; // Retell call_id
+}): Promise<{ contactId: string | null; taskId: string | null; created: boolean }> {
+  const summary = (args.summary || "").trim();
+  if (!summary) return { contactId: null, taskId: null, created: false };
+
+  const ex = await extractLead(summary, args.transcript || "");
+  const display = toUsDisplayPhone(args.fromPhone) || args.fromPhone;
+
+  // 1. Upsert contact by phone (agent-scoped) — reuse the known-caller match.
+  let contactId: string | null = null;
+  let existingName: string | null = null;
+  try {
+    const existing = await findContactByPhone(args.agentId, args.fromPhone);
+    if (existing) {
+      contactId = existing.id;
+      existingName = existing.name;
+    }
+  } catch {
+    // fall through to insert
+  }
+
+  if (!contactId) {
+    const row: Record<string, unknown> = {
+      agent_id: args.agentId,
+      name: ex.name || null,
+      phone: display,
+      phone_number: display,
+      source: "ai_receptionist",
+      lead_status: "new",
+      notes: `AI receptionist call: ${summary}`,
+    };
+    if (ex.partyType === "buyer" || ex.partyType === "seller") row.type = ex.partyType;
+    if (ex.location) row.property_address = ex.location;
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("contacts")
+        .insert(row as never)
+        .select("id")
+        .single();
+      if (error) console.error("[lead-capture] contact insert:", error.message);
+      else if (data) contactId = String((data as { id: unknown }).id);
+    } catch (e) {
+      console.error("[lead-capture] contact insert threw:", e);
+    }
+  } else if (ex.name && !(existingName && existingName.trim())) {
+    // Known caller with no name on file — backfill it.
+    try {
+      await supabaseAdmin
+        .from("contacts")
+        .update({ name: ex.name } as never)
+        .eq("id", contactId as never);
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  if (!contactId) return { contactId: null, taskId: null, created: false };
+
+  // 2. Follow-up task (idempotent per call).
+  try {
+    if (await hasOpenVoiceFollowUpForCall(contactId, args.providerCallId)) {
+      return { contactId, taskId: null, created: false };
+    }
+  } catch {
+    /* if the check fails, fall through and attempt the insert */
+  }
+
+  const who = ex.name || display;
+  const typeLabel =
+    ex.partyType === "buyer" ? "buyer" : ex.partyType === "seller" ? "seller" : ex.partyType === "renter" ? "renter" : "";
+  const title = `Follow up with ${who}${typeLabel ? ` (${typeLabel})` : ""} — AI call`;
+  const description = [
+    ex.interest ? `Interest: ${ex.interest}` : "",
+    ex.location ? `Area: ${ex.location}` : "",
+    ex.timeline ? `Timeline: ${ex.timeline}` : "",
+    summary,
+    "Captured by Lucy (AI receptionist).",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+  const dueAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+  let taskId: string | null = null;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("crm_tasks")
+      .insert({
+        agent_id: args.agentId,
+        contact_id: contactId,
+        title,
+        description,
+        status: "open",
+        priority: "high",
+        task_type: "voice_follow_up",
+        source: "ai_call",
+        due_at: dueAt,
+        metadata_json: {
+          twilio_call_sid: args.providerCallId,
+          reason: "ai_inbound_lead",
+          party_type: ex.partyType,
+          captured_by: "ai_receptionist",
+        },
+      } as never)
+      .select("id")
+      .single();
+    if (error) console.error("[lead-capture] task insert:", error.message);
+    else if (data) taskId = String((data as { id: unknown }).id);
+  } catch (e) {
+    console.error("[lead-capture] task insert threw:", e);
+  }
+
+  // 3. Timeline event (best-effort).
+  try {
+    await supabaseAdmin.from("contact_events").insert({
+      contact_id: contactId,
+      agent_id: args.agentId,
+      event_type: "ai_lead_captured",
+      metadata: { retell_call_id: args.providerCallId, task_id: taskId, party_type: ex.partyType },
+    } as never);
+  } catch {
+    /* best-effort */
+  }
+
+  return { contactId, taskId, created: true };
+}

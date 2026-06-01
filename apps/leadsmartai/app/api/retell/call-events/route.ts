@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { finalizeCallByProviderId, logInboundCallStart } from "@/lib/missed-call/service";
 import { resolveAgentIdByReceptionistNumber } from "@/lib/voice-receptionist/settings";
+import { captureLeadFromInboundCall } from "@/lib/voice-agent/lead-capture";
 
 export const runtime = "nodejs";
 
@@ -30,6 +31,7 @@ type RetellCall = {
   duration_ms?: number;
   start_timestamp?: number;
   end_timestamp?: number;
+  transcript?: string;
   call_analysis?: { call_summary?: string | null } | null;
 };
 
@@ -100,6 +102,32 @@ export async function POST(req: NextRequest) {
       // Only overwrite the placement note once we have a summary (call_analyzed).
       note: summary ? `AI call summary: ${summary}` : null,
     });
+
+    // On analysis of an INBOUND call, capture the caller as a CRM contact + a
+    // follow-up task (extracted from Lucy's summary). Runs after the response so
+    // the webhook stays fast; no-ops without an owning agent or a summary.
+    if (
+      body.event === "call_analyzed" &&
+      call.direction === "inbound" &&
+      summary &&
+      call.from_number &&
+      call.to_number
+    ) {
+      const fromPhone = call.from_number;
+      const toNumber = call.to_number;
+      const providerCallId = call.call_id;
+      const transcript = call.transcript;
+      after(async () => {
+        try {
+          const agentId = await resolveAgentIdByReceptionistNumber(toNumber);
+          if (agentId) {
+            await captureLeadFromInboundCall({ agentId, fromPhone, summary, transcript, providerCallId });
+          }
+        } catch (e) {
+          console.error("retell/call-events: lead capture failed", e);
+        }
+      });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e) {
