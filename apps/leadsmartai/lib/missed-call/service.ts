@@ -526,6 +526,92 @@ async function logMissedCall(
   return (data as { id: string }).id;
 }
 
+// ── Outbound call logging ────────────────────────────────────────
+
+/**
+ * Record an AI outbound call in `call_logs` so it appears in the AI Assistant
+ * → Inbound & outbound activity log right after it's placed. Links a known
+ * contact when the dialed number matches one. The Retell `call_id` is stored in
+ * `twilio_call_sid` (the row's external-call-id column) so the call-events
+ * webhook can later finalize status + duration by that id.
+ *
+ * Best-effort: never throws — a logging failure must not fail the placed call.
+ */
+export async function logOutboundCall(args: {
+  agentId: string;
+  toPhone: string; // E.164 dialed number
+  fromPhone: string; // E.164 receptionist number the call goes out from
+  providerCallId: string; // Retell call_id
+  leadName?: string | null;
+}): Promise<{ logId: string | null; contactId: string | null }> {
+  let contactId: string | null = null;
+  try {
+    const contact = await findContactByPhone(args.agentId, args.toPhone);
+    contactId = contact?.id ?? null;
+  } catch {
+    // Contact match is best-effort; an unmatched number still logs.
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("call_logs")
+      .insert({
+        agent_id: args.agentId,
+        contact_id: contactId,
+        twilio_call_sid: args.providerCallId,
+        direction: "outbound",
+        status: "initiated",
+        from_phone: args.fromPhone,
+        to_phone: args.toPhone,
+        notes: `AI outbound call placed${args.leadName ? ` to ${args.leadName}` : ""}.`,
+      })
+      .select("id")
+      .single();
+    if (error) {
+      console.error("[missed-call] logOutboundCall insert failed:", error.message);
+      return { logId: null, contactId };
+    }
+    return { logId: (data as { id: string }).id, contactId };
+  } catch (e) {
+    console.error("[missed-call] logOutboundCall threw:", e);
+    return { logId: null, contactId };
+  }
+}
+
+/**
+ * Finalize a logged call (matched by the provider's call id, stored in
+ * `twilio_call_sid`) once it ends — used by the Retell call-events webhook to
+ * advance an outbound call from "initiated" to its real outcome with duration
+ * and an optional AI summary note. Best-effort; returns false on any error.
+ */
+export async function finalizeCallByProviderId(args: {
+  providerCallId: string;
+  status: string;
+  durationSeconds: number | null;
+  note?: string | null;
+}): Promise<boolean> {
+  const patch: Record<string, unknown> = { status: args.status };
+  if (args.durationSeconds != null && Number.isFinite(args.durationSeconds)) {
+    patch.duration_seconds = Math.max(0, Math.round(args.durationSeconds));
+  }
+  if (args.note) patch.notes = args.note;
+
+  try {
+    const { error } = await supabaseAdmin
+      .from("call_logs")
+      .update(patch)
+      .eq("twilio_call_sid", args.providerCallId);
+    if (error) {
+      console.error("[missed-call] finalizeCallByProviderId failed:", error.message);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("[missed-call] finalizeCallByProviderId threw:", e);
+    return false;
+  }
+}
+
 // ── Activity log read ────────────────────────────────────────────
 
 export type CallLogEntry = {

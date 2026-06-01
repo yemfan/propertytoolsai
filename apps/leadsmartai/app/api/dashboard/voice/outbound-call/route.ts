@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { loadReceptionistContext } from "@/lib/voice-agent/context";
+import { logOutboundCall } from "@/lib/missed-call/service";
 import {
   buildOutboundDynamicVariables,
   createPhoneCall,
@@ -53,6 +54,16 @@ export async function POST(req: Request) {
       agentId: RETELL_AGENT_ID,
       dynamicVariables,
       metadata: { source: "leadsmart-outbound", leadName: name, agentId },
+    });
+
+    // Log to call_logs so the call shows in AI Assistant → Inbound & outbound
+    // activity immediately. Best-effort — never fail the placed call on a log error.
+    await logOutboundCall({
+      agentId,
+      toPhone: r.value,
+      fromPhone: FROM_NUMBER,
+      providerCallId: callId,
+      leadName: name || null,
     });
 
     return NextResponse.json({ ok: true, callId, to: r.value });
