@@ -579,6 +579,64 @@ export async function logOutboundCall(args: {
 }
 
 /**
+ * Record an AI INBOUND call (Retell receptionist) in `call_logs` when it starts,
+ * so inbound Lucy calls appear in the same activity feed as outbound. Idempotent
+ * on the provider call id (stored in `twilio_call_sid`) so a retried call_started
+ * event won't double-insert. Best-effort — never throws.
+ */
+export async function logInboundCallStart(args: {
+  agentId: string;
+  fromPhone: string; // E.164 caller
+  toPhone: string; // E.164 receptionist number dialed
+  providerCallId: string; // Retell call_id
+}): Promise<{ logId: string | null }> {
+  // Skip if we already logged this call_id (e.g. duplicate webhook delivery).
+  try {
+    const { data: existing } = await supabaseAdmin
+      .from("call_logs")
+      .select("id")
+      .eq("twilio_call_sid", args.providerCallId)
+      .maybeSingle();
+    if (existing) return { logId: (existing as { id: string }).id };
+  } catch {
+    // fall through to insert
+  }
+
+  let contactId: string | null = null;
+  try {
+    const contact = await findContactByPhone(args.agentId, args.fromPhone);
+    contactId = contact?.id ?? null;
+  } catch {
+    // best-effort contact match
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("call_logs")
+      .insert({
+        agent_id: args.agentId,
+        contact_id: contactId,
+        twilio_call_sid: args.providerCallId,
+        direction: "inbound",
+        status: "in_progress",
+        from_phone: args.fromPhone,
+        to_phone: args.toPhone,
+        notes: "AI inbound call answered by receptionist.",
+      })
+      .select("id")
+      .single();
+    if (error) {
+      console.error("[missed-call] logInboundCallStart insert failed:", error.message);
+      return { logId: null };
+    }
+    return { logId: (data as { id: string }).id };
+  } catch (e) {
+    console.error("[missed-call] logInboundCallStart threw:", e);
+    return { logId: null };
+  }
+}
+
+/**
  * Finalize a logged call (matched by the provider's call id, stored in
  * `twilio_call_sid`) once it ends — used by the Retell call-events webhook to
  * advance an outbound call from "initiated" to its real outcome with duration

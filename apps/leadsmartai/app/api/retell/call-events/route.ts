@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { finalizeCallByProviderId } from "@/lib/missed-call/service";
+import { finalizeCallByProviderId, logInboundCallStart } from "@/lib/missed-call/service";
+import { resolveAgentIdByReceptionistNumber } from "@/lib/voice-receptionist/settings";
 
 export const runtime = "nodejs";
 
@@ -20,6 +21,10 @@ export const runtime = "nodejs";
 
 type RetellCall = {
   call_id?: string;
+  call_type?: string;
+  direction?: "inbound" | "outbound";
+  from_number?: string;
+  to_number?: string;
   call_status?: string;
   disconnection_reason?: string;
   duration_ms?: number;
@@ -59,9 +64,31 @@ export async function POST(req: NextRequest) {
       call?: RetellCall;
     };
     const call = body.call;
+    if (!call?.call_id) {
+      return NextResponse.json({ ok: true, ignored: true });
+    }
 
-    // Only the terminal events carry an outcome — ignore call_started/registered.
-    if (!call?.call_id || (body.event !== "call_ended" && body.event !== "call_analyzed")) {
+    // call_started: log inbound Lucy calls so they appear in the activity feed.
+    // (Outbound rows are already written at placement, so we skip those here —
+    // call_started for them would otherwise create a second row.) The call-events
+    // finalizer below then advances inbound rows the same way as outbound.
+    if (body.event === "call_started") {
+      if (call.direction === "inbound" && call.from_number && call.to_number) {
+        const agentId = await resolveAgentIdByReceptionistNumber(call.to_number);
+        if (agentId) {
+          await logInboundCallStart({
+            agentId,
+            fromPhone: call.from_number,
+            toPhone: call.to_number,
+            providerCallId: call.call_id,
+          });
+        }
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    // Only the terminal events carry an outcome — ignore anything else.
+    if (body.event !== "call_ended" && body.event !== "call_analyzed") {
       return NextResponse.json({ ok: true, ignored: true });
     }
 
