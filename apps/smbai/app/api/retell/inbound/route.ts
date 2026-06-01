@@ -17,6 +17,14 @@ import { loadReceptionistContext, buildReceptionistDynamicVariables, findOrgIdBy
 import { matchOrCreateClient } from "@/lib/booking";
 import { normalizePhoneE164 } from "@/lib/phone";
 
+/** Format a caller's E.164 number into a spoken-friendly US form, e.g.
+ *  "+16267557917" -> "(626) 755-7917". Falls back to the raw input. */
+function formatCallerNumber(e164: string): string {
+  const d = (e164 || "").replace(/\D/g, "").slice(-10);
+  if (d.length !== 10) return e164 || "";
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
 export async function POST(req: NextRequest) {
   const secret = process.env.RETELL_FUNCTION_SECRET;
   if (secret && req.nextUrl.searchParams.get("k") !== secret) {
@@ -39,13 +47,18 @@ export async function POST(req: NextRequest) {
   const orgId = await findOrgIdByNumber(db, toNumber);
   if (orgId) {
     const ctx = await loadReceptionistContext(db, orgId);
+
+    // Give the receptionist the caller's own number so it can confirm it as the
+    // callback number (and catch a mistyped/different number the caller dictates).
+    const caller = normalizePhoneE164(fromNumber);
+    if (caller.ok) ctx.callerNumber = formatCallerNumber(caller.value);
+
     dynamic_variables = buildReceptionistDynamicVariables(ctx);
 
     // Capture the caller as a contact: match the caller ID to an existing client,
     // or create a lead if it's new — so every inbound caller becomes a follow-up-
     // able contact (and appears in outbound "Call all"). Runs in the background so
     // it never slows Retell's inbound response (which must return within ~10s).
-    const caller = normalizePhoneE164(fromNumber);
     if (caller.ok) {
       after(() => matchOrCreateClient(orgId, caller.value));
     }
