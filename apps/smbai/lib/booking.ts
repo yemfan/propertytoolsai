@@ -1,14 +1,13 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { getGoogleFreeBusy, upsertGoogleEvent, type BusyInterval } from "@/lib/google-calendar";
 import { type BusinessHours } from "@/lib/receptionist";
+import { speakTime, zonedToUtc, normalizeDateStr, resolveStartMs } from "@repo/voice/datetime";
 import {
-  speakTime,
-  weekdayKey,
-  zonedToUtc,
-  addDaysISO,
-  normalizeDateStr,
-  resolveStartMs,
-} from "@repo/voice/datetime";
+  overlapsBusy,
+  nextOpenDay,
+  generateDaySlots,
+  validateBookingTime,
+} from "@repo/voice/scheduling";
 
 // The receptionist's booking engine: availability (business hours ∩ free/busy)
 // and conflict-safe booking. Service-client based — runs in the voice webhook.
@@ -19,10 +18,6 @@ export { normalizeDateStr, resolveStartMs };
 
 const DEFAULT_TZ = "America/New_York";
 const SLOT_STEP_MS = 30 * 60_000;
-
-function overlapsBusy(startMs: number, endMs: number, busy: BusyInterval[]): boolean {
-  return busy.some((b) => startMs < new Date(b.end).getTime() && endMs > new Date(b.start).getTime());
-}
 
 async function loadOrg(orgId: string): Promise<{ timezone: string; hours: BusinessHours | null }> {
   const db = createServiceClient();
@@ -83,31 +78,24 @@ export async function getAvailability(orgId: string, appointmentTypeName: string
   const todayISO = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
   }).format(new Date());
-  let date = normalizeDateStr(dateStr, todayISO);
+  // Normalize the requested date, then roll forward to the next open day so the
+  // caller is always offered real times (shared @repo/voice/scheduling core).
+  const date0 = normalizeDateStr(dateStr, todayISO);
+  const open = nextOpenDay(date0, hours);
+  if (!open) return { closed: true, durationMinutes: duration, slots: [] };
 
-  let dayHours = hours?.[weekdayKey(date)] ?? null;
-  for (let guard = 0; !dayHours && guard < 14; guard++) {
-    date = addDaysISO(date, 1);
-    dayHours = hours?.[weekdayKey(date)] ?? null;
-  }
-  if (!dayHours) return { closed: true, durationMinutes: duration, slots: [] };
-
-  const openUtc = zonedToUtc(date, dayHours.open, timezone);
-  const closeUtc = zonedToUtc(date, dayHours.close, timezone);
+  const openUtc = zonedToUtc(open.date, open.open, timezone);
+  const closeUtc = zonedToUtc(open.date, open.close, timezone);
   const busy = await busyIntervals(orgId, openUtc, closeUtc);
-  const now = Date.now();
-  const durMs = duration * 60_000;
-
-  const fmt = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+  const slots = generateDaySlots({
+    date: open.date,
+    open: open.open,
+    close: open.close,
+    timezone,
+    busy,
+    durationMin: duration,
+    now: Date.now(),
   });
-  const slots: { startISO: string; label: string }[] = [];
-  for (let t = openUtc.getTime(); t + durMs <= closeUtc.getTime(); t += SLOT_STEP_MS) {
-    if (t < now) continue;
-    if (overlapsBusy(t, t + durMs, busy)) continue;
-    slots.push({ startISO: new Date(t).toISOString(), label: speakTime(fmt.format(new Date(t))) });
-    if (slots.length >= 5) break;
-  }
   return { closed: false, durationMinutes: duration, slots };
 }
 
@@ -138,24 +126,11 @@ export async function bookAppointment(
   // the next open day (same as check_availability) so the booking lands on a real
   // open day; the time of day must then sit inside that day's open–close window.
   // (After-hours emergencies are handled live by the agent, not booked.)
-  const fmtDate = (ms: number) =>
-    new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(ms));
-  if (hours) {
-    let dayHours = hours[weekdayKey(fmtDate(startMs))] ?? null;
-    for (let guard = 0; !dayHours && guard < 14; guard++) {
-      startMs += 24 * 60 * 60_000; // advance one day, keeping the time of day
-      dayHours = hours[weekdayKey(fmtDate(startMs))] ?? null;
-    }
-    if (!dayHours) {
-      return { ok: false, reason: "We're closed then. Offer a day within business hours." };
-    }
-    const slotDate = fmtDate(startMs);
-    const openMs = zonedToUtc(slotDate, dayHours.open, timezone).getTime();
-    const closeMs = zonedToUtc(slotDate, dayHours.close, timezone).getTime();
-    if (startMs < openMs || startMs + duration * 60_000 > closeMs) {
-      return { ok: false, reason: `That time is outside business hours (${dayHours.open}–${dayHours.close}). Offer a time within hours.` };
-    }
-  }
+  // Keep the booking inside business hours (shared core): a closed-day request
+  // rolls forward to the next open day, then the time must sit inside open–close.
+  const inHours = validateBookingTime({ startMs, durationMin: duration, hours, timezone });
+  if (!inHours.ok) return { ok: false, reason: inHours.reason };
+  startMs = inHours.startMs;
   const endMs = startMs + duration * 60_000;
   const title = `${type?.name ?? "Appointment"}${input.callerName ? ` — ${input.callerName}` : ""}`;
   const startISO = new Date(startMs).toISOString();
