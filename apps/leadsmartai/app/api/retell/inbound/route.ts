@@ -5,6 +5,14 @@ import { resolveAgentIdByReceptionistNumber } from "@/lib/voice-receptionist/set
 import { sendSMS } from "@/lib/twilioSms";
 import { buildReceptionistDynamicVariables, type ReceptionistContext } from "@repo/voice";
 
+/** Format a caller's E.164 number into a spoken-friendly US form, e.g.
+ *  "+16267557917" -> "(626) 755-7917". Falls back to the raw input. */
+function formatCallerNumber(e164: string): string {
+  const d = (e164 || "").replace(/\D/g, "").slice(-10);
+  if (d.length !== 10) return e164 || "";
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
 /**
  * Follow-up text to the caller after a forwarded (missed) call reaches the AI —
  * runs after the response so it never blocks Retell. Sends from TWILIO_FROM_NUMBER,
@@ -68,6 +76,9 @@ export async function POST(req: NextRequest) {
     try {
       const ctx = await loadReceptionistContext(agentId);
       if (ctx) {
+        // Give Lucy the caller's own number so she can confirm it as the callback
+        // number (and catch a mistyped/different number the caller dictates).
+        ctx.callerNumber = formatCallerNumber(fromNumber);
         dynamic_variables = buildReceptionistDynamicVariables(ctx);
         sendCallerTextBack(ctx, fromNumber);
       }

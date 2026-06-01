@@ -24,6 +24,9 @@ export type ReceptionistContext = {
   knowledgeText: string;
   extraNotes: string;
   greeting: string;
+  /** Inbound only: the caller's own phone number (caller ID), formatted for
+   *  speech. When set, the receptionist confirms it as the callback number. */
+  callerNumber?: string;
 };
 
 /** Resolve {{agent_name}} / {{business_name}} placeholders a business may use in
@@ -64,7 +67,7 @@ ${ctx.knowledgeText || "(no knowledge base yet — if you don't know the answer,
 
 About the business:
 ${fillPlaceholders(ctx.extraNotes, ctx) || "(none)"}
-
+${ctx.callerNumber ? `\nCallback number — ALWAYS confirm it: this caller is phoning from ${ctx.callerNumber}. Before you take a message or end the call, confirm how to reach them: ask "Is ${ctx.callerNumber} the best number to call you back, or is there a better one?" If they want a different number, read it back digit by digit and get a clear "yes" before you save it. Never record a callback number you haven't read back and confirmed out loud.\n` : ""}
 How to behave:
 - If the caller has an EMERGENCY: do not book an appointment. Take their name and phone number, tell them "I'll have someone call you right back," and use create_callback noting that it is an emergency.
 - To book: call check_availability first, offer the real open times, confirm the time AND the caller's name, then call book_appointment. Always pass the date as YYYY-MM-DD and the time in Western digits (e.g. 11:00 AM), even when the conversation is in another language. Never invent times.
@@ -104,6 +107,7 @@ export function buildReceptionistDynamicVariables(ctx: ReceptionistContext): Rec
     business_name: ctx.orgName,
     business_name_zh: ctx.orgNameZh,
     agent_name: ctx.agentName,
+    caller_number: ctx.callerNumber || "",
     business_hours: ctx.hoursText,
     appointment_types: ctx.typesText,
     knowledge: ctx.knowledgeText || "(no knowledge base provided — take a message instead of guessing)",
