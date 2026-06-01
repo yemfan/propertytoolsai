@@ -5,16 +5,6 @@ import { resolveAgentIdByReceptionistNumber } from "@/lib/voice-receptionist/set
 import { buildReceptionistDynamicVariables } from "@repo/voice";
 
 /**
- * Known LeadSmart receptionist numbers -> agent id. Committed fallback so the
- * inbound webhook resolves the right account without per-number env config;
- * resolveVoiceAgentId (VOICE_INBOUND_AGENT_MAP / default env) still handles any
- * number not listed here. Extend this as receptionist numbers are added.
- */
-const NUMBER_AGENT_OVERRIDES: Record<string, string> = {
-  "+18778017240": "22", // Michael Ye Realty — Lucy
-};
-
-/**
  * Retell inbound-call webhook (LeadSmart) — POST /api/retell/inbound
  *
  * Additive, opt-in: a parallel Retell-based receptionist that reuses the shared
@@ -42,12 +32,11 @@ export async function POST(req: NextRequest) {
   }
 
   let dynamic_variables: Record<string, string> = {};
-  // Dynamic multi-tenant routing: dialed number -> the agent whose config owns it.
-  // NUMBER_AGENT_OVERRIDES is a transitional fallback until every number is stored
-  // on its config row; resolveVoiceAgentId (env) is the final fallback.
+  // Dynamic multi-tenant routing: the dialed number -> the agent whose config
+  // owns it (each agent's config row stores its receptionist number).
+  // resolveVoiceAgentId (VOICE_INBOUND_AGENT_MAP / default env) is the fallback.
   const agentId =
     (await resolveAgentIdByReceptionistNumber(toNumber)) ||
-    NUMBER_AGENT_OVERRIDES[toNumber] ||
     (await resolveVoiceAgentId(toNumber));
   if (agentId) {
     try {
