@@ -16,8 +16,8 @@ function sendCallerTextBack(ctx: ReceptionistContext, fromNumber: string) {
   if (digits.length !== 10 && digits.length !== 11) return;
   const to = digits.length === 10 ? `+1${digits}` : `+${digits}`;
   const who = ctx.agentName
-    ? `This is ${ctx.agentName}, ${ctx.orgName}'s virtual assistant.`
-    : `This is ${ctx.orgName}'s virtual assistant.`;
+    ? `This is ${ctx.agentName}, your virtual assistant.`
+    : `This is our virtual assistant.`;
   const message = `Thanks for calling ${ctx.orgName}! ${who} We'll follow up shortly — reply here anytime. Reply STOP to opt out.`;
   after(async () => {
     try {
