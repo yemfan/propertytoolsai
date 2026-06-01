@@ -1,18 +1,88 @@
 "use client";
 
-import { useState } from "react";
-import { PhoneOutgoing } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { PhoneOutgoing, Search, User2, X } from "lucide-react";
+
+type PickContact = { id: string; name: string; phone: string };
 
 /**
  * Outbound AI calling. The AI receptionist (Lucy) dials a lead from your
  * receptionist number, discloses it's an AI, and follows up. Mirrors the
  * HelmSmart outbound console.
+ *
+ * Pick a CRM contact in one click (search by name or number → fills the
+ * fields) or type an ad-hoc number.
  */
 export default function OutboundCallPanel() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [status, setStatus] = useState<"idle" | "calling" | "placed" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
+
+  // Contact picker
+  const [contacts, setContacts] = useState<PickContact[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(true);
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  const boxRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/dashboard/voice/contacts");
+        const data = (await res.json()) as { contacts?: PickContact[] };
+        if (alive) setContacts(Array.isArray(data.contacts) ? data.contacts : []);
+      } catch {
+        if (alive) setContacts([]);
+      } finally {
+        if (alive) setLoadingContacts(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Close the dropdown on outside click.
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const digits = q.replace(/\D/g, "");
+    const list = !q
+      ? contacts
+      : contacts.filter((c) => {
+          const nameHit = c.name.toLowerCase().includes(q);
+          const phoneHit = digits.length > 0 && c.phone.replace(/\D/g, "").includes(digits);
+          return nameHit || phoneHit;
+        });
+    return list.slice(0, 8);
+  }, [contacts, query]);
+
+  function pick(c: PickContact) {
+    setName(c.name === "Unnamed contact" ? "" : c.name);
+    setPhone(c.phone);
+    setPickedId(c.id);
+    setQuery(c.name === "Unnamed contact" ? c.phone : c.name);
+    setOpen(false);
+    setStatus("idle");
+    setMessage(null);
+  }
+
+  function clearPick() {
+    setPickedId(null);
+    setQuery("");
+    setName("");
+    setPhone("");
+  }
 
   async function placeCall() {
     if (!phone.trim() || status === "calling") return;
@@ -28,8 +98,7 @@ export default function OutboundCallPanel() {
       if (!res.ok || !data.ok) throw new Error(data.error || "Failed to place the call.");
       setStatus("placed");
       setMessage(`Calling ${data.to}… Lucy will dial now and follow up.`);
-      setPhone("");
-      setName("");
+      clearPick();
     } catch (e) {
       setStatus("error");
       setMessage(e instanceof Error ? e.message : "Failed to place the call.");
@@ -47,6 +116,69 @@ export default function OutboundCallPanel() {
           Lucy dials the lead from your receptionist number, opens by disclosing she&apos;s an AI
           assistant, and follows up on your behalf — then logs the call below in Inbound &amp; outbound activity.
         </p>
+
+        {/* Contact picker */}
+        <div ref={boxRef} className="relative mb-3">
+          <span className="mb-1 block text-[11px] font-medium text-slate-500">
+            Call a contact
+          </span>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2} />
+            <input
+              className={`${input} pl-9 ${pickedId ? "pr-9" : ""}`}
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPickedId(null);
+                setOpen(true);
+              }}
+              onFocus={() => setOpen(true)}
+              placeholder={
+                loadingContacts
+                  ? "Loading your contacts…"
+                  : contacts.length
+                    ? "Search contacts by name or number…"
+                    : "No saved contacts yet — enter a number below"
+              }
+              disabled={loadingContacts}
+            />
+            {pickedId && (
+              <button
+                type="button"
+                onClick={clearPick}
+                aria-label="Clear selected contact"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" strokeWidth={2} />
+              </button>
+            )}
+          </div>
+
+          {open && contacts.length > 0 && (
+            <div className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+              {filtered.length === 0 ? (
+                <div className="px-3 py-2 text-xs text-slate-400">No matching contacts.</div>
+              ) : (
+                filtered.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    // onMouseDown fires before the input's blur, so the pick registers.
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      pick(c);
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-blue-50"
+                  >
+                    <User2 className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2} />
+                    <span className="min-w-0 flex-1 truncate text-slate-800">{c.name}</span>
+                    <span className="shrink-0 text-xs text-slate-500">{c.phone}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
@@ -79,7 +211,7 @@ export default function OutboundCallPanel() {
 
       <p className="text-xs text-slate-400">
         Outbound calls go out from your receptionist number and require Retell calling credits.
-        Coming next: call a CRM contact in one click + bulk &ldquo;call all.&rdquo;
+        Coming next: bulk &ldquo;call all.&rdquo;
       </p>
     </div>
   );
