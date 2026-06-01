@@ -32,7 +32,9 @@ function fromNumber() {
 
 function statusCallbackUrl() {
   const base = (process.env.APP_BASE_URL || "").replace(/\/$/, "");
-  if (!base) return undefined;
+  // Only attach the status callback when APP_BASE_URL is a valid absolute URL —
+  // a scheme-less / malformed value makes Twilio reject the whole send (20001).
+  if (!/^https?:\/\/.+/i.test(base)) return undefined;
   return `${base}/api/twilio/sms/status`;
 }
 
@@ -45,10 +47,14 @@ export async function sendOutboundSms(params: {
   actorName?: string | null;
 }) {
   const client = getTwilioClient();
-  const from = fromNumber();
-  if (!from) {
+  const rawFrom = fromNumber();
+  if (!rawFrom) {
     throw new Error("Missing TWILIO_SMS_FROM_NUMBER or TWILIO_PHONE_NUMBER / TWILIO_FROM_NUMBER");
   }
+  // Normalize the configured from-number to E.164 — tolerate a value saved with
+  // spaces/parens/dashes or as bare 10 digits. A malformed `from` is a common
+  // cause of Twilio 20001 ("invalid/unrecognized parameter").
+  const from = normalizeToE164(rawFrom) || rawFrom;
 
   const toE164 = normalizeToE164(params.to);
   if (!toE164) {
