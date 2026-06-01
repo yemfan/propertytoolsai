@@ -250,34 +250,47 @@ export function AiChatPanel() {
     }
   }, []);
 
-  // Resize handler — bottom-right corner. Computes new size as
-  // (cursor - panel-top-left) so it tracks the corner under the cursor.
-  const onResizePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    e.preventDefault();
-    const handleEl = e.currentTarget;
-    const panelEl = handleEl.parentElement as HTMLElement | null;
-    if (!panelEl) return;
-    const rect = panelEl.getBoundingClientRect();
-    setResizing(true);
-    handleEl.setPointerCapture?.(e.pointerId);
+  // Directional resize — "e" (right edge → width), "s" (bottom edge → height),
+  // "se" (corner → both). Pins an explicit top-left anchor first so the panel
+  // grows toward the cursor (down/right), like a normal resizable window.
+  const startResize = useCallback(
+    (dir: "e" | "s" | "se") => (e: React.PointerEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const handleEl = e.currentTarget;
+      const panelEl = handleEl.parentElement as HTMLElement | null;
+      if (!panelEl) return;
+      const rect = panelEl.getBoundingClientRect();
+      setPosition({ x: rect.left, y: rect.top });
+      const startW = rect.width;
+      const startH = rect.height;
+      setResizing(true);
+      handleEl.setPointerCapture?.(e.pointerId);
 
-    const onMove = (ev: PointerEvent) => {
-      const w = Math.min(PANEL_MAX_WIDTH, Math.max(PANEL_MIN_WIDTH, ev.clientX - rect.left));
-      const h = Math.min(PANEL_MAX_HEIGHT_LIMIT, Math.max(PANEL_MIN_HEIGHT, ev.clientY - rect.top));
-      setSize({ width: w, height: h });
-    };
-    const onUp = (ev: PointerEvent) => {
-      setResizing(false);
-      handleEl.releasePointerCapture?.(ev.pointerId);
-      handleEl.removeEventListener("pointermove", onMove);
-      handleEl.removeEventListener("pointerup", onUp);
-      handleEl.removeEventListener("pointercancel", onUp);
-    };
-    handleEl.addEventListener("pointermove", onMove);
-    handleEl.addEventListener("pointerup", onUp);
-    handleEl.addEventListener("pointercancel", onUp);
-  }, []);
+      const onMove = (ev: PointerEvent) => {
+        const w =
+          dir === "s"
+            ? startW
+            : Math.min(PANEL_MAX_WIDTH, Math.max(PANEL_MIN_WIDTH, ev.clientX - rect.left));
+        const h =
+          dir === "e"
+            ? startH
+            : Math.min(PANEL_MAX_HEIGHT_LIMIT, Math.max(PANEL_MIN_HEIGHT, ev.clientY - rect.top));
+        setSize({ width: w, height: h });
+      };
+      const onUp = (ev: PointerEvent) => {
+        setResizing(false);
+        handleEl.releasePointerCapture?.(ev.pointerId);
+        handleEl.removeEventListener("pointermove", onMove);
+        handleEl.removeEventListener("pointerup", onUp);
+        handleEl.removeEventListener("pointercancel", onUp);
+      };
+      handleEl.addEventListener("pointermove", onMove);
+      handleEl.addEventListener("pointerup", onUp);
+      handleEl.addEventListener("pointercancel", onUp);
+    },
+    [],
+  );
 
   // ── AI Guide (free-form chat) state ─────────────────────────────
   const [guideMessages, setGuideMessages] = useState<GuideMessage[]>([]);
@@ -612,18 +625,35 @@ export function AiChatPanel() {
             <div className="flex-1 p-4 text-sm text-gray-500">Tab not found.</div>
           )}
 
-          {/* Resize handle — bottom-right corner. Only visible while not
-              minimized. Pointer events; cursor flips to nwse-resize. */}
+          {/* Resize handles — right edge, bottom edge, and bottom-right corner.
+              Faintly visible by default + highlighted on hover with the proper
+              resize cursors, so it's discoverable like a normal window. */}
           <div
-            onPointerDown={onResizePointerDown}
+            onPointerDown={startResize("e")}
+            title="Drag to resize width"
+            aria-label="Resize width"
+            className={`absolute right-0 top-14 bottom-4 w-1.5 cursor-ew-resize touch-none rounded-full transition-colors ${
+              resizing ? "bg-blue-400/70" : "bg-gray-200/60 hover:bg-blue-300/70"
+            }`}
+          />
+          <div
+            onPointerDown={startResize("s")}
+            title="Drag to resize height"
+            aria-label="Resize height"
+            className={`absolute bottom-0 left-3 right-4 h-1.5 cursor-ns-resize touch-none rounded-full transition-colors ${
+              resizing ? "bg-blue-400/70" : "bg-gray-200/60 hover:bg-blue-300/70"
+            }`}
+          />
+          <div
+            onPointerDown={startResize("se")}
             title="Drag to resize"
             aria-label="Resize panel"
             className={`absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize touch-none ${
-              resizing ? "bg-blue-200/40" : "hover:bg-blue-200/30"
+              resizing ? "bg-blue-200/50" : "hover:bg-blue-200/40"
             }`}
             style={{
               backgroundImage:
-                "linear-gradient(135deg, transparent 0 50%, rgba(100,116,139,0.45) 50% 60%, transparent 60% 70%, rgba(100,116,139,0.45) 70% 80%, transparent 80%)",
+                "linear-gradient(135deg, transparent 0 45%, rgba(100,116,139,0.55) 45% 55%, transparent 55% 65%, rgba(100,116,139,0.55) 65% 75%, transparent 75% 85%, rgba(100,116,139,0.55) 85% 95%, transparent 95%)",
             }}
           />
         </>
