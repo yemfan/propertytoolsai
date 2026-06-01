@@ -1,5 +1,5 @@
 import { getAgentDisplayName } from "@/lib/ai-call/lead-resolution";
-import { getReceptionistConfig } from "@/lib/voice-receptionist/settings";
+import { getReceptionistConfig, isBookingEnabled } from "@/lib/voice-receptionist/settings";
 import {
   describeHours,
   defaultBusinessHours,
@@ -39,6 +39,10 @@ export async function loadReceptionistContext(
   const cfg = await getReceptionistConfig(agentId);
   if (!cfg.enabled) return null;
 
+  // Booking is offered only when the agent has enabled it (and the Retell tools
+  // are wired). Off by default, so Lucy keeps taking messages until it's ready.
+  const bookingEnabled = await isBookingEnabled(agentId);
+
   // Only look up the account display name when no business name is configured —
   // skips two DB round-trips (agents + user_profiles) on the call's hot path.
   const orgName = cfg.businessName || (await getAgentDisplayName(agentId)) || "our team";
@@ -66,10 +70,12 @@ export async function loadReceptionistContext(
     todayISO,
     todayLabel,
     hoursText: describeHours(defaultBusinessHours()),
-    // LeadSmart's Retell agent has no booking backend yet — steer callers to a
-    // message / call-back instead of attempting check_availability.
-    typesText:
-      "No online appointment booking. If the caller wants to schedule, take a message or offer a call-back.",
+    // When booking is on, the agent offers 30-minute appointments via the Retell
+    // check_availability / book_appointment tools (backed by /api/retell/function).
+    // When off, steer callers to a message / call-back instead.
+    typesText: bookingEnabled
+      ? "30-minute appointments you can book: property showings, buyer consultations, listing consultations, and general meetings. Use check_availability first, then book_appointment."
+      : "No online appointment booking. If the caller wants to schedule, take a message or offer a call-back.",
     knowledgeText: cfg.extraNotes || "",
     extraNotes: "",
     greeting: cfg.greeting || "",

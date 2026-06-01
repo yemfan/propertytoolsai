@@ -47,6 +47,29 @@ export async function getReceptionistConfig(
 }
 
 /**
+ * Whether the agent has appointment booking turned on. Read separately (not via
+ * SELECT_COLS) and defensively so a missing `booking_enabled` column (before the
+ * voice_appointments migration is applied) never breaks the main config read —
+ * it just resolves to false (booking off).
+ */
+export async function isBookingEnabled(
+  agentId: string | null | undefined,
+): Promise<boolean> {
+  if (!agentId) return false;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("voice_receptionist_settings")
+      .select("booking_enabled")
+      .eq("agent_id", agentId as never)
+      .maybeSingle();
+    if (error || !data) return false;
+    return Boolean((data as { booking_enabled?: boolean | null }).booking_enabled);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Resolve the dialed E.164 number to the agent whose receptionist answers it —
  * the dynamic, multi-tenant routing: each agent's config row stores the number
  * customers call. Returns null on no match / error (incl. the phone_number

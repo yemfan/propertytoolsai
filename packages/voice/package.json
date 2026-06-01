@@ -11,6 +11,7 @@
     "./retell": "./src/retell.ts",
     "./prompt": "./src/prompt.ts",
     "./brain": "./src/brain.ts",
-    "./datetime": "./src/datetime.ts"
+    "./datetime": "./src/datetime.ts",
+    "./scheduling": "./src/scheduling.ts"
   }
 }
