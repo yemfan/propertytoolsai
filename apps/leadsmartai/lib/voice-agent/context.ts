@@ -18,6 +18,21 @@ import {
  *
  * Additive — LeadSmart's existing Twilio/OpenAI-Realtime voice is untouched.
  */
+
+/** Validate a user-entered IANA timezone; fall back if invalid (e.g. a typo). */
+function safeTimezone(tz: string | undefined | null): string {
+  const v = (tz || "").trim();
+  if (v) {
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: v });
+      return v;
+    } catch {
+      /* invalid tz (e.g. "America/Los_Angles") — fall through to default */
+    }
+  }
+  return "America/New_York";
+}
+
 export async function loadReceptionistContext(
   agentId: string,
 ): Promise<ReceptionistContext | null> {
@@ -29,7 +44,7 @@ export async function loadReceptionistContext(
   if (!cfg.enabled) return null;
 
   const orgName = cfg.businessName || displayName || "our team";
-  const timezone = cfg.timezone || "America/New_York";
+  const timezone = safeTimezone(cfg.timezone);
   const todayISO = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
     year: "numeric",

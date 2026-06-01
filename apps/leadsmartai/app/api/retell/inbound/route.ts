@@ -33,8 +33,13 @@ export async function POST(req: NextRequest) {
   let dynamic_variables: Record<string, string> = {};
   const agentId = await resolveVoiceAgentId(toNumber);
   if (agentId) {
-    const ctx = await loadReceptionistContext(agentId);
-    if (ctx) dynamic_variables = buildReceptionistDynamicVariables(ctx);
+    try {
+      const ctx = await loadReceptionistContext(agentId);
+      if (ctx) dynamic_variables = buildReceptionistDynamicVariables(ctx);
+    } catch (err) {
+      // Never 500 on Retell — fall back to empty variables.
+      console.error("retell/inbound: failed to build receptionist context", err);
+    }
   }
 
   return NextResponse.json({ call_inbound: { dynamic_variables } });
