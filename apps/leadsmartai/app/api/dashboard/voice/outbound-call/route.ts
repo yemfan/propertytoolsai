@@ -1,20 +1,10 @@
 import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { loadReceptionistContext } from "@/lib/voice-agent/context";
-import { logOutboundCall } from "@/lib/missed-call/service";
-import {
-  buildOutboundDynamicVariables,
-  createPhoneCall,
-  normalizePhoneE164,
-} from "@repo/voice";
+import { placeOutboundCall } from "@/lib/voice-agent/outbound";
+import { normalizePhoneE164 } from "@repo/voice";
 
 export const runtime = "nodejs";
-
-// The receptionist's own Retell number + agent place the outbound call. Single
-// receptionist for now; when multiple agents/numbers exist this resolves from
-// the caller's config row instead of these constants.
-const FROM_NUMBER = "+18778017240";
-const RETELL_AGENT_ID = "agent_7e51ed0664a3716ecaa6a183d4"; // LeadSmart Receptionist (Lucy)
 
 /**
  * Place an outbound AI call. The agent (Lucy) dials the lead from the
@@ -43,27 +33,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const dynamicVariables = buildOutboundDynamicVariables(ctx, {
-      leadName: name,
-      purpose: "follow_up",
-    });
-
-    const { callId } = await createPhoneCall({
-      fromNumber: FROM_NUMBER,
-      toNumber: r.value,
-      agentId: RETELL_AGENT_ID,
-      dynamicVariables,
-      metadata: { source: "leadsmart-outbound", leadName: name, agentId },
-    });
-
-    // Log to call_logs so the call shows in AI Assistant → Inbound & outbound
-    // activity immediately. Best-effort — never fail the placed call on a log error.
-    await logOutboundCall({
+    const { callId } = await placeOutboundCall({
+      ctx,
       agentId,
-      toPhone: r.value,
-      fromPhone: FROM_NUMBER,
-      providerCallId: callId,
-      leadName: name || null,
+      leadName: name,
+      toNumberE164: r.value,
     });
 
     return NextResponse.json({ ok: true, callId, to: r.value });

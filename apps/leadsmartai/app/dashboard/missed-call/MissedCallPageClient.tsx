@@ -6,6 +6,7 @@ import { Settings as SettingsIcon, ChevronDown, ChevronUp } from "lucide-react";
 import MissedCallActivityLog from "@/components/dashboard/MissedCallActivityLog";
 import MissedCallSettingsForm from "@/components/dashboard/MissedCallSettingsForm";
 import OutboundCallPanel from "@/components/dashboard/OutboundCallPanel";
+import BulkCallPanel from "@/components/dashboard/BulkCallPanel";
 
 /**
  * /dashboard/missed-call — the AI Assistant voice console.
@@ -103,7 +104,10 @@ export default function MissedCallPageClient() {
           </p>
         </>
       ) : (
-        <OutboundCallPanel />
+        <div className="space-y-4">
+          <OutboundCallPanel />
+          <BulkCallPanel />
+        </div>
       )}
     </div>
   );
