@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import MissedCallPageClient from "./MissedCallPageClient";
 
 export const metadata: Metadata = {
-  title: "Missed-call text-back",
+  title: "AI Assistant",
   description:
-    "Review every recent call and the auto-text that went out, with one-click access to your forwarding settings, message template, and AI personalization toggle.",
+    "Your AI voice assistant — inbound call activity + missed-call auto-text, plus outbound AI calling.",
   robots: { index: false },
 };
 

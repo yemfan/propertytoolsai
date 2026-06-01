@@ -234,11 +234,9 @@ const navConfig = {
           icon: l(<MessageCircle size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
-          // Dedicated entry for the missed-call text-back surface.
-          // Same panel as Settings → Voice → Missed Call Text-Back, but
-          // surfaced here so agents who care about it don't have to
-          // hunt through settings tabs to find the activity log.
-          label: "Missed-call text-back",
+          // The AI Assistant voice console — Inbound (incoming-call activity +
+          // missed-call auto-text settings) and Outbound (place AI calls).
+          label: "AI Assistant",
           href: "/dashboard/missed-call",
           match: ["/dashboard/missed-call"],
           icon: l(<PhoneMissed size={14} strokeWidth={STROKE} aria-hidden />),
