@@ -505,8 +505,8 @@ export function AiChatPanel() {
   // to explicit top/left so it stays where they left it.
   const positionedClass = position ? "" : "bottom-6 right-6";
   const sizeStyle: React.CSSProperties = size
-    ? { width: size.width, height: minimized ? "auto" : size.height, maxHeight: size.height }
-    : { width: PANEL_DEFAULT_WIDTH, maxHeight: PANEL_DEFAULT_HEIGHT };
+    ? { width: size.width, height: minimized ? "auto" : size.height, maxHeight: "92vh" }
+    : { width: PANEL_DEFAULT_WIDTH, height: minimized ? "auto" : PANEL_DEFAULT_HEIGHT, maxHeight: "92vh" };
   const positionedStyle: React.CSSProperties = {
     ...sizeStyle,
     ...(position
@@ -702,7 +702,7 @@ function GuideTabBody({
 }) {
   return (
     <>
-      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4 min-h-[220px] max-h-[420px]">
+      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4 min-h-0">
         {messages.length === 0 && !loading && (
           <div className="space-y-2">
             <p className="text-sm text-gray-500">Try asking:</p>
@@ -791,7 +791,7 @@ function ContactTabBody({
   }, [tab.thread]);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* Top: contact picker + auto-pilot toggle */}
       <div className="space-y-2 border-b border-gray-100 px-3 py-3">
         {tab.contact ? (
@@ -826,7 +826,7 @@ function ContactTabBody({
       </div>
 
       {/* Middle: prompt + draft + thread */}
-      <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3 min-h-[220px] max-h-[360px]">
+      <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3 min-h-0">
         {tab.contact ? (
           <>
             <div>
