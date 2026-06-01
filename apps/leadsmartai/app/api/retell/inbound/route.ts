@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   const agentId = await resolveVoiceAgentId(toNumber);
   if (agentId) {
     const ctx = await loadReceptionistContext(agentId);
-    dynamic_variables = buildReceptionistDynamicVariables(ctx);
+    if (ctx) dynamic_variables = buildReceptionistDynamicVariables(ctx);
   }
 
   return NextResponse.json({ call_inbound: { dynamic_variables } });

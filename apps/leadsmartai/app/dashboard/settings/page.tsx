@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import AgentAiSettingsPanel from "@/components/dashboard/AgentAiSettingsPanel";
 import AgentVoiceSettingsPanel from "@/components/dashboard/AgentVoiceSettingsPanel";
+import VoiceReceptionistSettingsPanel from "@/components/dashboard/VoiceReceptionistSettingsPanel";
 import BriefingScheduleCard from "@/components/dashboard/BriefingScheduleCard";
 import MissedCallSettingsPanel from "@/components/dashboard/MissedCallSettingsPanel";
 import ChannelsCard from "@/components/dashboard/ChannelsCard";
@@ -44,6 +45,14 @@ export default async function SettingsPage() {
             <div className="p-5">
               <h2 className="text-sm font-semibold text-gray-900 mb-3">Phone Voice</h2>
               <AgentVoiceSettingsPanel />
+            </div>
+            <div className="p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-1">AI Voice Receptionist</h2>
+              <p className="mb-3 text-xs text-gray-500">
+                Your AI phone receptionist&apos;s identity and what it knows about your business —
+                used on every inbound call to your receptionist number.
+              </p>
+              <VoiceReceptionistSettingsPanel />
             </div>
             <div className="p-5">
               <h2 className="text-sm font-semibold text-gray-900 mb-1">Missed Call Text-Back</h2>
