@@ -42,6 +42,9 @@ export default function HomeValueEstimatorPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [smsConsent, setSmsConsent] = useState(false);
+  const [reviewStatus, setReviewStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   const handleEstimate = async () => {
     if (!address.trim()) {
@@ -280,31 +283,94 @@ export default function HomeValueEstimatorPage() {
             </div>
             <div className="rounded-xl border border-gray-200 bg-white p-5 text-sm shadow-sm">
               <h2 className="ui-card-title text-brand-text">Get a personalized review</h2>
-              <p className="ui-meta mt-1 text-brand-text/70">
-                Share your contact info and a local real estate professional can provide a more detailed valuation.
-              </p>
-              <div className="mt-3 space-y-2">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email"
-                  className={inputClass}
-                />
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Phone (optional)"
-                  className={inputClass}
-                />
-                <button
-                  type="button"
-                  className="w-full rounded-lg bg-brand-primary py-2 text-xs font-semibold text-white hover:opacity-90"
-                >
-                  Request expert valuation
-                </button>
-              </div>
+              {reviewStatus === "sent" ? (
+                <p className="ui-meta mt-2 text-emerald-700">
+                  Thanks! A local real estate professional will follow up with a detailed valuation.
+                </p>
+              ) : (
+                <>
+                  <p className="ui-meta mt-1 text-brand-text/70">
+                    Share your contact info and a local real estate professional can provide a more detailed valuation.
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Email"
+                      className={inputClass}
+                    />
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Phone (optional)"
+                      className={inputClass}
+                    />
+                    {/* SMS opt-in — identical disclosure to /contact + /open-house-signup. */}
+                    <label htmlFor="hv-sms-consent" className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 bg-gray-50/60 p-2">
+                      <input
+                        id="hv-sms-consent"
+                        type="checkbox"
+                        checked={smsConsent}
+                        onChange={(e) => setSmsConsent(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300"
+                      />
+                      <span className="text-[11px] leading-relaxed text-gray-600">
+                        <span className="font-semibold text-gray-900">Yes, send me marketing text messages from LeadSmart AI.</span>{" "}
+                        By checking this box and providing my phone number above, I consent to receive promotional text messages from LeadSmart AI about real-estate services, new listings, market updates, and special offers.
+                      </span>
+                    </label>
+                    <p className="text-[10px] leading-relaxed text-gray-400">
+                      Message frequency varies. Message and data rates may apply. Reply STOP to opt out at any time, or HELP for help. Consent is not a condition of any purchase. See our{" "}
+                      <Link href="/privacy" className="underline">Privacy Policy</Link> and{" "}
+                      <Link href="/terms" className="underline">Terms of Service</Link> for details.
+                    </p>
+                    {reviewError ? (
+                      <p className="text-[11px] font-medium text-rose-600">{reviewError}</p>
+                    ) : null}
+                    <button
+                      type="button"
+                      disabled={reviewStatus === "sending"}
+                      onClick={async () => {
+                        setReviewError(null);
+                        const e = email.trim();
+                        if (!e) {
+                          setReviewError("Please enter your email.");
+                          return;
+                        }
+                        if (smsConsent && !phone.trim()) {
+                          setReviewError("Add a phone number to receive SMS, or untick the box.");
+                          return;
+                        }
+                        setReviewStatus("sending");
+                        try {
+                          const res = await fetch("/api/leads", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              email: e,
+                              phone: phone.trim(),
+                              address: result?.property?.address || address,
+                              source: "home-value-estimator",
+                              smsConsent,
+                            }),
+                          });
+                          const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+                          if (!res.ok || j.ok === false) throw new Error(j.error || "Failed to submit.");
+                          setReviewStatus("sent");
+                        } catch (err) {
+                          setReviewError(err instanceof Error ? err.message : "Failed to submit.");
+                          setReviewStatus("error");
+                        }
+                      }}
+                      className="w-full rounded-lg bg-brand-primary py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                    >
+                      {reviewStatus === "sending" ? "Sending…" : "Request expert valuation"}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
