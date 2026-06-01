@@ -36,14 +36,12 @@ function safeTimezone(tz: string | undefined | null): string {
 export async function loadReceptionistContext(
   agentId: string,
 ): Promise<ReceptionistContext | null> {
-  const [displayName, cfg] = await Promise.all([
-    getAgentDisplayName(agentId),
-    getReceptionistConfig(agentId),
-  ]);
-
+  const cfg = await getReceptionistConfig(agentId);
   if (!cfg.enabled) return null;
 
-  const orgName = cfg.businessName || displayName || "our team";
+  // Only look up the account display name when no business name is configured —
+  // skips two DB round-trips (agents + user_profiles) on the call's hot path.
+  const orgName = cfg.businessName || (await getAgentDisplayName(agentId)) || "our team";
   const timezone = safeTimezone(cfg.timezone);
   const todayISO = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
