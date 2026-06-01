@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { normalizePhoneE164 } from "@repo/voice";
 import {
   getReceptionistConfig,
   upsertReceptionistConfig,
@@ -31,6 +32,22 @@ export async function PATCH(req: Request) {
 
     const input: UpsertReceptionistConfigInput = {};
     if (typeof body.enabled === "boolean") input.enabled = body.enabled;
+
+    if (typeof body.phoneNumber === "string") {
+      const raw = body.phoneNumber.trim();
+      if (raw === "") {
+        input.phoneNumber = ""; // explicit clear
+      } else {
+        const r = normalizePhoneE164(raw);
+        if (!r.ok) {
+          return NextResponse.json(
+            { ok: false, error: "Enter a valid phone number (e.g. +1 626 555 1234)." },
+            { status: 400 },
+          );
+        }
+        input.phoneNumber = r.value;
+      }
+    }
 
     const businessName = str(body.businessName, 200);
     if (businessName !== undefined) input.businessName = businessName;

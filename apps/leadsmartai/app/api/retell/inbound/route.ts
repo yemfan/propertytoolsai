@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveVoiceAgentId } from "@/lib/ai-call/lead-resolution";
 import { loadReceptionistContext } from "@/lib/voice-agent/context";
+import { resolveAgentIdByReceptionistNumber } from "@/lib/voice-receptionist/settings";
 import { buildReceptionistDynamicVariables } from "@repo/voice";
 
 /**
@@ -41,7 +42,13 @@ export async function POST(req: NextRequest) {
   }
 
   let dynamic_variables: Record<string, string> = {};
-  const agentId = NUMBER_AGENT_OVERRIDES[toNumber] || (await resolveVoiceAgentId(toNumber));
+  // Dynamic multi-tenant routing: dialed number -> the agent whose config owns it.
+  // NUMBER_AGENT_OVERRIDES is a transitional fallback until every number is stored
+  // on its config row; resolveVoiceAgentId (env) is the final fallback.
+  const agentId =
+    (await resolveAgentIdByReceptionistNumber(toNumber)) ||
+    NUMBER_AGENT_OVERRIDES[toNumber] ||
+    (await resolveVoiceAgentId(toNumber));
   if (agentId) {
     try {
       const ctx = await loadReceptionistContext(agentId);

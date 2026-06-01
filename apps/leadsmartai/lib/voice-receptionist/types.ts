@@ -6,6 +6,8 @@
 export type ReceptionistConfig = {
   /** When false, the inbound webhook serves no prompt (receptionist is off). */
   enabled: boolean;
+  /** E.164 number customers call; the inbound webhook routes it to this config. */
+  phoneNumber: string;
   /** Trade / DBA name the receptionist introduces itself with. */
   businessName: string;
   /** Chinese business name (used when the agent speaks Chinese). */
@@ -24,6 +26,7 @@ export type ReceptionistConfig = {
 export type ReceptionistConfigRow = {
   agent_id: number | string;
   enabled: boolean | null;
+  phone_number: string | null;
   business_name: string | null;
   business_name_zh: string | null;
   agent_name: string | null;
@@ -36,6 +39,7 @@ export type ReceptionistConfigRow = {
 
 export const DEFAULT_RECEPTIONIST_CONFIG: ReceptionistConfig = {
   enabled: true,
+  phoneNumber: "",
   businessName: "",
   businessNameZh: "",
   agentName: "",

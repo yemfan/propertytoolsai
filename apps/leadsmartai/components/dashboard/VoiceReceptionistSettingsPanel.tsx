@@ -107,6 +107,20 @@ export default function VoiceReceptionistSettingsPanel() {
         )}
       </label>
 
+      <div>
+        <span className={LABEL}>Receptionist phone number</span>
+        <input
+          className={FIELD}
+          value={settings.phoneNumber}
+          onChange={(e) => update("phoneNumber", e.target.value)}
+          placeholder="+1 (626) 555-1234 — the number customers call"
+        />
+        <p className="mt-1 text-[11px] text-gray-400">
+          Calls to this number route to this receptionist. Point the number&apos;s inbound webhook
+          at /api/retell/inbound; saved in E.164 (e.g. +16265551234).
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <span className={LABEL}>Business name</span>
