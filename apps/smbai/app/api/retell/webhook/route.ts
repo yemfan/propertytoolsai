@@ -18,6 +18,54 @@ import { matchOrCreateClient } from "@/lib/booking";
 import { normalizePhoneE164 } from "@/lib/phone";
 
 type TranscriptTurn = { role?: string; content?: string };
+type Db = ReturnType<typeof createServiceClient>;
+
+/** Spoken-friendly US phone, e.g. "+16267557917" -> "(626) 755-7917". */
+function formatPhone(e164: string): string {
+  const d = (e164 || "").replace(/\D/g, "").slice(-10);
+  if (d.length !== 10) return e164 || "the caller";
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
+/**
+ * Create a follow-up task for the owner after an inbound AI call. Idempotent —
+ * skips when a task already references this call (so a re-delivered call_analyzed
+ * won't double-task). Best-effort; the caller swallows errors.
+ */
+async function createInboundFollowUpTask(
+  db: Db,
+  args: { orgId: string; clientId: string; callId: string; summary: string; fromNumber: string },
+): Promise<void> {
+  const { data: dup } = await db
+    .from("tasks")
+    .select("id")
+    .eq("organization_id", args.orgId)
+    .ilike("notes", `%${args.callId}%`)
+    .maybeSingle();
+  if (dup) return;
+
+  // Use the contact's name when it isn't the "Caller" placeholder; else the number.
+  let who = formatPhone(args.fromNumber);
+  const { data: client } = await db
+    .from("clients")
+    .select("first_name,last_name")
+    .eq("id", args.clientId)
+    .maybeSingle();
+  const fn = (client?.first_name ?? "").trim();
+  const ln = (client?.last_name ?? "").trim();
+  if (fn && fn.toLowerCase() !== "caller") who = ln ? `${fn} ${ln}` : fn;
+
+  const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  await db.from("tasks").insert({
+    organization_id: args.orgId,
+    title: `Follow up: AI call from ${who}`,
+    notes: `${args.summary}\n\n(Ref: ${args.callId})`,
+    due_date: dueDate,
+    client_id: args.clientId,
+    priority: "high",
+    status: "open",
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -76,6 +124,16 @@ export async function POST(request: NextRequest) {
     }
 
     await db.from("voice_sessions").upsert(row, { onConflict: "call_sid" });
+
+    // On analysis of an inbound call, create an owner follow-up task linked to
+    // the caller's contact, with the AI call summary in the notes.
+    if (event === "call_analyzed" && direction === "inbound" && summary && clientId) {
+      try {
+        await createInboundFollowUpTask(db, { orgId, clientId, callId, summary, fromNumber });
+      } catch (taskErr) {
+        console.error("Retell webhook: follow-up task failed", taskErr);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
