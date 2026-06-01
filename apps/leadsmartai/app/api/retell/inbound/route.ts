@@ -1,8 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { resolveVoiceAgentId } from "@/lib/ai-call/lead-resolution";
 import { loadReceptionistContext } from "@/lib/voice-agent/context";
 import { resolveAgentIdByReceptionistNumber } from "@/lib/voice-receptionist/settings";
-import { buildReceptionistDynamicVariables } from "@repo/voice";
+import { sendSMS } from "@/lib/twilioSms";
+import { buildReceptionistDynamicVariables, type ReceptionistContext } from "@repo/voice";
+
+/**
+ * Follow-up text to the caller after a forwarded (missed) call reaches the AI —
+ * runs after the response so it never blocks Retell. Sends from TWILIO_FROM_NUMBER,
+ * so that env must be an SMS-capable number (a toll-free with rejected verification
+ * can't text). No-ops on a missing/invalid caller number.
+ */
+function sendCallerTextBack(ctx: ReceptionistContext, fromNumber: string) {
+  const digits = (fromNumber || "").replace(/\D/g, "");
+  if (digits.length !== 10 && digits.length !== 11) return;
+  const to = digits.length === 10 ? `+1${digits}` : `+${digits}`;
+  const who = ctx.agentName
+    ? `This is ${ctx.agentName}, ${ctx.orgName}'s virtual assistant.`
+    : `This is ${ctx.orgName}'s virtual assistant.`;
+  const message = `Thanks for calling ${ctx.orgName}! ${who} We'll follow up shortly — reply here anytime. Reply STOP to opt out.`;
+  after(async () => {
+    try {
+      await sendSMS(to, message);
+    } catch (e) {
+      console.error("retell/inbound: caller text-back failed", e);
+    }
+  });
+}
 
 /**
  * Retell inbound-call webhook (LeadSmart) — POST /api/retell/inbound
@@ -24,9 +48,11 @@ export async function POST(req: NextRequest) {
   }
 
   let toNumber = "";
+  let fromNumber = "";
   try {
     const body = await req.json();
     toNumber = String(body?.call_inbound?.to_number ?? "");
+    fromNumber = String(body?.call_inbound?.from_number ?? "");
   } catch {
     /* malformed body — fall through to empty vars */
   }
@@ -41,7 +67,10 @@ export async function POST(req: NextRequest) {
   if (agentId) {
     try {
       const ctx = await loadReceptionistContext(agentId);
-      if (ctx) dynamic_variables = buildReceptionistDynamicVariables(ctx);
+      if (ctx) {
+        dynamic_variables = buildReceptionistDynamicVariables(ctx);
+        sendCallerTextBack(ctx, fromNumber);
+      }
     } catch (err) {
       // Never 500 on Retell — fall back to empty variables.
       console.error("retell/inbound: failed to build receptionist context", err);
