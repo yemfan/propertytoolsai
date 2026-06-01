@@ -726,7 +726,11 @@ function GuideTabBody({
                 : "mr-8 rounded-xl rounded-bl-sm bg-gray-50 px-3 py-2 text-gray-800"
             }`}
           >
-            <div className="whitespace-pre-wrap">{m.content}</div>
+            {m.role === "assistant" ? (
+              <MarkdownLite text={m.content} />
+            ) : (
+              <div className="whitespace-pre-wrap">{m.content}</div>
+            )}
           </div>
         ))}
         {loading && (
@@ -1050,4 +1054,60 @@ function AutoPilotSwitch({
       <span>Auto Pilot</span>
     </label>
   );
+}
+
+// ── Lightweight Markdown renderer for AI Guide replies ────────────
+// The guide replies in Markdown (### headings, **bold**, - bullets). Render the
+// common cases inline (no dependency) so users see formatting, not raw symbols.
+function renderInline(text: string): React.ReactNode[] {
+  // Split on **bold**; odd-indexed segments are the bold captures.
+  return text.split(/\*\*(.+?)\*\*/g).map((part, i) =>
+    i % 2 === 1 ? (
+      <strong key={i} className="font-semibold text-gray-900">
+        {part}
+      </strong>
+    ) : (
+      <span key={i}>{part}</span>
+    ),
+  );
+}
+
+function MarkdownLite({ text }: { text: string }) {
+  const lines = (text || "").replace(/\r\n/g, "\n").split("\n");
+  const blocks: React.ReactNode[] = [];
+  let list: React.ReactNode[] = [];
+  const flushList = (key: string) => {
+    if (list.length) {
+      blocks.push(
+        <ul key={key} className="my-1 ml-4 list-disc space-y-0.5">
+          {list}
+        </ul>,
+      );
+      list = [];
+    }
+  };
+  lines.forEach((raw, idx) => {
+    const line = raw.replace(/\s+$/, "");
+    if (/^#{1,6}\s+/.test(line)) {
+      flushList(`ul-${idx}`);
+      blocks.push(
+        <p key={idx} className="mb-0.5 mt-2 font-bold text-gray-900">
+          {renderInline(line.replace(/^#{1,6}\s+/, ""))}
+        </p>,
+      );
+    } else if (/^\s*[-*]\s+/.test(line)) {
+      list.push(<li key={idx}>{renderInline(line.replace(/^\s*[-*]\s+/, ""))}</li>);
+    } else if (line.trim() === "") {
+      flushList(`ul-${idx}`);
+    } else {
+      flushList(`ul-${idx}`);
+      blocks.push(
+        <p key={idx} className="my-0.5">
+          {renderInline(line)}
+        </p>,
+      );
+    }
+  });
+  flushList("ul-end");
+  return <div className="space-y-0.5">{blocks}</div>;
 }
