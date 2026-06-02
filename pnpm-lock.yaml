@@ -496,6 +496,12 @@ importers:
       '@helm/dna-communication':
         specifier: workspace:*
         version: link:../../packages/dna-communication
+      '@helm/dna-finance':
+        specifier: workspace:*
+        version: link:../../packages/dna-finance
+      '@helm/dna-operations':
+        specifier: workspace:*
+        version: link:../../packages/dna-operations
       '@repo/voice':
         specifier: workspace:*
         version: link:../../packages/voice
@@ -616,7 +622,14 @@ importers:
 
   packages/dna-marketing: {}
 
-  packages/dna-operations: {}
+  packages/dna-operations:
+    dependencies:
+      '@helm/data':
+        specifier: workspace:*
+        version: link:../data
+      '@supabase/supabase-js':
+        specifier: ^2.99.2
+        version: 2.100.1
 
   packages/dna-people: {}
 
