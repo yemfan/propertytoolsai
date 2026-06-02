@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/sidebar";
 import { getUnreadCount, getRecentNotifications } from "@/lib/actions/notifications";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { HelmSmartAiPanel } from "@/components/helmsmart-ai-panel";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -33,6 +34,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main id="main-content" className="flex-1 overflow-auto">
         {children}
       </main>
+      {orgId ? <HelmSmartAiPanel /> : null}
     </div>
   );
 }

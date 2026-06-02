@@ -9,9 +9,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
+import Anthropic from "@anthropic-ai/sdk";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createNotificationService } from "@/lib/actions/notifications";
-import { analyzeInbound, translateToEnglish, localizeOutbound, intentLabel, type Lang } from "@/lib/language";
+import { analyzeInbound, translateToEnglish, localizeOutbound, intentLabel, languageName, type Lang } from "@/lib/language";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
   // Find org by Twilio number
   const { data: org } = await supabase
     .from("organizations")
-    .select("id, auto_reply, auto_reply_msg, owner_english_assist")
+    .select("id, name, auto_reply, auto_reply_msg, owner_english_assist")
     .eq("twilio_number", to)
     .single();
 
@@ -91,10 +92,34 @@ export async function POST(request: NextRequest) {
       link: "/inbox",
     });
 
-    // Instant auto-acknowledge so a new lead never sits unanswered. At most once
-    // per ~4h per sender — the ack counts as recent outbound, so an active
-    // back-and-forth won't get repeatedly auto-replied.
-    if (org.auto_reply) {
+    // auto_pilot lives on clients (migration 00045). Read it best-effort so a
+    // not-yet-migrated DB degrades to the canned auto-reply instead of erroring
+    // the whole inbound flow.
+    let clientAutoPilot = false;
+    if (client) {
+      const { data: ap } = await supabase
+        .from("clients")
+        .select("auto_pilot")
+        .eq("id", client.id)
+        .maybeSingle();
+      clientAutoPilot = Boolean((ap as { auto_pilot?: boolean } | null)?.auto_pilot);
+    }
+
+    // Per-client AI Auto Pilot takes precedence over the canned org auto-reply:
+    // if this client has auto_pilot on, send a contextual AI reply instead of
+    // the static acknowledgement.
+    if (client && clientAutoPilot) {
+      await runAutoPilotReply({
+        supabase,
+        orgId: org.id,
+        orgName: org.name ?? "our business",
+        clientId: client.id,
+        from,
+        to,
+        lang,
+        assist,
+      });
+    } else if (org.auto_reply) {
       const fourHoursAgo = new Date(Date.now() - 4 * 3600_000).toISOString();
       const { count } = await supabase
         .from("messages")
@@ -133,4 +158,96 @@ export async function POST(request: NextRequest) {
   return new NextResponse("<?xml version=\"1.0\"?><Response/>", {
     headers: { "Content-Type": "text/xml" },
   });
+}
+
+/**
+ * HelmSmart AI Auto Pilot — when a client has auto_pilot on, draft a contextual
+ * reply with Claude and send it via Twilio. Best-effort: any failure leaves the
+ * inbound captured + owner notified. A 5-message / 10-minute circuit breaker
+ * prevents runaway loops with an automated counterpart.
+ */
+async function runAutoPilotReply(opts: {
+  supabase: ReturnType<typeof createServiceClient>;
+  orgId: string;
+  orgName: string;
+  clientId: string;
+  from: string;
+  to: string;
+  lang: Lang;
+  assist: boolean;
+}) {
+  const { supabase, orgId, orgName, clientId, from, to, lang, assist } = opts;
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return;
+
+  const tenMinAgo = new Date(Date.now() - 10 * 60_000).toISOString();
+  const { count } = await supabase
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", orgId)
+    .eq("direction", "outbound")
+    .eq("to_address", from)
+    .gt("sent_at", tenMinAgo);
+  if ((count ?? 0) >= 5) return;
+
+  const { data: recent } = await supabase
+    .from("messages")
+    .select("direction, body")
+    .eq("organization_id", orgId)
+    .eq("client_id", clientId)
+    .eq("channel", "sms")
+    .order("sent_at", { ascending: false })
+    .limit(8);
+  const transcript = (recent ?? [])
+    .slice()
+    .reverse()
+    .map((m) => `${m.direction === "inbound" ? "Customer" : orgName}: ${m.body}`)
+    .join("\n");
+
+  const langRule =
+    lang === "en"
+      ? "Write the reply in English."
+      : assist
+        ? `Write the reply in ${languageName(lang)}, then add an English translation after a blank line.`
+        : `Write the reply entirely in ${languageName(lang)}.`;
+
+  let replyText = "";
+  try {
+    const anthropic = new Anthropic({ apiKey });
+    const resp = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 400,
+      system: `You are replying on behalf of the business "${orgName}" to a customer's text message. Reply helpfully and concisely (under 320 characters). ${langRule} Address their latest message directly. Return ONLY the reply text — no greeting placeholder like "[Name]", no signature.`,
+      messages: [
+        {
+          role: "user",
+          content: `Conversation (most recent last):\n${transcript}\n\nWrite the next reply from ${orgName}.`,
+        },
+      ],
+    });
+    replyText = (resp.content[0] as { type: string; text?: string }).text?.trim() ?? "";
+    replyText = replyText.replace(/^["']|["']$/g, "").trim();
+  } catch {
+    return;
+  }
+  if (!replyText) return;
+
+  try {
+    const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
+    await twilioClient.messages.create({ from: to, to: from, body: replyText });
+    await supabase.from("messages").insert({
+      organization_id: orgId,
+      client_id: clientId,
+      channel: "sms",
+      direction: "outbound",
+      from_address: to,
+      to_address: from,
+      body: replyText,
+      read: true,
+      sent_at: new Date().toISOString(),
+    });
+  } catch {
+    // send failed — inbound still captured + owner notified
+  }
 }

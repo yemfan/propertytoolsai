@@ -1,0 +1,37 @@
+/**
+ * PATCH /api/sms/auto-pilot  { clientId, enabled }
+ *
+ * Toggles a client's auto_pilot flag (read by the inbound SMS webhook to
+ * decide whether to auto-draft + send an AI reply). Org-scoped.
+ */
+
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
+
+export async function PATCH(request: NextRequest) {
+  let clientId = "";
+  let enabled = false;
+  try {
+    const json = await request.json();
+    clientId = String(json.clientId ?? "").trim();
+    enabled = Boolean(json.enabled);
+  } catch {
+    return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+  }
+  if (!clientId) return NextResponse.json({ ok: false, error: "Missing clientId" }, { status: 400 });
+
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
+  if (!orgId) return NextResponse.json({ ok: false, error: "Not authenticated" }, { status: 401 });
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("clients")
+    .update({ auto_pilot: enabled })
+    .eq("id", clientId)
+    .eq("organization_id", orgId);
+
+  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true, autoPilot: enabled });
+}

@@ -1,0 +1,64 @@
+/**
+ * GET /api/sms/messages?clientId=<uuid>
+ *
+ * SMS thread for one client + the client's auto-pilot state, for the
+ * HelmSmart AI panel. Org-scoped (helmsmart-org-id cookie + RLS).
+ * smbai's messages table has no Twilio delivery-status column, so
+ * twilio_status is always null (the widget hides the badge when absent).
+ */
+
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
+
+export async function GET(request: NextRequest) {
+  const clientId = request.nextUrl.searchParams.get("clientId")?.trim() ?? "";
+  if (!clientId) return NextResponse.json({ ok: false, error: "Missing clientId" }, { status: 400 });
+
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
+  if (!orgId) return NextResponse.json({ ok: false, error: "Not authenticated" }, { status: 401 });
+
+  const supabase = await createClient();
+
+  const { data: client } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("id", clientId)
+    .eq("organization_id", orgId)
+    .maybeSingle();
+  if (!client) return NextResponse.json({ ok: false, error: "Client not found" }, { status: 404 });
+
+  // auto_pilot may not exist yet (migration 00045) — read best-effort so the
+  // thread still loads before the column is added.
+  let autoPilot = false;
+  {
+    const { data: ap } = await supabase
+      .from("clients")
+      .select("auto_pilot")
+      .eq("id", clientId)
+      .maybeSingle();
+    autoPilot = Boolean((ap as { auto_pilot?: boolean } | null)?.auto_pilot);
+  }
+
+  const { data, error } = await supabase
+    .from("messages")
+    .select("id, body, direction, sent_at, created_at")
+    .eq("organization_id", orgId)
+    .eq("client_id", clientId)
+    .eq("channel", "sms")
+    .order("sent_at", { ascending: true })
+    .limit(50);
+
+  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+
+  const messages = (data ?? []).map((m) => ({
+    id: m.id,
+    message: m.body,
+    direction: m.direction,
+    created_at: m.sent_at ?? m.created_at,
+    twilio_status: null,
+  }));
+
+  return NextResponse.json({ ok: true, autoPilot, messages });
+}
