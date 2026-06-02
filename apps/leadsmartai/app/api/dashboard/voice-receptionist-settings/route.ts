@@ -73,16 +73,12 @@ export async function PATCH(req: Request) {
 
     const settings = await upsertReceptionistConfig(agentId, input);
 
-    // Office hours live in their own jsonb column; save defensively so the rest
-    // of the config still saves even before the business_hours migration.
+    // Office hours live in their own jsonb column; save best-effort so the rest
+    // of the config still saves even before the business_hours migration (a
+    // missing column just means hours don't persist yet — never a failed save).
     if ("businessHours" in body) {
       const r = await setBusinessHours(agentId, body.businessHours as BusinessHours | null);
-      if (!r.ok) {
-        return NextResponse.json(
-          { ok: false, error: r.error || "Could not save office hours." },
-          { status: 400 },
-        );
-      }
+      if (!r.ok) console.warn("voice-receptionist-settings: office hours not saved:", r.error);
     }
 
     const { hours } = await getBookingSettings(agentId);
