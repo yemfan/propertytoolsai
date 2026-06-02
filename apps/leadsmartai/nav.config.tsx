@@ -33,6 +33,7 @@ import {
   TrendingUp,
   User,
   Users,
+  Wallet,
   Wrench,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -223,6 +224,12 @@ const navConfig = {
           href: "/dashboard/books",
           match: ["/dashboard/books"],
           icon: l(<Receipt size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          label: "Expenses",
+          href: "/dashboard/expenses",
+          match: ["/dashboard/expenses"],
+          icon: l(<Wallet size={14} strokeWidth={STROKE} aria-hidden />),
         },
       ],
     },
