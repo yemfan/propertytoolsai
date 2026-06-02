@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Sparkles } from "lucide-react";
 
 /**
  * HelmSmart AI — a floating, draggable/resizable assistant panel.
@@ -486,10 +485,11 @@ export function HelmSmartAiPanel() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg ring-1 ring-blue-300/40 transition-transform hover:scale-105 hover:bg-blue-700"
+        className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-[#0b1733] shadow-lg ring-1 ring-blue-400/30 transition-transform hover:scale-105 hover:ring-blue-300/50"
         aria-label="Open HelmSmart AI"
       >
-        <Sparkles className="h-7 w-7" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/helmsmart-mark.png" alt="" aria-hidden className="h-11 w-11 object-contain" />
       </button>
     );
   }
@@ -519,7 +519,8 @@ export function HelmSmartAiPanel() {
       >
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/95 ring-1 ring-white/40">
-            <Sparkles className="h-5 w-5 text-blue-600" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/helmsmart-mark.png" alt="" aria-hidden className="h-7 w-7 object-contain" />
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-bold">HelmSmart AI</p>
