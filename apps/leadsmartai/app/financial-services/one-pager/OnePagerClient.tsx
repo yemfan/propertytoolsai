@@ -28,7 +28,7 @@ export default function OnePagerClient() {
   const params = useSearchParams();
 
   useEffect(() => {
-    if (params.get("print") === "1") {
+    if (params?.get("print") === "1") {
       setTimeout(() => window.print(), 400);
     }
   }, [params]);

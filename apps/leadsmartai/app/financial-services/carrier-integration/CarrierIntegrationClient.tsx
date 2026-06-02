@@ -69,7 +69,7 @@ export default function CarrierIntegrationClient() {
   const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long" });
 
   useEffect(() => {
-    if (params.get("print") === "1") {
+    if (params?.get("print") === "1") {
       setTimeout(() => window.print(), 400);
     }
   }, [params]);

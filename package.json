@@ -33,6 +33,14 @@
     "db:migrate": "prisma migrate dev",
     "postinstall": "prisma generate"
   },
+  "pnpm": {
+    "overrides": {
+      "react": "19.2.0",
+      "react-dom": "19.2.0",
+      "@types/react": "19.2.14",
+      "@types/react-dom": "19.2.3"
+    }
+  },
   "devDependencies": {
     "@prisma/client": "^6.19.2",
     "cross-env": "^7.0.3",
