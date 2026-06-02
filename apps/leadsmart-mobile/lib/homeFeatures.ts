@@ -83,6 +83,13 @@ export const HOME_FEATURE_SECTIONS: readonly HomeFeatureSectionConfig[] = [
         href: "/quick-post",
         badge: { label: "NEW", variant: "new" },
       },
+      {
+        key: "expenses",
+        labelKey: "v2.tiles.expenses",
+        iconName: "wallet-outline",
+        href: "/expenses",
+        badge: { label: "NEW", variant: "new" },
+      },
     ],
   },
   {

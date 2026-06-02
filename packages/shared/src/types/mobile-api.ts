@@ -322,6 +322,55 @@ export type MobileDashboardResponse = {
   quickActions: MobileDashboardQuickAction[];
 };
 
+/**
+ * Realtor business-expense tracking (Books → Expenses). A realtor's income is
+ * commission, so the bookkeeping pain is logging COSTS for taxes. Logging is a
+ * natural mobile action — snap a receipt the moment money is spent.
+ */
+export type MobileExpenseDto = {
+  id: string;
+  /** YYYY-MM-DD */
+  expense_date: string;
+  amount: number;
+  category: string;
+  vendor: string | null;
+  notes: string | null;
+  /** Public URL of an uploaded receipt image, if any. */
+  receipt_url: string | null;
+  created_at: string;
+};
+
+export type MobileExpenseCategoryTotalDto = {
+  category: string;
+  total: number;
+  count: number;
+};
+
+export type MobileExpenseTotalsDto = {
+  total: number;
+  count: number;
+  byCategory: MobileExpenseCategoryTotalDto[];
+};
+
+/** `GET /api/mobile/expenses` — recent expenses + this-month / YTD totals. */
+export type MobileExpensesResponseDto = {
+  expenses: MobileExpenseDto[];
+  totals: { month: MobileExpenseTotalsDto; year: MobileExpenseTotalsDto };
+  /** Known realtor expense categories (single source of truth from the server). */
+  categories: string[];
+};
+
+/** Request body for `POST /api/mobile/expenses`. */
+export type MobileCreateExpenseRequestDto = {
+  amount: number;
+  category?: string;
+  vendor?: string | null;
+  notes?: string | null;
+  /** YYYY-MM-DD; defaults to today server-side when omitted. */
+  expenseDate?: string | null;
+  receiptUrl?: string | null;
+};
+
 export type DailyAgendaItemType = "task" | "appointment" | "follow_up";
 
 /** Single row for a daily agenda (tasks + appointments + CRM follow-up touchpoints). */

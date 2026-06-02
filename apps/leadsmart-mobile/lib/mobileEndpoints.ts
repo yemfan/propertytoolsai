@@ -18,6 +18,9 @@ export const MOBILE_API_PATHS = {
   pushRegister: "/api/mobile/push/register",
   tasks: "/api/mobile/tasks",
   task: (taskId: string) => `/api/mobile/tasks/${encodeURIComponent(taskId)}`,
+  expenses: "/api/mobile/expenses",
+  expensesDelete: "/api/mobile/expenses/delete",
+  expenseReceiptUpload: "/api/mobile/expenses/receipt",
   leadPipelineStage: (leadId: string) =>
     `/api/mobile/leads/${encodeURIComponent(leadId)}/pipeline-stage`,
   calendarEvents: "/api/mobile/calendar/events",

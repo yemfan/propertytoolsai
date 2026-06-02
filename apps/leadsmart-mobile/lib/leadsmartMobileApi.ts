@@ -15,6 +15,9 @@ import type {
   MobileDashboardStats,
   MobileEmailAiReplyResponseDto,
   MobileEmailMessageDto,
+  MobileExpenseDto,
+  MobileExpenseTotalsDto,
+  MobileExpensesResponseDto,
   MobileFollowUpReminderDto,
   MobileInboxThreadDto,
   MobileLeadDetailResponseDto,
@@ -888,6 +891,121 @@ export async function patchMobileNotificationPreferences(
     return { ok: false, status: 200, message: "Invalid notification preferences response." };
   }
   return { ok: true, preferences: p };
+}
+
+// ── Expenses (Books → realtor business-cost tracking) ────────────
+//
+// A realtor's income is commission, so the bookkeeping pain is
+// logging COSTS for taxes. Logging is a natural mobile action —
+// snap a receipt the moment money is spent. Mirrors
+// /api/mobile/expenses (list + create + delete) and
+// /api/mobile/expenses/receipt (multipart receipt-photo upload).
+
+type ExpensesListJson = MobileJsonError & Partial<MobileExpensesResponseDto>;
+
+export type MobileExpensesSuccess = {
+  ok: true;
+  expenses: MobileExpenseDto[];
+  totals: { month: MobileExpenseTotalsDto; year: MobileExpenseTotalsDto };
+  categories: string[];
+};
+
+const emptyTotals: MobileExpenseTotalsDto = { total: 0, count: 0, byCategory: [] };
+
+export async function fetchMobileExpenses(): Promise<MobileExpensesSuccess | MobileApiFailure> {
+  const res = await mobileGet<ExpensesListJson>(MOBILE_API_PATHS.expenses);
+  if (res.ok === false) return res;
+  const d = res.data;
+  if (!Array.isArray(d.expenses)) {
+    return { ok: false, status: 200, message: "Invalid expenses response." };
+  }
+  return {
+    ok: true,
+    expenses: d.expenses,
+    totals: {
+      month: d.totals?.month ?? emptyTotals,
+      year: d.totals?.year ?? emptyTotals,
+    },
+    categories: Array.isArray(d.categories) ? d.categories : [],
+  };
+}
+
+export type CreateMobileExpenseInput = {
+  amount: number;
+  category?: string;
+  vendor?: string | null;
+  notes?: string | null;
+  expenseDate?: string | null;
+  receiptUrl?: string | null;
+};
+
+export async function postMobileExpense(
+  input: CreateMobileExpenseInput
+): Promise<{ ok: true; id: string } | MobileApiFailure> {
+  const res = await mobilePost<MobileJsonError & { id?: string }>(MOBILE_API_PATHS.expenses, {
+    amount: input.amount,
+    category: input.category ?? null,
+    vendor: input.vendor ?? null,
+    notes: input.notes ?? null,
+    expenseDate: input.expenseDate ?? null,
+    receiptUrl: input.receiptUrl ?? null,
+  });
+  if (res.ok === false) return res;
+  const id = res.data.id;
+  if (!id) return { ok: false, status: 200, message: "Invalid create-expense response." };
+  return { ok: true, id: String(id) };
+}
+
+export async function deleteMobileExpense(
+  id: string
+): Promise<{ ok: true } | MobileApiFailure> {
+  const res = await mobilePost<MobileJsonError>(MOBILE_API_PATHS.expensesDelete, { id });
+  if (res.ok === false) return res;
+  return { ok: true };
+}
+
+/**
+ * Upload a receipt photo for an expense. Multipart POST (same pattern
+ * as uploadMobileMedia) — returns a stable public URL the caller
+ * passes to postMobileExpense as `receiptUrl`. Best-effort: callers
+ * should still log the expense if this fails.
+ */
+export async function uploadMobileReceipt(input: {
+  /** Local file URI from expo-image-picker. */
+  uri: string;
+  fileName?: string;
+  contentType?: string;
+}): Promise<{ ok: true; url: string } | MobileApiFailure> {
+  const cfg = requireConfig();
+  if (!isMobileConfig(cfg)) return cfg;
+  const { base, token } = cfg;
+
+  const fileName =
+    input.fileName || input.uri.split("/").pop() || `receipt-${Date.now()}.jpg`;
+  const mime = (input.contentType ?? "image/jpeg").toLowerCase();
+
+  const form = new FormData();
+  form.append(
+    "file",
+    { uri: input.uri, name: fileName, type: mime } as unknown as Blob,
+  );
+
+  try {
+    const res = await fetch(`${base}${MOBILE_API_PATHS.expenseReceiptUpload}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      body: form,
+    });
+    const body = (await res.json().catch(() => ({}))) as MobileJsonError & { url?: string };
+    if (!res.ok || body.ok === false || body.success === false) {
+      return parseMobileFailure(res.status, body, body.error ?? "Upload failed");
+    }
+    if (!body.url) return { ok: false, status: 500, message: "Upload returned no URL" };
+    return { ok: true, url: body.url };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Upload failed";
+    return { ok: false, status: 0, message: msg };
+  }
 }
 
 // ── Lead Queue ──
