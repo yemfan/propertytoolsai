@@ -231,7 +231,7 @@ const agentCopy: LandingCopy = {
       },
       {
         icon: "📲",
-        title: "AI Outbound Calling",
+        title: "AI Concierge",
         desc: "Confirms appointments, follows up with leads, and runs surveys — automatically",
       },
       {

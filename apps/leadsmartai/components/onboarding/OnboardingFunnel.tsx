@@ -770,7 +770,7 @@ export default function OnboardingFunnel({
         tagline: "For top producers running solo.",
         features: [
           "Unlimited leads & contacts",
-          "AI Receptionist + Outbound Calling",
+          "AI Receptionist + AI Concierge",
           "Top Producer Track coaching",
           "ISA workflow",
           "E-signature (Dotloop / DocuSign)",

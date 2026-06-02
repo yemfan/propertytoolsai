@@ -53,8 +53,8 @@ const features: Feature[] = [
     color: "text-teal-600",
     bgColor: "bg-teal-50",
     placeholderColor: "bg-teal-200",
-    headline: "AI Outbound Calling",
-    subheadline: "Your AI makes the calls you don't have time for",
+    headline: "AI Concierge",
+    subheadline: "Your AI makes the outbound calls you don't have time for",
     bullets: [
       "Appointment confirmations & reminders — cut no-shows automatically",
       "Lead and past-client follow-ups, on time every time",

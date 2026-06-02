@@ -67,7 +67,7 @@ const plans: {
       "Reports Download: Unlimited",
       "Top Producer Track coaching included",
       "Bookkeeping: Invoices & expenses",
-      "AI Calling: Receptionist + Outbound",
+      "AI Calling: Receptionist + Concierge",
     ],
     cta: "Upgrade to Premium",
   },

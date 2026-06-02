@@ -26,7 +26,7 @@ const tiers = [
     features: [
       "Everything in Starter",
       "AI Receptionist",
-      "AI Outbound Calling (confirmations, follow-ups, surveys)",
+      "AI Concierge (confirmations, follow-ups, surveys)",
       "HelmSmart AI Assistant",
       "Missed-call text-back & Auto Pilot",
       "Bookkeeping & expenses",

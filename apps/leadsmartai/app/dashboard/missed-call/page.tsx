@@ -4,7 +4,7 @@ import MissedCallPageClient from "./MissedCallPageClient";
 export const metadata: Metadata = {
   title: "AI Assistant",
   description:
-    "Your AI voice assistant — inbound call activity + missed-call auto-text, plus outbound AI calling.",
+    "Your AI voice assistant — inbound call activity + missed-call auto-text, plus AI Concierge outbound calls.",
   robots: { index: false },
 };
 

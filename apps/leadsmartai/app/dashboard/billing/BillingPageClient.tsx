@@ -67,7 +67,7 @@ const FEATURE_LABELS: Record<string, string> = {
   producer_track_coaching: "Producer Track coaching",
   top_producer_track_coaching: "Top Producer Track coaching",
   bookkeeping: "Bookkeeping (invoices & expenses)",
-  ai_calling: "AI Outbound Calling",
+  ai_calling: "AI Concierge (outbound calls)",
 };
 
 function featureLabel(key: string) {

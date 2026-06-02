@@ -479,7 +479,7 @@ const GROWTH_ENGINE: Pillar[] = [
     features: [
       "SMS + email automation",
       "AI receptionist — answers every call &amp; books showings 24/7",
-      "AI outbound calling — confirmations, follow-ups &amp; surveys",
+      "AI Concierge — outbound confirmations, follow-ups &amp; surveys",
       "Multi-step follow-up sequences",
       "Behavior-based triggers",
     ],

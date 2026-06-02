@@ -131,7 +131,7 @@ export default function OutboundCallPanel() {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-900">AI outbound call</h2>
+        <h2 className="text-sm font-semibold text-slate-900">AI Concierge</h2>
         <p className="mt-0.5 mb-4 text-xs text-slate-500">
           Lucy dials the lead from your receptionist number, opens by disclosing she&apos;s an AI
           assistant, and follows up on your behalf — then logs the call below in Inbound &amp; outbound activity.
