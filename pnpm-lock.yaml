@@ -537,7 +537,13 @@ importers:
         specifier: ^5.1.6
         version: 5.9.3
 
+  industry-packs/financial-services: {}
+
+  industry-packs/real-estate: {}
+
   packages/ai: {}
+
+  packages/ai-workforce: {}
 
   packages/api-client:
     dependencies:
@@ -548,6 +554,26 @@ importers:
       typescript:
         specifier: ^5.1.6
         version: 5.9.3
+
+  packages/data: {}
+
+  packages/dna-communication: {}
+
+  packages/dna-finance: {}
+
+  packages/dna-intelligence: {}
+
+  packages/dna-knowledge: {}
+
+  packages/dna-marketing: {}
+
+  packages/dna-operations: {}
+
+  packages/dna-people: {}
+
+  packages/dna-revenue: {}
+
+  packages/dna-service: {}
 
   packages/growth: {}
 
@@ -567,6 +593,8 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.99.2
         version: 2.100.1
+
+  packages/platform: {}
 
   packages/shared:
     devDependencies:
