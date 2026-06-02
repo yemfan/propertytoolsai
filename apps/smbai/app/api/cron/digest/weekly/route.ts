@@ -103,9 +103,9 @@ export async function GET(request: NextRequest) {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:40px 0">
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)">
-        <tr><td style="background:#4f46e5;padding:20px 32px">
+        <tr><td style="background:#1e88e5;padding:20px 32px">
           <span style="font-size:16px;font-weight:700;color:#fff">${org.name}</span>
-          <span style="font-size:13px;color:#c7d2fe;float:right">Your week ahead</span>
+          <span style="font-size:13px;color:#aad4f7;float:right">Your week ahead</span>
         </td></tr>
         <tr><td style="padding:28px 32px 8px">
           <p style="margin:0 0 4px;font-size:18px;font-weight:700;color:#1e293b">Monday snapshot</p>
@@ -122,8 +122,8 @@ export async function GET(request: NextRequest) {
           </table>
         </td></tr>
         <tr><td style="padding:16px 32px 32px">
-          <a href="${appUrl}/home" style="display:inline-block;background:#4f46e5;color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:10px">Open dashboard →</a>
-          <a href="${appUrl}/reports?tab=forecast" style="display:inline-block;margin-left:8px;color:#4f46e5;font-size:14px;font-weight:600;text-decoration:none;padding:12px 8px">View cash-flow forecast</a>
+          <a href="${appUrl}/home" style="display:inline-block;background:#1e88e5;color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:10px">Open dashboard →</a>
+          <a href="${appUrl}/reports?tab=forecast" style="display:inline-block;margin-left:8px;color:#1e88e5;font-size:14px;font-weight:600;text-decoration:none;padding:12px 8px">View cash-flow forecast</a>
         </td></tr>
         <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px;text-align:center">
           <p style="margin:0;font-size:12px;color:#94a3b8">Weekly digest · Powered by HelmSmart</p>

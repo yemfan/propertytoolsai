@@ -68,7 +68,7 @@ export default async function JoinPage({
           style={{
             width: 52,
             height: 52,
-            background: "#4f46e5",
+            background: "#1e88e5",
             borderRadius: 14,
             display: "flex",
             alignItems: "center",
@@ -97,7 +97,7 @@ export default async function JoinPage({
               style={{
                 display: "inline-block",
                 padding: "10px 24px",
-                background: "#4f46e5",
+                background: "#1e88e5",
                 color: "#fff",
                 borderRadius: 10,
                 fontSize: 14,
@@ -133,7 +133,7 @@ export default async function JoinPage({
                   style={{
                     display: "block",
                     padding: "12px 24px",
-                    background: "#4f46e5",
+                    background: "#1e88e5",
                     color: "#fff",
                     borderRadius: 10,
                     fontSize: 14,

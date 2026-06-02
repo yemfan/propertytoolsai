@@ -86,10 +86,10 @@ export default async function ClientPortalPage({
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
       {/* Header bar */}
-      <div style={{ background: "#4f46e5", padding: "16px 0" }}>
+      <div style={{ background: "#1e88e5", padding: "16px 0" }}>
         <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>{orgName}</span>
-          <span style={{ color: "#c7d2fe", fontSize: 13 }}>Client Portal</span>
+          <span style={{ color: "#aad4f7", fontSize: 13 }}>Client Portal</span>
         </div>
       </div>
 
@@ -153,7 +153,7 @@ export default async function ClientPortalPage({
                       href={`${appUrl}/pay/${inv.id}`}
                       style={{
                         padding: "7px 16px",
-                        background: "#4f46e5",
+                        background: "#1e88e5",
                         color: "#fff",
                         borderRadius: 8,
                         fontSize: 12,
@@ -205,8 +205,8 @@ export default async function ClientPortalPage({
                       style={{
                         padding: "7px 16px",
                         background: "#f8fafc",
-                        color: "#4f46e5",
-                        border: "1px solid #e0e7ff",
+                        color: "#1e88e5",
+                        border: "1px solid #d2e8fb",
                         borderRadius: 8,
                         fontSize: 12,
                         fontWeight: 600,

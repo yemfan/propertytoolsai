@@ -1,5 +1,37 @@
 @import "tailwindcss";
 
+/*
+ * HelmSmart brand color (#1E88E5 "Blue Steel"). The app was built on Tailwind's
+ * indigo (primary accent) + some blue (secondary). Remap BOTH palettes to one
+ * brand-azure ramp so every accent across the app resolves to brand blue with
+ * no per-file churn. Anchored: 600 = #1E88E5; darker steps trend toward navy.
+ */
+@theme {
+  --color-indigo-50: #eaf4fd;
+  --color-indigo-100: #d2e8fb;
+  --color-indigo-200: #aad4f7;
+  --color-indigo-300: #74b9f1;
+  --color-indigo-400: #429beb;
+  --color-indigo-500: #2790e8;
+  --color-indigo-600: #1e88e5;
+  --color-indigo-700: #186fbe;
+  --color-indigo-800: #185b98;
+  --color-indigo-900: #194b7b;
+  --color-indigo-950: #0f2e4c;
+
+  --color-blue-50: #eaf4fd;
+  --color-blue-100: #d2e8fb;
+  --color-blue-200: #aad4f7;
+  --color-blue-300: #74b9f1;
+  --color-blue-400: #429beb;
+  --color-blue-500: #2790e8;
+  --color-blue-600: #1e88e5;
+  --color-blue-700: #186fbe;
+  --color-blue-800: #185b98;
+  --color-blue-900: #194b7b;
+  --color-blue-950: #0f2e4c;
+}
+
 :root {
   --font-body: '';
   --font-mono: '';

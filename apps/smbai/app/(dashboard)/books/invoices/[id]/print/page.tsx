@@ -100,7 +100,7 @@ export default async function InvoicePrintPage({
             margin-bottom: 40px;
           }
           .no-print button {
-            background: #4f46e5;
+            background: #1e88e5;
             color: #fff;
             border: none;
             border-radius: 8px;
@@ -121,7 +121,7 @@ export default async function InvoicePrintPage({
             margin-bottom: 40px;
           }
           .org-name { font-size: 20px; font-weight: 700; color: #0f172a; }
-          .inv-num  { font-size: 28px; font-weight: 800; color: #4f46e5; font-variant-numeric: tabular-nums; }
+          .inv-num  { font-size: 28px; font-weight: 800; color: #1e88e5; font-variant-numeric: tabular-nums; }
           .label    { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; margin-bottom: 3px; }
           .meta-grid {
             display: grid;

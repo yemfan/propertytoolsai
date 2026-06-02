@@ -83,11 +83,11 @@ export default async function ClientStatementPage({
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #0f172a; background: #fff; font-size: 13px; }
           .page { max-width: 720px; margin: 0 auto; padding: 48px; }
           .no-print { display: flex; align-items: center; justify-content: space-between; padding: 12px 0 28px; border-bottom: 1px solid #e2e8f0; margin-bottom: 40px; }
-          .no-print button { background: #4f46e5; color: #fff; border: none; border-radius: 8px; padding: 9px 20px; font-size: 13px; font-weight: 600; cursor: pointer; }
+          .no-print button { background: #1e88e5; color: #fff; border: none; border-radius: 8px; padding: 9px 20px; font-size: 13px; font-weight: 600; cursor: pointer; }
           .no-print a { font-size: 13px; color: #64748b; text-decoration: none; }
           .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
           .org-name { font-size: 20px; font-weight: 700; color: #0f172a; }
-          .title { font-size: 24px; font-weight: 800; color: #4f46e5; }
+          .title { font-size: 24px; font-weight: 800; color: #1e88e5; }
           .label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; margin-bottom: 3px; }
           .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 36px; padding-bottom: 28px; border-bottom: 1px solid #e2e8f0; }
           table { width: 100%; border-collapse: collapse; }
