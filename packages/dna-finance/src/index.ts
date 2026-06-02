@@ -5,3 +5,4 @@
 // Core package: MUST NOT import @helm/pack-* or apps/*. Depends only on @helm/data + @supabase.
 export * from "./money";
 export * from "./invoices";
+export * from "./expenses";
