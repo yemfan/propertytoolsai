@@ -100,7 +100,10 @@ export default async function VoicePage() {
   const totalSessions = sessions?.length ?? 0;
   const booked  = (sessions ?? []).filter((s) => s.booked_event_id).length;
   const msgLeft = (sessions ?? []).filter(
-    (s) => (s.messages as { role: string }[]).some((m) => m.role === "user") && !s.booked_event_id
+    (s) =>
+      (Array.isArray(s.messages) ? (s.messages as { role: string }[]) : []).some(
+        (m) => m?.role === "user",
+      ) && !s.booked_event_id,
   ).length;
   const totalSeconds = (sessions ?? []).reduce((sum, s) => sum + (s.duration_seconds ?? 0), 0);
   const totalMinutes = totalSeconds / 60;
@@ -207,7 +210,9 @@ export default async function VoicePage() {
         ) : (
           <div className="divide-y divide-slate-50">
             {sessions.map((session) => {
-              const msgs = session.messages as { role: string; content: string }[];
+              const msgs = Array.isArray(session.messages)
+                ? (session.messages as { role: string; content: string }[])
+                : [];
               const turns = Math.ceil(msgs.length / 2);
               return (
                 <details key={session.id} className="group">

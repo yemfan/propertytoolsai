@@ -161,7 +161,7 @@ export default async function ReceptionPage() {
                     <p className={`text-xs font-medium ${
                       call.status === "missed" ? "text-rose-600" : "text-emerald-600"
                     }`}>
-                      {call.status.charAt(0).toUpperCase() + call.status.slice(1)}
+                      {call.status ? call.status.charAt(0).toUpperCase() + call.status.slice(1) : "—"}
                     </p>
                     <p className="text-xs text-slate-400">{timeAgo(call.called_at)}</p>
                   </div>
