@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const config: NextConfig = {
   experimental: {},
   // HelmSmart Core packages are TS source — Next must transpile them.
-  transpilePackages: ["@helm/data"],
+  transpilePackages: ["@helm/data", "@helm/dna-finance"],
   // Hardcode public Supabase values so they are always embedded at build time.
   // The anon key is intentionally public (protected by RLS, safe to commit).
   env: {
