@@ -18,6 +18,8 @@
     "@anthropic-ai/sdk": "^0.73.0",
     "@helm/data": "workspace:*",
     "@helm/dna-communication": "workspace:*",
+    "@helm/dna-finance": "workspace:*",
+    "@helm/dna-operations": "workspace:*",
     "@repo/voice": "workspace:*",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.99.2",

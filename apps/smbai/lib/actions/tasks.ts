@@ -3,11 +3,16 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import {
+  insertTask,
+  setTaskStatus,
+  deleteTask as deleteTaskOps,
+  type TaskStatus,
+  type TaskPriority,
+} from "@helm/dna-operations";
 
-type TaskStatus = "open" | "in_progress" | "done" | "cancelled";
-type TaskPriority = "low" | "normal" | "high" | "urgent";
-
-// ─── Create ───────────────────────────────────────────────────────────────────
+// Org-scoped task CRUD lives in @helm/dna-operations (Operations DNA). These server
+// actions own org resolution + revalidation.
 
 export async function createTask(data: {
   title: string;
@@ -21,22 +26,10 @@ export async function createTask(data: {
   if (!orgId) throw new Error("Not authenticated");
 
   const supabase = await createClient();
-  const { error } = await supabase.from("tasks").insert({
-    organization_id: orgId,
-    title: data.title,
-    notes: data.notes ?? null,
-    due_date: data.due_date ?? null,
-    client_id: data.client_id || null,
-    priority: data.priority ?? "normal",
-    status: "open",
-  });
-
-  if (error) throw new Error(error.message);
+  await insertTask(supabase, orgId, data);
   revalidatePath("/tasks");
   if (data.client_id) revalidatePath(`/clients/${data.client_id}`);
 }
-
-// ─── Update status ────────────────────────────────────────────────────────────
 
 export async function updateTaskStatus(taskId: string, status: TaskStatus) {
   const cookieStore = await cookies();
@@ -44,19 +37,10 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus) {
   if (!orgId) throw new Error("Not authenticated");
 
   const supabase = await createClient();
-  const { data: task } = await supabase
-    .from("tasks")
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", taskId)
-    .eq("organization_id", orgId)
-    .select("client_id")
-    .single();
-
+  const { clientId } = await setTaskStatus(supabase, orgId, taskId, status);
   revalidatePath("/tasks");
-  if (task?.client_id) revalidatePath(`/clients/${task.client_id}`);
+  if (clientId) revalidatePath(`/clients/${clientId}`);
 }
-
-// ─── Delete ───────────────────────────────────────────────────────────────────
 
 export async function deleteTask(taskId: string) {
   const cookieStore = await cookies();
@@ -64,14 +48,7 @@ export async function deleteTask(taskId: string) {
   if (!orgId) throw new Error("Not authenticated");
 
   const supabase = await createClient();
-  const { data: task } = await supabase
-    .from("tasks")
-    .delete()
-    .eq("id", taskId)
-    .eq("organization_id", orgId)
-    .select("client_id")
-    .single();
-
+  const { clientId } = await deleteTaskOps(supabase, orgId, taskId);
   revalidatePath("/tasks");
-  if (task?.client_id) revalidatePath(`/clients/${task.client_id}`);
+  if (clientId) revalidatePath(`/clients/${clientId}`);
 }
