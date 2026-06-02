@@ -7,6 +7,7 @@ import MissedCallActivityLog from "@/components/dashboard/MissedCallActivityLog"
 import MissedCallSettingsForm from "@/components/dashboard/MissedCallSettingsForm";
 import OutboundCallPanel from "@/components/dashboard/OutboundCallPanel";
 import BulkCallPanel from "@/components/dashboard/BulkCallPanel";
+import AppointmentRemindersPanel from "@/components/dashboard/AppointmentRemindersPanel";
 
 /**
  * /dashboard/missed-call — the AI Assistant voice console.
@@ -106,6 +107,7 @@ export default function MissedCallPageClient() {
       ) : (
         <div className="space-y-4">
           <OutboundCallPanel />
+          <AppointmentRemindersPanel />
           <BulkCallPanel />
         </div>
       )}

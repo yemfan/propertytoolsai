@@ -4,6 +4,7 @@ import {
   buildOutboundDynamicVariables,
   createPhoneCall,
   type ReceptionistContext,
+  type OutboundPurpose,
 } from "@repo/voice";
 import { logOutboundCall } from "@/lib/missed-call/service";
 
@@ -23,10 +24,15 @@ export async function placeOutboundCall(args: {
   agentId: string;
   leadName: string;
   toNumberE164: string;
+  /** Defaults to "follow_up". Use "appointment_reminder" for booking reminders. */
+  purpose?: OutboundPurpose;
+  /** Extra context for the purpose, e.g. the appointment time for a reminder. */
+  detail?: string;
 }): Promise<{ callId: string }> {
   const dynamicVariables = buildOutboundDynamicVariables(args.ctx, {
     leadName: args.leadName,
-    purpose: "follow_up",
+    purpose: args.purpose ?? "follow_up",
+    detail: args.detail,
   });
 
   const { callId } = await createPhoneCall({
