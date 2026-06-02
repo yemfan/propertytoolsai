@@ -65,6 +65,281 @@ export type Database = {
           },
         ]
       }
+      ai_employee_memory: {
+        Row: {
+          content: string
+          created_at: string
+          employee_id: string
+          expires_at: string | null
+          id: string
+          importance: number
+          kind: string
+          organization_id: string
+          subject_id: string | null
+          subject_type: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          employee_id: string
+          expires_at?: string | null
+          id?: string
+          importance?: number
+          kind?: string
+          organization_id: string
+          subject_id?: string | null
+          subject_type?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          employee_id?: string
+          expires_at?: string | null
+          id?: string
+          importance?: number
+          kind?: string
+          organization_id?: string
+          subject_id?: string | null
+          subject_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_employee_memory_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "ai_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_employee_memory_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_employee_metrics: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          metric_date: string
+          metric_key: string
+          metric_value: number
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          metric_date: string
+          metric_key: string
+          metric_value?: number
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          metric_date?: string
+          metric_key?: string
+          metric_value?: number
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_employee_metrics_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "ai_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_employee_metrics_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_employee_runs: {
+        Row: {
+          channel: string | null
+          cost_cents: number
+          employee_id: string
+          ended_at: string | null
+          id: string
+          organization_id: string
+          outcome: Json
+          started_at: string
+          status: string
+          subject_id: string | null
+          subject_type: string | null
+          tokens_used: number
+        }
+        Insert: {
+          channel?: string | null
+          cost_cents?: number
+          employee_id: string
+          ended_at?: string | null
+          id?: string
+          organization_id: string
+          outcome?: Json
+          started_at?: string
+          status?: string
+          subject_id?: string | null
+          subject_type?: string | null
+          tokens_used?: number
+        }
+        Update: {
+          channel?: string | null
+          cost_cents?: number
+          employee_id?: string
+          ended_at?: string | null
+          id?: string
+          organization_id?: string
+          outcome?: Json
+          started_at?: string
+          status?: string
+          subject_id?: string | null
+          subject_type?: string | null
+          tokens_used?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_employee_runs_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "ai_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_employee_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_employee_tools: {
+        Row: {
+          config: Json
+          created_at: string
+          dna_module: Database["public"]["Enums"]["dna_module"]
+          employee_id: string
+          enabled: boolean
+          id: string
+          organization_id: string
+          tool_key: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          dna_module: Database["public"]["Enums"]["dna_module"]
+          employee_id: string
+          enabled?: boolean
+          id?: string
+          organization_id: string
+          tool_key: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          dna_module?: Database["public"]["Enums"]["dna_module"]
+          employee_id?: string
+          enabled?: boolean
+          id?: string
+          organization_id?: string
+          tool_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_employee_tools_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "ai_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_employee_tools_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_employees: {
+        Row: {
+          config: Json
+          created_at: string
+          department: string
+          dna_module: Database["public"]["Enums"]["dna_module"]
+          goals: Json
+          id: string
+          industry_pack: string | null
+          knowledge_sources: Json
+          model: string
+          name: string
+          organization_id: string
+          permissions: Json
+          personality: string
+          role: string
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          department: string
+          dna_module: Database["public"]["Enums"]["dna_module"]
+          goals?: Json
+          id?: string
+          industry_pack?: string | null
+          knowledge_sources?: Json
+          model?: string
+          name: string
+          organization_id: string
+          permissions?: Json
+          personality?: string
+          role: string
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          department?: string
+          dna_module?: Database["public"]["Enums"]["dna_module"]
+          goals?: Json
+          id?: string
+          industry_pack?: string | null
+          knowledge_sources?: Json
+          model?: string
+          name?: string
+          organization_id?: string
+          permissions?: Json
+          personality?: string
+          role?: string
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_employees_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointment_types: {
         Row: {
           active: boolean
@@ -2616,7 +2891,17 @@ export type Database = {
       get_user_workspace_ids: { Args: never; Returns: string[] }
     }
     Enums: {
-      [_ in never]: never
+      dna_module:
+        | "revenue"
+        | "marketing"
+        | "service"
+        | "operations"
+        | "finance"
+        | "people"
+        | "communication"
+        | "knowledge"
+        | "intelligence"
+        | "platform"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2743,6 +3028,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      dna_module: [
+        "revenue",
+        "marketing",
+        "service",
+        "operations",
+        "finance",
+        "people",
+        "communication",
+        "knowledge",
+        "intelligence",
+        "platform",
+      ],
+    },
   },
 } as const
