@@ -485,7 +485,7 @@ export function HelmSmartAiPanel() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-[#0b1733] shadow-lg ring-1 ring-blue-400/30 transition-transform hover:scale-105 hover:ring-blue-300/50"
+        className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-[#0B1D33] shadow-lg ring-1 ring-blue-400/30 transition-transform hover:scale-105 hover:ring-blue-300/50"
         aria-label="Open HelmSmart AI"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -515,7 +515,7 @@ export function HelmSmartAiPanel() {
         onPointerDown={onHeaderPointerDown}
         onDoubleClick={resetPosition}
         title="Drag to reposition · Double-click to reset position + size"
-        className={`flex items-center justify-between gap-3 bg-blue-600 px-4 py-3 text-white touch-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
+        className={`flex items-center justify-between gap-3 bg-[#1E88E5] px-4 py-3 text-white touch-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
       >
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/95 ring-1 ring-white/40">
@@ -567,7 +567,7 @@ export function HelmSmartAiPanel() {
             <button
               type="button"
               onClick={openNewContactTab}
-              className="ml-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-blue-50 hover:text-blue-600"
+              className="ml-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-blue-50 hover:text-[#1E88E5]"
               aria-label="New contact tab"
               title="New contact tab"
             >
@@ -652,7 +652,7 @@ function TabPill({
         active
           ? tone === "autopilot"
             ? "bg-amber-500 text-white"
-            : "bg-blue-600 text-white"
+            : "bg-[#1E88E5] text-white"
           : tone === "autopilot"
             ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
             : "bg-white text-gray-700 hover:bg-gray-100"
@@ -717,7 +717,7 @@ function GuideTabBody({
               <button
                 key={q}
                 onClick={() => send(q)}
-                className="block w-full rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-left text-sm text-blue-600 transition hover:bg-blue-100"
+                className="block w-full rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-left text-sm text-[#1E88E5] transition hover:bg-blue-100"
               >
                 {q}
               </button>
@@ -769,7 +769,7 @@ function GuideTabBody({
         <button
           onClick={() => send(input)}
           disabled={loading || !input.trim()}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-lg bg-[#1E88E5] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1872c9] disabled:opacity-50"
         >
           Send
         </button>
@@ -846,7 +846,7 @@ function ContactTabBody({
                 type="button"
                 onClick={() => generateDraft(tab)}
                 disabled={tab.drafting || !tab.prompt.trim()}
-                className="mt-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                className="mt-1 rounded-lg bg-[#1E88E5] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1872c9] disabled:opacity-50"
               >
                 {tab.drafting ? "Drafting..." : "Generate draft"}
               </button>
@@ -909,7 +909,7 @@ function ContactTabBody({
                           m.direction === "outbound"
                             ? badge?.tone === "error"
                               ? "bg-rose-600 text-white"
-                              : "bg-blue-600 text-white"
+                              : "bg-[#1E88E5] text-white"
                             : "bg-white text-gray-800 ring-1 ring-gray-200"
                         }`}
                       >

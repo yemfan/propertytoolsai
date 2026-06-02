@@ -23,7 +23,7 @@ export function MarketingNav() {
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <HelmLogo className="h-8 w-8" />
           <span className="text-lg font-semibold tracking-tight text-gray-900">
-            HelmSmart
+            HelmSmart<span style={{ color: "#1E88E5" }}>.ai</span>
           </span>
         </Link>
 

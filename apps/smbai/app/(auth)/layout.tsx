@@ -14,7 +14,7 @@ export default function AuthLayout({
           <HelmLogo size={48} variant="color" />
           <div>
             <span className="text-2xl font-bold text-slate-900 tracking-tight">
-              Helm<span className="text-indigo-600">Smart</span>
+              HelmSmart<span style={{ color: "#1E88E5" }}>.ai</span>
             </span>
             <p className="mt-1 text-sm text-slate-500">More control, less effort</p>
           </div>
