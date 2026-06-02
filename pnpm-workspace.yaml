@@ -16,3 +16,4 @@ nodeLinker: hoisted
 packages:
   - "apps/*"
   - "packages/*"
+  - "industry-packs/*"

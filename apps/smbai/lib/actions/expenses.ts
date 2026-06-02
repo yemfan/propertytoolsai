@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { recordExpense } from "@helm/dna-finance";
 import { checkProjectBudgetAlert } from "./budget-alerts";
 
 export interface ExpenseInput {
@@ -23,74 +24,8 @@ export async function createExpense(input: ExpenseInput) {
 
   const supabase = await createClient();
 
-  // Resolve credit account: bank CoA or Accounts Payable
-  let creditAccountId: string;
-
-  if (input.paymentSourceId) {
-    // Use the bank account's mapped CoA account
-    const { data: bank } = await supabase
-      .from("bank_accounts")
-      .select("coa_account_id")
-      .eq("id", input.paymentSourceId)
-      .eq("organization_id", orgId)
-      .single();
-    if (!bank?.coa_account_id) throw new Error("Bank account has no CoA mapping — set it in Settings first");
-    creditAccountId = bank.coa_account_id;
-  } else {
-    // Accounts Payable (first liability account with "payable" in name, or just first liability)
-    const { data: ap } = await supabase
-      .from("chart_of_accounts")
-      .select("id")
-      .eq("organization_id", orgId)
-      .eq("type", "liability")
-      .ilike("name", "%payable%")
-      .order("code")
-      .limit(1)
-      .single();
-    if (!ap) throw new Error("No Accounts Payable account found in Chart of Accounts");
-    creditAccountId = ap.id;
-  }
-
-  // Verify expense account belongs to this org
-  const { data: expAcct } = await supabase
-    .from("chart_of_accounts")
-    .select("id, name")
-    .eq("id", input.expenseAccountId)
-    .eq("organization_id", orgId)
-    .single();
-  if (!expAcct) throw new Error("Expense account not found");
-
-  // Post journal entry: DR expense / CR bank (or payable)
-  const { data: je, error: jeErr } = await supabase
-    .from("journal_entries")
-    .insert({
-      organization_id: orgId,
-      date: input.date,
-      memo: input.description,
-      source_type: "expense",
-      project_id: input.projectId ?? null,
-    })
-    .select("id")
-    .single();
-
-  if (jeErr || !je) throw new Error(jeErr?.message ?? "Failed to create journal entry");
-
-  await supabase.from("journal_lines").insert([
-    {
-      journal_entry_id: je.id,
-      account_id: input.expenseAccountId,
-      debit: input.amount,
-      credit: 0,
-      description: input.description,
-    },
-    {
-      journal_entry_id: je.id,
-      account_id: creditAccountId,
-      debit: 0,
-      credit: input.amount,
-      description: input.description,
-    },
-  ]);
+  // Double-entry posting (DR expense / CR bank|payable) lives in @helm/dna-finance.
+  await recordExpense(supabase, orgId, input);
 
   revalidatePath("/books");
   revalidatePath("/books/expenses");

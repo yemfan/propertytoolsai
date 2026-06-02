@@ -1,43 +1,4 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { cookies } from "next/headers";
-
-export async function createClient() {
-  const cookieStore = await cookies();
-
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // setAll called from a Server Component — cookies will be set
-            // by the middleware instead.
-          }
-        },
-      },
-    }
-  );
-}
-
-/** Service-role client for server-side mutations (bypasses RLS). */
-export function createServiceClient() {
-  const serviceKey =
-    process.env.SMBAI_SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    "";
-  return createServerClient(
-    "https://vpmwsnoosuiknyzdxgtk.supabase.co",
-    serviceKey,
-    {
-      cookies: { getAll: () => [], setAll: () => {} },
-    }
-  );
-}
+// Canonical Supabase access now lives in @helm/data (single source of truth).
+// This thin re-export keeps the ~120 importers of "@/lib/supabase/server" working
+// unchanged while the implementation is owned by HelmSmart Core.
+export { createClient, createServiceClient } from "@helm/data/server";

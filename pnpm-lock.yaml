@@ -167,6 +167,12 @@ importers:
       '@googlemaps/js-api-loader':
         specifier: ^2.0.2
         version: 2.0.2
+      '@helm/dna-communication':
+        specifier: workspace:*
+        version: link:../../packages/dna-communication
+      '@helm/pack-real-estate':
+        specifier: workspace:*
+        version: link:../../industry-packs/real-estate
       '@leadsmart/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
@@ -466,6 +472,12 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.73.0
         version: 0.73.0(zod@3.25.76)
+      '@helm/data':
+        specifier: workspace:*
+        version: link:../../packages/data
+      '@helm/dna-communication':
+        specifier: workspace:*
+        version: link:../../packages/dna-communication
       '@repo/voice':
         specifier: workspace:*
         version: link:../../packages/voice
@@ -537,7 +549,15 @@ importers:
         specifier: ^5.1.6
         version: 5.9.3
 
-  packages/ai: {}
+  industry-packs/financial-services: {}
+
+  industry-packs/real-estate:
+    dependencies:
+      '@helm/dna-communication':
+        specifier: workspace:*
+        version: link:../../packages/dna-communication
+
+  packages/ai-workforce: {}
 
   packages/api-client:
     dependencies:
@@ -548,6 +568,43 @@ importers:
       typescript:
         specifier: ^5.1.6
         version: 5.9.3
+
+  packages/data:
+    dependencies:
+      '@supabase/ssr':
+        specifier: ^0.6.1
+        version: 0.6.1(@supabase/supabase-js@2.100.1)
+      '@supabase/supabase-js':
+        specifier: ^2.99.2
+        version: 2.100.1
+      next:
+        specifier: '>=15'
+        version: 16.1.6(@playwright/test@1.59.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.2.0))(react@19.2.0)
+
+  packages/dna-communication: {}
+
+  packages/dna-finance:
+    dependencies:
+      '@helm/data':
+        specifier: workspace:*
+        version: link:../data
+      '@supabase/supabase-js':
+        specifier: ^2.99.2
+        version: 2.100.1
+
+  packages/dna-intelligence: {}
+
+  packages/dna-knowledge: {}
+
+  packages/dna-marketing: {}
+
+  packages/dna-operations: {}
+
+  packages/dna-people: {}
+
+  packages/dna-revenue: {}
+
+  packages/dna-service: {}
 
   packages/growth: {}
 
@@ -567,6 +624,8 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.99.2
         version: 2.100.1
+
+  packages/platform: {}
 
   packages/shared:
     devDependencies:
@@ -10444,7 +10503,7 @@ snapshots:
       '@next/eslint-plugin-next': 16.2.1
       eslint: 9.39.4(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.4(jiti@2.6.1))
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1))
       eslint-plugin-jsx-a11y: 6.10.2(eslint@9.39.4(jiti@2.6.1))
       eslint-plugin-react: 7.37.5(eslint@9.39.4(jiti@2.6.1))
@@ -10487,7 +10546,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1)):
+  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.4(jiti@2.6.1)):
     dependencies:
       '@nolyfill/is-core-module': 1.0.39
       debug: 4.4.3
@@ -10502,36 +10561,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.4(jiti@2.6.1)):
-    dependencies:
-      '@nolyfill/is-core-module': 1.0.39
-      debug: 4.4.3
-      eslint: 9.39.4(jiti@2.6.1)
-      get-tsconfig: 4.13.7
-      is-bun-module: 2.0.0
-      stable-hash: 0.0.5
-      tinyglobby: 0.2.15
-      unrs-resolver: 1.11.1
-    optionalDependencies:
-      eslint-plugin-import: 2.32.0(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1))
-    transitivePeerDependencies:
-      - supports-color
-
-  eslint-module-utils@2.12.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1)):
+  eslint-module-utils@2.12.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1)):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
       '@typescript-eslint/parser': 8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
-      eslint: 9.39.4(jiti@2.6.1)
-      eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1))
-    transitivePeerDependencies:
-      - supports-color
-
-  eslint-module-utils@2.12.1(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1)):
-    dependencies:
-      debug: 3.2.7
-    optionalDependencies:
       eslint: 9.39.4(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.4(jiti@2.6.1))
@@ -10549,7 +10583,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.39.4(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1)))(eslint@9.39.4(jiti@2.6.1))
+      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1))
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
@@ -10578,7 +10612,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.39.4(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.1(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1))
+      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.4(jiti@2.6.1))
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
@@ -12286,6 +12320,32 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
+  next@16.1.6(@playwright/test@1.59.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.2.0))(react@19.2.0):
+    dependencies:
+      '@next/env': 16.1.6
+      '@swc/helpers': 0.5.15
+      baseline-browser-mapping: 2.10.12
+      caniuse-lite: 1.0.30001781
+      postcss: 8.4.31
+      react: 19.2.0
+      react-dom: 19.1.0(react@19.2.0)
+      styled-jsx: 5.1.6(react@19.2.0)
+    optionalDependencies:
+      '@next/swc-darwin-arm64': 16.1.6
+      '@next/swc-darwin-x64': 16.1.6
+      '@next/swc-linux-arm64-gnu': 16.1.6
+      '@next/swc-linux-arm64-musl': 16.1.6
+      '@next/swc-linux-x64-gnu': 16.1.6
+      '@next/swc-linux-x64-musl': 16.1.6
+      '@next/swc-win32-arm64-msvc': 16.1.6
+      '@next/swc-win32-x64-msvc': 16.1.6
+      '@playwright/test': 1.59.1
+      babel-plugin-react-compiler: 1.0.0
+      sharp: 0.34.5
+    transitivePeerDependencies:
+      - '@babel/core'
+      - babel-plugin-macros
+
   no-scroll@2.1.1: {}
 
   node-domexception@1.0.0: {}
@@ -12568,7 +12628,7 @@ snapshots:
 
   postcss@8.4.31:
     dependencies:
-      nanoid: 3.3.11
+      nanoid: 3.3.12
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -13437,6 +13497,11 @@ snapshots:
       client-only: 0.0.1
       react: 19.1.0
 
+  styled-jsx@5.1.6(react@19.2.0):
+    dependencies:
+      client-only: 0.0.1
+      react: 19.2.0
+
   subtag@0.5.0: {}
 
   supercluster@8.0.1:
@@ -13816,7 +13881,7 @@ snapshots:
       esbuild: 0.27.4
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
-      postcss: 8.5.8
+      postcss: 8.5.15
       rollup: 4.60.0
       tinyglobby: 0.2.15
     optionalDependencies:

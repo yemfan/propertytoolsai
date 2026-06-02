@@ -1,8 +1,2 @@
-import { createBrowserClient } from "@supabase/ssr";
-
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY!
-  );
-}
+// Canonical browser Supabase client now lives in @helm/data (single source of truth).
+export { createClient } from "@helm/data/client";
