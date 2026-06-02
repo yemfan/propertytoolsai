@@ -478,6 +478,7 @@ const GROWTH_ENGINE: Pillar[] = [
     rationale: "Speed is the #1 factor in converting leads.",
     features: [
       "SMS + email automation",
+      "AI voice receptionist — answers every call &amp; books showings 24/7",
       "Multi-step follow-up sequences",
       "Behavior-based triggers",
     ],

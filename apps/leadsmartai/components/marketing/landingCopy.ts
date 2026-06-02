@@ -224,6 +224,21 @@ const agentCopy: LandingCopy = {
         title: "Automated Nurturing",
         desc: "Stay top-of-mind without lifting a finger",
       },
+      {
+        icon: "📞",
+        title: "AI Voice Receptionist",
+        desc: "Answers every lead’s call 24/7 — and books the showing on the spot",
+      },
+      {
+        icon: "🧾",
+        title: "Invoicing & Expenses",
+        desc: "Bill clients, get paid, and track costs for tax time",
+      },
+      {
+        icon: "📱",
+        title: "Mobile App",
+        desc: "Run your pipeline — and snap expense receipts — from your pocket",
+      },
     ],
   },
   valueStack: {
