@@ -26,6 +26,9 @@ const tiers = [
     features: [
       "Everything in Starter",
       "AI Voice Receptionist",
+      "HelmSmart AI Assistant",
+      "Missed-call text-back & Auto Pilot",
+      "Outbound & appointment-reminder calls",
       "Bookkeeping & expenses",
       "AI Daily Briefing",
       "3 users",

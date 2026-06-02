@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Users,
   Sunrise,
+  Sparkles,
   CheckCircle2,
 } from "lucide-react";
 
@@ -42,7 +43,24 @@ const features: Feature[] = [
       "Books appointments directly to your Google Calendar",
       "Takes messages and routes them to the right person",
       "Handles FAQs so you don't have to repeat yourself",
+      "Calls clients back for you — follow-ups and appointment reminders",
       "Sends a post-call summary straight to your inbox",
+    ],
+  },
+  {
+    id: "ai-assistant",
+    icon: <Sparkles className="h-6 w-6" />,
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
+    placeholderColor: "bg-blue-200",
+    headline: "HelmSmart AI Assistant",
+    subheadline: "Your business co-pilot, one tap away",
+    bullets: [
+      "Ask plain-English questions — \"what's overdue?\", \"how's cash flow?\", \"who should I follow up with?\"",
+      "Answers come from your live business data, not generic advice",
+      "Drafts the perfect text to any client in seconds — then sends it for you",
+      "Auto Pilot can reply to a client's incoming texts automatically, in their language",
+      "Floats on every screen, so help is always within reach",
     ],
   },
   {
@@ -57,6 +75,7 @@ const features: Feature[] = [
       "Email and SMS unified in one clean inbox",
       "AI triage flags urgent messages vs. routine ones",
       "Auto-replies acknowledge clients instantly",
+      "Missed-call text-back — a missed call becomes a friendly text, so the lead doesn't slip away",
       "Detects language and responds accordingly",
     ],
   },

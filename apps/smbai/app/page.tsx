@@ -4,7 +4,7 @@
  */
 
 import Link from "next/link";
-import { Phone, Inbox, Receipt, Calendar, Users, Sunrise, CheckCircle, Star } from "lucide-react";
+import { Phone, Inbox, Receipt, Calendar, Users, Sunrise, Sparkles, CheckCircle, Star } from "lucide-react";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 
@@ -74,12 +74,13 @@ export default function RootPage() {
           <div className="mx-auto max-w-5xl px-6">
             <div className="text-center">
               <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Everything you need to run your business</h2>
-              <p className="mt-3 text-lg text-gray-500">Six powerful tools, one simple platform.</p>
+              <p className="mt-3 text-lg text-gray-500">Powerful tools, one simple platform.</p>
             </div>
             <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {[
-                { icon: Phone,   color: "text-indigo-600 bg-indigo-50", title: "Voice AI Receptionist", description: "Answers every inbound call around the clock. Books appointments, captures leads, and routes urgent calls — no human operator needed." },
-                { icon: Inbox,   color: "text-emerald-600 bg-emerald-50", title: "Smart Inbox",         description: "Email and SMS in one place. AI triage surfaces urgent messages, drafts replies, and keeps your inbox from becoming a distraction." },
+                { icon: Phone,    color: "text-indigo-600 bg-indigo-50", title: "Voice AI Receptionist", description: "Answers every inbound call around the clock — and calls clients back for follow-ups and appointment reminders. Books appointments and captures leads, no human operator needed." },
+                { icon: Sparkles, color: "text-blue-600 bg-blue-50",     title: "HelmSmart AI Assistant", description: "A co-pilot on every screen: ask plain-English questions about your business and get answers from your live data, or have it draft and send the perfect text to any client." },
+                { icon: Inbox,   color: "text-emerald-600 bg-emerald-50", title: "Smart Inbox",         description: "Email and SMS in one place. AI triage surfaces urgent messages, drafts replies, and missed-call text-back turns a missed call into a lead instead of a lost one." },
                 { icon: Receipt, color: "text-amber-600 bg-amber-50",   title: "Invoicing & Bookkeeping", description: "Create and send invoices in seconds. Track expenses, flag overdue payments, and get a real-time view of your cash flow." },
                 { icon: Calendar,color: "text-violet-600 bg-violet-50", title: "Calendar & Scheduling", description: "Syncs with Google Calendar so bookings land where you already live. Avoid double-bookings and automated reminders handle no-shows." },
                 { icon: Users,   color: "text-rose-600 bg-rose-50",     title: "Client CRM",            description: "Track every client, deal, and follow-up in a simple pipeline. Know exactly where each relationship stands without digging through notes." },
