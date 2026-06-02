@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
 import Anthropic from "@anthropic-ai/sdk";
 import { createServiceClient } from "@/lib/supabase/server";
+import { shouldStopMessaging } from "@helm/dna-communication";
 import { createNotificationService } from "@/lib/actions/notifications";
 import { analyzeInbound, translateToEnglish, localizeOutbound, intentLabel, languageName, type Lang } from "@/lib/language";
 
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
     // Per-client AI Auto Pilot takes precedence over the canned org auto-reply:
     // if this client has auto_pilot on, send a contextual AI reply instead of
     // the static acknowledgement.
-    if (client && clientAutoPilot) {
+    if (client && clientAutoPilot && !shouldStopMessaging(body)) {
       await runAutoPilotReply({
         supabase,
         orgId: org.id,
@@ -119,7 +120,8 @@ export async function POST(request: NextRequest) {
         lang,
         assist,
       });
-    } else if (org.auto_reply) {
+    } else if (org.auto_reply && !shouldStopMessaging(body)) {
+      // Opt-out (STOP/unsubscribe/…): message is still captured + triaged, but no auto-reply (TCPA).
       const fourHoursAgo = new Date(Date.now() - 4 * 3600_000).toISOString();
       const { count } = await supabase
         .from("messages")

@@ -472,6 +472,9 @@ importers:
       '@helm/data':
         specifier: workspace:*
         version: link:../../packages/data
+      '@helm/dna-communication':
+        specifier: workspace:*
+        version: link:../../packages/dna-communication
       '@repo/voice':
         specifier: workspace:*
         version: link:../../packages/voice
