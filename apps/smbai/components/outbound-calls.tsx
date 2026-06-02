@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Bot, Loader2, PhoneOutgoing, Users, CalendarClock } from "lucide-react";
+import { Bot, Loader2, PhoneOutgoing, Users, CalendarClock, ClipboardList, Megaphone } from "lucide-react";
 import { callLead, callAll } from "@/lib/actions/outbound";
 
 type FollowUpContact = { id: string; name: string; phone: string | null; company: string | null; stage: string };
 type ApptContact = { clientId: string; name: string; phone: string | null; startAt: string };
-type Purpose = "follow_up" | "appointment_reminder";
+type Purpose = "follow_up" | "appointment_reminder" | "survey" | "promo";
 
 const PURPOSES: { key: Purpose; label: string; hint: string; icon: typeof Users }[] = [
   { key: "follow_up", label: "Follow-up", hint: "Re-engage leads & clients", icon: Users },
   { key: "appointment_reminder", label: "Appointment reminder", hint: "Confirm upcoming bookings", icon: CalendarClock },
+  { key: "survey", label: "Survey / review", hint: "Ask for feedback or a review", icon: ClipboardList },
+  { key: "promo", label: "Promo / announcement", hint: "Share news or an offer", icon: Megaphone },
 ];
 
 function formatWhen(iso: string) {
@@ -30,15 +32,23 @@ export function OutboundCalls({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [bulkPending, setBulkPending] = useState(false);
+  const [detail, setDetail] = useState("");
   const [, startTransition] = useTransition();
+
+  const needsDetail = purpose === "survey" || purpose === "promo";
+  const detailMissing = needsDetail && !detail.trim();
 
   function call(clientId: string, name: string, phone: string | null) {
     if (!phone || pendingId) return;
+    if (detailMissing) {
+      setMsg({ ok: false, text: purpose === "survey" ? "Add the survey questions first." : "Add the announcement message first." });
+      return;
+    }
     if (!window.confirm(`Place an AI call to ${name} at ${phone}?\n\nThe AI agent will call them now on your behalf.`)) return;
     setPendingId(clientId);
     setMsg(null);
     startTransition(async () => {
-      const res = await callLead({ clientId, purpose });
+      const res = await callLead({ clientId, purpose, detail: needsDetail ? detail.trim() : undefined });
       setPendingId(null);
       setMsg(res.ok ? { ok: true, text: `📞 Calling ${res.name} now — the AI agent is dialing.` } : { ok: false, text: res.error });
     });
@@ -52,12 +62,16 @@ export function OutboundCalls({
   function callEveryone() {
     const ids = Array.from(new Set(rows.map((r) => r.id)));
     if (!ids.length || bulkPending || pendingId) return;
+    if (detailMissing) {
+      setMsg({ ok: false, text: purpose === "survey" ? "Add the survey questions first." : "Add the announcement message first." });
+      return;
+    }
     const n = Math.min(ids.length, 15);
     if (!window.confirm(`Place AI calls to ${n} contact${n !== 1 ? "s" : ""}?\n\nThey'll be dialed in the background — staggered and only within calling hours.`)) return;
     setBulkPending(true);
     setMsg(null);
     startTransition(async () => {
-      const res = await callAll({ purpose, clientIds: ids });
+      const res = await callAll({ purpose, clientIds: ids, detail: needsDetail ? detail.trim() : undefined });
       setBulkPending(false);
       setMsg(
         res.ok
@@ -101,6 +115,29 @@ export function OutboundCalls({
               </button>
             ))}
           </div>
+
+          {/* Message / questions for survey + promo calls */}
+          {needsDetail && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">
+                {purpose === "survey" ? "What should the AI ask?" : "What's the announcement?"}
+              </label>
+              <textarea
+                value={detail}
+                onChange={(e) => setDetail(e.target.value)}
+                rows={2}
+                placeholder={
+                  purpose === "survey"
+                    ? 'e.g. "How was your recent service, 1–5? Would you leave us a Google review?"'
+                    : 'e.g. "We\'re running 15% off new bookings through Friday — want me to book you in?"'
+                }
+                className="w-full resize-y rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none"
+              />
+              <p className="mt-1 text-[11px] text-slate-400">
+                The AI works this into a short, friendly call and adapts to each contact.
+              </p>
+            </div>
+          )}
 
           {msg && (
             <div className={`rounded-lg px-3 py-2 text-sm ${msg.ok ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"}`}>

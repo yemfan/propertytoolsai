@@ -98,7 +98,8 @@ export async function enqueueCalls(
   db: ServiceClient,
   orgId: string,
   purpose: OutboundPurpose,
-  clientIds: string[]
+  clientIds: string[],
+  detail?: string
 ): Promise<number> {
   if (!clientIds.length) return 0;
 
@@ -116,7 +117,7 @@ export async function enqueueCalls(
 
   const { error } = await db
     .from("outbound_call_queue")
-    .insert(toInsert.map((client_id) => ({ organization_id: orgId, client_id, purpose, status: "queued" })));
+    .insert(toInsert.map((client_id) => ({ organization_id: orgId, client_id, purpose, status: "queued", detail: detail ?? null })));
   if (error) throw new Error(error.message);
   return toInsert.length;
 }
@@ -134,7 +135,7 @@ export async function drainOutboundQueue(
 
   const { data: rows } = await db
     .from("outbound_call_queue")
-    .select("id, client_id, purpose, event_id")
+    .select("id, client_id, purpose, event_id, detail")
     .eq("organization_id", orgId)
     .eq("status", "queued")
     .order("created_at", { ascending: true })
@@ -158,8 +159,9 @@ export async function drainOutboundQueue(
 
     try {
       if (!client) throw new Error("Contact not found.");
-      // For appointment reminders, tell the agent the exact appointment time.
-      let detail: string | undefined;
+      // Survey / promo carry their message in the queue row; appointment
+      // reminders derive the exact time from the linked event below.
+      let detail: string | undefined = (row.detail as string | null) ?? undefined;
       if (row.event_id) {
         const { data: evt } = await db.from("events").select("start_at").eq("id", row.event_id as string).single();
         if (evt?.start_at) {

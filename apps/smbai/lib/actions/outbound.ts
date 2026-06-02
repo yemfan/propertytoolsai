@@ -27,7 +27,7 @@ const STAGGER_MS = 1500;
  * dials) — distinct from the owner calling someone themselves. Guards: valid
  * phone, connected number, and 8am–9pm in the business's timezone.
  */
-export async function callLead(input: { clientId: string; purpose: OutboundPurpose }): Promise<CallResult> {
+export async function callLead(input: { clientId: string; purpose: OutboundPurpose; detail?: string }): Promise<CallResult> {
   const cookieStore = await cookies();
   const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return { ok: false, error: "No organization." };
@@ -53,7 +53,7 @@ export async function callLead(input: { clientId: string; purpose: OutboundPurpo
 
   const leadName = `${client.first_name}${client.last_name ? ` ${client.last_name}` : ""}`.trim();
   try {
-    await placeOutboundCall(db, ctx, client, input.purpose, agentId);
+    await placeOutboundCall(db, ctx, client, input.purpose, agentId, input.detail);
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Call failed to start." };
   }
@@ -66,7 +66,7 @@ export async function callLead(input: { clientId: string; purpose: OutboundPurpo
  * the background — staggered, within calling hours, capped per batch. Returns how
  * many were newly queued (already-pending contacts are skipped).
  */
-export async function callAll(input: { purpose: OutboundPurpose; clientIds: string[] }): Promise<BulkResult> {
+export async function callAll(input: { purpose: OutboundPurpose; clientIds: string[]; detail?: string }): Promise<BulkResult> {
   const cookieStore = await cookies();
   const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return { ok: false, error: "No organization." };
@@ -92,7 +92,7 @@ export async function callAll(input: { purpose: OutboundPurpose; clientIds: stri
   const validIds = (valid ?? []).map((c) => c.id as string);
   if (!validIds.length) return { ok: false, error: "No reachable contacts (they need a phone number)." };
 
-  const queued = await enqueueCalls(db, orgId, input.purpose, validIds);
+  const queued = await enqueueCalls(db, orgId, input.purpose, validIds, input.detail);
   if (queued === 0) return { ok: false, error: "Those contacts are already queued or being called." };
 
   // Dial the batch in the background so the click returns immediately.

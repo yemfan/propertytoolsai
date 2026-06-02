@@ -123,7 +123,11 @@ export function buildReceptionistDynamicVariables(ctx: ReceptionistContext): Rec
 // ─── Outbound calls (app-initiated) ───────────────────────────────────────────────
 
 /** What an outbound AI call is trying to accomplish. */
-export type OutboundPurpose = "follow_up" | "appointment_reminder";
+export type OutboundPurpose =
+  | "follow_up"
+  | "appointment_reminder"
+  | "survey"
+  | "promo";
 
 /** First line the AI speaks when the lead answers — bilingual (English + Chinese),
  *  disclosing it's an AI in both (compliance). The agent then continues in
@@ -143,11 +147,23 @@ export function buildOutboundSystemPrompt(
   opts: { leadName: string; purpose: OutboundPurpose; detail?: string }
 ): string {
   const lead = opts.leadName.trim() || "the customer";
-  const appt = opts.detail ? ` Their appointment is on ${opts.detail}.` : "";
-  const goal =
-    opts.purpose === "appointment_reminder"
-      ? `Your goal: remind ${lead} about their upcoming appointment with ${ctx.orgName} and confirm they can still make it.${appt} If they want to reschedule, use check_availability then book_appointment for a new time. If they want to cancel or need a person, use create_callback.`
-      : `Your goal: follow up with ${lead} about their interest in ${ctx.orgName}. Re-engage warmly, answer their questions, and if there is interest, book a meeting with book_appointment. If they are not interested, thank them politely and end the call.`;
+  const detail = opts.detail?.trim();
+  let goal: string;
+  switch (opts.purpose) {
+    case "appointment_reminder":
+      goal = `Your goal: remind ${lead} about their upcoming appointment with ${ctx.orgName} and confirm they can still make it.${detail ? ` Their appointment is on ${detail}.` : ""} If they want to reschedule, use check_availability then book_appointment for a new time. If they want to cancel or need a person, use create_callback.`;
+      break;
+    case "survey":
+      goal = `Your goal: on behalf of ${ctx.orgName}, ask ${lead} a couple of quick questions and capture their answers. ${detail ? `What to ask: ${detail}` : "Ask how their recent experience went and whether they would recommend you."} Keep it short and friendly, never pushy, and thank them for their time. If they raise a problem, offer a call-back with create_callback. Do not try to sell or book anything.`;
+      break;
+    case "promo":
+      goal = `Your goal: briefly share an update from ${ctx.orgName} with ${lead}. ${detail ? `The message: ${detail}` : "Share the latest news or offer."} Keep it to a sentence or two and gauge interest. If they are interested, book a meeting with book_appointment or take their details with create_callback. If they are not interested, thank them and end politely.`;
+      break;
+    case "follow_up":
+    default:
+      goal = `Your goal: follow up with ${lead} about their interest in ${ctx.orgName}. Re-engage warmly, answer their questions, and if there is interest, book a meeting with book_appointment. If they are not interested, thank them politely and end the call.`;
+      break;
+  }
 
   return `## Outbound call — YOU placed this call
 You are ${ctx.agentName ? `${ctx.agentName}, ` : ""}an AI assistant calling on behalf of ${ctx.orgName}. This is a LIVE outbound call that you initiated, and your opening line already greeted them and disclosed that you are an AI.
