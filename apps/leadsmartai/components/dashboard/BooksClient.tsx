@@ -31,6 +31,9 @@ export default function BooksClient({ initialInvoices }: { initialInvoices: Invo
   const [dueDate, setDueDate] = useState("");
   const [taxPct, setTaxPct] = useState("0");
   const [notes, setNotes] = useState("");
+  const [paymentUrl, setPaymentUrl] = useState(
+    initialInvoices.find((i) => i.payment_url)?.payment_url ?? "",
+  );
   const [lines, setLines] = useState<LineDraft[]>([emptyLine()]);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -148,6 +151,7 @@ export default function BooksClient({ initialInvoices }: { initialInvoices: Invo
           dueDate: dueDate || null,
           taxRate: (Number(taxPct) || 0) / 100,
           notes,
+          paymentUrl,
           lines: cleanLines,
         }),
       });
@@ -302,6 +306,16 @@ export default function BooksClient({ initialInvoices }: { initialInvoices: Invo
               <span className="mb-1 block text-[11px] font-medium text-slate-500">Tax rate %</span>
               <input className={input} value={taxPct} onChange={(e) => setTaxPct(e.target.value)} inputMode="decimal" placeholder="0" />
             </div>
+          </div>
+
+          <div className="mt-3">
+            <span className="mb-1 block text-[11px] font-medium text-slate-500">Payment link (optional)</span>
+            <input
+              className={input}
+              value={paymentUrl}
+              onChange={(e) => setPaymentUrl(e.target.value)}
+              placeholder="https://… your Stripe/PayPal/Venmo link — shown as a Pay button"
+            />
           </div>
 
           {/* Line items */}

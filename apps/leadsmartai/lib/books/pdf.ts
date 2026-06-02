@@ -17,6 +17,7 @@ export type InvoicePdfInput = {
   taxAmount: number;
   total: number;
   notes?: string | null;
+  paymentUrl?: string | null;
 };
 
 const DARK = rgb(0.13, 0.13, 0.13);
@@ -133,6 +134,14 @@ export async function renderInvoicePdf(inv: InvoicePdfInput): Promise<Uint8Array
   drawRight("Total", colUnit, y, { bold: true, size: 12 });
   drawRight(formatMoney(inv.total, cur), colAmt, y, { bold: true, size: 12 });
   y -= 30;
+
+  // Payment link
+  if (inv.paymentUrl && y > 70) {
+    draw("PAY ONLINE", M, y, { size: 8, bold: true, color: GRAY });
+    y -= 13;
+    draw(String(inv.paymentUrl).slice(0, 92), M, y, { size: 9, color: rgb(0.15, 0.35, 0.85) });
+    y -= 18;
+  }
 
   // Notes
   if (inv.notes && y > 80) {

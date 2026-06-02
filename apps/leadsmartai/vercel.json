@@ -49,6 +49,10 @@
       "schedule": "45 * * * *"
     },
     {
+      "path": "/api/cron/invoices-overdue",
+      "schedule": "0 8 * * *"
+    },
+    {
       "path": "/api/cron/smart-automation",
       "schedule": "0 */6 * * *"
     },

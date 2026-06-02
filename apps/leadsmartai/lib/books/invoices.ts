@@ -31,6 +31,7 @@ export type InvoiceRow = {
   tax_amount: number;
   total: number;
   notes: string | null;
+  payment_url: string | null;
   paid_at: string | null;
   created_at: string;
 };
@@ -101,6 +102,7 @@ export type CreateInvoiceInput = {
   dueDate?: string | null;
   taxRate?: number;
   notes?: string;
+  paymentUrl?: string;
   lines: InvoiceLineInput[];
 };
 
@@ -137,6 +139,7 @@ export async function createInvoice(
       tax_amount: taxAmount,
       total,
       notes: input.notes?.trim() || null,
+      payment_url: input.paymentUrl?.trim() || null,
     } as never)
     .select("id")
     .single();
@@ -228,6 +231,7 @@ export async function sendInvoiceEmail(id: string): Promise<{ ok: boolean; error
         ${totalsRow("Total", formatMoney(Number(invoice.total), cur), true)}
       </tfoot>
     </table>
+    ${invoice.payment_url ? `<p style="margin:20px 0"><a href="${esc(invoice.payment_url)}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:600;font-size:14px">Pay ${esc(formatMoney(Number(invoice.total), cur))} online</a></p>` : ""}
     ${invoice.notes ? `<p style="margin:16px 0;color:#444;white-space:pre-wrap">${esc(invoice.notes)}</p>` : ""}
     <p style="margin:20px 0 0;color:#888;font-size:12px">Reply to this email with any questions. — ${esc(business)}</p>
   </div>`;
@@ -239,6 +243,7 @@ export async function sendInvoiceEmail(id: string): Promise<{ ok: boolean; error
     (Number(invoice.tax_amount) > 0 ? `\nTax: ${formatMoney(Number(invoice.tax_amount), cur)}` : "") +
     `\nTotal: ${formatMoney(Number(invoice.total), cur)}` +
     (invoice.due_date ? `\nDue: ${invoice.due_date}` : "") +
+    (invoice.payment_url ? `\n\nPay online: ${invoice.payment_url}` : "") +
     (invoice.notes ? `\n\n${invoice.notes}` : "");
 
   // Attach a PDF copy of the invoice (best-effort — send without it if it fails).
@@ -263,6 +268,7 @@ export async function sendInvoiceEmail(id: string): Promise<{ ok: boolean; error
       taxAmount: Number(invoice.tax_amount),
       total: Number(invoice.total),
       notes: invoice.notes,
+      paymentUrl: invoice.payment_url,
     });
   } catch (e) {
     console.error("[books] invoice PDF render failed (sending without attachment):", e);

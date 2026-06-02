@@ -13,6 +13,7 @@ export async function POST(req: Request) {
       dueDate?: string | null;
       taxRate?: number;
       notes?: string;
+      paymentUrl?: string;
       lines?: InvoiceLineInput[];
     };
 
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
       dueDate: body.dueDate ?? null,
       taxRate: body.taxRate,
       notes: body.notes,
+      paymentUrl: body.paymentUrl,
       lines: Array.isArray(body.lines) ? body.lines : [],
     });
 
