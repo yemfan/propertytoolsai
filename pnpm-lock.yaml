@@ -329,7 +329,7 @@ importers:
         version: 9.39.4(jiti@2.6.1)
       eslint-config-next:
         specifier: ^16.2.0
-        version: 16.2.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+        version: 16.2.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
       tsx:
         specifier: ^4.19.3
         version: 4.21.0
@@ -474,7 +474,7 @@ importers:
         version: 9.39.4(jiti@2.6.1)
       eslint-config-next:
         specifier: ^16.2.0
-        version: 16.2.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+        version: 16.2.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
       tsx:
         specifier: ^4.19.3
         version: 4.21.0
@@ -502,6 +502,9 @@ importers:
       '@helm/dna-operations':
         specifier: workspace:*
         version: link:../../packages/dna-operations
+      '@helm/dna-revenue':
+        specifier: workspace:*
+        version: link:../../packages/dna-revenue
       '@repo/voice':
         specifier: workspace:*
         version: link:../../packages/voice
@@ -633,7 +636,14 @@ importers:
 
   packages/dna-people: {}
 
-  packages/dna-revenue: {}
+  packages/dna-revenue:
+    dependencies:
+      '@helm/data':
+        specifier: workspace:*
+        version: link:../data
+      '@supabase/supabase-js':
+        specifier: ^2.99.2
+        version: 2.100.1
 
   packages/dna-service: {}
 

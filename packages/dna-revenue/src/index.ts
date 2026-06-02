@@ -1,5 +1,3 @@
-// @helm/dna-revenue - Revenue DNA: Lead, Contact, Opportunity, Pipeline, Deal, Referral.
-// Core package. MUST NOT import @helm/pack-* or apps/*. (enforced by scripts/check-boundaries.mjs)
-// Phase 0 scaffold - empty boundary.
-export {}
-
+// @helm/dna-revenue — Revenue DNA: Lead, Contact/Client, Opportunity, Pipeline, Deal, Referral.
+// First extraction: org-scoped client pipeline ops. Core package: MUST NOT import @helm/pack-* or apps/*.
+export * from "./clients";
