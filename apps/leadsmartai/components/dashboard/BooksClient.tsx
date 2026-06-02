@@ -22,6 +22,7 @@ export default function BooksClient({ initialInvoices }: { initialInvoices: Invo
   const router = useRouter();
   const [showForm, setShowForm] = useState(initialInvoices.length === 0);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [rowError, setRowError] = useState<string | null>(null);
 
   // Create-form state
   const [clientName, setClientName] = useState("");
@@ -109,6 +110,7 @@ export default function BooksClient({ initialInvoices }: { initialInvoices: Invo
 
   async function changeStatus(id: string, status: InvoiceStatus) {
     setBusyId(id);
+    setRowError(null);
     try {
       const res = await fetch("/api/dashboard/books/invoices/status", {
         method: "POST",
@@ -117,6 +119,25 @@ export default function BooksClient({ initialInvoices }: { initialInvoices: Invo
       });
       const data = (await res.json()) as { ok?: boolean };
       if (res.ok && data.ok) router.refresh();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function sendInvoice(id: string) {
+    setBusyId(id);
+    setRowError(null);
+    try {
+      const res = await fetch("/api/dashboard/books/invoices/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (res.ok && data.ok) router.refresh();
+      else setRowError(data.error || "Could not send the invoice.");
+    } catch {
+      setRowError("Could not send the invoice.");
     } finally {
       setBusyId(null);
     }
@@ -247,6 +268,10 @@ export default function BooksClient({ initialInvoices }: { initialInvoices: Invo
         </section>
       )}
 
+      {rowError && (
+        <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{rowError}</p>
+      )}
+
       {/* Invoice list */}
       {initialInvoices.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
@@ -270,7 +295,12 @@ export default function BooksClient({ initialInvoices }: { initialInvoices: Invo
               </div>
               <span className="shrink-0 text-sm font-semibold text-slate-900">{formatMoney(Number(inv.total), inv.currency || "USD")}</span>
               <div className="flex shrink-0 items-center gap-1">
-                {inv.status === "draft" && (
+                {inv.client_email && inv.status !== "paid" && inv.status !== "void" && (
+                  <button type="button" onClick={() => void sendInvoice(inv.id)} disabled={busyId === inv.id} className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50">
+                    {busyId === inv.id ? "…" : inv.status === "draft" ? "Send" : "Resend"}
+                  </button>
+                )}
+                {inv.status === "draft" && !inv.client_email && (
                   <button type="button" onClick={() => void changeStatus(inv.id, "sent")} disabled={busyId === inv.id} className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
                     Mark sent
                   </button>

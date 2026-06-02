@@ -2,7 +2,9 @@ import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
-import { computeTotals, lineAmount } from "./money";
+import { getReceptionistConfig } from "@/lib/voice-receptionist/settings";
+import { sendEmail } from "@/lib/email";
+import { computeTotals, lineAmount, formatMoney } from "./money";
 
 /**
  * Invoice service for the LeadSmart "Books" feature. Agent-scoped via
@@ -156,6 +158,114 @@ export async function createInvoice(
   if (lerr) console.error("[books] invoice_lines insert:", lerr.message);
 
   return { ok: true, id: invoiceId, invoiceNumber };
+}
+
+function esc(s: unknown): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Email the invoice (HTML) to its client and mark it sent. Replies route to the
+ *  agent. Agent-scoped; needs RESEND_API_KEY + a client email on the invoice. */
+export async function sendInvoiceEmail(id: string): Promise<{ ok: boolean; error?: string }> {
+  const { agentId, email: agentEmail } = await getCurrentAgentContext();
+
+  const { data: inv } = await supabaseAdmin
+    .from("invoices")
+    .select("*")
+    .eq("id", id)
+    .eq("agent_id", agentId as never)
+    .maybeSingle();
+  if (!inv) return { ok: false, error: "Invoice not found." };
+  const invoice = inv as unknown as InvoiceRow;
+  const to = (invoice.client_email || "").trim();
+  if (!to) return { ok: false, error: "This invoice has no client email — add one first." };
+
+  const { data: lineData } = await supabaseAdmin
+    .from("invoice_lines")
+    .select("*")
+    .eq("invoice_id", id)
+    .order("sort_order", { ascending: true });
+  const lines = (lineData ?? []) as unknown as InvoiceLineRow[];
+
+  const cfg = await getReceptionistConfig(agentId);
+  const business = cfg.businessName?.trim() || "Your real estate agent";
+  const cur = invoice.currency || "USD";
+
+  const rowsHtml = lines
+    .map(
+      (l) =>
+        `<tr><td style="padding:8px;border-bottom:1px solid #eee">${esc(l.description)}</td>` +
+        `<td align="right" style="padding:8px;border-bottom:1px solid #eee">${esc(l.quantity)}</td>` +
+        `<td align="right" style="padding:8px;border-bottom:1px solid #eee">${esc(formatMoney(Number(l.unit_price), cur))}</td>` +
+        `<td align="right" style="padding:8px;border-bottom:1px solid #eee">${esc(formatMoney(Number(l.amount), cur))}</td></tr>`,
+    )
+    .join("");
+
+  const totalsRow = (label: string, value: string, bold = false) =>
+    `<tr><td colspan="2"></td><td align="right" style="padding:6px 8px;${bold ? "font-weight:700;border-top:2px solid #222" : "color:#555"}">${esc(label)}</td>` +
+    `<td align="right" style="padding:6px 8px;${bold ? "font-weight:700;border-top:2px solid #222" : "color:#555"}">${esc(value)}</td></tr>`;
+
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;color:#222">
+    <h2 style="margin:0 0 4px">${esc(business)}</h2>
+    <p style="margin:0 0 16px;color:#666">Invoice <strong>${esc(invoice.invoice_number)}</strong>${invoice.due_date ? ` &middot; Due ${esc(invoice.due_date)}` : ""}</p>
+    <p style="margin:0 0 16px">Hi ${esc(invoice.client_name || "there")}, please find your invoice below.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px">
+      <thead><tr style="text-align:left;color:#888">
+        <th style="padding:8px;border-bottom:2px solid #222">Description</th>
+        <th align="right" style="padding:8px;border-bottom:2px solid #222">Qty</th>
+        <th align="right" style="padding:8px;border-bottom:2px solid #222">Unit</th>
+        <th align="right" style="padding:8px;border-bottom:2px solid #222">Amount</th>
+      </tr></thead>
+      <tbody>${rowsHtml}</tbody>
+      <tfoot>
+        ${totalsRow("Subtotal", formatMoney(Number(invoice.subtotal), cur))}
+        ${Number(invoice.tax_amount) > 0 ? totalsRow(`Tax (${(Number(invoice.tax_rate) * 100).toFixed(2)}%)`, formatMoney(Number(invoice.tax_amount), cur)) : ""}
+        ${totalsRow("Total", formatMoney(Number(invoice.total), cur), true)}
+      </tfoot>
+    </table>
+    ${invoice.notes ? `<p style="margin:16px 0;color:#444;white-space:pre-wrap">${esc(invoice.notes)}</p>` : ""}
+    <p style="margin:20px 0 0;color:#888;font-size:12px">Reply to this email with any questions. — ${esc(business)}</p>
+  </div>`;
+
+  const text =
+    `Invoice ${invoice.invoice_number} from ${business}\n\n` +
+    lines.map((l) => `${l.description} — ${l.quantity} x ${formatMoney(Number(l.unit_price), cur)} = ${formatMoney(Number(l.amount), cur)}`).join("\n") +
+    `\n\nSubtotal: ${formatMoney(Number(invoice.subtotal), cur)}` +
+    (Number(invoice.tax_amount) > 0 ? `\nTax: ${formatMoney(Number(invoice.tax_amount), cur)}` : "") +
+    `\nTotal: ${formatMoney(Number(invoice.total), cur)}` +
+    (invoice.due_date ? `\nDue: ${invoice.due_date}` : "") +
+    (invoice.notes ? `\n\n${invoice.notes}` : "");
+
+  let sendResult: { id?: string } | undefined;
+  try {
+    sendResult = await sendEmail({
+      to,
+      subject: `Invoice ${invoice.invoice_number} from ${business}`,
+      html,
+      text,
+      replyTo: agentEmail || undefined,
+    });
+  } catch (e) {
+    console.error("[books] sendInvoiceEmail:", e);
+    return { ok: false, error: e instanceof Error ? e.message : "Could not send the email." };
+  }
+  // sendEmail returns undefined (silently) when RESEND_API_KEY isn't set — don't
+  // mark the invoice sent in that case, so the status stays honest.
+  if (!sendResult) {
+    return { ok: false, error: "Email isn't configured on this account yet — the invoice was not sent." };
+  }
+
+  await supabaseAdmin
+    .from("invoices")
+    .update({ status: "sent", updated_at: new Date().toISOString() } as never)
+    .eq("id", id)
+    .eq("agent_id", agentId as never);
+
+  return { ok: true };
 }
 
 const VALID_STATUS: InvoiceStatus[] = ["draft", "sent", "paid", "overdue", "void"];
