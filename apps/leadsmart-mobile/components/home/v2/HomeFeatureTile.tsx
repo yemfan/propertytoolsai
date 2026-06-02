@@ -59,10 +59,10 @@ export function HomeFeatureTile({
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
   const tint = accentColor ?? tokens.accent;
-  // Background fill ~10% opacity of the accent — readable on both the
-  // light card surface and the dark slate-900 surface without needing
-  // a separate dark-mode token.
-  const iconBg = `${tint}1a`; // 0x1a = ~10% alpha
+  // Solid vibrant fill (colorful app-icon style, per the reference design)
+  // with a white glyph. The caller passes the icon already colored white;
+  // we draw the bubble in the tile's own hue.
+  const iconBg = tint;
 
   const badgeVariant = badge?.variant ?? "hot";
   const badgeColor =
@@ -89,7 +89,7 @@ export function HomeFeatureTile({
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
     >
-      <View style={[styles.iconBubble, { backgroundColor: iconBg }]}>
+      <View style={[styles.iconBubble, { backgroundColor: iconBg, shadowColor: tint }]}>
         {/* The caller passes the icon already configured with size + color.
             Wrapping in a View so accessibility focus lands on the Pressable,
             not the icon itself. */}
@@ -112,27 +112,30 @@ export function HomeFeatureTile({
 const createStyles = (theme: ThemeTokens) =>
   StyleSheet.create({
     tile: {
-      backgroundColor: theme.surface,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: theme.border,
-      padding: 12,
+      // Transparent — the tile is now content inside the section card,
+      // so only the card draws a surface/border (the "block" look). Width
+      // is controlled by HomeFeatureGrid's 3-col cell.
+      paddingVertical: 10,
+      paddingHorizontal: 4,
       alignItems: "center",
-      justifyContent: "center",
-      minHeight: 96,
-      // Tile sits inside a 3-col flex grid in HomeFeatureGrid; width is
-      // controlled there to share gap math.
+      justifyContent: "flex-start",
+      minHeight: 92,
     },
     tilePressed: {
-      opacity: 0.85,
+      opacity: 0.6,
     },
     iconBubble: {
-      width: 44,
-      height: 44,
-      borderRadius: 14,
+      width: 50,
+      height: 50,
+      borderRadius: 16,
       alignItems: "center",
       justifyContent: "center",
       marginBottom: 8,
+      // Soft colored glow gives the solid tiles depth, like an app-icon grid.
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.3,
+      shadowRadius: 5,
+      elevation: 3,
     },
     label: {
       fontSize: 12,
