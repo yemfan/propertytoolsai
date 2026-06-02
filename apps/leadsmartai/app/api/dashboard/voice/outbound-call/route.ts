@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { loadReceptionistContext } from "@/lib/voice-agent/context";
 import { placeOutboundCall } from "@/lib/voice-agent/outbound";
-import { normalizePhoneE164 } from "@repo/voice";
+import { normalizePhoneE164, type OutboundPurpose } from "@repo/voice";
 
 export const runtime = "nodejs";
+
+const VALID_PURPOSES: OutboundPurpose[] = ["follow_up", "appointment_reminder", "survey", "promo"];
 
 /**
  * Place an outbound AI call. The agent (Lucy) dials the lead from the
@@ -14,8 +16,17 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   try {
     const { agentId } = await getCurrentAgentContext();
-    const body = (await req.json().catch(() => ({}))) as { name?: string; phone?: string };
+    const body = (await req.json().catch(() => ({}))) as {
+      name?: string;
+      phone?: string;
+      purpose?: OutboundPurpose;
+      detail?: string;
+    };
     const name = String(body.name ?? "").trim();
+    const purpose: OutboundPurpose = VALID_PURPOSES.includes(body.purpose as OutboundPurpose)
+      ? (body.purpose as OutboundPurpose)
+      : "follow_up";
+    const detail = body.detail ? String(body.detail).trim() : undefined;
 
     const r = normalizePhoneE164(String(body.phone ?? "").trim());
     if (!r.ok) {
@@ -38,6 +49,8 @@ export async function POST(req: Request) {
       agentId,
       leadName: name,
       toNumberE164: r.value,
+      purpose,
+      detail,
     });
 
     return NextResponse.json({ ok: true, callId, to: r.value });

@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PhoneOutgoing, Search, User2, X } from "lucide-react";
+import { PhoneOutgoing, Search, User2, X, Users, ClipboardList, Megaphone } from "lucide-react";
 
 type PickContact = { id: string; name: string; phone: string };
+
+type Purpose = "follow_up" | "survey" | "promo";
+const PURPOSES: { key: Purpose; label: string; icon: typeof Users }[] = [
+  { key: "follow_up", label: "Follow-up", icon: Users },
+  { key: "survey", label: "Survey / review", icon: ClipboardList },
+  { key: "promo", label: "Promo / announcement", icon: Megaphone },
+];
 
 /**
  * Outbound AI calling. The AI receptionist (Lucy) dials a lead from your
@@ -18,6 +25,9 @@ export default function OutboundCallPanel() {
   const [phone, setPhone] = useState("");
   const [status, setStatus] = useState<"idle" | "calling" | "placed" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const [purpose, setPurpose] = useState<Purpose>("follow_up");
+  const [detail, setDetail] = useState("");
+  const needsDetail = purpose === "survey" || purpose === "promo";
 
   // Contact picker
   const [contacts, setContacts] = useState<PickContact[]>([]);
@@ -86,13 +96,23 @@ export default function OutboundCallPanel() {
 
   async function placeCall() {
     if (!phone.trim() || status === "calling") return;
+    if (needsDetail && !detail.trim()) {
+      setStatus("error");
+      setMessage(purpose === "survey" ? "Add the survey questions first." : "Add the announcement message first.");
+      return;
+    }
     setStatus("calling");
     setMessage(null);
     try {
       const res = await fetch("/api/dashboard/voice/outbound-call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), phone: phone.trim() }),
+        body: JSON.stringify({
+          name: name.trim(),
+          phone: phone.trim(),
+          purpose,
+          detail: needsDetail ? detail.trim() : undefined,
+        }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; to?: string };
       if (!res.ok || !data.ok) throw new Error(data.error || "Failed to place the call.");
@@ -116,6 +136,29 @@ export default function OutboundCallPanel() {
           Lucy dials the lead from your receptionist number, opens by disclosing she&apos;s an AI
           assistant, and follows up on your behalf — then logs the call below in Inbound &amp; outbound activity.
         </p>
+
+        {/* Purpose picker */}
+        <div className="mb-3 flex flex-wrap gap-2">
+          {PURPOSES.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => {
+                setPurpose(key);
+                setStatus("idle");
+                setMessage(null);
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                purpose === key
+                  ? "border-blue-500 bg-blue-50 text-blue-700"
+                  : "border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+              {label}
+            </button>
+          ))}
+        </div>
 
         {/* Contact picker */}
         <div ref={boxRef} className="relative mb-3">
@@ -190,6 +233,25 @@ export default function OutboundCallPanel() {
             <input className={input} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 (626) 555-1234" />
           </div>
         </div>
+
+        {needsDetail && (
+          <div className="mt-3">
+            <span className="mb-1 block text-[11px] font-medium text-slate-500">
+              {purpose === "survey" ? "What should Lucy ask?" : "What's the announcement?"}
+            </span>
+            <textarea
+              className={`${input} resize-y`}
+              rows={2}
+              value={detail}
+              onChange={(e) => setDetail(e.target.value)}
+              placeholder={
+                purpose === "survey"
+                  ? 'e.g. "How was your home tour? Would you leave us a Google review?"'
+                  : 'e.g. "A new listing just hit your target neighborhood — want a private showing?"'
+              }
+            />
+          </div>
+        )}
 
         <div className="mt-4 flex items-center gap-3">
           <button
