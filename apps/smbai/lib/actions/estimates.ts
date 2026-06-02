@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { insertEstimateWithLines, setEstimateStatus as setEstimateStatusFinance } from "@helm/dna-finance";
 import { Resend } from "resend";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -19,18 +20,6 @@ export interface EstimateLine {
   sort_order?: number;
 }
 
-// ─── Estimate number ──────────────────────────────────────────────────────────
-
-async function nextEstimateNumber(orgId: string): Promise<string> {
-  const supabase = await createClient();
-  const { count } = await supabase
-    .from("estimates")
-    .select("*", { count: "exact", head: true })
-    .eq("organization_id", orgId);
-  const n = (count ?? 0) + 1;
-  return `EST-${String(n).padStart(4, "0")}`;
-}
-
 // ─── Create estimate ──────────────────────────────────────────────────────────
 
 export async function createEstimate(data: {
@@ -45,47 +34,10 @@ export async function createEstimate(data: {
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
-  const estimateNumber = await nextEstimateNumber(orgId);
-
-  const subtotal = data.lines.reduce((s, l) => s + l.amount, 0);
-  const taxAmount = +(subtotal * data.taxRate).toFixed(2);
-  const total = +(subtotal + taxAmount).toFixed(2);
-
-  const { data: est, error } = await supabase
-    .from("estimates")
-    .insert({
-      organization_id: orgId,
-      client_id: data.clientId || null,
-      estimate_number: estimateNumber,
-      status: "draft",
-      issue_date: new Date().toISOString().slice(0, 10),
-      expiry_date: data.expiryDate,
-      subtotal,
-      tax_rate: data.taxRate,
-      tax_amount: taxAmount,
-      total,
-      notes: data.notes || null,
-    })
-    .select("id")
-    .single();
-
-  if (error || !est) throw new Error(error?.message ?? "Failed to create estimate");
-
-  if (data.lines.length > 0) {
-    await supabase.from("estimate_lines").insert(
-      data.lines.map((l, i) => ({
-        estimate_id: est.id,
-        description: l.description,
-        quantity: l.quantity,
-        unit_price: l.unit_price,
-        amount: l.amount,
-        sort_order: i,
-      }))
-    );
-  }
+  const id = await insertEstimateWithLines(supabase, orgId, data);
 
   revalidatePath("/books/estimates");
-  return est.id;
+  return id;
 }
 
 // ─── Send estimate ────────────────────────────────────────────────────────────
@@ -259,11 +211,7 @@ export async function setEstimateStatus(
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
-  await supabase
-    .from("estimates")
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", estimateId)
-    .eq("organization_id", orgId);
+  await setEstimateStatusFinance(supabase, orgId, estimateId, status);
 
   revalidatePath("/books/estimates");
   revalidatePath(`/books/estimates/${estimateId}`);
