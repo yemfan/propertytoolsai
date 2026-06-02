@@ -8,6 +8,7 @@ import {
   generateDaySlots,
   validateBookingTime,
 } from "@repo/voice/scheduling";
+import { DEFAULT_APPOINTMENT_MINUTES, splitCallerName, appointmentTitle } from "@helm/dna-service";
 
 // The receptionist's booking engine: availability (business hours ∩ free/busy)
 // and conflict-safe booking. Service-client based — runs in the voice webhook.
@@ -70,7 +71,7 @@ export type AvailabilityResult = {
 export async function getAvailability(orgId: string, appointmentTypeName: string, dateStr: string): Promise<AvailabilityResult> {
   const { timezone, hours } = await loadOrg(orgId);
   const type = await findType(orgId, appointmentTypeName);
-  const duration = type?.duration_minutes ?? 30;
+  const duration = type?.duration_minutes ?? DEFAULT_APPOINTMENT_MINUTES;
 
   // Normalize whatever the agent sent (weekday name, natural date, …) to a real
   // calendar date, then roll forward past closed days (weekends/holidays) to the
@@ -115,7 +116,7 @@ export async function bookAppointment(
 ): Promise<BookResult> {
   const { timezone, hours } = await loadOrg(orgId);
   const type = await findType(orgId, input.appointmentTypeName);
-  const duration = type?.duration_minutes ?? 30;
+  const duration = type?.duration_minutes ?? DEFAULT_APPOINTMENT_MINUTES;
 
   let startMs = resolveStartMs(input.startISO, input.dateStr, input.timeStr, timezone);
   if (startMs === null || startMs < Date.now()) {
@@ -132,7 +133,7 @@ export async function bookAppointment(
   if (!inHours.ok) return { ok: false, reason: inHours.reason };
   startMs = inHours.startMs;
   const endMs = startMs + duration * 60_000;
-  const title = `${type?.name ?? "Appointment"}${input.callerName ? ` — ${input.callerName}` : ""}`;
+  const title = appointmentTitle(type?.name, input.callerName);
   const startISO = new Date(startMs).toISOString();
   const endISO = new Date(endMs).toISOString();
   const db = createServiceClient();
@@ -213,13 +214,13 @@ export async function matchOrCreateClient(orgId: string, phone: string, name?: s
     .maybeSingle();
   if (existing) return existing.id;
 
-  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  const { firstName, lastName } = splitCallerName(name);
   const { data: created } = await db
     .from("clients")
     .insert({
       organization_id: orgId,
-      first_name: parts[0] || "Caller",
-      last_name: parts.slice(1).join(" ") || null,
+      first_name: firstName,
+      last_name: lastName,
       phone,
       status: "lead",
       source: "voice",

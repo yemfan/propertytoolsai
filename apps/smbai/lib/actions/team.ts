@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
+import { assertCanManageTeam, assertCanModifyMember } from "@helm/dna-people";
 
 const resend = new Resend(process.env.RESEND_API_KEY ?? "");
 
@@ -28,9 +29,7 @@ async function assertAdminOrOwner(supabase: Awaited<ReturnType<typeof createClie
     .eq("organization_id", orgId)
     .eq("user_id", userId)
     .single();
-  if (!data || !["owner", "admin"].includes(data.role)) {
-    throw new Error("Only admins and owners can manage team members");
-  }
+  assertCanManageTeam(data?.role);
 }
 
 // ─── List members + pending invitations ──────────────────────────────────────
@@ -170,8 +169,12 @@ export async function updateMemberRole(memberId: string, role: Role) {
     .single();
 
   if (!target) throw new Error("Member not found");
-  if (target.role === "owner") throw new Error("Cannot change the owner's role");
-  if (target.user_id === userId) throw new Error("Cannot change your own role");
+  assertCanModifyMember({
+    targetRole: target.role,
+    targetUserId: target.user_id,
+    actorUserId: userId,
+    action: "change_role",
+  });
 
   const { error } = await supabase
     .from("organization_members")
@@ -197,8 +200,12 @@ export async function removeMember(memberId: string) {
     .single();
 
   if (!target) throw new Error("Member not found");
-  if (target.role === "owner") throw new Error("Cannot remove the owner");
-  if (target.user_id === userId) throw new Error("Cannot remove yourself");
+  assertCanModifyMember({
+    targetRole: target.role,
+    targetUserId: target.user_id,
+    actorUserId: userId,
+    action: "remove",
+  });
 
   const { error } = await supabase
     .from("organization_members")

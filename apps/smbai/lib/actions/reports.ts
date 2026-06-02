@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { aggregatePnL, agingBucket, daysPastDue, type PnLJournalLine } from "@helm/dna-intelligence";
 
 export interface PnLRow {
   account_id: string;
@@ -56,56 +57,27 @@ export async function getPnLReport(from: string, to: string): Promise<PnLReport>
 
   if (error) throw new Error(error.message);
 
-  // Aggregate by account
-  const accountMap = new Map<string, PnLRow & { debitSum: number; creditSum: number }>();
-
+  // Normalize the joined rows, then delegate the cash-basis P&L math to the
+  // Intelligence DNA so every surface applies the same sign convention.
+  const lines: PnLJournalLine[] = [];
   for (const line of data ?? []) {
     const coaRaw = line.chart_of_accounts as unknown as
-      | { code: string; name: string; type: string; normal_balance: string }
-      | { code: string; name: string; type: string; normal_balance: string }[];
+      | { code: string; name: string; type: string }
+      | { code: string; name: string; type: string }[];
     const coa = Array.isArray(coaRaw) ? coaRaw[0] : coaRaw;
     if (!coa) continue;
     if (coa.type !== "revenue" && coa.type !== "expense") continue;
-
-    const key = line.account_id;
-    const existing = accountMap.get(key) ?? {
+    lines.push({
       account_id: line.account_id,
       account_code: coa.code,
       account_name: coa.name,
-      account_type: coa.type as "revenue" | "expense",
-      total: 0,
-      debitSum: 0,
-      creditSum: 0,
-    };
-    existing.debitSum += Number(line.debit);
-    existing.creditSum += Number(line.credit);
-    accountMap.set(key, existing);
+      account_type: coa.type,
+      debit: Number(line.debit),
+      credit: Number(line.credit),
+    });
   }
 
-  // Cash-basis P&L sign convention:
-  //   Revenue accounts: normal balance = credit → net = credit - debit (positive = revenue earned)
-  //   Expense accounts: normal balance = debit  → net = debit - credit (positive = expense incurred)
-  const revenue: PnLRow[] = [];
-  const expenses: PnLRow[] = [];
-
-  for (const [, row] of accountMap) {
-    if (row.account_type === "revenue") {
-      row.total = row.creditSum - row.debitSum;
-      revenue.push({ account_id: row.account_id, account_code: row.account_code, account_name: row.account_name, account_type: "revenue", total: row.total });
-    } else {
-      row.total = row.debitSum - row.creditSum;
-      expenses.push({ account_id: row.account_id, account_code: row.account_code, account_name: row.account_name, account_type: "expense", total: row.total });
-    }
-  }
-
-  revenue.sort((a, b) => b.total - a.total);
-  expenses.sort((a, b) => b.total - a.total);
-
-  const grossRevenue = revenue.reduce((s, r) => s + r.total, 0);
-  const totalExpenses = expenses.reduce((s, r) => s + r.total, 0);
-  const netIncome = grossRevenue - totalExpenses;
-
-  return { from, to, revenue, expenses, grossRevenue, totalExpenses, netIncome };
+  return aggregatePnL(lines, from, to);
 }
 
 // ─── Cash flow summary (bank transactions) ────────────────────────────────────
@@ -284,8 +256,6 @@ export async function getTimeReport(from: string, to: string): Promise<TimeRepor
 // (status sent/overdue) by days past its due date, grouped by client. As-of
 // today — independent of the report date range.
 
-type AgingDayBucket = "current" | "d1_30" | "d31_60" | "d61_90" | "d90_plus";
-
 export interface AgingRow {
   client_id: string | null;
   client_name: string;
@@ -335,9 +305,6 @@ export async function getReceivablesAging(): Promise<ReceivablesAging> {
 
   if (error) throw new Error(error.message);
 
-  const todayMs = new Date(today + "T00:00:00").getTime();
-  const DAY = 86_400_000;
-
   const map = new Map<string, AgingRow>();
   const totals: AgingTotals = { current: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90_plus: 0, total: 0 };
 
@@ -354,14 +321,7 @@ export async function getReceivablesAging(): Promise<ReceivablesAging> {
       : "No client";
 
     const due = inv.due_date as string;
-    const daysPast = Math.floor((todayMs - new Date(due + "T00:00:00").getTime()) / DAY);
-
-    let bucket: AgingDayBucket;
-    if (daysPast <= 0) bucket = "current";
-    else if (daysPast <= 30) bucket = "d1_30";
-    else if (daysPast <= 60) bucket = "d31_60";
-    else if (daysPast <= 90) bucket = "d61_90";
-    else bucket = "d90_plus";
+    const bucket = agingBucket(daysPastDue(due, today));
 
     const row = map.get(clientKey) ?? {
       client_id: clientId,
