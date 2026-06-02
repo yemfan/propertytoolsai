@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { insertVendor, updateVendor as updateVendorFinance, deleteVendor as deleteVendorFinance } from "@helm/dna-finance";
 
 export type Vendor = {
   id: string;
@@ -91,18 +92,9 @@ export async function createVendor(input: {
 }): Promise<void> {
   const orgId = await getOrgId();
   if (!orgId) throw new Error("No org");
-  if (!input.name.trim()) throw new Error("Vendor name is required");
 
   const supabase = await createClient();
-  const { error } = await supabase.from("vendors").insert({
-    organization_id: orgId,
-    name: input.name.trim(),
-    email: input.email,
-    phone: input.phone,
-    notes: input.notes,
-    is_1099: input.is1099,
-  });
-  if (error) throw new Error(error.message);
+  await insertVendor(supabase, orgId, input);
   revalidatePath("/books/vendors");
 }
 
@@ -112,21 +104,9 @@ export async function updateVendor(
 ): Promise<void> {
   const orgId = await getOrgId();
   if (!orgId) throw new Error("No org");
-  if (!input.name.trim()) throw new Error("Vendor name is required");
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("vendors")
-    .update({
-      name: input.name.trim(),
-      email: input.email,
-      phone: input.phone,
-      notes: input.notes,
-      is_1099: input.is1099,
-    })
-    .eq("id", id)
-    .eq("organization_id", orgId);
-  if (error) throw new Error(error.message);
+  await updateVendorFinance(supabase, orgId, id, input);
   revalidatePath("/books/vendors");
 }
 
@@ -196,6 +176,6 @@ export async function deleteVendor(id: string): Promise<void> {
   const orgId = await getOrgId();
   if (!orgId) throw new Error("No org");
   const supabase = await createClient();
-  await supabase.from("vendors").delete().eq("id", id).eq("organization_id", orgId);
+  await deleteVendorFinance(supabase, orgId, id);
   revalidatePath("/books/vendors");
 }
