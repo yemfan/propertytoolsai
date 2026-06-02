@@ -10,3 +10,4 @@ export * from "./bills";
 export * from "./ledger";
 export * from "./estimates";
 export * from "./vendors";
+export * from "./payee";
