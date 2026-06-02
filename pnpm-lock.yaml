@@ -170,6 +170,9 @@ importers:
       '@helm/dna-communication':
         specifier: workspace:*
         version: link:../../packages/dna-communication
+      '@helm/pack-real-estate':
+        specifier: workspace:*
+        version: link:../../industry-packs/real-estate
       '@leadsmart/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
@@ -308,7 +311,7 @@ importers:
         version: 9.39.4(jiti@2.6.1)
       eslint-config-next:
         specifier: ^16.2.0
-        version: 16.2.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+        version: 16.2.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
       tsx:
         specifier: ^4.19.3
         version: 4.21.0
@@ -541,14 +544,18 @@ importers:
         version: 9.39.4(jiti@2.6.1)
       eslint-config-next:
         specifier: ^16.2.0
-        version: 16.2.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+        version: 16.2.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
       typescript:
         specifier: ^5.1.6
         version: 5.9.3
 
   industry-packs/financial-services: {}
 
-  industry-packs/real-estate: {}
+  industry-packs/real-estate:
+    dependencies:
+      '@helm/dna-communication':
+        specifier: workspace:*
+        version: link:../../packages/dna-communication
 
   packages/ai-workforce: {}
 

@@ -30,3 +30,23 @@ export function emailNeedsHumanEscalation(subject: string, body: string): boolea
   const t = `${subject} ${body}`.toLowerCase();
   return /(attorney|lawsuit|legal|fraud|scam|complaint|breach|urgent dispute|report you)/.test(t);
 }
+
+// Sensitive: legal / fraud / discrimination / harassment — route to a human regardless of channel.
+const SENSITIVE: RegExp[] = [
+  /\b(lawsuit|attorney|lawyer|legal action|sue|discriminat|fair housing|hud|harass|stalk|threat)\b/i,
+  /\b(fraud|scam|police|fcc|ftc)\b/i,
+];
+
+/**
+ * Stricter human-escalation check (used by voice/call transcripts). Independent of any
+ * sales "hot" intent. Industry-agnostic — the RE/FS hot-lead logic composes this from a pack.
+ */
+export function needsHumanFromText(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  for (const re of SENSITIVE) {
+    if (re.test(t)) return true;
+  }
+  if (/\b(angry|furious|terrible|worst|never using)\b/i.test(t) && t.length > 40) return true;
+  return false;
+}
