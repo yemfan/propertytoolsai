@@ -402,6 +402,14 @@ export default function BooksClient({ initialInvoices }: { initialInvoices: Invo
               </div>
               <span className="shrink-0 text-sm font-semibold text-slate-900">{formatMoney(Number(inv.total), inv.currency || "USD")}</span>
               <div className="flex shrink-0 items-center gap-1">
+                <a
+                  href={`/api/dashboard/books/invoices/pdf?id=${inv.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  PDF
+                </a>
                 {inv.client_email && inv.status !== "paid" && inv.status !== "void" && (
                   <button type="button" onClick={() => void sendInvoice(inv.id)} disabled={busyId === inv.id} className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50">
                     {busyId === inv.id ? "…" : inv.status === "draft" ? "Send" : "Resend"}

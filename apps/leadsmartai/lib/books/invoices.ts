@@ -5,6 +5,7 @@ import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { getReceptionistConfig } from "@/lib/voice-receptionist/settings";
 import { sendEmail } from "@/lib/email";
 import { computeTotals, lineAmount, formatMoney } from "./money";
+import { renderInvoicePdf } from "./pdf";
 
 /**
  * Invoice service for the LeadSmart "Books" feature. Agent-scoped via
@@ -240,6 +241,33 @@ export async function sendInvoiceEmail(id: string): Promise<{ ok: boolean; error
     (invoice.due_date ? `\nDue: ${invoice.due_date}` : "") +
     (invoice.notes ? `\n\n${invoice.notes}` : "");
 
+  // Attach a PDF copy of the invoice (best-effort — send without it if it fails).
+  let pdf: Uint8Array | undefined;
+  try {
+    pdf = await renderInvoicePdf({
+      business,
+      invoiceNumber: invoice.invoice_number,
+      issueDate: invoice.issue_date,
+      dueDate: invoice.due_date,
+      clientName: invoice.client_name,
+      clientEmail: invoice.client_email,
+      currency: cur,
+      lines: lines.map((l) => ({
+        description: l.description,
+        quantity: Number(l.quantity),
+        unitPrice: Number(l.unit_price),
+        amount: Number(l.amount),
+      })),
+      subtotal: Number(invoice.subtotal),
+      taxRate: Number(invoice.tax_rate),
+      taxAmount: Number(invoice.tax_amount),
+      total: Number(invoice.total),
+      notes: invoice.notes,
+    });
+  } catch (e) {
+    console.error("[books] invoice PDF render failed (sending without attachment):", e);
+  }
+
   let sendResult: { id?: string } | undefined;
   try {
     sendResult = await sendEmail({
@@ -248,6 +276,9 @@ export async function sendInvoiceEmail(id: string): Promise<{ ok: boolean; error
       html,
       text,
       replyTo: agentEmail || undefined,
+      attachments: pdf
+        ? [{ filename: `Invoice-${invoice.invoice_number}.pdf`, contentType: "application/pdf", content: pdf }]
+        : undefined,
     });
   } catch (e) {
     console.error("[books] sendInvoiceEmail:", e);
@@ -266,6 +297,51 @@ export async function sendInvoiceEmail(id: string): Promise<{ ok: boolean; error
     .eq("agent_id", agentId as never);
 
   return { ok: true };
+}
+
+/** Build a PDF for an invoice (agent-scoped) — used by the download endpoint. */
+export async function buildInvoicePdf(
+  id: string,
+): Promise<{ pdf: Uint8Array; invoiceNumber: string } | null> {
+  const { agentId } = await getCurrentAgentContext();
+  const { data: inv } = await supabaseAdmin
+    .from("invoices")
+    .select("*")
+    .eq("id", id)
+    .eq("agent_id", agentId as never)
+    .maybeSingle();
+  if (!inv) return null;
+  const invoice = inv as unknown as InvoiceRow;
+  const { data: lineData } = await supabaseAdmin
+    .from("invoice_lines")
+    .select("*")
+    .eq("invoice_id", id)
+    .order("sort_order", { ascending: true });
+  const lines = (lineData ?? []) as unknown as InvoiceLineRow[];
+  const cfg = await getReceptionistConfig(agentId);
+  const business = cfg.businessName?.trim() || "Your real estate agent";
+
+  const pdf = await renderInvoicePdf({
+    business,
+    invoiceNumber: invoice.invoice_number,
+    issueDate: invoice.issue_date,
+    dueDate: invoice.due_date,
+    clientName: invoice.client_name,
+    clientEmail: invoice.client_email,
+    currency: invoice.currency || "USD",
+    lines: lines.map((l) => ({
+      description: l.description,
+      quantity: Number(l.quantity),
+      unitPrice: Number(l.unit_price),
+      amount: Number(l.amount),
+    })),
+    subtotal: Number(invoice.subtotal),
+    taxRate: Number(invoice.tax_rate),
+    taxAmount: Number(invoice.tax_amount),
+    total: Number(invoice.total),
+    notes: invoice.notes,
+  });
+  return { pdf, invoiceNumber: invoice.invoice_number };
 }
 
 const VALID_STATUS: InvoiceStatus[] = ["draft", "sent", "paid", "overdue", "void"];
