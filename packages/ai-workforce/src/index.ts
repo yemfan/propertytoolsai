@@ -1,5 +1,7 @@
-// @helm/ai-workforce - AI Workforce runtime + AI Employee registry (Role/Goals/Tools/Knowledge/Permissions/Memory/Metrics).
-// Core package. MUST NOT import @helm/pack-* or apps/*. (enforced by scripts/check-boundaries.mjs)
-// Phase 0 scaffold - empty boundary.
-export {}
-
+// @helm/ai-workforce — AI Workforce: first-class AI employees (Role/Goals/Tools/
+// Knowledge/Permissions/Memory/Metrics). Domain model backed by 00048_ai_workforce.
+// Runtime (registry queries, tool dispatch, run/metric recording) lands in a follow-up
+// once @helm/data's generated types include the ai_employee_* tables.
+//
+// Core package: MUST NOT import @helm/pack-* or apps/*.
+export * from "./types";
