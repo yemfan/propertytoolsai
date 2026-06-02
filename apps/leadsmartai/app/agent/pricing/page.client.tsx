@@ -99,6 +99,7 @@ const CARD_DEFS: CardDef[] = [
       "Vanity / call-tracking numbers",
       "Sphere prediction + equity signals",
       "Buyer Broker Agreement (BBA) workflow",
+      "Bookkeeping — invoices, expenses & receipt capture",
       "5,000 AI actions / month",
     ],
     cta: "Start 14-day trial",
@@ -110,6 +111,7 @@ const CARD_DEFS: CardDef[] = [
     coachingPill: "LeadSmart AI Coaching: Top Producer Track included",
     features: [
       "Everything in Pro, plus:",
+      "AI Receptionist + AI Outbound Calling — answers every call, and auto-calls for confirmations, follow-ups & surveys",
       "Unlimited leads & contacts",
       "ISA workflow + qualified handoff",
       "E-signature workflow (Dotloop / DocuSign)",

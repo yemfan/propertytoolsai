@@ -754,6 +754,7 @@ export default function OnboardingFunnel({
           "Producer Track coaching",
           "5 CMA reports/day",
           "SMS + email AI (< 60s)",
+          "Bookkeeping — invoices & expenses",
           "5,000 AI actions/mo",
         ],
         primary: true,
@@ -769,6 +770,7 @@ export default function OnboardingFunnel({
         tagline: "For top producers running solo.",
         features: [
           "Unlimited leads & contacts",
+          "AI Receptionist + Outbound Calling",
           "Top Producer Track coaching",
           "ISA workflow",
           "E-signature (Dotloop / DocuSign)",
