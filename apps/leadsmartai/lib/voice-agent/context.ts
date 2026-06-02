@@ -75,7 +75,7 @@ export async function loadReceptionistContext(
     // check_availability / book_appointment tools (backed by /api/retell/function).
     // When off, steer callers to a message / call-back instead.
     typesText: bookingEnabled
-      ? "30-minute appointments you can book: property showings, buyer consultations, listing consultations, and general meetings. Use check_availability first, then book_appointment."
+      ? "Thirty-minute appointments you can book: property showings, buyer consultations, listing consultations, and general meetings. Use check_availability first, then book_appointment. Always speak durations and times as words (say \"thirty minutes\", never \"three zero\")."
       : "No online appointment booking. If the caller wants to schedule, take a message or offer a call-back.",
     knowledgeText: cfg.extraNotes || "",
     extraNotes: "",

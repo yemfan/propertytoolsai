@@ -253,8 +253,9 @@ export async function runReceptionistTool(
     const r = await getAvailability(ctx.agentId, dateStr);
     if (r.closed) return { text: "We're closed that day. Offer another day within business hours." };
     if (!r.slots.length) return { text: "No open times that day — offer the next open day." };
+    // Spell the duration ("thirty") so TTS doesn't read "30" as "three zero".
     return {
-      text: `Open ${r.durationMinutes}-minute times: ${r.slots.map((s) => s.label).join("; ")}. Offer these and confirm one.`,
+      text: `Open thirty-minute appointment times: ${r.slots.map((s) => s.label).join("; ")}. Offer these and confirm one. Say times as words (e.g. "eleven thirty"), not digit by digit.`,
     };
   }
 
