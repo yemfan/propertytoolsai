@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { getContacts, getCurrentAgentContext } from "@/lib/dashboardService";
 import { loadReceptionistContext } from "@/lib/voice-agent/context";
 import { placeOutboundCall } from "@/lib/voice-agent/outbound";
-import { normalizePhoneE164 } from "@repo/voice";
+import { normalizePhoneE164, type OutboundPurpose } from "@repo/voice";
+import { userHasCrmFeature, subscriptionRequiredResponse } from "@/lib/billing/subscriptionAccess";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /** Cap per batch — guards against runaway cost and Retell concurrency limits. */
 const MAX_BULK = 25;
+const VALID_PURPOSES: OutboundPurpose[] = ["follow_up", "appointment_reminder", "survey", "promo"];
 
 /**
  * Place AI outbound calls to a batch of selected CRM contacts. Each call is the
@@ -17,11 +19,22 @@ const MAX_BULK = 25;
  */
 export async function POST(req: Request) {
   try {
-    const { agentId } = await getCurrentAgentContext();
-    const body = (await req.json().catch(() => ({}))) as { contactIds?: unknown };
+    const { agentId, userId } = await getCurrentAgentContext();
+    if (!(await userHasCrmFeature(userId, "ai_calling"))) {
+      return subscriptionRequiredResponse("ai_calling");
+    }
+    const body = (await req.json().catch(() => ({}))) as {
+      contactIds?: unknown;
+      purpose?: OutboundPurpose;
+      detail?: string;
+    };
     const ids = Array.isArray(body.contactIds)
       ? Array.from(new Set(body.contactIds.map((x) => String(x)).filter(Boolean)))
       : [];
+    const purpose: OutboundPurpose = VALID_PURPOSES.includes(body.purpose as OutboundPurpose)
+      ? (body.purpose as OutboundPurpose)
+      : "follow_up";
+    const detail = body.detail ? String(body.detail).trim() : undefined;
 
     if (ids.length === 0) {
       return NextResponse.json({ ok: false, error: "Select at least one contact." }, { status: 400 });
@@ -55,7 +68,7 @@ export async function POST(req: Request) {
         continue;
       }
       try {
-        await placeOutboundCall({ ctx, agentId, leadName: name, toNumberE164: norm.value });
+        await placeOutboundCall({ ctx, agentId, leadName: name, toNumberE164: norm.value, purpose, detail });
         results.push({ id: String(c.id), name, phone: norm.value, ok: true });
       } catch (e) {
         results.push({

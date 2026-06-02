@@ -66,6 +66,8 @@ const FEATURE_LABELS: Record<string, string> = {
   routing: "Smart lead routing",
   producer_track_coaching: "Producer Track coaching",
   top_producer_track_coaching: "Top Producer Track coaching",
+  bookkeeping: "Bookkeeping (invoices & expenses)",
+  ai_calling: "AI Outbound Calling",
 };
 
 function featureLabel(key: string) {

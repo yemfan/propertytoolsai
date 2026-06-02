@@ -5,6 +5,8 @@ import {
   expenseTotals,
   EXPENSE_CATEGORIES,
 } from "@/lib/books/expenses";
+import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { userHasCrmFeature, subscriptionRequiredResponse } from "@/lib/billing/subscriptionAccess";
 
 export const runtime = "nodejs";
 
@@ -18,6 +20,10 @@ function yearStart(d: Date): string {
 /** Recent expenses + this-month / year-to-date totals for the signed-in agent. */
 export async function GET() {
   try {
+    const { userId } = await getCurrentAgentContext();
+    if (!(await userHasCrmFeature(userId, "bookkeeping"))) {
+      return subscriptionRequiredResponse("bookkeeping");
+    }
     const now = new Date();
     const today = now.toISOString().slice(0, 10);
     const [expenses, month, year] = await Promise.all([
@@ -41,6 +47,10 @@ export async function GET() {
 /** Log a business expense for the signed-in agent. */
 export async function POST(req: Request) {
   try {
+    const { userId } = await getCurrentAgentContext();
+    if (!(await userHasCrmFeature(userId, "bookkeeping"))) {
+      return subscriptionRequiredResponse("bookkeeping");
+    }
     const body = (await req.json().catch(() => ({}))) as {
       amount?: number;
       category?: string;

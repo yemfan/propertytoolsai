@@ -3,6 +3,7 @@ import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { loadReceptionistContext } from "@/lib/voice-agent/context";
 import { placeOutboundCall } from "@/lib/voice-agent/outbound";
 import { normalizePhoneE164, type OutboundPurpose } from "@repo/voice";
+import { userHasCrmFeature, subscriptionRequiredResponse } from "@/lib/billing/subscriptionAccess";
 
 export const runtime = "nodejs";
 
@@ -15,7 +16,10 @@ const VALID_PURPOSES: OutboundPurpose[] = ["follow_up", "appointment_reminder", 
  */
 export async function POST(req: Request) {
   try {
-    const { agentId } = await getCurrentAgentContext();
+    const { agentId, userId } = await getCurrentAgentContext();
+    if (!(await userHasCrmFeature(userId, "ai_calling"))) {
+      return subscriptionRequiredResponse("ai_calling");
+    }
     const body = (await req.json().catch(() => ({}))) as {
       name?: string;
       phone?: string;

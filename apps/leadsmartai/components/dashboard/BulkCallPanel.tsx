@@ -1,12 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { PhoneOutgoing, Search, Users, AlertTriangle } from "lucide-react";
+import { PhoneOutgoing, Search, Users, AlertTriangle, ClipboardList, Megaphone } from "lucide-react";
 
 type PickContact = { id: string; name: string; phone: string };
 type CallResult = { id: string; name: string; phone: string | null; ok: boolean; error?: string };
+type Purpose = "follow_up" | "survey" | "promo";
 
 const MAX_BULK = 25;
+const PURPOSES: { key: Purpose; label: string; icon: typeof Users }[] = [
+  { key: "follow_up", label: "Follow-up", icon: Users },
+  { key: "survey", label: "Survey / review", icon: ClipboardList },
+  { key: "promo", label: "Promo / announcement", icon: Megaphone },
+];
 
 /**
  * Bulk AI calling — select multiple CRM contacts and have Lucy call each one.
@@ -21,6 +27,9 @@ export default function BulkCallPanel() {
   const [status, setStatus] = useState<"idle" | "calling" | "done" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [results, setResults] = useState<CallResult[] | null>(null);
+  const [purpose, setPurpose] = useState<Purpose>("follow_up");
+  const [detail, setDetail] = useState("");
+  const needsDetail = purpose === "survey" || purpose === "promo";
 
   useEffect(() => {
     let alive = true;
@@ -80,6 +89,12 @@ export default function BulkCallPanel() {
 
   async function runBulk() {
     if (selected.size === 0 || status === "calling") return;
+    if (needsDetail && !detail.trim()) {
+      setStatus("error");
+      setMessage(purpose === "survey" ? "Add the survey questions first." : "Add the announcement message first.");
+      setConfirming(false);
+      return;
+    }
     setStatus("calling");
     setMessage(null);
     setResults(null);
@@ -87,7 +102,11 @@ export default function BulkCallPanel() {
       const res = await fetch("/api/dashboard/voice/outbound-call/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contactIds: Array.from(selected) }),
+        body: JSON.stringify({
+          contactIds: Array.from(selected),
+          purpose,
+          detail: needsDetail ? detail.trim() : undefined,
+        }),
       });
       const data = (await res.json()) as {
         ok?: boolean;
@@ -121,6 +140,49 @@ export default function BulkCallPanel() {
         Select contacts and Lucy calls each one (up to {MAX_BULK} per batch). Each call discloses
         it&apos;s an AI and is logged below in Inbound &amp; outbound activity.
       </p>
+
+      {/* Purpose picker */}
+      <div className="mb-2 flex flex-wrap gap-2">
+        {PURPOSES.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => {
+              setPurpose(key);
+              setStatus("idle");
+              setMessage(null);
+              setConfirming(false);
+            }}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+              purpose === key
+                ? "border-blue-500 bg-blue-50 text-blue-700"
+                : "border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {needsDetail && (
+        <div className="mb-3">
+          <span className="mb-1 block text-[11px] font-medium text-slate-500">
+            {purpose === "survey" ? "What should Lucy ask each contact?" : "What's the announcement?"}
+          </span>
+          <textarea
+            className="w-full resize-y rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+            rows={2}
+            value={detail}
+            onChange={(e) => setDetail(e.target.value)}
+            placeholder={
+              purpose === "survey"
+                ? 'e.g. "How was your home tour? Would you leave us a Google review?"'
+                : 'e.g. "A new listing just hit your target neighborhood — want a private showing?"'
+            }
+          />
+        </div>
+      )}
 
       {/* Search + bulk actions */}
       <div className="mb-2 flex items-center gap-2">

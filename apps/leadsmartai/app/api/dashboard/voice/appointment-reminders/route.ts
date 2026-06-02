@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { loadReceptionistContext } from "@/lib/voice-agent/context";
 import { placeOutboundCall } from "@/lib/voice-agent/outbound";
 import { normalizePhoneE164 } from "@repo/voice";
+import { userHasCrmFeature, subscriptionRequiredResponse } from "@/lib/billing/subscriptionAccess";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -75,7 +76,10 @@ export async function GET() {
 /** Place AI reminder calls for upcoming appointments (all, or the given ids). */
 export async function POST(req: Request) {
   try {
-    const { agentId } = await getCurrentAgentContext();
+    const { agentId, userId } = await getCurrentAgentContext();
+    if (!(await userHasCrmFeature(userId, "ai_calling"))) {
+      return subscriptionRequiredResponse("ai_calling");
+    }
     const body = (await req.json().catch(() => ({}))) as { ids?: unknown };
     const idSet = Array.isArray(body.ids) ? new Set(body.ids.map((x) => String(x))) : null;
 

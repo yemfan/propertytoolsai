@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { listExpenses, expenseTotals } from "@/lib/books/expenses";
 import ExpensesClient from "@/components/dashboard/ExpensesClient";
+import FeatureUpgradeCard from "@/components/billing/FeatureUpgradeCard";
+import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { userHasCrmFeature } from "@/lib/billing/subscriptionAccess";
 
 export const metadata: Metadata = {
   title: "Expenses",
@@ -21,6 +24,16 @@ function yearStart(d: Date): string {
  * clients. Server component loads recent expenses + this-month / YTD totals.
  */
 export default async function ExpensesPage() {
+  const { userId } = await getCurrentAgentContext();
+  if (!(await userHasCrmFeature(userId, "bookkeeping"))) {
+    return (
+      <FeatureUpgradeCard
+        title="Expense tracking is a Pro feature"
+        description="Track your real estate business costs for tax time — marketing, mileage, dues, and more, with receipt capture."
+        requiredPlan="Pro"
+      />
+    );
+  }
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
   const [expenses, month, year] = await Promise.all([

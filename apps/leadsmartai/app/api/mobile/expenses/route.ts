@@ -8,8 +8,23 @@ import {
   type ExpenseRow,
 } from "@/lib/books/expenses";
 import type { MobileExpenseDto } from "@leadsmart/shared";
+import { userHasCrmFeature } from "@/lib/billing/subscriptionAccess";
 
 export const runtime = "nodejs";
+
+/** Mobile-shaped 402 when the agent's plan lacks bookkeeping. */
+function bookkeepingRequired() {
+  return NextResponse.json(
+    {
+      ok: false,
+      success: false,
+      error: "Expense tracking requires the Pro plan or higher.",
+      code: "SUBSCRIPTION_REQUIRED",
+      feature: "bookkeeping",
+    },
+    { status: 402 },
+  );
+}
 
 function monthStart(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-01`;
@@ -35,6 +50,7 @@ function toDto(r: ExpenseRow): MobileExpenseDto {
 export async function GET(req: Request) {
   const auth = await requireMobileAgent(req);
   if (auth.ok === false) return auth.response;
+  if (!(await userHasCrmFeature(auth.ctx.userId, "bookkeeping"))) return bookkeepingRequired();
 
   try {
     const now = new Date();
@@ -72,6 +88,7 @@ type PostBody = {
 export async function POST(req: Request) {
   const auth = await requireMobileAgent(req);
   if (auth.ok === false) return auth.response;
+  if (!(await userHasCrmFeature(auth.ctx.userId, "bookkeeping"))) return bookkeepingRequired();
 
   try {
     const body = (await req.json().catch(() => ({}))) as PostBody;

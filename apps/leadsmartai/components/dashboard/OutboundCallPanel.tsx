@@ -273,7 +273,7 @@ export default function OutboundCallPanel() {
 
       <p className="text-xs text-slate-400">
         Outbound calls go out from your receptionist number and require Retell calling credits.
-        Coming next: bulk &ldquo;call all.&rdquo;
+        Need to reach several people at once? Select multiple contacts to call them in one batch.
       </p>
     </div>
   );

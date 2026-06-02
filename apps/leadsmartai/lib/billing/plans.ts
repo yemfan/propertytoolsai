@@ -41,7 +41,9 @@ export type PlanFeature =
   | "white_glove_onboarding"
   | "concierge_support"
   | "cultural_calendar"
-  | "custom_voice_tuning";
+  | "custom_voice_tuning"
+  | "bookkeeping"
+  | "ai_calling";
 
 export type BillingCadence = "monthly" | "annual";
 
@@ -96,6 +98,7 @@ export const PLANS: Record<PlanSlug, PlanDefinition> = {
       "limited_ai",
       "bilingual_ai",
       "producer_track_coaching",
+      "bookkeeping",
     ],
     // Reuses the existing STRIPE_PRICE_ID_PRO env var — historically
     // the $49 product was wired to this name (the old "starter" CRM
@@ -119,6 +122,8 @@ export const PLANS: Record<PlanSlug, PlanDefinition> = {
       "prediction",
       "bilingual_ai",
       "top_producer_track_coaching",
+      "bookkeeping",
+      "ai_calling",
     ],
     // STRIPE_PRICE_ID_PREMIUM with fallback to STRIPE_PRICE_ID_ELITE
     // is handled in crmStripePrices.ts so existing deployments don't
@@ -146,6 +151,8 @@ export const PLANS: Record<PlanSlug, PlanDefinition> = {
       "concierge_support",
       "cultural_calendar",
       "custom_voice_tuning",
+      "bookkeeping",
+      "ai_calling",
     ],
     stripePriceEnvVar: "STRIPE_PRICE_ID_SIGNATURE",
     stripePriceEnvVarAnnual: "STRIPE_PRICE_ID_SIGNATURE_ANNUAL",
@@ -167,6 +174,8 @@ export const PLANS: Record<PlanSlug, PlanDefinition> = {
       "multi_agent",
       "routing",
       "top_producer_track_coaching",
+      "bookkeeping",
+      "ai_calling",
     ],
     stripePriceEnvVar: "STRIPE_PRICE_ID_TEAM",
     stripePriceEnvVarAnnual: "STRIPE_PRICE_ID_TEAM_ANNUAL",

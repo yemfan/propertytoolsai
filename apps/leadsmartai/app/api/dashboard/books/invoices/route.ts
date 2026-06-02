@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { createInvoice, type InvoiceLineInput } from "@/lib/books/invoices";
+import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { userHasCrmFeature, subscriptionRequiredResponse } from "@/lib/billing/subscriptionAccess";
 
 export const runtime = "nodejs";
 
 /** Create a draft invoice for the signed-in agent. */
 export async function POST(req: Request) {
   try {
+    const { userId } = await getCurrentAgentContext();
+    if (!(await userHasCrmFeature(userId, "bookkeeping"))) {
+      return subscriptionRequiredResponse("bookkeeping");
+    }
     const body = (await req.json().catch(() => ({}))) as {
       contactId?: string | null;
       clientName?: string;
