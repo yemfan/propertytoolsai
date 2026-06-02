@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { setInvoiceStatus, type InvoiceStatus } from "@/lib/books/invoices";
+import { requireCrmFeature } from "@/lib/billing/guard";
 
 export const runtime = "nodejs";
 
 /** Update an invoice's status (e.g. mark sent / paid / void). Agent-scoped. */
 export async function POST(req: Request) {
   try {
+    const gate = await requireCrmFeature("bookkeeping");
+    if (!gate.ok) return gate.response;
     const body = (await req.json().catch(() => ({}))) as { id?: string; status?: string };
     const id = String(body.id ?? "").trim();
     if (!id) return NextResponse.json({ ok: false, error: "Missing invoice id." }, { status: 400 });

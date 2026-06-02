@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { sendInvoiceEmail } from "@/lib/books/invoices";
+import { requireCrmFeature } from "@/lib/billing/guard";
 
 export const runtime = "nodejs";
 
 /** Email an invoice to its client and mark it sent. */
 export async function POST(req: Request) {
   try {
+    const gate = await requireCrmFeature("bookkeeping");
+    if (!gate.ok) return gate.response;
     const body = (await req.json().catch(() => ({}))) as { id?: string };
     const id = String(body.id ?? "").trim();
     if (!id) return NextResponse.json({ ok: false, error: "Missing invoice id." }, { status: 400 });

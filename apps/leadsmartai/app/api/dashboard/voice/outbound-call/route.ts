@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { loadReceptionistContext } from "@/lib/voice-agent/context";
 import { placeOutboundCall } from "@/lib/voice-agent/outbound";
 import { normalizePhoneE164, type OutboundPurpose } from "@repo/voice";
-import { userHasCrmFeature, subscriptionRequiredResponse } from "@/lib/billing/subscriptionAccess";
+import { requireCrmFeature } from "@/lib/billing/guard";
 
 export const runtime = "nodejs";
 
@@ -16,10 +15,9 @@ const VALID_PURPOSES: OutboundPurpose[] = ["follow_up", "appointment_reminder", 
  */
 export async function POST(req: Request) {
   try {
-    const { agentId, userId } = await getCurrentAgentContext();
-    if (!(await userHasCrmFeature(userId, "ai_calling"))) {
-      return subscriptionRequiredResponse("ai_calling");
-    }
+    const gate = await requireCrmFeature("ai_calling");
+    if (!gate.ok) return gate.response;
+    const { agentId } = gate.ctx;
     const body = (await req.json().catch(() => ({}))) as {
       name?: string;
       phone?: string;
