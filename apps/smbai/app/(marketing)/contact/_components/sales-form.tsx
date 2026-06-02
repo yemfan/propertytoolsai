@@ -6,6 +6,7 @@ import type { SalesState } from "@/lib/actions/sales";
 
 const interestOptions = [
   { id: "voice", label: "AI Voice Receptionist" },
+  { id: "ai-assistant", label: "HelmSmart AI Assistant" },
   { id: "inbox", label: "Smart Inbox" },
   { id: "invoicing", label: "Invoicing & Bookkeeping" },
   { id: "calendar", label: "Calendar & Scheduling" },
