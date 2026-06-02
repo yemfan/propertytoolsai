@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Receipt, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, Receipt, ChevronDown, ChevronUp, Search, User2, X } from "lucide-react";
 import { formatMoney, computeTotals } from "@/lib/books/money";
 import type { InvoiceRow, InvoiceStatus } from "@/lib/books/invoices";
 
 type LineDraft = { description: string; quantity: string; unitPrice: string };
+type PickContact = { id: string; name: string; email: string };
 
 const STATUS_TONE: Record<string, string> = {
   draft: "bg-slate-100 text-slate-700 ring-slate-200",
@@ -34,6 +35,13 @@ export default function BooksClient({ initialInvoices }: { initialInvoices: Invo
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // "Bill to" contact picker
+  const [contacts, setContacts] = useState<PickContact[]>([]);
+  const [contactId, setContactId] = useState<string | null>(null);
+  const [contactQuery, setContactQuery] = useState("");
+  const [contactOpen, setContactOpen] = useState(false);
+  const contactBoxRef = useRef<HTMLDivElement | null>(null);
+
   const totals = useMemo(
     () =>
       computeTotals(
@@ -42,6 +50,50 @@ export default function BooksClient({ initialInvoices }: { initialInvoices: Invo
       ),
     [lines, taxPct],
   );
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/dashboard/books/contacts");
+        const data = (await res.json()) as { contacts?: PickContact[] };
+        if (alive) setContacts(Array.isArray(data.contacts) ? data.contacts : []);
+      } catch {
+        /* manual entry still works */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (contactBoxRef.current && !contactBoxRef.current.contains(e.target as Node)) setContactOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const filteredContacts = useMemo(() => {
+    const q = contactQuery.trim().toLowerCase();
+    const list = !q
+      ? contacts
+      : contacts.filter((c) => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q));
+    return list.slice(0, 8);
+  }, [contacts, contactQuery]);
+
+  function pickContact(c: PickContact) {
+    setContactId(c.id);
+    setContactQuery(c.name);
+    setClientName(c.name === "Unnamed contact" ? "" : c.name);
+    if (c.email) setClientEmail(c.email);
+    setContactOpen(false);
+  }
+  function clearContact() {
+    setContactId(null);
+    setContactQuery("");
+  }
 
   const outstanding = useMemo(
     () =>
@@ -71,6 +123,8 @@ export default function BooksClient({ initialInvoices }: { initialInvoices: Invo
     setTaxPct("0");
     setNotes("");
     setLines([emptyLine()]);
+    setContactId(null);
+    setContactQuery("");
   }
 
   async function createInvoice() {
@@ -88,6 +142,7 @@ export default function BooksClient({ initialInvoices }: { initialInvoices: Invo
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          contactId,
           clientName,
           clientEmail,
           dueDate: dueDate || null,
@@ -178,6 +233,58 @@ export default function BooksClient({ initialInvoices }: { initialInvoices: Invo
       {showForm && (
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-3 text-sm font-semibold text-slate-900">New invoice</h2>
+
+          <div ref={contactBoxRef} className="relative mb-3">
+            <span className="mb-1 block text-[11px] font-medium text-slate-500">Bill to a contact (optional)</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" strokeWidth={2} />
+              <input
+                className={`${input} pl-9 ${contactId ? "pr-9" : ""}`}
+                value={contactQuery}
+                onChange={(e) => {
+                  setContactQuery(e.target.value);
+                  setContactId(null);
+                  setContactOpen(true);
+                }}
+                onFocus={() => setContactOpen(true)}
+                placeholder="Search your contacts by name or email…"
+              />
+              {contactId && (
+                <button
+                  type="button"
+                  onClick={clearContact}
+                  aria-label="Clear contact"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                >
+                  <X className="h-4 w-4" strokeWidth={2} />
+                </button>
+              )}
+            </div>
+            {contactOpen && contacts.length > 0 && (
+              <div className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                {filteredContacts.length === 0 ? (
+                  <div className="px-3 py-2 text-xs text-slate-400">No matching contacts.</div>
+                ) : (
+                  filteredContacts.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        pickContact(c);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-blue-50"
+                    >
+                      <User2 className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={2} />
+                      <span className="min-w-0 flex-1 truncate text-slate-800">{c.name}</span>
+                      {c.email && <span className="shrink-0 truncate text-xs text-slate-500">{c.email}</span>}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <span className="mb-1 block text-[11px] font-medium text-slate-500">Client name</span>
