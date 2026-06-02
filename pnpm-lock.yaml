@@ -499,12 +499,27 @@ importers:
       '@helm/dna-finance':
         specifier: workspace:*
         version: link:../../packages/dna-finance
+      '@helm/dna-intelligence':
+        specifier: workspace:*
+        version: link:../../packages/dna-intelligence
+      '@helm/dna-knowledge':
+        specifier: workspace:*
+        version: link:../../packages/dna-knowledge
+      '@helm/dna-marketing':
+        specifier: workspace:*
+        version: link:../../packages/dna-marketing
       '@helm/dna-operations':
         specifier: workspace:*
         version: link:../../packages/dna-operations
+      '@helm/dna-people':
+        specifier: workspace:*
+        version: link:../../packages/dna-people
       '@helm/dna-revenue':
         specifier: workspace:*
         version: link:../../packages/dna-revenue
+      '@helm/dna-service':
+        specifier: workspace:*
+        version: link:../../packages/dna-service
       '@repo/voice':
         specifier: workspace:*
         version: link:../../packages/voice
@@ -621,7 +636,14 @@ importers:
 
   packages/dna-intelligence: {}
 
-  packages/dna-knowledge: {}
+  packages/dna-knowledge:
+    dependencies:
+      '@helm/data':
+        specifier: workspace:*
+        version: link:../data
+      '@supabase/supabase-js':
+        specifier: ^2.99.2
+        version: 2.100.1
 
   packages/dna-marketing: {}
 

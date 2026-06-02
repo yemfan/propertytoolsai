@@ -6,11 +6,21 @@ import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import { runAutomations } from "@/lib/automation-engine";
 import Anthropic from "@anthropic-ai/sdk";
+import {
+  parseCampaignCopy,
+  parseSubjectLines,
+  statusForRecipientFilter,
+  CAMPAIGN_TONE,
+  REFINE_INSTRUCTION,
+  type CampaignTone,
+  type RefineMode,
+  type RecipientFilter,
+} from "@helm/dna-marketing";
+
+export type { CampaignTone, RefineMode };
 
 const resend = new Resend(process.env.RESEND_API_KEY ?? "");
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-type RecipientFilter = "all" | "active" | "leads" | "prospects" | "inactive";
 
 // ─── Create campaign ──────────────────────────────────────────────────────────
 
@@ -75,16 +85,8 @@ export async function sendCampaign(campaignId: string) {
     .not("email", "is", null)
     .neq("email", "");
 
-  if (campaign.recipient_filter !== "all") {
-    const statusMap: Record<string, string> = {
-      active: "active",
-      leads: "lead",
-      prospects: "prospect",
-      inactive: "inactive",
-    };
-    const status = statusMap[campaign.recipient_filter];
-    if (status) clientQuery = clientQuery.eq("status", status);
-  }
+  const status = statusForRecipientFilter(campaign.recipient_filter as RecipientFilter);
+  if (status) clientQuery = clientQuery.eq("status", status);
 
   if (campaign.recipient_tag) {
     clientQuery = clientQuery.contains("tags", [campaign.recipient_tag]);
@@ -210,30 +212,8 @@ export async function deleteCampaign(campaignId: string) {
 }
 
 // ─── AI copywriter (Week 44) ──────────────────────────────────────────────────
-
-export type CampaignTone = "promotional" | "friendly" | "professional" | "announcement";
-
-const CAMPAIGN_TONE: Record<CampaignTone, string> = {
-  promotional: "persuasive and action-oriented, highlighting the offer with a sense of urgency",
-  friendly: "warm, casual, and personable",
-  professional: "polished, credible, and concise",
-  announcement: "clear and informative, sharing news or an update",
-};
-
-function parseCopy(raw: string): { subject: string; body: string } {
-  let t = raw.trim();
-  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fence) t = fence[1].trim();
-  const start = t.indexOf("{");
-  const end = t.lastIndexOf("}");
-  if (start !== -1 && end !== -1 && end > start) t = t.slice(start, end + 1);
-  try {
-    const obj = JSON.parse(t) as { subject?: unknown; body?: unknown };
-    return { subject: String(obj.subject ?? "").trim(), body: String(obj.body ?? "").trim() };
-  } catch {
-    return { subject: "", body: raw.trim() };
-  }
-}
+// Tone presets + LLM-output parsers live in @helm/dna-marketing; this layer keeps
+// the org lookup and the Anthropic call.
 
 export async function generateCampaignCopy(input: {
   prompt: string;
@@ -271,31 +251,9 @@ Rules:
   });
 
   const text = (response.content[0] as { type: string; text: string }).text ?? "";
-  const parsed = parseCopy(text);
+  const parsed = parseCampaignCopy(text);
   if (!parsed.body) throw new Error("Couldn't generate copy — try rephrasing your prompt");
   return parsed;
-}
-
-function parseSubjectLines(raw: string): string[] {
-  let t = raw.trim();
-  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fence) t = fence[1].trim();
-  const start = t.indexOf("[");
-  const end = t.lastIndexOf("]");
-  if (start !== -1 && end !== -1 && end > start) t = t.slice(start, end + 1);
-  try {
-    const arr = JSON.parse(t);
-    if (Array.isArray(arr)) {
-      return arr.map((s) => String(s).trim()).filter(Boolean).slice(0, 5);
-    }
-  } catch {
-    // fall through to line-based parsing
-  }
-  return raw
-    .split("\n")
-    .map((l) => l.replace(/^[\s\-*\d.)"]+/, "").replace(/"\s*,?\s*$/, "").trim())
-    .filter(Boolean)
-    .slice(0, 5);
 }
 
 export async function generateSubjectLines(input: {
@@ -339,16 +297,6 @@ Respond with ONLY a JSON array of 5 strings, e.g.:
   if (!ideas.length) throw new Error("Couldn't generate subject lines — try again");
   return ideas;
 }
-
-export type RefineMode = "shorten" | "persuasive" | "casual" | "formal" | "grammar";
-
-const REFINE_INSTRUCTION: Record<RefineMode, string> = {
-  shorten: "Make it more concise — cut to the essential message while keeping a clear call to action.",
-  persuasive: "Make it more persuasive and compelling — strengthen the value proposition and the call to action.",
-  casual: "Make the tone warmer, friendlier, and more conversational.",
-  formal: "Make the tone more polished and professional.",
-  grammar: "Fix spelling, grammar, and punctuation and improve clarity, without changing the meaning or tone.",
-};
 
 export async function refineCampaignBody(input: { body: string; mode: RefineMode }): Promise<string> {
   const cookieStore = await cookies();
