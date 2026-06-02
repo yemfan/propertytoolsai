@@ -5,6 +5,10 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { runAutomations } from "@/lib/automation-engine";
+import {
+  patchClient as patchClientRevenue,
+  deleteClient as deleteClientRevenue,
+} from "@helm/dna-revenue";
 
 /**
  * Recalculates and updates a client's lifetime_value from paid invoices.
@@ -143,21 +147,7 @@ export async function patchClient(
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
-
-  // Auto-set stage_changed_at when stage changes
-  const dbPatch: Record<string, unknown> = {
-    ...patch,
-    updated_at: new Date().toISOString(),
-  };
-  if (patch.pipeline_stage) {
-    dbPatch.stage_changed_at = new Date().toISOString();
-  }
-
-  await supabase
-    .from("clients")
-    .update(dbPatch)
-    .eq("id", clientId)
-    .eq("organization_id", orgId);
+  await patchClientRevenue(supabase, orgId, clientId, patch);
 
   revalidatePath("/pipeline");
   revalidatePath(`/clients/${clientId}`);
@@ -166,12 +156,19 @@ export async function patchClient(
 // ── Delete ────────────────────────────────────────────────────────────────────
 
 export async function deleteClient(clientId: string): Promise<{ error?: string }> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
+  if (!orgId) return { error: "Unauthorized." };
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized." };
 
-  const { error } = await supabase.from("clients").delete().eq("id", clientId);
-  if (error) return { error: "Failed to delete client." };
+  try {
+    await deleteClientRevenue(supabase, orgId, clientId);
+  } catch {
+    return { error: "Failed to delete client." };
+  }
 
   revalidatePath("/clients");
   return {};
