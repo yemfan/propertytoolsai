@@ -4,8 +4,11 @@ import { normalizePhoneE164 } from "@repo/voice";
 import {
   getReceptionistConfig,
   upsertReceptionistConfig,
+  getBookingSettings,
+  setBusinessHours,
   type UpsertReceptionistConfigInput,
 } from "@/lib/voice-receptionist/settings";
+import type { BusinessHours } from "@repo/voice";
 
 export const runtime = "nodejs";
 
@@ -17,7 +20,8 @@ export async function GET() {
   try {
     const { agentId } = await getCurrentAgentContext();
     const settings = await getReceptionistConfig(agentId);
-    return NextResponse.json({ ok: true, settings });
+    const { hours } = await getBookingSettings(agentId);
+    return NextResponse.json({ ok: true, settings, businessHours: hours });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Server error";
     console.error("voice-receptionist-settings GET", e);
@@ -68,7 +72,21 @@ export async function PATCH(req: Request) {
     if (extraNotes !== undefined) input.extraNotes = extraNotes;
 
     const settings = await upsertReceptionistConfig(agentId, input);
-    return NextResponse.json({ ok: true, settings });
+
+    // Office hours live in their own jsonb column; save defensively so the rest
+    // of the config still saves even before the business_hours migration.
+    if ("businessHours" in body) {
+      const r = await setBusinessHours(agentId, body.businessHours as BusinessHours | null);
+      if (!r.ok) {
+        return NextResponse.json(
+          { ok: false, error: r.error || "Could not save office hours." },
+          { status: 400 },
+        );
+      }
+    }
+
+    const { hours } = await getBookingSettings(agentId);
+    return NextResponse.json({ ok: true, settings, businessHours: hours });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Server error";
     console.error("voice-receptionist-settings PATCH", e);

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { getReceptionistConfig } from "@/lib/voice-receptionist/settings";
+import { getReceptionistConfig, getBookingSettings } from "@/lib/voice-receptionist/settings";
 import { findContactByPhone, toUsDisplayPhone } from "@/lib/missed-call/service";
 import {
   defaultBusinessHours,
@@ -46,7 +46,8 @@ function safeTimezone(tz: string | undefined | null): string {
 
 async function loadBookingOrg(agentId: string): Promise<{ timezone: string; hours: BusinessHours }> {
   const cfg = await getReceptionistConfig(agentId);
-  return { timezone: safeTimezone(cfg.timezone), hours: defaultBusinessHours() };
+  const { hours } = await getBookingSettings(agentId);
+  return { timezone: safeTimezone(cfg.timezone), hours: hours ?? defaultBusinessHours() };
 }
 
 /** Existing booked appointments in the window, as busy intervals. */

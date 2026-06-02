@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { type BusinessHours, DAY_KEYS } from "@repo/voice";
 import {
   DEFAULT_RECEPTIONIST_CONFIG,
   type ReceptionistConfig,
@@ -46,26 +47,91 @@ export async function getReceptionistConfig(
   }
 }
 
+/** Validate a stored business_hours blob into a clean BusinessHours, or null. */
+function sanitizeBusinessHours(raw: unknown): BusinessHours | null {
+  if (!raw || typeof raw !== "object") return null;
+  const src = raw as Record<string, unknown>;
+  const out = {} as BusinessHours;
+  let any = false;
+  for (const d of DAY_KEYS) {
+    const v = src[d];
+    if (
+      v &&
+      typeof v === "object" &&
+      typeof (v as { open?: unknown }).open === "string" &&
+      typeof (v as { close?: unknown }).close === "string" &&
+      /^\d{1,2}:\d{2}$/.test((v as { open: string }).open) &&
+      /^\d{1,2}:\d{2}$/.test((v as { close: string }).close)
+    ) {
+      out[d] = { open: (v as { open: string }).open, close: (v as { close: string }).close };
+      any = true;
+    } else {
+      out[d] = null;
+    }
+  }
+  return any ? out : null;
+}
+
 /**
- * Whether the agent has appointment booking turned on. Read separately (not via
- * SELECT_COLS) and defensively so a missing `booking_enabled` column (before the
- * voice_appointments migration is applied) never breaks the main config read —
- * it just resolves to false (booking off).
+ * Booking settings (enabled + per-agent hours) for the inbound hot path. One
+ * query post-migration; falls back to a booking_enabled-only read when the
+ * business_hours column doesn't exist yet, so an agent who already has booking
+ * on never breaks before this migration. hours is null when unset (callers fall
+ * back to the default Mon–Fri 9–5).
  */
-export async function isBookingEnabled(
+export async function getBookingSettings(
   agentId: string | null | undefined,
-): Promise<boolean> {
-  if (!agentId) return false;
+): Promise<{ enabled: boolean; hours: BusinessHours | null }> {
+  if (!agentId) return { enabled: false, hours: null };
   try {
     const { data, error } = await supabaseAdmin
+      .from("voice_receptionist_settings")
+      .select("booking_enabled, business_hours")
+      .eq("agent_id", agentId as never)
+      .maybeSingle();
+    if (!error && data) {
+      const d = data as { booking_enabled?: boolean | null; business_hours?: unknown };
+      return { enabled: Boolean(d.booking_enabled), hours: sanitizeBusinessHours(d.business_hours) };
+    }
+  } catch {
+    /* fall through to the column-absent fallback */
+  }
+  try {
+    const { data } = await supabaseAdmin
       .from("voice_receptionist_settings")
       .select("booking_enabled")
       .eq("agent_id", agentId as never)
       .maybeSingle();
-    if (error || !data) return false;
-    return Boolean((data as { booking_enabled?: boolean | null }).booking_enabled);
+    return {
+      enabled: Boolean((data as { booking_enabled?: boolean | null } | null)?.booking_enabled),
+      hours: null,
+    };
   } catch {
-    return false;
+    return { enabled: false, hours: null };
+  }
+}
+
+/** Persist an agent's office hours (jsonb). Upsert touches only business_hours,
+ *  so it never disturbs the rest of the config. Returns ok:false with the error
+ *  message if the column doesn't exist yet (migration not applied). */
+export async function setBusinessHours(
+  agentId: string,
+  hours: BusinessHours | null,
+): Promise<{ ok: boolean; error?: string }> {
+  const clean = hours ? sanitizeBusinessHours(hours) : null;
+  try {
+    const { error } = await supabaseAdmin.from("voice_receptionist_settings").upsert(
+      {
+        agent_id: agentId as never,
+        business_hours: clean as never,
+        updated_at: new Date().toISOString(),
+      } as never,
+      { onConflict: "agent_id" },
+    );
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Could not save hours." };
   }
 }
 

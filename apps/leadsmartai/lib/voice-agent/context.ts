@@ -1,5 +1,5 @@
 import { getAgentDisplayName } from "@/lib/ai-call/lead-resolution";
-import { getReceptionistConfig, isBookingEnabled } from "@/lib/voice-receptionist/settings";
+import { getReceptionistConfig, getBookingSettings } from "@/lib/voice-receptionist/settings";
 import {
   describeHours,
   defaultBusinessHours,
@@ -39,9 +39,10 @@ export async function loadReceptionistContext(
   const cfg = await getReceptionistConfig(agentId);
   if (!cfg.enabled) return null;
 
-  // Booking is offered only when the agent has enabled it (and the Retell tools
-  // are wired). Off by default, so Lucy keeps taking messages until it's ready.
-  const bookingEnabled = await isBookingEnabled(agentId);
+  // Booking on/off + per-agent office hours (one query). Booking off by default;
+  // hours fall back to the engine default (Mon–Fri 9–5) when unset.
+  const { enabled: bookingEnabled, hours: configuredHours } = await getBookingSettings(agentId);
+  const hours = configuredHours ?? defaultBusinessHours();
 
   // Only look up the account display name when no business name is configured —
   // skips two DB round-trips (agents + user_profiles) on the call's hot path.
@@ -69,7 +70,7 @@ export async function loadReceptionistContext(
     timezone,
     todayISO,
     todayLabel,
-    hoursText: describeHours(defaultBusinessHours()),
+    hoursText: describeHours(hours),
     // When booking is on, the agent offers 30-minute appointments via the Retell
     // check_availability / book_appointment tools (backed by /api/retell/function).
     // When off, steer callers to a message / call-back instead.

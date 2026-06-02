@@ -5,6 +5,13 @@ import {
   DEFAULT_RECEPTIONIST_CONFIG,
   type ReceptionistConfig,
 } from "@/lib/voice-receptionist/types";
+import {
+  defaultBusinessHours,
+  DAY_KEYS,
+  DAY_LABELS,
+  type BusinessHours,
+  type DayKey,
+} from "@repo/voice";
 
 const defaults: ReceptionistConfig = { ...DEFAULT_RECEPTIONIST_CONFIG };
 
@@ -15,14 +22,19 @@ const LABEL = "block text-[11px] font-medium text-gray-500 mb-1";
 export default function VoiceReceptionistSettingsPanel() {
   const [settings, setSettings] = useState<ReceptionistConfig>(defaults);
   const [saved, setSaved] = useState<ReceptionistConfig>(defaults);
+  const [hours, setHours] = useState<BusinessHours | null>(null);
+  const [savedHours, setSavedHours] = useState<BusinessHours | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const isDirty = (Object.keys(settings) as (keyof ReceptionistConfig)[]).some(
+  const configDirty = (Object.keys(settings) as (keyof ReceptionistConfig)[]).some(
     (k) => settings[k] !== saved[k],
   );
+  const hoursDirty = JSON.stringify(hours) !== JSON.stringify(savedHours);
+  const isDirty = configDirty || hoursDirty;
+  const displayHours = hours ?? defaultBusinessHours();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -32,11 +44,14 @@ export default function VoiceReceptionistSettingsPanel() {
       const data = (await res.json()) as {
         ok?: boolean;
         settings?: ReceptionistConfig;
+        businessHours?: BusinessHours | null;
         error?: string;
       };
       if (!res.ok || !data.ok || !data.settings) throw new Error(data.error || "Failed to load");
       setSettings(data.settings);
       setSaved(data.settings);
+      setHours(data.businessHours ?? null);
+      setSavedHours(data.businessHours ?? null);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Load failed");
     } finally {
@@ -56,16 +71,19 @@ export default function VoiceReceptionistSettingsPanel() {
       const res = await fetch("/api/dashboard/voice-receptionist-settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify({ ...settings, businessHours: hours }),
       });
       const data = (await res.json()) as {
         ok?: boolean;
         settings?: ReceptionistConfig;
+        businessHours?: BusinessHours | null;
         error?: string;
       };
       if (!res.ok || !data.ok || !data.settings) throw new Error(data.error || "Save failed");
       setSettings(data.settings);
       setSaved(data.settings);
+      setHours(data.businessHours ?? null);
+      setSavedHours(data.businessHours ?? null);
       setMessage("Saved.");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Save failed");
@@ -76,6 +94,11 @@ export default function VoiceReceptionistSettingsPanel() {
 
   function update<K extends keyof ReceptionistConfig>(key: K, value: ReceptionistConfig[K]) {
     setSettings((s) => ({ ...s, [key]: value }));
+    setMessage(null);
+  }
+
+  function setDay(day: DayKey, val: { open: string; close: string } | null) {
+    setHours((prev) => ({ ...(prev ?? defaultBusinessHours()), [day]: val }));
     setMessage(null);
   }
 
@@ -178,6 +201,52 @@ export default function VoiceReceptionistSettingsPanel() {
           onChange={(e) => update("extraNotes", e.target.value)}
           placeholder="Business hours, services, pricing, address, and FAQs. Also say what to do with callers — e.g. take a message, collect their name + number, or offer a call-back. The receptionist uses this to answer questions."
         />
+      </div>
+
+      <div>
+        <span className={LABEL}>Office hours</span>
+        <div className="space-y-1.5">
+          {DAY_KEYS.map((d) => {
+            const dh = displayHours[d];
+            const open = Boolean(dh);
+            return (
+              <div key={d} className="flex items-center gap-2 text-sm">
+                <span className="w-24 shrink-0 text-gray-700">{DAY_LABELS[d]}</span>
+                <label className="flex w-20 shrink-0 items-center gap-1.5 text-[11px] text-gray-500">
+                  <input
+                    type="checkbox"
+                    checked={open}
+                    onChange={(e) => setDay(d, e.target.checked ? dh ?? { open: "09:00", close: "17:00" } : null)}
+                    className="h-3.5 w-3.5 rounded border-gray-300"
+                  />
+                  {open ? "Open" : "Closed"}
+                </label>
+                {open && dh ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="time"
+                      className="rounded border border-gray-300 px-2 py-1 text-xs"
+                      value={dh.open}
+                      onChange={(e) => setDay(d, { open: e.target.value, close: dh.close })}
+                    />
+                    <span className="text-gray-400">–</span>
+                    <input
+                      type="time"
+                      className="rounded border border-gray-300 px-2 py-1 text-xs"
+                      value={dh.close}
+                      onChange={(e) => setDay(d, { open: dh.open, close: e.target.value })}
+                    />
+                  </div>
+                ) : (
+                  <span className="text-[11px] text-gray-400">—</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <p className="mt-1 text-[11px] text-gray-400">
+          The AI books 30-minute appointments within these hours. Defaults to Mon–Fri 9–5 until you set them.
+        </p>
       </div>
 
       <div className="flex items-center gap-3">
