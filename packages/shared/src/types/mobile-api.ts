@@ -343,3 +343,27 @@ export type MobileDailyAgendaResponseDto = {
   agendaDate: string;
   items: DailyAgendaItem[];
 };
+
+// ─── Books / invoices ─────────────────────────────────────────────────────────
+
+export type MobileInvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "void";
+
+/** One invoice row for the mobile Books list. */
+export type MobileInvoiceDto = {
+  id: string;
+  invoice_number: string;
+  status: MobileInvoiceStatus;
+  client_name: string | null;
+  client_email: string | null;
+  total: number;
+  currency: string;
+  due_date: string | null;
+  created_at: string;
+};
+
+/** `GET /api/mobile/books` — invoices + headline totals. */
+export type MobileInvoicesResponseDto = {
+  invoices: MobileInvoiceDto[];
+  outstanding: number;
+  paid: number;
+};

@@ -58,8 +58,9 @@ async function nextInvoiceNumber(agentId: string): Promise<string> {
   return `INV-${String((count ?? 0) + 1).padStart(4, "0")}`;
 }
 
-export async function listInvoices(limit = 100): Promise<InvoiceRow[]> {
-  const { agentId } = await getCurrentAgentContext();
+/** Core list (agent id supplied) — shared by the dashboard (cookie auth) and the
+ *  mobile API (Bearer-token auth). */
+export async function listInvoicesForAgent(agentId: string, limit = 100): Promise<InvoiceRow[]> {
   const { data, error } = await supabaseAdmin
     .from("invoices")
     .select("*")
@@ -71,6 +72,11 @@ export async function listInvoices(limit = 100): Promise<InvoiceRow[]> {
     return [];
   }
   return (data ?? []) as unknown as InvoiceRow[];
+}
+
+export async function listInvoices(limit = 100): Promise<InvoiceRow[]> {
+  const { agentId } = await getCurrentAgentContext();
+  return listInvoicesForAgent(agentId, limit);
 }
 
 export async function getInvoice(
@@ -352,13 +358,14 @@ export async function buildInvoicePdf(
 
 const VALID_STATUS: InvoiceStatus[] = ["draft", "sent", "paid", "overdue", "void"];
 
-/** Update an invoice's status (sets paid_at when moving to paid). Agent-scoped. */
-export async function setInvoiceStatus(
+/** Update an invoice's status (sets paid_at when moving to paid). Core variant
+ *  takes the agent id so both the dashboard and the mobile API can call it. */
+export async function setInvoiceStatusForAgent(
+  agentId: string,
   id: string,
   status: InvoiceStatus,
 ): Promise<{ ok: boolean; error?: string }> {
   if (!VALID_STATUS.includes(status)) return { ok: false, error: "Invalid status." };
-  const { agentId } = await getCurrentAgentContext();
   const patch: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
   patch.paid_at = status === "paid" ? new Date().toISOString() : null;
   const { error } = await supabaseAdmin
@@ -371,4 +378,12 @@ export async function setInvoiceStatus(
     return { ok: false, error: error.message };
   }
   return { ok: true };
+}
+
+export async function setInvoiceStatus(
+  id: string,
+  status: InvoiceStatus,
+): Promise<{ ok: boolean; error?: string }> {
+  const { agentId } = await getCurrentAgentContext();
+  return setInvoiceStatusForAgent(agentId, id, status);
 }

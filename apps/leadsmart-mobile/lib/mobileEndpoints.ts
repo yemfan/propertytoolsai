@@ -18,6 +18,8 @@ export const MOBILE_API_PATHS = {
   pushRegister: "/api/mobile/push/register",
   tasks: "/api/mobile/tasks",
   task: (taskId: string) => `/api/mobile/tasks/${encodeURIComponent(taskId)}`,
+  books: "/api/mobile/books",
+  booksStatus: "/api/mobile/books/status",
   leadPipelineStage: (leadId: string) =>
     `/api/mobile/leads/${encodeURIComponent(leadId)}/pipeline-stage`,
   calendarEvents: "/api/mobile/calendar/events",

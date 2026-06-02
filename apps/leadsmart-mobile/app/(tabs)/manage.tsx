@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTranslation } from "react-i18next";
 import { Linking, Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import { useMemo } from "react";
+import { useRouter } from "expo-router";
 import { HomeFeatureSection } from "../../components/home/v2/HomeFeatureSection";
 import { getHomeFeatureSection } from "../../lib/homeFeatures";
 import { useThemeTokens } from "../../lib/useThemeTokens";
@@ -20,6 +21,7 @@ export default function ManageTabScreen() {
   const tokens = useThemeTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const { t } = useTranslation(["home", "nav"]);
+  const router = useRouter();
   const section = getHomeFeatureSection("manage");
 
   const onOpenWeb = () => {
@@ -32,6 +34,19 @@ export default function ManageTabScreen() {
       <Text style={styles.h1}>{t("tabs.manage", { ns: "nav" })}</Text>
       <Text style={styles.subtitle}>{t("v2.tab_subtitle.manage", { ns: "home" })}</Text>
       <HomeFeatureSection section={section} />
+
+      <Pressable
+        onPress={() => {
+          hapticButtonPress();
+          router.push("/books");
+        }}
+        style={({ pressed }) => [styles.webLink, pressed && styles.webLinkPressed]}
+        accessibilityRole="button"
+        accessibilityLabel="Books and invoices"
+      >
+        <Ionicons name="receipt-outline" size={18} color={tokens.accent} style={{ marginRight: 8 }} />
+        <Text style={styles.webLinkText}>Books / Invoices</Text>
+      </Pressable>
 
       <Pressable
         onPress={onOpenWeb}

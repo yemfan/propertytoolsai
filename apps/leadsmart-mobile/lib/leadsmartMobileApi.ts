@@ -17,6 +17,9 @@ import type {
   MobileEmailMessageDto,
   MobileFollowUpReminderDto,
   MobileInboxThreadDto,
+  MobileInvoiceDto,
+  MobileInvoicesResponseDto,
+  MobileInvoiceStatus,
   MobileLeadDetailResponseDto,
   MobileLeadPipelineDto,
   MobileLeadTaskDto,
@@ -2222,4 +2225,38 @@ export async function fetchMobileNextPostSuggestions(opts?: {
   const res = await mobileGet<MobileNextPostSuggestionsJson>(path);
   if (res.ok === false) return res;
   return { ok: true, suggestions: res.data.suggestions ?? [] };
+}
+
+// ─── Books / invoices ──────────────────────────────────────────────────────────
+
+type InvoicesJson = MobileJsonError & {
+  invoices?: MobileInvoiceDto[];
+  outstanding?: number;
+  paid?: number;
+};
+
+export async function fetchMobileInvoices(): Promise<
+  ({ ok: true } & MobileInvoicesResponseDto) | MobileApiFailure
+> {
+  const res = await mobileGet<InvoicesJson>(MOBILE_API_PATHS.books);
+  if (res.ok === false) return res;
+  const data = res.data;
+  if (!Array.isArray(data.invoices)) {
+    return { ok: false, status: 200, message: "Invalid invoices response." };
+  }
+  return {
+    ok: true as const,
+    invoices: data.invoices,
+    outstanding: Number(data.outstanding ?? 0),
+    paid: Number(data.paid ?? 0),
+  };
+}
+
+export async function patchMobileInvoiceStatus(
+  id: string,
+  status: MobileInvoiceStatus,
+): Promise<{ ok: true } | MobileApiFailure> {
+  const res = await mobilePost<MobileJsonError>(MOBILE_API_PATHS.booksStatus, { id, status });
+  if (res.ok === false) return res;
+  return { ok: true };
 }
