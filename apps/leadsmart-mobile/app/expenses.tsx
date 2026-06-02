@@ -89,9 +89,13 @@ export default function ExpensesScreen() {
     setMonth(res.totals.month);
     setYear(res.totals.year);
     setCategories(res.categories);
-    if (!category && res.categories.length > 0) setCategory(res.categories[0]);
     setError(null);
-  }, [category]);
+  }, []);
+
+  // Effective category: the user's pick, falling back to the first
+  // known category. Derived (not stored) so picking a chip never
+  // churns `load`'s identity and re-triggers the focus effect.
+  const selectedCategory = category || categories[0] || "";
 
   useFocusEffect(
     useCallback(() => {
@@ -105,7 +109,7 @@ export default function ExpensesScreen() {
 
   function resetForm() {
     setAmount("");
-    setCategory(categories[0] ?? "");
+    setCategory("");
     setExpenseDate(todayLocalIso());
     setVendor("");
     setNotes("");
@@ -178,7 +182,7 @@ export default function ExpensesScreen() {
     setFormError(null);
     const res = await postMobileExpense({
       amount: amt,
-      category: category || undefined,
+      category: selectedCategory || undefined,
       vendor: vendor || null,
       notes: notes || null,
       expenseDate: expenseDate || null,
@@ -192,7 +196,7 @@ export default function ExpensesScreen() {
     resetForm();
     setShowForm(false);
     void load("refresh");
-  }, [amount, category, vendor, notes, expenseDate, receiptUrl, load]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [amount, selectedCategory, vendor, notes, expenseDate, receiptUrl, load]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const confirmDelete = useCallback(
     (item: MobileExpenseDto) => {
@@ -278,7 +282,7 @@ export default function ExpensesScreen() {
           <Text style={styles.label}>Category</Text>
           <View style={styles.chipWrap}>
             {categories.map((c) => {
-              const active = c === category;
+              const active = c === selectedCategory;
               return (
                 <Pressable
                   key={c}
