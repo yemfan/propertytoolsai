@@ -7,7 +7,7 @@ const monorepoRoot = path.join(__dirname, "../..");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@repo/ui", "@leadsmart/shared", "@leadsmart/api-client"],
+  transpilePackages: ["@repo/ui", "@leadsmart/shared", "@leadsmart/api-client", "@helm/dna-communication"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "img.youtube.com", pathname: "/**" },
