@@ -25,10 +25,10 @@ const tiers = [
     ctaHref: "/signup",
     features: [
       "Everything in Starter",
-      "AI Voice Receptionist",
+      "AI Receptionist",
+      "AI Outbound Calling (confirmations, follow-ups, surveys)",
       "HelmSmart AI Assistant",
       "Missed-call text-back & Auto Pilot",
-      "Outbound & appointment-reminder calls",
       "Bookkeeping & expenses",
       "AI Daily Briefing",
       "3 users",

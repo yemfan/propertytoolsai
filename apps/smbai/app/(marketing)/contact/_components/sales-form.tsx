@@ -5,7 +5,8 @@ import { submitSalesForm } from "@/lib/actions/sales";
 import type { SalesState } from "@/lib/actions/sales";
 
 const interestOptions = [
-  { id: "voice", label: "AI Voice Receptionist" },
+  { id: "voice", label: "AI Receptionist" },
+  { id: "outbound", label: "AI Outbound Calling" },
   { id: "ai-assistant", label: "HelmSmart AI Assistant" },
   { id: "inbox", label: "Smart Inbox" },
   { id: "invoicing", label: "Invoicing & Bookkeeping" },

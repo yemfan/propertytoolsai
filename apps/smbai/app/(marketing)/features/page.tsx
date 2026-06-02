@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Phone,
+  PhoneOutgoing,
   Inbox,
   Receipt,
   CalendarDays,
@@ -30,12 +31,12 @@ interface Feature {
 
 const features: Feature[] = [
   {
-    id: "voice-receptionist",
+    id: "ai-receptionist",
     icon: <Phone className="h-6 w-6" />,
     color: "text-indigo-600",
     bgColor: "bg-indigo-50",
     placeholderColor: "bg-indigo-200",
-    headline: "Voice AI Receptionist",
+    headline: "AI Receptionist",
     subheadline: "Never miss a call again",
     bullets: [
       "Answers calls 24/7 — even when you're on the job",
@@ -43,8 +44,23 @@ const features: Feature[] = [
       "Books appointments directly to your Google Calendar",
       "Takes messages and routes them to the right person",
       "Handles FAQs so you don't have to repeat yourself",
-      "Calls clients back for you — follow-ups and appointment reminders",
       "Sends a post-call summary straight to your inbox",
+    ],
+  },
+  {
+    id: "outbound-calling",
+    icon: <PhoneOutgoing className="h-6 w-6" />,
+    color: "text-teal-600",
+    bgColor: "bg-teal-50",
+    placeholderColor: "bg-teal-200",
+    headline: "AI Outbound Calling",
+    subheadline: "Your AI makes the calls you don't have time for",
+    bullets: [
+      "Appointment confirmations & reminders — cut no-shows automatically",
+      "Lead and past-client follow-ups, on time every time",
+      "Surveys and review requests once the job's done",
+      "Promos and announcements to the right group of clients",
+      "Every call logged with a summary and the outcome",
     ],
   },
   {

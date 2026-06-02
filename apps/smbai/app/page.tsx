@@ -4,7 +4,7 @@
  */
 
 import Link from "next/link";
-import { Phone, Inbox, Receipt, Calendar, Users, Sunrise, Sparkles, CheckCircle, Star } from "lucide-react";
+import { Phone, PhoneOutgoing, Inbox, Receipt, Calendar, Users, Sunrise, Sparkles, CheckCircle, Star } from "lucide-react";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 
@@ -78,7 +78,8 @@ export default function RootPage() {
             </div>
             <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {[
-                { icon: Phone,    color: "text-indigo-600 bg-indigo-50", title: "Voice AI Receptionist", description: "Answers every inbound call around the clock — and calls clients back for follow-ups and appointment reminders. Books appointments and captures leads, no human operator needed." },
+                { icon: Phone,         color: "text-indigo-600 bg-indigo-50", title: "AI Receptionist",      description: "Answers every inbound call around the clock. Books appointments, captures leads, and routes urgent calls — no human operator needed." },
+                { icon: PhoneOutgoing, color: "text-teal-600 bg-teal-50",     title: "AI Outbound Calling",  description: "Your AI makes the calls you don't have time for — appointment confirmations & reminders, lead and past-client follow-ups, surveys, and promos. Every call logged." },
                 { icon: Sparkles, color: "text-blue-600 bg-blue-50",     title: "HelmSmart AI Assistant", description: "A co-pilot on every screen: ask plain-English questions about your business and get answers from your live data, or have it draft and send the perfect text to any client." },
                 { icon: Inbox,   color: "text-emerald-600 bg-emerald-50", title: "Smart Inbox",         description: "Email and SMS in one place. AI triage surfaces urgent messages, drafts replies, and missed-call text-back turns a missed call into a lead instead of a lost one." },
                 { icon: Receipt, color: "text-amber-600 bg-amber-50",   title: "Invoicing & Bookkeeping", description: "Create and send invoices in seconds. Track expenses, flag overdue payments, and get a real-time view of your cash flow." },

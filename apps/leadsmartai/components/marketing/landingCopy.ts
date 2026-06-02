@@ -226,8 +226,13 @@ const agentCopy: LandingCopy = {
       },
       {
         icon: "📞",
-        title: "AI Voice Receptionist",
+        title: "AI Receptionist",
         desc: "Answers every lead’s call 24/7 — and books the showing on the spot",
+      },
+      {
+        icon: "📲",
+        title: "AI Outbound Calling",
+        desc: "Confirms appointments, follows up with leads, and runs surveys — automatically",
       },
       {
         icon: "🧾",
