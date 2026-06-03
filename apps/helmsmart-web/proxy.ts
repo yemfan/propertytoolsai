@@ -19,7 +19,8 @@ export async function proxy(request: NextRequest) {
 
   const supabase = createServerClient(
     "https://vpmwsnoosuiknyzdxgtk.supabase.co",
-    process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_HELM_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY ||
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwbXdzbm9vc3Vpa255emR4Z3RrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NDU5MTgsImV4cCI6MjA5NTQyMTkxOH0.eAn1vPTAHXj_4OMd9T50LcazrxnvMxkcfFs-de98SNg",
     {
       cookies: {

@@ -69,8 +69,8 @@ export function NotificationsBell({ orgId, initialCount, initialNotifications }:
   // Supabase Realtime — push new notifications in without page reload
   useEffect(() => {
     const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY!
+      (process.env.NEXT_PUBLIC_HELM_SUPABASE_URL ?? process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL)!,
+      (process.env.NEXT_PUBLIC_HELM_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY)!
     );
 
     const channel = supabase

@@ -96,8 +96,8 @@ export function InboxClient({ threads: initialThreads, clients, orgId }: Props) 
   useEffect(() => {
     if (!orgId) return;
     const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY!
+      (process.env.NEXT_PUBLIC_HELM_SUPABASE_URL ?? process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL)!,
+      (process.env.NEXT_PUBLIC_HELM_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY)!
     );
     const rtChannel = supabase
       .channel("inbox-messages")
