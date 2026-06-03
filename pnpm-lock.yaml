@@ -101,6 +101,9 @@ importers:
       '@helm/dna-service':
         specifier: workspace:*
         version: link:../../packages/dna-service
+      '@helm/pack-medical':
+        specifier: workspace:*
+        version: link:../../industry-packs/medical
       '@helm/ui':
         specifier: workspace:*
         version: link:../helm-ui
@@ -605,6 +608,12 @@ importers:
         version: 3.2.4(@types/node@20.19.37)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
 
   industry-packs/financial-services: {}
+
+  industry-packs/medical:
+    dependencies:
+      '@helm/ui':
+        specifier: workspace:*
+        version: link:../../apps/helm-ui
 
   industry-packs/real-estate:
     dependencies:

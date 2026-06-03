@@ -2,6 +2,7 @@ import "./globals.css";
 import "@helm/ui/tokens";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { getActivePack } from "@/lib/packs";
 
 const fontBody = Geist({
   subsets: ["latin"],
@@ -15,18 +16,22 @@ const fontMono = Geist_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "HelmSmart",
-    template: "%s | HelmSmart",
-  },
-  description:
-    "More control, less effort — AI-powered front office for small businesses.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const pack = await getActivePack();
+  return {
+    title: {
+      default: pack.productName,
+      template: `%s | ${pack.productName}`,
+    },
+    description:
+      "More control, less effort — AI-powered front office for small businesses.",
+  };
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const pack = await getActivePack();
   return (
-    <html lang="en" data-pack="helm">
+    <html lang="en" data-pack={pack.dataPack}>
       <body
         className={`${fontBody.variable} ${fontMono.variable} antialiased bg-slate-50 text-slate-900`}
       >

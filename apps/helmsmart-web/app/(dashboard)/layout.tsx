@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/sidebar";
 import { getUnreadCount, getRecentNotifications } from "@/lib/actions/notifications";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { HelmSmartAiPanel } from "@/components/helmsmart-ai-panel";
+import { getActivePack } from "@/lib/packs";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -18,11 +19,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
     supabase.auth.getUser(),
   ]);
 
+  const pack = await getActivePack();
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Sidebar
         unreadCount={unreadCount}
         userEmail={user?.email ?? null}
+        productName={pack.productName}
+        logoLetter={pack.logoLetter}
+        terms={pack.terms}
         notificationsSlot={
           <NotificationsBell
             orgId={orgId}
