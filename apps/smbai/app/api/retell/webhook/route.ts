@@ -16,6 +16,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { findOrgIdByNumber } from "@/lib/receptionist-agent";
 import { matchOrCreateClient } from "@/lib/booking";
 import { normalizePhoneE164 } from "@/lib/phone";
+import { attributeCallToEmma } from "@/lib/workforce-attribution";
 
 type TranscriptTurn = { role?: string; content?: string };
 type Db = ReturnType<typeof createServiceClient>;
@@ -133,6 +134,15 @@ export async function POST(request: NextRequest) {
       } catch (taskErr) {
         console.error("Retell webhook: follow-up task failed", taskErr);
       }
+    }
+
+    // Attribute the inbound call to Emma (AI Receptionist): record it as one run and
+    // bump calls_answered. Idempotent per call_sid; best-effort (never throws).
+    if (event === "call_analyzed" && direction === "inbound") {
+      await attributeCallToEmma(db, orgId, {
+        callId,
+        outcome: { from: fromNumber, ...(summary ? { summary } : {}), ...(durationMs > 0 ? { durationSeconds: Math.round(durationMs / 1000) } : {}) },
+      });
     }
 
     return NextResponse.json({ success: true });
