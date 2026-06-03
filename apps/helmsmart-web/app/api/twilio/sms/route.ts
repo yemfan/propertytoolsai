@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const supabase = createServiceClient();
+  const supabase = await createServiceClient();
 
   // Find org by Twilio number
   const { data: org } = await supabase
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
  * prevents runaway loops with an automated counterpart.
  */
 async function runAutoPilotReply(opts: {
-  supabase: ReturnType<typeof createServiceClient>;
+  supabase: Awaited<ReturnType<typeof createServiceClient>>;
   orgId: string;
   orgName: string;
   clientId: string;

@@ -15,7 +15,7 @@ import {
  * Called after marking an invoice paid (session auth or service role).
  */
 export async function refreshClientLifetimeValue(clientId: string, orgId: string) {
-  const supabase = createServiceClient();
+  const supabase = await createServiceClient();
   const { data } = await supabase
     .from("invoices")
     .select("total")

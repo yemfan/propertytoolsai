@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
     return endCall("Sorry, I didn't catch that. Please call back anytime. Goodbye!");
   }
 
-  const db = createServiceClient();
+  const db = await createServiceClient();
   const { data: session } = await db
     .from("voice_sessions")
     .select("id, organization_id, from_number, messages")

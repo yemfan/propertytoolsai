@@ -14,7 +14,7 @@ import {
 } from "@/lib/receptionist-agent";
 import { normalizePhoneE164 } from "@/lib/phone";
 
-type ServiceClient = ReturnType<typeof createServiceClient>;
+type ServiceClient = Awaited<ReturnType<typeof createServiceClient>>;
 type QueueClient = { id: string; first_name: string; last_name: string | null; phone: string | null };
 
 /** Only dial 8am–9pm in the business's timezone (compliance). */

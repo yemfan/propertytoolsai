@@ -2,14 +2,15 @@
  * POST /api/cron/invoices/overdue
  *
  * Marks sent invoices whose due_date has passed as "overdue" and fires
- * invoice_overdue notifications. Called daily by Vercel Cron.
+ * invoice_overdue notifications. Called daily by Vercel Cron. Iterates every
+ * vertical (Core + medical, …) so each project's invoices are processed.
  *
  * Auth: Bearer token via CRON_SECRET env var (Vercel sets this automatically
  * when crons are configured in vercel.json).
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClientFor, packServiceConns } from "@/lib/supabase/server";
 import { createNotificationService } from "@/lib/actions/notifications";
 import { runAutomations } from "@/lib/automation-engine";
 
@@ -23,56 +24,69 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createServiceClient();
   const today = new Date().toISOString().slice(0, 10);
+  let processed = 0;
+  const errors: string[] = [];
 
-  // Find all sent invoices past their due date
-  const { data: overdueInvoices, error } = await supabase
-    .from("invoices")
-    .select("id, invoice_number, total, organization_id, clients(first_name, last_name, company)")
-    .eq("status", "sent")
-    .lt("due_date", today);
+  // Process every vertical's orgs — Core plus the medical project (if configured).
+  for (const conn of packServiceConns()) {
+    const supabase = createServiceClientFor(conn);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Find all sent invoices past their due date
+    const { data: overdueInvoices, error } = await supabase
+      .from("invoices")
+      .select("id, invoice_number, total, organization_id, clients(first_name, last_name, company)")
+      .eq("status", "sent")
+      .lt("due_date", today);
+
+    if (error) {
+      errors.push(error.message);
+      continue;
+    }
+    if (!overdueInvoices?.length) continue;
+
+    // Mark all as overdue in one update
+    const ids = overdueInvoices.map((i) => i.id);
+    await supabase
+      .from("invoices")
+      .update({ status: "overdue", updated_at: new Date().toISOString() })
+      .in("id", ids);
+
+    // Fire one notification per invoice
+    for (const inv of overdueInvoices) {
+      const clientRaw = inv.clients;
+      const client = (Array.isArray(clientRaw) ? clientRaw[0] : clientRaw) as {
+        first_name: string | null; last_name: string | null; company: string | null;
+      } | null;
+      const clientName = client
+        ? [client.first_name, client.last_name].filter(Boolean).join(" ") || client.company || "a client"
+        : "a client";
+
+      await createNotificationService(
+        inv.organization_id,
+        {
+          type: "invoice_overdue",
+          title: `Invoice overdue: $${Number(inv.total).toFixed(2)}`,
+          body: `Invoice ${inv.invoice_number} from ${clientName} is past due`,
+          link: `/books/invoices/${inv.id}`,
+        },
+        supabase
+      );
+
+      await runAutomations(
+        "invoice_overdue",
+        {
+          orgId: inv.organization_id,
+          invoiceId: inv.id,
+          invoiceNumber: inv.invoice_number,
+          amount: Number(inv.total),
+          clientName,
+        },
+        supabase
+      );
+    }
+    processed += overdueInvoices.length;
   }
 
-  if (!overdueInvoices?.length) {
-    return NextResponse.json({ processed: 0 });
-  }
-
-  // Mark all as overdue in one update per org
-  const ids = overdueInvoices.map((i) => i.id);
-  await supabase
-    .from("invoices")
-    .update({ status: "overdue", updated_at: new Date().toISOString() })
-    .in("id", ids);
-
-  // Fire one notification per invoice
-  for (const inv of overdueInvoices) {
-    const clientRaw = inv.clients;
-    const client = (Array.isArray(clientRaw) ? clientRaw[0] : clientRaw) as {
-      first_name: string | null; last_name: string | null; company: string | null;
-    } | null;
-    const clientName = client
-      ? [client.first_name, client.last_name].filter(Boolean).join(" ") || client.company || "a client"
-      : "a client";
-
-    await createNotificationService(inv.organization_id, {
-      type: "invoice_overdue",
-      title: `Invoice overdue: $${Number(inv.total).toFixed(2)}`,
-      body: `Invoice ${inv.invoice_number} from ${clientName} is past due`,
-      link: `/books/invoices/${inv.id}`,
-    });
-
-    await runAutomations("invoice_overdue", {
-      orgId: inv.organization_id,
-      invoiceId: inv.id,
-      invoiceNumber: inv.invoice_number,
-      amount: Number(inv.total),
-      clientName,
-    });
-  }
-
-  return NextResponse.json({ processed: overdueInvoices.length });
+  return NextResponse.json({ processed, errors });
 }

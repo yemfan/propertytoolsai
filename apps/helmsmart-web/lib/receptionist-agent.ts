@@ -17,7 +17,7 @@ import type { ReceptionistContext } from "@repo/voice/prompt";
  */
 export * from "@repo/voice/prompt";
 
-type ServiceClient = ReturnType<typeof createServiceClient>;
+type ServiceClient = Awaited<ReturnType<typeof createServiceClient>>;
 
 // ─── Per-org context ────────────────────────────────────────────────────────────
 

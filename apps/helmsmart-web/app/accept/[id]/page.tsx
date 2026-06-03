@@ -20,7 +20,7 @@ export default async function AcceptEstimatePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = createServiceClient();
+  const supabase = await createServiceClient();
 
   const { data: est } = await supabase
     .from("estimates")

@@ -27,7 +27,7 @@ type TokenRow = { access_token: string; refresh_token: string | null; expires_at
 
 /** A valid access token for the org, refreshing if near expiry. null if not connected. */
 async function getValidToken(orgId: string): Promise<string | null> {
-  const db = createServiceClient();
+  const db = await createServiceClient();
   const { data } = await db
     .from("org_oauth_tokens")
     .select("access_token, refresh_token, expires_at")
@@ -66,7 +66,7 @@ async function getValidToken(orgId: string): Promise<string | null> {
 }
 
 export async function isGoogleCalendarConnected(orgId: string): Promise<boolean> {
-  const db = createServiceClient();
+  const db = await createServiceClient();
   const { data } = await db
     .from("org_oauth_tokens")
     .select("id")
@@ -77,7 +77,7 @@ export async function isGoogleCalendarConnected(orgId: string): Promise<boolean>
 }
 
 export async function getConnectedGoogleAccount(orgId: string): Promise<string | null> {
-  const db = createServiceClient();
+  const db = await createServiceClient();
   const { data } = await db
     .from("org_oauth_tokens")
     .select("account_email")

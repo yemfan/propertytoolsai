@@ -61,7 +61,7 @@ export async function createOrg(
   }
 
   // Create the organization (service role to bypass RLS on insert)
-  const service = createServiceClient();
+  const service = await createServiceClient();
 
   const { data: org, error: orgError } = await service
     .from("organizations")

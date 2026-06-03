@@ -45,7 +45,7 @@ async function handleRequest(request: NextRequest) {
   if (recordingUrl) update.recording_url = recordingUrl;
 
   if (Object.keys(update).length > 0) {
-    const db = createServiceClient();
+    const db = await createServiceClient();
     await db.from("voice_sessions").update(update).eq("call_sid", callSid);
   }
 

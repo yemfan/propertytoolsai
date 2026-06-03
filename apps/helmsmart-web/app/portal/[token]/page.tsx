@@ -37,7 +37,7 @@ export default async function ClientPortalPage({
 }) {
   const { token } = await params;
 
-  const sb = createServiceClient();
+  const sb = await createServiceClient();
 
   // Look up client by portal token
   const { data: client } = await sb

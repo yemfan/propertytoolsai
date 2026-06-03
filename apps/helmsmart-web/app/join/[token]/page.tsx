@@ -12,7 +12,7 @@ export default async function JoinPage({
   const { token } = await params;
 
   // Look up invitation (service client — no session required)
-  const serviceSb = createServiceClient();
+  const serviceSb = await createServiceClient();
   const { data: invite } = await serviceSb
     .from("team_invitations")
     .select("id, email, role, expires_at, accepted_at, organization_id")

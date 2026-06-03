@@ -43,7 +43,7 @@ async function handleRequest(request: NextRequest) {
     return xml("<Response/>");
   }
 
-  const supabase = createServiceClient();
+  const supabase = await createServiceClient();
 
   // Find org by Twilio number
   const { data: org } = await supabase

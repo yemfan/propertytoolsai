@@ -8,7 +8,7 @@ import { postBankTransaction, reverseJournalEntry as reverseEntry } from "@helm/
 
 /** Post an approved bank_transaction to the double-entry journal (cash-basis). */
 export async function postTransaction(transactionId: string): Promise<{ error?: string }> {
-  return postBankTransaction(createServiceClient(), transactionId);
+  return postBankTransaction(await createServiceClient(), transactionId);
 }
 
 /** Reverse a posted journal entry (creates a reversing entry with debits/credits swapped). */
@@ -16,5 +16,5 @@ export async function reverseJournalEntry(
   journalEntryId: string,
   orgId: string
 ): Promise<{ error?: string }> {
-  return reverseEntry(createServiceClient(), journalEntryId, orgId);
+  return reverseEntry(await createServiceClient(), journalEntryId, orgId);
 }

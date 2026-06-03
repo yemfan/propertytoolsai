@@ -276,7 +276,7 @@ export async function importTimeEntriesToInvoice(
   entryIds: string[]
 ): Promise<void> {
   const orgId = await getOrgId();
-  const db = createServiceClient();
+  const db = await createServiceClient();
 
   // Verify invoice belongs to this org
   const { data: inv } = await db

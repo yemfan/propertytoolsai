@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   const callId = String(call.call_id ?? "");
   const dynVars = (call.retell_llm_dynamic_variables ?? {}) as Record<string, string>;
 
-  const db = createServiceClient();
+  const db = await createServiceClient();
   const orgId = dynVars.org_id || (await findOrgIdByNumber(db, toNumber));
   if (!orgId) {
     return NextResponse.json({ result: "I can't reach the booking system right now — please take a message instead." });

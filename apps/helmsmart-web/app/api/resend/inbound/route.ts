@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
   const slug = inboundAddr ? inboundAddr.split("@")[0] : null;
   if (!slug) return ok();
 
-  const supabase = createServiceClient();
+  const supabase = await createServiceClient();
 
   const { data: org } = await supabase
     .from("organizations")

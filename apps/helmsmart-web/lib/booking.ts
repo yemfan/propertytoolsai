@@ -21,7 +21,7 @@ const DEFAULT_TZ = "America/New_York";
 const SLOT_STEP_MS = 30 * 60_000;
 
 async function loadOrg(orgId: string): Promise<{ timezone: string; hours: BusinessHours | null }> {
-  const db = createServiceClient();
+  const db = await createServiceClient();
   const { data } = await db.from("organizations").select("timezone, business_hours").eq("id", orgId).single();
   return {
     timezone: (data?.timezone as string) || DEFAULT_TZ,
@@ -30,7 +30,7 @@ async function loadOrg(orgId: string): Promise<{ timezone: string; hours: Busine
 }
 
 async function findType(orgId: string, name: string): Promise<{ id: string; name: string; duration_minutes: number } | null> {
-  const db = createServiceClient();
+  const db = await createServiceClient();
   const { data } = await db
     .from("appointment_types")
     .select("id, name, duration_minutes")
@@ -47,7 +47,7 @@ async function busyIntervals(orgId: string, startUtc: Date, endUtc: Date): Promi
   const gcal = await getGoogleFreeBusy(orgId, startUtc.toISOString(), endUtc.toISOString());
   if (gcal !== null) return gcal;
 
-  const db = createServiceClient();
+  const db = await createServiceClient();
   const { data } = await db
     .from("events")
     .select("start_at, end_at")
@@ -136,7 +136,7 @@ export async function bookAppointment(
   const title = appointmentTitle(type?.name, input.callerName);
   const startISO = new Date(startMs).toISOString();
   const endISO = new Date(endMs).toISOString();
-  const db = createServiceClient();
+  const db = await createServiceClient();
   const fmtLabel = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone, weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit",
   });
@@ -205,7 +205,7 @@ export async function bookAppointment(
 
 /** Match a caller to a client by phone, creating a lightweight one if new. */
 export async function matchOrCreateClient(orgId: string, phone: string, name?: string | null): Promise<string | null> {
-  const db = createServiceClient();
+  const db = await createServiceClient();
   const { data: existing } = await db
     .from("clients")
     .select("id")

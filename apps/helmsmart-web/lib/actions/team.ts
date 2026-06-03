@@ -225,7 +225,7 @@ export async function acceptInvitation(token: string): Promise<{ orgId: string; 
   if (!user) throw new Error("You must be signed in to accept an invitation");
 
   // Use service client for the token lookup (invitations table is RLS-restricted to admins)
-  const serviceSb = createServiceClient();
+  const serviceSb = await createServiceClient();
 
   const { data: invite } = await serviceSb
     .from("team_invitations")

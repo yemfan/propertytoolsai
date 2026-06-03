@@ -29,7 +29,7 @@ export default async function PayInvoicePage({
   const sp = await searchParams;
   const stripeResult: "success" | "cancelled" | null =
     sp.success === "1" ? "success" : sp.cancelled === "1" ? "cancelled" : null;
-  const supabase = createServiceClient();
+  const supabase = await createServiceClient();
 
   const { data: inv } = await supabase
     .from("invoices")

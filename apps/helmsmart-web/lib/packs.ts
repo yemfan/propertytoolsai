@@ -38,3 +38,36 @@ export async function getActivePack(): Promise<PackManifest> {
 export async function getActivePackSupabase(): Promise<PackConn | undefined> {
   return connForHost((await headers()).get("host") ?? "");
 }
+
+/**
+ * Service-role connection for the medical pack — SERVER-ONLY secret
+ * (MEDICAL_SUPABASE_SERVICE_ROLE_KEY, set in Vercel env, never inlined). Returns
+ * undefined when the key isn't configured, so callers gracefully fall back to Core.
+ */
+function medicalServiceConn(): PackConn | undefined {
+  const url = process.env.NEXT_PUBLIC_MEDICAL_SUPABASE_URL;
+  const key = process.env.MEDICAL_SUPABASE_SERVICE_ROLE_KEY;
+  return url && key ? { url, key } : undefined;
+}
+
+/** Host-resolved SERVICE (RLS-bypass) connection for the active pack (undefined = Core). */
+export async function getActivePackServiceConn(): Promise<PackConn | undefined> {
+  try {
+    const host = (await headers()).get("host") ?? "";
+    return packIdForHost(host) === "medical" ? medicalServiceConn() : undefined;
+  } catch {
+    return undefined; // called outside a request scope -> Core
+  }
+}
+
+/**
+ * Every configured pack SERVICE connection — Core plus any vertical whose service
+ * key is set. Cron / cross-pack jobs have no request host, so they loop over these
+ * to process every vertical's orgs. `undefined` = Core.
+ */
+export function packServiceConns(): Array<PackConn | undefined> {
+  const conns: Array<PackConn | undefined> = [undefined]; // Core
+  const medical = medicalServiceConn();
+  if (medical) conns.push(medical);
+  return conns;
+}
