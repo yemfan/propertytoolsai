@@ -89,7 +89,9 @@ export default async function BooksPage({
   const now = new Date();
   const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const selectedMonth = monthParam ?? currentYearMonth;
-  const monthLabel = new Date(selectedMonth + "-01").toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  // Append a time component so the YYYY-MM-01 string is parsed as LOCAL midnight, not UTC.
+  // Without it, behind-UTC timezones roll back to the previous month in the rendered label.
+  const monthLabel = new Date(selectedMonth + "-01T00:00:00").toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const monthOptions = buildMonthOptions();
 
   const supabase = await createClient();
