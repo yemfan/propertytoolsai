@@ -4,6 +4,7 @@ import { useState, useEffect, useTransition, useRef } from "react";
 import { Bell, CheckCheck, FileText, MessageSquare, Phone, Calendar, Zap } from "lucide-react";
 import { markNotificationsRead } from "@/lib/actions/notifications";
 import { createBrowserClient } from "@supabase/ssr";
+import { browserConnForHost } from "@/lib/pack-host";
 import Link from "next/link";
 
 interface Notification {
@@ -68,10 +69,8 @@ export function NotificationsBell({ orgId, initialCount, initialNotifications }:
 
   // Supabase Realtime — push new notifications in without page reload
   useEffect(() => {
-    const supabase = createBrowserClient(
-      (process.env.NEXT_PUBLIC_HELM_SUPABASE_URL ?? process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL)!,
-      (process.env.NEXT_PUBLIC_HELM_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY)!
-    );
+    const conn = browserConnForHost(window.location.host);
+    const supabase = createBrowserClient(conn.url, conn.key);
 
     const channel = supabase
       .channel("notifications-bell")

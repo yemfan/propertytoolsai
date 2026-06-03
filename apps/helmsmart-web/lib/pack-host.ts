@@ -27,3 +27,20 @@ export function medicalConn(): PackConn | undefined {
 export function connForHost(host: string): PackConn | undefined {
   return packIdForHost(host) === "medical" ? medicalConn() : undefined;
 }
+
+/** The Core (HelmSmart) Supabase, from inlined public env. */
+export function coreConn(): PackConn {
+  return {
+    url: (process.env.NEXT_PUBLIC_HELM_SUPABASE_URL ?? process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL)!,
+    key: (process.env.NEXT_PUBLIC_HELM_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY)!,
+  };
+}
+
+/**
+ * Full browser Supabase connection for a host — medical on medical.*, else Core.
+ * Client components call this with window.location.host so realtime subscriptions
+ * hit the SAME project the session belongs to (no cross-vertical websocket retries).
+ */
+export function browserConnForHost(host: string): PackConn {
+  return connForHost(host) ?? coreConn();
+}

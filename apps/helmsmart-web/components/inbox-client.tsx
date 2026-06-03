@@ -6,6 +6,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { MessageSquarePlus, Send, Mail, MessageSquare, RefreshCw, Sparkles, UserPlus } from "lucide-react";
 import { markThreadRead, sendEmail, sendSms, draftReply, createClientFromConversation } from "@/lib/actions/messages";
 import { InboxCompose } from "./inbox-compose";
+import { browserConnForHost } from "@/lib/pack-host";
 
 type Channel = "all" | "email" | "sms";
 
@@ -95,10 +96,8 @@ export function InboxClient({ threads: initialThreads, clients, orgId }: Props) 
   // Supabase Realtime — pull in new messages live, no manual refresh.
   useEffect(() => {
     if (!orgId) return;
-    const supabase = createBrowserClient(
-      (process.env.NEXT_PUBLIC_HELM_SUPABASE_URL ?? process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL)!,
-      (process.env.NEXT_PUBLIC_HELM_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY)!
-    );
+    const conn = browserConnForHost(window.location.host);
+    const supabase = createBrowserClient(conn.url, conn.key);
     const rtChannel = supabase
       .channel("inbox-messages")
       .on(
