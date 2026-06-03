@@ -1,9 +1,10 @@
 import { Metadata } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { Phone, MessageSquare, Calendar, Bot, Clock, DollarSign, Mic, Settings } from "lucide-react";
+import { Phone, MessageSquare, Calendar, Bot, Clock, DollarSign, Settings } from "lucide-react";
 import { OutboundCalls } from "@/components/outbound-calls";
 import { AppointmentReminders } from "@/components/appointment-reminders";
+import { RecordingLink } from "@/components/recording-link";
 
 export const metadata: Metadata = { title: "Voice Agent" };
 
@@ -236,16 +237,7 @@ export default async function VoicePage() {
                         </span>
                       ) : null}
                       {session.recording_url ? (
-                        <a
-                          href={session.recording_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700"
-                        >
-                          <Mic className="w-3 h-3" />
-                          Recording
-                        </a>
+                        <RecordingLink href={session.recording_url} />
                       ) : null}
                       <span className="text-xs text-slate-400">{timeAgo(session.created_at)}</span>
                       <span className="text-slate-300 group-open:rotate-90 transition-transform">›</span>
