@@ -21,6 +21,7 @@ const helmManifest: PackManifest = {
   dataPack: "helm",
   auth: "shared",
   terms: {},
+  tagline: "More control, less effort",
 };
 
 const PACKS: Record<string, PackManifest> = {

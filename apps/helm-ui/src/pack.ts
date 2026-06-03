@@ -19,4 +19,6 @@ export interface PackManifest {
   auth: "isolated" | "shared";
   /** Label overrides applied to nav section titles + item labels (e.g. `{ Clients: "Patients" }`). */
   terms?: Record<string, string>;
+  /** Short marketing tagline shown under the wordmark (e.g. on auth pages). */
+  tagline?: string;
 }

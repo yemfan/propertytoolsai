@@ -39,9 +39,9 @@ export function Wordmark({
   const fontSize = Math.round(size * 0.5);
   const lineHeight = size;
 
-  // Strip a trailing ".ai" from the product name if the user already included it,
-  // so we can render the suffix consistently with the brand color.
-  const baseName = productName.replace(/\.ai$/i, '');
+  // Strip a trailing ".ai" OR " AI" from the product name so we render the ".ai"
+  // suffix once, in brand color — e.g. "DoctorSmart AI" -> "DoctorSmart" -> "DoctorSmart.ai".
+  const baseName = productName.replace(/(\s+AI|\.ai)$/i, '');
 
   return (
     <div
