@@ -8,18 +8,16 @@ interface Props {
   enabled: boolean;
   agentName: string;
   businessName: string;
-  businessNameZh: string;
   orgName: string;
   greeting: string;
   prompt: string;
   twilioNumber: string | null;
 }
 
-export function VoiceSettings({ enabled, agentName, businessName, businessNameZh, orgName, greeting, prompt, twilioNumber }: Props) {
+export function VoiceSettings({ enabled, agentName, businessName, orgName, greeting, prompt, twilioNumber }: Props) {
   const [isEnabled, setIsEnabled] = useState(enabled);
   const [agentNameText, setAgentName] = useState(agentName ?? "");
   const [businessNameText, setBusinessName] = useState(businessName ?? "");
-  const [businessNameZhText, setBusinessNameZh] = useState(businessNameZh ?? "");
   const [greetingText, setGreeting] = useState(greeting);
   const [promptText, setPrompt] = useState(prompt ?? "");
   const [saved, setSaved] = useState(false);
@@ -27,7 +25,7 @@ export function VoiceSettings({ enabled, agentName, businessName, businessNameZh
 
   function handleSave() {
     start(async () => {
-      await saveVoiceSettings({ enabled: isEnabled, agentName: agentNameText, businessName: businessNameText, businessNameZh: businessNameZhText, greeting: greetingText, prompt: promptText });
+      await saveVoiceSettings({ enabled: isEnabled, agentName: agentNameText, businessName: businessNameText, greeting: greetingText, prompt: promptText });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     });
@@ -95,24 +93,6 @@ export function VoiceSettings({ enabled, agentName, businessName, businessNameZh
         </p>
       </div>
 
-      {/* Chinese business name — used when the agent speaks Chinese */}
-      <div>
-        <label className="block text-xs font-medium text-slate-500 mb-1.5">
-          Chinese name <span className="text-slate-400">(中文名称 — optional)</span>
-        </label>
-        <input
-          type="text"
-          value={businessNameZhText}
-          onChange={(e) => setBusinessNameZh(e.target.value)}
-          className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          placeholder="例如：宏图投资"
-        />
-        <p className="text-xs text-slate-400 mt-1">
-          What the agent calls the business when speaking Chinese. Leave blank to use the name above. In your greeting, use{" "}
-          <code className="text-slate-500">{"{{business_name_zh}}"}</code> for the Chinese part.
-        </p>
-      </div>
-
       {/* Greeting */}
       <div>
         <label className="block text-xs font-medium text-slate-500 mb-1.5">Opening greeting</label>
@@ -142,7 +122,6 @@ export function VoiceSettings({ enabled, agentName, businessName, businessNameZh
           className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none font-mono"
           placeholder={`Business name: Acme Plumbing
 Services: residential plumbing, drain cleaning, water heater installation
-Hours: Mon-Fri 8am-6pm, Sat 9am-2pm, emergency service available 24/7
 Pricing: free estimates, $95 service call fee
 Appointments: available same-day most days, book at least 2 hours ahead
 Owner: Mike Johnson — available for callbacks between 9am-5pm`}

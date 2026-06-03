@@ -48,6 +48,13 @@ export async function loadReceptionistContext(db: ServiceClient, orgId: string):
   const displayName = (org?.voice_agent_business_name as string)?.trim() || (org?.name as string) || "this business";
   const displayNameZh = (org?.voice_agent_business_name_zh as string)?.trim() || displayName;
 
+  // Deliver the opening greeting in English first, then a standard Chinese greeting,
+  // so bilingual callers are welcomed in both languages. The English half is the
+  // org's own "Opening greeting" (unchanged); {{business_name_zh}} resolves to the
+  // Chinese business name when one is defined, otherwise the English display name.
+  const englishGreeting = (org?.voice_agent_greeting as string)?.trim() || "Hello! Thank you for calling. How can I help you today?";
+  const greeting = `${englishGreeting} 您好，感谢致电{{business_name_zh}}，请问有什么可以帮您？`;
+
   return {
     orgId,
     orgName: displayName,
@@ -61,7 +68,7 @@ export async function loadReceptionistContext(db: ServiceClient, orgId: string):
     typesText,
     knowledgeText,
     extraNotes: (org?.voice_agent_prompt as string) || "",
-    greeting: (org?.voice_agent_greeting as string) || "",
+    greeting,
   };
 }
 
