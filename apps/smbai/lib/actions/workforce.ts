@@ -9,6 +9,7 @@ import {
   type AiEmployee,
   type AiEmployeeMetric,
 } from "@helm/ai-workforce";
+import { rollUpWorkforce, type WorkforceSummary } from "@helm/dna-intelligence";
 
 async function orgScope() {
   const cookieStore = await cookies();
@@ -34,4 +35,24 @@ export async function getWorkforce(): Promise<AiEmployee[]> {
 export async function getWorkforceMetrics(from: string, to: string): Promise<AiEmployeeMetric[]> {
   const { orgId, supabase } = await orgScope();
   return getMetrics(supabase, orgId, { from, to });
+}
+
+/**
+ * The Executive Command Center's AI Workforce node: each employee's KPIs summed over
+ * [from, to], plus org-wide totals, busiest-first. Bridges the AI Workforce runtime
+ * (directory + metrics) and the Intelligence DNA read-model (rollUpWorkforce) — neither
+ * Core package imports the other; this app layer composes them.
+ */
+export async function getWorkforceSummary(from: string, to: string): Promise<WorkforceSummary> {
+  const { orgId, supabase } = await orgScope();
+  const [employees, metrics] = await Promise.all([
+    listEmployees(supabase, orgId),
+    getMetrics(supabase, orgId, { from, to }),
+  ]);
+  return rollUpWorkforce(
+    employees.map((e) => ({ id: e.id, slug: e.slug, name: e.name, role: e.role })),
+    metrics.map((m) => ({ employeeId: m.employeeId, metricKey: m.metricKey, metricValue: m.metricValue })),
+    from,
+    to
+  );
 }
