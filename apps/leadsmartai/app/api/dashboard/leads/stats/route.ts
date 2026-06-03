@@ -62,7 +62,8 @@ export async function GET() {
     }
     const growth = Object.entries(monthCounts).map(([month, count]) => ({
       month,
-      label: new Date(month + "-01").toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+      // Append a time so "YYYY-MM-01" parses as LOCAL midnight, not UTC (else the label is a month early behind UTC).
+      label: new Date(month + "-01T00:00:00").toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
       count,
     }));
 
