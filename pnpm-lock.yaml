@@ -490,6 +490,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.73.0
         version: 0.73.0(zod@3.25.76)
+      '@helm/ai-workforce':
+        specifier: workspace:*
+        version: link:../../packages/ai-workforce
       '@helm/data':
         specifier: workspace:*
         version: link:../../packages/data
@@ -599,7 +602,14 @@ importers:
         specifier: workspace:*
         version: link:../../packages/dna-communication
 
-  packages/ai-workforce: {}
+  packages/ai-workforce:
+    dependencies:
+      '@helm/data':
+        specifier: workspace:*
+        version: link:../data
+      '@supabase/supabase-js':
+        specifier: ^2.99.2
+        version: 2.100.1
 
   packages/api-client:
     dependencies:
