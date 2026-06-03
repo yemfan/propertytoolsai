@@ -2,6 +2,11 @@
  * Sidebar — App navigation shell with logo, nav sections, and AI employee badge.
  * Background is always #080d18 (dark navy) regardless of product vertical.
  * Active state and AI badge use var(--brand) for per-vertical color theming.
+ *
+ * Presentational by default — nav rows render as <a href>. Host apps can pass
+ * `linkComponent` (e.g. the Next.js <Link>) for client-side navigation, plus
+ * `notificationsSlot` and `footer` to mount product-specific chrome (a
+ * notifications bell, a user menu / sign-out) without forking the component.
  */
 
 import React from 'react';
@@ -47,6 +52,16 @@ export interface SidebarProps {
   aiEmployee?: AiEmployeeBadge;
   /** Additional class names for the root element. */
   className?: string;
+  /**
+   * Element used to render each nav row. Defaults to 'a' (full-page nav).
+   * Pass the Next.js <Link> for client-side routing; it receives `href`,
+   * `style`, `aria-current`, and mouse handlers.
+   */
+  linkComponent?: React.ElementType;
+  /** Optional node rendered in the logo header (e.g. a notifications bell). */
+  notificationsSlot?: React.ReactNode;
+  /** Optional node rendered at the very bottom (e.g. a user menu / sign-out). */
+  footer?: React.ReactNode;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -54,11 +69,14 @@ export interface SidebarProps {
 function NavItemRow({
   item,
   isActive,
+  linkComponent,
 }: {
   item: NavItem;
   isActive: boolean;
+  linkComponent?: React.ElementType;
 }) {
   const [hovered, setHovered] = React.useState(false);
+  const LinkComponent: React.ElementType = linkComponent ?? 'a';
 
   const rowStyle: React.CSSProperties = {
     display: 'flex',
@@ -95,7 +113,7 @@ function NavItemRow({
   };
 
   return (
-    <a
+    <LinkComponent
       href={item.href}
       style={rowStyle}
       onMouseEnter={() => setHovered(true)}
@@ -121,7 +139,7 @@ function NavItemRow({
           {item.badge > 99 ? '99+' : item.badge}
         </span>
       )}
-    </a>
+    </LinkComponent>
   );
 }
 
@@ -154,6 +172,9 @@ export function Sidebar({
   activeHref,
   aiEmployee,
   className,
+  linkComponent,
+  notificationsSlot,
+  footer,
 }: SidebarProps) {
   return (
     <nav
@@ -178,9 +199,13 @@ export function Sidebar({
           padding: '18px 14px 14px',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
           flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
         }}
       >
-        <a href="/" style={{ display: 'inline-flex', textDecoration: 'none' }}>
+        <a href="/" style={{ display: 'inline-flex', textDecoration: 'none', minWidth: 0 }}>
           <Wordmark
             letter={logoLetter}
             productName={productName}
@@ -188,6 +213,7 @@ export function Sidebar({
             variant="white"
           />
         </a>
+        {notificationsSlot}
       </div>
 
       {/* Nav sections */}
@@ -210,6 +236,7 @@ export function Sidebar({
                   key={item.href}
                   item={item}
                   isActive={activeHref === item.href}
+                  linkComponent={linkComponent}
                 />
               ))}
             </div>
@@ -277,6 +304,19 @@ export function Sidebar({
               {aiEmployee.name}
             </span>
           </div>
+        </div>
+      )}
+
+      {/* Footer slot (e.g. user menu / sign-out) */}
+      {footer && (
+        <div
+          style={{
+            padding: '10px 12px',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            flexShrink: 0,
+          }}
+        >
+          {footer}
         </div>
       )}
     </nav>
