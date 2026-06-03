@@ -1,0 +1,27 @@
+/**
+ * @helm/ui — RealtorSmart Theme Pack
+ * Apply by setting data-pack="real-estate" on the root element.
+ * Brand color: Indigo (#4F46E5)
+ */
+
+[data-pack="real-estate"] {
+  /* ─── Brand Ramp (Indigo) ────────────────────────────────────────────────── */
+  --brand: #4f46e5;
+  --brand-rgb: 79, 70, 229;
+
+  --brand-50: #eef2ff;
+  --brand-100: #e0e7ff;
+  --brand-200: #c7d2fe;
+  --brand-300: #a5b4fc;
+  --brand-400: #818cf8;
+  --brand-500: #6366f1;
+  --brand-600: #4f46e5;
+  --brand-700: #4338ca;
+  --brand-800: #3730a3;
+  --brand-900: #312e81;
+  --brand-950: #1e1b4b;
+
+  /* ─── Brand-tinted shadows ───────────────────────────────────────────────── */
+  --shadow-floating: 0 4px 12px rgba(0, 0, 0, 0.10), 0 2px 4px rgba(79, 70, 229, 0.08);
+  --shadow-overlay: 0 16px 48px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(79, 70, 229, 0.10);
+}

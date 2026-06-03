@@ -1,0 +1,27 @@
+/**
+ * @helm/ui — HelmSmart Theme Pack
+ * Apply by setting data-pack="helm" on the root element.
+ * Brand color: HelmSmart Blue (#1E88E5)
+ */
+
+[data-pack="helm"] {
+  /* ─── Brand Ramp (Blue) ──────────────────────────────────────────────────── */
+  --brand: #1e88e5;
+  --brand-rgb: 30, 136, 229;
+
+  --brand-50: #eaf4fd;
+  --brand-100: #cce4fa;
+  --brand-200: #99c9f5;
+  --brand-300: #60aaef;
+  --brand-400: #3394eb;
+  --brand-500: #1e88e5;
+  --brand-600: #1a7ad0;
+  --brand-700: #1566b3;
+  --brand-800: #105290;
+  --brand-900: #0b3d6b;
+  --brand-950: #072849;
+
+  /* ─── Brand-tinted shadows ───────────────────────────────────────────────── */
+  --shadow-floating: 0 4px 12px rgba(0, 0, 0, 0.10), 0 2px 4px rgba(30, 136, 229, 0.08);
+  --shadow-overlay: 0 16px 48px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(30, 136, 229, 0.10);
+}

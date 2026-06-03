@@ -55,6 +55,13 @@ importers:
       react-dom:
         specifier: 19.2.0
         version: 19.2.0(react@19.2.0)
+    devDependencies:
+      '@types/react':
+        specifier: 19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.14)
 
   apps/helmsmart-web:
     dependencies:
@@ -94,6 +101,9 @@ importers:
       '@helm/dna-service':
         specifier: workspace:*
         version: link:../../packages/dna-service
+      '@helm/ui':
+        specifier: workspace:*
+        version: link:../helm-ui
       '@repo/voice':
         specifier: workspace:*
         version: link:../../packages/voice
@@ -160,7 +170,7 @@ importers:
         version: 9.39.4(jiti@2.6.1)
       eslint-config-next:
         specifier: ^16.2.0
-        version: 16.2.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+        version: 16.2.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
       typescript:
         specifier: ^5.1.6
         version: 5.9.3
@@ -438,7 +448,7 @@ importers:
         version: 9.39.4(jiti@2.6.1)
       eslint-config-next:
         specifier: ^16.2.0
-        version: 16.2.1(@typescript-eslint/parser@8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+        version: 16.2.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
       tsx:
         specifier: ^4.19.3
         version: 4.21.0
@@ -601,6 +611,18 @@ importers:
       '@helm/dna-communication':
         specifier: workspace:*
         version: link:../../packages/dna-communication
+      '@helm/ui':
+        specifier: workspace:*
+        version: link:../../apps/helm-ui
+      lucide-react:
+        specifier: ^0.577.0
+        version: 0.577.0(react@19.2.0)
+      react:
+        specifier: 19.2.0
+        version: 19.2.0
+      react-dom:
+        specifier: 19.2.0
+        version: 19.2.0(react@19.2.0)
 
   packages/ai-workforce:
     dependencies:
