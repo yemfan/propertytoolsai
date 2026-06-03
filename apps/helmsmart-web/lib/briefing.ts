@@ -43,7 +43,7 @@ function fallback(s: BriefingSignals): Briefing {
 
 export async function getOrCreateDailyBriefing(orgId: string, signals: BriefingSignals): Promise<Briefing> {
   const s = signals;
-  const db = createServiceClient();
+  const db = await createServiceClient();
   const today = new Date().toISOString().slice(0, 10);
 
   // Cached once per org per day.

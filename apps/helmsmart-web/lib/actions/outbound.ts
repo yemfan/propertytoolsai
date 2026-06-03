@@ -32,7 +32,7 @@ export async function callLead(input: { clientId: string; purpose: OutboundPurpo
   const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return { ok: false, error: "No organization." };
 
-  const db = createServiceClient();
+  const db = await createServiceClient();
 
   // Load the contact and the org context in parallel (they only need orgId).
   const [{ data: client }, ctx] = await Promise.all([
@@ -71,7 +71,7 @@ export async function callAll(input: { purpose: OutboundPurpose; clientIds: stri
   const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return { ok: false, error: "No organization." };
 
-  const db = createServiceClient();
+  const db = await createServiceClient();
 
   const ctx = await loadReceptionistContext(db, orgId);
   if (!ctx.twilioNumber) return { ok: false, error: "Connect a phone number first in Settings → AI Voice agent." };
@@ -114,7 +114,7 @@ export async function saveReminderSettings(input: {
   if (!orgId) return { ok: false, error: "No organization." };
 
   const lead = Math.max(15, Math.min(43200, Math.round(input.leadMinutes || 0)));
-  const db = createServiceClient();
+  const db = await createServiceClient();
   await db
     .from("organizations")
     .update({ voice_reminder_enabled: input.enabled, voice_reminder_lead_minutes: lead })

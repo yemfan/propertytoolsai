@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, skipped: "no_invoice_id" });
     }
 
-    const supabase = createServiceClient();
+    const supabase = await createServiceClient();
 
     const { data: inv } = await supabase
       .from("invoices")

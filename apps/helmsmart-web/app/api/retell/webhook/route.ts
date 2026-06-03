@@ -19,7 +19,7 @@ import { normalizePhoneE164 } from "@/lib/phone";
 import { attributeCallToEmma } from "@/lib/workforce-attribution";
 
 type TranscriptTurn = { role?: string; content?: string };
-type Db = ReturnType<typeof createServiceClient>;
+type Db = Awaited<ReturnType<typeof createServiceClient>>;
 
 /** Spoken-friendly US phone, e.g. "+16267557917" -> "(626) 755-7917". */
 function formatPhone(e164: string): string {
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     const durationMs = Number(call.duration_ms ?? (endTs && startTs ? endTs - startTs : 0));
     const transcriptObj = call.transcript_object as TranscriptTurn[] | undefined;
 
-    const db = createServiceClient();
+    const db = await createServiceClient();
 
     // Resolve the org from the call: dynamic var first, else the business number
     // (to_number for inbound, from_number for outbound).

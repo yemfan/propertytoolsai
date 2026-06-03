@@ -21,8 +21,11 @@ export async function createNotificationService(orgId: string, data: {
   title: string;
   body?: string;
   link?: string;
-}) {
-  const supabase = createServiceClient();
+}, db?: Awaited<ReturnType<typeof createServiceClient>>) {
+  // `db` lets cron jobs pass the iterated pack client (so a medical org's
+  // notification lands in the medical project); webhooks/actions omit it and
+  // get the host-resolved client.
+  const supabase = db ?? await createServiceClient();
   await supabase.from("notifications").insert({
     organization_id: orgId,
     type: data.type,

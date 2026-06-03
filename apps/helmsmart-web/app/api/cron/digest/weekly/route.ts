@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClientFor, packServiceConns } from "@/lib/supabase/server";
 import { Resend } from "resend";
 
 export const dynamic = "force-dynamic";
@@ -32,18 +32,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ skipped: "not monday" });
   }
 
-  const db = createServiceClient();
   const today = new Date().toISOString().slice(0, 10);
   const weekOut = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
   const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@smbai.app";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
-  const { data: orgs } = await db.from("organizations").select("id, name, weekly_digest_enabled");
-
   let sent = 0;
+  let orgCount = 0;
   const errors: string[] = [];
 
-  for (const org of orgs ?? []) {
+  // Process every vertical's orgs — Core plus the medical project (if configured).
+  for (const conn of packServiceConns()) {
+    const db = createServiceClientFor(conn);
+    const { data: orgs } = await db.from("organizations").select("id, name, weekly_digest_enabled");
+    orgCount += orgs?.length ?? 0;
+
+    for (const org of orgs ?? []) {
     try {
       if (org.weekly_digest_enabled === false) continue;
       // Recipients: owners + admins
@@ -146,7 +150,8 @@ export async function GET(request: NextRequest) {
     } catch (err) {
       errors.push(`${org.id}: ${err instanceof Error ? err.message : String(err)}`);
     }
+    }
   }
 
-  return NextResponse.json({ ok: true, orgs: (orgs ?? []).length, sent, errors });
+  return NextResponse.json({ ok: true, orgs: orgCount, sent, errors });
 }

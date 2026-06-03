@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const supabase = createServiceClient();
+  const supabase = await createServiceClient();
 
   const { data: inv } = await supabase
     .from("invoices")

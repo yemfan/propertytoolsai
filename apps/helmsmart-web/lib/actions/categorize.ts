@@ -53,7 +53,7 @@ export async function categorizeTransactions(
   orgId: string,
   limit = 50
 ): Promise<{ categorized: number; error?: string }> {
-  const service = createServiceClient();
+  const service = await createServiceClient();
 
   // 1. Fetch org metadata for context
   const { data: org } = await service

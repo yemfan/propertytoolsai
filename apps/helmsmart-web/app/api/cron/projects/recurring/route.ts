@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClientFor, packServiceConns } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -39,55 +39,61 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  const supabase = createServiceClient();
   const today = new Date().toISOString().slice(0, 10);
-
-  const { data: due, error } = await supabase
-    .from("recurring_projects")
-    .select("*")
-    .eq("status", "active")
-    .lte("next_run_date", today);
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
+  let processed = 0;
   let generated = 0;
   const errors: string[] = [];
 
-  for (const rec of due ?? []) {
-    try {
-      const period = new Date(rec.next_run_date + "T00:00:00").toLocaleDateString("en-US", {
-        month: "short",
-        year: "numeric",
-      });
+  // Process every vertical's orgs — Core plus the medical project (if configured).
+  for (const conn of packServiceConns()) {
+    const supabase = createServiceClientFor(conn);
 
-      const { error: insErr } = await supabase.from("projects").insert({
-        organization_id: rec.organization_id,
-        client_id: rec.client_id ?? null,
-        name: `${rec.name} — ${period}`,
-        description: rec.description ?? null,
-        status: "active",
-        color: rec.color ?? "indigo",
-        budget_hours: rec.budget_hours,
-        budget_amount: rec.budget_amount,
-        hourly_rate: rec.hourly_rate,
-      });
-      if (insErr) throw new Error(insErr.message);
+    const { data: due, error } = await supabase
+      .from("recurring_projects")
+      .select("*")
+      .eq("status", "active")
+      .lte("next_run_date", today);
 
-      await supabase
-        .from("recurring_projects")
-        .update({
-          next_run_date: advanceDate(rec.next_run_date, rec.frequency),
-          last_generated_at: new Date().toISOString(),
-        })
-        .eq("id", rec.id);
+    if (error) {
+      errors.push(error.message);
+      continue;
+    }
+    processed += (due ?? []).length;
 
-      generated++;
-    } catch (err) {
-      errors.push(`${rec.id}: ${err instanceof Error ? err.message : String(err)}`);
+    for (const rec of due ?? []) {
+      try {
+        const period = new Date(rec.next_run_date + "T00:00:00").toLocaleDateString("en-US", {
+          month: "short",
+          year: "numeric",
+        });
+
+        const { error: insErr } = await supabase.from("projects").insert({
+          organization_id: rec.organization_id,
+          client_id: rec.client_id ?? null,
+          name: `${rec.name} — ${period}`,
+          description: rec.description ?? null,
+          status: "active",
+          color: rec.color ?? "indigo",
+          budget_hours: rec.budget_hours,
+          budget_amount: rec.budget_amount,
+          hourly_rate: rec.hourly_rate,
+        });
+        if (insErr) throw new Error(insErr.message);
+
+        await supabase
+          .from("recurring_projects")
+          .update({
+            next_run_date: advanceDate(rec.next_run_date, rec.frequency),
+            last_generated_at: new Date().toISOString(),
+          })
+          .eq("id", rec.id);
+
+        generated++;
+      } catch (err) {
+        errors.push(`${rec.id}: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
   }
 
-  return NextResponse.json({ ok: true, processed: (due ?? []).length, generated, errors });
+  return NextResponse.json({ ok: true, processed, generated, errors });
 }

@@ -44,7 +44,7 @@ function tpl(template: string, ctx: AutomationContext): string {
 
 // ─── Rule executor ────────────────────────────────────────────────────────────
 
-type Db = ReturnType<typeof createServiceClient>;
+type Db = Awaited<ReturnType<typeof createServiceClient>>;
 
 async function executeRule(
   rule: { id: string; action: string; config: Record<string, unknown> },
@@ -130,10 +130,13 @@ async function executeRule(
  */
 export async function runAutomations(
   trigger: AutomationTrigger,
-  ctx: AutomationContext
+  ctx: AutomationContext,
+  serviceDb?: Awaited<ReturnType<typeof createServiceClient>>
 ): Promise<void> {
   try {
-    const db = createServiceClient();
+    // serviceDb lets cron jobs pass the iterated pack client; callers in a
+    // request context omit it and get the host-resolved client.
+    const db = serviceDb ?? await createServiceClient();
 
     const { data: rules } = await db
       .from("automation_rules")

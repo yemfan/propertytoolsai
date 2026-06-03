@@ -25,7 +25,7 @@ export async function POST(
     return new NextResponse("Invalid JSON", { status: 400 });
   }
 
-  const supabase = createServiceClient();
+  const supabase = await createServiceClient();
 
   // Verify estimate exists and is in a respondable state
   const { data: est } = await supabase

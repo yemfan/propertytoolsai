@@ -22,7 +22,7 @@ export async function billVoiceCall(callSid: string, durationSeconds: number): P
   if (!stripe) return;
   if (!durationSeconds || durationSeconds <= 0) return;
 
-  const db = createServiceClient();
+  const db = await createServiceClient();
 
   const { data: session } = await db
     .from("voice_sessions")

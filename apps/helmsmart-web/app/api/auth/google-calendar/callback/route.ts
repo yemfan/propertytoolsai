@@ -76,7 +76,7 @@ export async function GET(req: Request) {
     };
     if (tokenData.refresh_token) payload.refresh_token = tokenData.refresh_token;
 
-    const db = createServiceClient();
+    const db = await createServiceClient();
     const { error: dbErr } = await db
       .from("org_oauth_tokens")
       .upsert(payload, { onConflict: "organization_id,provider" });

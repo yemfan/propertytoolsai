@@ -1,8 +1,9 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { getAccountsForEntityType } from "@/lib/data/chart-of-accounts-seed";
 
 export type OrgState = { error: string } | null;
@@ -60,42 +61,42 @@ export async function createOrg(
     redirect("/books");
   }
 
-  // Create the organization (service role to bypass RLS on insert)
-  const service = createServiceClient();
+  // Create the org, membership, and chart of accounts with the RLS client (NOT
+  // the service role) so they all land in the SAME project the user authenticated
+  // against — the medical project on medical/doctor hosts, else Core. RLS permits
+  // it: "authenticated users can create orgs", users self-insert their membership,
+  // and the new owner may seed accounts. The id is generated client-side so the
+  // org INSERT needs no RETURNING (which RLS blocks until the membership exists).
+  const orgId = randomUUID();
 
-  const { data: org, error: orgError } = await service
-    .from("organizations")
-    .insert({
-      name,
-      slug: `${slugify(name)}-${Date.now()}`,
-      entity_type: entityType,
-    })
-    .select("id")
-    .single();
+  const { error: orgError } = await supabase.from("organizations").insert({
+    id: orgId,
+    name,
+    slug: `${slugify(name)}-${Date.now()}`,
+    entity_type: entityType,
+  });
 
-  if (orgError || !org) {
+  if (orgError) {
     console.error("createOrg error:", orgError);
     return { error: "Failed to create organization. Please try again." };
   }
 
-  // Add user as owner
-  const { error: memberError } = await service
-    .from("organization_members")
-    .insert({
-      organization_id: org.id,
-      user_id: user.id,
-      role: "owner",
-    });
+  // Add the user as owner
+  const { error: memberError } = await supabase.from("organization_members").insert({
+    organization_id: orgId,
+    user_id: user.id,
+    role: "owner",
+  });
 
   if (memberError) {
     console.error("createOrg membership error:", memberError);
     return { error: "Organization created but membership failed. Contact support." };
   }
 
-  // Seed chart of accounts
+  // Seed chart of accounts (the user is now owner, so RLS permits the insert)
   const accounts = getAccountsForEntityType(entityType);
-  const { error: coaError } = await service.from("chart_of_accounts").insert(
-    accounts.map((a) => ({ organization_id: org.id, ...a }))
+  const { error: coaError } = await supabase.from("chart_of_accounts").insert(
+    accounts.map((a) => ({ organization_id: orgId, ...a }))
   );
 
   if (coaError) {
@@ -105,7 +106,7 @@ export async function createOrg(
 
   // Set org cookie for middleware routing
   const cookieStore = await cookies();
-  cookieStore.set(ORG_COOKIE, org.id, COOKIE_OPTS);
+  cookieStore.set(ORG_COOKIE, orgId, COOKIE_OPTS);
 
   redirect("/books");
 }

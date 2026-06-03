@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     /* malformed body — fall through to empty vars */
   }
 
-  const db = createServiceClient();
+  const db = await createServiceClient();
   let dynamic_variables: Record<string, string> = {};
   // findOrgIdByNumber tolerates phone-format differences (+1 prefix, spacing).
   const orgId = await findOrgIdByNumber(db, toNumber);

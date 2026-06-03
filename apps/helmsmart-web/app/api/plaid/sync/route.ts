@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Service client for upserts (bypasses RLS for server-side batch writes)
-    const service = createServiceClient();
+    const service = await createServiceClient();
 
     const results = await Promise.all(
       connections.map(async (conn) => {
