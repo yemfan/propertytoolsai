@@ -5,6 +5,7 @@ const config: NextConfig = {
   // HelmSmart Core packages are TS source — Next must transpile them.
   transpilePackages: [
     "@helm/data",
+    "@helm/ai-workforce",
     "@helm/dna-finance",
     "@helm/dna-communication",
     "@helm/dna-operations",
