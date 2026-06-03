@@ -4,9 +4,9 @@ import type { NextRequest } from "next/server";
 
 // Routes that require an authenticated user + an org.
 const DASHBOARD_SEGMENTS = [
-  "/ask", "/automations", "/books", "/calendar", "/clients", "/home",
-  "/inbox", "/marketing", "/pipeline", "/projects", "/reception", "/reports",
-  "/settings", "/social", "/tasks", "/timesheets", "/voice",
+  "/ask", "/automations", "/books", "/calendar", "/clients", "/command-center",
+  "/home", "/inbox", "/marketing", "/pipeline", "/projects", "/reception",
+  "/reports", "/settings", "/social", "/tasks", "/timesheets", "/voice",
 ];
 
 // Routes only accessible when logged OUT

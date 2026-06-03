@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   BookOpen, Users, Inbox, Phone, Calendar,
   Mic, Share2, Settings, Building2, LogOut, Sparkles, LayoutDashboard,
-  CheckSquare, Mail, BarChart2, Zap, Clock, TrendingUp, FolderOpen,
+  CheckSquare, Mail, BarChart2, Zap, Clock, TrendingUp, FolderOpen, Bot,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 
@@ -15,6 +15,7 @@ const navSections = [
     title: "Workspace",
     items: [
       { key: "home",     label: "Dashboard",   icon: LayoutDashboard, href: "/home" },
+      { key: "command",  label: "Command Center", icon: Bot,          href: "/command-center" },
       { key: "inbox",    label: "Inbox",       icon: Inbox,           href: "/inbox" },
       { key: "calendar", label: "Calendar",    icon: Calendar,        href: "/calendar" },
       { key: "tasks",    label: "Tasks",       icon: CheckSquare,     href: "/tasks" },
