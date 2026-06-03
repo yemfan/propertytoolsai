@@ -4,10 +4,15 @@
  * headers()-based resolvers live in `lib/packs.ts`.
  */
 
-/** "medical.helmsmart.ai" / "medical.localhost" -> "medical"; everything else -> "helm". */
+/**
+ * Subdomain -> pack id. The medical (DoctorSmart AI) vertical answers on either
+ * `doctor.*` (production brand, e.g. doctor.helmsmart.ai) or `medical.*`
+ * (dev / internal, e.g. medical.localhost); everything else is HelmSmart.
+ * Add a vertical here when its subdomain goes live.
+ */
 export function packIdForHost(host: string): string {
   const sub = host.split(":")[0].split(".")[0];
-  return sub === "medical" ? "medical" : "helm";
+  return sub === "doctor" || sub === "medical" ? "medical" : "helm";
 }
 
 /** A per-vertical Supabase connection (URL + public anon key). */
