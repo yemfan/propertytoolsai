@@ -2,8 +2,23 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 
 export type AuthState = { error: string } | null;
+
+/**
+ * Origin of the CURRENT request (the vertical's own host), e.g.
+ * https://medical.helmsmart.ai — so per-vertical confirmation / password-reset
+ * emails link back to the host the user actually signed up on, not a static base
+ * URL. Falls back to NEXT_PUBLIC_APP_URL if the host header is somehow absent.
+ */
+async function requestOrigin(): Promise<string> {
+  const h = await headers();
+  const host = h.get("host");
+  if (!host) return process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const proto = h.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
 
 // ── Sign in ──────────────────────────────────────────────────────────────────
 
@@ -41,7 +56,7 @@ export async function signUp(
     email,
     password,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`,
+      emailRedirectTo: `${await requestOrigin()}/api/auth/callback`,
     },
   });
 
@@ -77,7 +92,7 @@ export async function requestPasswordReset(
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback?next=/reset-password`,
+    redirectTo: `${await requestOrigin()}/api/auth/callback?next=/reset-password`,
   });
 
   if (error) return { error: error.message };
