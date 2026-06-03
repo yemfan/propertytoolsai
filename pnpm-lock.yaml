@@ -56,6 +56,115 @@ importers:
         specifier: 19.2.0
         version: 19.2.0(react@19.2.0)
 
+  apps/helmsmart-web:
+    dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.73.0
+        version: 0.73.0(zod@3.25.76)
+      '@helm/ai-workforce':
+        specifier: workspace:*
+        version: link:../../packages/ai-workforce
+      '@helm/data':
+        specifier: workspace:*
+        version: link:../../packages/data
+      '@helm/dna-communication':
+        specifier: workspace:*
+        version: link:../../packages/dna-communication
+      '@helm/dna-finance':
+        specifier: workspace:*
+        version: link:../../packages/dna-finance
+      '@helm/dna-intelligence':
+        specifier: workspace:*
+        version: link:../../packages/dna-intelligence
+      '@helm/dna-knowledge':
+        specifier: workspace:*
+        version: link:../../packages/dna-knowledge
+      '@helm/dna-marketing':
+        specifier: workspace:*
+        version: link:../../packages/dna-marketing
+      '@helm/dna-operations':
+        specifier: workspace:*
+        version: link:../../packages/dna-operations
+      '@helm/dna-people':
+        specifier: workspace:*
+        version: link:../../packages/dna-people
+      '@helm/dna-revenue':
+        specifier: workspace:*
+        version: link:../../packages/dna-revenue
+      '@helm/dna-service':
+        specifier: workspace:*
+        version: link:../../packages/dna-service
+      '@repo/voice':
+        specifier: workspace:*
+        version: link:../../packages/voice
+      '@supabase/ssr':
+        specifier: ^0.6.1
+        version: 0.6.1(@supabase/supabase-js@2.100.1)
+      '@supabase/supabase-js':
+        specifier: ^2.99.2
+        version: 2.100.1
+      '@tailwindcss/postcss':
+        specifier: ^4.2.1
+        version: 4.2.2
+      lucide-react:
+        specifier: ^0.577.0
+        version: 0.577.0(react@19.2.0)
+      next:
+        specifier: 16.1.6
+        version: 16.1.6(@playwright/test@1.59.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      plaid:
+        specifier: ^29.0.0
+        version: 29.0.0
+      react:
+        specifier: 19.2.0
+        version: 19.2.0
+      react-dom:
+        specifier: 19.2.0
+        version: 19.2.0(react@19.2.0)
+      react-plaid-link:
+        specifier: ^3.6.0
+        version: 3.6.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      recharts:
+        specifier: ^3.8.0
+        version: 3.8.1(@types/react@19.2.14)(react-dom@19.2.0(react@19.2.0))(react-is@19.2.4)(react@19.2.0)(redux@5.0.1)
+      resend:
+        specifier: ^6.9.4
+        version: 6.9.4
+      retell-sdk:
+        specifier: ^5.31.0
+        version: 5.31.0
+      stripe:
+        specifier: ^18.5.0
+        version: 18.5.0(@types/node@20.19.37)
+      tailwindcss:
+        specifier: ^4.2.1
+        version: 4.2.2
+      twilio:
+        specifier: ^5.13.0
+        version: 5.13.1
+      zod:
+        specifier: ^3.24.2
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.4.2
+        version: 20.19.37
+      '@types/react':
+        specifier: 19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      eslint:
+        specifier: ^9.39.4
+        version: 9.39.4(jiti@2.6.1)
+      eslint-config-next:
+        specifier: ^16.2.0
+        version: 16.2.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+      typescript:
+        specifier: ^5.1.6
+        version: 5.9.3
+
   apps/leadsmart-mobile:
     dependencies:
       '@expo-google-fonts/geist':
@@ -484,115 +593,6 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@20.19.37)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
-
-  apps/smbai:
-    dependencies:
-      '@anthropic-ai/sdk':
-        specifier: ^0.73.0
-        version: 0.73.0(zod@3.25.76)
-      '@helm/ai-workforce':
-        specifier: workspace:*
-        version: link:../../packages/ai-workforce
-      '@helm/data':
-        specifier: workspace:*
-        version: link:../../packages/data
-      '@helm/dna-communication':
-        specifier: workspace:*
-        version: link:../../packages/dna-communication
-      '@helm/dna-finance':
-        specifier: workspace:*
-        version: link:../../packages/dna-finance
-      '@helm/dna-intelligence':
-        specifier: workspace:*
-        version: link:../../packages/dna-intelligence
-      '@helm/dna-knowledge':
-        specifier: workspace:*
-        version: link:../../packages/dna-knowledge
-      '@helm/dna-marketing':
-        specifier: workspace:*
-        version: link:../../packages/dna-marketing
-      '@helm/dna-operations':
-        specifier: workspace:*
-        version: link:../../packages/dna-operations
-      '@helm/dna-people':
-        specifier: workspace:*
-        version: link:../../packages/dna-people
-      '@helm/dna-revenue':
-        specifier: workspace:*
-        version: link:../../packages/dna-revenue
-      '@helm/dna-service':
-        specifier: workspace:*
-        version: link:../../packages/dna-service
-      '@repo/voice':
-        specifier: workspace:*
-        version: link:../../packages/voice
-      '@supabase/ssr':
-        specifier: ^0.6.1
-        version: 0.6.1(@supabase/supabase-js@2.100.1)
-      '@supabase/supabase-js':
-        specifier: ^2.99.2
-        version: 2.100.1
-      '@tailwindcss/postcss':
-        specifier: ^4.2.1
-        version: 4.2.2
-      lucide-react:
-        specifier: ^0.577.0
-        version: 0.577.0(react@19.2.0)
-      next:
-        specifier: 16.1.6
-        version: 16.1.6(@playwright/test@1.59.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      plaid:
-        specifier: ^29.0.0
-        version: 29.0.0
-      react:
-        specifier: 19.2.0
-        version: 19.2.0
-      react-dom:
-        specifier: 19.2.0
-        version: 19.2.0(react@19.2.0)
-      react-plaid-link:
-        specifier: ^3.6.0
-        version: 3.6.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      recharts:
-        specifier: ^3.8.0
-        version: 3.8.1(@types/react@19.2.14)(react-dom@19.2.0(react@19.2.0))(react-is@19.2.4)(react@19.2.0)(redux@5.0.1)
-      resend:
-        specifier: ^6.9.4
-        version: 6.9.4
-      retell-sdk:
-        specifier: ^5.31.0
-        version: 5.31.0
-      stripe:
-        specifier: ^18.5.0
-        version: 18.5.0(@types/node@20.19.37)
-      tailwindcss:
-        specifier: ^4.2.1
-        version: 4.2.2
-      twilio:
-        specifier: ^5.13.0
-        version: 5.13.1
-      zod:
-        specifier: ^3.24.2
-        version: 3.25.76
-    devDependencies:
-      '@types/node':
-        specifier: ^20.4.2
-        version: 20.19.37
-      '@types/react':
-        specifier: 19.2.14
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: 19.2.3
-        version: 19.2.3(@types/react@19.2.14)
-      eslint:
-        specifier: ^9.39.4
-        version: 9.39.4(jiti@2.6.1)
-      eslint-config-next:
-        specifier: ^16.2.0
-        version: 16.2.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
-      typescript:
-        specifier: ^5.1.6
-        version: 5.9.3
 
   industry-packs/financial-services: {}
 
