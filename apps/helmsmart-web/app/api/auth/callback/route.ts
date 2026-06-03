@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY!,
+    (process.env.NEXT_PUBLIC_HELM_SUPABASE_URL ?? process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL)!,
+    (process.env.NEXT_PUBLIC_HELM_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY)!,
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
