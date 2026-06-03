@@ -26,9 +26,9 @@ function anonKey(): string {
  * This is the DEFAULT for all user-facing reads/writes — every query runs as the
  * signed-in user and is scoped by get_user_org_ids() / get_user_scope().
  */
-export async function createClient() {
+export async function createClient(conn?: { url?: string; key?: string }) {
   const cookieStore = await cookies();
-  return createServerClient(url(), anonKey(), {
+  return createServerClient(conn?.url ?? url(), conn?.key ?? anonKey(), {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -51,13 +51,14 @@ export async function createClient() {
  * admin paths (see the service-role lint allowlist). Never use for user-facing actions —
  * use createClient() so RLS enforces tenant isolation.
  */
-export function createServiceClient() {
+export function createServiceClient(conn?: { url?: string; key?: string }) {
   const serviceKey =
+    conn?.key ??
     process.env.HELM_SUPABASE_SERVICE_ROLE_KEY ??
     process.env.SMBAI_SUPABASE_SERVICE_ROLE_KEY ??
     process.env.SUPABASE_SERVICE_ROLE_KEY ??
     "";
-  return createServerClient(url(), serviceKey, {
+  return createServerClient(conn?.url ?? url(), serviceKey, {
     cookies: { getAll: () => [], setAll: () => {} },
   });
 }
