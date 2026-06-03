@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { browserConnForHost } from "@/lib/pack-host";
 
 /**
  * Supabase email-confirmation callback.
@@ -24,9 +25,13 @@ export async function GET(request: NextRequest) {
 
   const cookieStore = await cookies();
 
+  // Pack-aware: exchange the code against the SAME project that issued it
+  // (medical.* / doctor.* -> medical), so medical email-confirmation + OAuth work.
+  const conn = browserConnForHost(request.headers.get("host") ?? new URL(request.url).host);
+
   const supabase = createServerClient(
-    (process.env.NEXT_PUBLIC_HELM_SUPABASE_URL ?? process.env.NEXT_PUBLIC_SMBAI_SUPABASE_URL)!,
-    (process.env.NEXT_PUBLIC_HELM_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY)!,
+    conn.url,
+    conn.key,
     {
       cookies: {
         getAll: () => cookieStore.getAll(),

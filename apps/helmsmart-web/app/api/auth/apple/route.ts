@@ -7,16 +7,17 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { browserConnForHost } from "@/lib/pack-host";
 
 export async function GET(request: NextRequest) {
   const { origin } = new URL(request.url);
+  // Pack-aware: medical.* / doctor.* OAuth runs against the medical project.
+  const conn = browserConnForHost(request.headers.get("host") ?? new URL(request.url).host);
   const cookieStore = await cookies();
 
   const supabase = createServerClient(
-    "https://vpmwsnoosuiknyzdxgtk.supabase.co",
-    process.env.NEXT_PUBLIC_HELM_SUPABASE_ANON_KEY ||
-      process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY ||
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwbXdzbm9vc3Vpa255emR4Z3RrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NDU5MTgsImV4cCI6MjA5NTQyMTkxOH0.eAn1vPTAHXj_4OMd9T50LcazrxnvMxkcfFs-de98SNg",
+    conn.url,
+    conn.key,
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
