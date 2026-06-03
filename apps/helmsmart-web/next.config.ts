@@ -15,6 +15,7 @@ const config: NextConfig = {
     "@helm/dna-marketing",
     "@helm/dna-service",
     "@helm/dna-knowledge",
+    "@helm/ui",
   ],
   // Hardcode public Supabase values so they are always embedded at build time.
   // The anon key is intentionally public (protected by RLS, safe to commit).
