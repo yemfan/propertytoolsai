@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * CommandCenterGrid — The HelmSmart Command Center dashboard layout.
  *
