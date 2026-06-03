@@ -94,6 +94,7 @@ export function Sidebar({ unreadCount = 0, notificationsSlot, userEmail }: Props
     <HelmUiSidebar
       productName="HelmSmart"
       logoLetter="H"
+      logoHref="/home"
       sections={sections}
       activeHref={activeHref}
       linkComponent={Link}

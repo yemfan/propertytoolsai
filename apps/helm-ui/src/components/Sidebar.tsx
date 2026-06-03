@@ -44,6 +44,12 @@ export interface SidebarProps {
   productName: string;
   /** Letter shown in the logo mark, e.g. 'H', 'R'. */
   logoLetter: string;
+  /**
+   * Where the logo links. Defaults to '/'. Authed apps should pass their
+   * dashboard home (e.g. '/home') so clicking the logo doesn't bounce a
+   * signed-in user out to the public marketing site.
+   */
+  logoHref?: string;
   /** Ordered navigation sections. */
   sections: NavSection[];
   /** Href of the currently active route (matched to NavItem.href). */
@@ -168,6 +174,7 @@ function SectionLabel({ label }: { label: string }) {
 export function Sidebar({
   productName,
   logoLetter,
+  logoHref = '/',
   sections,
   activeHref,
   aiEmployee,
@@ -176,6 +183,10 @@ export function Sidebar({
   notificationsSlot,
   footer,
 }: SidebarProps) {
+  // Logo links through the same client-side router as the nav rows (falls back
+  // to a plain <a>), so a signed-in user stays in the app instead of full-page
+  // navigating to the marketing site.
+  const LogoLink: React.ElementType = linkComponent ?? 'a';
   return (
     <nav
       className={className}
@@ -205,14 +216,14 @@ export function Sidebar({
           gap: 8,
         }}
       >
-        <a href="/" style={{ display: 'inline-flex', textDecoration: 'none', minWidth: 0 }}>
+        <LogoLink href={logoHref} style={{ display: 'inline-flex', textDecoration: 'none', minWidth: 0 }}>
           <Wordmark
             letter={logoLetter}
             productName={productName}
             size={24}
             variant="white"
           />
-        </a>
+        </LogoLink>
         {notificationsSlot}
       </div>
 
