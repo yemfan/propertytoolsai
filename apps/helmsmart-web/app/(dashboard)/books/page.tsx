@@ -33,8 +33,11 @@ async function getBankSummary(orgId: string) {
 async function getMonthTotals(orgId: string, yearMonth: string) {
   const supabase = await createClient();
   const [year, month] = yearMonth.split("-").map(Number);
-  const firstDay = new Date(year, month - 1, 1).toISOString().slice(0, 10);
-  const lastDay  = new Date(year, month, 0).toISOString().slice(0, 10);
+  // Build the calendar month window as plain YYYY-MM-DD strings. Routing through
+  // toISOString() converts local midnight to UTC, which shifts the window back a
+  // day in timezones ahead of UTC; derive the boundaries directly instead.
+  const firstDay = `${yearMonth}-01`;
+  const lastDay  = `${yearMonth}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`;
 
   const { data: txns } = await supabase
     .from("bank_transactions")
