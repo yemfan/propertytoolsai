@@ -105,7 +105,7 @@ export function Badge({
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        fontFamily: 'var(--font-sans)',
         fontWeight: 600,
         letterSpacing: '0.02em',
         lineHeight: 1,

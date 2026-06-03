@@ -60,7 +60,7 @@ export function Wordmark({
         style={{
           fontSize,
           lineHeight: `${lineHeight}px`,
-          fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+          fontFamily: 'var(--font-sans)',
           fontWeight: 600,
           letterSpacing: '-0.02em',
           color: nameColor,

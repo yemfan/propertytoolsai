@@ -33,21 +33,21 @@ const LABEL_STYLE: React.CSSProperties = {
   fontWeight: 500,
   color: 'var(--color-text-primary)',
   marginBottom: 5,
-  fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+  fontFamily: 'var(--font-sans)',
 };
 
 const HINT_STYLE: React.CSSProperties = {
   fontSize: 12,
   color: 'var(--color-text-tertiary)',
   marginTop: 4,
-  fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+  fontFamily: 'var(--font-sans)',
 };
 
 const ERROR_STYLE: React.CSSProperties = {
   fontSize: 12,
   color: '#dc2626',
   marginTop: 4,
-  fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+  fontFamily: 'var(--font-sans)',
 };
 
 export function Input({
@@ -99,7 +99,7 @@ export function Input({
     outline: 'none',
     fontSize: 14,
     color: 'var(--color-text-primary)',
-    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    fontFamily: 'var(--font-sans)',
     width: '100%',
     ...style,
   };
@@ -203,7 +203,7 @@ export function Textarea({ label, hint, error, className, id, style, ...rest }: 
     outline: 'none',
     fontSize: 14,
     color: 'var(--color-text-primary)',
-    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    fontFamily: 'var(--font-sans)',
     resize: 'vertical',
     minHeight: 96,
     boxSizing: 'border-box',

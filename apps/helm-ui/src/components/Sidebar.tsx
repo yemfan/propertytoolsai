@@ -85,7 +85,7 @@ function NavItemRow({
     padding: '6px 12px 6px 14px',
     borderRadius: 'var(--radius-md)',
     textDecoration: 'none',
-    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    fontFamily: 'var(--font-sans)',
     fontSize: 13,
     fontWeight: isActive ? 600 : 400,
     color: isActive ? '#ffffff' : hovered ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.55)',
@@ -154,7 +154,7 @@ function SectionLabel({ label }: { label: string }) {
         textTransform: 'uppercase',
         color: 'rgba(255,255,255,0.28)',
         padding: '10px 14px 4px',
-        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        fontFamily: 'var(--font-sans)',
         userSelect: 'none',
       } as React.CSSProperties}
     >
@@ -293,7 +293,7 @@ export function Sidebar({
                 fontSize: 11,
                 fontWeight: 500,
                 color: 'rgba(255,255,255,0.60)',
-                fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                fontFamily: 'var(--font-sans)',
                 lineHeight: 1.3,
                 letterSpacing: '-0.01em',
                 overflow: 'hidden',

@@ -111,7 +111,7 @@ export function LogoMark({
         x={cx}
         y={letterY}
         textAnchor="middle"
-        fontFamily="Inter, system-ui, -apple-system, sans-serif"
+        fontFamily="var(--font-sans)"
         fontSize={fontSize}
         fontWeight="800"
         fill={color}

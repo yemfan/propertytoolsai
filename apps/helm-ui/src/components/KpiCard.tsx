@@ -116,7 +116,7 @@ export function KpiCard({
           letterSpacing: '0.06em',
           textTransform: 'uppercase',
           color: 'var(--color-text-tertiary)',
-          fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+          fontFamily: 'var(--font-sans)',
         } as React.CSSProperties}
       >
         {label}
@@ -130,7 +130,7 @@ export function KpiCard({
           letterSpacing: '-0.03em',
           lineHeight: 1.1,
           color: isNull ? 'var(--color-text-tertiary)' : 'var(--color-text-primary)',
-          fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+          fontFamily: 'var(--font-sans)',
         } as React.CSSProperties}
       >
         {formattedValue}
@@ -161,7 +161,7 @@ export function KpiCard({
             fontSize: 11,
             fontWeight: 500,
             color: deltaColor,
-            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+            fontFamily: 'var(--font-sans)',
           } as React.CSSProperties}
         >
           {delta}
