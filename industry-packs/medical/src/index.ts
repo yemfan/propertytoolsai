@@ -24,4 +24,5 @@ export const medicalManifest: PackManifest = {
     Pipeline: "Referrals",
     Books: "Billing",
   },
+  tagline: "Less paperwork, more patients",
 };

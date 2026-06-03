@@ -1,22 +1,29 @@
 import type React from "react";
-import { HelmLogo } from "@/components/logo";
+import { LogoMark } from "@helm/ui";
+import { getActivePack } from "@/lib/packs";
 
-export default function AuthLayout({
+export default async function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Pack-aware brand: DoctorSmart on doctor.*/medical.*, HelmSmart elsewhere.
+  const pack = await getActivePack();
+  const baseName = pack.productName.replace(/(\s+AI|\.ai)$/i, "");
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        {/* Logo / wordmark */}
+        {/* Logo / wordmark — driven by the active pack manifest */}
         <div className="mb-8 text-center flex flex-col items-center gap-3">
-          <HelmLogo size={48} variant="color" />
+          <LogoMark letter={pack.logoLetter} size={48} />
           <div>
             <span className="text-2xl font-bold text-slate-900 tracking-tight">
-              HelmSmart<span style={{ color: "#1E88E5" }}>.ai</span>
+              {baseName}<span style={{ color: "var(--brand)" }}>.ai</span>
             </span>
-            <p className="mt-1 text-sm text-slate-500">More control, less effort</p>
+            {pack.tagline && (
+              <p className="mt-1 text-sm text-slate-500">{pack.tagline}</p>
+            )}
           </div>
         </div>
 
