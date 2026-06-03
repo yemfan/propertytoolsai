@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { createNotificationService } from "@/lib/actions/notifications";
 import { getAvailability, bookAppointment, matchOrCreateClient } from "@/lib/booking";
+import { recordEmmaBooking } from "@/lib/workforce-attribution";
 import { describeHours, type BusinessHours, type AppointmentType, type KnowledgeEntry } from "@/lib/receptionist";
 import twilio from "twilio";
 import type { ReceptionistContext } from "@repo/voice/prompt";
@@ -123,6 +124,8 @@ export async function runReceptionistTool(name: string, input: unknown, ctx: Too
     const clientId = await matchOrCreateClient(ctx.orgId, ctx.fromNumber, callerName);
     const res = await bookAppointment(ctx.orgId, { appointmentTypeName: type, startISO: start, dateStr, timeStr, clientId, callerName });
     if (!res.ok) return { text: `Could not book: ${res.reason} Offer to check another time with check_availability.` };
+    // Attribute the booking to Emma for the Command Center (best-effort; never blocks).
+    await recordEmmaBooking(ctx.db, ctx.orgId);
     return {
       text: `Booked: ${res.title} on ${res.label}. Confirm this back to the caller.`,
       bookedEventId: res.eventId,
