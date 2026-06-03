@@ -103,7 +103,7 @@ export function Button({
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    fontFamily: 'var(--font-sans)',
     fontWeight: 500,
     letterSpacing: '-0.01em',
     lineHeight: 1,

@@ -76,7 +76,7 @@ export function AiEmployeeCard({
             fontSize: 13,
             fontWeight: 600,
             color: 'var(--color-text-primary)',
-            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+            fontFamily: 'var(--font-sans)',
             flex: 1,
             letterSpacing: '-0.01em',
           } as React.CSSProperties}
@@ -92,7 +92,7 @@ export function AiEmployeeCard({
           fontSize: 13,
           lineHeight: 1.6,
           color: 'var(--color-text-secondary)',
-          fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+          fontFamily: 'var(--font-sans)',
           margin: 0,
         } as React.CSSProperties}
       >
@@ -116,7 +116,7 @@ export function AiEmployeeCard({
                   borderRadius: 'var(--radius-sm)',
                   padding: '4px 10px',
                   textDecoration: 'none',
-                  fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                  fontFamily: 'var(--font-sans)',
                   transition: 'background var(--duration-fast) var(--ease-standard)',
                 } as React.CSSProperties}
               >

@@ -9,6 +9,9 @@
   --brand: #1e88e5;
   --brand-rgb: 30, 136, 229;
 
+  /* ─── Typography (host app may override --font-sans with its own font) ───── */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+
   /* ─── Sidebar (constant across all verticals) ────────────────────────────── */
   --sidebar-bg: #080d18;
 
