@@ -70,9 +70,13 @@ interface Props {
   unreadCount?: number;
   notificationsSlot?: ReactNode;
   userEmail?: string | null;
+  /** Pack-driven branding + nav relabeling (defaults to HelmSmart). */
+  productName?: string;
+  logoLetter?: string;
+  terms?: Record<string, string>;
 }
 
-export function Sidebar({ unreadCount = 0, notificationsSlot, userEmail }: Props) {
+export function Sidebar({ unreadCount = 0, notificationsSlot, userEmail, productName = "HelmSmart", logoLetter = "H", terms = {} }: Props) {
   const pathname = usePathname();
 
   // Longest-prefix match so e.g. /books/invoices keeps "Books" highlighted.
@@ -80,10 +84,11 @@ export function Sidebar({ unreadCount = 0, notificationsSlot, userEmail }: Props
     .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
     .sort((a, b) => b.length - a.length)[0];
 
+  const relabel = (s: string) => terms[s] ?? s;
   const sections: NavSection[] = navSections.map((section) => ({
-    label: section.title,
+    label: relabel(section.title),
     items: section.items.map((item) => ({
-      label: item.label,
+      label: relabel(item.label),
       href: item.href,
       icon: item.icon,
       badge: item.href === "/inbox" && unreadCount > 0 ? unreadCount : undefined,
@@ -92,8 +97,8 @@ export function Sidebar({ unreadCount = 0, notificationsSlot, userEmail }: Props
 
   return (
     <HelmUiSidebar
-      productName="HelmSmart"
-      logoLetter="H"
+      productName={productName}
+      logoLetter={logoLetter}
       logoHref="/home"
       sections={sections}
       activeHref={activeHref}

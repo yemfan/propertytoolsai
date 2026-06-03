@@ -15,6 +15,7 @@ const config: NextConfig = {
     "@helm/dna-marketing",
     "@helm/dna-service",
     "@helm/dna-knowledge",
+    "@helm/pack-medical",
     "@helm/ui",
   ],
   // Hardcode public Supabase values so they are always embedded at build time.

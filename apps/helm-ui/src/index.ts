@@ -33,3 +33,6 @@ export type { SidebarProps, NavItem, NavSection, AiEmployeeBadge } from './compo
 
 export { AppShell } from './components/AppShell';
 export type { AppShellProps } from './components/AppShell';
+
+// ─── Pack config ────────────────────────────────────────────────────────────────
+export type { PackManifest } from './pack';
