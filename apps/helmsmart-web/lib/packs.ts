@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import type { PackManifest } from "@helm/ui";
 import { medicalManifest } from "@helm/pack-medical";
+import { packIdForHost, connForHost, type PackConn } from "@/lib/pack-host";
 
 /**
  * Active industry-pack resolution (Slice 1).
@@ -27,13 +28,13 @@ const PACKS: Record<string, PackManifest> = {
   medical: medicalManifest,
 };
 
-function packIdForHost(host: string): string {
-  const sub = host.split(":")[0].split(".")[0]; // "medical.helmsmart.ai" -> "medical"
-  return sub === "medical" ? "medical" : "helm";
-}
-
 /** Resolve the active pack manifest from the request host. Defaults to HelmSmart. */
 export async function getActivePack(): Promise<PackManifest> {
   const host = (await headers()).get("host") ?? "";
   return PACKS[packIdForHost(host)] ?? helmManifest;
+}
+
+/** Server-side Supabase connection override for the active pack (undefined = Core). */
+export async function getActivePackSupabase(): Promise<PackConn | undefined> {
+  return connForHost((await headers()).get("host") ?? "");
 }

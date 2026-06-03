@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { connForHost } from "@/lib/pack-host";
 
 // Routes that require an authenticated user + an org.
 const DASHBOARD_SEGMENTS = [
@@ -17,11 +18,16 @@ export async function proxy(request: NextRequest) {
 
   let response = NextResponse.next({ request });
 
+  // Pack-aware auth: medical.* hosts authenticate against the medical Supabase
+  // (its own auth island); every other host uses Core. Auth cookies are keyed by
+  // project ref, so sessions never cross verticals.
+  const conn = connForHost(request.headers.get("host") ?? "");
   const supabase = createServerClient(
-    "https://vpmwsnoosuiknyzdxgtk.supabase.co",
-    process.env.NEXT_PUBLIC_HELM_SUPABASE_ANON_KEY ||
-      process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY ||
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwbXdzbm9vc3Vpa255emR4Z3RrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NDU5MTgsImV4cCI6MjA5NTQyMTkxOH0.eAn1vPTAHXj_4OMd9T50LcazrxnvMxkcfFs-de98SNg",
+    conn?.url ?? "https://vpmwsnoosuiknyzdxgtk.supabase.co",
+    conn?.key ??
+      (process.env.NEXT_PUBLIC_HELM_SUPABASE_ANON_KEY ||
+        process.env.NEXT_PUBLIC_SMBAI_SUPABASE_ANON_KEY ||
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwbXdzbm9vc3Vpa255emR4Z3RrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NDU5MTgsImV4cCI6MjA5NTQyMTkxOH0.eAn1vPTAHXj_4OMd9T50LcazrxnvMxkcfFs-de98SNg"),
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
