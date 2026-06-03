@@ -5,56 +5,66 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen, Users, Inbox, Phone, Calendar,
-  Mic, Share2, Settings, Building2, LogOut, Sparkles, LayoutDashboard,
+  Mic, Share2, Settings, LogOut, Sparkles, LayoutDashboard,
   CheckSquare, Mail, BarChart2, Zap, Clock, TrendingUp, FolderOpen, Bot,
 } from "lucide-react";
+import { Sidebar as HelmUiSidebar, type NavSection } from "@helm/ui";
 import { signOut } from "@/lib/actions/auth";
 
-const navSections = [
+const ICON = 16;
+
+/**
+ * Real HelmSmart dashboard routes, grouped. This is the live navigation —
+ * presentation (dark shell, brand-blue active state, AI badge) comes from
+ * @helm/ui's <Sidebar>; the routes + plumbing stay owned by the app.
+ */
+const navSections: { title: string; items: { label: string; href: string; icon: ReactNode }[] }[] = [
   {
     title: "Workspace",
     items: [
-      { key: "home",     label: "Dashboard",   icon: LayoutDashboard, href: "/home" },
-      { key: "command",  label: "Command Center", icon: Bot,          href: "/command-center" },
-      { key: "inbox",    label: "Inbox",       icon: Inbox,           href: "/inbox" },
-      { key: "calendar", label: "Calendar",    icon: Calendar,        href: "/calendar" },
-      { key: "tasks",    label: "Tasks",       icon: CheckSquare,     href: "/tasks" },
-      { key: "ask",      label: "Ask AI",      icon: Sparkles,        href: "/ask" },
+      { label: "Dashboard",      href: "/home",           icon: <LayoutDashboard size={ICON} /> },
+      { label: "Command Center", href: "/command-center", icon: <Bot size={ICON} /> },
+      { label: "Inbox",          href: "/inbox",          icon: <Inbox size={ICON} /> },
+      { label: "Calendar",       href: "/calendar",       icon: <Calendar size={ICON} /> },
+      { label: "Tasks",          href: "/tasks",          icon: <CheckSquare size={ICON} /> },
+      { label: "Ask AI",         href: "/ask",            icon: <Sparkles size={ICON} /> },
     ],
   },
   {
     title: "Reception",
     items: [
-      { key: "reception", label: "Reception",   icon: Phone, href: "/reception" },
-      { key: "voice",     label: "Voice Agent", icon: Mic,   href: "/voice" },
-      { key: "clients",   label: "Clients",     icon: Users, href: "/clients" },
+      { label: "Reception",   href: "/reception", icon: <Phone size={ICON} /> },
+      { label: "Voice Agent", href: "/voice",     icon: <Mic size={ICON} /> },
+      { label: "Clients",     href: "/clients",   icon: <Users size={ICON} /> },
     ],
   },
   {
     title: "Marketing",
     items: [
-      { key: "pipeline",  label: "Pipeline",  icon: TrendingUp, href: "/pipeline" },
-      { key: "social",    label: "Social",    icon: Share2,     href: "/social" },
-      { key: "marketing", label: "Marketing", icon: Mail,       href: "/marketing" },
+      { label: "Pipeline",  href: "/pipeline",  icon: <TrendingUp size={ICON} /> },
+      { label: "Social",    href: "/social",    icon: <Share2 size={ICON} /> },
+      { label: "Marketing", href: "/marketing", icon: <Mail size={ICON} /> },
     ],
   },
   {
     title: "Accounting",
     items: [
-      { key: "books",   label: "Books",   icon: BookOpen,  href: "/books" },
-      { key: "reports", label: "Reports", icon: BarChart2, href: "/reports" },
+      { label: "Books",   href: "/books",   icon: <BookOpen size={ICON} /> },
+      { label: "Reports", href: "/reports", icon: <BarChart2 size={ICON} /> },
     ],
   },
   {
     title: "Managing",
     items: [
-      { key: "projects",    label: "Projects",    icon: FolderOpen, href: "/projects" },
-      { key: "timesheets",  label: "Timesheets",  icon: Clock,      href: "/timesheets" },
-      { key: "automations", label: "Automations", icon: Zap,        href: "/automations" },
-      { key: "settings",    label: "Settings",    icon: Settings,   href: "/settings" },
+      { label: "Projects",    href: "/projects",    icon: <FolderOpen size={ICON} /> },
+      { label: "Timesheets",  href: "/timesheets",  icon: <Clock size={ICON} /> },
+      { label: "Automations", href: "/automations", icon: <Zap size={ICON} /> },
+      { label: "Settings",    href: "/settings",    icon: <Settings size={ICON} /> },
     ],
   },
 ];
+
+const ALL_HREFS = navSections.flatMap((s) => s.items.map((i) => i.href));
 
 interface Props {
   unreadCount?: number;
@@ -65,75 +75,85 @@ interface Props {
 export function Sidebar({ unreadCount = 0, notificationsSlot, userEmail }: Props) {
   const pathname = usePathname();
 
+  // Longest-prefix match so e.g. /books/invoices keeps "Books" highlighted.
+  const activeHref = ALL_HREFS
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
+
+  const sections: NavSection[] = navSections.map((section) => ({
+    label: section.title,
+    items: section.items.map((item) => ({
+      label: item.label,
+      href: item.href,
+      icon: item.icon,
+      badge: item.href === "/inbox" && unreadCount > 0 ? unreadCount : undefined,
+    })),
+  }));
+
   return (
-    <aside className="w-60 flex-shrink-0 bg-slate-900 flex flex-col h-full">
-      {/* Logo + notification bell */}
-      <div className="px-4 py-4 border-b border-slate-800 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/helmsmart-mark.png" alt="HelmSmart" className="h-7 w-7 object-contain" />
-          <span className="text-white font-semibold text-[15px] tracking-tight">
-            HelmSmart<span style={{ color: "#1E88E5" }}>.ai</span>
-          </span>
-        </div>
-        {notificationsSlot}
+    <HelmUiSidebar
+      productName="HelmSmart"
+      logoLetter="H"
+      sections={sections}
+      activeHref={activeHref}
+      linkComponent={Link}
+      notificationsSlot={notificationsSlot}
+      aiEmployee={{ name: "Mark, AI COO", status: "active" }}
+      footer={userEmail ? <UserFooter userEmail={userEmail} /> : undefined}
+    />
+  );
+}
+
+function UserFooter({ userEmail }: { userEmail: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: "50%",
+          background: "var(--brand)",
+          color: "#fff",
+          fontSize: 10,
+          fontWeight: 700,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        {userEmail[0]?.toUpperCase()}
       </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-3 space-y-4 overflow-y-auto">
-        {navSections.map((section) => (
-          <div key={section.title} className="space-y-0.5">
-            <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-              {section.title}
-            </p>
-            {section.items.map(({ key, label, icon: Icon, href }) => {
-              const active = pathname === href || pathname.startsWith(`${href}/`);
-              const badge = key === "inbox" && unreadCount > 0 ? unreadCount : 0;
-
-              return (
-                <Link
-                  key={key}
-                  href={href}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    active
-                      ? "bg-indigo-600 text-white"
-                      : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-                  }`}
-                >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="flex-1">{label}</span>
-                  {badge > 0 && (
-                    <span className="text-[10px] font-bold bg-indigo-500 text-white rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
-                      {badge > 99 ? "99+" : badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
-      </nav>
-
-      {/* Bottom: user */}
-      {userEmail && (
-        <div className="px-3 py-3 border-t border-slate-800">
-          <div className="flex items-center gap-2 px-3 py-2">
-            <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
-              {userEmail[0].toUpperCase()}
-            </div>
-            <span className="flex-1 text-xs text-slate-500 truncate">{userEmail}</span>
-            <form action={signOut}>
-              <button
-                type="submit"
-                title="Sign out"
-                className="p-1 text-slate-600 hover:text-slate-300 transition-colors rounded"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-    </aside>
+      <span
+        style={{
+          flex: 1,
+          fontSize: 11,
+          color: "rgba(255,255,255,0.5)",
+          fontFamily: "Inter, system-ui, sans-serif",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {userEmail}
+      </span>
+      <form action={signOut}>
+        <button
+          type="submit"
+          title="Sign out"
+          aria-label="Sign out"
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            color: "rgba(255,255,255,0.4)",
+            display: "flex",
+            padding: 2,
+          }}
+        >
+          <LogOut size={14} />
+        </button>
+      </form>
+    </div>
   );
 }

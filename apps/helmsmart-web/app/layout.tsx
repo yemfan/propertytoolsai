@@ -1,4 +1,5 @@
 import "./globals.css";
+import "@helm/ui/tokens";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
@@ -25,7 +26,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-pack="helm">
       <body
         className={`${fontBody.variable} ${fontMono.variable} antialiased bg-slate-50 text-slate-900`}
       >

@@ -39,6 +39,9 @@
 
 body {
   font-family: var(--font-body), system-ui, sans-serif;
+  /* Feed the app font (Geist) into @helm/ui's design-system components so the
+     shell matches the pages instead of falling back to system-ui. */
+  --font-sans: var(--font-body), system-ui, -apple-system, sans-serif;
 }
 
 code, pre, .tabular-nums {

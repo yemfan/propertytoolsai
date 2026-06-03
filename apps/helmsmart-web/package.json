@@ -27,6 +27,7 @@
     "@helm/dna-people": "workspace:*",
     "@helm/dna-revenue": "workspace:*",
     "@helm/dna-service": "workspace:*",
+    "@helm/ui": "workspace:*",
     "@repo/voice": "workspace:*",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.99.2",
