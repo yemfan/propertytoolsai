@@ -1,21 +1,20 @@
 import type { WorkforceSummary } from "@helm/dna-intelligence";
 import { SeedWorkforceButton } from "./seed-workforce-button";
+import { EmployeeAvatarPicker } from "./employee-avatar-picker";
 
 /** "calls_answered" → "Calls Answered". */
 function humanize(key: string): string {
   return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-const AVATAR_COLORS = [
-  "bg-indigo-500",
-  "bg-emerald-500",
-  "bg-amber-500",
-  "bg-sky-500",
-  "bg-rose-500",
-  "bg-violet-500",
-];
-
-export function WorkforceBoard({ summary }: { summary: WorkforceSummary }) {
+export function WorkforceBoard({
+  summary,
+  avatarById,
+}: {
+  summary: WorkforceSummary;
+  /** employeeId → resolved avatar id (chosen, or a stable default). */
+  avatarById: Record<string, string>;
+}) {
   if (summary.employees.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
@@ -48,16 +47,16 @@ export function WorkforceBoard({ summary }: { summary: WorkforceSummary }) {
 
       {/* Roster */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {summary.employees.map((e, i) => {
+        {summary.employees.map((e) => {
           const keys = Object.keys(e.metrics);
           return (
             <div key={e.employeeId} className="rounded-xl border border-slate-200 bg-white p-5">
               <div className="flex items-center gap-3">
-                <div
-                  className={`w-10 h-10 rounded-full ${AVATAR_COLORS[i % AVATAR_COLORS.length]} flex items-center justify-center text-white font-semibold`}
-                >
-                  {e.name.charAt(0).toUpperCase()}
-                </div>
+                <EmployeeAvatarPicker
+                  employeeId={e.employeeId}
+                  name={e.name}
+                  value={avatarById[e.employeeId] ?? "persona-01"}
+                />
                 <div>
                   <p className="font-semibold text-slate-900">{e.name}</p>
                   <p className="text-xs text-slate-500">{e.role}</p>

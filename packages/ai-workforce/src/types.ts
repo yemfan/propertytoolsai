@@ -47,6 +47,9 @@ export interface AiEmployee {
   personality: string;
   status: EmployeeStatus;
   config: Record<string, unknown>;
+  /** Chosen persona avatar id (e.g. "persona-03"), or null to use a default. Stored in config.avatar.
+   *  Optional in roster blueprints (a business assigns it); always present on a read employee. */
+  avatar?: string | null;
 }
 
 /** A reference to a DNA service capability the employee may call — never embedded logic. */

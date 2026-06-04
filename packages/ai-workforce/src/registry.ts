@@ -54,6 +54,33 @@ export async function listEmployeeTools(db: Db, orgId: string, employeeId: strin
   return (data ?? []).map(rowToTool);
 }
 
+/**
+ * Set an employee's persona avatar. Merges into the config jsonb (preserving other
+ * keys), so no schema change is needed. RLS scopes the write to the caller's org.
+ */
+export async function setEmployeeAvatar(
+  db: Db,
+  orgId: string,
+  employeeId: string,
+  avatar: string,
+): Promise<void> {
+  const { data: existing, error: readErr } = await db
+    .from("ai_employees")
+    .select("config")
+    .eq("organization_id", orgId)
+    .eq("id", employeeId)
+    .maybeSingle();
+  if (readErr) throw new Error(readErr.message);
+
+  const config = { ...((existing?.config as Record<string, unknown>) ?? {}), avatar };
+  const { error } = await db
+    .from("ai_employees")
+    .update({ config: config as unknown as Json })
+    .eq("organization_id", orgId)
+    .eq("id", employeeId);
+  if (error) throw new Error(error.message);
+}
+
 export interface SeedResult {
   /** Number of employees newly created (existing slugs are left untouched). */
   seeded: number;

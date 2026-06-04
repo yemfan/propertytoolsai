@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { LogoMark } from './LogoMark';
+import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { Button } from './Button';
 
@@ -25,6 +26,8 @@ export interface AiEmployeeCardProps {
    * Should correspond to the product vertical ('H', 'R', 'D', etc.).
    */
   logoLetter?: string;
+  /** Persona avatar id (e.g. "persona-03"). When set, shown instead of the LogoMark. */
+  avatar?: string;
   /** The AI's current briefing message displayed in the card body. */
   message: string;
   /** Quick action buttons rendered at the bottom. */
@@ -49,6 +52,7 @@ function StatusBadge({ status }: { status: AiEmployeeCardProps['status'] }) {
 export function AiEmployeeCard({
   employeeName,
   logoLetter = 'H',
+  avatar,
   message,
   actions = [],
   status = 'active',
@@ -70,7 +74,7 @@ export function AiEmployeeCard({
     >
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <LogoMark letter={logoLetter} size={20} />
+        {avatar ? <Avatar id={avatar} size={24} alt={employeeName} /> : <LogoMark letter={logoLetter} size={20} />}
         <span
           style={{
             fontSize: 13,
