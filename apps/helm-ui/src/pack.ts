@@ -21,4 +21,11 @@ export interface PackManifest {
   terms?: Record<string, string>;
   /** Short marketing tagline shown under the wordmark (e.g. on auth pages). */
   tagline?: string;
+  /**
+   * Vertical-specific fill-in template for the AI Front Desk's "Business context" field
+   * (e.g. a clinic's services, the doctor's bio, insurance, reviews). Shown as the
+   * placeholder and offered as a one-click starting point; falls back to a generic
+   * small-business example when a pack doesn't supply one.
+   */
+  voiceContextExample?: string;
 }

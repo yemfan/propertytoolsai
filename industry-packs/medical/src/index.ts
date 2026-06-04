@@ -25,4 +25,21 @@ export const medicalManifest: PackManifest = {
     Books: "Billing",
   },
   tagline: "Less paperwork, more patients",
+  // A complete doctor's-office example so a clinic's AI Front Desk can answer the
+  // questions patients actually ask — location, the doctor's background, insurance,
+  // reviews and recognitions. Demo content (a fictional clinic), not real PHI; a
+  // clinic replaces it with its own non-patient business information.
+  voiceContextExample: `Clinic name: Riverside Family Medicine
+Location: 1240 Oak Street, Suite 200, Springfield, IL 62704 (free parking, wheelchair accessible)
+Hours: Mon-Fri 8am-5pm, Sat 9am-1pm; closed Sunday. Same-week sick visits usually available.
+Services: annual physicals, sick visits, chronic-care management (diabetes, blood pressure, thyroid), pediatric & adult care, vaccinations & flu shots, women's health, wellness screenings, minor procedures, and telehealth visits.
+Provider: Dr. Sarah Chen, MD — board-certified in Family Medicine.
+Education: MD, University of Illinois College of Medicine; Family Medicine residency at Northwestern Memorial; BS Biology, University of Michigan.
+Experience: 14 years in practice; special interest in preventive care and women's health; speaks English and Mandarin.
+Recognitions: "Top Doctor," Springfield Magazine (2022-2024); Fellow of the American Academy of Family Physicians (FAAFP); Patients' Choice Award.
+Patient reviews: 4.9-star average across 320+ reviews — patients highlight short wait times, clear explanations, and a caring, unhurried bedside manner.
+Insurance: accepts most major plans (Blue Cross Blue Shield, Aetna, Cigna, UnitedHealthcare, Medicare); self-pay rates available — we verify your plan before the visit.
+Appointments: new patients welcome; please arrive 15 minutes early with a photo ID and insurance card; 24-hour notice to cancel or reschedule.
+Urgent & after-hours: for a medical emergency call 911; after hours, an on-call provider can be reached through this number.
+Callbacks: Dr. Chen returns non-urgent patient calls between 12pm-1pm on weekdays.`,
 };
