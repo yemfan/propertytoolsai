@@ -14,13 +14,18 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { shouldStopMessaging } from "@helm/dna-communication";
 import { createNotificationService } from "@/lib/actions/notifications";
 import { analyzeInbound, translateToEnglish, localizeOutbound, intentLabel, languageName, type Lang } from "@/lib/language";
+import { verifyTwilioSignature, formParams } from "@/lib/twilio-verify";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
-  const from = formData.get("From") as string | null;
-  const to   = formData.get("To")   as string | null;
-  const body = formData.get("Body") as string | null;
-  const sid  = formData.get("MessageSid") as string | null;
+  const params = formParams(formData);
+  if (!verifyTwilioSignature(request, params)) {
+    return new NextResponse("Forbidden", { status: 403 });
+  }
+  const from = params.From ?? null;
+  const to   = params.To   ?? null;
+  const body = params.Body ?? null;
+  const sid  = params.MessageSid ?? null;
 
   if (!from || !to || !body) {
     return new NextResponse("<?xml version=\"1.0\"?><Response/>", {
