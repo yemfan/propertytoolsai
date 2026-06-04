@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { defaultAvatarForSeed } from "@helm/ui";
+import { getBlueprint } from "@helm/ai-workforce";
 import { getWorkforceSummary, getWorkforce } from "@/lib/actions/workforce";
 import { CommandCenterView } from "./command-center-view";
 import { WorkforceBoard } from "./workforce-board";
@@ -18,9 +19,13 @@ export default async function CommandCenterPage() {
     getWorkforce(),
   ]);
 
-  // Each employee's avatar: their chosen one, or a stable default from their slug.
+  // Each employee's avatar: their chosen one → the role-fit default from the roster
+  // blueprint → a stable hash fallback (for non-roster employees).
   const avatarById: Record<string, string> = Object.fromEntries(
-    employees.map((e) => [e.id, e.avatar ?? defaultAvatarForSeed(e.slug)])
+    employees.map((e) => [
+      e.id,
+      e.avatar ?? getBlueprint(e.slug)?.avatar ?? defaultAvatarForSeed(e.slug),
+    ])
   );
 
   return (
