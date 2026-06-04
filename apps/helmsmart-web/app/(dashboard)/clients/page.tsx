@@ -1,3 +1,4 @@
+import { PageTitle } from "@/components/page-title";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
@@ -78,7 +79,7 @@ export default async function ClientsPage({
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Clients</h1>
+          <PageTitle base="Clients" />
           <p className="text-sm text-slate-500 mt-0.5">
             {counts.active ?? 0} active · {counts.lead ?? 0} leads · {counts.prospect ?? 0} prospects
           </p>

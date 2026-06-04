@@ -35,6 +35,15 @@ export async function getActivePack(): Promise<PackManifest> {
   return PACKS[packIdForHost(host)] ?? helmManifest;
 }
 
+/**
+ * Relabel a Core noun for the active pack — the same map the sidebar uses, so page
+ * headings stay in lockstep with the nav (e.g. "Reception" → "Front Desk", "Books"
+ * → "Billing" on medical). Identity on Core, where `terms` is empty.
+ */
+export async function term(label: string): Promise<string> {
+  return (await getActivePack()).terms?.[label] ?? label;
+}
+
 /** Server-side Supabase connection override for the active pack (undefined = Core). */
 export async function getActivePackSupabase(): Promise<PackConn | undefined> {
   return connForHost((await headers()).get("host") ?? "");
