@@ -5,10 +5,13 @@ import { Mic, Save, Zap } from "lucide-react";
 import { saveVoiceSettings } from "@/lib/actions/social";
 
 // Generic small-business example, shown when the active pack doesn't supply its own.
-const DEFAULT_CONTEXT_EXAMPLE = `Business name: Acme Plumbing
+const DEFAULT_CONTEXT_EXAMPLE = `## BUSINESS
+Name: Acme Plumbing
 Services: residential plumbing, drain cleaning, water heater installation
 Pricing: free estimates, $95 service call fee
-Appointments: available same-day most days, book at least 2 hours ahead
+
+## APPOINTMENTS & CONTACT
+Availability: same-day most days; book at least 2 hours ahead
 Owner: Mike Johnson — available for callbacks between 9am-5pm`;
 
 interface Props {
