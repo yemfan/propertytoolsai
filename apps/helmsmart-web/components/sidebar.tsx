@@ -1,15 +1,17 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen, Users, Inbox, PhoneIncoming, Calendar,
   PhoneOutgoing, Share2, Settings, LogOut, Sparkles, LayoutDashboard,
   CheckSquare, Mail, BarChart2, Zap, Clock, TrendingUp, FolderOpen, Bot,
+  ChevronUp, KeyRound, RefreshCw,
 } from "lucide-react";
 import { Sidebar as HelmUiSidebar, type NavSection } from "@helm/ui";
 import { signOut } from "@/lib/actions/auth";
+import { ChangePasswordModal } from "@/components/change-password-modal";
 
 const ICON = 16;
 
@@ -70,13 +72,15 @@ interface Props {
   unreadCount?: number;
   notificationsSlot?: ReactNode;
   userEmail?: string | null;
+  /** User's uploaded profile picture (from auth metadata); falls back to an initial. */
+  avatarUrl?: string | null;
   /** Pack-driven branding + nav relabeling (defaults to HelmSmart). */
   productName?: string;
   logoLetter?: string;
   terms?: Record<string, string>;
 }
 
-export function Sidebar({ unreadCount = 0, notificationsSlot, userEmail, productName = "HelmSmart", logoLetter = "H", terms = {} }: Props) {
+export function Sidebar({ unreadCount = 0, notificationsSlot, userEmail, avatarUrl, productName = "HelmSmart", logoLetter = "H", terms = {} }: Props) {
   const pathname = usePathname();
 
   // Longest-prefix match so e.g. /books/invoices keeps "Books" highlighted.
@@ -105,61 +109,99 @@ export function Sidebar({ unreadCount = 0, notificationsSlot, userEmail, product
       linkComponent={Link}
       notificationsSlot={notificationsSlot}
       aiEmployee={{ name: "Mark, AI COO", status: "active" }}
-      footer={userEmail ? <UserFooter userEmail={userEmail} /> : undefined}
+      footer={userEmail ? <UserFooter userEmail={userEmail} avatarUrl={avatarUrl} /> : undefined}
     />
   );
 }
 
-function UserFooter({ userEmail }: { userEmail: string }) {
+function UserFooter({ userEmail, avatarUrl }: { userEmail: string; avatarUrl?: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close the menu on an outside click.
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div
+    <div ref={ref} style={{ position: "relative" }}>
+      {/* The avatar chip — click it to open the account menu. */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Account menu"
         style={{
-          width: 24,
-          height: 24,
-          borderRadius: "50%",
-          background: "var(--brand)",
-          color: "#fff",
-          fontSize: 10,
-          fontWeight: 700,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 8, width: "100%",
+          background: "transparent", border: "none", cursor: "pointer",
+          padding: 4, borderRadius: 8, textAlign: "left",
         }}
       >
-        {userEmail[0]?.toUpperCase()}
-      </div>
-      <span
-        style={{
-          flex: 1,
-          fontSize: 11,
-          color: "rgba(255,255,255,0.5)",
-          fontFamily: "Inter, system-ui, sans-serif",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {userEmail}
-      </span>
-      <form action={signOut}>
-        <button
-          type="submit"
-          title="Sign out"
-          aria-label="Sign out"
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatarUrl} alt="" style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+        ) : (
+          <span
+            style={{
+              width: 24, height: 24, borderRadius: "50%", background: "var(--brand)",
+              color: "#fff", fontSize: 10, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}
+          >
+            {userEmail[0]?.toUpperCase()}
+          </span>
+        )}
+        <span
           style={{
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            color: "rgba(255,255,255,0.4)",
-            display: "flex",
-            padding: 2,
+            flex: 1, fontSize: 11, color: "rgba(255,255,255,0.5)",
+            fontFamily: "Inter, system-ui, sans-serif",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}
         >
-          <LogOut size={14} />
-        </button>
-      </form>
+          {userEmail}
+        </span>
+        <ChevronUp
+          size={14}
+          style={{
+            color: "rgba(255,255,255,0.4)", flexShrink: 0,
+            transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s",
+          }}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl border border-slate-200 shadow-xl py-1 z-50 overflow-hidden">
+          <div className="px-3 py-2 border-b border-slate-100">
+            <p className="text-[11px] text-slate-400">Signed in as</p>
+            <p className="text-sm font-medium text-slate-800 truncate">{userEmail}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setPwOpen(true); setOpen(false); }}
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+          >
+            <KeyRound size={14} /> Change password
+          </button>
+          <form action={signOut}>
+            <button type="submit" className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+              <RefreshCw size={14} /> Switch account
+            </button>
+          </form>
+          <div className="border-t border-slate-100 my-1" />
+          <form action={signOut}>
+            <button type="submit" className="flex items-center gap-2 w-full px-3 py-2 text-sm text-rose-600 hover:bg-rose-50">
+              <LogOut size={14} /> Log out
+            </button>
+          </form>
+        </div>
+      )}
+
+      {pwOpen && <ChangePasswordModal onClose={() => setPwOpen(false)} />}
     </div>
   );
 }

@@ -123,3 +123,28 @@ export async function updatePassword(
 
   redirect("/home");
 }
+
+// ── Change password (in-app, while signed in) ────────────────────────────────
+
+/**
+ * Update the signed-in user's password from the account menu. Unlike updatePassword
+ * (used in the reset flow), this stays on the page and reports success so a modal can
+ * close itself. Return type is inferred by the caller's useActionState — no exported
+ * type, since a "use server" module may only export async functions.
+ */
+export async function changePassword(
+  _: { error: string } | { ok: true } | null,
+  formData: FormData
+): Promise<{ error: string } | { ok: true } | null> {
+  const password = formData.get("password") as string;
+  const confirm  = formData.get("confirm")  as string;
+
+  if (!password || password.length < 8) return { error: "Password must be at least 8 characters." };
+  if (password !== confirm) return { error: "Passwords do not match." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { error: error.message };
+
+  return { ok: true };
+}

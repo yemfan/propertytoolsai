@@ -26,6 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Sidebar
         unreadCount={unreadCount}
         userEmail={user?.email ?? null}
+        avatarUrl={(user?.user_metadata?.avatar_url as string | undefined) ?? null}
         productName={pack.productName}
         logoLetter={pack.logoLetter}
         terms={pack.terms}
