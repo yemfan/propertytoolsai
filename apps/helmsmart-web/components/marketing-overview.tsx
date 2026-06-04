@@ -2,7 +2,7 @@
 
 import { useState, type ComponentType } from "react";
 import Link from "next/link";
-import { Phone, MessageSquare, Mail, Settings, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Phone, MessageSquare, Mail, Settings, ArrowRight, CheckCircle2, Plus } from "lucide-react";
 
 type Channel = "voice" | "sms" | "email";
 
@@ -18,6 +18,13 @@ const TABS: { key: Channel; label: string; icon: ComponentType<{ className?: str
   { key: "email", label: "Email", icon: Mail },
 ];
 
+// The active channel's "create new" action, shown in the tab bar (changes per tab).
+const CREATE: Record<Channel, { label: string; href: string }> = {
+  voice: { label: "New call campaign", href: "/client-assistant" },
+  sms:   { label: "Set up text-back",  href: "/settings#operations" },
+  email: { label: "New campaign",      href: "/marketing/new" },
+};
+
 /**
  * Marketing Overview — a multi-channel control panel. One tab per outreach channel
  * (Voice / SMS / Email); each shows how to SET UP the channel and a MONITOR snapshot,
@@ -30,22 +37,31 @@ export function MarketingOverview({ voice, sms, email }: Props) {
     <section className="mb-8">
       <h2 className="text-sm font-semibold text-slate-700 mb-3">Overview</h2>
       <div className="bg-white rounded-xl border border-slate-200">
-        {/* Channel tabs */}
-        <div className="flex border-b border-slate-100">
-          {TABS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                tab === key
-                  ? "border-indigo-600 text-indigo-700"
-                  : "border-transparent text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          ))}
+        {/* Channel tabs + the active channel's "create new" action */}
+        <div className="flex items-center justify-between border-b border-slate-100 pr-3">
+          <div className="flex">
+            {TABS.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  tab === key
+                    ? "border-indigo-600 text-indigo-700"
+                    : "border-transparent text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </button>
+            ))}
+          </div>
+          <Link
+            href={CREATE[tab].href}
+            className="flex items-center gap-1.5 shrink-0 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {CREATE[tab].label}
+          </Link>
         </div>
 
         {/* Tab content */}
