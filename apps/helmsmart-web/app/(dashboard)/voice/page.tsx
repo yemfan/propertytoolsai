@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Phone, MessageSquare, Calendar, Bot, Clock, DollarSign, Settings } from "lucide-react";
 import { MissedCallTextBack } from "@/components/missed-call-text-back";
 import { RecordingLink } from "@/components/recording-link";
+import { RoiCounter } from "@/components/roi-counter";
 
 export const metadata: Metadata = { title: "AI Receptionist" };
 
@@ -38,7 +39,9 @@ export default async function AiReceptionistPage() {
   const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const [{ data: org }, { data: sessions }, { data: calls }] = await Promise.all([
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
+
+  const [{ data: org }, { data: sessions }, { data: calls }, { count: autoTexted }, { count: bookedViaSms }] = await Promise.all([
     supabase.from("organizations").select("twilio_number, auto_reply, auto_reply_msg").eq("id", orgId).single(),
     supabase
       .from("voice_sessions")
@@ -55,6 +58,21 @@ export default async function AiReceptionistPage() {
       .eq("organization_id", orgId)
       .order("called_at", { ascending: false })
       .limit(50),
+    // Missed calls that were auto-texted in the last 7 days.
+    supabase
+      .from("calls")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("auto_replied", true)
+      .gte("called_at", sevenDaysAgo),
+    // SMS conversations that Emma booked in the last 7 days (from real run accounting).
+    supabase
+      .from("ai_employee_runs")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .eq("channel", "sms")
+      .filter("outcome->>booked", "eq", "true")
+      .gte("started_at", sevenDaysAgo),
   ]);
 
   const totalSessions = sessions?.length ?? 0;
@@ -136,6 +154,11 @@ export default async function AiReceptionistPage() {
           </p>
           <p className="text-xs text-slate-400 mt-0.5">@ $0.10/min</p>
         </div>
+      </div>
+
+      {/* Missed-call recovery ROI */}
+      <div className="mb-8">
+        <RoiCounter autoTexted={autoTexted ?? 0} bookedViaSms={bookedViaSms ?? 0} />
       </div>
 
       {/* Missed-call text-back (inbound safety-net) */}
