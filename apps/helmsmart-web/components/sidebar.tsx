@@ -7,11 +7,12 @@ import {
   BookOpen, Users, Inbox, PhoneIncoming, Calendar,
   PhoneOutgoing, Share2, Settings, LogOut, Sparkles, LayoutDashboard,
   CheckSquare, Mail, BarChart2, Zap, Clock, TrendingUp, FolderOpen, Bot,
-  ChevronUp, KeyRound, RefreshCw,
+  ChevronUp, KeyRound, RefreshCw, Camera,
 } from "lucide-react";
 import { Sidebar as HelmUiSidebar, type NavSection } from "@helm/ui";
 import { signOut } from "@/lib/actions/auth";
 import { ChangePasswordModal } from "@/components/change-password-modal";
+import { AvatarUploadModal } from "@/components/avatar-upload-modal";
 
 const ICON = 16;
 
@@ -117,6 +118,7 @@ export function Sidebar({ unreadCount = 0, notificationsSlot, userEmail, avatarU
 function UserFooter({ userEmail, avatarUrl }: { userEmail: string; avatarUrl?: string | null }) {
   const [open, setOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
+  const [picOpen, setPicOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   // Close the menu on an outside click.
@@ -182,6 +184,13 @@ function UserFooter({ userEmail, avatarUrl }: { userEmail: string; avatarUrl?: s
           </div>
           <button
             type="button"
+            onClick={() => { setPicOpen(true); setOpen(false); }}
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+          >
+            <Camera size={14} /> Change picture
+          </button>
+          <button
+            type="button"
             onClick={() => { setPwOpen(true); setOpen(false); }}
             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
           >
@@ -202,6 +211,7 @@ function UserFooter({ userEmail, avatarUrl }: { userEmail: string; avatarUrl?: s
       )}
 
       {pwOpen && <ChangePasswordModal onClose={() => setPwOpen(false)} />}
+      {picOpen && <AvatarUploadModal currentUrl={avatarUrl} onClose={() => setPicOpen(false)} />}
     </div>
   );
 }
