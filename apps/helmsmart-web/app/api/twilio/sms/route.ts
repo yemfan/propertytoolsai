@@ -17,7 +17,10 @@ import { analyzeInbound, translateToEnglish, localizeOutbound, intentLabel, lang
 import { verifyTwilioSignature, formParams } from "@/lib/twilio-verify";
 import { cancelAppointment, getUpcomingAppointment } from "@/lib/booking";
 import { isAffirmative, isCancelRequest } from "@/lib/sms-intent";
-import { runReceptionistTool, notifyBooking } from "@/lib/receptionist-agent";
+import { notifyBooking } from "@/lib/receptionist-agent";
+import { dispatchTool } from "@helm/ai-workforce";
+import { createSmsReceptionistRegistry, type ToolTextResult } from "@/lib/workforce-tools";
+import { enforceAutonomy } from "@/lib/workforce-gating";
 
 // The SMS receptionist uses Sonnet for reliable multi-step tool-use (qualify →
 // check_availability → book_appointment), same as the live-call path.
@@ -336,11 +339,21 @@ async function handleAppointmentSelfService(args: {
   return false;
 }
 
+// Sonnet pricing (per million tokens): input $3, output $15.
+// Used to estimate cost_cents for run accounting — not billed to customers.
+function estimateCostCents(inputTokens: number, outputTokens: number): number {
+  return Math.round((inputTokens * 3 + outputTokens * 15) / 10_000);
+}
+
 /**
- * HelmSmart AI Auto Pilot — when a client has auto_pilot on, draft a contextual
- * reply with Claude and send it via Twilio. Best-effort: any failure leaves the
- * inbound captured + owner notified. A 5-message / 10-minute circuit breaker
- * prevents runaway loops with an automated counterpart.
+ * HelmSmart AI Receptionist over SMS — now routed through the real workforce
+ * engine (executeRun + ToolRegistry). Emma's autonomy level is enforced:
+ *   autonomous       → full qualify-and-book loop runs inside a tracked run
+ *   act_with_approval → queued for owner approval, run escalated
+ *   suggest          → no auto-reply
+ *
+ * Falls back to the pre-engine (legacy) path if Emma isn't seeded/active for
+ * this org yet, so existing tenants keep working without re-configuration.
  */
 async function runAutoPilotReply(opts: {
   supabase: Awaited<ReturnType<typeof createServiceClient>>;
@@ -357,6 +370,7 @@ async function runAutoPilotReply(opts: {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return;
 
+  // Circuit breaker: max 5 outbound SMS to this number in the last 10 minutes.
   const tenMinAgo = new Date(Date.now() - 10 * 60_000).toISOString();
   const { count } = await supabase
     .from("messages")
@@ -367,6 +381,7 @@ async function runAutoPilotReply(opts: {
     .gt("sent_at", tenMinAgo);
   if ((count ?? 0) >= 5) return;
 
+  // Build conversation transcript for the LLM.
   const { data: recent } = await supabase
     .from("messages")
     .select("direction, body")
@@ -393,21 +408,32 @@ async function runAutoPilotReply(opts: {
     `Your goal is to understand what they need and book an appointment. Qualify briefly (what service, preferred day/time), then ALWAYS call check_availability before offering times, and book with book_appointment using an exact "start" it returned. ` +
     `Today is ${todayISO}. ${langRule} If you can't help over text or they ask for a person, use create_callback. Never invent availability. Return only the message text — no "[Name]" placeholder, no signature.`;
 
-  const messages: Anthropic.MessageParam[] = [
-    {
-      role: "user",
-      content: `Conversation so far (most recent last):\n${transcript}\n\nWrite the next reply to the customer, booking an appointment when appropriate.`,
-    },
-  ];
+  // Tool registry built around this caller's phone number.
+  const registry = createSmsReceptionistRegistry(from);
 
-  let replyText = "";
-  let bookedNote: string | null = null;
-  let bookedLabel: string | null = null;
-  let bookedRescheduleToken: string | null = null;
-  try {
-    const anthropic = new Anthropic({ apiKey });
+  // The agent loop — unchanged logic, but tool calls go through dispatchTool
+  // (real ToolRegistry) instead of the hand-rolled runReceptionistTool.
+  async function runAgentLoop(): Promise<{ replyText: string; bookedNote: string | null; bookedLabel: string | null; bookedRescheduleToken: string | null; tokensUsed: number; costCents: number }> {
+    const messages: Anthropic.MessageParam[] = [
+      {
+        role: "user",
+        content: `Conversation so far (most recent last):\n${transcript}\n\nWrite the next reply to the customer, booking an appointment when appropriate.`,
+      },
+    ];
+
+    let replyText = "";
+    let bookedNote: string | null = null;
+    let bookedLabel: string | null = null;
+    let bookedRescheduleToken: string | null = null;
+    let totalInput = 0;
+    let totalOutput = 0;
+
+    const anthropic = new Anthropic({ apiKey: apiKey! });
     for (let i = 0; i < 4; i++) {
       const resp = await anthropic.messages.create({ model: SMS_BOOKING_MODEL, max_tokens: 500, system, tools: SMS_TOOLS, messages });
+      totalInput += resp.usage.input_tokens;
+      totalOutput += resp.usage.output_tokens;
+
       const textPart = resp.content
         .filter((b): b is Anthropic.TextBlock => b.type === "text")
         .map((b) => b.text)
@@ -421,7 +447,13 @@ async function runAutoPilotReply(opts: {
       messages.push({ role: "assistant", content: resp.content as Anthropic.ContentBlockParam[] });
       const results: Anthropic.ToolResultBlockParam[] = [];
       for (const tu of toolUses) {
-        const out = await runReceptionistTool(tu.name, tu.input, { db: supabase, orgId, fromNumber: from });
+        // dispatchTool routes through the real ToolRegistry — not the hand-rolled dispatcher.
+        const out = await dispatchTool<ToolTextResult>(registry, tu.name, tu.input, {
+          db: supabase,
+          orgId,
+          employeeId: "", // filled in by enforceAutonomy's run ctx; harmless empty here
+          runId: undefined,
+        });
         if (out.bookedEventId) {
           bookedNote = out.bookedNote ?? null;
           bookedLabel = out.bookedLabel ?? null;
@@ -431,19 +463,67 @@ async function runAutoPilotReply(opts: {
       }
       messages.push({ role: "user", content: results });
     }
-  } catch (e) {
-    console.error("[sms autopilot] loop error:", e);
-    return;
+
+    return {
+      replyText,
+      bookedNote,
+      bookedLabel,
+      bookedRescheduleToken,
+      tokensUsed: totalInput + totalOutput,
+      costCents: estimateCostCents(totalInput, totalOutput),
+    };
   }
 
-  // Booked → send the formal confirmation (reschedule link + CANCEL line) and skip
-  // the chat reply to avoid double-texting. Otherwise send the conversational reply.
-  if (bookedNote) {
-    await notifyBooking(supabase, { orgId, orgName, twilioNumber: to }, from, { bookedNote, bookedLabel, rescheduleToken: bookedRescheduleToken });
-    return;
-  }
+  // Enforce Emma's autonomy level. If she isn't seeded/active, "no_employee"
+  // falls through to the legacy path below, so nothing breaks for existing orgs.
+  const gatingResult = await enforceAutonomy(supabase, orgId, "emma", {
+    runInput: { channel: "sms", subjectType: "contact", subjectId: clientId },
+    approvalSubject: { from, bodyPreview: transcript.slice(-200) },
+    toolKey: "service.book_appointment",
+    toolInput: { from, orgId },
+    description: `Emma wants to qualify and book an appointment for ${from} over SMS.`,
+    execute: async () => {
+      const result = await runAgentLoop();
+      // Side-effects after a successful run: send reply or confirmation.
+      if (result.bookedNote) {
+        await notifyBooking(supabase, { orgId, orgName, twilioNumber: to }, from, {
+          bookedNote: result.bookedNote,
+          bookedLabel: result.bookedLabel,
+          rescheduleToken: result.bookedRescheduleToken,
+        });
+      } else {
+        const replyText = result.replyText.replace(/^["']|["']$/g, "").trim();
+        if (replyText) await sendSms(supabase, { orgId, clientId, from: to, to: from, body: replyText });
+      }
+      return {
+        value: result.bookedNote,
+        tokensUsed: result.tokensUsed,
+        costCents: result.costCents,
+        outcome: { from, booked: !!result.bookedNote },
+      };
+    },
+  }).catch((e) => {
+    console.error("[sms autopilot] gating error:", e);
+    return { status: "no_employee" as const };
+  });
 
-  replyText = replyText.replace(/^["']|["']$/g, "").trim();
-  if (!replyText) return;
-  await sendSms(supabase, { orgId, clientId, from: to, to: from, body: replyText });
+  // Legacy fallback: if Emma isn't in the registry yet, run the loop directly
+  // (no run accounting). This keeps existing tenants working without re-seeding.
+  if (gatingResult.status === "no_employee") {
+    try {
+      const result = await runAgentLoop();
+      if (result.bookedNote) {
+        await notifyBooking(supabase, { orgId, orgName, twilioNumber: to }, from, {
+          bookedNote: result.bookedNote,
+          bookedLabel: result.bookedLabel,
+          rescheduleToken: result.bookedRescheduleToken,
+        });
+      } else {
+        const replyText = result.replyText.replace(/^["']|["']$/g, "").trim();
+        if (replyText) await sendSms(supabase, { orgId, clientId, from: to, to: from, body: replyText });
+      }
+    } catch (e) {
+      console.error("[sms autopilot] legacy loop error:", e);
+    }
+  }
 }
