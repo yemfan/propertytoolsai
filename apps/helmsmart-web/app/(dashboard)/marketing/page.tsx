@@ -1,3 +1,4 @@
+import { ResponsibleEmployee } from "@/components/responsible-employee";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
@@ -36,6 +37,7 @@ export default async function MarketingPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
+          <ResponsibleEmployee slug="emily" className="mb-3" />
           <h1 className="text-2xl font-semibold text-slate-900">Email Marketing</h1>
           <p className="text-sm text-slate-500 mt-0.5">
             Send campaigns to your client segments via Resend

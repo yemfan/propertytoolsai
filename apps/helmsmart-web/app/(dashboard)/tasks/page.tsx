@@ -1,3 +1,4 @@
+import { ResponsibleEmployee } from "@/components/responsible-employee";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
@@ -76,6 +77,7 @@ export default async function TasksPage({
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
+          <ResponsibleEmployee slug="mark" className="mb-3" />
           <h1 className="text-2xl font-semibold text-slate-900">Tasks</h1>
           <p className="text-sm text-slate-500 mt-0.5">
             {tasks.length} task{tasks.length !== 1 ? "s" : ""}
