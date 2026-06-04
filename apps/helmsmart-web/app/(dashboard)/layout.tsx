@@ -12,12 +12,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const supabase = await createClient();
 
-  // Load notification data + current user email server-side
-  const [unreadCount, notifications, { data: { user } }] = await Promise.all([
+  // Load notification data + pending approvals + current user email server-side
+  const [unreadCount, notifications, { data: { user } }, approvalsRes] = await Promise.all([
     getUnreadCount(orgId),
     getRecentNotifications(orgId, 20),
     supabase.auth.getUser(),
+    orgId
+      ? supabase
+          .from("ai_employee_approvals")
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", orgId)
+          .eq("status", "pending")
+          .gt("expires_at", new Date().toISOString())
+      : Promise.resolve({ count: 0 }),
   ]);
+  const pendingApprovalsCount = approvalsRes.count ?? 0;
 
   const pack = await getActivePack();
 
@@ -25,6 +34,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Sidebar
         unreadCount={unreadCount}
+        pendingApprovalsCount={pendingApprovalsCount}
         userEmail={user?.email ?? null}
         avatarUrl={(user?.user_metadata?.avatar_url as string | undefined) ?? null}
         productName={pack.productName}

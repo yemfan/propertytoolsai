@@ -134,23 +134,31 @@ export default async function ApprovalsPage() {
                   </div>
                 </div>
 
-                {/* Content preview */}
-                {content && (
+                {/* Content preview — for non-editable tools (invoice list, etc.) */}
+                {content && toolKey !== "communication.send_sms" && (
                   <div className="px-5 py-4 border-b border-slate-100">
                     <div className="flex items-start gap-2">
                       <MessageSquare className="w-3.5 h-3.5 text-indigo-400 mt-0.5 flex-shrink-0" />
                       <p className="text-sm text-slate-700 whitespace-pre-wrap">{content}</p>
                     </div>
-                    {(toolInput.to as string | null) && (
-                      <p className="text-xs text-slate-400 mt-2 ml-5">To: {toolInput.to as string}</p>
-                    )}
+                  </div>
+                )}
+                {/* SMS recipient line — shown above the editable textarea */}
+                {toolKey === "communication.send_sms" && (toolInput.to as string | null) && (
+                  <div className="px-5 py-2 border-b border-slate-100">
+                    <p className="text-xs text-slate-400">To: {toolInput.to as string}</p>
                   </div>
                 )}
 
                 {/* Actions */}
-                <div className="flex items-center justify-between px-5 py-3 bg-slate-50/60">
-                  <span className="text-xs text-slate-400">{timeAgo(a.created_at as string)}</span>
-                  <ApprovalActions approvalId={a.id as string} />
+                <div className="px-5 py-3 bg-slate-50/60">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-slate-400">{timeAgo(a.created_at as string)}</span>
+                  </div>
+                  <ApprovalActions
+                    approvalId={a.id as string}
+                    editableContent={toolKey === "communication.send_sms" ? (toolInput.body as string | undefined) : undefined}
+                  />
                 </div>
               </div>
             );

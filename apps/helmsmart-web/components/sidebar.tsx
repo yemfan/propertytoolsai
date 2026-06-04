@@ -7,7 +7,7 @@ import {
   BookOpen, Users, Inbox, PhoneIncoming, Calendar,
   PhoneOutgoing, Share2, Settings, LogOut, Sparkles, LayoutDashboard,
   CheckSquare, Mail, BarChart2, Zap, Clock, TrendingUp, FolderOpen, Bot,
-  ChevronUp, KeyRound, RefreshCw, Camera,
+  ChevronUp, KeyRound, RefreshCw, Camera, ShieldCheck,
 } from "lucide-react";
 import { Sidebar as HelmUiSidebar, type NavSection } from "@helm/ui";
 import { signOut } from "@/lib/actions/auth";
@@ -27,6 +27,7 @@ const navSections: { title: string; items: { label: string; href: string; icon: 
     items: [
       { label: "Dashboard",      href: "/home",           icon: <LayoutDashboard size={ICON} /> },
       { label: "Command Center", href: "/command-center", icon: <Bot size={ICON} /> },
+      { label: "Approvals",      href: "/approvals",      icon: <ShieldCheck size={ICON} /> },
       { label: "Inbox",          href: "/inbox",          icon: <Inbox size={ICON} /> },
       { label: "Calendar",       href: "/calendar",       icon: <Calendar size={ICON} /> },
       { label: "Tasks",          href: "/tasks",          icon: <CheckSquare size={ICON} /> },
@@ -71,6 +72,7 @@ const ALL_HREFS = navSections.flatMap((s) => s.items.map((i) => i.href));
 
 interface Props {
   unreadCount?: number;
+  pendingApprovalsCount?: number;
   notificationsSlot?: ReactNode;
   userEmail?: string | null;
   /** User's uploaded profile picture (from auth metadata); falls back to an initial. */
@@ -81,7 +83,7 @@ interface Props {
   terms?: Record<string, string>;
 }
 
-export function Sidebar({ unreadCount = 0, notificationsSlot, userEmail, avatarUrl, productName = "HelmSmart", logoLetter = "H", terms = {} }: Props) {
+export function Sidebar({ unreadCount = 0, pendingApprovalsCount = 0, notificationsSlot, userEmail, avatarUrl, productName = "HelmSmart", logoLetter = "H", terms = {} }: Props) {
   const pathname = usePathname();
 
   // Longest-prefix match so e.g. /books/invoices keeps "Books" highlighted.
@@ -96,7 +98,10 @@ export function Sidebar({ unreadCount = 0, notificationsSlot, userEmail, avatarU
       label: relabel(item.label),
       href: item.href,
       icon: item.icon,
-      badge: item.href === "/inbox" && unreadCount > 0 ? unreadCount : undefined,
+      badge:
+        item.href === "/inbox" && unreadCount > 0 ? unreadCount :
+        item.href === "/approvals" && pendingApprovalsCount > 0 ? pendingApprovalsCount :
+        undefined,
     })),
   }));
 
