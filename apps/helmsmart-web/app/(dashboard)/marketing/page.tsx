@@ -4,8 +4,9 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { Plus, Mail, Send, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { MarketingOverview } from "@/components/marketing-overview";
 
-export const metadata: Metadata = { title: "Email Marketing" };
+export const metadata: Metadata = { title: "Marketing" };
 
 const STATUS_CONFIG = {
   draft:   { label: "Draft",   color: "bg-slate-100 text-slate-600",     icon: Mail },
@@ -19,11 +20,15 @@ export default async function MarketingPage() {
   const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const { data: campaigns } = await supabase
-    .from("campaigns")
-    .select("id, name, subject, status, recipient_filter, recipient_count, sent_at, created_at")
-    .eq("organization_id", orgId)
-    .order("created_at", { ascending: false });
+  const [{ data: campaigns }, { data: org }, { count: callsHandled }] = await Promise.all([
+    supabase
+      .from("campaigns")
+      .select("id, name, subject, status, recipient_filter, recipient_count, sent_at, created_at")
+      .eq("organization_id", orgId)
+      .order("created_at", { ascending: false }),
+    supabase.from("organizations").select("twilio_number, voice_agent_enabled, auto_reply").eq("id", orgId).single(),
+    supabase.from("voice_sessions").select("id", { count: "exact", head: true }).eq("organization_id", orgId),
+  ]);
 
   const all = campaigns ?? [];
   const sentCampaigns = all.filter((c) => c.status === "sent");
@@ -38,9 +43,9 @@ export default async function MarketingPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <ResponsibleEmployee slug="emily" className="mb-3" />
-          <h1 className="text-2xl font-semibold text-slate-900">Email Marketing</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">Marketing</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Send campaigns to your client segments via Resend
+            Reach your customers by voice, text, and email
           </p>
         </div>
         <Link
@@ -51,6 +56,14 @@ export default async function MarketingPage() {
           New campaign
         </Link>
       </div>
+
+      <MarketingOverview
+        voice={{ configured: Boolean(org?.twilio_number), callsHandled: callsHandled ?? 0 }}
+        sms={{ active: org?.auto_reply ?? false, number: org?.twilio_number ?? null }}
+        email={{ sent: sentCampaigns.length, reached: totalReached }}
+      />
+
+      <h2 id="email-campaigns" className="text-sm font-semibold text-slate-700 mb-3 scroll-mt-8">Email campaigns</h2>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
