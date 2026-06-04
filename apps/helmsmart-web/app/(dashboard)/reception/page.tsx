@@ -1,3 +1,4 @@
+import { ResponsibleEmployee } from "@/components/responsible-employee";
 import { PageTitle } from "@/components/page-title";
 import { Metadata } from "next";
 import { cookies } from "next/headers";
@@ -56,6 +57,7 @@ export default async function ReceptionPage() {
     <div className="p-8 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-8 gap-4">
         <div>
+          <ResponsibleEmployee slug="emma" className="mb-3" />
           <PageTitle base="Reception" />
           <p className="text-sm text-slate-500 mt-0.5">
             Missed call text-back — never lose a lead to voicemail

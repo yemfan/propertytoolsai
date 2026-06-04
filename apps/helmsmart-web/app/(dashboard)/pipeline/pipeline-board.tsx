@@ -360,7 +360,7 @@ function BoardColumn({
 
 // ─── Main board ───────────────────────────────────────────────────────────────
 
-export function PipelineBoard({ initialClients, title = "Pipeline" }: { initialClients: PipelineClient[]; title?: string }) {
+export function PipelineBoard({ initialClients, title = "Pipeline", owner }: { initialClients: PipelineClient[]; title?: string; owner?: React.ReactNode }) {
   const [clients, setClients] = useState<PipelineClient[]>(initialClients);
   const [selected, setSelected] = useState<PipelineClient | null>(null);
   const [, startTransition] = useTransition();
@@ -406,6 +406,7 @@ export function PipelineBoard({ initialClients, title = "Pipeline" }: { initialC
       <div className="px-8 py-6 border-b border-slate-100 bg-white flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
+            {owner ? <div className="mb-3">{owner}</div> : null}
             <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
             <p className="text-sm text-slate-500 mt-0.5">
               Drag clients between stages · {activeClients.length} active deal{activeClients.length !== 1 ? "s" : ""}

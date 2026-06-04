@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { PipelineBoard } from "./pipeline-board";
 import { term } from "@/lib/packs";
+import { ResponsibleEmployee } from "@/components/responsible-employee";
 
 export const metadata: Metadata = { title: "Pipeline" };
 
@@ -43,6 +44,7 @@ export default async function PipelinePage() {
     <PipelineBoard
       initialClients={(clients ?? []) as PipelineClient[]}
       title={title}
+      owner={<ResponsibleEmployee slug="sarah" />}
     />
   );
 }

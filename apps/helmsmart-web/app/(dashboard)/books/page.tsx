@@ -1,3 +1,4 @@
+import { ResponsibleEmployee } from "@/components/responsible-employee";
 import { PageTitle } from "@/components/page-title";
 import type { Metadata } from "next";
 import { TrendingUp, TrendingDown, DollarSign, Link2 } from "lucide-react";
@@ -158,6 +159,7 @@ export default async function BooksPage({
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
+          <ResponsibleEmployee slug="alex" className="mb-3" />
           <PageTitle base="Books" />
           <p className="text-sm text-slate-500 mt-0.5">
             AI-powered bookkeeping — cash basis, double-entry
