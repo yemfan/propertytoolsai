@@ -6,17 +6,25 @@
  * inbound or outbound, booking or not — is logged with the caller's number,
  * linked to a contact, and (on analysis) its summary + transcript + recording.
  *
+ * On call_ended for an inbound call we also run the missed-call text-back: if the
+ * caller hung up on the AI, hit voicemail, or the call errored, we auto-text them
+ * so the lead isn't lost (logged to `calls`, which the Missed-Call UI reads).
+ *
  * Set the agent's Webhook URL to the canonical www host so Retell's POST isn't
- * lost to the apex->www redirect:
- *   https://www.helmsmart.ai/api/retell/webhook
+ * lost to the apex->www redirect, and include ?k=<RETELL_FUNCTION_SECRET> so the
+ * SMS-sending side of this webhook can't be triggered by forged call events:
+ *   https://www.helmsmart.ai/api/retell/webhook?k=<RETELL_FUNCTION_SECRET>
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
+import twilio from "twilio";
 import { createServiceClient } from "@/lib/supabase/server";
 import { findOrgIdByNumber } from "@/lib/receptionist-agent";
 import { matchOrCreateClient } from "@/lib/booking";
 import { normalizePhoneE164 } from "@/lib/phone";
 import { attributeCallToEmma } from "@/lib/workforce-attribution";
+import { createNotificationService } from "@/lib/actions/notifications";
+import { classifyMissed } from "@/lib/missed-call";
 
 type TranscriptTurn = { role?: string; content?: string };
 type Db = Awaited<ReturnType<typeof createServiceClient>>;
@@ -68,6 +76,97 @@ async function createInboundFollowUpTask(
   });
 }
 
+/**
+ * Auto-text a caller the AI receptionist couldn't serve, so the lead isn't lost.
+ * Best-effort: every failure is swallowed so a hiccup never breaks the webhook.
+ *
+ * Idempotent + de-duped: one `calls` row per call_sid (the UNIQUE constraint wins
+ * a race between re-delivered webhooks), and we skip the send if this caller was
+ * already texted in the last 4 hours (repeat calls from the same number).
+ */
+async function maybeTextBackMissedCall(
+  db: Db,
+  args: {
+    orgId: string;
+    callId: string;
+    fromNumber: string; // caller
+    toNumber: string; // business number (Twilio "from" when we reply)
+    clientId: string | null;
+    disconnectionReason: string;
+    userTurns: number;
+  },
+): Promise<void> {
+  try {
+    const caller = normalizePhoneE164(args.fromNumber);
+    if (!caller.ok || !args.toNumber || args.toNumber === "unknown") return;
+
+    const verdict = classifyMissed(args);
+    if (!verdict) return;
+
+    const { data: org } = await db
+      .from("organizations")
+      .select("auto_reply, auto_reply_msg")
+      .eq("id", args.orgId)
+      .maybeSingle();
+    if (!org?.auto_reply || !org.auto_reply_msg) return;
+
+    // Idempotency guard: insert the call row first. If call_sid already exists
+    // (re-delivered webhook / concurrent run), the UNIQUE constraint errors and
+    // we bail — the prior delivery already handled this call.
+    const { error: insErr } = await db.from("calls").insert({
+      organization_id: args.orgId,
+      client_id: args.clientId,
+      from_number: caller.value,
+      to_number: args.toNumber,
+      status: verdict.status,
+      twilio_call_sid: args.callId,
+      auto_replied: false,
+    });
+    if (insErr) return;
+
+    // De-dup repeat callers: if we already texted this number in the last 4h,
+    // log the call but don't send again (row stays auto_replied=false).
+    const fourHoursAgo = new Date(Date.now() - 4 * 3600_000).toISOString();
+    const { count } = await db
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", args.orgId)
+      .eq("direction", "outbound")
+      .eq("to_address", caller.value)
+      .gt("sent_at", fourHoursAgo);
+    if (count) return;
+
+    const replyBody = org.auto_reply_msg;
+    const client = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
+    await client.messages.create({ from: args.toNumber, to: caller.value, body: replyBody });
+
+    await db.from("messages").insert({
+      organization_id: args.orgId,
+      client_id: args.clientId,
+      channel: "sms",
+      direction: "outbound",
+      from_address: args.toNumber,
+      to_address: caller.value,
+      body: replyBody,
+      read: true,
+      sent_at: new Date().toISOString(),
+    });
+    await db
+      .from("calls")
+      .update({ auto_replied: true, reply_body: replyBody })
+      .eq("twilio_call_sid", args.callId);
+
+    await createNotificationService(args.orgId, {
+      type: "missed_call",
+      title: "Missed call — auto-texted",
+      body: `Texted ${caller.value} back`,
+      link: "/voice",
+    });
+  } catch (e) {
+    console.error("[retell webhook] missed-call text-back failed:", e);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -77,6 +176,11 @@ export async function POST(request: NextRequest) {
     if (!callId) return NextResponse.json({ success: true });
 
     const event = String(body?.event ?? "");
+    // Only an authenticated webhook (?k=<RETELL_FUNCTION_SECRET>) may trigger the
+    // outbound text-back. When no secret is configured the endpoint is open, same
+    // as the rest of the Retell integration. Call logging stays unconditional.
+    const secret = process.env.RETELL_FUNCTION_SECRET;
+    const authed = !secret || request.nextUrl.searchParams.get("k") === secret;
     const direction = call.direction === "outbound" ? "outbound" : "inbound";
     const fromNumber = String(call.from_number ?? "");
     const toNumber = String(call.to_number ?? "");
@@ -88,6 +192,10 @@ export async function POST(request: NextRequest) {
     const endTs = Number(call.end_timestamp ?? 0);
     const durationMs = Number(call.duration_ms ?? (endTs && startTs ? endTs - startTs : 0));
     const transcriptObj = call.transcript_object as TranscriptTurn[] | undefined;
+    const disconnectionReason = String(call.disconnection_reason ?? "");
+    const userTurns = Array.isArray(transcriptObj)
+      ? transcriptObj.filter((t) => t.role === "user" && String(t.content ?? "").trim().length > 0).length
+      : 0;
 
     const db = await createServiceClient();
 
@@ -143,6 +251,22 @@ export async function POST(request: NextRequest) {
         callId,
         outcome: { from: fromNumber, ...(summary ? { summary } : {}), ...(durationMs > 0 ? { durationSeconds: Math.round(durationMs / 1000) } : {}) },
       });
+    }
+
+    // Missed-call text-back: when an inbound call ends without the caller being
+    // served, auto-text them. Runs in after() so Retell's response stays fast.
+    if (authed && event === "call_ended" && direction === "inbound") {
+      after(() =>
+        maybeTextBackMissedCall(db, {
+          orgId,
+          callId,
+          fromNumber,
+          toNumber,
+          clientId,
+          disconnectionReason,
+          userTurns,
+        }),
+      );
     }
 
     return NextResponse.json({ success: true });

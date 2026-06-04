@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createNotificationService } from "@/lib/actions/notifications";
+import { verifyTwilioSignature, formParams } from "@/lib/twilio-verify";
 import twilio from "twilio";
 
 const VoiceResponse = twilio.twiml.VoiceResponse;
@@ -24,9 +25,13 @@ async function handleRequest(request: NextRequest) {
   try {
     if (request.method === "POST") {
       const formData = await request.formData();
-      from = formData.get("From") as string | null;
-      to = formData.get("To") as string | null;
-      callSid = formData.get("CallSid") as string | null;
+      const params = formParams(formData);
+      if (!verifyTwilioSignature(request, params)) {
+        return new NextResponse("Forbidden", { status: 403 });
+      }
+      from = params.From ?? null;
+      to = params.To ?? null;
+      callSid = params.CallSid ?? null;
     } else {
       // GET request — extract from URL params (for health checks)
       const url = new URL(request.url);
