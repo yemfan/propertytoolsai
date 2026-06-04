@@ -46,6 +46,31 @@ export default async function ApprovalsPage() {
 
   type ApprovalRow = NonNullable<typeof approvals>[number];
 
+  function approvalHeadline(toolKey: string, subject: Record<string, unknown>): string {
+    switch (toolKey) {
+      case "communication.send_sms":
+        return `text ${(subject.clientName as string) ?? "a lead"}`;
+      case "finance.send_invoice_reminder":
+        return `send payment reminders to ${subject.invoiceCount ?? "overdue"} invoice${(subject.invoiceCount as number) > 1 ? "s" : ""}`;
+      default:
+        return "take an action";
+    }
+  }
+
+  function approvalContent(toolKey: string, toolInput: Record<string, unknown>): string | null {
+    switch (toolKey) {
+      case "communication.send_sms":
+        return (toolInput.body as string) ?? null;
+      case "finance.send_invoice_reminder": {
+        type Inv = { invoiceNumber: string; clientName: string; amount: string; dueDate: string };
+        const invs = (toolInput.invoices as Inv[]) ?? [];
+        return invs.slice(0, 3).map((i) => `${i.clientName} — ${i.invoiceNumber} (${i.amount}, due ${i.dueDate})`).join("\n") || null;
+      }
+      default:
+        return null;
+    }
+  }
+
   function getEmployee(a: ApprovalRow) {
     // Supabase may return the FK join as an array or single object depending on
     // generated types; normalise to the first element in both cases.
@@ -77,8 +102,10 @@ export default async function ApprovalsPage() {
           {approvals.map((a) => {
             const emp = getEmployee(a);
             const subject = (a.subject ?? {}) as Record<string, unknown>;
-            const toolInput = (a.tool_input ?? {}) as { to?: string; body?: string; clientId?: string; clientName?: string };
+            const toolInput = (a.tool_input ?? {}) as Record<string, unknown>;
+            const toolKey = a.tool_key as string;
             const avatar = getBlueprint(emp.slug)?.avatar ?? defaultAvatarForSeed(emp.slug);
+            const content = approvalContent(toolKey, toolInput);
 
             return (
               <div key={a.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -92,12 +119,12 @@ export default async function ApprovalsPage() {
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-800">
-                      {emp.name} wants to text{" "}
-                      <span className="text-indigo-700">{(subject.clientName as string) ?? toolInput.clientName ?? "a lead"}</span>
+                      {emp.name} wants to{" "}
+                      <span className="text-indigo-700">{approvalHeadline(toolKey, subject)}</span>
                     </p>
                     <p className="text-xs text-slate-400">
                       {emp.role}
-                      {subject.stage ? ` · ${subject.stage} stage` : ""}
+                      {(subject.stage as string | null) ? ` · ${subject.stage} stage` : ""}
                       {subject.daysInStage != null ? ` · ${subject.daysInStage}d` : ""}
                     </p>
                   </div>
@@ -107,15 +134,15 @@ export default async function ApprovalsPage() {
                   </div>
                 </div>
 
-                {/* Drafted message */}
-                {toolInput.body && (
+                {/* Content preview */}
+                {content && (
                   <div className="px-5 py-4 border-b border-slate-100">
                     <div className="flex items-start gap-2">
                       <MessageSquare className="w-3.5 h-3.5 text-indigo-400 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-slate-700 whitespace-pre-wrap">{toolInput.body}</p>
+                      <p className="text-sm text-slate-700 whitespace-pre-wrap">{content}</p>
                     </div>
-                    {toolInput.to && (
-                      <p className="text-xs text-slate-400 mt-2 ml-5">To: {toolInput.to}</p>
+                    {(toolInput.to as string | null) && (
+                      <p className="text-xs text-slate-400 mt-2 ml-5">To: {toolInput.to as string}</p>
                     )}
                   </div>
                 )}

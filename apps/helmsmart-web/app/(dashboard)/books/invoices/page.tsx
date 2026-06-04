@@ -5,6 +5,8 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BooksNav } from "@/components/books-nav";
 import { Plus, FileText, Send, CheckCircle2, Clock, XCircle, Download } from "lucide-react";
+import { AlexReminderBanner } from "@/components/alex-reminder-button";
+import { ResponsibleEmployee } from "@/components/responsible-employee";
 
 export const metadata: Metadata = { title: "Invoices · Books" };
 
@@ -53,6 +55,7 @@ export default async function InvoicesPage() {
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
+          <ResponsibleEmployee slug="alex" className="mb-2" />
           <PageTitle base="Books" />
           <p className="text-sm text-slate-500 mt-0.5">AI-powered bookkeeping — cash basis, double-entry</p>
         </div>
@@ -88,6 +91,8 @@ export default async function InvoicesPage() {
           </div>
         ))}
       </div>
+
+      <AlexReminderBanner overdueCount={overdue.length} overdueTotal={fmt(totalOverdue)} />
 
       {/* Invoice list */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
