@@ -7,6 +7,7 @@ import { TaskRow } from "@/components/task-row";
 import { PriorityFilter } from "./priority-filter";
 import Link from "next/link";
 import { CheckSquare, Filter, Repeat } from "lucide-react";
+import { MarkTaskButton } from "@/components/mark-task-button";
 
 export const metadata: Metadata = { title: "Tasks" };
 
@@ -87,6 +88,7 @@ export default async function TasksPage({
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <MarkTaskButton />
           <Link
             href="/tasks/recurring"
             className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-indigo-700 transition-colors"

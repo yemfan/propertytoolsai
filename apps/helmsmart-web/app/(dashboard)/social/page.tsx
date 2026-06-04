@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { SocialComposer } from "@/components/social-composer";
 import { ResponsibleEmployee } from "@/components/responsible-employee";
+import { EmilyDraftButton } from "@/components/emily-draft-button";
 
 export const metadata: Metadata = { title: "Social" };
 
@@ -29,7 +30,12 @@ export default async function SocialPage() {
       <SocialComposer
         posts={(posts ?? []) as Parameters<typeof SocialComposer>[0]["posts"]}
         orgName={org?.name ?? "My Business"}
-        owner={<ResponsibleEmployee slug="emily" />}
+        owner={
+          <div className="flex items-center gap-4">
+            <ResponsibleEmployee slug="emily" />
+            <EmilyDraftButton />
+          </div>
+        }
       />
     </div>
   );

@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import twilio from "twilio";
+import { Resend } from "resend";
 import { completeRun, escalateRun } from "@helm/ai-workforce";
 import { enforceAutonomy } from "@/lib/workforce-gating";
 import { normalizePhoneE164 } from "@/lib/phone";
@@ -117,6 +118,23 @@ export async function approveApproval(approvalId: string): Promise<{ ok: boolean
         external_id: sms.sid,
         sent_at: new Date().toISOString(),
       });
+    } else if (approval.tool_key === "finance.send_invoice_reminder") {
+      type InvoiceItem = { id: string; invoiceNumber: string; clientName: string; clientEmail: string; amount: string; dueDate: string };
+      const { invoices = [], orgName = "" } = toolInput as { invoices?: InvoiceItem[]; orgName?: string };
+      const resend = new Resend(process.env.RESEND_API_KEY ?? "");
+      const from = process.env.RESEND_FROM_EMAIL ?? "billing@helmsmart.ai";
+      for (const inv of invoices) {
+        if (!inv.clientEmail) continue;
+        try {
+          await resend.emails.send({
+            from,
+            to: inv.clientEmail,
+            subject: `Payment Reminder: Invoice ${inv.invoiceNumber} — ${orgName}`,
+            text: `Hi ${inv.clientName},\n\nThis is a friendly reminder that invoice ${inv.invoiceNumber} for ${inv.amount} was due on ${inv.dueDate}.\n\nPlease reach out if you have any questions or would like to arrange payment.\n\nThank you,\n${orgName}`,
+          });
+        } catch { /* best-effort per invoice */ }
+      }
+      revalidatePath("/books/invoices");
     }
 
     await supabase.from("ai_employee_approvals").update({
@@ -169,4 +187,110 @@ export async function rejectApproval(approvalId: string): Promise<{ ok: boolean 
 
   revalidatePath("/approvals");
   return { ok: true };
+}
+
+// ─── Alex — Finance ────────────────────────────────────────────────────────────
+
+/** Ask Alex to queue payment reminder emails for all overdue invoices. */
+export async function letAlexRemind(): Promise<{ status: "queued" | "no_alex" | "no_overdue" | "error" }> {
+  const orgId = await orgScope();
+  const supabase = await createClient();
+  const serviceDb = await createServiceClient();
+
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: raw } = await supabase
+    .from("invoices")
+    .select("id, invoice_number, total, due_date, clients(first_name, last_name, company, email)")
+    .eq("organization_id", orgId)
+    .eq("status", "sent")
+    .lt("due_date", today)
+    .limit(20);
+
+  type InvClient = { first_name?: string | null; last_name?: string | null; company?: string | null; email?: string | null } | null;
+  const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+
+  const invoices = (raw ?? []).map((inv) => {
+    const c = (Array.isArray(inv.clients) ? inv.clients[0] : inv.clients) as InvClient;
+    return {
+      id: inv.id as string,
+      invoiceNumber: inv.invoice_number as string,
+      clientName: [c?.first_name, c?.last_name].filter(Boolean).join(" ") || (c?.company ?? "Client"),
+      clientEmail: (c?.email as string | null) ?? "",
+      amount: fmt(Number(inv.total)),
+      dueDate: inv.due_date as string,
+    };
+  }).filter((i) => i.clientEmail);
+
+  if (!invoices.length) return { status: "no_overdue" };
+
+  const { data: org } = await supabase.from("organizations").select("name").eq("id", orgId).single();
+  const orgName = (org?.name as string) ?? "us";
+
+  const result = await enforceAutonomy(serviceDb, orgId, "alex", {
+    runInput: { channel: "email", subjectType: "invoice", subjectId: invoices[0].id },
+    approvalSubject: { invoiceCount: invoices.length },
+    toolKey: "finance.send_invoice_reminder",
+    toolInput: { invoices, orgName },
+    description: `Alex wants to send payment reminders for ${invoices.length} overdue invoice${invoices.length > 1 ? "s" : ""}`,
+    execute: async () => ({ value: null }),
+  }).catch(() => ({ status: "no_employee" as const }));
+
+  if (result.status === "no_employee") return { status: "no_alex" };
+  if (result.status === "escalated") { revalidatePath("/approvals"); return { status: "queued" }; }
+  return { status: "error" };
+}
+
+// ─── Emily — Marketing ─────────────────────────────────────────────────────────
+
+/**
+ * Ask Emily to create a draft social post directly — no approval needed.
+ * A draft is internal and reversible; the owner edits and publishes it manually
+ * from the Social page. Only publishing (external) would warrant approval.
+ */
+export async function letEmilyDraftPost(): Promise<{ status: "created" | "error" }> {
+  const orgId = await orgScope();
+  const supabase = await createClient();
+
+  const { data: org } = await supabase.from("organizations").select("name").eq("id", orgId).single();
+  const orgName = (org?.name as string) ?? "us";
+
+  const { error } = await supabase.from("social_posts").insert({
+    organization_id: orgId,
+    platform: "general",
+    content: `We'd love to share something with our community at ${orgName}! ✏️ Edit this post before publishing.`,
+    status: "draft",
+    generated_by_ai: false,
+    created_at: new Date().toISOString(),
+  });
+
+  if (error) return { status: "error" };
+  revalidatePath("/social");
+  return { status: "created" };
+}
+
+// ─── Mark — Operations ─────────────────────────────────────────────────────────
+
+/**
+ * Ask Mark to create a follow-up task directly — no approval needed. Task
+ * creation is internal and reversible; gating it behind an approval would be
+ * friction for zero benefit. Mark is autonomous for internal ops.
+ */
+export async function letMarkCreateTask(): Promise<{ status: "created" | "error" }> {
+  const orgId = await orgScope();
+  const supabase = await createClient();
+
+  const dueDate = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+
+  const { error } = await supabase.from("tasks").insert({
+    organization_id: orgId,
+    title: "Review and prioritise open items — update this title",
+    notes: "Mark created this task. Edit the title, assign it, and set a due date.",
+    priority: "high",
+    status: "open",
+    due_date: dueDate,
+  });
+
+  if (error) return { status: "error" };
+  revalidatePath("/tasks");
+  return { status: "created" };
 }

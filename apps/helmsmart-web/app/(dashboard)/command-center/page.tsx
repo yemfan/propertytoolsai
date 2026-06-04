@@ -1,23 +1,43 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { defaultAvatarForSeed } from "@helm/ui";
 import { getBlueprint } from "@helm/ai-workforce";
 import { getWorkforceSummary, getWorkforce } from "@/lib/actions/workforce";
+import { createClient } from "@/lib/supabase/server";
 import { CommandCenterView } from "./command-center-view";
 import { WorkforceBoard } from "./workforce-board";
+import { TimBriefing } from "@/components/tim-briefing";
 
 export const metadata: Metadata = { title: "Command Center" };
 
 export default async function CommandCenterPage() {
-  // Last 30 days (inclusive).
   const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
   const from = new Date(today.getTime() - 29 * 86_400_000);
   const fromStr = from.toISOString().slice(0, 10);
-  const toStr = today.toISOString().slice(0, 10);
 
-  const [summary, employees] = await Promise.all([
-    getWorkforceSummary(fromStr, toStr),
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
+  const supabase = await createClient();
+
+  const [summary, employees, overdueRes, approvalsRes, tasksRes] = await Promise.all([
+    getWorkforceSummary(fromStr, todayStr),
     getWorkforce(),
+    supabase.from("invoices").select("id, total").eq("organization_id", orgId).eq("status", "sent").lt("due_date", todayStr),
+    supabase.from("ai_employee_approvals").select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "pending").gt("expires_at", today.toISOString()),
+    supabase.from("tasks").select("id, priority").eq("organization_id", orgId).eq("status", "open"),
   ]);
+
+  const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+  const overdueInvoices = overdueRes.data ?? [];
+  const allTasks = tasksRes.data ?? [];
+  const timData = {
+    overdueInvoices: overdueInvoices.length,
+    overdueTotal: fmt(overdueInvoices.reduce((s, i) => s + Number(i.total), 0)),
+    pendingApprovals: approvalsRes.count ?? 0,
+    openTasks: allTasks.length,
+    urgentTasks: allTasks.filter((t) => t.priority === "urgent" || t.priority === "high").length,
+  };
 
   // Each employee's avatar: their chosen one → the role-fit default from the roster
   // blueprint → a stable hash fallback (for non-roster employees).
@@ -43,6 +63,8 @@ export default async function CommandCenterPage() {
         <h2 className="text-lg font-semibold text-slate-900 mb-4">AI Workforce</h2>
         <WorkforceBoard summary={summary} avatarById={avatarById} />
       </div>
+
+      <TimBriefing data={timData} />
     </div>
   );
 }
