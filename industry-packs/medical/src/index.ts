@@ -20,7 +20,6 @@ export const medicalManifest: PackManifest = {
   terms: {
     Clients: "Patients",
     Reception: "Front Desk",
-    "Voice Agent": "AI Receptionist",
     Pipeline: "Referrals",
     Books: "Billing",
   },

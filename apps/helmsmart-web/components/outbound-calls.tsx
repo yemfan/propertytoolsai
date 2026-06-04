@@ -86,8 +86,8 @@ export function OutboundCalls({
       <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
         <PhoneOutgoing className="w-4 h-4 text-indigo-500" />
         <div>
-          <h2 className="text-sm font-semibold text-slate-700">AI Concierge</h2>
-          <p className="text-xs text-slate-400">Your AI calls your contacts on your behalf — distinct from you dialing them yourself.</p>
+          <h2 className="text-sm font-semibold text-slate-700">Place AI calls</h2>
+          <p className="text-xs text-slate-400">Pick a purpose, then call one contact or the whole list.</p>
         </div>
       </div>
 
