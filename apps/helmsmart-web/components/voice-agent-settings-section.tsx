@@ -5,6 +5,7 @@ import { ReceptionistConfig } from "@/components/receptionist-config";
 import { ReceptionistSetup } from "@/components/receptionist-setup";
 import { defaultBusinessHours, type BusinessHours, type AppointmentType, type KnowledgeEntry } from "@/lib/receptionist";
 import { isGoogleCalendarConfigured, isGoogleCalendarConnected, getConnectedGoogleAccount } from "@/lib/google-calendar";
+import { getActivePack } from "@/lib/packs";
 
 /**
  * All AI voice-agent configuration, surfaced inside the global Settings page so
@@ -61,9 +62,12 @@ export async function VoiceAgentSettingsSection() {
     functionUrl: `${canonicalBase}/api/retell/function`,
   };
 
+  const pack = await getActivePack();
+
   return (
     <div className="space-y-8">
       <VoiceSettings
+        contextExample={pack.voiceContextExample}
         enabled={org?.voice_agent_enabled ?? false}
         agentName={org?.voice_agent_name ?? ""}
         businessName={org?.voice_agent_business_name ?? ""}

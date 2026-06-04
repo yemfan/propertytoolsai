@@ -4,6 +4,13 @@ import { useState, useTransition } from "react";
 import { Mic, Save, Zap } from "lucide-react";
 import { saveVoiceSettings } from "@/lib/actions/social";
 
+// Generic small-business example, shown when the active pack doesn't supply its own.
+const DEFAULT_CONTEXT_EXAMPLE = `Business name: Acme Plumbing
+Services: residential plumbing, drain cleaning, water heater installation
+Pricing: free estimates, $95 service call fee
+Appointments: available same-day most days, book at least 2 hours ahead
+Owner: Mike Johnson — available for callbacks between 9am-5pm`;
+
 interface Props {
   enabled: boolean;
   agentName: string;
@@ -12,9 +19,11 @@ interface Props {
   greeting: string;
   prompt: string;
   twilioNumber: string | null;
+  /** Vertical-tailored example for the Business-context field (placeholder + "Use this template"). */
+  contextExample?: string;
 }
 
-export function VoiceSettings({ enabled, agentName, businessName, orgName, greeting, prompt, twilioNumber }: Props) {
+export function VoiceSettings({ enabled, agentName, businessName, orgName, greeting, prompt, twilioNumber, contextExample }: Props) {
   const [isEnabled, setIsEnabled] = useState(enabled);
   const [agentNameText, setAgentName] = useState(agentName ?? "");
   const [businessNameText, setBusinessName] = useState(businessName ?? "");
@@ -22,6 +31,7 @@ export function VoiceSettings({ enabled, agentName, businessName, orgName, greet
   const [promptText, setPrompt] = useState(prompt ?? "");
   const [saved, setSaved] = useState(false);
   const [isPending, start] = useTransition();
+  const example = contextExample || DEFAULT_CONTEXT_EXAMPLE;
 
   function handleSave() {
     start(async () => {
@@ -120,13 +130,20 @@ export function VoiceSettings({ enabled, agentName, businessName, orgName, greet
           onChange={(e) => setPrompt(e.target.value)}
           rows={8}
           className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none font-mono"
-          placeholder={`Business name: Acme Plumbing
-Services: residential plumbing, drain cleaning, water heater installation
-Pricing: free estimates, $95 service call fee
-Appointments: available same-day most days, book at least 2 hours ahead
-Owner: Mike Johnson — available for callbacks between 9am-5pm`}
+          placeholder={example}
         />
-        <p className="text-xs text-slate-400 mt-1">Plain text is fine. The more detail, the better the agent performs.</p>
+        <div className="flex items-center justify-between gap-3 mt-1">
+          <p className="text-xs text-slate-400">Plain text is fine. The more detail, the better the agent performs.</p>
+          {!promptText.trim() && (
+            <button
+              type="button"
+              onClick={() => setPrompt(example)}
+              className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+            >
+              Use this template
+            </button>
+          )}
+        </div>
       </div>
 
       <button
