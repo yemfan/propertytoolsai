@@ -165,6 +165,7 @@ export async function POST(request: NextRequest) {
   let bookedEventId: string | null = null;
   let bookedNote: string | null = null;
   let bookedLabel: string | null = null;
+  let bookedRescheduleToken: string | null = null;
 
   try {
     for (let i = 0; i < 5; i++) {
@@ -192,6 +193,7 @@ export async function POST(request: NextRequest) {
           bookedEventId = out.bookedEventId;
           bookedNote = out.bookedNote ?? null;
           bookedLabel = out.bookedLabel ?? null;
+          bookedRescheduleToken = out.bookedRescheduleToken ?? null;
         }
         results.push({ type: "tool_result", tool_use_id: tu.id, content: out.text });
       }
@@ -218,7 +220,7 @@ export async function POST(request: NextRequest) {
   // Post-response work: booking notify + caller SMS, and a recap when the call ends.
   after(async () => {
     if (bookedEventId) {
-      await notifyBooking(db, { orgId, orgName: ctx.orgName, twilioNumber: ctx.twilioNumber }, fromNumber, { bookedNote, bookedLabel });
+      await notifyBooking(db, { orgId, orgName: ctx.orgName, twilioNumber: ctx.twilioNumber }, fromNumber, { bookedNote, bookedLabel, rescheduleToken: bookedRescheduleToken });
     }
     if (ended) {
       const summary = await summarizeCall(transcript, ctx.orgName);
