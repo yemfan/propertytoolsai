@@ -48,13 +48,6 @@ export default async function MarketingPage() {
             Reach your customers by voice, text, and email
           </p>
         </div>
-        <Link
-          href="/marketing/new"
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          New campaign
-        </Link>
       </div>
 
       <MarketingOverview
