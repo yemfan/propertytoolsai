@@ -76,7 +76,7 @@ export async function letSarahFollowUp(
  * Approve a pending action. Executes the queued tool (currently only
  * communication.send_sms), marks the approval approved, and closes the run.
  */
-export async function approveApproval(approvalId: string): Promise<{ ok: boolean; error?: string }> {
+export async function approveApproval(approvalId: string, editedBody?: string): Promise<{ ok: boolean; error?: string }> {
   const orgId = await orgScope();
   const supabase = await createClient();
   const serviceDb = await createServiceClient();
@@ -103,8 +103,10 @@ export async function approveApproval(approvalId: string): Promise<{ ok: boolean
       const { data: org } = await serviceDb.from("organizations").select("twilio_number").eq("id", orgId).single();
       if (!org?.twilio_number) throw new Error("No Twilio number configured.");
 
+      // Owner may have edited the message in the approval inbox before approving.
+      const body = editedBody?.trim() || (toolInput.body as string);
       const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
-      const sms = await twilioClient.messages.create({ from: org.twilio_number as string, to: toolInput.to, body: toolInput.body });
+      const sms = await twilioClient.messages.create({ from: org.twilio_number as string, to: toolInput.to as string, body });
 
       await serviceDb.from("messages").insert({
         organization_id: orgId,
@@ -113,7 +115,7 @@ export async function approveApproval(approvalId: string): Promise<{ ok: boolean
         direction: "outbound",
         from_address: org.twilio_number,
         to_address: toolInput.to,
-        body: toolInput.body,
+        body,
         read: true,
         external_id: sms.sid,
         sent_at: new Date().toISOString(),
