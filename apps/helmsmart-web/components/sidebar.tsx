@@ -4,8 +4,8 @@ import { type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BookOpen, Users, Inbox, Phone, Calendar,
-  Mic, Share2, Settings, LogOut, Sparkles, LayoutDashboard,
+  BookOpen, Users, Inbox, PhoneIncoming, Calendar,
+  PhoneOutgoing, Share2, Settings, LogOut, Sparkles, LayoutDashboard,
   CheckSquare, Mail, BarChart2, Zap, Clock, TrendingUp, FolderOpen, Bot,
 } from "lucide-react";
 import { Sidebar as HelmUiSidebar, type NavSection } from "@helm/ui";
@@ -33,9 +33,9 @@ const navSections: { title: string; items: { label: string; href: string; icon: 
   {
     title: "Reception",
     items: [
-      { label: "Reception",   href: "/reception", icon: <Phone size={ICON} /> },
-      { label: "Voice Agent", href: "/voice",     icon: <Mic size={ICON} /> },
-      { label: "Clients",     href: "/clients",   icon: <Users size={ICON} /> },
+      { label: "AI Receptionist",     href: "/voice",            icon: <PhoneIncoming size={ICON} /> },
+      { label: "AI Client Assistant", href: "/client-assistant", icon: <PhoneOutgoing size={ICON} /> },
+      { label: "Clients",             href: "/clients",          icon: <Users size={ICON} /> },
     ],
   },
   {
