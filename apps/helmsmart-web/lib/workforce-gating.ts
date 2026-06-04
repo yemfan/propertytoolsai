@@ -36,6 +36,7 @@ export type GatingStatus = "executed" | "escalated" | "skipped" | "no_employee";
 export interface GatingResult {
   status: GatingStatus;
   runId?: string;
+  approvalId?: string;
   /** The value returned by execute() on success. */
   value?: unknown;
 }
@@ -83,7 +84,7 @@ export async function enforceAutonomy(
   // ── act_with_approval: queue + escalate ───────────────────────────────────
   if (autonomy === "act_with_approval") {
     const runId = await startRun(db, orgId, { employeeId: employee.id, ...opts.runInput });
-    await db.from("ai_employee_approvals").insert({
+    const { data: approvalRow } = await db.from("ai_employee_approvals").insert({
       organization_id: orgId,
       employee_id: employee.id,
       run_id: runId,
@@ -92,15 +93,15 @@ export async function enforceAutonomy(
       tool_key: opts.toolKey,
       tool_input: opts.toolInput,
       status: "pending",
-    });
+    }).select("id").single();
     await escalateRun(db, orgId, runId, `Waiting for owner approval: ${opts.toolKey}`);
     await createNotificationService(orgId, {
       type: "new_message",
       title: `${employee.name} needs your approval`,
       body: opts.description.slice(0, 120),
-      link: "/command-center",
+      link: "/approvals",
     });
-    return { status: "escalated", runId };
+    return { status: "escalated", runId, approvalId: approvalRow?.id as string | undefined };
   }
 
   // ── autonomous: execute inside a tracked run ──────────────────────────────

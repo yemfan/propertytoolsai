@@ -56,7 +56,14 @@ function makeEmployee(autonomy: "autonomous" | "act_with_approval" | "suggest"):
 }
 
 function makeDb(insertResult: { error: null | { message: string } } = { error: null }) {
-  const insertFn = vi.fn().mockResolvedValue(insertResult);
+  const singleFn = vi.fn().mockResolvedValue({ data: { id: "approval-1" }, error: null });
+  const selectFn = vi.fn().mockReturnValue({ single: singleFn });
+  const insertFn = vi.fn().mockReturnValue({
+    // for callers that just await the insert (no .select chain)
+    then: (resolve: (v: typeof insertResult) => unknown) => Promise.resolve(insertResult).then(resolve),
+    // for callers that chain .select("id").single()
+    select: selectFn,
+  });
   return {
     from: vi.fn().mockReturnValue({ insert: insertFn }),
     _insertFn: insertFn,
