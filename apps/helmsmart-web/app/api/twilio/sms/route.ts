@@ -15,6 +15,56 @@ import { shouldStopMessaging } from "@helm/dna-communication";
 import { createNotificationService } from "@/lib/actions/notifications";
 import { analyzeInbound, translateToEnglish, localizeOutbound, intentLabel, languageName, type Lang } from "@/lib/language";
 import { verifyTwilioSignature, formParams } from "@/lib/twilio-verify";
+import { cancelAppointment, getUpcomingAppointment } from "@/lib/booking";
+import { isAffirmative, isCancelRequest } from "@/lib/sms-intent";
+import { runReceptionistTool, notifyBooking } from "@/lib/receptionist-agent";
+
+// The SMS receptionist uses Sonnet for reliable multi-step tool-use (qualify →
+// check_availability → book_appointment), same as the live-call path.
+const SMS_BOOKING_MODEL = "claude-sonnet-4-6";
+
+const SMS_TOOLS: Anthropic.Tool[] = [
+  {
+    name: "check_availability",
+    description:
+      "Find open appointment slots for an appointment type on a date. ALWAYS call this before offering or booking a time. Returns real openings only — never invent times.",
+    input_schema: {
+      type: "object",
+      properties: {
+        appointment_type: { type: "string", description: "The service/appointment type the customer wants." },
+        date: { type: "string", description: "Date to check, formatted YYYY-MM-DD." },
+      },
+      required: ["appointment_type", "date"],
+    },
+  },
+  {
+    name: "book_appointment",
+    description:
+      "Book a specific open slot. Use only a `start` value returned by check_availability, after confirming the time and the customer's name.",
+    input_schema: {
+      type: "object",
+      properties: {
+        appointment_type: { type: "string" },
+        start: { type: "string", description: "Exact ISO start time from check_availability." },
+        caller_name: { type: "string", description: "The customer's name." },
+      },
+      required: ["appointment_type", "start", "caller_name"],
+    },
+  },
+  {
+    name: "create_callback",
+    description:
+      "Log a request for the team to call the customer back. Use when you can't help over text or they ask for a person.",
+    input_schema: {
+      type: "object",
+      properties: {
+        reason: { type: "string", description: "Why they want a callback / the message to pass on." },
+        caller_name: { type: "string", description: "The customer's name, if given." },
+      },
+      required: ["reason"],
+    },
+  },
+];
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -50,6 +100,13 @@ export async function POST(request: NextRequest) {
       .eq("organization_id", org.id)
       .eq("phone", from)
       .maybeSingle();
+
+    // Appointment self-service (CANCEL → confirm → YES) runs BEFORE the opt-out /
+    // auto-reply branches so a customer's "cancel" manages their appointment (with
+    // a YES confirmation) rather than unsubscribing them.
+    if (client && (await handleAppointmentSelfService({ supabase, org, client, from, to, body }))) {
+      return new NextResponse('<?xml version="1.0"?><Response/>', { headers: { "Content-Type": "text/xml" } });
+    }
 
     // One Haiku call classifies language + intent + urgency together.
     const assist = !!org.owner_english_assist;
@@ -111,10 +168,25 @@ export async function POST(request: NextRequest) {
       clientAutoPilot = Boolean((ap as { auto_pilot?: boolean } | null)?.auto_pilot);
     }
 
-    // Per-client AI Auto Pilot takes precedence over the canned org auto-reply:
-    // if this client has auto_pilot on, send a contextual AI reply instead of
-    // the static acknowledgement.
-    if (client && clientAutoPilot && !shouldStopMessaging(body)) {
+    // A lead we recently auto-texted after a missed call (Phase 1) is in an active
+    // booking conversation — let the AI receptionist qualify + book over SMS, not
+    // just the manually-enabled auto_pilot clients.
+    let missedCallLead = false;
+    if (client) {
+      const since = new Date(Date.now() - 48 * 3600_000).toISOString();
+      const { count: leadCalls } = await supabase
+        .from("calls")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", org.id)
+        .eq("client_id", client.id)
+        .eq("auto_replied", true)
+        .gt("called_at", since);
+      missedCallLead = (leadCalls ?? 0) > 0;
+    }
+
+    // The AI receptionist (qualify + book over SMS) runs for auto_pilot clients and
+    // recent missed-call leads; it takes precedence over the canned org auto-reply.
+    if (client && (clientAutoPilot || missedCallLead) && !shouldStopMessaging(body)) {
       await runAutoPilotReply({
         supabase,
         orgId: org.id,
@@ -167,6 +239,103 @@ export async function POST(request: NextRequest) {
   });
 }
 
+/** Send an SMS via Twilio and log it to the inbox. Best-effort. */
+async function sendSms(
+  supabase: Awaited<ReturnType<typeof createServiceClient>>,
+  opts: { orgId: string; clientId: string | null; from: string; to: string; body: string; intent?: string },
+): Promise<void> {
+  try {
+    const client = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
+    const sms = await client.messages.create({ from: opts.from, to: opts.to, body: opts.body });
+    await supabase.from("messages").insert({
+      organization_id: opts.orgId,
+      client_id: opts.clientId,
+      channel: "sms",
+      direction: "outbound",
+      from_address: opts.from,
+      to_address: opts.to,
+      body: opts.body,
+      read: true,
+      intent: opts.intent ?? null,
+      external_id: sms.sid,
+      sent_at: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.error("[sms] send error:", e);
+  }
+}
+
+/**
+ * Appointment self-service over SMS. A customer texts CANCEL → we reply asking them
+ * to confirm with YES (marking that outbound message intent="cancel_confirm") and
+ * do NOT cancel yet. On the YES (within 30 min) we cancel their upcoming
+ * appointment. Returns true when it fully handled the inbound (logged it + replied)
+ * so the route stops processing — keeping "cancel" out of the opt-out path.
+ */
+async function handleAppointmentSelfService(args: {
+  supabase: Awaited<ReturnType<typeof createServiceClient>>;
+  org: { id: string; name: string | null };
+  client: { id: string };
+  from: string;
+  to: string;
+  body: string;
+}): Promise<boolean> {
+  const { supabase, org, client, from, to, body } = args;
+  const orgName = org.name ?? "the team";
+
+  // Did we recently ask this customer to confirm a cancellation?
+  const since = new Date(Date.now() - 30 * 60_000).toISOString();
+  const { data: pending } = await supabase
+    .from("messages")
+    .select("id")
+    .eq("organization_id", org.id)
+    .eq("client_id", client.id)
+    .eq("direction", "outbound")
+    .eq("intent", "cancel_confirm")
+    .gt("sent_at", since)
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const logInbound = () =>
+    supabase.from("messages").insert({
+      organization_id: org.id, client_id: client.id, channel: "sms", direction: "inbound",
+      from_address: from, to_address: to, body, read: false, sent_at: new Date().toISOString(),
+    });
+
+  // Step 1 — a cancel request with no pending confirmation: ask them to confirm.
+  if (!pending && isCancelRequest(body)) {
+    const appt = await getUpcomingAppointment(org.id, client.id);
+    if (!appt) return false; // nothing to cancel → let the normal flow handle it
+    await logInbound();
+    const link = appt.rescheduleToken ? `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/reschedule/${appt.rescheduleToken}` : "";
+    const prompt = `You're booked for ${appt.label}. Reply YES to cancel${link ? `, or reschedule here: ${link}` : ""}. — ${orgName}`;
+    await sendSms(supabase, { orgId: org.id, clientId: client.id, from: to, to: from, body: prompt, intent: "cancel_confirm" });
+    return true;
+  }
+
+  // Step 2 — they confirmed (YES / cancel again) after we asked: cancel it.
+  if (pending && (isAffirmative(body) || isCancelRequest(body))) {
+    await logInbound();
+    const res = await cancelAppointment(org.id, { clientId: client.id });
+    const reply = res.ok
+      ? `Done — your appointment${res.label ? ` on ${res.label}` : ""} is cancelled. Text us anytime to rebook. — ${orgName}`
+      : `We couldn't find an upcoming appointment to cancel — give us a call and we'll help. — ${orgName}`;
+    await sendSms(supabase, { orgId: org.id, clientId: client.id, from: to, to: from, body: reply });
+    if (res.ok) {
+      await createNotificationService(org.id, {
+        type: "booking",
+        title: "Appointment cancelled by customer",
+        body: `${from}${res.label ? ` — was ${res.label}` : ""}`,
+        link: "/calendar",
+      });
+    }
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * HelmSmart AI Auto Pilot — when a client has auto_pilot on, draft a contextual
  * reply with Claude and send it via Twilio. Best-effort: any failure leaves the
@@ -214,47 +383,67 @@ async function runAutoPilotReply(opts: {
 
   const langRule =
     lang === "en"
-      ? "Write the reply in English."
+      ? "Write replies in English."
       : assist
-        ? `Write the reply in ${languageName(lang)}, then add an English translation after a blank line.`
-        : `Write the reply entirely in ${languageName(lang)}.`;
+        ? `Write replies in ${languageName(lang)}, then add an English translation after a blank line.`
+        : `Write replies entirely in ${languageName(lang)}.`;
+  const todayISO = new Intl.DateTimeFormat("en-CA").format(new Date());
+  const system =
+    `You are the receptionist for "${orgName}", helping a customer over SMS. Be warm and concise (under 320 characters) and ask ONE question at a time. ` +
+    `Your goal is to understand what they need and book an appointment. Qualify briefly (what service, preferred day/time), then ALWAYS call check_availability before offering times, and book with book_appointment using an exact "start" it returned. ` +
+    `Today is ${todayISO}. ${langRule} If you can't help over text or they ask for a person, use create_callback. Never invent availability. Return only the message text — no "[Name]" placeholder, no signature.`;
+
+  const messages: Anthropic.MessageParam[] = [
+    {
+      role: "user",
+      content: `Conversation so far (most recent last):\n${transcript}\n\nWrite the next reply to the customer, booking an appointment when appropriate.`,
+    },
+  ];
 
   let replyText = "";
+  let bookedNote: string | null = null;
+  let bookedLabel: string | null = null;
+  let bookedRescheduleToken: string | null = null;
   try {
     const anthropic = new Anthropic({ apiKey });
-    const resp = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 400,
-      system: `You are replying on behalf of the business "${orgName}" to a customer's text message. Reply helpfully and concisely (under 320 characters). ${langRule} Address their latest message directly. Return ONLY the reply text — no greeting placeholder like "[Name]", no signature.`,
-      messages: [
-        {
-          role: "user",
-          content: `Conversation (most recent last):\n${transcript}\n\nWrite the next reply from ${orgName}.`,
-        },
-      ],
-    });
-    replyText = (resp.content[0] as { type: string; text?: string }).text?.trim() ?? "";
-    replyText = replyText.replace(/^["']|["']$/g, "").trim();
-  } catch {
+    for (let i = 0; i < 4; i++) {
+      const resp = await anthropic.messages.create({ model: SMS_BOOKING_MODEL, max_tokens: 500, system, tools: SMS_TOOLS, messages });
+      const textPart = resp.content
+        .filter((b): b is Anthropic.TextBlock => b.type === "text")
+        .map((b) => b.text)
+        .join(" ")
+        .trim();
+      if (textPart) replyText = textPart;
+
+      const toolUses = resp.content.filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
+      if (toolUses.length === 0) break;
+
+      messages.push({ role: "assistant", content: resp.content as Anthropic.ContentBlockParam[] });
+      const results: Anthropic.ToolResultBlockParam[] = [];
+      for (const tu of toolUses) {
+        const out = await runReceptionistTool(tu.name, tu.input, { db: supabase, orgId, fromNumber: from });
+        if (out.bookedEventId) {
+          bookedNote = out.bookedNote ?? null;
+          bookedLabel = out.bookedLabel ?? null;
+          bookedRescheduleToken = out.bookedRescheduleToken ?? null;
+        }
+        results.push({ type: "tool_result", tool_use_id: tu.id, content: out.text });
+      }
+      messages.push({ role: "user", content: results });
+    }
+  } catch (e) {
+    console.error("[sms autopilot] loop error:", e);
     return;
   }
-  if (!replyText) return;
 
-  try {
-    const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
-    await twilioClient.messages.create({ from: to, to: from, body: replyText });
-    await supabase.from("messages").insert({
-      organization_id: orgId,
-      client_id: clientId,
-      channel: "sms",
-      direction: "outbound",
-      from_address: to,
-      to_address: from,
-      body: replyText,
-      read: true,
-      sent_at: new Date().toISOString(),
-    });
-  } catch {
-    // send failed — inbound still captured + owner notified
+  // Booked → send the formal confirmation (reschedule link + CANCEL line) and skip
+  // the chat reply to avoid double-texting. Otherwise send the conversational reply.
+  if (bookedNote) {
+    await notifyBooking(supabase, { orgId, orgName, twilioNumber: to }, from, { bookedNote, bookedLabel, rescheduleToken: bookedRescheduleToken });
+    return;
   }
+
+  replyText = replyText.replace(/^["']|["']$/g, "").trim();
+  if (!replyText) return;
+  await sendSms(supabase, { orgId, clientId, from: to, to: from, body: replyText });
 }

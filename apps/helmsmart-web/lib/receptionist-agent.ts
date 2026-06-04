@@ -100,7 +100,7 @@ export async function findOrgIdByNumber(db: ServiceClient, toNumber: string): Pr
 
 // ─── Tools ────────────────────────────────────────────────────────────────────────
 
-export type ToolResult = { text: string; bookedEventId?: string; bookedNote?: string; bookedLabel?: string };
+export type ToolResult = { text: string; bookedEventId?: string; bookedNote?: string; bookedLabel?: string; bookedRescheduleToken?: string };
 export type ToolCtx = { db: ServiceClient; orgId: string; fromNumber: string };
 
 /** Execute one receptionist tool. Returns a natural-language result for the LLM. */
@@ -138,6 +138,7 @@ export async function runReceptionistTool(name: string, input: unknown, ctx: Too
       bookedEventId: res.eventId,
       bookedNote: `${res.title} on ${res.label} (from ${ctx.fromNumber})`,
       bookedLabel: res.label,
+      bookedRescheduleToken: res.rescheduleToken,
     };
   }
 
@@ -177,7 +178,7 @@ export async function notifyBooking(
   db: ServiceClient,
   org: { orgId: string; orgName: string; twilioNumber: string | null },
   callerNumber: string,
-  booked: { bookedNote?: string | null; bookedLabel?: string | null }
+  booked: { bookedNote?: string | null; bookedLabel?: string | null; rescheduleToken?: string | null }
 ): Promise<void> {
   if (!booked.bookedNote) return;
 
@@ -190,7 +191,10 @@ export async function notifyBooking(
 
   if (org.twilioNumber && booked.bookedLabel && callerNumber) {
     try {
-      const body = `You're confirmed for ${booked.bookedLabel}. See you then! — ${org.orgName}`;
+      const link = booked.rescheduleToken ? `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/reschedule/${booked.rescheduleToken}` : "";
+      const body =
+        `You're confirmed for ${booked.bookedLabel}. See you then! — ${org.orgName}` +
+        `\nReply CANCEL to cancel${link ? ` · reschedule: ${link}` : ""}.`;
       const client = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
       const sms = await client.messages.create({ from: org.twilioNumber, to: callerNumber, body });
       const clientId = await matchOrCreateClient(org.orgId, callerNumber);

@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
       await notifyBooking(db, { orgId, orgName, twilioNumber: toNumber || null }, fromNumber, {
         bookedNote: out.bookedNote,
         bookedLabel: out.bookedLabel,
+        rescheduleToken: out.bookedRescheduleToken,
       });
     });
   }
