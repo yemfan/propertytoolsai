@@ -21,15 +21,28 @@ const SEEDS = [
 ];
 const BGS = ["b6e3f4", "c0aede", "d1d4f9", "ffd5dc", "ffdfbf", "c8f7dc", "fef3c7"];
 
+// Four personas wear formal attire (collared shirts / a tie) so they read as senior,
+// professional roles — these are the slots the Core roster assigns to its execs:
+// Tim/CIO (persona-04), Sarah/Sales (persona-05), Alex/Finance (persona-06) and
+// Mark/COO (persona-13). Everyone else's clothing stays seed-randomised. Keyed by seed;
+// forcing only the `body` keeps each persona's own face, hair and glasses.
+const FORMAL_BODY = {
+  Felix: "variant19", // collared shirt — keeps the glasses (CIO)
+  Nova:  "variant13", // open-collar blazer (Sales)
+  Kai:   "variant05", // collared button-up (Finance)
+  Sage:  "variant20", // collared shirt + tie (COO)
+};
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let ok = 0;
 for (let i = 0; i < SEEDS.length; i++) {
   const id = String(i + 1).padStart(2, "0");
   const bg = BGS[i % BGS.length];
+  const body = FORMAL_BODY[SEEDS[i]] ? `&body=${FORMAL_BODY[SEEDS[i]]}` : "";
   const url = `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(
     SEEDS[i]
-  )}&radius=50&backgroundType=solid&backgroundColor=${bg}`;
+  )}&radius=50&backgroundType=solid&backgroundColor=${bg}${body}`;
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
