@@ -18,6 +18,8 @@ export interface EmployeeBlueprint {
   permissions: EmployeePermissions;
   model: string;
   personality: string;
+  /** Default persona avatar id (one of @helm/ui's 20), chosen to fit the role. A business can override it. */
+  avatar?: string;
 }
 
 const OPUS = "claude-opus-4-8";
@@ -40,6 +42,7 @@ export const CORE_ROSTER: readonly EmployeeBlueprint[] = [
     permissions: { min_role: "admin", scopes: ["operations.tasks", "operations.projects"], autonomy: "act_with_approval" },
     model: OPUS,
     personality: "Calm, organized, and accountable — turns goals into tracked work.",
+    avatar: "persona-13",
   },
   {
     slug: "tim",
@@ -53,6 +56,7 @@ export const CORE_ROSTER: readonly EmployeeBlueprint[] = [
     permissions: { min_role: "admin", scopes: ["intelligence.reports", "intelligence.kpis"], autonomy: "suggest" },
     model: OPUS,
     personality: "Analytical and plain-spoken — explains what the data means, not just what it says.",
+    avatar: "persona-04",
   },
   {
     slug: "emily",
@@ -66,6 +70,7 @@ export const CORE_ROSTER: readonly EmployeeBlueprint[] = [
     permissions: { min_role: "admin", scopes: ["marketing.campaigns", "communication.send_email"], autonomy: "act_with_approval" },
     model: OPUS,
     personality: "Creative and on-brand — writes like the owner would, only faster.",
+    avatar: "persona-14",
   },
   {
     slug: "alex",
@@ -79,6 +84,7 @@ export const CORE_ROSTER: readonly EmployeeBlueprint[] = [
     permissions: { min_role: "owner", scopes: ["finance.invoices", "finance.reminders", "finance.expenses"], autonomy: "act_with_approval" },
     model: OPUS,
     personality: "Precise and trustworthy — chases money owed without nagging the customer.",
+    avatar: "persona-06",
   },
   {
     slug: "sarah",
@@ -92,6 +98,7 @@ export const CORE_ROSTER: readonly EmployeeBlueprint[] = [
     permissions: { min_role: "admin", scopes: ["revenue.pipeline", "communication.send_sms", "service.book_appointment"], autonomy: "act_with_approval" },
     model: SONNET,
     personality: "Persistent and friendly — fast to follow up, never pushy.",
+    avatar: "persona-05",
   },
   {
     slug: "emma",
@@ -105,6 +112,7 @@ export const CORE_ROSTER: readonly EmployeeBlueprint[] = [
     permissions: { min_role: "admin", scopes: ["service.book_appointment", "communication.send_sms"], autonomy: "autonomous" },
     model: SONNET,
     personality: "Warm and unflappable — makes every caller feel handled.",
+    avatar: "persona-02",
   },
 ];
 
