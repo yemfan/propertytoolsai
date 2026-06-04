@@ -65,6 +65,76 @@ export type Database = {
           },
         ]
       }
+      ai_employee_approvals: {
+        Row: {
+          channel: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          employee_id: string
+          expires_at: string
+          id: string
+          organization_id: string
+          run_id: string | null
+          status: string
+          subject: Json
+          tool_input: Json
+          tool_key: string
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          employee_id: string
+          expires_at?: string
+          id?: string
+          organization_id: string
+          run_id?: string | null
+          status?: string
+          subject?: Json
+          tool_input?: Json
+          tool_key: string
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          employee_id?: string
+          expires_at?: string
+          id?: string
+          organization_id?: string
+          run_id?: string | null
+          status?: string
+          subject?: Json
+          tool_input?: Json
+          tool_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_employee_approvals_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "ai_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_employee_approvals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_employee_approvals_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_employee_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_employee_memory: {
         Row: {
           content: string
@@ -1317,6 +1387,7 @@ export type Database = {
           id: string
           location: string | null
           organization_id: string
+          reschedule_token: string
           start_at: string
           title: string
           type: string
@@ -1334,6 +1405,7 @@ export type Database = {
           id?: string
           location?: string | null
           organization_id: string
+          reschedule_token?: string
           start_at: string
           title: string
           type?: string
@@ -1351,6 +1423,7 @@ export type Database = {
           id?: string
           location?: string | null
           organization_id?: string
+          reschedule_token?: string
           start_at?: string
           title?: string
           type?: string
