@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { Sparkles, Send, Calendar, Copy, Check, Trash2, ExternalLink, Clock } from "lucide-react";
 import { generateSocialPost, generateSocialVariants, refineSocialPost, createSocialPost, updateSocialPost, deleteSocialPost, type SocialRefineMode } from "@/lib/actions/social";
 
@@ -25,6 +25,8 @@ interface Post {
 interface Props {
   posts: Post[];
   orgName: string;
+  /** Optional "handled by" badge rendered in the platform-tabs bar (server-supplied). */
+  owner?: ReactNode;
 }
 
 const PLATFORM_META: Record<Platform, { label: string; icon: string; limit: number; color: string }> = {
@@ -62,7 +64,7 @@ function timeLabel(iso: string | null) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-export function SocialComposer({ posts: initialPosts, orgName }: Props) {
+export function SocialComposer({ posts: initialPosts, orgName, owner }: Props) {
   const [posts, setPosts] = useState(initialPosts);
   const [activePlatform, setActivePlatform] = useState<Platform>("linkedin");
   const [tone, setTone]   = useState<Tone>("professional");
@@ -186,7 +188,7 @@ export function SocialComposer({ posts: initialPosts, orgName }: Props) {
   return (
     <div className="flex flex-col h-full">
       {/* Platform tabs */}
-      <div className="flex border-b border-slate-200 bg-white px-6">
+      <div className="flex items-center border-b border-slate-200 bg-white px-6">
         {(Object.keys(PLATFORM_META) as Platform[]).map((p) => {
           const meta = PLATFORM_META[p];
           const count = posts.filter((post) => post.platform === p && post.status !== "published").length;
@@ -210,6 +212,7 @@ export function SocialComposer({ posts: initialPosts, orgName }: Props) {
             </button>
           );
         })}
+        {owner ? <div className="ml-auto shrink-0 pl-4">{owner}</div> : null}
       </div>
 
       <div className="flex flex-1 overflow-hidden">

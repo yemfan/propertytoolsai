@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { OutboundCalls } from "@/components/outbound-calls";
 import { AppointmentReminders } from "@/components/appointment-reminders";
+import { ResponsibleEmployee } from "@/components/responsible-employee";
 
 export const metadata: Metadata = { title: "AI Client Assistant" };
 
@@ -84,6 +85,7 @@ export default async function ClientAssistantPage() {
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <div className="mb-8">
+        <ResponsibleEmployee slug="sarah" className="mb-3" />
         <PageTitle base="AI Client Assistant" />
         <p className="text-sm text-slate-500 mt-0.5">
           Your AI calls your contacts on your behalf — follow-ups, appointment reminders, surveys, and announcements
