@@ -7,7 +7,7 @@ import {
   BookOpen, Users, Inbox, PhoneIncoming, Calendar,
   PhoneOutgoing, Share2, Settings, LogOut, Sparkles, LayoutDashboard,
   CheckSquare, Mail, BarChart2, Zap, Clock, TrendingUp, FolderOpen, Bot,
-  ChevronUp, KeyRound, RefreshCw, Camera, ShieldCheck,
+  ChevronUp, KeyRound, RefreshCw, Camera, ShieldCheck, FileText, FileCheck, Receipt,
 } from "lucide-react";
 import { Sidebar as HelmUiSidebar, type NavSection } from "@helm/ui";
 import { signOut } from "@/lib/actions/auth";
@@ -53,8 +53,11 @@ const navSections: { title: string; items: { label: string; href: string; icon: 
   {
     title: "Accounting",
     items: [
-      { label: "Books",   href: "/books",   icon: <BookOpen size={ICON} /> },
-      { label: "Reports", href: "/reports", icon: <BarChart2 size={ICON} /> },
+      { label: "Invoices", href: "/books/invoices",  icon: <FileText  size={ICON} /> },
+      { label: "Quotes",   href: "/books/estimates", icon: <FileCheck size={ICON} /> },
+      { label: "Bills",    href: "/books/bills",     icon: <Receipt   size={ICON} /> },
+      { label: "Books",    href: "/books",           icon: <BookOpen  size={ICON} /> },
+      { label: "Reports",  href: "/reports",         icon: <BarChart2 size={ICON} /> },
     ],
   },
   {
