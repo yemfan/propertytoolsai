@@ -20,12 +20,12 @@ export const medicalManifest: PackManifest = {
   terms: {
     Clients: "Patients",
     Reception: "Front Desk",
-    "Voice Agent": "AI Front Desk",
+    "Voice Agent": "AI Receptionist",
     Pipeline: "Referrals",
     Books: "Billing",
   },
   tagline: "Less paperwork, more patients",
-  // A complete doctor's-office example so a clinic's AI Front Desk can answer the
+  // A complete doctor's-office example so a clinic's AI Receptionist can answer the
   // questions patients actually ask — location, the doctor's background, insurance,
   // reviews and recognitions. Demo content (a fictional clinic), not real PHI; a
   // clinic replaces it with its own non-patient business information.
