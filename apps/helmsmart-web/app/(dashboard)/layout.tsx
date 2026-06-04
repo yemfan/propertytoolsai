@@ -40,7 +40,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main id="main-content" className="flex-1 overflow-auto">
         {children}
       </main>
-      {orgId ? <HelmSmartAiPanel /> : null}
+      {orgId ? <HelmSmartAiPanel productName={pack.productName} logoLetter={pack.logoLetter} /> : null}
     </div>
   );
 }

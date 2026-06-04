@@ -1,3 +1,4 @@
+import { PageTitle } from "@/components/page-title";
 import { Metadata } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
@@ -114,7 +115,7 @@ export default async function VoicePage() {
     <div className="p-8 max-w-4xl mx-auto">
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Voice Agent</h1>
+          <PageTitle base="Voice Agent" />
           <p className="text-sm text-slate-500 mt-0.5">
             Claude answers your calls 24/7 — books appointments, takes messages, handles FAQs
           </p>

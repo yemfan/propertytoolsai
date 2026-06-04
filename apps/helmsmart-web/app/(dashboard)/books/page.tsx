@@ -1,3 +1,4 @@
+import { PageTitle } from "@/components/page-title";
 import type { Metadata } from "next";
 import { TrendingUp, TrendingDown, DollarSign, Link2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -157,7 +158,7 @@ export default async function BooksPage({
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Books</h1>
+          <PageTitle base="Books" />
           <p className="text-sm text-slate-500 mt-0.5">
             AI-powered bookkeeping — cash basis, double-entry
           </p>

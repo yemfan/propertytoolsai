@@ -1,3 +1,4 @@
+import { PageTitle } from "@/components/page-title";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
@@ -32,7 +33,7 @@ export default async function NewEstimatePage({
     <div className="p-8 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Books</h1>
+          <PageTitle base="Books" />
           <p className="text-sm text-slate-500 mt-0.5">
             AI-powered bookkeeping — cash basis, double-entry
           </p>

@@ -1,3 +1,4 @@
+import { PageTitle } from "@/components/page-title";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
@@ -214,7 +215,7 @@ export default async function ReportsPage({
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Books</h1>
+          <PageTitle base="Books" />
           <p className="text-sm text-slate-500 mt-0.5">AI-powered bookkeeping — cash basis, double-entry</p>
         </div>
         <PeriodSelect options={PERIODS} value={period} />

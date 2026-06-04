@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { PipelineBoard } from "./pipeline-board";
+import { term } from "@/lib/packs";
 
 export const metadata: Metadata = { title: "Pipeline" };
 
@@ -36,9 +37,12 @@ export default async function PipelinePage() {
     .eq("organization_id", orgId)
     .order("stage_changed_at", { ascending: false });
 
+  const title = await term("Pipeline");
+
   return (
     <PipelineBoard
       initialClients={(clients ?? []) as PipelineClient[]}
+      title={title}
     />
   );
 }

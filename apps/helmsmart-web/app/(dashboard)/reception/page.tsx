@@ -1,3 +1,4 @@
+import { PageTitle } from "@/components/page-title";
 import { Metadata } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
@@ -55,7 +56,7 @@ export default async function ReceptionPage() {
     <div className="p-8 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Reception</h1>
+          <PageTitle base="Reception" />
           <p className="text-sm text-slate-500 mt-0.5">
             Missed call text-back — never lose a lead to voicemail
           </p>

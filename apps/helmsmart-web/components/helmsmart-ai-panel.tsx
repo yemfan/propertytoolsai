@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { LogoMark } from "@helm/ui";
 
 /**
  * HelmSmart AI — a floating, draggable/resizable assistant panel.
@@ -109,7 +110,14 @@ function clampToViewport(p: PanelPosition): PanelPosition {
   };
 }
 
-export function HelmSmartAiPanel() {
+export function HelmSmartAiPanel({
+  productName = "HelmSmart",
+  logoLetter = "H",
+}: {
+  /** Pack-driven branding so the assistant matches the active vertical (e.g. "DoctorSmart AI"). */
+  productName?: string;
+  logoLetter?: string;
+} = {}) {
   const [open, setOpen] = useState(false);
 
   const [activeTabId, setActiveTabId] = useState<string>("guide");
@@ -486,10 +494,9 @@ export function HelmSmartAiPanel() {
       <button
         onClick={() => setOpen(true)}
         className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-[#0B1D33] shadow-lg ring-1 ring-blue-400/30 transition-transform hover:scale-105 hover:ring-blue-300/50"
-        aria-label="Open HelmSmart AI"
+        aria-label={`Open ${productName} AI`}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/helmsmart-mark.png" alt="" aria-hidden className="h-11 w-11 object-contain" />
+        <LogoMark letter={logoLetter} color="#fff" size={40} />
       </button>
     );
   }
@@ -519,11 +526,10 @@ export function HelmSmartAiPanel() {
       >
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/95 ring-1 ring-white/40">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/helmsmart-mark.png" alt="" aria-hidden className="h-7 w-7 object-contain" />
+            <LogoMark letter={logoLetter} size={28} />
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold">HelmSmart AI</p>
+            <p className="truncate text-sm font-bold">{productName} AI</p>
             <p className="truncate text-[11px] opacity-80">Guide + per-client SMS drafting</p>
           </div>
         </div>
@@ -531,7 +537,7 @@ export function HelmSmartAiPanel() {
           <button
             onClick={() => setMinimized((v) => !v)}
             className="inline-flex h-7 w-7 items-center justify-center rounded text-white/80 hover:bg-white/10 hover:text-white"
-            aria-label={minimized ? "Expand HelmSmart AI" : "Minimize HelmSmart AI"}
+            aria-label={minimized ? `Expand ${productName} AI` : `Minimize ${productName} AI`}
             title={minimized ? "Expand" : "Minimize"}
           >
             {minimized ? (
@@ -543,7 +549,7 @@ export function HelmSmartAiPanel() {
           <button
             onClick={() => setOpen(false)}
             className="inline-flex h-7 w-7 items-center justify-center rounded text-xl leading-none text-white/80 hover:bg-white/10 hover:text-white"
-            aria-label="Close HelmSmart AI"
+            aria-label={`Close ${productName} AI`}
           >
             &times;
           </button>
@@ -577,6 +583,7 @@ export function HelmSmartAiPanel() {
 
           {activeTabId === "guide" ? (
             <GuideTabBody
+              productName={productName}
               messages={guideMessages}
               loading={guideLoading}
               input={guideInput}
@@ -684,6 +691,7 @@ function TabPill({
 
 // ── Guide tab body ────────────────────────────────────────────────
 function GuideTabBody({
+  productName,
   messages,
   loading,
   input,
@@ -692,6 +700,7 @@ function GuideTabBody({
   scrollRef,
   quickPrompts,
 }: {
+  productName: string;
   messages: GuideMessage[];
   loading: boolean;
   input: string;
@@ -762,7 +771,7 @@ function GuideTabBody({
               send(input);
             }
           }}
-          placeholder="Ask HelmSmart AI..."
+          placeholder={`Ask ${productName} AI...`}
           className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
           disabled={loading}
         />
