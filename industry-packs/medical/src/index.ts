@@ -49,4 +49,7 @@ Insurance: accepts most major plans (Blue Cross Blue Shield, Aetna, Cigna, Unite
 Appointments: new patients welcome; please arrive 15 minutes early with a photo ID and insurance card; 24-hour notice to cancel or reschedule.
 Urgent & after-hours: for a medical emergency call 911; after hours, an on-call provider can be reached through this number.
 Callbacks: Dr. Chen returns non-urgent patient calls between 12pm-1pm on weekdays.`,
+  // Sample clinic name for the onboarding form's placeholder (kept in step with the
+  // example clinic above). The owner replaces it with their real practice name.
+  businessNameExample: "Riverside Family Medicine",
 };

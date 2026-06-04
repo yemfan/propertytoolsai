@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { OnboardingForm } from "@/components/onboarding-form";
+import { getActivePack } from "@/lib/packs";
 
 /**
  * Onboarding page — server component that gate-checks auth,
@@ -44,5 +45,6 @@ export default async function OnboardingPage() {
     redirect(`/api/auth/restore-org?org_id=${existing.organization_id}`);
   }
 
-  return <OnboardingForm />;
+  const pack = await getActivePack();
+  return <OnboardingForm namePlaceholder={pack.businessNameExample} />;
 }

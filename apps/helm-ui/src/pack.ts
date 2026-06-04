@@ -28,4 +28,6 @@ export interface PackManifest {
    * small-business example when a pack doesn't supply one.
    */
   voiceContextExample?: string;
+  /** Example business name for the onboarding form's placeholder (e.g. a clinic name on medical). */
+  businessNameExample?: string;
 }

@@ -32,7 +32,7 @@ const ENTITY_TYPES = [
   },
 ] as const;
 
-export function OnboardingForm() {
+export function OnboardingForm({ namePlaceholder }: { namePlaceholder?: string }) {
   const [state, action, isPending] = useActionState<OrgState, FormData>(
     createOrg,
     null
@@ -76,7 +76,7 @@ export function OnboardingForm() {
             className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400
                        focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
                        disabled:bg-slate-50 disabled:text-slate-500"
-            placeholder="Acme Plumbing LLC"
+            placeholder={namePlaceholder || "Acme Plumbing LLC"}
           />
         </div>
 
