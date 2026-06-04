@@ -7,6 +7,9 @@
 export { LogoMark } from './components/LogoMark';
 export type { LogoMarkProps } from './components/LogoMark';
 
+export { Avatar, AvatarPicker, AVATARS, avatarUrl, defaultAvatarForSeed } from './components/Avatar';
+export type { AvatarProps, AvatarPickerProps } from './components/Avatar';
+
 export { Wordmark } from './components/Wordmark';
 export type { WordmarkProps } from './components/Wordmark';
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { getWorkforceSummary } from "@/lib/actions/workforce";
+import { defaultAvatarForSeed } from "@helm/ui";
+import { getWorkforceSummary, getWorkforce } from "@/lib/actions/workforce";
 import { CommandCenterView } from "./command-center-view";
 import { WorkforceBoard } from "./workforce-board";
 
@@ -12,7 +13,15 @@ export default async function CommandCenterPage() {
   const fromStr = from.toISOString().slice(0, 10);
   const toStr = today.toISOString().slice(0, 10);
 
-  const summary = await getWorkforceSummary(fromStr, toStr);
+  const [summary, employees] = await Promise.all([
+    getWorkforceSummary(fromStr, toStr),
+    getWorkforce(),
+  ]);
+
+  // Each employee's avatar: their chosen one, or a stable default from their slug.
+  const avatarById: Record<string, string> = Object.fromEntries(
+    employees.map((e) => [e.id, e.avatar ?? defaultAvatarForSeed(e.slug)])
+  );
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -27,7 +36,7 @@ export default async function CommandCenterPage() {
 
       <div className="mt-10">
         <h2 className="text-lg font-semibold text-slate-900 mb-4">AI Workforce</h2>
-        <WorkforceBoard summary={summary} />
+        <WorkforceBoard summary={summary} avatarById={avatarById} />
       </div>
     </div>
   );

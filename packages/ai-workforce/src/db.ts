@@ -28,6 +28,7 @@ export type MemoryRow = Tables["ai_employee_memory"]["Row"];
 export type MetricRow = Tables["ai_employee_metrics"]["Row"];
 
 export function rowToEmployee(r: EmployeeRow): AiEmployee {
+  const config = (r.config as unknown as Record<string, unknown>) ?? {};
   return {
     id: r.id,
     organizationId: r.organization_id,
@@ -43,7 +44,8 @@ export function rowToEmployee(r: EmployeeRow): AiEmployee {
     model: r.model,
     personality: r.personality,
     status: r.status as EmployeeStatus,
-    config: (r.config as unknown as Record<string, unknown>) ?? {},
+    config,
+    avatar: typeof config.avatar === "string" ? config.avatar : null,
   };
 }
 

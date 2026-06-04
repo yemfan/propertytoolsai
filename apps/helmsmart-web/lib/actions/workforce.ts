@@ -1,11 +1,13 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
   seedCoreRoster,
   listEmployees,
   getMetrics,
+  setEmployeeAvatar,
   type AiEmployee,
   type AiEmployeeMetric,
 } from "@helm/ai-workforce";
@@ -29,6 +31,14 @@ export async function seedWorkforce(): Promise<{ seeded: number }> {
 export async function getWorkforce(): Promise<AiEmployee[]> {
   const { orgId, supabase } = await orgScope();
   return listEmployees(supabase, orgId);
+}
+
+/** Assign a persona avatar (one of the 20) to an AI employee. */
+export async function setEmployeeAvatarAction(employeeId: string, avatar: string): Promise<void> {
+  if (!/^persona-\d{2}$/.test(avatar)) throw new Error("Invalid avatar");
+  const { orgId, supabase } = await orgScope();
+  await setEmployeeAvatar(supabase, orgId, employeeId, avatar);
+  revalidatePath("/command-center");
 }
 
 /** Daily AI-workforce metrics across a date range — the Command Center's KPI source. */
