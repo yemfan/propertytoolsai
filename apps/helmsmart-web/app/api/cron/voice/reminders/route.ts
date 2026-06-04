@@ -12,7 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClientFor, packServiceConns } from "@/lib/supabase/server";
-import { scheduleDueReminders, drainOutboundQueue } from "@/lib/outbound-queue";
+import { scheduleDueReminders, drainOutboundQueue, scheduleDueSmsReminders, drainSmsReminderQueue } from "@/lib/outbound-queue";
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +26,14 @@ export async function GET(request: NextRequest) {
   let orgCount = 0;
   let scheduled = 0;
   let placed = 0;
+  let smsSent = 0;
 
   // Process every vertical's orgs — Core plus the medical project (if configured).
   for (const conn of packServiceConns()) {
     const db = createServiceClientFor(conn);
     const { data: orgs } = await db
       .from("organizations")
-      .select("id, voice_reminder_lead_minutes, twilio_number")
+      .select("id, name, voice_reminder_lead_minutes, twilio_number, timezone")
       .eq("voice_reminder_enabled", true)
       .not("twilio_number", "is", null);
 
@@ -40,11 +41,23 @@ export async function GET(request: NextRequest) {
     for (const org of orgs ?? []) {
       const orgId = org.id as string;
       const lead = (org.voice_reminder_lead_minutes as number) || 1440;
+
+      // Voice reminders (Retell outbound call).
       scheduled += await scheduleDueReminders(db, orgId, lead);
-      const res = await drainOutboundQueue(db, orgId, { limit: 25, staggerMs: 1500 });
-      placed += res.placed;
+      const voiceRes = await drainOutboundQueue(db, orgId, { limit: 25, staggerMs: 1500 });
+      placed += voiceRes.placed;
+
+      // SMS reminders (text message with reschedule link + CANCEL line).
+      await scheduleDueSmsReminders(db, orgId, lead);
+      const smsRes = await drainSmsReminderQueue(db, {
+        orgId,
+        orgName: (org.name as string) ?? "us",
+        twilioNumber: org.twilio_number as string,
+        timezone: (org.timezone as string) || "America/New_York",
+      });
+      smsSent += smsRes.sent;
     }
   }
 
-  return NextResponse.json({ ok: true, orgs: orgCount, scheduled, placed });
+  return NextResponse.json({ ok: true, orgs: orgCount, scheduled, placed, smsSent });
 }

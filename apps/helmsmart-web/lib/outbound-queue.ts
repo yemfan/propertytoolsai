@@ -13,6 +13,7 @@ import {
   type ReceptionistContext,
 } from "@/lib/receptionist-agent";
 import { normalizePhoneE164 } from "@/lib/phone";
+import twilio from "twilio";
 
 type ServiceClient = Awaited<ReturnType<typeof createServiceClient>>;
 type QueueClient = { id: string; first_name: string; last_name: string | null; phone: string | null };
@@ -246,4 +247,158 @@ export async function scheduleDueReminders(
   const { error } = await db.from("outbound_call_queue").insert(toInsert);
   if (error) return 0; // unique-index race — another run already scheduled it
   return toInsert.length;
+}
+
+// ─── SMS reminders ────────────────────────────────────────────────────────────
+// Parallel to the voice reminder path: for orgs with reminders enabled, send
+// a text message (reschedule link + CANCEL line) alongside the voice call.
+// De-dup via the same outbound_call_queue unique (event_id, purpose) index,
+// using purpose='appointment_reminder_sms'.
+
+/**
+ * Enqueue SMS reminders for appointments now inside the lead window.
+ * Idempotent: if the queue row already exists for this event+purpose, the
+ * unique-index conflict is swallowed and the function returns 0. Returns the
+ * number of newly scheduled reminders.
+ */
+export async function scheduleDueSmsReminders(
+  db: ServiceClient,
+  orgId: string,
+  leadMinutes: number
+): Promise<number> {
+  const now = new Date();
+  const windowEnd = new Date(now.getTime() + Math.max(0, leadMinutes) * 60_000);
+
+  const { data: appts } = await db
+    .from("events")
+    .select("id, client_id")
+    .eq("organization_id", orgId)
+    .eq("type", "appointment")
+    .gt("start_at", now.toISOString())
+    .lte("start_at", windowEnd.toISOString())
+    .not("client_id", "is", null);
+  if (!appts?.length) return 0;
+
+  const eventIds = appts.map((a) => a.id as string);
+  const { data: existing } = await db
+    .from("outbound_call_queue")
+    .select("event_id")
+    .eq("purpose", "appointment_reminder_sms")
+    .in("event_id", eventIds);
+  const already = new Set((existing ?? []).map((r) => r.event_id as string));
+
+  const toInsert = appts
+    .filter((a) => !already.has(a.id as string))
+    .map((a) => ({
+      organization_id: orgId,
+      client_id: a.client_id as string,
+      event_id: a.id as string,
+      purpose: "appointment_reminder_sms",
+      status: "queued",
+    }));
+  if (!toInsert.length) return 0;
+
+  const { error } = await db.from("outbound_call_queue").insert(toInsert);
+  if (error) return 0;
+  return toInsert.length;
+}
+
+/**
+ * Send queued SMS reminders for an org. For each queued row: load the event
+ * time + reschedule token, build a text with a reschedule link + CANCEL line,
+ * send via Twilio, mark the row done. Best-effort per row — one failure doesn't
+ * block the rest. Returns sent/failed counts.
+ */
+export async function drainSmsReminderQueue(
+  db: ServiceClient,
+  orgContext: { orgId: string; orgName: string; twilioNumber: string; timezone: string }
+): Promise<{ sent: number; failed: number }> {
+  const { orgId, orgName, twilioNumber, timezone } = orgContext;
+
+  const { data: rows } = await db
+    .from("outbound_call_queue")
+    .select("id, client_id, event_id")
+    .eq("organization_id", orgId)
+    .eq("purpose", "appointment_reminder_sms")
+    .eq("status", "queued")
+    .order("created_at", { ascending: true })
+    .limit(25);
+  if (!rows?.length) return { sent: 0, failed: 0 };
+
+  const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const timeFmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const row of rows) {
+    try {
+      // Mark as "calling" first (reuse the voice queue status) so a concurrent
+      // run doesn't double-send.
+      await db
+        .from("outbound_call_queue")
+        .update({ status: "calling", attempts: 1, updated_at: new Date().toISOString() })
+        .eq("id", row.id);
+
+      const [{ data: evt }, { data: client }] = await Promise.all([
+        db.from("events").select("start_at, reschedule_token").eq("id", row.event_id as string).single(),
+        db.from("clients").select("phone").eq("id", row.client_id as string).single(),
+      ]);
+
+      if (!evt || !client?.phone) throw new Error("Missing event or client phone.");
+
+      const timeLabel = timeFmt.format(new Date(evt.start_at as string));
+      const token = evt.reschedule_token as string | null;
+      const link = token ? `${appUrl}/reschedule/${token}` : "";
+      const body =
+        `Reminder: appt on ${timeLabel}. Reply CANCEL to cancel` +
+        (link ? `, or reschedule: ${link}` : "") +
+        `. — ${orgName}`;
+
+      const toResult = normalizePhoneE164(client.phone);
+      if (!toResult.ok) throw new Error(`Invalid phone: ${toResult.error}`);
+
+      const sms = await twilioClient.messages.create({ from: twilioNumber, to: toResult.value, body });
+
+      await db.from("messages").insert({
+        organization_id: orgId,
+        client_id: row.client_id as string,
+        channel: "sms",
+        direction: "outbound",
+        from_address: twilioNumber,
+        to_address: toResult.value,
+        body,
+        intent: "sms_reminder",
+        read: true,
+        external_id: sms.sid,
+        sent_at: new Date().toISOString(),
+      });
+
+      await db
+        .from("outbound_call_queue")
+        .update({ status: "done", updated_at: new Date().toISOString() })
+        .eq("id", row.id);
+      sent++;
+    } catch (e) {
+      await db
+        .from("outbound_call_queue")
+        .update({
+          status: "failed",
+          last_error: e instanceof Error ? e.message : "failed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id);
+      failed++;
+    }
+  }
+
+  return { sent, failed };
 }
