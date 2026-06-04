@@ -4,10 +4,11 @@ import { useState, useTransition, useRef } from "react";
 import Link from "next/link";
 import {
   X, DollarSign, Mail, Phone, ChevronRight,
-  TrendingUp, Users, Edit2, Check,
+  TrendingUp, Users, Edit2, Check, Sparkles,
 } from "lucide-react";
 import type { PipelineStage, PipelineClient } from "./page";
 import { patchClient } from "@/lib/actions/clients";
+import { letSarahFollowUp } from "@/lib/actions/approvals";
 
 // ─── Stage config ─────────────────────────────────────────────────────────────
 
@@ -122,6 +123,14 @@ function DetailPanel({
   const [value, setValue] = useState(client.expected_value?.toString() ?? "");
   const [editNote, setEditNote] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [sarahStatus, setSarahStatus] = useState<"idle" | "queued" | "no_phone" | "error">("idle");
+
+  function askSarah() {
+    startTransition(async () => {
+      const res = await letSarahFollowUp(client.id);
+      setSarahStatus(res.status === "queued" ? "queued" : res.status === "no_phone" ? "no_phone" : "error");
+    });
+  }
 
   function saveNote() {
     startTransition(async () => {
@@ -273,7 +282,30 @@ function DetailPanel({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0">
+        <div className="px-6 py-4 border-t border-slate-100 flex-shrink-0 space-y-3">
+          {/* Sarah follow-up */}
+          {client.phone && (
+            <div>
+              {sarahStatus === "queued" ? (
+                <p className="text-xs text-emerald-700 flex items-center gap-1.5 font-medium">
+                  <Check className="w-3.5 h-3.5" /> Queued for your approval — <a href="/approvals" className="underline">review it</a>
+                </p>
+              ) : sarahStatus === "no_phone" ? (
+                <p className="text-xs text-slate-400">No phone number on file.</p>
+              ) : sarahStatus === "error" ? (
+                <p className="text-xs text-rose-500">Something went wrong — try again.</p>
+              ) : (
+                <button
+                  onClick={askSarah}
+                  disabled={isPending}
+                  className="flex items-center gap-1.5 w-full text-left px-3 py-2 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 disabled:opacity-50 transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                  {isPending ? "Drafting…" : "Ask Sarah to follow up"}
+                </button>
+              )}
+            </div>
+          )}
           <Link
             href={`/clients/${client.id}`}
             className="flex items-center justify-between text-sm font-medium text-slate-700 hover:text-indigo-700 transition-colors group"
