@@ -14,8 +14,10 @@ import { ClientNotesPanel } from "@/components/client-notes-panel";
 import { EligibilityPanel } from "@/components/eligibility-panel";
 import { ClientTimelinePanel } from "@/components/client-timeline-panel";
 import { CommunicationPreferences } from "@/components/communication-preferences";
+import { ClientAIBrief } from "@/components/client-ai-brief";
 import { getActivePack } from "@/lib/packs";
 import { getClientCommunications, getClientPreferences } from "@/lib/actions/communication-logs";
+import { getClientBrief } from "@/lib/actions/client-brief";
 
 export const metadata: Metadata = { title: "Client · CRM" };
 
@@ -78,7 +80,7 @@ export default async function ClientDetailPage({
   const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const [clientRes, invoicesRes, messagesRes, notesRes, clientsPnL, estimatesRes, projectsRes, tasksRes, commLogs, commPrefs] = await Promise.all([
+  const [clientRes, invoicesRes, messagesRes, notesRes, clientsPnL, estimatesRes, projectsRes, tasksRes, commLogs, commPrefs, aiBrief] = await Promise.all([
     supabase
       .from("clients")
       .select("*, portal_token")
@@ -131,6 +133,7 @@ export default async function ClientDetailPage({
       .limit(10),
     getClientCommunications(id, 50),
     getClientPreferences(id),
+    getClientBrief(id),
   ]);
 
   if (!clientRes.data) notFound();
@@ -458,8 +461,10 @@ export default async function ClientDetailPage({
           <ClientTimelinePanel clientId={client.id} initialLogs={commLogs as Parameters<typeof ClientTimelinePanel>[0]["initialLogs"]} />
         </div>
 
-        {/* Right column — notes + edit form */}
+        {/* Right column — AI brief + notes + edit form */}
         <div className="space-y-4">
+          <ClientAIBrief clientId={client.id} initialBrief={aiBrief} />
+
           {isMedical && (
             <EligibilityPanel
               clientId={client.id}
