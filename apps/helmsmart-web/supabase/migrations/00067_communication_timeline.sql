@@ -76,14 +76,38 @@ CREATE INDEX idx_communication_preferences_client ON communication_preferences(c
 ALTER TABLE communication_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE communication_preferences ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "org_access_logs" ON communication_logs
-  FOR ALL USING (organization_id IN (
-    SELECT organization_id FROM auth.organization_members
-    WHERE user_id = auth.uid()
-  ));
+-- Communication logs policies
+CREATE POLICY "org members can select communication logs"
+  ON communication_logs FOR SELECT
+  USING (organization_id IN (SELECT get_user_org_ids()));
 
-CREATE POLICY "org_access_prefs" ON communication_preferences
-  FOR ALL USING (organization_id IN (
-    SELECT organization_id FROM auth.organization_members
-    WHERE user_id = auth.uid()
-  ));
+CREATE POLICY "org members can insert communication logs"
+  ON communication_logs FOR INSERT
+  WITH CHECK (organization_id IN (SELECT get_user_org_ids()));
+
+CREATE POLICY "org members can update communication logs"
+  ON communication_logs FOR UPDATE
+  USING (organization_id IN (SELECT get_user_org_ids()))
+  WITH CHECK (organization_id IN (SELECT get_user_org_ids()));
+
+CREATE POLICY "org members can delete communication logs"
+  ON communication_logs FOR DELETE
+  USING (organization_id IN (SELECT get_user_org_ids()));
+
+-- Communication preferences policies
+CREATE POLICY "org members can select communication preferences"
+  ON communication_preferences FOR SELECT
+  USING (organization_id IN (SELECT get_user_org_ids()));
+
+CREATE POLICY "org members can insert communication preferences"
+  ON communication_preferences FOR INSERT
+  WITH CHECK (organization_id IN (SELECT get_user_org_ids()));
+
+CREATE POLICY "org members can update communication preferences"
+  ON communication_preferences FOR UPDATE
+  USING (organization_id IN (SELECT get_user_org_ids()))
+  WITH CHECK (organization_id IN (SELECT get_user_org_ids()));
+
+CREATE POLICY "org members can delete communication preferences"
+  ON communication_preferences FOR DELETE
+  USING (organization_id IN (SELECT get_user_org_ids()));
