@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createExpense } from "@/lib/actions/expenses";
-import { DollarSign, ScanLine, X, Loader2, ImagePlus, CheckCircle2 } from "lucide-react";
+import { DollarSign, ScanLine, X, Loader2, ImagePlus, CheckCircle2, Camera } from "lucide-react";
 
 interface CoAAccount {
   id: string;
@@ -64,6 +64,7 @@ export function ExpenseForm({ expenseAccounts, bankAccounts, projects, onSuccess
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
 
   const [date, setDate]                 = useState(today);
   const [amount, setAmount]             = useState("");
@@ -195,17 +196,31 @@ export function ExpenseForm({ expenseAccounts, bankAccounts, projects, onSuccess
                 </button>
               </div>
             ) : (
-              <label className="inline-flex items-center gap-2 cursor-pointer px-4 py-2 bg-white border border-indigo-200 hover:border-indigo-400 text-indigo-700 text-sm font-medium rounded-lg transition-colors">
-                <ImagePlus className="w-4 h-4" />
-                Upload receipt
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  onChange={handleReceiptUpload}
-                  className="sr-only"
-                />
-              </label>
+              <div className="flex gap-2">
+                <label className="inline-flex items-center gap-2 cursor-pointer px-4 py-2 bg-white border border-indigo-200 hover:border-indigo-400 text-indigo-700 text-sm font-medium rounded-lg transition-colors">
+                  <ImagePlus className="w-4 h-4" />
+                  Upload receipt
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={handleReceiptUpload}
+                    className="sr-only"
+                  />
+                </label>
+                <label className="inline-flex items-center gap-2 cursor-pointer px-4 py-2 bg-white border border-indigo-200 hover:border-indigo-400 text-indigo-700 text-sm font-medium rounded-lg transition-colors">
+                  <Camera className="w-4 h-4" />
+                  Take photo
+                  <input
+                    ref={cameraRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    capture="environment"
+                    onChange={handleReceiptUpload}
+                    className="sr-only"
+                  />
+                </label>
+              </div>
             )}
 
             {scanError && (
