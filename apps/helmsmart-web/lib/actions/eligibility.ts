@@ -67,3 +67,50 @@ export async function checkPatientEligibility(clientId: string): Promise<Eligibi
   revalidatePath(`/clients/${clientId}`);
   return result;
 }
+
+/** Save a patient's insurance identifiers (medical pack). */
+export async function updateClientInsurance(
+  clientId: string,
+  fields: { payerId: string; payerName: string; memberId: string; dateOfBirth: string },
+): Promise<void> {
+  const pack = await getActivePack();
+  if (pack.id !== "medical") throw new Error("Insurance is a DoctorSmart feature.");
+
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
+  if (!orgId) throw new Error("Not authenticated");
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("clients")
+    .update({
+      insurance_payer_id: fields.payerId.trim() || null,
+      insurance_payer_name: fields.payerName.trim() || null,
+      insurance_member_id: fields.memberId.trim() || null,
+      date_of_birth: fields.dateOfBirth || null,
+    })
+    .eq("id", clientId)
+    .eq("organization_id", orgId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/clients/${clientId}`);
+}
+
+/** Save the practice NPI used as the requesting provider in eligibility checks. */
+export async function updateOrgNpi(npi: string): Promise<void> {
+  const pack = await getActivePack();
+  if (pack.id !== "medical") throw new Error("NPI is a DoctorSmart feature.");
+
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
+  if (!orgId) throw new Error("Not authenticated");
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("organizations")
+    .update({ npi: npi.trim() || null })
+    .eq("id", orgId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/settings");
+}
