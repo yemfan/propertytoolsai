@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { GoogleBusinessConnect } from "@/components/google-business-connect";
+import { GoogleBusinessSettings } from "@/components/google-business-settings";
 import { StarIcon, MessageSquare, Link as LinkIcon, RefreshCw } from "lucide-react";
 
 export const metadata: Metadata = { title: "Google Business · Marketing" };
@@ -16,6 +17,12 @@ export default async function GoogleBusinessPage() {
     .from("google_business_profiles")
     .select("*")
     .eq("organization_id", orgId)
+    .single();
+
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("auto_request_reviews")
+    .eq("id", orgId)
     .single();
 
   const { data: reviews } = await supabase
@@ -163,6 +170,12 @@ export default async function GoogleBusinessPage() {
               })}
             </div>
           )}
+
+          {/* Settings */}
+          <div className="mt-8 pt-8 border-t border-slate-200">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">Settings</h2>
+            <GoogleBusinessSettings autoRequestEnabled={org?.auto_request_reviews ?? false} />
+          </div>
         </>
       )}
     </div>
