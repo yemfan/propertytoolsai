@@ -187,6 +187,62 @@ export async function deleteSMSCampaign(campaignId: string): Promise<{ ok: boole
 }
 
 /**
+ * Update an existing draft campaign
+ */
+export async function updateSMSCampaign(
+  campaignId: string,
+  input: Partial<CreateCampaignInput>
+): Promise<{ ok: boolean; error?: string }> {
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("helmsmart-org-id")?.value;
+  if (!orgId) return { ok: false, error: "Not authenticated" };
+
+  const db = await createServiceClient();
+
+  // Check campaign exists and is editable
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("sms_campaigns")
+    .select("status")
+    .eq("id", campaignId)
+    .eq("organization_id", orgId)
+    .single();
+
+  if (!existing) return { ok: false, error: "Campaign not found" };
+  if (existing.status !== "draft" && existing.status !== "scheduled") {
+    return { ok: false, error: "Cannot edit a sent campaign" };
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (input.name !== undefined) updates.name = input.name;
+  if (input.description !== undefined) updates.description = input.description;
+  if (input.messageText !== undefined) updates.message_text = input.messageText;
+  if (input.targetSegment !== undefined) updates.target_segment = input.targetSegment;
+  if (input.targetPipelineStages !== undefined) updates.target_pipeline_stages = input.targetPipelineStages;
+  if (input.targetTags !== undefined) updates.target_tags = input.targetTags;
+  if (input.excludeTags !== undefined) updates.exclude_tags = input.excludeTags;
+  if (input.scheduledFor !== undefined) {
+    updates.scheduled_for = input.scheduledFor || null;
+    updates.status = input.scheduledFor ? "scheduled" : "draft";
+  }
+
+  const { error } = await db
+    .from("sms_campaigns")
+    .update(updates)
+    .eq("id", campaignId)
+    .eq("organization_id", orgId);
+
+  if (error) {
+    console.error("[sms-campaigns] update error:", error);
+    return { ok: false, error: error.message };
+  }
+
+  revalidatePath("/marketing/sms");
+  revalidatePath(`/marketing/sms/${campaignId}`);
+  return { ok: true };
+}
+
+/**
  * Unsubscribe a phone number from SMS campaigns
  */
 export async function unsubscribeFromSMS(phoneNumber: string): Promise<{ ok: boolean }> {
