@@ -26,6 +26,10 @@ interface Props {
   expenseAccounts: CoAAccount[];
   bankAccounts: BankAccount[];
   projects: ProjectOption[];
+  /** When embedded in a modal: called after a successful save instead of navigating to the Expenses page. */
+  onSuccess?: () => void;
+  /** Overrides the default Cancel behavior (router.back) — e.g. close the host modal. */
+  onCancel?: () => void;
 }
 
 // Map AI category → CoA account name fragment (case-insensitive partial match)
@@ -56,7 +60,7 @@ function findBestAccount(category: string | null, accounts: CoAAccount[]): strin
   return accounts[0]?.id ?? "";
 }
 
-export function ExpenseForm({ expenseAccounts, bankAccounts, projects }: Props) {
+export function ExpenseForm({ expenseAccounts, bankAccounts, projects, onSuccess, onCancel }: Props) {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -136,7 +140,11 @@ export function ExpenseForm({ expenseAccounts, bankAccounts, projects }: Props) 
           paymentSourceId: paymentSourceId || null,
           projectId: projectId || null,
         });
-        router.push("/books/expenses");
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push("/books/expenses");
+        }
         router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to save expense");
@@ -314,7 +322,7 @@ export function ExpenseForm({ expenseAccounts, bankAccounts, projects }: Props) 
       <div className="flex gap-3">
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => (onCancel ? onCancel() : router.back())}
           disabled={pending}
           className="flex-1 py-3 text-sm font-medium border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-60 transition-colors"
         >
