@@ -3,10 +3,6 @@
     {
       "path": "/api/cron/daily",
       "schedule": "10 9 * * *"
-    },
-    {
-      "path": "/api/cron/voice/reminders",
-      "schedule": "*/5 * * * *"
     }
   ]
 }
