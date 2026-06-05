@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { GoogleBusinessConnect } from "@/components/google-business-connect";
 import { GoogleBusinessSettings } from "@/components/google-business-settings";
-import { StarIcon, MessageSquare, Link as LinkIcon, RefreshCw } from "lucide-react";
+import { StarIcon, MessageSquare, Link as LinkIcon, RefreshCw, TrendingUp } from "lucide-react";
 
 export const metadata: Metadata = { title: "Google Business · Marketing" };
 
@@ -81,6 +81,13 @@ export default async function GoogleBusinessPage() {
                   Visit profile
                 </a>
               )}
+              <Link
+                href="/google/seo-audit"
+                className="flex items-center gap-1.5 text-sm text-slate-700 hover:text-slate-900 border border-slate-300 px-3 py-1.5 rounded-lg"
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                SEO Audit
+              </Link>
             </div>
           </div>
 
