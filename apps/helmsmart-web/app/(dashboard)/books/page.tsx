@@ -101,7 +101,7 @@ export default async function BooksPage({
 
   const supabase = await createClient();
 
-  const [{ totalBalance, hasBank }, { revenue, expenses }, expenseAccountsRes, bankAccountsRes] = await Promise.all([
+  const [{ totalBalance, hasBank }, { revenue, expenses }, expenseAccountsRes, bankAccountsRes, projectsRes] = await Promise.all([
     getBankSummary(orgId),
     getMonthTotals(orgId, selectedMonth),
     supabase
@@ -116,10 +116,17 @@ export default async function BooksPage({
       .select("id, name, mask, coa_account_id")
       .eq("organization_id", orgId)
       .eq("is_active", true),
+    supabase
+      .from("projects")
+      .select("id, name")
+      .eq("organization_id", orgId)
+      .in("status", ["active", "paused"])
+      .order("created_at", { ascending: false }),
   ]);
 
   const expenseAccounts = expenseAccountsRes.data ?? [];
   const bankAccounts    = bankAccountsRes.data ?? [];
+  const projects        = projectsRes.data ?? [];
 
   const netProfit = revenue !== null && expenses !== null ? revenue - expenses : null;
 
@@ -207,6 +214,7 @@ export default async function BooksPage({
           <ExpenseModal
             expenseAccounts={expenseAccounts as { id: string; code: string; name: string }[]}
             bankAccounts={bankAccounts as { id: string; name: string; mask: string | null; coa_account_id: string | null }[]}
+            projects={projects as { id: string; name: string }[]}
           />
         </div>
       </div>
