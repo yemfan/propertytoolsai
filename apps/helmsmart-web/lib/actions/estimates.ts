@@ -8,6 +8,7 @@ import {
   setEstimateStatus as setEstimateStatusFinance,
   convertEstimateToInvoice as convertEstimateToInvoiceFinance,
 } from "@helm/dna-finance";
+import { maybeTrigerEstimateWorkflow } from "@/lib/integrations/workflow-triggers";
 import { Resend } from "resend";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -39,6 +40,20 @@ export async function createEstimate(data: {
 
   const supabase = await createClient();
   const id = await insertEstimateWithLines(supabase, orgId, data);
+
+  // Compute total for workflow threshold check
+  const total = data.lines.reduce((s, l) => s + l.amount, 0);
+  const taxAmount = total * (data.taxRate / 100);
+  const grandTotal = total + taxAmount;
+
+  // Auto-trigger any configured approval workflows (fire-and-forget)
+  void maybeTrigerEstimateWorkflow(
+    orgId,
+    id,
+    grandTotal,
+    `Estimate — ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(grandTotal)}`,
+    { total: grandTotal, clientId: data.clientId }
+  );
 
   revalidatePath("/books/estimates");
   return id;

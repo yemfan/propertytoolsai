@@ -8,6 +8,7 @@ import {
   Users, Plus, ArrowRight, Building2,
   CheckSquare, Clock, CalendarDays, AlertCircle,
   FolderOpen, Timer, Wallet, AlertTriangle, Sparkles,
+  GitBranch, FileInput,
 } from "lucide-react";
 import { RevenueChart, type ChartMonth } from "@/components/revenue-chart";
 import { getReceivablesAging, getCashFlowForecast } from "@/lib/actions/reports";
@@ -77,6 +78,8 @@ async function getDashboardData(orgId: string) {
     receivables,
     forecast,
     unreadMsgRes,
+    pendingApprovalsRes,
+    recentSubmissionsRes,
   ] = await Promise.all([
     // Bank balances
     supabase
@@ -177,6 +180,24 @@ async function getDashboardData(orgId: string) {
       .eq("organization_id", orgId)
       .eq("direction", "inbound")
       .eq("read", false),
+
+    // Pending approval requests
+    supabase
+      .from("approval_requests")
+      .select("id, subject_label, requested_at")
+      .eq("organization_id", orgId)
+      .eq("status", "pending")
+      .order("requested_at", { ascending: true })
+      .limit(5),
+
+    // Recent form submissions (last 7 days)
+    supabase
+      .from("form_submissions")
+      .select("id, name, email, form_id, created_at, form_definitions(title)")
+      .eq("organization_id", orgId)
+      .gte("created_at", new Date(Date.now() - 7 * 86_400_000).toISOString())
+      .order("created_at", { ascending: false })
+      .limit(5),
   ]);
 
   // Bank balance
@@ -274,6 +295,8 @@ async function getDashboardData(orgId: string) {
     receivables,
     forecast,
     todayStr,
+    pendingApprovals: pendingApprovalsRes.data ?? [],
+    recentSubmissions: recentSubmissionsRes.data ?? [],
   };
 }
 
@@ -332,6 +355,8 @@ export default async function HomePage() {
     receivables,
     forecast,
     todayStr,
+    pendingApprovals,
+    recentSubmissions,
   } = await getDashboardData(orgId);
 
   const cashOnHand      = forecast.startingBalance;
@@ -818,6 +843,98 @@ export default async function HomePage() {
           )}
         </div>
       </div>
+
+      {/* ── Pending Approvals + Form Submissions ── */}
+      {(pendingApprovals.length > 0 || recentSubmissions.length > 0) && (
+        <div className="grid grid-cols-2 gap-6">
+          {/* Pending approvals */}
+          {pendingApprovals.length > 0 && (
+            <div className="bg-amber-50 rounded-xl border border-amber-200 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-amber-200">
+                <div className="flex items-center gap-2">
+                  <GitBranch className="w-4 h-4 text-amber-600" />
+                  <h2 className="text-sm font-semibold text-amber-900">
+                    Pending Approvals
+                    <span className="ml-1.5 text-xs font-bold bg-amber-600 text-white px-1.5 py-0.5 rounded-full">
+                      {pendingApprovals.length}
+                    </span>
+                  </h2>
+                </div>
+                <Link
+                  href="/workflows/requests?status=pending"
+                  className="text-xs text-amber-700 hover:text-amber-900 font-medium flex items-center gap-1"
+                >
+                  View all <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+              <div className="divide-y divide-amber-100">
+                {pendingApprovals.map((req) => (
+                  <Link
+                    key={req.id}
+                    href={`/workflows/requests/${req.id}`}
+                    className="flex items-center gap-3 px-5 py-3 hover:bg-amber-100 transition-colors"
+                  >
+                    <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-amber-900 truncate">{req.subject_label}</p>
+                      <p className="text-xs text-amber-600 mt-0.5">
+                        {new Date(req.requested_at).toLocaleDateString("en-US", {
+                          month: "short", day: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold text-amber-700 flex-shrink-0">Review →</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recent form submissions */}
+          {recentSubmissions.length > 0 && (
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <FileInput className="w-4 h-4 text-indigo-500" />
+                  <h2 className="text-sm font-semibold text-slate-800">Recent Form Leads</h2>
+                </div>
+                <Link
+                  href="/forms"
+                  className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
+                >
+                  All forms <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+              <div className="divide-y divide-slate-50">
+                {recentSubmissions.map((sub) => {
+                  const formRaw = sub.form_definitions;
+                  const formTitle = (Array.isArray(formRaw) ? formRaw[0] : formRaw)?.title ?? "Form";
+                  return (
+                    <Link
+                      key={sub.id}
+                      href={`/forms/${sub.form_id}/submissions`}
+                      className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0 text-xs font-bold text-indigo-600">
+                        {(sub.name || sub.email || "?")[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-800 truncate">
+                          {sub.name || sub.email || "Anonymous"}
+                        </p>
+                        <p className="text-xs text-slate-400 truncate">{formTitle}</p>
+                      </div>
+                      <p className="text-[11px] text-slate-400 flex-shrink-0">
+                        {new Date(sub.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </p>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Tasks + Events ── */}
       <div className="grid grid-cols-2 gap-6">
