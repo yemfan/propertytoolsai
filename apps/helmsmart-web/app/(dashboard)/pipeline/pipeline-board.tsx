@@ -288,7 +288,7 @@ function DetailPanel({
             <div>
               {sarahStatus === "queued" ? (
                 <p className="text-xs text-emerald-700 flex items-center gap-1.5 font-medium">
-                  <Check className="w-3.5 h-3.5" /> Queued for your approval — <a href="/approvals" className="underline">review it</a>
+                  <Check className="w-3.5 h-3.5" /> Sarah created a task for you — <a href="/tasks" className="underline">see Tasks</a>
                 </p>
               ) : sarahStatus === "no_phone" ? (
                 <p className="text-xs text-slate-400">No phone number on file.</p>

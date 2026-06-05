@@ -6,7 +6,6 @@ import { getBlueprint } from "@helm/ai-workforce";
 type TimData = {
   overdueInvoices: number;
   overdueTotal: string;
-  pendingApprovals: number;
   openTasks: number;
   urgentTasks: number;
 };
@@ -17,11 +16,10 @@ type TimData = {
  * the data says so the owner can decide what to act on.
  */
 export function TimBriefing({ data }: { data: TimData }) {
-  const { overdueInvoices, overdueTotal, pendingApprovals, openTasks, urgentTasks } = data;
+  const { overdueInvoices, overdueTotal, openTasks, urgentTasks } = data;
 
   const insights: string[] = [];
   if (overdueInvoices > 0) insights.push(`${overdueInvoices} invoice${overdueInvoices > 1 ? "s" : ""} overdue — ${overdueTotal} uncollected`);
-  if (pendingApprovals > 0) insights.push(`${pendingApprovals} pending approval${pendingApprovals > 1 ? "s" : ""} waiting for your review`);
   if (urgentTasks > 0) insights.push(`${urgentTasks} urgent task${urgentTasks > 1 ? "s" : ""} open`);
   else if (openTasks > 0) insights.push(`${openTasks} open task${openTasks > 1 ? "s" : ""} — none urgent`);
   if (insights.length === 0) insights.push("No urgent items — everything looks healthy");

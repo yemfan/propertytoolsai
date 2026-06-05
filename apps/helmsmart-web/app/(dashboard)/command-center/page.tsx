@@ -20,11 +20,10 @@ export default async function CommandCenterPage() {
   const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const [summary, employees, overdueRes, approvalsRes, tasksRes] = await Promise.all([
+  const [summary, employees, overdueRes, tasksRes] = await Promise.all([
     getWorkforceSummary(fromStr, todayStr),
     getWorkforce(),
     supabase.from("invoices").select("id, total").eq("organization_id", orgId).eq("status", "sent").lt("due_date", todayStr),
-    supabase.from("ai_employee_approvals").select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "pending").gt("expires_at", today.toISOString()),
     supabase.from("tasks").select("id, priority").eq("organization_id", orgId).eq("status", "open"),
   ]);
 
@@ -34,7 +33,6 @@ export default async function CommandCenterPage() {
   const timData = {
     overdueInvoices: overdueInvoices.length,
     overdueTotal: fmt(overdueInvoices.reduce((s, i) => s + Number(i.total), 0)),
-    pendingApprovals: approvalsRes.count ?? 0,
     openTasks: allTasks.length,
     urgentTasks: allTasks.filter((t) => t.priority === "urgent" || t.priority === "high").length,
   };

@@ -5,8 +5,10 @@
  * work accordingly:
  *
  *   autonomous       → execute inside executeRun; returns "executed"
- *   act_with_approval → insert ai_employee_approvals + escalateRun + notify owner;
- *                       returns "escalated". The owner's approve action runs the tool.
+ *   act_with_approval → create a to-do TASK for the owner + escalateRun + notify;
+ *                       returns "escalated". No external action is taken — the
+ *                       owner reads the task and acts manually. (We deliberately
+ *                       dropped the separate Approvals inbox + approve-and-send.)
  *   suggest          → no side effects; returns "skipped"
  *
  * The caller supplies `execute(runId)` — the actual work callback. For
@@ -19,6 +21,7 @@
  */
 
 import { createNotificationService } from "@/lib/actions/notifications";
+import { insertTask } from "@helm/dna-operations";
 import {
   getEmployee,
   startRun,
@@ -48,12 +51,14 @@ export interface GatingOptions {
   runInput: Omit<StartRunInput, "employeeId">;
   /** Context shown to the owner in the approval notification. */
   approvalSubject: Record<string, unknown>;
-  /** Which tool the employee wants to invoke (for act_with_approval queue). */
+  /** Which tool the employee would invoke (informational — recorded on the run). */
   toolKey: string;
-  /** The tool's input arguments (stored in the approval row). */
+  /** The tool's input arguments (informational). */
   toolInput: Record<string, unknown>;
-  /** Human-readable description for the owner notification. */
+  /** Human-readable description — becomes the task title + notification body. */
   description: string;
+  /** Optional detail for the task notes (e.g. the drafted message the owner should send). */
+  taskNote?: string;
 }
 
 /**
@@ -81,27 +86,27 @@ export async function enforceAutonomy(
     return { status: "skipped" };
   }
 
-  // ── act_with_approval: queue + escalate ───────────────────────────────────
+  // ── act_with_approval: hand off to the owner as a to-do task ───────────────
+  // No external action is taken. The employee's suggestion becomes a task the
+  // owner can read and act on, instead of a separate approve-and-send inbox.
   if (autonomy === "act_with_approval") {
     const runId = await startRun(db, orgId, { employeeId: employee.id, ...opts.runInput });
-    const { data: approvalRow } = await db.from("ai_employee_approvals").insert({
-      organization_id: orgId,
-      employee_id: employee.id,
-      run_id: runId,
-      channel: opts.runInput.channel ?? null,
-      subject: opts.approvalSubject,
-      tool_key: opts.toolKey,
-      tool_input: opts.toolInput,
-      status: "pending",
-    }).select("id").single();
-    await escalateRun(db, orgId, runId, `Waiting for owner approval: ${opts.toolKey}`);
-    await createNotificationService(orgId, {
-      type: "new_message",
-      title: `${employee.name} needs your approval`,
-      body: opts.description.slice(0, 120),
-      link: "/approvals",
+    const clientId =
+      opts.runInput.subjectType === "contact" ? opts.runInput.subjectId ?? undefined : undefined;
+    await insertTask(db, orgId, {
+      title: opts.description,
+      notes: opts.taskNote,
+      client_id: clientId,
+      priority: "high",
     });
-    return { status: "escalated", runId, approvalId: approvalRow?.id as string | undefined };
+    await escalateRun(db, orgId, runId, `Handed off to the owner as a task: ${opts.toolKey}`);
+    await createNotificationService(orgId, {
+      type: "system",
+      title: `${employee.name} created a task for you`,
+      body: opts.description.slice(0, 120),
+      link: "/tasks",
+    });
+    return { status: "escalated", runId };
   }
 
   // ── autonomous: execute inside a tracked run ──────────────────────────────
