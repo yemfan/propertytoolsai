@@ -8,7 +8,7 @@ import {
   PhoneOutgoing, Share2, Settings, LogOut, LayoutDashboard,
   CheckSquare, Mail, BarChart2, Zap, Clock, TrendingUp, FolderOpen, Bot,
   ChevronUp, KeyRound, RefreshCw, Camera, FileText, FileCheck, Receipt, Star,
-  FileInput,
+  FileInput, GitBranch,
 } from "lucide-react";
 import { Sidebar as HelmUiSidebar, type NavSection } from "@helm/ui";
 import { signOut } from "@/lib/actions/auth";
@@ -64,10 +64,11 @@ const navSections: { title: string; items: { label: string; href: string; icon: 
   {
     title: "Managing",
     items: [
-      { label: "Projects",    href: "/projects",    icon: <FolderOpen size={ICON} /> },
-      { label: "Timesheets",  href: "/timesheets",  icon: <Clock size={ICON} /> },
-      { label: "Automations", href: "/automations", icon: <Zap size={ICON} /> },
-      { label: "Settings",    href: "/settings",    icon: <Settings size={ICON} /> },
+      { label: "Projects",    href: "/projects",    icon: <FolderOpen  size={ICON} /> },
+      { label: "Timesheets",  href: "/timesheets",  icon: <Clock       size={ICON} /> },
+      { label: "Workflows",   href: "/workflows",   icon: <GitBranch   size={ICON} /> },
+      { label: "Automations", href: "/automations", icon: <Zap         size={ICON} /> },
+      { label: "Settings",    href: "/settings",    icon: <Settings    size={ICON} /> },
     ],
   },
 ];
