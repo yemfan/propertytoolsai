@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus, Receipt } from "lucide-react";
+import { Plus, Receipt, Upload } from "lucide-react";
 import { BooksNav } from "@/components/books-nav";
 import { listExpenses } from "@/lib/actions/expenses";
 
@@ -25,13 +25,36 @@ export default async function ExpensesPage() {
             {expenses.length} entries · {fmt(totalSpend)} total
           </p>
         </div>
-        <Link
-          href="/books/expenses/new"
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Record expense
-        </Link>
+        <div className="flex items-center gap-2">
+          <div className="relative group">
+            <button className="flex items-center gap-2 px-4 py-2.5 text-slate-700 text-sm font-medium border border-slate-200 hover:border-slate-300 rounded-lg transition-colors bg-white">
+              <Upload className="w-4 h-4" />
+              Import
+              <span className="text-slate-400">▼</span>
+            </button>
+            <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+              <Link
+                href="/books/expenses/import"
+                className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 border-b border-slate-100 first:rounded-t-lg"
+              >
+                <span>CSV / Spreadsheet</span>
+              </Link>
+              <Link
+                href="/books/expenses/import-ofx"
+                className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 last:rounded-b-lg"
+              >
+                <span>Bank Statement (OFX/QFX)</span>
+              </Link>
+            </div>
+          </div>
+          <Link
+            href="/books/expenses/new"
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Record expense
+          </Link>
+        </div>
       </div>
 
       {/* Table */}
