@@ -37,6 +37,48 @@ export async function POST(
       return NextResponse.json({ ok: false, error: "Form not found" }, { status: 404 });
     }
 
+    // ── Abuse protection ────────────────────────────────────────────────────
+    // 1) Honeypot: a hidden field named "_hp" that real users never fill.
+    //    Bots auto-fill every input → silently accept (200) but drop the spam,
+    //    so the bot can't distinguish a rejection.
+    if (typeof body._hp === "string" && body._hp.trim() !== "") {
+      return NextResponse.json({ ok: true, successMessage: form.success_message });
+    }
+
+    // 2) Per-form hourly cap: limit how many submissions a single form accepts
+    //    per hour to blunt floods (legit forms rarely exceed this).
+    const HOURLY_CAP = 60;
+    const oneHourAgo = new Date(Date.now() - 3_600_000).toISOString();
+    const { count: recentCount } = await db
+      .from("form_submissions")
+      .select("id", { count: "exact", head: true })
+      .eq("form_id", form.id)
+      .gte("created_at", oneHourAgo);
+    if ((recentCount ?? 0) >= HOURLY_CAP) {
+      return NextResponse.json(
+        { ok: false, error: "Too many submissions right now. Please try again later." },
+        { status: 429 }
+      );
+    }
+
+    // 3) Per-IP rate limit: max 5 submissions from one IP to one form per 10 min.
+    const ip = (request.headers.get("x-forwarded-for") || "").split(",")[0].trim();
+    if (ip) {
+      const tenMinAgo = new Date(Date.now() - 600_000).toISOString();
+      const { count: ipCount } = await db
+        .from("form_submissions")
+        .select("id", { count: "exact", head: true })
+        .eq("form_id", form.id)
+        .eq("ip_address", ip)
+        .gte("created_at", tenMinAgo);
+      if ((ipCount ?? 0) >= 5) {
+        return NextResponse.json(
+          { ok: false, error: "You've submitted this form a few times. Please wait a bit." },
+          { status: 429 }
+        );
+      }
+    }
+
     // Extract name/email/phone from submission data for quick access
     const fields = (form.fields ?? []) as Array<{ id: string; type: string; label: string }>;
     const emailField = fields.find((f) => f.type === "email" || f.label.toLowerCase().includes("email"));

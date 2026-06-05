@@ -30,6 +30,7 @@ export function PublicFormRenderer({
   redirectUrl,
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
+  const [honeypot, setHoneypot] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -47,7 +48,7 @@ export function PublicFormRenderer({
         const res = await fetch(`/api/forms/${slug}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(values),
+          body: JSON.stringify({ ...values, _hp: honeypot }),
         });
 
         const data = await res.json();
@@ -95,6 +96,19 @@ export function PublicFormRenderer({
       </div>
 
       <form onSubmit={handleSubmit} className="p-8 space-y-5">
+        {/* Honeypot — hidden from humans, bots tend to fill it. Submissions with
+            this field set are silently dropped server-side. */}
+        <input
+          type="text"
+          name="_hp"
+          tabIndex={-1}
+          autoComplete="off"
+          value={honeypot}
+          onChange={(e) => setHoneypot(e.target.value)}
+          aria-hidden="true"
+          style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
+        />
+
         {fields.map((field) => (
           <div key={field.id}>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
