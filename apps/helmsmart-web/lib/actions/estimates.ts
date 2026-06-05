@@ -9,6 +9,7 @@ import {
   convertEstimateToInvoice as convertEstimateToInvoiceFinance,
 } from "@helm/dna-finance";
 import { maybeTrigerEstimateWorkflow } from "@/lib/integrations/workflow-triggers";
+import { checkActionPermission } from "@/components/role-guard";
 import { Resend } from "resend";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -34,6 +35,8 @@ export async function createEstimate(data: {
   notes: string;
   lines: EstimateLine[];
 }) {
+  const denied = await checkActionPermission("invoices.write");
+  if (denied) throw new Error(denied.error);
   const cookieStore = await cookies();
   const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");

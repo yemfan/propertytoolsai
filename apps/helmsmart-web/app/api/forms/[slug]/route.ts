@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import twilio from "twilio";
-import { notifySlackFormSubmission } from "@/lib/integrations/slack";
+import { notifySlackFormSubmission, notifySlackNewLead } from "@/lib/integrations/slack";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -154,6 +154,18 @@ export async function POST(
 
     // Notify via Slack (fire-and-forget)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+
+    // If a new client was created, send new-lead notification
+    if (clientId && name && !email) {
+      void notifySlackNewLead(form.organization_id, {
+        name: name ?? "Lead",
+        email: email ?? undefined,
+        phone: phone ?? undefined,
+        source: "form",
+        clientUrl: `${appUrl}/clients/${clientId}`,
+      });
+    }
+
     void notifySlackFormSubmission(form.organization_id, {
       formTitle: form.title,
       name: name ?? undefined,

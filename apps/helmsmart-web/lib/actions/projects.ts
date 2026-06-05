@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getProjectExpenseTotal } from "./expenses";
+import { checkActionPermission } from "@/components/role-guard";
 
 export type ProjectStatus = "active" | "paused" | "completed" | "cancelled";
 export type ProjectColor  = "indigo" | "emerald" | "rose" | "amber" | "violet" | "slate";
@@ -328,6 +329,8 @@ export async function createProject(data: {
   startDate?: string | null;
   endDate?: string | null;
 }): Promise<string> {
+  const denied = await checkActionPermission("pipeline.write");
+  if (denied) throw new Error(denied.error);
   const orgId = await getOrgId();
   const supabase = await createClient();
 

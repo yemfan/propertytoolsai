@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { runAutomations } from "@/lib/automation-engine";
 import { checkActionPermission } from "@/components/role-guard";
+import { notifySlackNewLead } from "@/lib/integrations/slack";
 import {
   patchClient as patchClientRevenue,
   deleteClient as deleteClientRevenue,
@@ -79,10 +80,12 @@ export async function createClient_(
 
   // Fire new_lead automation if status is lead
   const status = (formData.get("status") as string) || "lead";
+  const lastName = (formData.get("last_name") as string)?.trim();
+  const clientName = [firstName, lastName].filter(Boolean).join(" ");
+  const email = (formData.get("email") as string)?.trim() || null;
+  const phone = (formData.get("phone") as string)?.trim() || null;
+
   if (status === "lead") {
-    const lastName = (formData.get("last_name") as string)?.trim();
-    const clientName = [firstName, lastName].filter(Boolean).join(" ");
-    const email = (formData.get("email") as string)?.trim() || null;
     // Fire and forget — don't await to keep form fast
     runAutomations("new_lead", {
       orgId,
@@ -90,6 +93,16 @@ export async function createClient_(
       clientEmail: email,
     }).catch((e) => console.error("[automations] new_lead failed:", e));
   }
+
+  // Slack notification for new lead/client
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  void notifySlackNewLead(orgId, {
+    name: clientName,
+    email: email ?? undefined,
+    phone: phone ?? undefined,
+    source: (formData.get("source") as string)?.trim() || "manual",
+    clientUrl: `${appUrl}/clients`,
+  });
 
   return { success: true };
 }

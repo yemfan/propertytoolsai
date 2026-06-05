@@ -10,6 +10,7 @@ import {
   type TaskStatus,
   type TaskPriority,
 } from "@helm/dna-operations";
+import { checkActionPermission } from "@/components/role-guard";
 
 // Org-scoped task CRUD lives in @helm/dna-operations (Operations DNA). These server
 // actions own org resolution + revalidation.
@@ -21,6 +22,8 @@ export async function createTask(data: {
   client_id?: string;
   priority?: TaskPriority;
 }) {
+  const denied = await checkActionPermission("pipeline.write");
+  if (denied) throw new Error(denied.error);
   const cookieStore = await cookies();
   const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   if (!orgId) throw new Error("Not authenticated");
