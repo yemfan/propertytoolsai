@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen, Users, Inbox, PhoneIncoming, Calendar,
-  PhoneOutgoing, Share2, Settings, LogOut, Sparkles, LayoutDashboard,
+  PhoneOutgoing, Share2, Settings, LogOut, LayoutDashboard,
   CheckSquare, Mail, BarChart2, Zap, Clock, TrendingUp, FolderOpen, Bot,
   ChevronUp, KeyRound, RefreshCw, Camera, FileText, FileCheck, Receipt,
 } from "lucide-react";
@@ -30,7 +30,6 @@ const navSections: { title: string; items: { label: string; href: string; icon: 
       { label: "Inbox",          href: "/inbox",          icon: <Inbox size={ICON} /> },
       { label: "Calendar",       href: "/calendar",       icon: <Calendar size={ICON} /> },
       { label: "Tasks",          href: "/tasks",          icon: <CheckSquare size={ICON} /> },
-      { label: "Ask AI",         href: "/ask",            icon: <Sparkles size={ICON} /> },
     ],
   },
   {
