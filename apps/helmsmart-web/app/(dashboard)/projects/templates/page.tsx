@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import { ArrowLeft, Plus, LayoutTemplate, Clock, CheckSquare } from "lucide-react";
 import { listProjectTemplates } from "@/lib/actions/project-templates";
 import { ProjectTemplateActions } from "./template-actions";
 import { ImportStarterButton } from "./import-starter-button";
+import { UseTemplateButton } from "./use-template-button";
 
 export const metadata: Metadata = { title: "Project Templates" };
 
@@ -64,7 +67,25 @@ const STARTER_TEMPLATES = [
 ] as const;
 
 export default async function ProjectTemplatesPage() {
-  const templates = await listProjectTemplates();
+  const cookieStore = await cookies();
+  const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
+  const supabase = await createClient();
+
+  const [templates, clientsRes] = await Promise.all([
+    listProjectTemplates(),
+    supabase
+      .from("clients")
+      .select("id, first_name, last_name, company")
+      .eq("organization_id", orgId)
+      .order("first_name"),
+  ]);
+
+  const clients = (clientsRes.data ?? []) as {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    company: string | null;
+  }[];
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
@@ -128,7 +149,8 @@ export default async function ProjectTemplatesPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0">
+                  <div className="flex gap-2 flex-shrink-0 items-center">
+                    <UseTemplateButton templateId={tpl.id} templateName={tpl.name} clients={clients} />
                     <Link
                       href={`/projects/templates/${tpl.id}`}
                       className="text-xs px-3 py-1.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors font-medium"
