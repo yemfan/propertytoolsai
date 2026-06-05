@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { insertBill, recordBillPayment } from "@helm/dna-finance";
+import { checkActionPermission } from "@/components/role-guard";
 
 export type BillStatus = "open" | "paid";
 
@@ -59,6 +60,8 @@ export async function createBill(input: {
   dueDate: string;
   amount: number;
 }): Promise<void> {
+  const denied = await checkActionPermission("books.write");
+  if (denied) throw new Error(denied.error);
   const orgId = await getOrgId();
   if (!orgId) throw new Error("No org");
   const supabase = await createClient();

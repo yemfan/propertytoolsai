@@ -4,7 +4,8 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BooksNav } from "@/components/books-nav";
 import { PeriodSelect } from "@/components/period-select";
-import { TrendingUp, TrendingDown, Scale, DollarSign } from "lucide-react";
+import { TrendingUp, TrendingDown, Scale, DollarSign, Clock, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Reports · Books" };
 
@@ -224,6 +225,18 @@ export default async function ReportsPage({
       <BooksNav />
 
       <p className="text-xs text-slate-400 mb-6">Period: {label} &nbsp;·&nbsp; {start} → {end}</p>
+
+      {/* Quick links to aging */}
+      <div className="flex gap-3 mb-6">
+        <Link
+          href="/books/aging"
+          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-indigo-300 transition-colors"
+        >
+          <Clock className="w-4 h-4 text-rose-500" />
+          AR / AP Aging Report
+          <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+        </Link>
+      </div>
 
       {/* ── Summary cards ── */}
       <div className="grid grid-cols-3 gap-4 mb-8">

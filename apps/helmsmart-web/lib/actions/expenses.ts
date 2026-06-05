@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { recordExpense } from "@helm/dna-finance";
 import { checkProjectBudgetAlert } from "./budget-alerts";
+import { checkActionPermission } from "@/components/role-guard";
 
 export interface ExpenseInput {
   date: string;              // YYYY-MM-DD
@@ -18,6 +19,8 @@ export interface ExpenseInput {
 }
 
 export async function createExpense(input: ExpenseInput) {
+  const denied = await checkActionPermission("books.write");
+  if (denied) throw new Error(denied.error);
   const cookieStore = await cookies();
   const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");

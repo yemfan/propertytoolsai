@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { runAutomations } from "@/lib/automation-engine";
+import { checkActionPermission } from "@/components/role-guard";
 import {
   patchClient as patchClientRevenue,
   deleteClient as deleteClientRevenue,
@@ -39,6 +40,9 @@ export async function createClient_(
   _: ClientState,
   formData: FormData
 ): Promise<ClientState> {
+  const denied = await checkActionPermission("clients.write");
+  if (denied) return { error: denied.error };
+
   const firstName = (formData.get("first_name") as string)?.trim();
   if (!firstName) return { error: "First name is required." };
 

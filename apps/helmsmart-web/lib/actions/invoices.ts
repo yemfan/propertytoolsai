@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { insertInvoiceWithLines } from "@helm/dna-finance";
 import { revalidatePath } from "next/cache";
+import { checkActionPermission } from "@/components/role-guard";
 import { Resend } from "resend";
 import { createNotification } from "@/lib/actions/notifications";
 import { refreshClientLifetimeValue } from "@/lib/actions/clients";
@@ -34,6 +35,8 @@ export async function createInvoice(data: {
   notes: string;
   lines: InvoiceLine[];
 }) {
+  const denied = await checkActionPermission("invoices.write");
+  if (denied) throw new Error(denied.error);
   const cookieStore = await cookies();
   const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) throw new Error("No org");
