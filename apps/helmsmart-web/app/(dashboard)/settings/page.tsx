@@ -9,6 +9,8 @@ import { SettingsTabs } from "@/components/settings-tabs";
 import { PlaidLink } from "@/components/plaid-link";
 import { BillingRatesForm } from "@/components/billing-rates-form";
 import { ReceptionSettings } from "@/components/reception-settings";
+import { NpiSetting } from "@/components/npi-setting";
+import { getActivePack } from "@/lib/packs";
 import { Users, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -37,7 +39,7 @@ export default async function SettingsPage() {
   const [{ data: org }, { data: bankAccounts }, { data: coaAccounts }] = await Promise.all([
     supabase
       .from("organizations")
-      .select("id, slug, name, entity_type, accounting_basis, currency, timezone, fiscal_year_end_month, default_hourly_rate, default_labor_cost_rate, weekly_digest_enabled, owner_english_assist, plan, subscription_status, trial_ends_at, twilio_number, auto_reply, auto_reply_msg")
+      .select("id, slug, name, entity_type, accounting_basis, currency, timezone, fiscal_year_end_month, default_hourly_rate, default_labor_cost_rate, weekly_digest_enabled, owner_english_assist, plan, subscription_status, trial_ends_at, twilio_number, auto_reply, auto_reply_msg, npi")
       .eq("id", orgId)
       .single(),
     supabase
@@ -53,6 +55,8 @@ export default async function SettingsPage() {
       .in("type", ["asset", "liability"])
       .order("code"),
   ]);
+
+  const isMedical = (await getActivePack()).id === "medical";
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
@@ -74,6 +78,13 @@ export default async function SettingsPage() {
                 ownerEnglishAssist={org?.owner_english_assist ?? true}
               />
             </section>
+
+            {isMedical && (
+              <section>
+                <h2 className={SECTION_H2}>Insurance eligibility</h2>
+                <NpiSetting initial={org?.npi ?? ""} />
+              </section>
+            )}
 
             <section>
               <h2 className={SECTION_H2}>Team &amp; plan</h2>

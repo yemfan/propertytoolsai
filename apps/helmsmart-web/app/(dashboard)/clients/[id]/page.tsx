@@ -11,6 +11,8 @@ import {
 import { ClientEditForm } from "./client-edit-form";
 import { PortalLinkButton } from "./portal-link-button";
 import { ClientNotesPanel } from "@/components/client-notes-panel";
+import { EligibilityPanel } from "@/components/eligibility-panel";
+import { getActivePack } from "@/lib/packs";
 
 export const metadata: Metadata = { title: "Client · CRM" };
 
@@ -135,6 +137,20 @@ export default async function ClientDetailPage({
   const projects = projectsRes.data ?? [];
   const tasks = tasksRes.data ?? [];
   const pnl = clientsPnL.find((c) => c.clientId === id) ?? null;
+
+  // Insurance eligibility is a DoctorSmart (medical pack) feature.
+  const pack = await getActivePack();
+  const isMedical = pack.id === "medical";
+  const { data: latestEligibility } = isMedical
+    ? await supabase
+        .from("eligibility_checks")
+        .select("status, plan_name, copay, coinsurance, deductible, deductible_remaining, error, checked_at")
+        .eq("client_id", id)
+        .eq("organization_id", orgId)
+        .order("checked_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
 
   const today = new Date().toISOString().slice(0, 10);
   const fullName = [client.first_name, client.last_name].filter(Boolean).join(" ");
@@ -436,6 +452,18 @@ export default async function ClientDetailPage({
 
         {/* Right column — notes + edit form */}
         <div className="space-y-4">
+          {isMedical && (
+            <EligibilityPanel
+              clientId={client.id}
+              insurance={{
+                payerId: client.insurance_payer_id ?? "",
+                payerName: client.insurance_payer_name ?? "",
+                memberId: client.insurance_member_id ?? "",
+                dateOfBirth: client.date_of_birth ?? "",
+              }}
+              latest={latestEligibility}
+            />
+          )}
           <ClientNotesPanel clientId={client.id} initialNotes={notes} />
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <div className="px-5 py-3.5 border-b border-slate-100">
