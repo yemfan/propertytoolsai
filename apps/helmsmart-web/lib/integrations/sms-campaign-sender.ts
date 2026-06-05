@@ -5,6 +5,7 @@
 
 import { createServiceClient } from "@/lib/supabase/server";
 import twilio from "twilio";
+import { logSMSCommunication } from "./communication-auto-logger";
 
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
@@ -85,6 +86,15 @@ export async function sendSMSCampaign(
         if (record) {
           recipientIds.push(record.id);
           sent++;
+
+          // Auto-log the communication
+          await logSMSCommunication({
+            clientId: recipient.client_id,
+            phoneNumber: recipient.phone_number,
+            messageText: campaign.message_text,
+            twilioSid: message.sid,
+            campaignId: campaignId,
+          });
         }
       } catch (err) {
         console.error("[sms-campaign-sender] message send error:", err);
