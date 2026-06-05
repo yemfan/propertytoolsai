@@ -13,6 +13,14 @@
     {
       "path": "/api/cron/google/reviews/sync",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/approvals/timeout",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/email/campaigns/send",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
