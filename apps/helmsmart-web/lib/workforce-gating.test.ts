@@ -22,6 +22,10 @@ vi.mock("@/lib/actions/notifications", () => ({
   createNotificationService: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@helm/dna-operations", () => ({
+  insertTask: vi.fn().mockResolvedValue(undefined),
+}));
+
 import {
   getEmployee,
   startRun,
@@ -29,6 +33,7 @@ import {
   failRun,
   completeRun,
 } from "@helm/ai-workforce";
+import { insertTask } from "@helm/dna-operations";
 
 import { enforceAutonomy } from "./workforce-gating";
 import type { AiEmployee } from "@helm/ai-workforce";
@@ -109,16 +114,26 @@ describe("enforceAutonomy", () => {
     expect(startRun).not.toHaveBeenCalled();
   });
 
-  it("escalates without calling execute for act_with_approval", async () => {
+  it("creates a task (no execute, no approval row) for act_with_approval", async () => {
     (getEmployee as MockedFunction<typeof getEmployee>).mockResolvedValueOnce(makeEmployee("act_with_approval"));
     const execute = vi.fn();
     const db = makeDb();
-    const result = await enforceAutonomy(db, "org-1", "emma", { ...baseOpts, execute });
+    const result = await enforceAutonomy(db, "org-1", "emma", {
+      ...baseOpts,
+      taskNote: "drafted message",
+      execute,
+    });
     expect(result.status).toBe("escalated");
     expect(result.runId).toBe("run-123");
     expect(execute).not.toHaveBeenCalled();
     expect(escalateRun).toHaveBeenCalledWith(expect.anything(), "org-1", "run-123", expect.any(String));
-    expect(db.from).toHaveBeenCalledWith("ai_employee_approvals");
+    // A to-do task is created for the owner — and crucially NOT an approval row.
+    expect(insertTask).toHaveBeenCalledWith(
+      expect.anything(),
+      "org-1",
+      expect.objectContaining({ title: baseOpts.description, client_id: "client-1" }),
+    );
+    expect(db.from).not.toHaveBeenCalledWith("ai_employee_approvals");
   });
 
   it("calls execute and returns executed for autonomous", async () => {

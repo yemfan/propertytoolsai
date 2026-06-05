@@ -21,8 +21,8 @@ export function AlexReminderBanner({ overdueCount, overdueTotal }: { overdueCoun
     return (
       <div className="flex items-center gap-3 mb-6 px-5 py-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-sm">
         <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-        <span className="text-emerald-800 font-medium">Queued for your approval —</span>
-        <a href="/approvals" className="text-emerald-700 underline font-medium">review it</a>
+        <span className="text-emerald-800 font-medium">Alex created a task for you —</span>
+        <a href="/tasks" className="text-emerald-700 underline font-medium">see Tasks</a>
       </div>
     );
   }
