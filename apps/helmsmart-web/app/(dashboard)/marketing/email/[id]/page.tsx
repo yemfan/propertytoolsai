@@ -19,7 +19,7 @@ export default async function EmailCampaignDetailPage({
 
   if (!campaign) notFound();
 
-  if (campaign.status === "draft" || campaign.status === "scheduled") {
+  if (campaign.status === "draft" || campaign.status === "scheduled" || campaign.status === "recurring") {
     return (
       <EmailCampaignEditor
         campaignId={id}

@@ -5,6 +5,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { sendEmailCampaign } from "@/lib/integrations/email-campaign-sender";
 import { checkActionPermission } from "@/components/role-guard";
+import { computeNextRun, type RecurrenceInterval } from "@/lib/recurrence";
 
 export interface CreateEmailCampaignInput {
   name: string;
@@ -19,6 +20,11 @@ export interface CreateEmailCampaignInput {
   scheduledFor?: string;
   description?: string;
   campaignType?: string;
+  // Recurrence
+  isRecurring?: boolean;
+  recurrenceInterval?: RecurrenceInterval;
+  recurrenceDay?: number;
+  recurrenceHour?: number;
 }
 
 export async function createEmailCampaign(
@@ -37,6 +43,19 @@ export async function createEmailCampaign(
 
   const db = await createServiceClient();
 
+  // For recurring campaigns, compute the first next_run_at
+  let nextRunAt: string | null = null;
+  let status = input.scheduledFor ? "scheduled" : "draft";
+  if (input.isRecurring && input.recurrenceInterval) {
+    nextRunAt = computeNextRun(
+      input.recurrenceInterval,
+      input.recurrenceDay ?? 1,
+      input.recurrenceHour ?? 9,
+      new Date()
+    );
+    status = "recurring";
+  }
+
   const { data: campaign, error } = await db
     .from("email_campaigns")
     .insert({
@@ -53,7 +72,12 @@ export async function createEmailCampaign(
       target_segment: input.targetSegment,
       target_pipeline_stages: input.targetPipelineStages ?? [],
       scheduled_for: input.scheduledFor ?? null,
-      status: input.scheduledFor ? "scheduled" : "draft",
+      status,
+      is_recurring: input.isRecurring ?? false,
+      recurrence_interval: input.recurrenceInterval ?? null,
+      recurrence_day: input.recurrenceDay ?? null,
+      recurrence_hour: input.recurrenceHour ?? 9,
+      next_run_at: nextRunAt,
       created_by: user.id,
     })
     .select("id")
@@ -173,7 +197,7 @@ export async function listEmailCampaigns() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("email_campaigns")
-    .select("id, name, subject, target_segment, status, total_recipients, delivered_count, open_count, click_count, scheduled_for, sent_at, created_at")
+    .select("id, name, subject, target_segment, status, total_recipients, delivered_count, open_count, click_count, scheduled_for, sent_at, created_at, is_recurring, recurrence_interval, recurrence_day, recurrence_hour, next_run_at")
     .eq("organization_id", orgId)
     .order("created_at", { ascending: false })
     .limit(50);

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus, Mail, TrendingUp, Eye } from "lucide-react";
+import { Plus, Mail, TrendingUp, Eye, Repeat } from "lucide-react";
 import { listEmailCampaigns } from "@/lib/actions/email-campaigns";
+import { describeRecurrence, type RecurrenceInterval } from "@/lib/recurrence";
 
 export const metadata: Metadata = { title: "Email Campaigns · Marketing" };
 
@@ -24,6 +25,7 @@ export default async function EmailCampaignsPage() {
   const draft     = campaigns.filter((c) => c.status === "draft");
   const scheduled = campaigns.filter((c) => c.status === "scheduled");
   const sent      = campaigns.filter((c) => c.status === "sent");
+  const recurring = campaigns.filter((c) => c.status === "recurring" || c.is_recurring);
   const totalSent = sent.reduce((s, c) => s + (c.delivered_count ?? 0), 0);
 
   return (
@@ -60,6 +62,35 @@ export default async function EmailCampaignsPage() {
           <p className="text-2xl font-bold text-slate-900 mt-2">{campaigns.length}</p>
         </div>
       </div>
+
+      {/* Recurring newsletters */}
+      {recurring.length > 0 && (
+        <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+          <p className="text-sm font-medium text-indigo-900 mb-3 flex items-center gap-1.5">
+            <Repeat className="w-4 h-4" />
+            {recurring.length} recurring newsletter{recurring.length !== 1 ? "s" : ""}
+          </p>
+          <div className="space-y-2">
+            {recurring.map((c) => (
+              <div key={c.id} className="flex items-center justify-between text-sm">
+                <span className="text-indigo-800 font-medium">{c.name}</span>
+                <span className="text-indigo-600 text-xs">
+                  {c.recurrence_interval
+                    ? describeRecurrence(
+                        c.recurrence_interval as RecurrenceInterval,
+                        c.recurrence_day ?? 1,
+                        c.recurrence_hour ?? 9
+                      )
+                    : "Recurring"}
+                  {c.next_run_at && (
+                    <> · next {new Date(c.next_run_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Scheduled */}
       {scheduled.length > 0 && (

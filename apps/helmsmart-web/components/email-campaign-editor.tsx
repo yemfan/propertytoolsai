@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, Clock, Users, AlertCircle, CheckCircle2, Smartphone, Eye } from "lucide-react";
+import { ArrowLeft, Send, Clock, Users, AlertCircle, CheckCircle2, Smartphone, Eye, Repeat } from "lucide-react";
 import { createEmailCampaign, updateEmailCampaign, sendEmailCampaignNow, deleteEmailCampaign } from "@/lib/actions/email-campaigns";
 
 const SEGMENTS = [
@@ -104,6 +104,12 @@ export function EmailCampaignEditor({ campaignId, initialValues, status }: Props
   const [scheduledFor, setScheduledFor]   = useState(initialValues?.scheduledFor ?? "");
   const [scheduleEnabled, setScheduleEnabled] = useState(!!initialValues?.scheduledFor);
 
+  // Recurrence
+  const [recurringEnabled, setRecurringEnabled] = useState(false);
+  const [recurInterval, setRecurInterval]       = useState<"weekly" | "monthly">("monthly");
+  const [recurDay, setRecurDay]                 = useState(1);
+  const [recurHour, setRecurHour]               = useState(9);
+
   const [activeTab, setActiveTab]   = useState<"content" | "audience" | "settings">("content");
   const [showPreview, setShowPreview] = useState(false);
   const [sendConfirm, setSendConfirm] = useState(false);
@@ -174,6 +180,31 @@ export function EmailCampaignEditor({ campaignId, initialValues, status }: Props
     });
   };
 
+  const handleSaveRecurring = () => {
+    if (!name.trim() || !subject.trim() || !bodyHtml.trim()) {
+      setError("Name, subject, and body are required.");
+      return;
+    }
+    setError(null);
+    startTransition(async () => {
+      const result = await createEmailCampaign({
+        name: name.trim(),
+        subject: subject.trim(),
+        previewText: previewText.trim(),
+        bodyHtml,
+        fromName: fromName.trim(),
+        replyTo: replyTo.trim(),
+        targetSegment: targetSegment as "all" | "leads" | "prospects" | "active" | "won",
+        isRecurring: true,
+        recurrenceInterval: recurInterval,
+        recurrenceDay: recurDay,
+        recurrenceHour: recurHour,
+      });
+      if (!result.ok) { setError(result.error ?? "Failed to create"); return; }
+      router.push("/marketing/email");
+    });
+  };
+
   const handleDelete = () => {
     if (!campaignId || !confirm("Delete this campaign?")) return;
     startTransition(async () => {
@@ -181,6 +212,8 @@ export function EmailCampaignEditor({ campaignId, initialValues, status }: Props
       router.push("/marketing/email");
     });
   };
+
+  const DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -364,6 +397,69 @@ export function EmailCampaignEditor({ campaignId, initialValues, status }: Props
                   )}
                 </div>
               )}
+
+              {/* Recurrence — only for new campaigns */}
+              {isEditable && !campaignId && (
+                <div className="bg-white rounded-xl border border-slate-200 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Repeat className="w-4 h-4 text-slate-500" />
+                      <h2 className="text-sm font-semibold text-slate-800">Recurring newsletter</h2>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <span className="text-xs text-slate-500">Repeat automatically</span>
+                      <div onClick={() => { setRecurringEnabled((v) => !v); if (!recurringEnabled) setScheduleEnabled(false); }}
+                        className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${recurringEnabled ? "bg-indigo-600" : "bg-slate-200"}`}>
+                        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${recurringEnabled ? "translate-x-4" : "translate-x-0.5"}`} />
+                      </div>
+                    </label>
+                  </div>
+                  {recurringEnabled ? (
+                    <div className="space-y-4">
+                      <div className="flex gap-2">
+                        {(["weekly", "monthly"] as const).map((iv) => (
+                          <button key={iv} type="button" onClick={() => { setRecurInterval(iv); setRecurDay(iv === "weekly" ? 1 : 1); }}
+                            className={`flex-1 text-sm py-2 rounded-lg border font-medium capitalize transition-colors ${recurInterval === iv ? "bg-indigo-50 border-indigo-300 text-indigo-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                            {iv}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                            {recurInterval === "weekly" ? "Day of week" : "Day of month"}
+                          </label>
+                          {recurInterval === "weekly" ? (
+                            <select value={recurDay} onChange={(e) => setRecurDay(Number(e.target.value))} disabled={isPending}
+                              className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60">
+                              {DOW.map((d, i) => <option key={i} value={i}>{d}</option>)}
+                            </select>
+                          ) : (
+                            <select value={recurDay} onChange={(e) => setRecurDay(Number(e.target.value))} disabled={isPending}
+                              className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60">
+                              {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d}</option>)}
+                            </select>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1.5">Hour (UTC)</label>
+                          <select value={recurHour} onChange={(e) => setRecurHour(Number(e.target.value))} disabled={isPending}
+                            className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60">
+                            {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+                              <option key={h} value={h}>{h % 12 === 0 ? 12 : h % 12}:00 {h < 12 ? "AM" : "PM"}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        A fresh copy is sent each period to the selected segment. Edit or stop it anytime from the campaigns list.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400">Turn on to auto-send this as a weekly or monthly newsletter.</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -396,7 +492,13 @@ export function EmailCampaignEditor({ campaignId, initialValues, status }: Props
           {/* Actions */}
           {isEditable && !sendConfirm && (
             <div className="mt-5 flex items-center gap-3">
-              {!scheduleEnabled ? (
+              {recurringEnabled ? (
+                <button onClick={handleSaveRecurring} disabled={isPending || !name.trim() || !subject.trim() || !bodyHtml.trim()}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50">
+                  <Repeat className="w-3.5 h-3.5" />
+                  {isPending ? "Saving…" : "Save Recurring Newsletter"}
+                </button>
+              ) : !scheduleEnabled ? (
                 <button onClick={handleSend} disabled={isPending || !name.trim() || !subject.trim() || !bodyHtml.trim()}
                   className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50">
                   <Send className="w-3.5 h-3.5" />
