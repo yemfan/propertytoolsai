@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { parseEligibility } from "./stedi";
+import { describe, it, expect, afterEach } from "vitest";
+import { parseEligibility, checkEligibility } from "./stedi";
 
 describe("parseEligibility", () => {
   it("flattens an active-coverage 271 into front-desk fields", () => {
@@ -40,5 +40,41 @@ describe("parseEligibility", () => {
     });
     expect(r.status).toBe("error");
     expect(r.error).toContain("Invalid Participant");
+  });
+});
+
+describe("checkEligibility HIPAA gate", () => {
+  const origKey = process.env.STEDI_API_KEY;
+  const origFlag = process.env.DOCTORSMART_HIPAA_READY;
+  afterEach(() => {
+    if (origKey === undefined) delete process.env.STEDI_API_KEY;
+    else process.env.STEDI_API_KEY = origKey;
+    if (origFlag === undefined) delete process.env.DOCTORSMART_HIPAA_READY;
+    else process.env.DOCTORSMART_HIPAA_READY = origFlag;
+  });
+
+  const input = {
+    npi: "1234567890",
+    organizationName: "Clinic",
+    payerId: "AHS",
+    firstName: "A",
+    lastName: "B",
+    dateOfBirth: "2000-01-01",
+    memberId: "M1",
+  };
+
+  it("returns the mock (no network) when no key is set", async () => {
+    delete process.env.STEDI_API_KEY;
+    const r = await checkEligibility(input);
+    expect(r.status).toBe("active");
+    expect((r.raw as { mock?: boolean } | null)?.mock).toBe(true);
+  });
+
+  it("blocks a LIVE key until DOCTORSMART_HIPAA_READY=true — no PHI leaves", async () => {
+    process.env.STEDI_API_KEY = "live_shouldNotTransmit";
+    delete process.env.DOCTORSMART_HIPAA_READY;
+    const r = await checkEligibility(input);
+    expect(r.status).toBe("error");
+    expect(r.error).toContain("HIPAA");
   });
 });

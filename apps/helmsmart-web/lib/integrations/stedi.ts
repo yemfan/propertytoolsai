@@ -131,6 +131,20 @@ export async function checkEligibility(input: EligibilityInput): Promise<Eligibi
   const key = process.env.STEDI_API_KEY;
   if (!key) return mockEligibility();
 
+  // HIPAA safety gate. A Stedi *test* key (prefix "test_") only ever returns
+  // synthetic data — safe. A *live* key transmits and stores REAL patient PHI,
+  // which must not happen until the HIPAA prerequisites (signed BAAs with
+  // Supabase/Stedi/Vercel, audit logging) are in place. We block live PHI until
+  // DOCTORSMART_HIPAA_READY=true is explicitly set, so it can't go live by accident.
+  const isTestKey = key.startsWith("test_");
+  const hipaaReady = process.env.DOCTORSMART_HIPAA_READY === "true";
+  if (!isTestKey && !hipaaReady) {
+    return errorResult(
+      "Live eligibility is blocked: handling real patient PHI requires HIPAA sign-off. " +
+        "Set DOCTORSMART_HIPAA_READY=true only after the BAAs (Supabase, Stedi, Vercel) are signed.",
+    );
+  }
+
   const body = {
     tradingPartnerServiceId: input.payerId,
     provider: { organizationName: input.organizationName, npi: input.npi },
