@@ -32,4 +32,13 @@ describe("parseEligibility", () => {
     expect(parseEligibility(null).status).toBe("inactive");
     expect(parseEligibility({ benefitsInformation: "nope" }).status).toBe("inactive");
   });
+
+  it("surfaces a payer AAA error instead of silently reporting inactive", () => {
+    // Shape confirmed against the live Stedi sandbox (AHS test payer, member-not-found).
+    const r = parseEligibility({
+      errors: [{ code: "79", description: "Invalid Participant Identification" }],
+    });
+    expect(r.status).toBe("error");
+    expect(r.error).toContain("Invalid Participant");
+  });
 });

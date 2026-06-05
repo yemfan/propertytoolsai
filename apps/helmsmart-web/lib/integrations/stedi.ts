@@ -14,7 +14,7 @@
  */
 
 const STEDI_BASE =
-  process.env.STEDI_BASE_URL ?? "https://healthcare.us.stedi.com/2025-06-01";
+  process.env.STEDI_BASE_URL ?? "https://healthcare.us.stedi.com/2024-04-01";
 const ELIGIBILITY_PATH = "/change/medicalnetwork/eligibility/v3";
 
 export interface EligibilityInput {
@@ -78,10 +78,20 @@ const errorResult = (error: string): EligibilityResult => ({
  * "C" Deductible (timeQualifierCode "29" = remaining, else total/per-period).
  */
 export function parseEligibility(resp: unknown): EligibilityResult {
-  const r = (resp ?? {}) as { benefitsInformation?: Benefit[] };
+  const r = (resp ?? {}) as {
+    benefitsInformation?: Benefit[];
+    errors?: { code?: string; description?: string }[];
+  };
   const benefits: Benefit[] = Array.isArray(r.benefitsInformation)
     ? r.benefitsInformation
     : [];
+
+  // The payer/clearinghouse can reject the request (AAA errors: member not found,
+  // payer unreachable, …). Surface that instead of silently reporting "inactive".
+  const payerErrors = Array.isArray(r.errors) ? r.errors : [];
+  if (!benefits.length && payerErrors.length) {
+    return { ...errorResult(payerErrors[0]?.description ?? "Payer could not verify coverage"), raw: resp };
+  }
 
   const active = benefits.some((b) => b.code === "1");
   const inactive = benefits.some((b) => ["6", "7", "8"].includes(b.code ?? ""));
