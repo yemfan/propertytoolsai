@@ -21,6 +21,7 @@ import { notifyBooking } from "@/lib/receptionist-agent";
 import { dispatchTool } from "@helm/ai-workforce";
 import { createSmsReceptionistRegistry, type ToolTextResult } from "@/lib/workforce-tools";
 import { enforceAutonomy } from "@/lib/workforce-gating";
+import { logInboundSMSCommunication, logSMSCommunication } from "@/lib/integrations/communication-auto-logger";
 
 // The SMS receptionist uses Sonnet for reliable multi-step tool-use (qualify →
 // check_availability → book_appointment), same as the live-call path.
@@ -136,6 +137,16 @@ export async function POST(request: NextRequest) {
       external_id: sid,
       sent_at: new Date().toISOString(),
     });
+
+    // Log inbound SMS to communication timeline
+    if (client?.id && body) {
+      void logInboundSMSCommunication({
+        clientId: client.id,
+        phoneNumber: from,
+        messageText: body,
+        twilioSid: sid ?? "",
+      });
+    }
 
     // Triage: auto-create a task for messages that need the owner to act.
     if (analysis.priority === "high" || ["booking", "billing", "complaint"].includes(analysis.intent)) {
@@ -263,6 +274,15 @@ async function sendSms(
       external_id: sms.sid,
       sent_at: new Date().toISOString(),
     });
+    // Log outbound SMS to communication timeline
+    if (opts.clientId) {
+      void logSMSCommunication({
+        clientId: opts.clientId,
+        phoneNumber: opts.to,
+        messageText: opts.body,
+        twilioSid: sms.sid,
+      });
+    }
   } catch (e) {
     console.error("[sms] send error:", e);
   }

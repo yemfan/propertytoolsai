@@ -25,6 +25,7 @@ import { normalizePhoneE164 } from "@/lib/phone";
 import { attributeCallToEmma } from "@/lib/workforce-attribution";
 import { createNotificationService } from "@/lib/actions/notifications";
 import { classifyMissed } from "@/lib/missed-call";
+import { logCallCommunication } from "@/lib/integrations/communication-auto-logger";
 
 type TranscriptTurn = { role?: string; content?: string };
 type Db = Awaited<ReturnType<typeof createServiceClient>>;
@@ -250,6 +251,20 @@ export async function POST(request: NextRequest) {
       await attributeCallToEmma(db, orgId, {
         callId,
         outcome: { from: fromNumber, ...(summary ? { summary } : {}), ...(durationMs > 0 ? { durationSeconds: Math.round(durationMs / 1000) } : {}) },
+      });
+    }
+
+    // Log call to communication timeline on call_analyzed (has summary + duration)
+    if (event === "call_analyzed" && clientId && durationMs > 0) {
+      void logCallCommunication({
+        clientId,
+        phoneNumber: direction === "inbound" ? fromNumber : toNumber,
+        durationSeconds: Math.round(durationMs / 1000),
+        callSid: callId,
+        direction: direction as "inbound" | "outbound",
+        summary: summary ?? undefined,
+        // Emma's AI employee ID is looked up lazily — we pass null for now and
+        // rely on the `from_ai_employee_id` being set by attribution separately
       });
     }
 

@@ -12,7 +12,10 @@ import { ClientEditForm } from "./client-edit-form";
 import { PortalLinkButton } from "./portal-link-button";
 import { ClientNotesPanel } from "@/components/client-notes-panel";
 import { EligibilityPanel } from "@/components/eligibility-panel";
+import { ClientTimelinePanel } from "@/components/client-timeline-panel";
+import { CommunicationPreferences } from "@/components/communication-preferences";
 import { getActivePack } from "@/lib/packs";
+import { getClientCommunications, getClientPreferences } from "@/lib/actions/communication-logs";
 
 export const metadata: Metadata = { title: "Client · CRM" };
 
@@ -75,7 +78,7 @@ export default async function ClientDetailPage({
   const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();
 
-  const [clientRes, invoicesRes, messagesRes, notesRes, clientsPnL, estimatesRes, projectsRes, tasksRes] = await Promise.all([
+  const [clientRes, invoicesRes, messagesRes, notesRes, clientsPnL, estimatesRes, projectsRes, tasksRes, commLogs, commPrefs] = await Promise.all([
     supabase
       .from("clients")
       .select("*, portal_token")
@@ -126,6 +129,8 @@ export default async function ClientDetailPage({
       .in("status", ["open", "in_progress"])
       .order("due_date", { ascending: true, nullsFirst: false })
       .limit(10),
+    getClientCommunications(id, 50),
+    getClientPreferences(id),
   ]);
 
   if (!clientRes.data) notFound();
@@ -448,6 +453,9 @@ export default async function ClientDetailPage({
               </div>
             )}
           </div>
+
+          {/* Communication Timeline */}
+          <ClientTimelinePanel clientId={client.id} initialLogs={commLogs as Parameters<typeof ClientTimelinePanel>[0]["initialLogs"]} />
         </div>
 
         {/* Right column — notes + edit form */}
@@ -465,6 +473,17 @@ export default async function ClientDetailPage({
             />
           )}
           <ClientNotesPanel clientId={client.id} initialNotes={notes} />
+          <CommunicationPreferences
+            clientId={client.id}
+            initialPreferences={commPrefs ? {
+              opted_out_sms: commPrefs.opted_out_sms ?? false,
+              opted_out_email: commPrefs.opted_out_email ?? false,
+              opted_out_calls: commPrefs.opted_out_calls ?? false,
+              preferred_contact_method: commPrefs.preferred_contact_method ?? undefined,
+              best_time_to_contact: commPrefs.best_time_to_contact ?? undefined,
+              notes: commPrefs.notes ?? undefined,
+            } : undefined}
+          />
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <div className="px-5 py-3.5 border-b border-slate-100">
               <h2 className="text-sm font-semibold text-slate-700">Details</h2>
