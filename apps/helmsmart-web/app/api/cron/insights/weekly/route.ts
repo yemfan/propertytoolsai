@@ -24,22 +24,53 @@ export async function GET(request: NextRequest) {
   let generated = 0;
   const errors: string[] = [];
 
+  // Cost gate: only generate for live, recently-active accounts.
+  const INACTIVE_STATUSES = new Set([
+    "canceled", "cancelled", "past_due", "unpaid", "incomplete_expired",
+  ]);
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86_400_000).toISOString();
+  let skipped = 0;
+
   for (const conn of packServiceConns()) {
     const db = createServiceClientFor(conn);
 
-    // Orgs that have at least one client (i.e. real activity)
     const { data: orgs } = await db
       .from("organizations")
-      .select("id")
+      .select("id, subscription_status")
       .limit(500);
 
     for (const org of orgs ?? []) {
-      // Skip orgs with no clients to avoid burning tokens on empty accounts
-      const { count } = await db
+      // 1) Skip churned / unpaid accounts — no point spending tokens on them.
+      if (org.subscription_status && INACTIVE_STATUSES.has(org.subscription_status)) {
+        skipped++;
+        continue;
+      }
+
+      // 2) Skip empty accounts.
+      const { count: clientCount } = await db
         .from("clients")
         .select("id", { count: "exact", head: true })
         .eq("organization_id", org.id);
-      if (!count) continue;
+      if (!clientCount) { skipped++; continue; }
+
+      // 3) Skip dormant accounts — no new client or invoice in the last 30 days.
+      //    Tim has nothing fresh to say, so don't burn a Claude call. Short-circuit
+      //    on clients (the cheaper signal) before checking invoices.
+      const { count: recentClients } = await db
+        .from("clients")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", org.id)
+        .gte("created_at", thirtyDaysAgo);
+      let active = (recentClients ?? 0) > 0;
+      if (!active) {
+        const { count: recentInvoices } = await db
+          .from("invoices")
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", org.id)
+          .gte("created_at", thirtyDaysAgo);
+        active = (recentInvoices ?? 0) > 0;
+      }
+      if (!active) { skipped++; continue; }
 
       const result = await generateBusinessInsight(db, org.id, now);
       if (!result.ok) {
@@ -95,5 +126,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, generated, errors });
+  return NextResponse.json({ ok: true, generated, skipped, errors });
 }
