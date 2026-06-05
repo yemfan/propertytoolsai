@@ -7,6 +7,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { convertEstimateToInvoice } from "@helm/dna-finance";
+import { createNotificationService } from "@/lib/actions/notifications";
 
 export async function POST(
   request: NextRequest,
@@ -30,7 +32,7 @@ export async function POST(
   // Verify estimate exists and is in a respondable state
   const { data: est } = await supabase
     .from("estimates")
-    .select("id, status, expiry_date")
+    .select("id, organization_id, estimate_number, status, expiry_date")
     .eq("id", id)
     .single();
 
@@ -51,6 +53,33 @@ export async function POST(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // On acceptance, auto-draft the invoice and notify the owner. Best-effort:
+  // a failure here must not break the client's acceptance — the estimate is
+  // already marked accepted and the owner can still convert manually from the
+  // estimate page (the "Convert to invoice" button reappears when there's no
+  // converted_invoice_id yet).
+  if (status === "accepted") {
+    try {
+      const { invoiceId } = await convertEstimateToInvoice(
+        supabase,
+        est.organization_id,
+        id
+      );
+      await createNotificationService(
+        est.organization_id,
+        {
+          type: "system",
+          title: `Quote ${est.estimate_number} accepted — invoice drafted`,
+          body: "The client accepted online. A draft invoice is ready to review and send.",
+          link: `/books/invoices/${invoiceId}`,
+        },
+        supabase
+      );
+    } catch (e) {
+      console.error("auto-convert on estimate acceptance failed", e);
+    }
   }
 
   return NextResponse.json({ ok: true, status });
