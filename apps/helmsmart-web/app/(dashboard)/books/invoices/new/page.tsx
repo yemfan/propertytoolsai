@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { InvoiceBuilder } from "@/components/invoice-builder";
+import { RoleGuard } from "@/components/role-guard";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = { title: "New Invoice · Books" };
@@ -46,6 +47,7 @@ export default async function NewInvoicePage({
         </div>
       </div>
 
+      <RoleGuard permission="invoices.write" />
       <InvoiceBuilder
         clients={(clients ?? []) as { id: string; first_name: string | null; last_name: string | null; company: string | null; email: string | null }[]}
         revenueAccounts={(revenueAccounts ?? []) as { id: string; code: string; name: string }[]}

@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { checkActionPermission } from "@/components/role-guard";
 
 export interface FormField {
   id: string;
@@ -82,6 +83,9 @@ export async function createForm(input: {
   notifySms?: boolean;
   redirectUrl?: string;
 }): Promise<{ ok: boolean; formId?: string; error?: string }> {
+  const denied = await checkActionPermission("forms.write");
+  if (denied) return denied;
+
   const cookieStore = await cookies();
   const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return { ok: false, error: "Not authenticated" };

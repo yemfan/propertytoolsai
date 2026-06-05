@@ -12,6 +12,7 @@ import { ReceptionSettings } from "@/components/reception-settings";
 import { NpiSetting } from "@/components/npi-setting";
 import { SlackSettings } from "@/components/slack-settings";
 import { getActivePack } from "@/lib/packs";
+import { requirePermission } from "@/lib/rbac";
 import { Users, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -33,6 +34,8 @@ const MONTHS = [
 const SECTION_H2 = "text-sm font-semibold text-slate-700 mb-4 pb-2 border-b border-slate-200";
 
 export default async function SettingsPage() {
+  await requirePermission("settings.read");
+
   const cookieStore = await cookies();
   const orgId = cookieStore.get("helmsmart-org-id")?.value ?? "";
   const supabase = await createClient();

@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { sendSMSCampaign } from "@/lib/integrations/sms-campaign-sender";
+import { checkActionPermission } from "@/components/role-guard";
 
 export interface CreateCampaignInput {
   name: string;
@@ -22,6 +23,9 @@ export interface CreateCampaignInput {
 export async function createSMSCampaign(
   input: CreateCampaignInput
 ): Promise<{ ok: boolean; campaignId?: string; error?: string }> {
+  const denied = await checkActionPermission("campaigns.write");
+  if (denied) return denied;
+
   const cookieStore = await cookies();
   const orgId = cookieStore.get("helmsmart-org-id")?.value;
   if (!orgId) return { ok: false, error: "Not authenticated" };
