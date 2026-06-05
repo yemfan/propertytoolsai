@@ -1110,6 +1110,53 @@ export type Database = {
           },
         ]
       }
+      business_insights: {
+        Row: {
+          generated_at: string
+          headline: string
+          id: string
+          insights: Json
+          metrics_snapshot: Json | null
+          model: string | null
+          organization_id: string
+          period_end: string
+          period_start: string
+          summary: string
+        }
+        Insert: {
+          generated_at?: string
+          headline: string
+          id?: string
+          insights?: Json
+          metrics_snapshot?: Json | null
+          model?: string | null
+          organization_id: string
+          period_end: string
+          period_start: string
+          summary: string
+        }
+        Update: {
+          generated_at?: string
+          headline?: string
+          id?: string
+          insights?: Json
+          metrics_snapshot?: Json | null
+          model?: string | null
+          organization_id?: string
+          period_end?: string
+          period_start?: string
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_insights_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calls: {
         Row: {
           auto_replied: boolean
@@ -1282,6 +1329,63 @@ export type Database = {
             columns: ["parent_account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_ai_briefs: {
+        Row: {
+          client_id: string
+          generated_at: string
+          headline: string
+          health_label: string | null
+          health_score: number | null
+          id: string
+          key_facts: Json
+          model: string | null
+          next_action: string | null
+          organization_id: string
+          summary: string
+        }
+        Insert: {
+          client_id: string
+          generated_at?: string
+          headline: string
+          health_label?: string | null
+          health_score?: number | null
+          id?: string
+          key_facts?: Json
+          model?: string | null
+          next_action?: string | null
+          organization_id: string
+          summary: string
+        }
+        Update: {
+          client_id?: string
+          generated_at?: string
+          headline?: string
+          health_label?: string | null
+          health_score?: number | null
+          id?: string
+          key_facts?: Json
+          model?: string | null
+          next_action?: string | null
+          organization_id?: string
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_ai_briefs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_ai_briefs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1782,10 +1886,17 @@ export type Database = {
           failed_count: number
           from_name: string | null
           id: string
+          is_recurring: boolean
+          last_run_at: string | null
           name: string
+          next_run_at: string | null
           open_count: number
           organization_id: string
+          parent_campaign_id: string | null
           preview_text: string | null
+          recurrence_day: number | null
+          recurrence_hour: number | null
+          recurrence_interval: string | null
           reply_to: string | null
           scheduled_for: string | null
           sent_at: string | null
@@ -1812,10 +1923,17 @@ export type Database = {
           failed_count?: number
           from_name?: string | null
           id?: string
+          is_recurring?: boolean
+          last_run_at?: string | null
           name: string
+          next_run_at?: string | null
           open_count?: number
           organization_id: string
+          parent_campaign_id?: string | null
           preview_text?: string | null
+          recurrence_day?: number | null
+          recurrence_hour?: number | null
+          recurrence_interval?: string | null
           reply_to?: string | null
           scheduled_for?: string | null
           sent_at?: string | null
@@ -1842,10 +1960,17 @@ export type Database = {
           failed_count?: number
           from_name?: string | null
           id?: string
+          is_recurring?: boolean
+          last_run_at?: string | null
           name?: string
+          next_run_at?: string | null
           open_count?: number
           organization_id?: string
+          parent_campaign_id?: string | null
           preview_text?: string | null
+          recurrence_day?: number | null
+          recurrence_hour?: number | null
+          recurrence_interval?: string | null
           reply_to?: string | null
           scheduled_for?: string | null
           sent_at?: string | null
@@ -1864,6 +1989,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_campaigns_parent_campaign_id_fkey"
+            columns: ["parent_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
             referencedColumns: ["id"]
           },
         ]
@@ -2940,6 +3072,7 @@ export type Database = {
           auto_reply: boolean
           auto_reply_msg: string
           auto_request_reviews: boolean | null
+          auto_send_reminders: boolean
           business_hours: Json | null
           created_at: string
           currency: string
@@ -2952,6 +3085,8 @@ export type Database = {
           npi: string | null
           owner_english_assist: boolean
           plan: string
+          reminder_days_intervals: number[]
+          reminder_max_count: number
           slack_notify_approval: boolean
           slack_notify_form_submission: boolean
           slack_notify_missed_call: boolean
@@ -2980,6 +3115,7 @@ export type Database = {
           auto_reply?: boolean
           auto_reply_msg?: string
           auto_request_reviews?: boolean | null
+          auto_send_reminders?: boolean
           business_hours?: Json | null
           created_at?: string
           currency?: string
@@ -2992,6 +3128,8 @@ export type Database = {
           npi?: string | null
           owner_english_assist?: boolean
           plan?: string
+          reminder_days_intervals?: number[]
+          reminder_max_count?: number
           slack_notify_approval?: boolean
           slack_notify_form_submission?: boolean
           slack_notify_missed_call?: boolean
@@ -3020,6 +3158,7 @@ export type Database = {
           auto_reply?: boolean
           auto_reply_msg?: string
           auto_request_reviews?: boolean | null
+          auto_send_reminders?: boolean
           business_hours?: Json | null
           created_at?: string
           currency?: string
@@ -3032,6 +3171,8 @@ export type Database = {
           npi?: string | null
           owner_english_assist?: boolean
           plan?: string
+          reminder_days_intervals?: number[]
+          reminder_max_count?: number
           slack_notify_approval?: boolean
           slack_notify_form_submission?: boolean
           slack_notify_missed_call?: boolean
@@ -3167,6 +3308,59 @@ export type Database = {
           },
           {
             foreignKeyName: "payee_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_templates: {
+        Row: {
+          budget_hours: number | null
+          color: string
+          created_at: string | null
+          default_duration_days: number | null
+          default_tasks: Json
+          description: string | null
+          hourly_rate: number | null
+          id: string
+          name: string
+          organization_id: string
+          updated_at: string | null
+          usage_count: number
+        }
+        Insert: {
+          budget_hours?: number | null
+          color?: string
+          created_at?: string | null
+          default_duration_days?: number | null
+          default_tasks?: Json
+          description?: string | null
+          hourly_rate?: number | null
+          id?: string
+          name: string
+          organization_id: string
+          updated_at?: string | null
+          usage_count?: number
+        }
+        Update: {
+          budget_hours?: number | null
+          color?: string
+          created_at?: string | null
+          default_duration_days?: number | null
+          default_tasks?: Json
+          description?: string | null
+          hourly_rate?: number | null
+          id?: string
+          name?: string
+          organization_id?: string
+          updated_at?: string | null
+          usage_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_templates_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
