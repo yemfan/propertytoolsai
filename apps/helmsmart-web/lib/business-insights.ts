@@ -8,6 +8,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
+import { pctChange } from "@/lib/metrics-format";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -134,12 +135,6 @@ async function gatherMetrics(
   };
 }
 
-function pctChange(now: number, prev: number): string {
-  if (prev === 0) return now > 0 ? "new" : "flat";
-  const pct = ((now - prev) / prev) * 100;
-  const sign = pct >= 0 ? "+" : "";
-  return `${sign}${pct.toFixed(0)}%`;
-}
 
 /**
  * Generate (and persist) a weekly business-insights digest for an org.

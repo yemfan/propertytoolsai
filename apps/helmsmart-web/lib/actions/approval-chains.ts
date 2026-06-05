@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { checkActionPermission } from "@/components/role-guard";
 import { createNotificationService } from "@/lib/actions/notifications";
 import { notifySlackApprovalPending } from "@/lib/integrations/slack";
+import { findCurrentPendingStep, computeApprovalTransition } from "@/lib/approval-state";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -298,8 +299,8 @@ export async function respondToApprovalStep(
   if (!request) return { ok: false, error: "Request not found" };
   if (request.status !== "pending") return { ok: false, error: "Request is no longer pending" };
 
-  const currentStepRecord = (request.steps as Array<{ id: string; step_order: number; status: string }>)
-    .find((s) => s.step_order === request.current_step && s.status === "pending");
+  const steps = request.steps as Array<{ id: string; step_order: number; status: string }>;
+  const currentStepRecord = findCurrentPendingStep(steps, request.current_step);
 
   if (!currentStepRecord) return { ok: false, error: "No pending step found" };
 
@@ -316,10 +317,10 @@ export async function respondToApprovalStep(
     })
     .eq("id", currentStepRecord.id);
 
-  const allSteps = (request.steps as Array<{ step_order: number }>)
-    .sort((a, b) => a.step_order - b.step_order);
-  const maxStep = allSteps[allSteps.length - 1].step_order;
-  const nextStep = request.current_step + 1;
+  // Pure state-machine decision (unit-tested in lib/approval-state.test.ts)
+  const transition = computeApprovalTransition(request.current_step, steps, decision);
+  const maxStep = steps.reduce((m, s) => Math.max(m, s.step_order), steps[0]?.step_order ?? 1);
+  const nextStep = transition.nextStep;
 
   if (decision === "rejected") {
     // Rejected — close the whole request
@@ -344,7 +345,7 @@ export async function respondToApprovalStep(
     return { ok: true, requestStatus: "rejected" };
   }
 
-  if (nextStep > maxStep) {
+  if (transition.requestStatus === "approved") {
     // All steps approved — final approval
     await db
       .from("approval_requests")

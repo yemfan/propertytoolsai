@@ -22,6 +22,12 @@ vi.mock("@/lib/actions/notifications", () => ({
   createNotificationService: vi.fn().mockResolvedValue(undefined),
 }));
 
+// slack.ts transitively imports supabase/server, which can't load under vitest —
+// stub the only export the gating module uses.
+vi.mock("@/lib/integrations/slack", () => ({
+  notifySlackApprovalPending: vi.fn().mockResolvedValue(false),
+}));
+
 vi.mock("@helm/dna-operations", () => ({
   insertTask: vi.fn().mockResolvedValue(undefined),
 }));
