@@ -3,7 +3,8 @@
 import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createExpense } from "@/lib/actions/expenses";
-import { DollarSign, ScanLine, X, Loader2, ImagePlus, CheckCircle2, Camera } from "lucide-react";
+import { suggestExpenseAccount } from "@/lib/actions/expense-categorize";
+import { DollarSign, ScanLine, X, Loader2, ImagePlus, CheckCircle2, Camera, Sparkles } from "lucide-react";
 
 interface CoAAccount {
   id: string;
@@ -70,6 +71,29 @@ export function ExpenseForm({ expenseAccounts, bankAccounts, projects, onSuccess
   const [amount, setAmount]             = useState("");
   const [description, setDescription]   = useState("");
   const [expenseAccountId, setExpenseAccountId] = useState(expenseAccounts[0]?.id ?? "");
+
+  // AI category suggestion
+  const [suggesting, setSuggesting]     = useState(false);
+  const [suggestReason, setSuggestReason] = useState<string | null>(null);
+
+  async function handleSuggestCategory() {
+    if (!description.trim() || suggesting) return;
+    setSuggesting(true);
+    setSuggestReason(null);
+    try {
+      const result = await suggestExpenseAccount(description.trim());
+      if (result) {
+        setExpenseAccountId(result.accountId);
+        setSuggestReason(`${result.accountName} — ${result.reason}`);
+      } else {
+        setSuggestReason("No confident match — pick manually.");
+      }
+    } catch {
+      setSuggestReason("Couldn't suggest a category.");
+    } finally {
+      setSuggesting(false);
+    }
+  }
   const [paymentSourceId, setPaymentSourceId]   = useState<string>("");
   const [projectId, setProjectId]       = useState<string>("");
   const [error, setError]               = useState("");
@@ -275,10 +299,24 @@ export function ExpenseForm({ expenseAccounts, bankAccounts, projects, onSuccess
 
         {/* Expense account (DR) */}
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">Expense account</label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-medium text-slate-600">Expense account</label>
+            <button
+              type="button"
+              onClick={handleSuggestCategory}
+              disabled={!description.trim() || suggesting}
+              title={description.trim() ? "Let AI pick the best account" : "Add a description first"}
+              className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {suggesting
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <Sparkles className="w-3 h-3" />}
+              {suggesting ? "Thinking…" : "Suggest"}
+            </button>
+          </div>
           <select
             value={expenseAccountId}
-            onChange={(e) => setExpenseAccountId(e.target.value)}
+            onChange={(e) => { setExpenseAccountId(e.target.value); setSuggestReason(null); }}
             className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
           >
             {expenseAccounts.length === 0 && (
@@ -290,7 +328,14 @@ export function ExpenseForm({ expenseAccounts, bankAccounts, projects, onSuccess
               </option>
             ))}
           </select>
-          <p className="text-xs text-slate-400 mt-1">Debited (expense increases)</p>
+          {suggestReason ? (
+            <p className="text-xs text-indigo-600 mt-1 flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              {suggestReason}
+            </p>
+          ) : (
+            <p className="text-xs text-slate-400 mt-1">Debited (expense increases)</p>
+          )}
         </div>
 
         {/* Payment source (CR) */}
