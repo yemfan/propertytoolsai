@@ -3,7 +3,11 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { insertEstimateWithLines, setEstimateStatus as setEstimateStatusFinance } from "@helm/dna-finance";
+import {
+  insertEstimateWithLines,
+  setEstimateStatus as setEstimateStatusFinance,
+  convertEstimateToInvoice as convertEstimateToInvoiceFinance,
+} from "@helm/dna-finance";
 import { Resend } from "resend";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -227,81 +231,17 @@ export async function convertEstimateToInvoice(
   if (!orgId) throw new Error("No org");
 
   const supabase = await createClient();
-
-  const { data: est } = await supabase
-    .from("estimates")
-    .select("*, estimate_lines(description, quantity, unit_price, amount, sort_order)")
-    .eq("id", estimateId)
-    .eq("organization_id", orgId)
-    .single();
-
-  if (!est) throw new Error("Estimate not found");
-
-  // Next invoice number
-  const { count } = await supabase
-    .from("invoices")
-    .select("*", { count: "exact", head: true })
-    .eq("organization_id", orgId);
-  const n = (count ?? 0) + 1;
-  const invoiceNumber = `INV-${String(n).padStart(4, "0")}`;
-
-  // Due date = 30 days from today
-  const dueDate = new Date();
-  dueDate.setDate(dueDate.getDate() + 30);
-  const dueDateStr = dueDate.toISOString().slice(0, 10);
-
-  const { data: inv, error } = await supabase
-    .from("invoices")
-    .insert({
-      organization_id: orgId,
-      client_id: est.client_id,
-      invoice_number: invoiceNumber,
-      status: "draft",
-      issue_date: new Date().toISOString().slice(0, 10),
-      due_date: dueDateStr,
-      subtotal: est.subtotal,
-      tax_rate: est.tax_rate,
-      tax_amount: est.tax_amount,
-      total: est.total,
-      notes: est.notes ?? null,
-    })
-    .select("id")
-    .single();
-
-  if (error || !inv) throw new Error(error?.message ?? "Failed to create invoice");
-
-  // Copy lines
-  const lines = (
-    Array.isArray(est.estimate_lines) ? est.estimate_lines : []
-  ) as EstimateLine[];
-  if (lines.length > 0) {
-    await supabase.from("invoice_lines").insert(
-      lines.map((l, i) => ({
-        invoice_id: inv.id,
-        description: l.description,
-        quantity: l.quantity,
-        unit_price: l.unit_price,
-        amount: l.amount,
-        sort_order: i,
-      }))
-    );
-  }
-
-  // Link back to estimate
-  await supabase
-    .from("estimates")
-    .update({
-      status: "accepted",
-      converted_invoice_id: inv.id,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", estimateId);
+  const { invoiceId } = await convertEstimateToInvoiceFinance(
+    supabase,
+    orgId,
+    estimateId
+  );
 
   revalidatePath("/books/estimates");
   revalidatePath(`/books/estimates/${estimateId}`);
   revalidatePath("/books/invoices");
 
-  return inv.id;
+  return invoiceId;
 }
 
 // ─── Convert to project ───────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@helm/data/types";
 import { computeTotals, formatDocNumber } from "./money";
+import { insertInvoiceWithLines } from "./invoices";
 
 type Db = SupabaseClient<Database>;
 
@@ -86,4 +87,68 @@ export async function setEstimateStatus(
     .update({ status, updated_at: new Date().toISOString() })
     .eq("id", estimateId)
     .eq("organization_id", orgId);
+}
+
+/**
+ * Convert an estimate into a draft invoice: copies the line items, links the two
+ * records (`estimates.converted_invoice_id`), and marks the estimate accepted.
+ * Pure persistence — the caller owns notifications / revalidation / email.
+ *
+ * Idempotent: if the estimate already has a `converted_invoice_id`, returns it
+ * without creating a duplicate (so the public accept route and the owner's
+ * manual button can't race into two invoices).
+ */
+export async function convertEstimateToInvoice(
+  db: Db,
+  orgId: string,
+  estimateId: string,
+  opts?: { dueInDays?: number }
+): Promise<{ invoiceId: string; alreadyConverted: boolean }> {
+  const { data: est, error } = await db
+    .from("estimates")
+    .select(
+      "id, client_id, tax_rate, notes, converted_invoice_id, estimate_lines(description, quantity, unit_price, amount, sort_order)"
+    )
+    .eq("id", estimateId)
+    .eq("organization_id", orgId)
+    .single();
+
+  if (error || !est) throw new Error(error?.message ?? "Estimate not found");
+  if (est.converted_invoice_id) {
+    return { invoiceId: est.converted_invoice_id as string, alreadyConverted: true };
+  }
+
+  const rawLines = Array.isArray(est.estimate_lines) ? est.estimate_lines : [];
+  const lines = [...rawLines]
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((l) => ({
+      description: l.description,
+      quantity: Number(l.quantity),
+      unit_price: Number(l.unit_price),
+      amount: Number(l.amount),
+    }));
+
+  const due = new Date();
+  due.setDate(due.getDate() + (opts?.dueInDays ?? 30));
+  const dueDate = due.toISOString().slice(0, 10);
+
+  const invoiceId = await insertInvoiceWithLines(db, orgId, {
+    clientId: (est.client_id as string | null) ?? null,
+    dueDate,
+    taxRate: Number(est.tax_rate),
+    notes: (est.notes as string | null) ?? "",
+    lines,
+  });
+
+  await db
+    .from("estimates")
+    .update({
+      status: "accepted",
+      converted_invoice_id: invoiceId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", estimateId)
+    .eq("organization_id", orgId);
+
+  return { invoiceId, alreadyConverted: false };
 }
