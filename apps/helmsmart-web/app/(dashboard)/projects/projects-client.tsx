@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Plus, Folder, X, ChevronRight, Clock, DollarSign, CheckSquare, AlertCircle, Repeat } from "lucide-react";
+import { Plus, Folder, X, ChevronRight, Clock, DollarSign, CheckSquare, AlertCircle, Repeat, LayoutTemplate } from "lucide-react";
 import { createProject, deleteProject, type Project, type ProjectColor, type ProjectWithPnL } from "@/lib/actions/projects";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -315,6 +315,13 @@ export function ProjectsClient({ initialProjects, clients }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href="/projects/templates"
+            className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-indigo-700 transition-colors"
+          >
+            <LayoutTemplate className="w-4 h-4" />
+            Templates
+          </Link>
           <Link
             href="/projects/recurring"
             className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-indigo-700 transition-colors"
