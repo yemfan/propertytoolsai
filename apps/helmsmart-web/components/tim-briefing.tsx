@@ -1,3 +1,5 @@
+"use client";
+
 import { defaultAvatarForSeed } from "@helm/ui";
 import { getBlueprint } from "@helm/ai-workforce";
 
