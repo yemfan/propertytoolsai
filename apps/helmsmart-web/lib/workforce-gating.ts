@@ -22,6 +22,7 @@
 
 import { createNotificationService } from "@/lib/actions/notifications";
 import { insertTask } from "@helm/dna-operations";
+import { notifySlackApprovalPending } from "@/lib/integrations/slack";
 import {
   getEmployee,
   startRun,
@@ -106,6 +107,15 @@ export async function enforceAutonomy(
       body: opts.description.slice(0, 120),
       link: "/tasks",
     });
+
+    // Slack notification (fire-and-forget)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    void notifySlackApprovalPending(orgId, {
+      employeeName: employee.name,
+      description: opts.description.slice(0, 200),
+      approvalsUrl: `${appUrl}/tasks`,
+    });
+
     return { status: "escalated", runId };
   }
 

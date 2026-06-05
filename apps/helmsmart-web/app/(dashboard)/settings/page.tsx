@@ -10,6 +10,7 @@ import { PlaidLink } from "@/components/plaid-link";
 import { BillingRatesForm } from "@/components/billing-rates-form";
 import { ReceptionSettings } from "@/components/reception-settings";
 import { NpiSetting } from "@/components/npi-setting";
+import { SlackSettings } from "@/components/slack-settings";
 import { getActivePack } from "@/lib/packs";
 import { Users, ChevronRight } from "lucide-react";
 
@@ -39,7 +40,7 @@ export default async function SettingsPage() {
   const [{ data: org }, { data: bankAccounts }, { data: coaAccounts }] = await Promise.all([
     supabase
       .from("organizations")
-      .select("id, slug, name, entity_type, accounting_basis, currency, timezone, fiscal_year_end_month, default_hourly_rate, default_labor_cost_rate, weekly_digest_enabled, owner_english_assist, plan, subscription_status, trial_ends_at, twilio_number, auto_reply, auto_reply_msg, npi")
+      .select("id, slug, name, entity_type, accounting_basis, currency, timezone, fiscal_year_end_month, default_hourly_rate, default_labor_cost_rate, weekly_digest_enabled, owner_english_assist, plan, subscription_status, trial_ends_at, twilio_number, auto_reply, auto_reply_msg, npi, slack_webhook_url, slack_notify_new_lead, slack_notify_approval, slack_notify_missed_call, slack_notify_form_submission")
       .eq("id", orgId)
       .single(),
     supabase
@@ -168,6 +169,17 @@ export default async function SettingsPage() {
               autoReply={org?.auto_reply ?? false}
               autoReplyMsg={org?.auto_reply_msg ?? "Hey! We missed your call. We'll get back to you shortly."}
             />
+
+            <section>
+              <h2 className={SECTION_H2}>Slack notifications</h2>
+              <SlackSettings
+                webhookUrl={org?.slack_webhook_url ?? null}
+                notifyNewLead={org?.slack_notify_new_lead ?? true}
+                notifyApproval={org?.slack_notify_approval ?? true}
+                notifyMissedCall={org?.slack_notify_missed_call ?? true}
+                notifyFormSubmission={org?.slack_notify_form_submission ?? true}
+              />
+            </section>
 
             <section>
             <h2 className="text-sm font-semibold text-slate-700 mb-1 pb-2 border-b border-slate-200">

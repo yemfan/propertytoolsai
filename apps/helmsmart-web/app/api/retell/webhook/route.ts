@@ -26,6 +26,7 @@ import { attributeCallToEmma } from "@/lib/workforce-attribution";
 import { createNotificationService } from "@/lib/actions/notifications";
 import { classifyMissed } from "@/lib/missed-call";
 import { logCallCommunication } from "@/lib/integrations/communication-auto-logger";
+import { notifySlackMissedCall } from "@/lib/integrations/slack";
 
 type TranscriptTurn = { role?: string; content?: string };
 type Db = Awaited<ReturnType<typeof createServiceClient>>;
@@ -162,6 +163,14 @@ async function maybeTextBackMissedCall(
       title: "Missed call — auto-texted",
       body: `Texted ${caller.value} back`,
       link: "/voice",
+    });
+
+    // Slack notification (fire-and-forget)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    void notifySlackMissedCall(args.orgId, {
+      callerNumber: caller.value,
+      autoTexted: true,
+      voiceUrl: `${appUrl}/voice`,
     });
   } catch (e) {
     console.error("[retell webhook] missed-call text-back failed:", e);

@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import twilio from "twilio";
+import { notifySlackFormSubmission } from "@/lib/integrations/slack";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -150,6 +151,17 @@ export async function POST(
         `,
       }).catch((e) => console.error("[forms] email notify error:", e));
     }
+
+    // Notify via Slack (fire-and-forget)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    void notifySlackFormSubmission(form.organization_id, {
+      formTitle: form.title,
+      name: name ?? undefined,
+      email: email ?? undefined,
+      phone: phone ?? undefined,
+      submissionsUrl: `${appUrl}/forms/${form.id}/submissions`,
+      clientUrl: clientId ? `${appUrl}/clients/${clientId}` : undefined,
+    });
 
     // Notify via SMS if enabled
     if (form.notify_sms) {
