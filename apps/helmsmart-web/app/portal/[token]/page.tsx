@@ -1,32 +1,52 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { FileText, CheckCircle2, Clock, AlertCircle, XCircle } from "lucide-react";
-import Link from "next/link";
+import { FileText, CheckCircle2, Clock, AlertCircle, XCircle, Calendar, ChevronRight } from "lucide-react";
 
 const fmt = (n: number | string) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(n));
 
-const INV_STATUS: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  draft:   { label: "Draft",   color: "#94a3b8", icon: FileText },
-  sent:    { label: "Sent",    color: "#3b82f6", icon: Clock },
-  paid:    { label: "Paid",    color: "#10b981", icon: CheckCircle2 },
-  overdue: { label: "Overdue", color: "#f43f5e", icon: AlertCircle },
-  void:    { label: "Void",    color: "#94a3b8", icon: XCircle },
+const fmtDate = (d: string) =>
+  new Date(d + "T00:00:00").toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+  });
+
+const INV_STATUS: Record<string, { label: string; bgColor: string; textColor: string; icon: React.ElementType }> = {
+  draft:   { label: "Draft",   bgColor: "#f1f5f9", textColor: "#64748b", icon: FileText },
+  sent:    { label: "Sent",    bgColor: "#eff6ff", textColor: "#2563eb", icon: Clock },
+  paid:    { label: "Paid",    bgColor: "#f0fdf4", textColor: "#16a34a", icon: CheckCircle2 },
+  overdue: { label: "Overdue", bgColor: "#fff1f2", textColor: "#e11d48", icon: AlertCircle },
+  void:    { label: "Void",    bgColor: "#f1f5f9", textColor: "#94a3b8", icon: XCircle },
 };
 
-const EST_STATUS: Record<string, { label: string; color: string }> = {
-  draft:    { label: "Draft",    color: "#94a3b8" },
-  sent:     { label: "Sent",     color: "#3b82f6" },
-  accepted: { label: "Accepted", color: "#10b981" },
-  declined: { label: "Declined", color: "#f43f5e" },
-  expired:  { label: "Expired",  color: "#f59e0b" },
+const EST_STATUS: Record<string, { label: string; bgColor: string; textColor: string }> = {
+  draft:    { label: "Draft",    bgColor: "#f1f5f9", textColor: "#64748b" },
+  sent:     { label: "Awaiting approval", bgColor: "#eff6ff", textColor: "#2563eb" },
+  accepted: { label: "Accepted", bgColor: "#f0fdf4", textColor: "#16a34a" },
+  declined: { label: "Declined", bgColor: "#fff1f2", textColor: "#e11d48" },
+  expired:  { label: "Expired",  bgColor: "#fffbeb", textColor: "#d97706" },
 };
 
-function Card({ children }: { children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #e2e8f0", overflow: "hidden", marginBottom: 24 }}>
-      {children}
+    <div style={{ marginBottom: 28 }}>
+      <h2 style={{ fontSize: 12, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 12px" }}>
+        {title}
+      </h2>
+      <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #e2e8f0", overflow: "hidden" }}>
+        {children}
+      </div>
     </div>
+  );
+}
+
+function Badge({ label, bgColor, textColor }: { label: string; bgColor: string; textColor: string }) {
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 100,
+      background: bgColor, color: textColor, whiteSpace: "nowrap",
+    }}>
+      {label}
+    </span>
   );
 }
 
@@ -36,10 +56,8 @@ export default async function ClientPortalPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-
   const sb = await createServiceClient();
 
-  // Look up client by portal token
   const { data: client } = await sb
     .from("clients")
     .select("id, first_name, last_name, company, email, organization_id")
@@ -49,55 +67,63 @@ export default async function ClientPortalPage({
   if (!client) notFound();
 
   const clientName =
-    [client.first_name, client.last_name].filter(Boolean).join(" ") || client.company || "Client";
+    [client.first_name, client.last_name].filter(Boolean).join(" ") ||
+    client.company ||
+    "Client";
 
-  // Load org name
-  const { data: org } = await sb
-    .from("organizations")
-    .select("name")
-    .eq("id", client.organization_id)
-    .single();
-  const orgName = org?.name ?? "HelmSmart";
+  const [orgRes, invoicesRes, estimatesRes, eventsRes] = await Promise.all([
+    sb.from("organizations").select("name").eq("id", client.organization_id).single(),
+    sb.from("invoices")
+      .select("id, invoice_number, status, issue_date, due_date, total, paid_at")
+      .eq("client_id", client.id)
+      .neq("status", "draft")
+      .order("issue_date", { ascending: false }),
+    sb.from("estimates")
+      .select("id, estimate_number, status, issue_date, expiry_date, total")
+      .eq("client_id", client.id)
+      .neq("status", "draft")
+      .order("issue_date", { ascending: false }),
+    sb.from("events")
+      .select("id, title, type, start_at, all_day")
+      .eq("client_id", client.id)
+      .eq("organization_id", client.organization_id)
+      .eq("completed", false)
+      .gte("start_at", new Date().toISOString())
+      .order("start_at", { ascending: true })
+      .limit(5),
+  ]);
 
-  // Load invoices
-  const { data: invoicesRaw } = await sb
-    .from("invoices")
-    .select("id, invoice_number, status, issue_date, due_date, total, paid_at")
-    .eq("client_id", client.id)
-    .neq("status", "draft")
-    .order("issue_date", { ascending: false });
+  const orgName   = orgRes.data?.name ?? "HelmSmart";
+  const invoices  = invoicesRes.data ?? [];
+  const estimates = estimatesRes.data ?? [];
+  const events    = eventsRes.data ?? [];
 
-  // Load estimates
-  const { data: estimatesRaw } = await sb
-    .from("estimates")
-    .select("id, estimate_number, status, issue_date, expiry_date, total")
-    .eq("client_id", client.id)
-    .neq("status", "draft")
-    .order("issue_date", { ascending: false });
-
-  const invoices  = invoicesRaw ?? [];
-  const estimates = estimatesRaw ?? [];
-
+  const today = new Date().toISOString().slice(0, 10);
   const totalPaid        = invoices.filter((i) => i.status === "paid").reduce((s, i) => s + Number(i.total), 0);
   const totalOutstanding = invoices.filter((i) => i.status === "sent" || i.status === "overdue").reduce((s, i) => s + Number(i.total), 0);
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const openEstimates    = estimates.filter((e) => e.status === "sent");
+  const appUrl           = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
-      {/* Header bar */}
-      <div style={{ background: "#1e88e5", padding: "16px 0" }}>
-        <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>{orgName}</span>
-          <span style={{ color: "#aad4f7", fontSize: 13 }}>Client Portal</span>
+      {/* Top bar */}
+      <div style={{ background: "#1e1e2e", padding: "0" }}>
+        <div style={{ maxWidth: 680, margin: "0 auto", padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ color: "#fff", fontSize: 13, fontWeight: 800 }}>H</span>
+            </div>
+            <span style={{ color: "#e2e8f0", fontWeight: 700, fontSize: 15 }}>{orgName}</span>
+          </div>
+          <span style={{ color: "#94a3b8", fontSize: 12, fontWeight: 500 }}>Client Portal</span>
         </div>
       </div>
 
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "40px 24px" }}>
+      <div style={{ maxWidth: 680, margin: "0 auto", padding: "36px 24px 60px" }}>
         {/* Greeting */}
-        <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: "#1e293b", margin: "0 0 4px" }}>
-            Hi, {clientName}
+        <div style={{ marginBottom: 28 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: "0 0 4px" }}>
+            Hi {clientName} 👋
           </h1>
           <p style={{ fontSize: 14, color: "#64748b", margin: 0 }}>
             Here's a summary of your account with {orgName}.
@@ -105,127 +131,151 @@ export default async function ClientPortalPage({
         </div>
 
         {/* KPI strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 32 }}>
-          {[
-            { label: "Amount paid", value: fmt(totalPaid), color: "#10b981" },
-            { label: "Outstanding", value: fmt(totalOutstanding), color: totalOutstanding > 0 ? "#f43f5e" : "#94a3b8" },
-          ].map(({ label, value, color }) => (
-            <div key={label} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "20px 24px" }}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>
-                {label}
-              </p>
-              <p style={{ fontSize: 24, fontWeight: 700, color, margin: 0 }}>{value}</p>
-            </div>
-          ))}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 28 }}>
+          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "20px 22px" }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>Amount paid</p>
+            <p style={{ fontSize: 22, fontWeight: 800, color: "#16a34a", margin: 0, fontVariantNumeric: "tabular-nums" }}>{fmt(totalPaid)}</p>
+          </div>
+          <div style={{ background: totalOutstanding > 0 ? "#fff7f7" : "#fff", border: `1px solid ${totalOutstanding > 0 ? "#fecaca" : "#e2e8f0"}`, borderRadius: 14, padding: "20px 22px" }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>Outstanding</p>
+            <p style={{ fontSize: 22, fontWeight: 800, color: totalOutstanding > 0 ? "#e11d48" : "#94a3b8", margin: 0, fontVariantNumeric: "tabular-nums" }}>{fmt(totalOutstanding)}</p>
+          </div>
         </div>
 
-        {/* Invoices */}
-        {invoices.length > 0 && (
-          <Card>
-            <div style={{ padding: "16px 24px", borderBottom: "1px solid #f1f5f9" }}>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: "#334155", margin: 0 }}>Invoices</h2>
-            </div>
-            {invoices.map((inv, i) => {
-              const cfg = INV_STATUS[inv.status] ?? INV_STATUS.sent;
-              const StatusIcon = cfg.icon;
-              const isLast = i === invoices.length - 1;
+        {/* Estimates needing action */}
+        {openEstimates.length > 0 && (
+          <div style={{ background: "#eef2ff", border: "1px solid #c7d2fe", borderRadius: 14, padding: "16px 20px", marginBottom: 28 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#4338ca", margin: "0 0 12px" }}>
+              ✍️ {openEstimates.length} estimate{openEstimates.length !== 1 ? "s" : ""} waiting for your approval
+            </p>
+            {openEstimates.map((est) => (
+              <div key={est.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", fontFamily: "monospace" }}>{est.estimate_number}</span>
+                  <span style={{ fontSize: 12, color: "#6366f1", marginLeft: 8 }}>{fmt(est.total)}</span>
+                </div>
+                <a
+                  href={`${appUrl}/accept/${est.id}`}
+                  style={{
+                    padding: "7px 18px", background: "#4f46e5", color: "#fff",
+                    borderRadius: 8, fontSize: 12, fontWeight: 600, textDecoration: "none",
+                  }}
+                >
+                  Review →
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Upcoming appointments */}
+        {events.length > 0 && (
+          <Section title="Upcoming Appointments">
+            {events.map((evt, i) => {
+              const evtDate = new Date(evt.start_at);
+              const isToday = evtDate.toISOString().slice(0, 10) === today;
+              const dateStr = isToday
+                ? `Today at ${evtDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
+                : evtDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+              const isLast = i === events.length - 1;
               return (
-                <div key={inv.id} style={{ padding: "14px 24px", borderBottom: isLast ? "none" : "1px solid #f8fafc", display: "flex", alignItems: "center", gap: 16 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", fontFamily: "monospace" }}>
-                        {inv.invoice_number}
-                      </span>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: cfg.color, display: "flex", alignItems: "center", gap: 4 }}>
-                        <StatusIcon style={{ width: 11, height: 11 }} />
-                        {cfg.label}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: 12, color: "#94a3b8", margin: "2px 0 0" }}>
-                      Issued {inv.issue_date} · Due {inv.due_date}
-                    </p>
+                <div key={evt.id} style={{ padding: "14px 20px", borderBottom: isLast ? "none" : "1px solid #f8fafc", display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: isToday ? "#f0fdf4" : "#f0f4ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Calendar style={{ width: 16, height: 16, color: isToday ? "#16a34a" : "#6366f1" }} />
                   </div>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: "#334155", fontVariantNumeric: "tabular-nums" }}>
-                    {fmt(inv.total)}
-                  </span>
-                  {(inv.status === "sent" || inv.status === "overdue") && (
-                    <a
-                      href={`${appUrl}/pay/${inv.id}`}
-                      style={{
-                        padding: "7px 16px",
-                        background: "#1e88e5",
-                        color: "#fff",
-                        borderRadius: 8,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        textDecoration: "none",
-                        flexShrink: 0,
-                      }}
-                    >
-                      Pay now
-                    </a>
-                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{evt.title}</p>
+                    <p style={{ fontSize: 12, color: isToday ? "#16a34a" : "#94a3b8", margin: "2px 0 0", fontWeight: isToday ? 600 : 400 }}>{dateStr}</p>
+                  </div>
                 </div>
               );
             })}
-          </Card>
+          </Section>
+        )}
+
+        {/* Invoices */}
+        {invoices.length > 0 && (
+          <Section title="Invoices">
+            {invoices.map((inv, i) => {
+              const effectiveStatus =
+                inv.status === "sent" && inv.due_date < today ? "overdue" : inv.status;
+              const cfg = INV_STATUS[effectiveStatus] ?? INV_STATUS.sent;
+              const StatusIcon = cfg.icon;
+              const isLast = i === invoices.length - 1;
+              return (
+                <div key={inv.id} style={{ padding: "14px 20px", borderBottom: isLast ? "none" : "1px solid #f8fafc", display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <StatusIcon style={{ width: 16, height: 16, color: cfg.textColor }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", fontFamily: "monospace" }}>{inv.invoice_number}</span>
+                      <Badge label={cfg.label} bgColor={cfg.bgColor} textColor={cfg.textColor} />
+                    </div>
+                    <p style={{ fontSize: 12, color: "#94a3b8", margin: "2px 0 0" }}>
+                      Due {fmtDate(inv.due_date)}
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", fontVariantNumeric: "tabular-nums" }}>{fmt(inv.total)}</span>
+                    {(effectiveStatus === "sent" || effectiveStatus === "overdue") && (
+                      <a
+                        href={`${appUrl}/pay/${inv.id}`}
+                        style={{ padding: "7px 16px", background: effectiveStatus === "overdue" ? "#e11d48" : "#4f46e5", color: "#fff", borderRadius: 8, fontSize: 12, fontWeight: 600, textDecoration: "none" }}
+                      >
+                        Pay now
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </Section>
         )}
 
         {/* Estimates */}
         {estimates.length > 0 && (
-          <Card>
-            <div style={{ padding: "16px 24px", borderBottom: "1px solid #f1f5f9" }}>
-              <h2 style={{ fontSize: 14, fontWeight: 700, color: "#334155", margin: 0 }}>Estimates</h2>
-            </div>
+          <Section title="Estimates">
             {estimates.map((est, i) => {
-              const cfg = EST_STATUS[est.status] ?? EST_STATUS.sent;
+              const today2 = new Date().toISOString().slice(0, 10);
+              const effectiveStatus =
+                est.status === "sent" && est.expiry_date && est.expiry_date < today2
+                  ? "expired"
+                  : est.status;
+              const cfg = EST_STATUS[effectiveStatus] ?? EST_STATUS.sent;
               const isLast = i === estimates.length - 1;
               return (
-                <div key={est.id} style={{ padding: "14px 24px", borderBottom: isLast ? "none" : "1px solid #f8fafc", display: "flex", alignItems: "center", gap: 16 }}>
+                <div key={est.id} style={{ padding: "14px 20px", borderBottom: isLast ? "none" : "1px solid #f8fafc", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", fontFamily: "monospace" }}>
-                        {est.estimate_number}
-                      </span>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: cfg.color }}>
-                        {cfg.label}
-                      </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", fontFamily: "monospace" }}>{est.estimate_number}</span>
+                      <Badge label={cfg.label} bgColor={cfg.bgColor} textColor={cfg.textColor} />
                     </div>
                     <p style={{ fontSize: 12, color: "#94a3b8", margin: "2px 0 0" }}>
-                      Issued {est.issue_date}
-                      {est.expiry_date ? ` · Expires ${est.expiry_date}` : ""}
+                      Issued {fmtDate(est.issue_date)}
+                      {est.expiry_date ? ` · Expires ${fmtDate(est.expiry_date)}` : ""}
                     </p>
                   </div>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: "#334155", fontVariantNumeric: "tabular-nums" }}>
-                    {fmt(est.total)}
-                  </span>
-                  {est.status === "sent" && (
-                    <a
-                      href={`${appUrl}/accept/${est.id}`}
-                      style={{
-                        padding: "7px 16px",
-                        background: "#f8fafc",
-                        color: "#1e88e5",
-                        border: "1px solid #d2e8fb",
-                        borderRadius: 8,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        textDecoration: "none",
-                        flexShrink: 0,
-                      }}
-                    >
-                      Review
-                    </a>
-                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", fontVariantNumeric: "tabular-nums" }}>{fmt(est.total)}</span>
+                    {effectiveStatus === "sent" && (
+                      <a
+                        href={`${appUrl}/accept/${est.id}`}
+                        style={{ padding: "7px 16px", background: "#f8fafc", color: "#4f46e5", border: "1.5px solid #c7d2fe", borderRadius: 8, fontSize: 12, fontWeight: 600, textDecoration: "none" }}
+                      >
+                        Review →
+                      </a>
+                    )}
+                  </div>
                 </div>
               );
             })}
-          </Card>
+          </Section>
         )}
 
-        {invoices.length === 0 && estimates.length === 0 && (
+        {invoices.length === 0 && estimates.length === 0 && events.length === 0 && (
           <div style={{ textAlign: "center", padding: "60px 0", color: "#94a3b8" }}>
-            <p style={{ fontSize: 14 }}>No invoices or estimates yet.</p>
+            <p style={{ fontSize: 14 }}>Nothing to show yet. Check back soon!</p>
           </div>
         )}
 
