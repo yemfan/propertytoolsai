@@ -86,11 +86,20 @@ export async function sendSms(clientId: string | null, toNumber: string, body: s
   if (!normalized.ok) throw new Error(normalized.error);
   const to = normalized.value;
 
+  // Absolute callback so Twilio can report delivery outcome back to us. Skip it
+  // for non-https/local URLs — Twilio rejects callbacks it can't reach, which
+  // would fail the whole send.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const statusCallback = appUrl.startsWith("https://")
+    ? `${appUrl}/api/twilio/sms/status`
+    : undefined;
+
   const client = twilioClient();
   const msg = await client.messages.create({
     from: fromNumber,
     to,
     body,
+    ...(statusCallback ? { statusCallback } : {}),
   });
 
   await supabase.from("messages").insert({

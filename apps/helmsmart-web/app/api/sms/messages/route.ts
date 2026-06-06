@@ -3,8 +3,8 @@
  *
  * SMS thread for one client + the client's auto-pilot state, for the
  * HelmSmart AI panel. Org-scoped (helmsmart-org-id cookie + RLS).
- * smbai's messages table has no Twilio delivery-status column, so
- * twilio_status is always null (the widget hides the badge when absent).
+ * twilio_status is populated by the status-callback webhook
+ * (/api/twilio/sms/status); the widget hides the badge when it's absent.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabase
     .from("messages")
-    .select("id, body, direction, sent_at, created_at")
+    .select("id, body, direction, sent_at, created_at, twilio_status")
     .eq("organization_id", orgId)
     .eq("client_id", clientId)
     .eq("channel", "sms")
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     message: m.body,
     direction: m.direction,
     created_at: m.sent_at ?? m.created_at,
-    twilio_status: null,
+    twilio_status: (m as { twilio_status?: string | null }).twilio_status ?? null,
   }));
 
   return NextResponse.json({ ok: true, autoPilot, messages });
