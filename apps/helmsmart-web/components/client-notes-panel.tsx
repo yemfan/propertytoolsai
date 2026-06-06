@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { Trash2, Phone, Users, Mail, MessageSquare, StickyNote, ChevronDown } from "lucide-react";
-import { addClientNote, deleteClientNote, type NoteKind } from "@/lib/actions/client-notes";
+import { addClientNote, deleteClientNote } from "@/lib/actions/client-notes";
+import type { NoteKind } from "@helm/dna-knowledge";
 
 interface Note {
   id: string;
