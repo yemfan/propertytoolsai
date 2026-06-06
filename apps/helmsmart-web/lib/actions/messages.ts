@@ -79,11 +79,27 @@ export async function sendSms(clientId: string | null, toNumber: string, body: s
   const fromNumber = org?.twilio_number ?? process.env.TWILIO_FROM_NUMBER;
   if (!fromNumber) throw new Error("No Twilio number configured");
 
+  // Twilio only reliably delivers to E.164 numbers. A bare "6066255055" gets a
+  // SID back (so the UI says "Sent") but never actually arrives — normalize first
+  // and fail loudly so the caller sees the real problem instead of a false success.
+  const normalized = normalizePhoneE164(toNumber);
+  if (!normalized.ok) throw new Error(normalized.error);
+  const to = normalized.value;
+
+  // Absolute callback so Twilio can report delivery outcome back to us. Skip it
+  // for non-https/local URLs — Twilio rejects callbacks it can't reach, which
+  // would fail the whole send.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const statusCallback = appUrl.startsWith("https://")
+    ? `${appUrl}/api/twilio/sms/status`
+    : undefined;
+
   const client = twilioClient();
   const msg = await client.messages.create({
     from: fromNumber,
-    to: toNumber,
+    to,
     body,
+    ...(statusCallback ? { statusCallback } : {}),
   });
 
   await supabase.from("messages").insert({
@@ -92,7 +108,7 @@ export async function sendSms(clientId: string | null, toNumber: string, body: s
     channel: "sms",
     direction: "outbound",
     from_address: fromNumber,
-    to_address: toNumber,
+    to_address: to,
     body,
     read: true,
     external_id: msg.sid,

@@ -9,6 +9,7 @@ import {
   FileText, MessageSquare, Tag, DollarSign, Receipt, Printer,
 } from "lucide-react";
 import { ClientEditForm } from "./client-edit-form";
+import { EditClientButton } from "./edit-client-button";
 import { PortalLinkButton } from "./portal-link-button";
 import { ClientNotesPanel } from "@/components/client-notes-panel";
 import { EligibilityPanel } from "@/components/eligibility-panel";
@@ -197,6 +198,20 @@ export default async function ClientDetailPage({
         </div>
         {/* Quick actions */}
         <div className="flex gap-2">
+          <EditClientButton
+            clientId={client.id}
+            initialValues={{
+              first_name: client.first_name ?? "",
+              last_name: client.last_name ?? "",
+              company: client.company ?? "",
+              email: client.email ?? "",
+              phone: client.phone ?? "",
+              status: client.status,
+              source: client.source ?? "",
+              notes: client.notes ?? "",
+              tags: (client.tags as string[] | null)?.join(", ") ?? "",
+            }}
+          />
           {client.email && (
             <Link
               href={`/inbox?compose=${encodeURIComponent(client.email)}`}
