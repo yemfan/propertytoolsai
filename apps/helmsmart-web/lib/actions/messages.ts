@@ -77,7 +77,13 @@ export async function sendSms(clientId: string | null, toNumber: string, body: s
     .single();
 
   const fromNumber = org?.twilio_number ?? process.env.TWILIO_FROM_NUMBER;
-  if (!fromNumber) throw new Error("No Twilio number configured");
+  // US A2P 10DLC compliance is enforced at the Messaging Service level: sending
+  // by bare `from` number can be filtered as "unregistered" (error 30034) even
+  // when the number sits in a registered campaign. When a Messaging Service SID
+  // is configured we send through it so Twilio applies the campaign; otherwise
+  // we fall back to the raw number (unchanged behavior).
+  const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+  if (!messagingServiceSid && !fromNumber) throw new Error("No Twilio number configured");
 
   // Twilio only reliably delivers to E.164 numbers. A bare "6066255055" gets a
   // SID back (so the UI says "Sent") but never actually arrives — normalize first
@@ -96,7 +102,7 @@ export async function sendSms(clientId: string | null, toNumber: string, body: s
 
   const client = twilioClient();
   const msg = await client.messages.create({
-    from: fromNumber,
+    ...(messagingServiceSid ? { messagingServiceSid } : { from: fromNumber! }),
     to,
     body,
     ...(statusCallback ? { statusCallback } : {}),
@@ -107,7 +113,7 @@ export async function sendSms(clientId: string | null, toNumber: string, body: s
     client_id: clientId,
     channel: "sms",
     direction: "outbound",
-    from_address: fromNumber,
+    from_address: fromNumber ?? msg.from ?? null,
     to_address: to,
     body,
     read: true,
