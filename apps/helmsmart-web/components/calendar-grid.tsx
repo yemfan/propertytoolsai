@@ -41,17 +41,35 @@ const TYPE_LABELS: Record<EventType, string> = {
   reminder:    "Reminder",
 };
 
+// Dot color shown on the filter chips, one per event type.
+const TYPE_DOT: Record<EventType, string> = {
+  appointment: "bg-indigo-500",
+  task:        "bg-emerald-500",
+  meeting:     "bg-violet-500",
+  reminder:    "bg-amber-500",
+};
+
+const TYPE_FILTERS: ("all" | EventType)[] = ["all", "appointment", "task", "meeting", "reminder"];
+
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Local YYYY-MM-DD for a Date (avoids the UTC shift toISOString would cause).
+function isoDate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 export function CalendarGrid({ events, clients }: { events: CalEvent[]; clients: Client[] }) {
   const now  = new Date();
   const [viewMode, setViewMode] = useState<"month" | "list">("month");
   const [year, setYear]   = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
-  const [creating, setCreating] = useState<string | null>(null); // ISO date string
-  const [form, setForm] = useState({ title: "", type: "appointment" as EventType, color: "indigo" as EventColor, time: "09:00", duration: 60, allDay: false, clientId: "", description: "" });
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState({ title: "", type: "appointment" as EventType, color: "indigo" as EventColor, date: isoDate(now), time: "09:00", duration: 60, allDay: false, clientId: "", description: "" });
   const [isPending, startTransition] = useTransition();
   const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null);
+  const [typeFilter, setTypeFilter] = useState<"all" | EventType>("all");
+
+  const visibleEvents = typeFilter === "all" ? events : events.filter((e) => e.type === typeFilter);
 
   // Grid helpers
   const firstDay  = new Date(year, month, 1);
@@ -70,27 +88,30 @@ export function CalendarGrid({ events, clients }: { events: CalEvent[]; clients:
 
   function eventsForDay(day: number) {
     const iso = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    return events.filter((e) => e.start_at.startsWith(iso));
+    return visibleEvents.filter((e) => e.start_at.startsWith(iso));
+  }
+
+  function openCreate(iso: string) {
+    setForm({ title: "", type: "appointment", color: "indigo", date: iso, time: "09:00", duration: 60, allDay: false, clientId: "", description: "" });
+    setCreating(true);
   }
 
   function handleCreate(day: number) {
-    const iso = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    setCreating(iso);
-    setForm({ title: "", type: "appointment", color: "indigo", time: "09:00", duration: 60, allDay: false, clientId: "", description: "" });
+    openCreate(`${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`);
   }
 
   function submitCreate() {
-    if (!form.title.trim() || !creating) return;
+    if (!form.title.trim() || !form.date) return;
     const startAt = form.allDay
-      ? `${creating}T00:00:00`
-      : `${creating}T${form.time}:00`;
+      ? `${form.date}T00:00:00`
+      : `${form.date}T${form.time}:00`;
     const endAt = form.allDay
       ? null
       : (() => {
           const [h, m] = form.time.split(":").map(Number);
           const end = new Date(0);
           end.setHours(h, m + form.duration);
-          return `${creating}T${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}:00`;
+          return `${form.date}T${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}:00`;
         })();
 
     startTransition(async () => {
@@ -104,7 +125,7 @@ export function CalendarGrid({ events, clients }: { events: CalEvent[]; clients:
         clientId: form.clientId || null,
         description: form.description || undefined,
       });
-      setCreating(null);
+      setCreating(false);
     });
   }
 
@@ -118,6 +139,12 @@ export function CalendarGrid({ events, clients }: { events: CalEvent[]; clients:
           <h1 className="text-xl font-semibold text-slate-900">{monthName}</h1>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => openCreate(isoDate(new Date()))}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4" /> New event
+          </button>
           <button
             onClick={() => { setYear(now.getFullYear()); setMonth(now.getMonth()); }}
             className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
@@ -157,6 +184,28 @@ export function CalendarGrid({ events, clients }: { events: CalEvent[]; clients:
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Type filter chips */}
+      <div className="flex items-center gap-2 px-8 py-3 border-b border-slate-200 bg-white overflow-x-auto">
+        {TYPE_FILTERS.map((f) => {
+          const active = typeFilter === f;
+          const label = f === "all" ? "All" : `${TYPE_LABELS[f]}s`;
+          return (
+            <button
+              key={f}
+              onClick={() => setTypeFilter(f)}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                active
+                  ? "bg-slate-800 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              {f !== "all" && <span className={`w-2 h-2 rounded-full ${TYPE_DOT[f]}`} />}
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {viewMode === "month" ? (
@@ -235,7 +284,7 @@ export function CalendarGrid({ events, clients }: { events: CalEvent[]; clients:
         // List View
         <div className="flex-1 flex flex-col overflow-hidden bg-white">
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-            {events
+            {visibleEvents
               .filter((e) => {
                 const eDate = new Date(e.start_at);
                 return eDate.getFullYear() === year && eDate.getMonth() === month;
@@ -257,10 +306,15 @@ export function CalendarGrid({ events, clients }: { events: CalEvent[]; clients:
                   : startDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
                 return (
-                  <button
+                  // A div (not button) so the nested "+" button below is valid
+                  // HTML — a button inside a button trips a hydration error.
+                  <div
                     key={ev.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setSelectedEvent(ev)}
-                    className="flex items-start gap-3 px-6 py-3.5 hover:bg-slate-50 transition-colors text-left w-full group"
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedEvent(ev); } }}
+                    className="flex items-start gap-3 px-6 py-3.5 hover:bg-slate-50 transition-colors text-left w-full group cursor-pointer"
                   >
                     <div className="pt-0.5">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded inline-block ${COLOR_CLASSES[ev.color]}`}>
@@ -292,15 +346,15 @@ export function CalendarGrid({ events, clients }: { events: CalEvent[]; clients:
                     >
                       <Plus className="w-4 h-4" />
                     </button>
-                  </button>
+                  </div>
                 );
               })}
-            {events.filter((e) => {
+            {visibleEvents.filter((e) => {
               const eDate = new Date(e.start_at);
               return eDate.getFullYear() === year && eDate.getMonth() === month;
             }).length === 0 && (
               <div className="flex-1 flex items-center justify-center text-slate-400">
-                <p className="text-sm">No events this month</p>
+                <p className="text-sm">{typeFilter === "all" ? "No events this month" : `No ${TYPE_LABELS[typeFilter].toLowerCase()}s this month`}</p>
               </div>
             )}
           </div>
@@ -312,10 +366,8 @@ export function CalendarGrid({ events, clients }: { events: CalEvent[]; clients:
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="text-sm font-semibold text-slate-800">
-                New event · {new Date(creating + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-              </h2>
-              <button onClick={() => setCreating(null)} className="p-1.5 hover:bg-slate-100 rounded-lg">
+              <h2 className="text-sm font-semibold text-slate-800">New event</h2>
+              <button onClick={() => setCreating(false)} className="p-1.5 hover:bg-slate-100 rounded-lg">
                 <X className="w-4 h-4 text-slate-500" />
               </button>
             </div>
@@ -330,6 +382,16 @@ export function CalendarGrid({ events, clients }: { events: CalEvent[]; clients:
                 onKeyDown={(e) => e.key === "Enter" && submitCreate()}
                 className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
+
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -404,7 +466,7 @@ export function CalendarGrid({ events, clients }: { events: CalEvent[]; clients:
             </div>
 
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100">
-              <button onClick={() => setCreating(null)} className="text-sm text-slate-500 hover:text-slate-700">Cancel</button>
+              <button onClick={() => setCreating(false)} className="text-sm text-slate-500 hover:text-slate-700">Cancel</button>
               <button onClick={submitCreate} disabled={isPending || !form.title.trim()}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
                 {isPending ? "Saving…" : "Create event"}
