@@ -9,7 +9,11 @@ import {
   type NoteKind,
 } from "@helm/dna-knowledge";
 
-export type { NoteKind };
+// NOTE: this is a "use server" module — it may only export async functions.
+// NoteKind is re-exported for consumers from @helm/dna-knowledge directly;
+// re-exporting the type here makes the SWC server-actions transform emit a
+// runtime value export ("ReferenceError: NoteKind is not defined") that breaks
+// every action on the page. See client-notes-panel.tsx for the import.
 
 export async function addClientNote(
   clientId: string,
