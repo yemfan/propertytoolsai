@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     message: m.body,
     direction: m.direction,
     created_at: m.sent_at ?? m.created_at,
-    twilio_status: (m as { twilio_status?: string | null }).twilio_status ?? null,
+    twilio_status: m.twilio_status ?? null,
   }));
 
   return NextResponse.json({ ok: true, autoPilot, messages });

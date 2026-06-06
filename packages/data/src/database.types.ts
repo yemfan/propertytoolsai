@@ -2861,6 +2861,8 @@ export type Database = {
           channel: string
           client_id: string | null
           created_at: string
+          delivery_error_code: string | null
+          delivery_error_message: string | null
           direction: string
           external_id: string | null
           from_address: string | null
@@ -2873,12 +2875,15 @@ export type Database = {
           subject: string | null
           to_address: string | null
           translation_en: string | null
+          twilio_status: string | null
         }
         Insert: {
           body: string
           channel: string
           client_id?: string | null
           created_at?: string
+          delivery_error_code?: string | null
+          delivery_error_message?: string | null
           direction: string
           external_id?: string | null
           from_address?: string | null
@@ -2891,12 +2896,15 @@ export type Database = {
           subject?: string | null
           to_address?: string | null
           translation_en?: string | null
+          twilio_status?: string | null
         }
         Update: {
           body?: string
           channel?: string
           client_id?: string | null
           created_at?: string
+          delivery_error_code?: string | null
+          delivery_error_message?: string | null
           direction?: string
           external_id?: string | null
           from_address?: string | null
@@ -2909,6 +2917,7 @@ export type Database = {
           subject?: string | null
           to_address?: string | null
           translation_en?: string | null
+          twilio_status?: string | null
         }
         Relationships: [
           {

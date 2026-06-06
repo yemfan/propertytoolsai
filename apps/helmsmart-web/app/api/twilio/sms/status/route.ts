@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   const status = params.MessageStatus ?? params.SmsStatus ?? null;
   if (!sid || !status) {
     // Nothing actionable, but ack so Twilio doesn't retry.
-    return new NextResponse("", { status: 204 });
+    return new NextResponse(null, { status: 204 });
   }
 
   const supabase = await createServiceClient();
@@ -40,5 +40,5 @@ export async function POST(request: NextRequest) {
     })
     .eq("external_id", sid);
 
-  return new NextResponse("", { status: 204 });
+  return new NextResponse(null, { status: 204 });
 }
