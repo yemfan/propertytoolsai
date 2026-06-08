@@ -16,7 +16,7 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="mt-4 text-lg text-gray-500">
-            Last updated: May 29, 2026
+            Last updated: June 8, 2026
           </p>
         </div>
       </section>
@@ -77,21 +77,31 @@ export default function PrivacyPage() {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">6. User Rights</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Mobile Information &amp; Text Messaging</h2>
+            <p className="text-gray-600 leading-relaxed mb-3">
+              If you opt in to receive text messages, we collect your mobile phone number and your consent. We use them only to send the messages you requested — such as appointment reminders and confirmations, follow-ups, account and document notifications, and replies to your inquiries. Message frequency varies, and message and data rates may apply. You can opt out at any time by replying STOP, or get help by replying HELP.
+            </p>
+            <p className="text-gray-600 leading-relaxed">
+              <strong>No mobile information (including your phone number and SMS opt-in or consent) is shared with or sold to third parties or affiliates for their marketing or promotional purposes.</strong> Phone numbers are shared only with our SMS delivery provider (Twilio) strictly to transmit the messages you requested, and never for any other purpose.
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">7. User Rights</h2>
             <p className="text-gray-600 leading-relaxed">
               Depending on your location, you may have rights to access, correct, or delete your personal information. Contact us at privacy@helmsmart.ai to exercise these rights.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Changes to This Policy</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">8. Changes to This Policy</h2>
             <p className="text-gray-600 leading-relaxed">
               We may update this Privacy Policy from time to time. We will notify you of any material changes by updating the date at the top of this policy.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">8. Contact Us</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">9. Contact Us</h2>
             <p className="text-gray-600 leading-relaxed">
               If you have questions about this Privacy Policy or our privacy practices, please contact us at:
             </p>
