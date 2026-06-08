@@ -16,7 +16,7 @@ export default function TermsPage() {
             Terms of Service
           </h1>
           <p className="mt-4 text-lg text-gray-500">
-            Last updated: May 29, 2026
+            Last updated: June 8, 2026
           </p>
         </div>
       </section>
@@ -99,21 +99,40 @@ export default function TermsPage() {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">10. Related Products</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">10. SMS / Text Messaging Program</h2>
+            <p className="text-gray-600 leading-relaxed mb-3">
+              If you provide your mobile phone number and opt in, you consent to receive text messages from HelmSmart and from the businesses that use HelmSmart to communicate with their customers (for example, MAXY Investment Inc). The terms of our SMS program are:
+            </p>
+            <ul className="list-disc list-inside space-y-2 text-gray-600">
+              <li><strong>Program description:</strong> recurring messages such as appointment reminders and confirmations, follow-ups to prior conversations, account and document notifications, and replies to your inquiries.</li>
+              <li><strong>Message frequency:</strong> message frequency varies based on your interactions.</li>
+              <li><strong>Cost:</strong> message and data rates may apply.</li>
+              <li><strong>Opt-out:</strong> reply <strong>STOP</strong> at any time to unsubscribe. You will receive a confirmation and no further messages.</li>
+              <li><strong>Help:</strong> reply <strong>HELP</strong> for assistance, or contact us at support@helmsmart.ai.</li>
+              <li>Consent to receive text messages is not a condition of any purchase. Carriers are not liable for delayed or undelivered messages.</li>
+            </ul>
+            <p className="text-gray-600 leading-relaxed mt-3">
+              Mobile opt-in information and consent are never shared with third parties or affiliates for marketing or promotional purposes. See our{" "}
+              <Link href="/privacy" className="text-indigo-600 hover:text-indigo-700">Privacy Policy</Link> for details.
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">11. Related Products</h2>
             <p className="text-gray-600 leading-relaxed">
               HelmSmart is built by the same team behind <Link href="https://leadsmart-ai.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-700 font-medium">LeadSmart AI</Link>, another AI-powered business platform. Both products share similar terms of service standards and are committed to the same level of quality and support.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">11. Changes to Terms</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">12. Changes to Terms</h2>
             <p className="text-gray-600 leading-relaxed">
               HelmSmart reserves the right to modify or replace these Terms at any time. If a revision is material, we will provide at least 30 days notice prior to any new terms taking effect.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">12. Contact Us</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">13. Contact Us</h2>
             <p className="text-gray-600 leading-relaxed">
               If you have any questions about these Terms of Service, please contact us at:
             </p>
