@@ -27,7 +27,7 @@ export default function PrivacyPage() {
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Introduction</h2>
             <p className="text-gray-600 leading-relaxed">
-              HelmSmart ("we," "us," "our," or "Company") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website and services.
+              HelmSmart, a DBA of MAXY Investment Inc ("we," "us," "our," or "Company"), is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website and services.
             </p>
           </div>
 

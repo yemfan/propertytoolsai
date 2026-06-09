@@ -27,7 +27,7 @@ export default function TermsPage() {
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Acceptance of Terms</h2>
             <p className="text-gray-600 leading-relaxed">
-              By accessing and using HelmSmart ("Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+              By accessing and using HelmSmart, a DBA of MAXY Investment Inc ("Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
             </p>
           </div>
 
@@ -101,7 +101,7 @@ export default function TermsPage() {
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">10. SMS / Text Messaging Program</h2>
             <p className="text-gray-600 leading-relaxed mb-3">
-              If you provide your mobile phone number and opt in, you consent to receive text messages from HelmSmart and from the businesses that use HelmSmart to communicate with their customers (for example, MAXY Investment Inc). The terms of our SMS program are:
+              If you provide your mobile phone number and opt in, you consent to receive text messages from HelmSmart (a DBA of MAXY Investment Inc) and, where applicable, from businesses that use the HelmSmart platform to communicate with their own customers. The terms of our SMS program are:
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-600">
               <li><strong>Program description:</strong> recurring messages such as appointment reminders and confirmations, follow-ups to prior conversations, account and document notifications, and replies to your inquiries.</li>
