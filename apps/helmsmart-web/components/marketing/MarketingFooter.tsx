@@ -56,7 +56,7 @@ export function MarketingFooter() {
               <span className="text-sm text-slate-400">More control, less effort</span>
             </div>
             <p className="text-sm text-slate-400">
-              &copy; 2025 HelmSmart. All rights reserved.
+              &copy; 2026 MAXY Investment Inc. HelmSmart is a DBA of MAXY Investment Inc. All rights reserved.
             </p>
           </div>
         </div>
