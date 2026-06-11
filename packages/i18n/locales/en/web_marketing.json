@@ -1,26 +1,26 @@
 {
   "landing": {
-    "title": "LeadSmart AI — The AI Deal Engine + Coaching for Real Estate",
-    "description": "Capture, qualify, convert, and coach — every stage of the deal on real-estate-native AI. Includes the LeadSmart AI Coaching program with annual transaction targets. Pro from $49/mo, Team from $199/mo.",
+    "title": "RealtorBoss — Your AI Real Estate Team. Close More Deals.",
+    "description": "RealtorBoss is an AI-powered real estate team that answers every call, follows up with every lead, and coordinates every transaction — so you close more deals without hiring additional staff. Pro from $49/mo.",
     "og": {
-      "title": "LeadSmart AI — The AI Deal Engine + Coaching for Real Estate",
-      "description": "The AI deal engine + producer-development program built for real estate agents. 14-day trial, cancel anytime."
+      "title": "RealtorBoss — Hire an AI Real Estate Team. Close More Deals.",
+      "description": "Your AI Real Estate Team — from first call to closing. AI Receptionist, Sales Assistant, and Transaction Assistant under your direction. 14-day trial, cancel anytime."
     }
   },
   "about": {
-    "title": "About LeadSmart AI — the AI growth engine for real estate",
-    "description": "LeadSmart AI is the AI deal engine + coaching program built for real estate agents and financing professionals. Learn how we help agents close more deals and become top producers.",
+    "title": "About RealtorBoss — Your AI Real Estate Team",
+    "description": "RealtorBoss (formerly LeadSmart AI) gives real estate agents an AI team — a Receptionist, Sales Assistant, and Transaction Assistant — that answers every call, follows up with every lead, and coordinates every transaction.",
     "og": {
-      "title": "About LeadSmart AI",
-      "description": "The AI deal engine + coaching program for real estate professionals — capture, qualify, convert, and grow your annual transaction count."
+      "title": "About RealtorBoss",
+      "description": "Your AI Real Estate Team — answer every call, follow up with every lead, coordinate every transaction, and close more deals."
     },
     "twitter": {
-      "title": "About LeadSmart AI",
-      "description": "The AI deal engine + coaching program for real estate professionals."
+      "title": "About RealtorBoss",
+      "description": "Your AI Real Estate Team — from first call to closing."
     }
   },
   "pricing": {
-    "title": "Pricing | LeadSmart AI",
-    "description": "Free, Pro ($49), Elite ($99), and Team ($199) plans — full feature comparison for AI lead management, CRM, and automation."
+    "title": "Pricing | RealtorBoss",
+    "description": "Free, Pro ($49), Elite ($99), and Team ($199) plans — full feature comparison for your AI real estate team: receptionist, follow-ups, and transaction coordination."
   }
 }

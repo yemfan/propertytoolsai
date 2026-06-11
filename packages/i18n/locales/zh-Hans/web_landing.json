@@ -8,17 +8,17 @@
   },
   "hero": {
     "trust_line": "深受全美各地金牌经纪人信赖",
-    "badge": "您的全天候 AI 销售团队 · 为独立经纪人打造",
-    "h1_prefix": "把在线流量转化为 ",
-    "h1_highlight": "成交订单",
-    "h1_suffix": " — 自动完成",
-    "subtitle": "全天候捕获、筛选、跟进、转化客户 — 这是您 AI 驱动的成长引擎，专为房产经纪人打造。",
+    "badge": "您的 AI 房产团队 — 从第一通电话到成功过户",
+    "h1_prefix": "雇一支 AI 房产团队，",
+    "h1_highlight": "成交更多",
+    "h1_suffix": "。",
+    "subtitle": "RealtorBoss 接听每一通来电、跟进每一位客户、协调每一笔交易 — AI 前台、AI 销售助理和 AI 交易助理，全部听您指挥。",
     "bullets": {
-      "speed": "在 60 秒内回应每一位客户",
-      "missed_call": "未接来电自动回短信 — 不再错失任何客户",
-      "focus": "只专注于高意向的买家和卖家"
+      "speed": "AI 销售助理在 60 秒内回应每一位客户",
+      "missed_call": "AI 前台接听并自动回复未接来电 — 不再错失任何客户",
+      "focus": "您只需专注于高意向的买家和卖家"
     },
-    "cta_primary": "开启您的 AI 交易引擎",
+    "cta_primary": "雇用您的 AI 团队",
     "cta_secondary": "了解工作原理",
     "trial_note": "无需设置 · 付费套餐 14 天试用 · 随时可取消"
   },
@@ -47,7 +47,7 @@
     }
   },
   "mock": {
-    "live_label": "LeadSmart AI — 实时",
+    "live_label": "RealtorBoss — 实时",
     "auto_replying": "自动回复中",
     "stats": {
       "new_leads": "新客户",
@@ -70,7 +70,7 @@
     "eyebrow": "交易流程",
     "h2_prefix": "从客户到成交 — ",
     "h2_highlight": "由 AI 处理",
-    "body": "LeadSmart AI 将您的网站访客和入站流量转化为有效对话 — 并持续培育，直到他们准备好成交。",
+    "body": "RealtorBoss 将您的网站访客和入站流量转化为有效对话 — 并持续培育，直到他们准备好成交。",
     "flow": {
       "traffic": "流量",
       "ai_capture": "AI 捕获",
@@ -139,7 +139,7 @@
     "tagline": "把未接来电变成对话 — 自动完成。",
     "body_p1_prefix": "未接来电不仅仅是一通错过的电话——",
     "body_p1_emphasis": "您可能错过了一笔交易。",
-    "body_p2": "LeadSmart AI 会立即回发短信，开启对话，并持续跟进，直到客户准备好交谈——然后在最佳时机交接给您。",
+    "body_p2": "RealtorBoss 会立即回发短信，开启对话，并持续跟进，直到客户准备好交谈——然后在最佳时机交接给您。",
     "features": {
       "text_back": "即时未接来电短信回复",
       "sms_convo": "AI 驱动的短信对话",
@@ -195,15 +195,15 @@
   "missed_call_hook": {
     "section_a11y": "未接来电提醒",
     "h3": "未接来电？您可能错过了一笔交易。",
-    "body": "当您无法接听时，LeadSmart AI 会立即回应 — 将未接来电转化为真实机会。",
+    "body": "当您无法接听时，RealtorBoss 会立即回应 — 将未接来电转化为真实机会。",
     "cta": "了解工作原理"
   },
   "why": {
-    "eyebrow": "为什么选择 LeadSmart AI",
+    "eyebrow": "为什么选择 RealtorBoss",
     "h2_prefix": "不只是另一款 CRM — ",
     "h2_highlight": "完整的 AI 成交系统",
     "col_traditional": "传统工具",
-    "col_us": "LeadSmart AI",
+    "col_us": "RealtorBoss",
     "rows": {
       "manual_followup": {
         "left": "人工跟进",
@@ -238,7 +238,7 @@
       "broken_sequences": "跟进流程在第二条消息后中断",
       "equity_threshold": "客户圈成员跨过房产升值阈值却无人提醒"
     },
-    "fix_line": "LeadSmart AI 自动为您解决这些问题。",
+    "fix_line": "RealtorBoss 自动为您解决这些问题。",
     "cta_primary": "今天就开始成交更多订单",
     "cta_secondary": "测算您的 ROI"
   },

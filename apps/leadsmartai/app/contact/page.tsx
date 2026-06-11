@@ -6,13 +6,13 @@ import ContactForm from "./ContactForm";
 import JsonLd from "@/components/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Contact Us | LeadSmart AI",
+  title: "Contact Us | RealtorBoss",
   description:
-    "Get in touch with the LeadSmart AI team. We'd love to hear from you about lead management and CRM solutions for real estate professionals.",
+    "Get in touch with the RealtorBoss team. We'd love to hear from you about lead management and CRM solutions for real estate professionals.",
   alternates: {
     canonical: "/contact",
   },
-  keywords: ["contact", "support", "LeadSmart AI", "CRM", "lead management"],
+  keywords: ["contact", "support", "RealtorBoss", "CRM", "lead management"],
 };
 
 export default function ContactPage() {
@@ -24,7 +24,7 @@ export default function ContactPage() {
           "@type": "ContactPoint",
           contactType: "Customer Service",
           url: "https://leadsmart-ai.com/contact",
-          name: "LeadSmart AI Contact",
+          name: "RealtorBoss Contact",
           availableLanguage: ["en"],
           email: "contact@leadsmart-ai.com",
         }}
@@ -34,7 +34,7 @@ export default function ContactPage() {
           Get in touch
         </h1>
         <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
-          Have a question, need help, or want to learn more about LeadSmart AI?
+          Have a question, need help, or want to learn more about RealtorBoss?
           We&apos;d love to hear from you.
         </p>
       </div>

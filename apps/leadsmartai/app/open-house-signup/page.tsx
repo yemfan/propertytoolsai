@@ -259,11 +259,11 @@ function OpenHouseSignupPageInner() {
                 />
                 <span className="text-sm text-slate-700">
                   <span className="font-semibold text-slate-900">
-                    Yes, send me marketing text messages from LeadSmart AI.
+                    Yes, send me marketing text messages from RealtorBoss.
                   </span>{" "}
                   By checking this box and providing my phone number above, I consent
                   to receive promotional text messages from{" "}
-                  <strong>LeadSmart AI</strong> about real-estate services, new
+                  <strong>RealtorBoss</strong> about real-estate services, new
                   listings, market updates, and special offers.
                 </span>
               </label>

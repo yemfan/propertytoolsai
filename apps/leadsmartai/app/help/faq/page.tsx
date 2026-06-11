@@ -5,10 +5,10 @@ import { groupedFaq, HELP_FAQ } from "@/lib/help/faq";
 export const metadata: Metadata = {
   title: "Frequently asked questions",
   description:
-    "Answers to the most common questions about LeadSmart AI: AI follow-up, LeadSmart AI Coaching, billing, integrations, and data privacy.",
+    "Answers to the most common questions about RealtorBoss: AI follow-up, RealtorBoss Coaching, billing, integrations, and data privacy.",
   alternates: { canonical: "/help/faq" },
   openGraph: {
-    title: "FAQ — LeadSmart AI",
+    title: "FAQ — RealtorBoss",
     description:
       "Answers to common questions about AI follow-up, coaching, billing, integrations, and privacy.",
     url: "/help/faq",
@@ -16,9 +16,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "FAQ — LeadSmart AI",
+    title: "FAQ — RealtorBoss",
     description:
-      "Common questions about LeadSmart AI: follow-up, coaching, billing, integrations, privacy.",
+      "Common questions about RealtorBoss: follow-up, coaching, billing, integrations, privacy.",
   },
 };
 

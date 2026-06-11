@@ -1,7 +1,7 @@
 import SupportDashboard from "@/components/support/SupportDashboard";
 
 export const metadata = {
-  title: "Support inbox | LeadSmart AI",
+  title: "Support inbox | RealtorBoss",
   description: "Manage customer support conversations.",
 };
 

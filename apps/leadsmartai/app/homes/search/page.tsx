@@ -8,7 +8,7 @@ import { getIdxAdapter, isIdxFailure } from "@/lib/idx";
 import type { IdxPropertyType, IdxSearchFilters } from "@/lib/idx/types";
 
 export const metadata: Metadata = {
-  title: "Homes for sale | LeadSmart AI",
+  title: "Homes for sale | RealtorBoss",
   description: "Search homes for sale by city, ZIP, price, beds, and baths.",
 };
 

@@ -78,8 +78,8 @@ export function ReferAFriendCard() {
     }
     try {
       await nav.share({
-        title: "LeadSmart AI — 20,000 free AI tokens",
-        text: "Try LeadSmart AI with me. We both get 20,000 free AI tokens when you sign up.",
+        title: "RealtorBoss — 20,000 free AI tokens",
+        text: "Try RealtorBoss with me. We both get 20,000 free AI tokens when you sign up.",
         url: shareUrl,
       });
     } catch {

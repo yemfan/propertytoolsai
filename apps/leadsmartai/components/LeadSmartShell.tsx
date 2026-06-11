@@ -4,10 +4,10 @@ import type { ReactNode } from "react";
 import { PremiumSidebar, PremiumTopbar } from "@repo/ui";
 import navConfig, { leadSmartNav } from "@/nav.config";
 
-const APP_NAME = "LeadSmart AI";
+const APP_NAME = "RealtorBoss";
 
 /**
- * LeadSmart AI layout using `PremiumSidebar` + `PremiumTopbar` from `@repo/ui`.
+ * RealtorBoss layout using `PremiumSidebar` + `PremiumTopbar` from `@repo/ui`.
  * For production dashboard chrome (tokens, notifications, real auth menu), use `DashboardShell` instead.
  */
 export default function LeadSmartShell({ children }: { children: ReactNode }) {

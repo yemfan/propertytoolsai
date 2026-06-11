@@ -8,17 +8,17 @@
   },
   "hero": {
     "trust_line": "Trusted by top-producing agents coast to coast",
-    "badge": "Your always-on AI sales team · Built for solo agents",
-    "h1_prefix": "Turn Online Traffic into ",
-    "h1_highlight": "Closed Deals",
-    "h1_suffix": " — Automatically",
-    "subtitle": "Capture, qualify, follow up, and convert leads 24/7 with your AI-powered growth engine — built specifically for real estate agents.",
+    "badge": "Your AI Real Estate Team — From First Call to Closing",
+    "h1_prefix": "Hire an AI Real Estate Team. ",
+    "h1_highlight": "Close More Deals",
+    "h1_suffix": ".",
+    "subtitle": "RealtorBoss answers every call, follows up with every lead, and coordinates every transaction — an AI Receptionist, Sales Assistant, and Transaction Assistant working under your direction.",
     "bullets": {
-      "speed": "Respond to every lead in under 60 seconds",
-      "missed_call": "Instantly text back missed calls — never lose a lead again",
-      "focus": "Focus only on high-intent buyers & sellers"
+      "speed": "Your AI Sales Assistant responds to every lead in under 60 seconds",
+      "missed_call": "Your AI Receptionist answers and texts back missed calls — never lose a lead again",
+      "focus": "You focus only on high-intent buyers & sellers"
     },
-    "cta_primary": "Get Your AI Deal Engine Started",
+    "cta_primary": "Hire Your AI Team",
     "cta_secondary": "See How It Works",
     "trial_note": "No setup required · 14-day trial on paid plans · Cancel anytime"
   },
@@ -47,7 +47,7 @@
     }
   },
   "mock": {
-    "live_label": "LeadSmart AI — Live",
+    "live_label": "RealtorBoss — Live",
     "auto_replying": "Auto-replying",
     "stats": {
       "new_leads": "New leads",
@@ -70,7 +70,7 @@
     "eyebrow": "The deal flow",
     "h2_prefix": "From Lead to Closing — ",
     "h2_highlight": "handled by AI",
-    "body": "LeadSmart AI turns your website visitors and inbound traffic into qualified conversations — and keeps nurturing them until they're ready to close.",
+    "body": "RealtorBoss turns your website visitors and inbound traffic into qualified conversations — and keeps nurturing them until they're ready to close.",
     "flow": {
       "traffic": "Traffic",
       "ai_capture": "AI Capture",
@@ -139,7 +139,7 @@
     "tagline": "Turn missed calls into conversations — automatically.",
     "body_p1_prefix": "When you miss a call, you're not just missing a call —",
     "body_p1_emphasis": " you're missing a deal.",
-    "body_p2": "LeadSmart AI instantly sends a text back, starts the conversation, and keeps engaging until the lead is ready to talk — then hands off to you at the perfect moment.",
+    "body_p2": "RealtorBoss instantly sends a text back, starts the conversation, and keeps engaging until the lead is ready to talk — then hands off to you at the perfect moment.",
     "features": {
       "text_back": "Instant missed-call text-back",
       "sms_convo": "AI-powered SMS conversation",
@@ -195,15 +195,15 @@
   "missed_call_hook": {
     "section_a11y": "Missed call hook",
     "h3": "Missed a call? You may have missed a deal.",
-    "body": "LeadSmart AI responds instantly when you can't — and turns missed calls into real opportunities.",
+    "body": "RealtorBoss responds instantly when you can't — and turns missed calls into real opportunities.",
     "cta": "See How It Works"
   },
   "why": {
-    "eyebrow": "Why LeadSmart AI",
+    "eyebrow": "Why RealtorBoss",
     "h2_prefix": "Not just another CRM — ",
     "h2_highlight": "a complete AI closing system",
     "col_traditional": "Traditional Tools",
-    "col_us": "LeadSmart AI",
+    "col_us": "RealtorBoss",
     "rows": {
       "manual_followup": {
         "left": "Manual follow-up",
@@ -238,7 +238,7 @@
       "broken_sequences": "Follow-up sequences breaking after the second message",
       "equity_threshold": "Sphere contacts crossing equity thresholds without a nudge"
     },
-    "fix_line": "LeadSmart AI fixes that — automatically.",
+    "fix_line": "RealtorBoss fixes that — automatically.",
     "cta_primary": "Start Closing More Deals Today",
     "cta_secondary": "Estimate Your ROI"
   },

@@ -369,7 +369,7 @@ export function OpenHouseSigninClient({ info }: { info: PublicOpenHouseInfo }) {
           </button>
 
           <p className="text-center text-[11px] text-slate-400">
-            Powered by LeadSmart AI
+            Powered by RealtorBoss
           </p>
         </div>
       </div>

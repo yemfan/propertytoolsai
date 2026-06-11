@@ -14,20 +14,20 @@ import {
 export const metadata: Metadata = {
   title: "Integrations",
   description:
-    "Every integration LeadSmart AI ships with — lead sources (Zillow, Facebook, IDX), email + calendar (Google, Microsoft), telephony (Twilio), e-signature (Dotloop, DocuSign), billing (Stripe), and more.",
+    "Every integration RealtorBoss ships with — lead sources (Zillow, Facebook, IDX), email + calendar (Google, Microsoft), telephony (Twilio), e-signature (Dotloop, DocuSign), billing (Stripe), and more.",
   alternates: { canonical: "/integrations" },
   openGraph: {
-    title: "Integrations — LeadSmart AI",
+    title: "Integrations — RealtorBoss",
     description:
-      "Lead sources, calendar, email, telephony, e-signature, billing, and AI — everything LeadSmart AI connects to.",
+      "Lead sources, calendar, email, telephony, e-signature, billing, and AI — everything RealtorBoss connects to.",
     url: "/integrations",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Integrations — LeadSmart AI",
+    title: "Integrations — RealtorBoss",
     description:
-      "Every integration LeadSmart AI ships with — across lead sources, calendar, telephony, e-signature, billing, and AI.",
+      "Every integration RealtorBoss ships with — across lead sources, calendar, telephony, e-signature, billing, and AI.",
   },
 };
 
@@ -274,10 +274,10 @@ export default function IntegrationsPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "LeadSmart AI Integrations",
+    name: "RealtorBoss Integrations",
     url: `${SITE_URL}/integrations`,
     description:
-      "Every integration LeadSmart AI ships with — lead sources, calendar, email, telephony, e-signature, billing, and AI.",
+      "Every integration RealtorBoss ships with — lead sources, calendar, email, telephony, e-signature, billing, and AI.",
     hasPart: CATEGORIES.flatMap((c) =>
       c.items.map((i) => ({
         "@type": "SoftwareApplication",

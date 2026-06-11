@@ -202,7 +202,7 @@ export default function IdxLeadCaptureModal(props: {
                   />
                   <span>
                     I agree to receive automated text messages about this property and similar
-                    homes from LeadSmart AI and its agents at the number above. Consent is not a
+                    homes from RealtorBoss and its agents at the number above. Consent is not a
                     condition of purchase. Reply STOP to unsubscribe.
                   </span>
                 </label>

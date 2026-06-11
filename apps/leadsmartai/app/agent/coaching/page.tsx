@@ -7,9 +7,9 @@ import {
 } from "@/lib/coaching-programs/programs";
 
 export const metadata: Metadata = {
-  title: "LeadSmart AI Coaching — Producer Track + Top Producer Track",
+  title: "RealtorBoss Coaching — Producer Track + Top Producer Track",
   description:
-    "AI-driven coaching built into LeadSmart AI. Producer Track (Pro+) targets 3% conversion / 10 transactions; Top Producer Track (Premium + Team) targets 5% conversion / 15 transactions. No add-on, no upsell — included in the plan price.",
+    "AI-driven coaching built into RealtorBoss. Producer Track (Pro+) targets 3% conversion / 10 transactions; Top Producer Track (Premium + Team) targets 5% conversion / 15 transactions. No add-on, no upsell — included in the plan price.",
   keywords: [
     "real estate coaching",
     "real estate AI coaching",
@@ -20,17 +20,17 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/agent/coaching" },
   openGraph: {
-    title: "LeadSmart AI Coaching — Producer Track + Top Producer Track",
+    title: "RealtorBoss Coaching — Producer Track + Top Producer Track",
     description:
-      "AI-driven coaching built into LeadSmart AI. Producer Track (10 deals / 3% conv) and Top Producer Track (15 deals / 5% conv) — included in your plan, no add-on fee.",
+      "AI-driven coaching built into RealtorBoss. Producer Track (10 deals / 3% conv) and Top Producer Track (15 deals / 5% conv) — included in your plan, no add-on fee.",
     url: "/agent/coaching",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "LeadSmart AI Coaching",
+    title: "RealtorBoss Coaching",
     description:
-      "Producer Track + Top Producer Track — AI coaching built into LeadSmart AI for real estate agents.",
+      "Producer Track + Top Producer Track — AI coaching built into RealtorBoss for real estate agents.",
   },
 };
 
@@ -58,12 +58,12 @@ const COACHING_FAQ: ReadonlyArray<{ q: string; a: string }> = [
   },
   {
     q: "How do you measure the conversion-rate target?",
-    a: "Lead-to-close — the percentage of contacts created in LeadSmart AI (any source) that result in a closed transaction. Visible on your performance dashboard with a moving 12-month window.",
+    a: "Lead-to-close — the percentage of contacts created in RealtorBoss (any source) that result in a closed transaction. Visible on your performance dashboard with a moving 12-month window.",
   },
 ];
 
 /**
- * Public marketing landing for LeadSmart AI Coaching. Reads the
+ * Public marketing landing for RealtorBoss Coaching. Reads the
  * canonical program registry from `lib/coaching-programs/programs.ts`
  * so targets + bullets stay in sync with the code that enforces
  * enrollment.
@@ -93,7 +93,7 @@ export default function AgentCoachingPage() {
       <div className="mx-auto max-w-5xl px-4 py-12 md:px-6 md:py-16">
         <header className="text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">
-            LeadSmart AI Coaching
+            RealtorBoss Coaching
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
             Coaching that&apos;s built in,

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import CmaDetailClient from "./CmaDetailClient";
 
 export const metadata: Metadata = {
-  title: "CMA Report | LeadSmart AI",
+  title: "CMA Report | RealtorBoss",
 };
 
 export default async function CmaDetailPage({

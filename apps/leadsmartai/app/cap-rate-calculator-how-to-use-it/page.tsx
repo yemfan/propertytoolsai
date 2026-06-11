@@ -61,7 +61,7 @@ export default function CapRateCalculatorHowToUseItPage() {
           Step 1: Gather the inputs your calculator needs
         </h2>
         <p>
-          Most cap rate calculators—including the one in LeadSmart AI—ask for the same core
+          Most cap rate calculators—including the one in RealtorBoss—ask for the same core
           inputs:
         </p>
         <ul className="list-disc list-inside space-y-1">
@@ -107,7 +107,7 @@ export default function CapRateCalculatorHowToUseItPage() {
           <Link href="/cap-rate-calculator" className="text-blue-600 hover:text-blue-700">
             Cap Rate Calculator
           </Link>{" "}
-          on LeadSmart AI, you can enter:
+          on RealtorBoss, you can enter:
         </p>
         <ul className="list-disc list-inside space-y-1">
           <li>Monthly rent.</li>
@@ -157,7 +157,7 @@ export default function CapRateCalculatorHowToUseItPage() {
           <li>Divide NOI by price to calculate cap rate.</li>
         </ul>
         <p>
-          In the LeadSmart AI{" "}
+          In the RealtorBoss{" "}
           <Link href="/cap-rate-calculator" className="text-blue-600 hover:text-blue-700">
             Cap Rate Calculator
           </Link>

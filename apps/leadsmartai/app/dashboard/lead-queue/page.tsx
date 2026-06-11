@@ -1,7 +1,7 @@
 import { LeadQueueClient } from "./LeadQueueClient";
 
 export const metadata = {
-  title: "Lead Queue | LeadSmart AI",
+  title: "Lead Queue | RealtorBoss",
   description: "Claim available leads from the shared queue.",
 };
 

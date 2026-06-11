@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Features — LeadSmart AI",
+  title: "Features — RealtorBoss",
   description:
     "A complete AI system to turn leads into closed deals — capture, qualify, follow up, convert, and scale, including Missed Call Recovery AI and an AI Sales Style Engine that adapts to how you sell.",
   keywords: [
@@ -37,16 +37,16 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/features" },
   openGraph: {
-    title: "Features — LeadSmart AI",
+    title: "Features — RealtorBoss",
     description:
-      "Capture → Qualify → Follow Up → Convert → Close. The full LeadSmart AI feature breakdown, including the Missed Call Recovery AI signature feature.",
+      "Capture → Qualify → Follow Up → Convert → Close. The full RealtorBoss feature breakdown, including the Missed Call Recovery AI signature feature.",
     url: "/features",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Features — LeadSmart AI",
-    description: "The full LeadSmart AI feature set in one page.",
+    title: "Features — RealtorBoss",
+    description: "The full RealtorBoss feature set in one page.",
   },
 };
 
@@ -135,7 +135,7 @@ export default function FeaturesPage() {
               </span>
             </h2>
             <p className="mt-4 text-base text-slate-600 dark:text-slate-400 md:text-lg">
-              LeadSmart AI connects every step of your pipeline into one seamless system —
+              RealtorBoss connects every step of your pipeline into one seamless system —
               so no lead is missed, delayed, or forgotten.
             </p>
           </div>
@@ -171,7 +171,7 @@ export default function FeaturesPage() {
               Your AI — your sales style
             </h2>
             <p className="mt-4 text-base text-slate-600 dark:text-slate-400 md:text-lg">
-              Most tools send generic messages. LeadSmart AI adapts to how{" "}
+              Most tools send generic messages. RealtorBoss adapts to how{" "}
               <span className="font-semibold text-slate-800 dark:text-slate-200">YOU</span>{" "}
               sell.
             </p>
@@ -253,7 +253,7 @@ export default function FeaturesPage() {
         <div className="mx-auto max-w-5xl">
           <div className="mx-auto max-w-3xl text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0072ce]">
-              Why LeadSmart AI
+              Why RealtorBoss
             </p>
             <h2 className="mt-2 font-heading text-3xl font-bold text-slate-900 md:text-4xl dark:text-white">
               Not just a CRM —{" "}
@@ -271,7 +271,7 @@ export default function FeaturesPage() {
                     Traditional Tools
                   </th>
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[#0072ce] dark:text-[#4da3e8]">
-                    LeadSmart AI
+                    RealtorBoss
                   </th>
                 </tr>
               </thead>
@@ -331,7 +331,7 @@ export default function FeaturesPage() {
             </div>
             <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/40 p-5 text-left shadow-sm dark:border-emerald-800 dark:bg-emerald-950/30">
               <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                With LeadSmart AI
+                With RealtorBoss
               </p>
               <ul className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
                 <li className="flex items-start gap-2">
@@ -491,7 +491,7 @@ const GROWTH_ENGINE: Pillar[] = [
       title: "Missed Call Recovery AI™",
       copyParagraphs: [
         "When you miss a call, you're not just missing a call — you're missing a potential deal.",
-        "LeadSmart AI instantly sends a text back, starts the conversation, and keeps engaging until the lead is ready to talk.",
+        "RealtorBoss instantly sends a text back, starts the conversation, and keeps engaging until the lead is ready to talk.",
       ],
       features: [
         "Instant missed-call text-back (within seconds)",

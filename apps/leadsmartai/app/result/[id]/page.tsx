@@ -10,9 +10,9 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const row = await getShareableResultById(id);
-  if (!row) return { title: "Result | LeadSmart AI" };
+  if (!row) return { title: "Result | RealtorBoss" };
   return {
-    title: `${row.title} | LeadSmart AI`,
+    title: `${row.title} | RealtorBoss`,
     description: row.summary ?? "Shared calculator result",
     openGraph: { title: row.title, description: row.summary ?? undefined },
   };
@@ -30,7 +30,7 @@ export default async function SharedResultPage({ params }: Props) {
       <ResultViewBeacon id={id} />
       <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
         <Link href="/" className="text-sm font-medium text-blue-700">
-          ← LeadSmart AI
+          ← RealtorBoss
         </Link>
         <header>
           <p className="text-xs font-semibold uppercase text-slate-500">{row.tool_slug.replace(/-/g, " ")}</p>

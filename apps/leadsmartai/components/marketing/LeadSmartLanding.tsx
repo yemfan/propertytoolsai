@@ -10,7 +10,7 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react";
-import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
+import { RealtorBossLogo } from "@/components/brand/RealtorBossLogo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FeatureHighlightCard } from "@/components/ui/FeatureHighlightCard";
@@ -220,7 +220,7 @@ export default function LeadSmartLanding() {
               href="/"
               className="flex min-w-0 items-center rounded-md transition hover:opacity-90 focus-visible:outline focus-visible:ring-2 focus-visible:ring-[#0072ce]/40"
             >
-              <LeadSmartLogo className="h-8 w-auto max-w-[180px] sm:h-9 sm:max-w-[280px] lg:max-w-[320px]" />
+              <RealtorBossLogo compact />
             </Link>
 
             {/* Desktop section nav (md+) */}
@@ -371,27 +371,27 @@ export default function LeadSmartLanding() {
             <div className="max-w-xl lg:max-w-2xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#0072ce]/20 bg-white/80 px-4 py-1.5 text-xs font-medium text-[#0072ce] shadow-sm backdrop-blur-sm dark:border-[#0072ce]/30 dark:bg-slate-900/80 dark:text-[#4da3e8]" style={{ animation: "fadeInUp 0.7s ease-out both" }}>
                 <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0072ce] opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-[#0072ce]" /></span>
-                AI deal engine + coaching for real estate
+                Your AI Real Estate Team — From First Call to Closing
               </div>
               <h1
                 className="font-heading text-4xl font-extrabold leading-[1.08] tracking-tight text-gray-950 md:text-5xl lg:text-[3rem] dark:text-white"
                 style={{ animation: "fadeInUp 0.7s ease-out 0.06s both" }}
               >
-                The AI Deal Engine
+                Hire an AI Real Estate Team.
                 <br />
-                <span className="bg-gradient-to-r from-[#0072ce] via-[#4F46E5] to-[#7c3aed] bg-clip-text text-transparent">for Real Estate</span>
+                <span className="bg-gradient-to-r from-[#0072ce] via-[#4F46E5] to-[#7c3aed] bg-clip-text text-transparent">Close More Deals.</span>
               </h1>
               <p
                 className="mt-5 text-lg leading-relaxed text-gray-600 md:text-xl dark:text-slate-400"
                 style={{ animation: "fadeInUp 0.7s ease-out 0.12s both" }}
               >
-                We don&apos;t just generate leads — we <strong className="text-gray-900 dark:text-white">turn them into closed deals automatically</strong>. Capture, qualify, and convert high-intent buyers and sellers with AI.
+                RealtorBoss <strong className="text-gray-900 dark:text-white">answers every call, follows up with every lead, and coordinates every transaction</strong> — an AI Receptionist, Sales Assistant, and Transaction Assistant working under your direction.
               </p>
               <p
                 className="mt-5 text-base leading-relaxed text-gray-600 md:text-lg dark:text-slate-400"
                 style={{ animation: "fadeInUp 0.6s ease-out 0.2s both" }}
               >
-                Capture, qualify, and convert high-intent buyers and sellers with AI — so you can focus on closing, not
+                Close more deals without hiring additional staff — you manage the outcomes, your AI team does the
                 chasing.
               </p>
               <div
@@ -460,7 +460,7 @@ export default function LeadSmartLanding() {
               {/* Window chrome */}
               <div className="flex items-center gap-2 rounded-t-xl border-b border-slate-100 bg-slate-50 px-4 py-2.5 dark:border-slate-700 dark:bg-slate-900">
                 <div className="flex gap-1.5"><div className="h-2.5 w-2.5 rounded-full bg-red-400" /><div className="h-2.5 w-2.5 rounded-full bg-amber-400" /><div className="h-2.5 w-2.5 rounded-full bg-emerald-400" /></div>
-                <span className="ml-2 text-[10px] font-medium text-slate-400">LeadSmart AI — Dashboard</span>
+                <span className="ml-2 text-[10px] font-medium text-slate-400">RealtorBoss — Dashboard</span>
                 <div className="ml-auto flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /><span className="text-[9px] font-medium text-emerald-600 dark:text-emerald-400">Live</span></div>
               </div>
               {/* Dashboard content */}
@@ -511,7 +511,7 @@ export default function LeadSmartLanding() {
         <VslSection
           {...vslConfig}
           title="See the full system: traffic → reply → booked appointment"
-          subtitle="Watch how LeadSmart AI qualifies and follows up so you show up first — without living in your inbox."
+          subtitle="Watch how RealtorBoss qualifies and follows up so you show up first — without living in your inbox."
           ctaText="Get My First Leads"
           ctaHref={primaryCtaHref}
           trustText="No credit card required to start · Cancel anytime"
@@ -556,7 +556,7 @@ export default function LeadSmartLanding() {
         >
           <RevealSection className="mx-auto max-w-3xl text-center">
             <h2 className="font-heading text-2xl font-bold leading-tight text-slate-900 md:text-3xl lg:text-[2rem] dark:text-white">
-              LeadSmart AI fixes the entire pipeline.
+              RealtorBoss fixes the entire pipeline.
             </h2>
             <p className="mt-5 text-lg font-semibold text-slate-800 md:text-xl dark:text-slate-200">
               From first click to final deal —{" "}
@@ -609,7 +609,7 @@ export default function LeadSmartLanding() {
                 <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-lg shadow-slate-900/10 ring-1 ring-slate-900/5 transition-all duration-300 hover:shadow-xl dark:border-slate-700 dark:bg-slate-900 dark:ring-slate-700/40">
                   <Image
                     src="/images/ProcessDiagram.png"
-                    alt="How LeadSmart AI works: from traffic through capture and nurture to closed deals"
+                    alt="How RealtorBoss works: from traffic through capture and nurture to closed deals"
                     width={1200}
                     height={800}
                     className="h-auto w-full object-contain"
@@ -642,7 +642,7 @@ export default function LeadSmartLanding() {
              * Deal workflow cards — replaces the prior generic CRM grid
              * (Follow-Up / Scoring / Pipeline / Drips) with the four
              * stages that actually map to how a real estate deal closes.
-             * The fourth card surfaces LeadSmart AI Coaching, which is
+             * The fourth card surfaces RealtorBoss Coaching, which is
              * the genuine moat: nobody else bundles a coaching program
              * with annual transaction targets into the CRM tier.
              */}
@@ -700,7 +700,7 @@ export default function LeadSmartLanding() {
                   title: "Coach",
                   badge: "Included on Pro+",
                   description:
-                    "LeadSmart AI Coaching turns the dashboard into a producer-development program. Daily plans, weekly playbooks, monthly reviews — tied to a real annual transaction target.",
+                    "RealtorBoss Coaching turns the dashboard into a producer-development program. Daily plans, weekly playbooks, monthly reviews — tied to a real annual transaction target.",
                   bullets: [
                     "Producer Track: 10 deals / 3% conv",
                     "Top Producer Track: 15 deals / 5% conv",
@@ -903,7 +903,7 @@ export default function LeadSmartLanding() {
                     </p>
                     <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">For active agents closing deals consistently.</p>
                     <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold text-[#0072ce] ring-1 ring-blue-200 dark:bg-blue-900/30 dark:text-[#4da3e8] dark:ring-blue-800">
-                      ★ LeadSmart AI Coaching: Producer Track included
+                      ★ RealtorBoss Coaching: Producer Track included
                     </div>
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 dark:text-slate-300">
                       {[
@@ -942,7 +942,7 @@ export default function LeadSmartLanding() {
                     </p>
                     <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">For top producers running solo.</p>
                     <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-2.5 py-0.5 text-[10px] font-semibold text-violet-700 ring-1 ring-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:ring-violet-800">
-                      ★ LeadSmart AI Coaching: Top Producer Track included
+                      ★ RealtorBoss Coaching: Top Producer Track included
                     </div>
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 dark:text-slate-300">
                       {[
@@ -979,7 +979,7 @@ export default function LeadSmartLanding() {
                     </p>
                     <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">For brokerages and small teams up to 5 seats.</p>
                     <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-800">
-                      ★ LeadSmart AI Coaching: Top Producer Track for every seat
+                      ★ RealtorBoss Coaching: Top Producer Track for every seat
                     </div>
                     <ul className="mt-4 space-y-2 text-xs text-slate-700 dark:text-slate-300">
                       {[
@@ -1040,7 +1040,7 @@ export default function LeadSmartLanding() {
                 How we stack up vs. the rest
               </h2>
               <p className="mx-auto mt-3 max-w-2xl text-gray-600 dark:text-slate-400">
-                LeadSmart AI vs. Follow Up Boss, kvCORE, Lofty, BoomTown, LionDesk, and Sierra Interactive — at a fraction of the price.
+                RealtorBoss vs. Follow Up Boss, kvCORE, Lofty, BoomTown, LionDesk, and Sierra Interactive — at a fraction of the price.
               </p>
             </RevealSection>
 
@@ -1093,11 +1093,11 @@ export default function LeadSmartLanding() {
               {[
                 {
                   q: "How does the AI follow-up actually work?",
-                  a: "When a new lead comes in from any source — your website, Zillow, Facebook, etc. — LeadSmart AI sends a personalized text and email within 60 seconds. The message is tailored to where they came from and what they were looking at. If they reply, AI continues the conversation and qualifies them before handing off to you.",
+                  a: "When a new lead comes in from any source — your website, Zillow, Facebook, etc. — RealtorBoss sends a personalized text and email within 60 seconds. The message is tailored to where they came from and what they were looking at. If they reply, AI continues the conversation and qualifies them before handing off to you.",
                 },
                 {
                   q: "Does it integrate with my current CRM or website?",
-                  a: "Yes. LeadSmart AI connects with major real estate CRMs (Follow Up Boss, kvCORE, Sierra Interactive, and more) via Zapier or native integrations. Your website lead forms, Zillow, and Facebook Lead Ads all flow in automatically. Setup typically takes under 15 minutes.",
+                  a: "Yes. RealtorBoss connects with major real estate CRMs (Follow Up Boss, kvCORE, Sierra Interactive, and more) via Zapier or native integrations. Your website lead forms, Zillow, and Facebook Lead Ads all flow in automatically. Setup typically takes under 15 minutes.",
                 },
                 {
                   q: "What happens after the free trial?",
@@ -1105,11 +1105,11 @@ export default function LeadSmartLanding() {
                 },
                 {
                   q: "Will leads know they're talking to AI?",
-                  a: "LeadSmart AI is designed to be transparent. Messages are sent in your name and from your number. When a lead is ready to connect, you're looped in immediately. You can customize exactly how much AI handles before you take over.",
+                  a: "RealtorBoss is designed to be transparent. Messages are sent in your name and from your number. When a lead is ready to connect, you're looped in immediately. You can customize exactly how much AI handles before you take over.",
                 },
                 {
                   q: "How is this different from a standard CRM?",
-                  a: "Most CRMs track what happened. LeadSmart AI acts on it. Instead of logging a lead and setting a manual reminder, our AI sends the first message, qualifies the lead, books a call if they're ready, and only escalates to you when there's real buying intent — saving you hours every week.",
+                  a: "Most CRMs track what happened. RealtorBoss acts on it. Instead of logging a lead and setting a manual reminder, our AI sends the first message, qualifies the lead, books a call if they're ready, and only escalates to you when there's real buying intent — saving you hours every week.",
                 },
               ].map((item, i) => (
                 <RevealSection key={i} delay={i * 60}>

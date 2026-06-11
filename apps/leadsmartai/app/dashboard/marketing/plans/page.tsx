@@ -1,7 +1,7 @@
 import MarketingPlansClient from "./MarketingPlansClient";
 
 export const metadata = {
-  title: "Marketing Plans | LeadSmart AI",
+  title: "Marketing Plans | RealtorBoss",
   description: "Create, customize, and manage automated marketing plans for your leads.",
 };
 
