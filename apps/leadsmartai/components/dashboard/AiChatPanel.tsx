@@ -119,6 +119,14 @@ function clampToViewport(p: PanelPosition): PanelPosition {
 export function AiChatPanel() {
   const [open, setOpen] = useState(false);
 
+  // Allow other surfaces (Boss Assistant's "Ask your Boss Assistant…"
+  // bar) to open the panel: window.dispatchEvent(new CustomEvent("open-ai-chat")).
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener("open-ai-chat", onOpen);
+    return () => window.removeEventListener("open-ai-chat", onOpen);
+  }, []);
+
   const [activeTabId, setActiveTabId] = useState<string>("guide");
   const [contactTabs, setContactTabs] = useState<ContactTab[]>([]);
 

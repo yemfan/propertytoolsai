@@ -147,6 +147,7 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
   const [calls, setCalls] = useState<CallEvent[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [activities, setActivities] = useState<ActivityRow[]>([]);
+  const [teamStatus, setTeamStatus] = useState<Record<string, "active" | "paused">>({});
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -154,7 +155,7 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
     const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
 
-    const [summaryRes, tasksRes, eventsRes, hotRes, txRes, callsRes, recsRes, actsRes] = await Promise.all([
+    const [summaryRes, tasksRes, eventsRes, hotRes, txRes, callsRes, recsRes, actsRes, teamRes] = await Promise.all([
       fetch("/api/dashboard/summary").then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/tasks?status=open").then((r) => r.json()).catch(() => ({})),
       fetch(`/api/dashboard/calendar/events?from=${todayStart}&to=${todayEnd}`).then((r) => r.json()).catch(() => ({})),
@@ -162,7 +163,8 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
       fetch("/api/dashboard/transactions").then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/missed-call/events?limit=20").then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/realtorboss/recommendations").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/dashboard/realtorboss/activities?limit=10").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/dashboard/realtorboss/activities?limit=40").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/dashboard/realtorboss/team").then((r) => r.json()).catch(() => ({})),
     ]);
 
     const m = summaryRes?.metrics;
@@ -183,6 +185,11 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
     setCalls((callsRes?.events ?? []) as CallEvent[]);
     setRecommendations((recsRes?.recommendations ?? []) as Recommendation[]);
     setActivities((actsRes?.activities ?? []) as ActivityRow[]);
+    const statuses: Record<string, "active" | "paused"> = {};
+    for (const a of (teamRes?.assistants ?? []) as { type: string; status: "active" | "paused" }[]) {
+      statuses[a.type] = a.status;
+    }
+    setTeamStatus(statuses);
     setLoading(false);
   }, []);
 
@@ -220,6 +227,25 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
   // (/api/dashboard/realtorboss/recommendations) — synced server-side
   // from CRM signals, with accept/dismiss state that persists.
 
+  // "While you were out" digest — what the AI team did in the last 24h,
+  // straight from assistant_activities (no projections).
+  const teamDigest = useMemo(() => {
+    const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const recent = activities.filter((a) => new Date(a.created_at).getTime() >= dayAgo);
+    if (recent.length === 0) return null;
+    const by = (t: string) => recent.filter((a) => a.assistant_type === t).length;
+    const needsYou = recent.filter((a) => a.requires_attention).length;
+    const parts: string[] = [];
+    const rec = by("receptionist");
+    const sales = by("sales_assistant");
+    const tx = by("transaction_assistant");
+    if (rec > 0) parts.push(`Receptionist handled ${rec} call${rec === 1 ? "" : "s"}`);
+    if (sales > 0) parts.push(`Sales Assistant ran ${sales} follow-up${sales === 1 ? "" : "s"}`);
+    if (tx > 0) parts.push(`Transaction Assistant flagged ${tx} item${tx === 1 ? "" : "s"}`);
+    if (parts.length === 0) return null;
+    return { line: parts.join(" · "), needsYou };
+  }, [activities]);
+
   // Per-assistant headline stats for the AI Team cards (today, from real logs).
   const teamStats: Record<string, string> = {
     receptionist: `${callsToday.filter((c) => c.direction === "inbound").length} calls today · ${callsToday.filter((c) => c.textback_sent).length} text-backs`,
@@ -241,6 +267,33 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
           {" — here is what needs your attention today."}
         </p>
       </div>
+
+      {/* ── Ask your Boss Assistant — persistent prompt (theme constitution) ── */}
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new CustomEvent("open-ai-chat"))}
+        className="flex w-full items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-left shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
+      >
+        <span className="text-sm" aria-hidden>💬</span>
+        <span className="text-sm text-gray-400">
+          Ask your Boss Assistant… <span className="hidden sm:inline">&ldquo;What should I focus on today?&rdquo; · &ldquo;Any transactions at risk?&rdquo;</span>
+        </span>
+      </button>
+
+      {/* ── While you were out — the AI team's last 24h ── */}
+      {teamDigest && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-amber-200/70 bg-gradient-to-r from-amber-50 to-white px-3 py-2">
+          <span className="text-sm" aria-hidden>⚡</span>
+          <p className="text-xs font-medium text-gray-700">
+            <span className="font-semibold text-gray-900">Your AI team, last 24h:</span> {teamDigest.line}
+          </p>
+          {teamDigest.needsYou > 0 && (
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+              {teamDigest.needsYou} need{teamDigest.needsYou === 1 ? "s" : ""} your attention
+            </span>
+          )}
+        </div>
+      )}
 
       {/* AI-written morning plan / evening summary (existing briefings engine). */}
       <BriefingsCard />
@@ -308,13 +361,29 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
       <section>
         <h2 className="mb-2 text-sm font-semibold text-gray-900">Your AI Team</h2>
         <div className="grid gap-3 md:grid-cols-3">
-          {AI_TEAM.filter((a) => a.type !== "boss_assistant").map((a) => (
-            <Link key={a.type} href={a.href} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:bg-gray-50">
-              <p className="text-sm font-semibold text-gray-900">{a.name}</p>
-              <p className="text-xs text-gray-500">{a.role} · {a.mission}</p>
-              <p className="mt-2 text-xs font-medium text-blue-700">{teamStats[a.type] ?? "—"}</p>
-            </Link>
-          ))}
+          {AI_TEAM.filter((a) => a.type !== "boss_assistant").map((a) => {
+            // Constitution: assistant cards show role, status, key
+            // metrics, and recent activity — checking on an employee.
+            const status = teamStatus[a.type] ?? "active";
+            const latest = activities.find((act) => act.assistant_type === a.type);
+            return (
+              <Link key={a.type} href={a.href} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:bg-gray-50">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-gray-900">{a.name}</p>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600"}`}>
+                    {status}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500">{a.role} · {a.mission}</p>
+                <p className="mt-2 text-xs font-medium text-blue-700">{teamStats[a.type] ?? "—"}</p>
+                {latest && (
+                  <p className="mt-1.5 truncate border-t border-gray-100 pt-1.5 text-[11px] text-gray-500">
+                    <span className="font-medium text-gray-600">Latest:</span> {latest.summary} · {fmtAgo(latest.created_at)}
+                  </p>
+                )}
+              </Link>
+            );
+          })}
         </div>
       </section>
 
@@ -424,7 +493,9 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
               ))}
             </div>
           ) : calls.length === 0 ? (
-            <p className="py-4 text-center text-sm text-gray-400">No AI activity yet — calls and text-backs will show up here.</p>
+            <p className="py-4 text-center text-sm text-gray-400">
+              Your AI team is ready — calls answered, texts sent, and deadline alerts will appear here as they work.
+            </p>
           ) : (
             <div className="space-y-2">
               {calls.slice(0, 5).map((c) => (

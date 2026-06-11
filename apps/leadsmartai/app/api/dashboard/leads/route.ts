@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
+import { supabaseServer } from "@/lib/supabaseServer";
 import { getAgentScopeForAgent } from "@/lib/teams/scope.server";
 import type { LeadStatus } from "@leadsmart/shared";
 
@@ -37,7 +38,13 @@ export async function GET(req: Request) {
     }
 
     const scope = await getAgentScopeForAgent(String(agentId));
-    let q = supabase
+    // Query via the service-role client with explicit agent scoping —
+    // `contacts` has RLS enabled with no policies, so the session-bound
+    // client is deny-all and this route silently returned 0 rows for
+    // everyone. Auth + agent resolution above still use the session
+    // client; the .in(agent_id, scope) filter is the tenant boundary,
+    // same pattern as /api/dashboard/summary.
+    let q = supabaseServer
       .from("contacts")
       .select(
         "id,agent_id,name,email,phone,property_address,source,lead_status,notes,engagement_score,last_activity_at,rating,contact_frequency,contact_method,last_contacted_at,next_contact_at,search_location,search_radius,price_min,price_max,beds,baths,created_at,pipeline_stage_id,prediction_score,prediction_label,prediction_factors,prediction_computed_at",
@@ -90,7 +97,7 @@ export async function GET(req: Request) {
     const leadIds = leads.map((l) => l.id).filter(Boolean);
     let scoreMap: Record<string, any> = {};
     if (leadIds.length) {
-      const { data: scoreRows } = await supabase
+      const { data: scoreRows } = await supabaseServer
         .from("contact_scores")
         .select("contact_id,score,intent,timeline,confidence,explanation,updated_at")
         .in("contact_id", leadIds as any)

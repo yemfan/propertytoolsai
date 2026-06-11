@@ -125,8 +125,9 @@ const navConfig = {
         {
           // Unified people hub — Smart Lists inside this page segment into
           // Leads, Sphere, All. Old /dashboard/leads and /dashboard/sphere
-          // routes redirect here.
-          label: "Contacts",
+          // routes redirect here. Labeled "Leads" per the theme
+          // constitution's preferred navigation (people, not records).
+          label: "Leads",
           href: "/dashboard/contacts",
           match: [
             "/dashboard/contacts",
