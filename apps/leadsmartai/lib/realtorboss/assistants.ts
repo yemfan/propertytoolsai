@@ -5,6 +5,7 @@ import {
   RECEPTIONIST_SYSTEM_PROMPT,
   SALES_ASSISTANT_SYSTEM_PROMPT,
   TRANSACTION_ASSISTANT_SYSTEM_PROMPT,
+  ACCOUNTANT_SYSTEM_PROMPT,
 } from "@/lib/ai/prompts/realtorboss";
 
 export type AiAssistantRow = {
@@ -25,6 +26,7 @@ const DEFAULT_PROMPTS: Record<AssistantType, string> = {
   receptionist: RECEPTIONIST_SYSTEM_PROMPT,
   sales_assistant: SALES_ASSISTANT_SYSTEM_PROMPT,
   transaction_assistant: TRANSACTION_ASSISTANT_SYSTEM_PROMPT,
+  accountant: ACCOUNTANT_SYSTEM_PROMPT,
 };
 
 function mapRow(r: Record<string, unknown>): AiAssistantRow {

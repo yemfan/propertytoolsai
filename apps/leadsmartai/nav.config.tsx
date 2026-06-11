@@ -33,7 +33,6 @@ import {
   TrendingUp,
   User,
   Users,
-  Wallet,
   Wrench,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -105,6 +104,12 @@ const navConfig = {
       href: "/dashboard/ai-transaction-assistant",
       match: ["/dashboard/ai-transaction-assistant"],
       icon: p(<KeyRound size={17} strokeWidth={STROKE} aria-hidden />),
+    },
+    {
+      label: "AI Accountant",
+      href: "/dashboard/ai-accountant",
+      match: ["/dashboard/ai-accountant"],
+      icon: p(<Receipt size={17} strokeWidth={STROKE} aria-hidden />),
     },
     {
       label: "Manage AI Team",
@@ -248,18 +253,8 @@ const navConfig = {
           match: ["/dashboard/transactions/coordinator"],
           icon: l(<LayoutGrid size={14} strokeWidth={STROKE} aria-hidden />),
         },
-        {
-          label: "Books",
-          href: "/dashboard/books",
-          match: ["/dashboard/books"],
-          icon: l(<Receipt size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          label: "Expenses",
-          href: "/dashboard/expenses",
-          match: ["/dashboard/expenses"],
-          icon: l(<Wallet size={14} strokeWidth={STROKE} aria-hidden />),
-        },
+        // Books + Expenses moved under the AI Accountant (Your AI Team) —
+        // same routes, reached from /dashboard/ai-accountant.
       ],
     },
 

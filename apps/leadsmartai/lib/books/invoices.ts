@@ -2,6 +2,7 @@ import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
+import { logAssistantActivity } from "@/lib/realtorboss/activities";
 import { getReceptionistConfig } from "@/lib/voice-receptionist/settings";
 import { sendEmail } from "@/lib/email";
 import { computeTotals, lineAmount, formatMoney } from "./money";
@@ -302,6 +303,17 @@ export async function sendInvoiceEmail(id: string): Promise<{ ok: boolean; error
     .eq("id", id)
     .eq("agent_id", agentId as never);
 
+  // RealtorBoss activity feed (fire-and-forget — never fails the send).
+  void logAssistantActivity({
+    agentId: String(agentId),
+    assistantType: "accountant",
+    activityType: "invoice_sent",
+    summary: `Sent invoice ${invoice.invoice_number}${invoice.client_name ? ` to ${invoice.client_name}` : ""}`,
+    outcome: invoice.total != null ? `$${Math.round(Number(invoice.total)).toLocaleString()} now outstanding` : "Sent",
+    relatedEntityType: "invoice",
+    relatedEntityId: id,
+  });
+
   return { ok: true };
 }
 
@@ -361,14 +373,31 @@ export async function setInvoiceStatus(
   const { agentId } = await getCurrentAgentContext();
   const patch: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
   patch.paid_at = status === "paid" ? new Date().toISOString() : null;
-  const { error } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("invoices")
     .update(patch as never)
     .eq("id", id)
-    .eq("agent_id", agentId as never);
+    .eq("agent_id", agentId as never)
+    .select("invoice_number, client_name, total")
+    .maybeSingle();
   if (error) {
     console.error("[books] setInvoiceStatus:", error.message);
     return { ok: false, error: error.message };
+  }
+
+  // RealtorBoss activity feed — a payment landing is the Accountant's
+  // win condition; log it (fire-and-forget).
+  if (status === "paid" && data) {
+    const row = data as { invoice_number: string; client_name: string | null; total: number | null };
+    void logAssistantActivity({
+      agentId: String(agentId),
+      assistantType: "accountant",
+      activityType: "invoice_paid",
+      summary: `Invoice ${row.invoice_number}${row.client_name ? ` from ${row.client_name}` : ""} was paid`,
+      outcome: row.total != null ? `$${Math.round(Number(row.total)).toLocaleString()} collected` : "Paid",
+      relatedEntityType: "invoice",
+      relatedEntityId: id,
+    });
   }
   return { ok: true };
 }

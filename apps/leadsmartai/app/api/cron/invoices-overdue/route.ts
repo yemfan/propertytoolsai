@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { logAssistantActivity } from "@/lib/realtorboss/activities";
 
 export const runtime = "nodejs";
 
@@ -29,11 +30,32 @@ export async function GET(req: NextRequest) {
     .eq("status", "sent")
     .not("due_date", "is", null)
     .lt("due_date", today)
-    .select("id");
+    .select("id, agent_id, invoice_number");
 
   if (error) {
     console.error("[cron] invoices-overdue:", error.message);
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, markedOverdue: (data ?? []).length });
+
+  // RealtorBoss activity feed — one Accountant alert per agent
+  // (fire-and-forget; a logging failure must not fail the cron).
+  const rows = (data ?? []) as { id: string; agent_id: unknown; invoice_number: string }[];
+  const byAgent = new Map<string, string[]>();
+  for (const r of rows) {
+    const key = String(r.agent_id);
+    byAgent.set(key, [...(byAgent.get(key) ?? []), r.invoice_number]);
+  }
+  for (const [agentId, numbers] of byAgent) {
+    void logAssistantActivity({
+      agentId,
+      assistantType: "accountant",
+      activityType: "invoices_overdue",
+      summary: `${numbers.length} invoice${numbers.length === 1 ? "" : "s"} became overdue (${numbers.slice(0, 3).join(", ")}${numbers.length > 3 ? "…" : ""})`,
+      outcome: "Follow-up recommended",
+      priority: "high",
+      requiresAttention: true,
+    });
+  }
+
+  return NextResponse.json({ ok: true, markedOverdue: rows.length });
 }

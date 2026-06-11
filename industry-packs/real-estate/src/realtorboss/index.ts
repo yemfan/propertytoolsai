@@ -9,6 +9,7 @@ export {
   RECEPTIONIST_SYSTEM_PROMPT,
   SALES_ASSISTANT_SYSTEM_PROMPT,
   TRANSACTION_ASSISTANT_SYSTEM_PROMPT,
+  ACCOUNTANT_SYSTEM_PROMPT,
   bossBriefingPrompt,
   type BossBriefingSignals,
 } from "./prompts";
