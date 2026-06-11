@@ -1,19 +1,23 @@
 /**
- * RealtorBoss prompt library — system prompts + skill fragments for
- * the four-member AI real estate team.
- *
- *   Boss Assistant          — AI Chief of Staff (briefings, priorities)
- *   AI Receptionist         — inbound calls ("never miss a call")
- *   AI Sales Assistant      — outbound conversion ("never miss a lead")
- *   AI Transaction Assistant— deal coordination ("never miss a deadline")
+ * RealtorBoss prompt library — re-exported from the real-estate
+ * industry pack (`@helm/pack-real-estate`), where the AI team's
+ * personas, skills, and guardrails are defined as pack config
+ * (HelmSmart tenet: packs = config, core stays industry-agnostic).
  */
-export { SHARED_GUARDRAILS, withGuardrails } from "./shared-guardrails";
 export {
+  SHARED_GUARDRAILS,
+  VOICE_GUARDRAILS,
+  withGuardrails,
   BOSS_ASSISTANT_SYSTEM_PROMPT,
+  RECEPTIONIST_SYSTEM_PROMPT,
+  SALES_ASSISTANT_SYSTEM_PROMPT,
+  TRANSACTION_ASSISTANT_SYSTEM_PROMPT,
   bossBriefingPrompt,
   type BossBriefingSignals,
-} from "./boss-assistant";
-export { RECEPTIONIST_SYSTEM_PROMPT } from "./receptionist";
-export { SALES_ASSISTANT_SYSTEM_PROMPT } from "./sales-assistant";
-export { TRANSACTION_ASSISTANT_SYSTEM_PROMPT } from "./transaction-assistant";
-export { SKILLS, getSkill, skillPrompts, type Skill, type SkillCategory } from "./skills";
+  SKILLS,
+  getSkill,
+  skillPrompts,
+  buildVoicePlaybook,
+  type Skill,
+  type SkillCategory,
+} from "@helm/pack-real-estate";

@@ -2,6 +2,7 @@ import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { logAssistantActivity } from "@/lib/realtorboss/activities";
 import { buildAgentDigest, renderDigestEmail } from "./overdueDigest";
 import type { TransactionRow, TransactionTaskRow } from "./types";
 
@@ -226,6 +227,17 @@ export async function runOverdueNudges(opts: {
       });
 
       result.sentEmails += 1;
+
+      // RealtorBoss activity feed — fire-and-forget, never fails the run.
+      void logAssistantActivity({
+        agentId,
+        assistantType: "transaction_assistant",
+        activityType: "transaction_digest",
+        summary: `Emailed your transaction digest: ${digest.overdueCount} overdue, ${digest.upcomingCount} upcoming task${digest.upcomingCount === 1 ? "" : "s"}`,
+        outcome: "Digest sent",
+        priority: digest.overdueCount > 0 ? "high" : "normal",
+        requiresAttention: digest.overdueCount > 0,
+      });
 
       if (logId) {
         await supabaseAdmin

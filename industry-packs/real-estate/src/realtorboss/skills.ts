@@ -1,10 +1,9 @@
 /**
  * RealtorBoss skill library — modular skills attachable to assistants.
  *
- * Phase 1: skills are typed prompt fragments. Phase 2 will promote
- * them to DB-backed `ai_skills` rows with config schemas (HelmSmart
- * `@helm/ai-workforce` tool pattern) — keep keys stable so the
- * migration is a data copy, not a rename.
+ * Keys are stable identifiers: they're seeded into the `ai_skills`
+ * table and stored in `ai_assistants.enabled_skills`, so renaming a
+ * key is a data migration, not a refactor.
  */
 
 export type SkillCategory =
@@ -21,6 +20,10 @@ export type Skill = {
   category: SkillCategory;
   /** Prompt fragment appended to the owning assistant's system prompt. */
   prompt: string;
+  /** One-line variant for the live voice channel (kept short — it rides
+   *  inside the per-call system prompt). Omitted = skill is not
+   *  voice-relevant (e.g. transaction checklist skills). */
+  voiceLine?: string;
 };
 
 export const SKILLS: readonly Skill[] = [
@@ -30,6 +33,7 @@ export const SKILLS: readonly Skill[] = [
     description: "Capture required contact info and create/update the lead record.",
     category: "reception",
     prompt: `When speaking with a new contact, capture: name, phone, email, source, and buyer/seller intent. Create or update the lead record with everything you learn.`,
+    voiceLine: "Always collect the caller's name, phone, email, and whether they're looking to buy or sell.",
   },
   {
     key: "buyer_qualification",
@@ -37,6 +41,7 @@ export const SKILLS: readonly Skill[] = [
     description: "Determine buyer readiness and lead temperature.",
     category: "qualification",
     prompt: `For buyers, learn: desired area, budget, property type, timeline, pre-approval status, and current housing situation. Classify lead temperature as hot, warm, or cold based on timeline and financing readiness.`,
+    voiceLine: "For buyers, ask about desired area, budget, timeline, and whether they're pre-approved for financing.",
   },
   {
     key: "seller_qualification",
@@ -44,6 +49,7 @@ export const SKILLS: readonly Skill[] = [
     description: "Determine seller opportunity and lead temperature.",
     category: "qualification",
     prompt: `For sellers, learn: property address, property type, timeline, motivation, desired price if offered, and whether they want a home valuation. Classify lead temperature as hot, warm, or cold.`,
+    voiceLine: "For sellers, ask for the property address, their selling timeline, and whether they'd like a home valuation.",
   },
   {
     key: "appointment_scheduling",
@@ -65,6 +71,7 @@ export const SKILLS: readonly Skill[] = [
     description: "Transfer or escalate urgent calls to the Realtor.",
     category: "reception",
     prompt: `Escalate to the Realtor when: the caller asks for a human, there is a transaction emergency, a legal or contract issue, a complaint, an active client issue, a ready-to-list seller, or a ready-to-offer buyer.`,
+    voiceLine: "Treat a ready-to-list seller, ready-to-offer buyer, active-client issue, complaint, or legal/contract question as urgent: take their details and promise a prompt call-back from the Realtor.",
   },
   {
     key: "speed_to_lead",
@@ -121,4 +128,22 @@ export function skillPrompts(keys: readonly string[]): string {
     .filter((s): s is Skill => Boolean(s))
     .map((s) => `### ${s.name}\n${s.prompt}`)
     .join("\n\n");
+}
+
+/**
+ * Compact qualification/escalation playbook for the LIVE VOICE channel,
+ * built from the skills the agent enabled on their AI Receptionist.
+ * Injected into the per-call system prompt as business "extra notes" —
+ * so it must stay short (a handful of bullet lines), voice-appropriate,
+ * and free of CRM/tool instructions the voice agent can't act on.
+ */
+export function buildVoicePlaybook(enabledSkillKeys: readonly string[]): string {
+  const lines = enabledSkillKeys
+    .map((k) => getSkill(k)?.voiceLine)
+    .filter((l): l is string => Boolean(l));
+  if (lines.length === 0) return "";
+  return [
+    "## Real-estate receptionist playbook",
+    ...lines.map((l) => `- ${l}`),
+  ].join("\n");
 }

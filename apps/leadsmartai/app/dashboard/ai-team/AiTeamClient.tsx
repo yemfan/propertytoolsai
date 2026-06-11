@@ -15,21 +15,33 @@ type AssistantRow = {
 
 type SkillRow = { key: string; name: string; description: string; category: string };
 
+type Performance = {
+  windowDays: number;
+  assistants: { type: AssistantType; activities: number; needsAttention: number; series: number[] }[];
+  calls: { answered: number; missed: number; recovered: number; outbound: number; avgDurationSeconds: number | null };
+  recommendations: { open: number; completed: number; dismissed: number };
+};
+
 export default function AiTeamClient() {
   const [assistants, setAssistants] = useState<AssistantRow[]>([]);
   const [skills, setSkills] = useState<SkillRow[]>([]);
+  const [perf, setPerf] = useState<Performance | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/dashboard/realtorboss/team").then((r) => r.json()).catch(() => ({}));
+    const [res, perfRes] = await Promise.all([
+      fetch("/api/dashboard/realtorboss/team").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/dashboard/realtorboss/performance").then((r) => r.json()).catch(() => ({})),
+    ]);
     if (res?.ok) {
       setAssistants((res.assistants ?? []) as AssistantRow[]);
       setSkills((res.skills ?? []) as SkillRow[]);
     } else {
       setError(res?.error ?? "Could not load your AI team.");
     }
+    if (perfRes?.ok) setPerf(perfRes as Performance);
     setLoading(false);
   }, []);
 
@@ -67,6 +79,49 @@ export default function AiTeamClient() {
 
       {error && (
         <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">{error}</p>
+      )}
+
+      {/* ── AI team performance (last 30 days, from real logs) ── */}
+      {perf && (
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-900">
+            Performance <span className="font-normal text-gray-400">· last {perf.windowDays} days</span>
+          </h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <PerfStat label="Calls answered" value={perf.calls.answered} hint={perf.calls.avgDurationSeconds != null ? `avg ${Math.round(perf.calls.avgDurationSeconds / 60)}m` : undefined} />
+            <PerfStat label="Missed calls recovered" value={`${perf.calls.recovered}/${perf.calls.missed}`} hint="text-back sent / missed" />
+            <PerfStat label="Outbound AI calls" value={perf.calls.outbound} />
+            <PerfStat label="Priorities completed" value={perf.recommendations.completed} hint={`${perf.recommendations.open} open · ${perf.recommendations.dismissed} dismissed`} />
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {perf.assistants
+              .filter((a) => a.type !== "boss_assistant")
+              .map((a) => {
+                const def = AI_TEAM.find((d) => d.type === a.type);
+                const max = Math.max(1, ...a.series);
+                return (
+                  <div key={a.type} className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-xs font-medium text-gray-900">{def?.name ?? a.type}</p>
+                    <p className="text-[10px] text-gray-500">
+                      {a.activities} activit{a.activities === 1 ? "y" : "ies"}
+                      {a.needsAttention > 0 ? ` · ${a.needsAttention} needed you` : ""}
+                    </p>
+                    <div className="mt-2 flex h-8 items-end gap-0.5" aria-hidden>
+                      {a.series.map((v, i) => (
+                        <div
+                          key={i}
+                          className={`flex-1 rounded-sm ${v > 0 ? "bg-blue-500/80" : "bg-gray-100"}`}
+                          style={{ height: `${Math.max(8, (v / max) * 100)}%` }}
+                          title={`${v} on day ${i + 1}`}
+                        />
+                      ))}
+                    </div>
+                    <p className="mt-1 text-[10px] text-gray-400">activity · last 14 days</p>
+                  </div>
+                );
+              })}
+          </div>
+        </section>
       )}
 
       {loading ? (
@@ -144,6 +199,16 @@ export default function AiTeamClient() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function PerfStat({ label, value, hint }: { label: string; value: number | string; hint?: string }) {
+  return (
+    <div className="rounded-lg border border-gray-100 p-3">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="mt-0.5 text-xl font-bold text-gray-900">{value}</p>
+      {hint && <p className="text-[10px] text-gray-400">{hint}</p>}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendSMS } from "@/lib/twilioSms";
+import { logAssistantActivity } from "@/lib/realtorboss/activities";
 import type { TransactionRow, TransactionTaskRow } from "./types";
 
 /**
@@ -157,6 +158,19 @@ export async function runWireFraudAlerts(opts: {
       await sendSMS(phone, message);
 
       result.sentSms += 1;
+
+      // RealtorBoss activity feed — fire-and-forget, never fails the run.
+      void logAssistantActivity({
+        agentId: String(tx.agent_id),
+        assistantType: "transaction_assistant",
+        activityType: "wire_fraud_alert",
+        summary: `Texted you a wire-fraud reminder for ${tx.property_address} (closes in ${daysToClose} day${daysToClose === 1 ? "" : "s"}, wire instructions unverified)`,
+        outcome: "Alert sent",
+        priority: "high",
+        requiresAttention: true,
+        relatedEntityType: "transaction",
+        relatedEntityId: tx.id,
+      });
       if (logId) {
         await supabaseAdmin
           .from("transaction_wire_alert_log")
