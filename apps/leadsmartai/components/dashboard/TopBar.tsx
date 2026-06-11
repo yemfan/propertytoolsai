@@ -25,7 +25,7 @@ import { Topbar, filterNavSectionsByRole } from "@repo/ui";
 import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { leadSmartNav } from "@/nav.config";
-import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
+import { RealtorBossLogo } from "@/components/brand/RealtorBossLogo";
 import { SupportChatLauncher } from "@/components/support/CustomerSupportChat";
 import { isAdminOrSupportRole, isAgentOrBrokerProfileRole } from "@/lib/rolePortalPaths";
 
@@ -477,7 +477,7 @@ export default function TopBar({
           href="/dashboard"
           className="flex min-w-0 shrink-0 items-center rounded-2xl p-1 outline-none transition hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
         >
-          <LeadSmartLogo compact className="h-8 max-w-[min(100%,200px)] w-auto sm:h-9" priority={false} />
+          <RealtorBossLogo compact className="max-w-[min(100%,220px)]" />
         </Link>
       }
       searchSlot={<div className="hidden min-[480px]:block w-full">{searchField("ls-dashboard-search")}</div>}

@@ -6,14 +6,17 @@ import { ReactNode, useCallback, useMemo } from "react";
 import type { MobileSidebarUser } from "@repo/ui";
 import { useAuth } from "@/components/AuthProvider";
 import { signOutWithFullReload } from "@/lib/auth/signOutClient";
-import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
+import { RealtorBossLogo } from "@/components/brand/RealtorBossLogo";
 import marketingNavConfig, { leadSmartMarketingNav } from "@/marketing.nav.config";
 import { MarketingTopNav } from "@/components/marketing/MarketingTopNav";
 import { SupportChatLauncher } from "@/components/support/CustomerSupportChat";
 import Footer from "./Footer";
 import FloatingCTA from "./FloatingCTA";
 
-const APP_NAME = "LeadSmart AI";
+// RealtorBoss repositioning: the product shells (auth, dashboard) brand
+// as RealtorBoss; the marketing chrome keeps LeadSmart AI until the
+// domain/SEO migration.
+const APP_NAME = "RealtorBoss";
 
 /** Marketing-shell user card — only renders when an auth session exists. */
 function useSidebarUser() {
@@ -146,9 +149,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <Link
               href="/"
               className="flex min-w-0 items-center rounded-md transition hover:opacity-90"
-              aria-label="LeadSmart AI home"
+              aria-label="RealtorBoss home"
             >
-              <LeadSmartLogo className="h-8 w-auto max-w-[180px] sm:h-9 sm:max-w-[260px]" />
+              <RealtorBossLogo compact />
             </Link>
             <Link
               href="/"

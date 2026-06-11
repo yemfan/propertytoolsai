@@ -94,9 +94,11 @@ export const metadata: Metadata = {
     creator: "@leadsmartai",
   },
   icons: {
-    icon: [{ url: "/images/lslog64.png", sizes: "64x64", type: "image/png" }],
-    shortcut: "/images/lslog64.png",
-    apple: [{ url: "/images/ls180.png", sizes: "180x180", type: "image/png" }],
+    // RealtorBoss mark (app/icon.png + app/apple-icon.png hold the same
+    // tiles via Next's file conventions, which take precedence).
+    icon: [{ url: "/brand/realtorboss/realtorboss-icon-64.png", sizes: "64x64", type: "image/png" }],
+    shortcut: "/brand/realtorboss/realtorboss-icon-64.png",
+    apple: [{ url: "/brand/realtorboss/realtorboss-icon-180.png", sizes: "180x180", type: "image/png" }],
   },
   // NOTE: Do NOT set a root-level canonical here. Next.js merges root
   // layout metadata into every child page that doesn't override it,
