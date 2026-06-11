@@ -15,6 +15,8 @@ export type BossRecommendationRow = {
   related_entity_id: string | null;
   recommended_action: string | null;
   action_href: string | null;
+  /** Constitution: what acting on this should achieve. */
+  expected_outcome: string | null;
   dedupe_key: string;
   status: "new" | "accepted" | "dismissed" | "completed";
   created_at: string;
@@ -76,6 +78,9 @@ async function buildCandidates(agentId: string): Promise<Candidate[]> {
           related_entity_id: t.id,
           recommended_action: "Review transaction",
           action_href: `/dashboard/transactions/${t.id}`,
+          expected_outcome: overdue
+            ? "Contingency handled before it can derail the closing."
+            : "Deal stays on track to close on schedule.",
           dedupe_key: `tx_deadline:${t.id}:${c.slug}`,
         });
       }
@@ -102,6 +107,7 @@ async function buildCandidates(agentId: string): Promise<Candidate[]> {
         related_entity_id: String(l.id),
         recommended_action: "Open lead",
         action_href: `/dashboard/contacts?list=leads&highlight=${encodeURIComponent(String(l.id))}`,
+        expected_outcome: "High-likelihood appointment or offer this week.",
         dedupe_key: `hot_lead:${l.id}`,
       });
     }
@@ -130,6 +136,7 @@ async function buildCandidates(agentId: string): Promise<Candidate[]> {
         related_entity_id: null,
         recommended_action: "Review calls",
         action_href: "/dashboard/ai-receptionist",
+        expected_outcome: "Caller recovered before they reach another agent.",
         dedupe_key: `missed_calls:${dayStamp()}`,
       });
     }
@@ -152,6 +159,7 @@ async function buildCandidates(agentId: string): Promise<Candidate[]> {
       related_entity_id: null,
       recommended_action: "Open tasks",
       action_href: "/dashboard/tasks",
+      expected_outcome: "Stalled follow-ups start moving again.",
       dedupe_key: `overdue_tasks:${dayStamp()}`,
     });
   }

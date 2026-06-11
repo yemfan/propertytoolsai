@@ -25,7 +25,7 @@ import { Topbar, filterNavSectionsByRole } from "@repo/ui";
 import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { leadSmartNav } from "@/nav.config";
-import { RealtorBossLogo } from "@/components/brand/RealtorBossLogo";
+import { RealtorBossLogo, RealtorBossMark } from "@/components/brand/RealtorBossLogo";
 import { SupportChatLauncher } from "@/components/support/CustomerSupportChat";
 import { isAdminOrSupportRole, isAgentOrBrokerProfileRole } from "@/lib/rolePortalPaths";
 
@@ -477,7 +477,10 @@ export default function TopBar({
           href="/dashboard"
           className="flex min-w-0 shrink-0 items-center rounded-2xl p-1 outline-none transition hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
         >
-          <RealtorBossLogo compact className="max-w-[min(100%,220px)]" />
+          {/* Phones get the mark only — the top bar's trailing actions are
+              shrink-0, so the wordmark is what must yield at ~375px. */}
+          <span className="sm:hidden"><RealtorBossMark className="h-8 w-8" /></span>
+          <span className="hidden sm:block"><RealtorBossLogo compact className="max-w-[min(100%,220px)]" /></span>
         </Link>
       }
       searchSlot={<div className="hidden min-[480px]:block w-full">{searchField("ls-dashboard-search")}</div>}

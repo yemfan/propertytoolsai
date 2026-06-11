@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getAssistant } from "@/lib/realtorboss/team";
+import { assessTransactionHealth, fmtMilestoneDay } from "@/lib/realtorboss/transactionHealth";
 import { AssistantHeader, AssistantKpiCard } from "@/components/realtorboss/AssistantPage";
 
 type TransactionItem = {
@@ -140,33 +141,54 @@ export default function TransactionAssistantClient() {
         )}
       </section>
 
+      {/* ── Transaction health (constitution: health, not data) ── */}
       <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">Active Transactions</h2>
+          <h2 className="text-sm font-semibold text-gray-900">Transaction Health</h2>
           <Link href="/dashboard/transactions" className="text-xs font-medium text-blue-600 hover:text-blue-800">View all</Link>
         </div>
         {active.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">
-            {loading ? "Loading…" : "No active transactions. New deals show up here automatically."}
+            {loading ? "Loading…" : "Your AI Transaction Assistant is ready — new deals are monitored here automatically."}
           </p>
         ) : (
-          <div className="space-y-2">
-            {active.slice(0, 10).map((t) => (
-              <Link key={t.id} href={`/dashboard/transactions/${t.id}`} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-gray-900">{t.property_address}</p>
-                  <p className="text-xs text-gray-500">
-                    {t.contact_name ?? "—"} · {t.task_completed}/{t.task_total} tasks done
-                    {(t.task_overdue ?? 0) > 0 ? ` · ${t.task_overdue} overdue` : ""}
-                  </p>
-                </div>
-                {t.closing_date && (
-                  <span className="shrink-0 text-xs text-gray-400">
-                    closes {new Date(t.closing_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </span>
-                )}
-              </Link>
-            ))}
+          <div className="grid gap-3 lg:grid-cols-3">
+            {active.slice(0, 9).map((t) => {
+              const h = assessTransactionHealth(t);
+              const tone =
+                h.level === "at_risk"
+                  ? "border-red-200 bg-red-50/40"
+                  : h.level === "needs_attention"
+                    ? "border-amber-200 bg-amber-50/40"
+                    : "border-emerald-200 bg-emerald-50/30";
+              const chip =
+                h.level === "at_risk"
+                  ? "bg-red-100 text-red-700"
+                  : h.level === "needs_attention"
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-emerald-100 text-emerald-700";
+              return (
+                <Link key={t.id} href={`/dashboard/transactions/${t.id}`} className={`rounded-xl border p-3 transition hover:shadow-sm ${tone}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="truncate text-sm font-semibold text-gray-900">{t.property_address}</p>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${chip}`}>{h.label}</span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-gray-600">{t.contact_name ?? "—"} · {h.happening}</p>
+                  {h.next && (
+                    <p className="mt-1.5 text-xs text-gray-700">
+                      <span className="font-medium">Next:</span> {h.next.label} · {fmtMilestoneDay(h.next.date)}
+                      {h.next.overdue ? " (overdue)" : ""}
+                    </p>
+                  )}
+                  {h.missing && (
+                    <p className="text-xs text-amber-700"><span className="font-medium">Missing:</span> {h.missing}</p>
+                  )}
+                  {h.risk && (
+                    <p className="text-xs font-medium text-red-700"><span className="font-semibold">At risk:</span> {h.risk}</p>
+                  )}
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>
