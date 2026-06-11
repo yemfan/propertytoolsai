@@ -176,17 +176,21 @@ begin
   insert into public.transactions
     (id, agent_id, contact_id, transaction_type, property_address, city, state, purchase_price, status,
      mutual_acceptance_date, inspection_deadline, inspection_completed_at, appraisal_deadline, appraisal_completed_at,
-     loan_contingency_deadline, loan_contingency_removed_at, closing_date)
+     loan_contingency_deadline, loan_contingency_removed_at, closing_date,
+     commission_pct, gross_commission, brokerage_split_pct, referral_fee_pct, agent_net_commission)
   values
     (t_cherry, v_agent, c_emily, 'buyer_rep', '148 W Cherry Ave', 'Monrovia', 'CA', 935000, 'active',
      (now() - interval '8 days')::date, (now() + interval '2 days')::date, null, (now() + interval '9 days')::date, null,
-     (now() + interval '16 days')::date, null, (now() + interval '32 days')::date),
+     (now() + interval '16 days')::date, null, (now() + interval '32 days')::date,
+     2.5, 23375, 70, 0, 16362.50),
     (t_maple, v_agent, c_daniel, 'buyer_rep', '2204 Maple Ct', 'Pasadena', 'CA', 612000, 'active',
      (now() - interval '15 days')::date, (now() - interval '5 days')::date, now() - interval '5 days', (now() + interval '6 days')::date, null,
-     (now() + interval '13 days')::date, null, (now() + interval '27 days')::date),
+     (now() + interval '13 days')::date, null, (now() + interval '27 days')::date,
+     2.5, 15300, 70, 0, 10710),
     (t_birch, v_agent, c_castillo, 'listing_rep', '87 Birchwood Ln', 'Pasadena', 'CA', 745000, 'active',
      (now() - interval '28 days')::date, (now() - interval '20 days')::date, now() - interval '20 days', (now() - interval '12 days')::date, now() - interval '12 days',
-     (now() - interval '5 days')::date, now() - interval '5 days', (now() + interval '2 days')::date);
+     (now() - interval '5 days')::date, now() - interval '5 days', (now() + interval '2 days')::date,
+     3.0, 22350, 70, 0, 15645);
 
   insert into public.transaction_tasks (transaction_id, stage, title, description, due_date, completed_at, order_index, seed_key, source) values
     (t_cherry, 'inspection', 'Schedule home inspection', null, (now() - interval '2 days')::date, now() - interval '3 days', 1, 'schedule_inspection', 'seed'),

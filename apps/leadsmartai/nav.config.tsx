@@ -1,7 +1,6 @@
 import type { NavConfig } from "@repo/ui";
 import {
   BarChart3,
-  Building2,
   Calendar,
   CheckCircle2,
   ClipboardList,
@@ -26,13 +25,12 @@ import {
   Route,
   Ruler,
   Settings,
-  ShoppingBag,
   Sparkles,
-  Tag,
   Target,
   TrendingUp,
   User,
   Users,
+  Wallet,
   Wrench,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -51,173 +49,122 @@ function l(icon: ReactNode): ReactNode {
 /**
  * RealtorBoss — agent portal sidebar.
  *
- * Visual structure (consumed by `PremiumSidebarV2`):
- *   pinned Boss Assistant  →  AI TEAM band  →  WORK band  →  ENGAGE band  →  ANALYZE band  →  MANAGE band  →  Admin
+ * Structure per the theme constitution's preferred navigation (and the
+ * user's spec):
  *
- * The supercategory bands ("section-label" sections) collapse the ten
- * collapsible groups into four scannable clusters; legacy `PremiumSidebar`
- * + `MobileSidebar` either skip the band rows or render them as small
- * labels (see `packages/ui/navigation`).
+ *   Boss Assistant · Calendar · Tasks · Leads · Transactions
+ *   ──────
+ *   Receptionist · Sales Assistant · Transaction Assistant · Accountant
+ *   ──────
+ *   More (collapsed — everything else stays reachable) · Settings
  *
- * Sections kept their original semantics:
- *   Boss Assistant — AI Chief of Staff command center (default home)
- *   Your AI Team — AI Receptionist / Sales Assistant / Transaction Assistant
- *   Leads        — prospecting + ops (contacts, queue, tasks, calendar)
- *   Buyers       — buyer-side activity (showings → offers)
- *   Sellers      — seller-side activity (presentations, listings)
- *   Transactions — operational layer (all deals + Coordinator kanban)
- *   Communicate  — inbox, drafts, templates, marketing plans
- *   Workflow     — sales model + playbooks
- *   Insights     — performance, growth, sphere monetization
- *   Property Tools — calculator suite + CMA library
- *   Account      — settings, billing, profile, support
- *   Admin        — role-gated platform management
+ * Every feature that used to live in the Work/Engage/Analyze/Manage
+ * bands kept its route; the long tail now lives in the collapsed
+ * "More" group so the daily surface stays calm (constitution: the
+ * software should not feel busy).
  */
 const navConfig = {
   id: "leadsmart",
   sidebarTitle: "RealtorBoss",
   sections: [
-    /* ── Boss Assistant — the AI Chief of Staff command center ── */
+    /* ── The Boss's day ── */
     {
       label: "Boss Assistant",
       href: "/dashboard/boss",
       match: ["/dashboard", "/dashboard/boss", "/dashboard/broker"],
-      icon: p(<LayoutDashboard size={17} strokeWidth={STROKE} aria-hidden />),
+      icon: p(<House size={17} strokeWidth={STROKE} aria-hidden />),
+    },
+    {
+      label: "Calendar",
+      href: "/dashboard/calendar",
+      match: ["/dashboard/calendar"],
+      icon: p(<Calendar size={17} strokeWidth={STROKE} aria-hidden />),
+    },
+    {
+      label: "Tasks",
+      href: "/dashboard/tasks",
+      match: ["/dashboard/tasks"],
+      icon: p(<CheckCircle2 size={17} strokeWidth={STROKE} aria-hidden />),
+    },
+    {
+      // Unified people hub — Smart Lists inside segment into Leads,
+      // Sphere, All. Old /dashboard/leads + /dashboard/sphere redirect here.
+      label: "Leads",
+      href: "/dashboard/contacts",
+      match: ["/dashboard/contacts", "/dashboard/leads", "/dashboard/sphere"],
+      icon: p(<Users size={17} strokeWidth={STROKE} aria-hidden />),
+    },
+    {
+      label: "Transactions",
+      href: "/dashboard/transactions",
+      match: ["/dashboard/transactions", "/dashboard/transactions/coordinator"],
+      icon: p(<KeyRound size={17} strokeWidth={STROKE} aria-hidden />),
     },
 
-    /* ── YOUR AI TEAM ── the three working assistants ── */
-    { kind: "section-label" as const, label: "Your AI Team" },
+    /* ── Your AI Team ── */
+    { kind: "divider" as const },
     {
-      label: "AI Receptionist",
+      label: "Receptionist",
       href: "/dashboard/ai-receptionist",
       match: ["/dashboard/ai-receptionist"],
       icon: p(<Headphones size={17} strokeWidth={STROKE} aria-hidden />),
     },
     {
-      label: "AI Sales Assistant",
+      label: "Sales Assistant",
       href: "/dashboard/ai-sales-assistant",
       match: ["/dashboard/ai-sales-assistant"],
-      icon: p(<Sparkles size={17} strokeWidth={STROKE} aria-hidden />),
+      icon: p(<TrendingUp size={17} strokeWidth={STROKE} aria-hidden />),
     },
     {
-      label: "AI Transaction Assistant",
+      label: "Transaction Assistant",
       href: "/dashboard/ai-transaction-assistant",
       match: ["/dashboard/ai-transaction-assistant"],
-      icon: p(<KeyRound size={17} strokeWidth={STROKE} aria-hidden />),
+      icon: p(<ClipboardList size={17} strokeWidth={STROKE} aria-hidden />),
     },
     {
-      label: "AI Accountant",
+      label: "Accountant",
       href: "/dashboard/ai-accountant",
       match: ["/dashboard/ai-accountant"],
       icon: p(<Receipt size={17} strokeWidth={STROKE} aria-hidden />),
     },
-    {
-      label: "Manage AI Team",
-      href: "/dashboard/ai-team",
-      match: ["/dashboard/ai-team"],
-      icon: p(<Settings size={17} strokeWidth={STROKE} aria-hidden />),
-    },
 
-    /* ── WORK ── side-of-deal activity + the bridge transactional layer ── */
-    { kind: "section-label" as const, label: "Work" },
-
-    /* ── Leads ── daily prospecting + ops + lead-gen events ── */
+    /* ── Everything else, collapsed ── */
+    { kind: "divider" as const },
     {
-      label: "Leads",
-      defaultOpen: true,
-      icon: p(<Users size={17} strokeWidth={STROKE} aria-hidden />),
+      label: "More",
+      icon: p(<Wrench size={17} strokeWidth={STROKE} aria-hidden />),
       items: [
         {
-          // Unified people hub — Smart Lists inside this page segment into
-          // Leads, Sphere, All. Old /dashboard/leads and /dashboard/sphere
-          // routes redirect here. Labeled "Leads" per the theme
-          // constitution's preferred navigation (people, not records).
-          label: "Leads",
-          href: "/dashboard/contacts",
-          match: [
-            "/dashboard/contacts",
-            "/dashboard/leads",
-            "/dashboard/sphere",
-          ],
-          icon: l(<Users size={14} strokeWidth={STROKE} aria-hidden />),
+          label: "Conversations",
+          href: "/dashboard/inbox",
+          match: ["/dashboard/inbox", "/dashboard/calls"],
+          icon: l(<MessageCircle size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
-          label: "Tasks",
-          href: "/dashboard/tasks",
-          match: ["/dashboard/tasks"],
-          icon: l(<CheckCircle2 size={14} strokeWidth={STROKE} aria-hidden />),
+          label: "Voice Console",
+          href: "/dashboard/missed-call",
+          match: ["/dashboard/missed-call"],
+          icon: l(<PhoneMissed size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
-          label: "Calendar",
-          href: "/dashboard/calendar",
-          match: ["/dashboard/calendar"],
-          icon: l(<Calendar size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          // Open houses are a lead-generation surface — buyer-side
-          // agents host floor-time events for other agents' listings,
-          // and listing agents host their own. Either way the
-          // outcome is captured visitors, so it lives with Leads, not
-          // strictly under Sellers.
           label: "Open Houses",
           href: "/dashboard/open-houses",
           match: ["/dashboard/open-houses", "/dashboard/open-house"],
           icon: l(<DoorOpen size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
-          // Triage queue lives at the bottom — agents land here only when
-          // they're actively claiming new inbound, not for daily prospecting.
-          label: "Lead Queue",
-          href: "/dashboard/lead-queue",
-          match: ["/dashboard/lead-queue"],
-          icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          // Generate Leads — AI-drafted social posts (Phase 1A) + ad
-          // campaigns on Meta/Google (Phase 2+). Sits next to Lead Queue
-          // since both are about pulling NEW inbound into the CRM rather
-          // than working existing contacts.
-          label: "Generate Leads",
-          href: "/dashboard/leads/generate",
-          match: ["/dashboard/leads/generate"],
-          icon: l(<Sparkles size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-      ],
-    },
-
-    /* ── Buyers ── buyer-side activity ── */
-    {
-      label: "Buyers",
-      defaultOpen: true,
-      icon: p(<ShoppingBag size={17} strokeWidth={STROKE} aria-hidden />),
-      items: [
-        {
-          // Buyer-side property-visit tracker: schedule + feedback capture.
           label: "Showings",
           href: "/dashboard/showings",
           match: ["/dashboard/showings"],
           icon: l(<Eye size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
-          // Buyer-side offer tracker: drafts, counters, acceptance → transaction.
           label: "Offers",
           href: "/dashboard/offers",
           match: ["/dashboard/offers"],
           icon: l(<FileSignature size={14} strokeWidth={STROKE} aria-hidden />),
         },
-      ],
-    },
-
-    /* ── Sellers ── listing-side activity. Open Houses lives under
-       Leads (lead-gen surface); CMAs live under Property Tools (used on
-       both sides for pricing strategy AND offer sizing). ── */
-    {
-      label: "Sellers",
-      icon: p(<Tag size={17} strokeWidth={STROKE} aria-hidden />),
-      items: [
         {
-          // Agent's active + closed listings, backed by /dashboard/properties
-          // — kept that URL since the CommandPalette already links there.
           label: "Listings",
           href: "/dashboard/properties",
           match: ["/dashboard/properties"],
@@ -229,57 +176,36 @@ const navConfig = {
           match: ["/dashboard/seller-presentation", "/dashboard/presentations"],
           icon: l(<Presentation size={14} strokeWidth={STROKE} aria-hidden />),
         },
-      ],
-    },
-
-    /* ── Transactions ── operational layer that spans both sides.
-       `match` is exact (see packages/ui/navigation/matchPath.ts), so
-       /dashboard/transactions/coordinator highlights Coordinator
-       without colliding with the All deals entry. ── */
-    {
-      label: "Transactions",
-      defaultOpen: true,
-      icon: p(<KeyRound size={17} strokeWidth={STROKE} aria-hidden />),
-      items: [
         {
-          label: "All deals",
-          href: "/dashboard/transactions",
-          match: ["/dashboard/transactions"],
-          icon: l(<KeyRound size={14} strokeWidth={STROKE} aria-hidden />),
+          label: "Lead Queue",
+          href: "/dashboard/lead-queue",
+          match: ["/dashboard/lead-queue"],
+          icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
-          label: "Coordinator",
+          label: "Generate Leads",
+          href: "/dashboard/leads/generate",
+          match: ["/dashboard/leads/generate"],
+          icon: l(<Sparkles size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          label: "Coordinator Board",
           href: "/dashboard/transactions/coordinator",
           match: ["/dashboard/transactions/coordinator"],
           icon: l(<LayoutGrid size={14} strokeWidth={STROKE} aria-hidden />),
         },
-        // Books + Expenses moved under the AI Accountant (Your AI Team) —
-        // same routes, reached from /dashboard/ai-accountant.
-      ],
-    },
-
-    /* ── ENGAGE ── outbound + workflow scaffolding ── */
-    { kind: "section-label" as const, label: "Engage" },
-
-    {
-      label: "Communicate",
-      icon: p(<MessageCircle size={17} strokeWidth={STROKE} aria-hidden />),
-      items: [
         {
-          label: "Conversations",
-          href: "/dashboard/inbox",
-          match: ["/dashboard/inbox", "/dashboard/calls"],
-          icon: l(<MessageCircle size={14} strokeWidth={STROKE} aria-hidden />),
+          // Owned by the AI Accountant; kept here for direct access.
+          label: "Invoices",
+          href: "/dashboard/books",
+          match: ["/dashboard/books"],
+          icon: l(<Receipt size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
-          // The voice console — Inbound (incoming-call activity +
-          // missed-call auto-text settings) and Outbound (place AI calls).
-          // Renamed from "AI Assistant" so it doesn't collide with the
-          // "Your AI Team" band; the AI Receptionist page links here.
-          label: "Voice Console",
-          href: "/dashboard/missed-call",
-          match: ["/dashboard/missed-call"],
-          icon: l(<PhoneMissed size={14} strokeWidth={STROKE} aria-hidden />),
+          label: "Expenses",
+          href: "/dashboard/expenses",
+          match: ["/dashboard/expenses"],
+          icon: l(<Wallet size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Drafts",
@@ -299,14 +225,6 @@ const navConfig = {
           match: ["/dashboard/marketing"],
           icon: l(<Megaphone size={14} strokeWidth={STROKE} aria-hidden />),
         },
-      ],
-    },
-
-    /* ── Workflow ── sales model + playbooks ── */
-    {
-      label: "Workflow",
-      icon: p(<Wrench size={17} strokeWidth={STROKE} aria-hidden />),
-      items: [
         {
           label: "Sales Model",
           href: "/dashboard/sales-model",
@@ -319,19 +237,7 @@ const navConfig = {
           match: ["/dashboard/playbooks"],
           icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
         },
-      ],
-    },
-
-    /* ── ANALYZE ── insight + calculator suites ── */
-    { kind: "section-label" as const, label: "Analyze" },
-
-    {
-      label: "Insights",
-      icon: p(<TrendingUp size={17} strokeWidth={STROKE} aria-hidden />),
-      items: [
         {
-          // The classic daily-overview dashboard — superseded as the
-          // default home by the Boss Assistant but kept reachable.
           label: "Daily Overview",
           href: "/dashboard/overview",
           match: ["/dashboard/overview"],
@@ -344,19 +250,13 @@ const navConfig = {
           icon: l(<BarChart3 size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
-          // Actionable nudges pulled live from CRM data: stale past
-          // clients, unreplied hot leads, response-time benchmark, drip
-          // health, past-due deals.
           label: "Coaching",
           href: "/dashboard/coaching",
           match: ["/dashboard/coaching"],
           icon: l(<Compass size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
-          // Combined sphere monetization view — seller + buyer scores
-          // per past-client / sphere contact, side-by-side, sorted by
-          // combined leverage. Pairs with the both_high drip cadence.
-          label: "Sphere monetization",
+          label: "Sphere Monetization",
           href: "/dashboard/sphere/monetization",
           match: ["/dashboard/sphere/monetization"],
           icon: l(<Gem size={14} strokeWidth={STROKE} aria-hidden />),
@@ -367,46 +267,22 @@ const navConfig = {
           match: ["/dashboard/growth"],
           icon: l(<Rocket size={14} strokeWidth={STROKE} aria-hidden />),
         },
-      ],
-    },
-
-    /* ── Property Tools ── calculator suite + CMA library. CMAs live
-       here (not under Sellers) because they're useful on both sides:
-       sellers see them as pricing strategy, buyers use them to size
-       offers. ── */
-    {
-      label: "Property Tools",
-      icon: p(<Building2 size={17} strokeWidth={STROKE} aria-hidden />),
-      items: [
         {
-          label: "All tools",
+          label: "Property Tools",
           href: "/dashboard/tools",
           match: ["/dashboard/tools"],
           icon: l(<Wrench size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
-          // Per-agent CMA library — saved snapshots with PDF + email-
-          // to-contact flow. The Smart CMA Builder tile on the tools
-          // page is what creates new CMAs; this is where they live.
           label: "CMAs",
           href: "/dashboard/cma",
           match: ["/dashboard/cma"],
           icon: l(<Ruler size={14} strokeWidth={STROKE} aria-hidden />),
         },
-      ],
-    },
-
-    /* ── MANAGE ── settings + role-gated platform admin ── */
-    { kind: "section-label" as const, label: "Manage" },
-
-    {
-      label: "Account",
-      icon: p(<Settings size={17} strokeWidth={STROKE} aria-hidden />),
-      items: [
         {
-          label: "Settings",
-          href: "/dashboard/settings",
-          match: ["/dashboard/settings", "/dashboard/notifications"],
+          label: "Manage AI Team",
+          href: "/dashboard/ai-team",
+          match: ["/dashboard/ai-team"],
           icon: l(<Settings size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
@@ -422,11 +298,7 @@ const navConfig = {
           icon: l(<User size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
-          // Support staff inbox — hidden for non-staff so agents
-          // don't click through and bounce off /unauthorized. The
-          // public customer-support chat lives at /contact and the
-          // Help center; this sidebar entry is only useful to
-          // admin / support roles.
+          // Support staff inbox — hidden for non-staff roles.
           label: "Support",
           href: "/support",
           match: ["/support"],
@@ -434,6 +306,14 @@ const navConfig = {
           icon: l(<Headphones size={14} strokeWidth={STROKE} aria-hidden />),
         },
       ],
+    },
+
+    /* ── Settings ── */
+    {
+      label: "Settings",
+      href: "/dashboard/settings",
+      match: ["/dashboard/settings", "/dashboard/notifications"],
+      icon: p(<Settings size={17} strokeWidth={STROKE} aria-hidden />),
     },
 
     /* ── Admin (role-gated) ── */
@@ -479,9 +359,6 @@ const navConfig = {
           icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
-          // Read-only roster of every agent in the IDX routing pool
-          // (DB rules + env allowlist), with last-assignment + 30d
-          // activity. Companion to PR #165's per-agent settings.
           label: "Lead Routing",
           href: "/dashboard/admin/lead-routing",
           roles: ["admin"],
