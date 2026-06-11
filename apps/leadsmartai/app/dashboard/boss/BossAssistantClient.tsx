@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AI_TEAM } from "@/lib/realtorboss/team";
+import { LeadProfileDrawer } from "@/components/realtorboss/LeadProfileDrawer";
 import BriefingsCard from "@/components/dashboard/BriefingsCard";
 
 // ── API row shapes (subset of fields the Boss Assistant reads) ──────
@@ -66,6 +67,9 @@ type Recommendation = {
   reason: string | null;
   recommended_action: string | null;
   action_href: string | null;
+  expected_outcome: string | null;
+  related_entity_type: string | null;
+  related_entity_id: string | null;
   status: "new" | "accepted";
 };
 
@@ -148,6 +152,9 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [activities, setActivities] = useState<ActivityRow[]>([]);
   const [teamStatus, setTeamStatus] = useState<Record<string, "active" | "paused">>({});
+  // Lead-profile drawer (constitution: leads are people — read them
+  // without leaving the command center).
+  const [profileLeadId, setProfileLeadId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -309,7 +316,7 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
       </div>
 
       {/* ── Top priorities (boss_recommendations engine) ── */}
-      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-900">Top Priorities</h2>
           <Link href="/dashboard/ai-team" className="text-xs font-medium text-blue-600 hover:text-blue-800">Manage AI team</Link>
@@ -327,13 +334,26 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
                   <p className="text-xs text-gray-500">
                     {[p.summary, p.reason].filter(Boolean).join(" — ")}
                   </p>
+                  {p.expected_outcome && (
+                    <p className="mt-0.5 text-xs font-medium text-[#8a6a0e]">
+                      → {p.expected_outcome}
+                    </p>
+                  )}
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
-                  {p.action_href && (
+                  {p.related_entity_type === "contact" && p.related_entity_id ? (
+                    <button
+                      type="button"
+                      onClick={() => setProfileLeadId(p.related_entity_id)}
+                      className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
+                    >
+                      {p.recommended_action ?? "Open"}
+                    </button>
+                  ) : p.action_href ? (
                     <Link href={p.action_href} className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">
                       {p.recommended_action ?? "Open"}
                     </Link>
-                  )}
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => void resolveRecommendation(p.id, "completed")}
@@ -367,9 +387,9 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
             const status = teamStatus[a.type] ?? "active";
             const latest = activities.find((act) => act.assistant_type === a.type);
             return (
-              <Link key={a.type} href={a.href} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:bg-gray-50">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-gray-900">{a.name}</p>
+              <Link key={a.type} href={a.href} className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:bg-gray-50">
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <p className="min-w-0 truncate text-sm font-semibold text-gray-900">{a.name}</p>
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600"}`}>
                     {status}
                   </span>
@@ -389,7 +409,7 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* ── Hot leads ── */}
-        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-900">Hot Leads</h2>
             <Link href="/dashboard/leads?filter=hot" className="text-xs font-medium text-blue-600 hover:text-blue-800">View all</Link>
@@ -399,7 +419,12 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
           ) : (
             <div className="space-y-2">
               {hotLeads.map((l) => (
-                <Link key={l.id} href={`/dashboard/contacts?list=leads&highlight=${encodeURIComponent(l.id)}`} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50">
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => setProfileLeadId(l.id)}
+                  className="flex w-full items-center justify-between rounded-lg border border-gray-100 px-3 py-2 text-left hover:bg-gray-50"
+                >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-gray-900">{l.name ?? "Unnamed lead"}</p>
                     <p className="truncate text-xs text-gray-500">
@@ -411,14 +436,14 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
                   {typeof l.engagement_score === "number" && (
                     <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">{l.engagement_score}</span>
                   )}
-                </Link>
+                </button>
               ))}
             </div>
           )}
         </section>
 
         {/* ── Today's appointments ── */}
-        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-900">Upcoming Appointments</h2>
             <Link href="/dashboard/calendar" className="text-xs font-medium text-blue-600 hover:text-blue-800">View calendar</Link>
@@ -445,7 +470,7 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* ── Transaction alerts ── */}
-        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-900">Transaction Alerts</h2>
             <Link href="/dashboard/ai-transaction-assistant" className="text-xs font-medium text-blue-600 hover:text-blue-800">View all</Link>
@@ -470,7 +495,7 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
         </section>
 
         {/* ── AI team activity (real call logs) ── */}
-        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-900">AI Team Activity</h2>
             <Link href="/dashboard/ai-receptionist" className="text-xs font-medium text-blue-600 hover:text-blue-800">View all</Link>
@@ -516,6 +541,8 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
           )}
         </section>
       </div>
+
+      <LeadProfileDrawer leadId={profileLeadId} onClose={() => setProfileLeadId(null)} />
     </div>
   );
 }

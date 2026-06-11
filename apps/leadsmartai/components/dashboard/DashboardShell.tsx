@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { ReactNode, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { RealtorBossLogo } from "@/components/brand/RealtorBossLogo";
 import { PremiumSidebarV2, filterNavSectionsByRole } from "@repo/ui";
 import navConfig, { leadSmartNav } from "@/nav.config";
 import brokerNavConfig from "@/brokerNav.config";
@@ -68,11 +70,6 @@ export default function AppDashboardShell({
   const showAgentBrokerPromotion = isAgentOrBrokerProfileRole(appRole);
   const sidebarUser = useMemo(() => buildSidebarUser(email, appRole), [email, appRole]);
 
-  const handleSearchClick = useCallback(() => {
-    if (typeof window === "undefined") return;
-    window.dispatchEvent(new CustomEvent("open-command-palette"));
-  }, []);
-
   const handleLogout = useCallback(() => {
     void signOutWithFullReload("/");
   }, []);
@@ -84,8 +81,14 @@ export default function AppDashboardShell({
         appName={APP_NAME}
         sections={navSections}
         workspaceLabel={activeNavConfig.sidebarTitle ?? "Workspace"}
+        // Brand lockup replaces the workspace switcher; the search row
+        // is omitted (⌘K / the top-bar search cover it).
+        brandHeader={
+          <Link href="/dashboard" aria-label="RealtorBoss home" className="flex items-center">
+            <RealtorBossLogo compact />
+          </Link>
+        }
         height="stretch"
-        onSearchClick={handleSearchClick}
         user={sidebarUser}
         onLogout={handleLogout}
         footer={showAgentBrokerPromotion ? sidebarFooter : undefined}
