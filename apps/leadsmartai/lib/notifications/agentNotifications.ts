@@ -9,7 +9,10 @@ const DEFAULT_PREFS: MobileNotificationPreferencesDto = {
   push_hot_lead: true,
   push_missed_call: true,
   push_reminder: true,
-  push_post_milestone: true,
+  // Opt-IN: engagement-milestone pushes are celebration-style noise per
+  // the notification philosophy (notify only on revenue opportunity,
+  // transaction risk, human action required, or urgent deadline).
+  push_post_milestone: false,
   reminder_digest_minutes: 15,
 };
 
@@ -40,7 +43,7 @@ export async function getAgentNotificationPreferences(
     push_hot_lead: row.push_hot_lead ?? true,
     push_missed_call: row.push_missed_call ?? true,
     push_reminder: row.push_reminder ?? true,
-    push_post_milestone: row.push_post_milestone ?? true,
+    push_post_milestone: row.push_post_milestone ?? false,
     reminder_digest_minutes:
       typeof row.reminder_digest_minutes === "number"
         ? row.reminder_digest_minutes
