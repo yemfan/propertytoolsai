@@ -270,8 +270,8 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
     transaction_assistant: `${activeTransactions.length} active deals · ${alerts.length} deadline${alerts.length === 1 ? "" : "s"} in 7 days`,
     accountant:
       overdueInvoiceRecs > 0
-        ? `${overdueInvoiceRecs} overdue invoice${overdueInvoiceRecs === 1 ? "" : "s"} flagged`
-        : "Invoices, expenses & commission pipeline",
+        ? `${overdueInvoiceRecs} overdue receivable${overdueInvoiceRecs === 1 ? "" : "s"} flagged`
+        : "Commission pipeline & expenses",
   };
 
   return (

@@ -89,24 +89,26 @@ export const AI_TEAM: readonly AssistantDef[] = [
     ],
   },
   {
-    // Modeled on HelmSmart's Alex (AI Finance Director): "get the
-    // business paid faster" — invoices, expenses, commission pipeline.
+    // Modeled on HelmSmart's Alex (AI Finance Director). A Realtor's
+    // paycheck is COMMISSION at closing — that's the headline; expenses
+    // (1099 deductions) second; invoices (referral fees, vendor
+    // rebills) are the edge case, not the lead.
     type: "accountant",
     name: "AI Accountant",
     role: "Money & books",
-    mission: "Get you paid faster.",
+    mission: "Know what you'll make — and keep more of it.",
     href: "/dashboard/ai-accountant",
     skills: [
+      "commission_tracking",
+      "expense_tracking",
       "invoice_tracking",
       "payment_reminders",
-      "expense_tracking",
-      "commission_tracking",
     ],
     kpis: [
-      "Outstanding invoices",
-      "Overdue invoices",
-      "Expenses this month",
       "Commission pipeline",
+      "Closed this year",
+      "Expenses this month",
+      "Next payout",
     ],
   },
 ] as const;
