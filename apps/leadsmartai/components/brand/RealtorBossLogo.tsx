@@ -1,7 +1,9 @@
 import { cn } from "@/lib/utils";
 
-const NAVY = "#1E3A66";
-const GOLD = "#D9A227";
+// Official palette per docs/branding/realtorboss-theme-constitution.md:
+// Primary Navy #0B1F44 (trust, leadership), Boss Gold #D4A017 (use sparingly).
+const NAVY = "#0B1F44";
+const GOLD = "#D4A017";
 
 type Tone = "light" | "dark";
 

@@ -261,6 +261,18 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
         </p>
       </div>
 
+      {/* ── Ask your Boss Assistant — persistent prompt (theme constitution) ── */}
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new CustomEvent("open-ai-chat"))}
+        className="flex w-full items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-left shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
+      >
+        <span className="text-sm" aria-hidden>💬</span>
+        <span className="text-sm text-gray-400">
+          Ask your Boss Assistant… <span className="hidden sm:inline">&ldquo;What should I focus on today?&rdquo; · &ldquo;Any transactions at risk?&rdquo;</span>
+        </span>
+      </button>
+
       {/* ── While you were out — the AI team's last 24h ── */}
       {teamDigest && (
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-amber-200/70 bg-gradient-to-r from-amber-50 to-white px-3 py-2">
@@ -458,7 +470,9 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
               ))}
             </div>
           ) : calls.length === 0 ? (
-            <p className="py-4 text-center text-sm text-gray-400">No AI activity yet — calls and text-backs will show up here.</p>
+            <p className="py-4 text-center text-sm text-gray-400">
+              Your AI team is ready — calls answered, texts sent, and deadline alerts will appear here as they work.
+            </p>
           ) : (
             <div className="space-y-2">
               {calls.slice(0, 5).map((c) => (
