@@ -13,12 +13,21 @@ export const runtime = "nodejs";
  * One round-trip; all reads scoped to the signed-in agent.
  */
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
   try {
     const { agentId } = await getCurrentAgentContext();
     const { id } = await ctx.params;
+    // ?full=1 → the full profile page; the drawer uses the lean limits.
+    const full = new URL(req.url).searchParams.get("full") === "1";
+    const lim = {
+      tasks: full ? 8 : 5,
+      events: full ? 5 : 3,
+      calls: full ? 10 : 5,
+      sms: full ? 14 : 6,
+      activities: full ? 20 : 8,
+    };
 
     const { data: contact, error: contactErr } = await supabaseAdmin
       .from("contacts")
@@ -41,7 +50,7 @@ export async function GET(
         .eq("contact_id", id)
         .eq("status", "open")
         .order("due_at", { ascending: true, nullsFirst: false })
-        .limit(5),
+        .limit(lim.tasks),
       supabaseAdmin
         .from("lead_calendar_events")
         .select("id,title,starts_at,status")
@@ -49,27 +58,27 @@ export async function GET(
         .eq("contact_id", id)
         .gte("starts_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
         .order("starts_at", { ascending: true })
-        .limit(3),
+        .limit(lim.events),
       supabaseAdmin
         .from("call_logs")
         .select("id,direction,status,duration_seconds,notes,created_at")
         .eq("agent_id", agentId)
         .eq("contact_id", id)
         .order("created_at", { ascending: false })
-        .limit(5),
+        .limit(lim.calls),
       supabaseAdmin
         .from("sms_messages")
         .select("id,direction,message,created_at")
         .eq("contact_id", id)
         .order("created_at", { ascending: false })
-        .limit(6),
+        .limit(lim.sms),
       supabaseAdmin
         .from("assistant_activities")
         .select("id,assistant_type,summary,outcome,requires_attention,created_at")
         .eq("agent_id", agentId)
         .eq("related_entity_id", id)
         .order("created_at", { ascending: false })
-        .limit(8),
+        .limit(lim.activities),
       supabaseAdmin
         .from("boss_recommendations")
         .select("id,title,reason,recommended_action,action_href,expected_outcome,status")
