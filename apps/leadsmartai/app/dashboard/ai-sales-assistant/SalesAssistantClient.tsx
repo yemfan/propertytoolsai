@@ -60,6 +60,7 @@ export default function SalesAssistantClient() {
           { label: "Lead queue", href: "/dashboard/lead-queue" },
           { label: "Conversations", href: "/dashboard/inbox" },
           { label: "Outbound calls", href: "/dashboard/missed-call" },
+          { label: "Manage", href: "/dashboard/ai-team" },
         ]}
       />
 

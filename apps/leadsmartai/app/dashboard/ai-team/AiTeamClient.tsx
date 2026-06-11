@@ -1,0 +1,149 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { AI_TEAM, type AssistantType } from "@/lib/realtorboss/team";
+
+type AssistantRow = {
+  id: string;
+  type: AssistantType;
+  name: string;
+  status: "active" | "paused";
+  description: string | null;
+  enabled_skills: string[];
+};
+
+type SkillRow = { key: string; name: string; description: string; category: string };
+
+export default function AiTeamClient() {
+  const [assistants, setAssistants] = useState<AssistantRow[]>([]);
+  const [skills, setSkills] = useState<SkillRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const res = await fetch("/api/dashboard/realtorboss/team").then((r) => r.json()).catch(() => ({}));
+    if (res?.ok) {
+      setAssistants((res.assistants ?? []) as AssistantRow[]);
+      setSkills((res.skills ?? []) as SkillRow[]);
+    } else {
+      setError(res?.error ?? "Could not load your AI team.");
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const patch = useCallback(
+    async (type: AssistantType, body: { status?: "active" | "paused"; enabledSkills?: string[] }) => {
+      setSaving(type);
+      setError(null);
+      const res = await fetch("/api/dashboard/realtorboss/team", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, ...body }),
+      }).then((r) => r.json()).catch(() => ({}));
+      if (res?.ok && res.assistant) {
+        setAssistants((prev) => prev.map((a) => (a.type === type ? (res.assistant as AssistantRow) : a)));
+      } else {
+        setError(res?.error ?? "Could not save — try again.");
+      }
+      setSaving(null);
+    },
+    [],
+  );
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400">RealtorBoss</p>
+        <h1 className="mt-0.5 text-xl font-semibold text-gray-900">Manage Your AI Team</h1>
+        <p className="text-sm text-gray-500">
+          Pause an assistant to hide its recommendations and activity from your Boss Assistant
+          dashboard, and choose which skills each assistant works with.
+        </p>
+      </div>
+
+      {error && (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">{error}</p>
+      )}
+
+      {loading ? (
+        <p className="py-8 text-center text-sm text-gray-400">Loading your AI team…</p>
+      ) : (
+        <div className="space-y-4">
+          {assistants.map((a) => {
+            const def = AI_TEAM.find((d) => d.type === a.type);
+            const rosterSkills = new Set(def?.skills ?? []);
+            // Boss Assistant has no attachable skills — it coordinates the others.
+            const configurable = a.type !== "boss_assistant";
+            return (
+              <section key={a.type} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-sm font-semibold text-gray-900">{a.name}</h2>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${a.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600"}`}>
+                        {a.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500">{a.description ?? def?.mission ?? ""}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {def && def.type !== "boss_assistant" && (
+                      <Link href={def.href} className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                        View dashboard
+                      </Link>
+                    )}
+                    <button
+                      type="button"
+                      disabled={saving === a.type}
+                      onClick={() => void patch(a.type, { status: a.status === "active" ? "paused" : "active" })}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-medium shadow-sm disabled:opacity-50 ${a.status === "active" ? "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50" : "bg-gray-900 text-white hover:bg-gray-700"}`}
+                    >
+                      {saving === a.type ? "Saving…" : a.status === "active" ? "Pause" : "Activate"}
+                    </button>
+                  </div>
+                </div>
+
+                {configurable && (
+                  <div className="mt-3 border-t border-gray-100 pt-3">
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Skills</p>
+                    <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+                      {skills
+                        .filter((s) => rosterSkills.has(s.key))
+                        .map((s) => {
+                          const enabled = a.enabled_skills.includes(s.key);
+                          return (
+                            <label key={s.key} className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-100 px-2.5 py-2 hover:bg-gray-50">
+                              <input
+                                type="checkbox"
+                                checked={enabled}
+                                disabled={saving === a.type}
+                                onChange={() => {
+                                  const next = enabled
+                                    ? a.enabled_skills.filter((k) => k !== s.key)
+                                    : [...a.enabled_skills, s.key];
+                                  void patch(a.type, { enabledSkills: next });
+                                }}
+                                className="mt-0.5"
+                              />
+                              <span className="min-w-0">
+                                <span className="block text-xs font-medium text-gray-900">{s.name}</span>
+                                <span className="block text-[10px] leading-snug text-gray-500">{s.description}</span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

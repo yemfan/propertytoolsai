@@ -3,6 +3,7 @@ import { supabaseServer } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { generateSmsAssistantReply } from "@/lib/ai-sms/service";
 import { inferIntentHeuristic } from "@/lib/ai-sms/intent";
+import { logAssistantActivity } from "@/lib/realtorboss/activities";
 import type { SmsReplyContext } from "@/lib/ai-sms/types";
 
 function digitsOnly(input: string) {
@@ -154,6 +155,19 @@ export async function POST(req: Request) {
         } as Record<string, unknown>);
       } catch (e) {
         console.warn("[twilio-sms autopilot] outbound persist", e);
+      }
+
+      // RealtorBoss activity feed (fire-and-forget — never fails the webhook).
+      if (agentId) {
+        void logAssistantActivity({
+          agentId,
+          assistantType: "sales_assistant",
+          activityType: "sms_auto_reply",
+          summary: `Replied to ${leadRow.name?.trim() || from} via SMS (Auto Pilot)`,
+          outcome: "Reply sent",
+          relatedEntityType: "contact",
+          relatedEntityId: String(leadId),
+        });
       }
 
       try {
