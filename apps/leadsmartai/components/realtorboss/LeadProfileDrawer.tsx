@@ -10,66 +10,12 @@ import { useEffect, useMemo, useState } from "react";
  * never leaves the command center for a quick read on someone.
  */
 
-type Person = {
-  id: string;
-  name: string | null;
-  first_name: string | null;
-  email: string | null;
-  phone: string | null;
-  source: string | null;
-  rating: string | null;
-  engagement_score: number | null;
-  intent: string | null;
-  buying_or_selling: string | null;
-  timeline: string | null;
-  search_location: string | null;
-  price_min: number | null;
-  price_max: number | null;
-  property_address: string | null;
-  notes: string | null;
-  created_at: string;
-  auto_pilot: boolean;
-};
-
-type NextBestAction = {
-  id: string;
-  title: string;
-  reason: string | null;
-  recommended_action: string | null;
-  action_href: string | null;
-  expected_outcome: string | null;
-};
-
-type TimelineItem = { id: string; at: string; icon: string; title: string; detail: string | null };
-
-type Payload = {
-  person: Person;
-  tasks: { id: string; title: string; due_at: string | null; priority: string | null }[];
-  appointments: { id: string; title: string; starts_at: string }[];
-  calls: { id: string; direction: string; status: string; notes: string | null; created_at: string }[];
-  messages: { id: string; direction: string; message: string; created_at: string }[];
-  activities: { id: string; assistant_type: string; summary: string; outcome: string | null; created_at: string }[];
-  nextBestAction: NextBestAction | null;
-};
-
-const ASSISTANT_LABELS: Record<string, string> = {
-  receptionist: "AI Receptionist",
-  sales_assistant: "AI Sales Assistant",
-  transaction_assistant: "AI Transaction Assistant",
-  boss_assistant: "Boss Assistant",
-};
-
-function fmtAgo(iso: string): string {
-  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.round(hours / 24)}d ago`;
-}
-
-function fmtMoney(n: number): string {
-  return n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${Math.round(n / 1000)}k`;
-}
+import {
+  buildStory,
+  buildTimeline,
+  fmtAgo,
+  type LeadProfilePayload as Payload,
+} from "@/lib/realtorboss/leadProfile";
 
 export function LeadProfileDrawer({ leadId, onClose }: { leadId: string | null; onClose: () => void }) {
   const [data, setData] = useState<Payload | null>(null);
@@ -94,54 +40,11 @@ export function LeadProfileDrawer({ leadId, onClose }: { leadId: string | null; 
   }, [leadId]);
 
   // Merge every interaction into one relationship timeline.
-  const timeline = useMemo<TimelineItem[]>(() => {
-    if (!data) return [];
-    const items: TimelineItem[] = [
-      ...data.activities.map((a) => ({
-        id: `act-${a.id}`,
-        at: a.created_at,
-        icon: "⚡",
-        title: `${ASSISTANT_LABELS[a.assistant_type] ?? a.assistant_type}: ${a.summary}`,
-        detail: a.outcome,
-      })),
-      ...data.calls.map((c) => ({
-        id: `call-${c.id}`,
-        at: c.created_at,
-        icon: "📞",
-        title: `${c.direction === "inbound" ? "Inbound" : "Outbound"} call · ${c.status}`,
-        detail: c.notes?.replace(/^AI call summary:\s*/i, "") ?? null,
-      })),
-      ...data.messages.map((m) => ({
-        id: `sms-${m.id}`,
-        at: m.created_at,
-        icon: "💬",
-        title: m.direction === "inbound" ? "They texted" : "AI team texted",
-        detail: m.message,
-      })),
-      ...data.appointments.map((e) => ({
-        id: `evt-${e.id}`,
-        at: e.starts_at,
-        icon: "📅",
-        title: e.title,
-        detail: new Date(e.starts_at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }),
-      })),
-    ];
-    return items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 14);
-  }, [data]);
+  const timeline = useMemo(() => (data ? buildTimeline(data, 14) : []), [data]);
 
   if (!leadId) return null;
   const p = data?.person;
-  const story = p
-    ? [
-        p.buying_or_selling ? (p.buying_or_selling === "selling" ? "Seller" : "Buyer") : null,
-        p.timeline ? `timeline ${p.timeline}` : null,
-        p.search_location ? `looking in ${p.search_location}` : null,
-        p.price_min != null && p.price_max != null ? `${fmtMoney(p.price_min)}–${fmtMoney(p.price_max)}` : null,
-        p.property_address ? `re: ${p.property_address}` : null,
-      ]
-        .filter(Boolean)
-        .join(" · ")
-    : "";
+  const story = p ? buildStory(p) : "";
 
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Lead profile">
@@ -249,7 +152,7 @@ export function LeadProfileDrawer({ leadId, onClose }: { leadId: string | null; 
             {/* ── Footer actions ── */}
             <div className="mt-auto flex items-center gap-2 border-t border-gray-100 bg-slate-50/60 px-4 py-3">
               <Link
-                href={`/dashboard/contacts?list=leads&highlight=${encodeURIComponent(p.id)}`}
+                href={`/dashboard/leads/${encodeURIComponent(p.id)}`}
                 className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
               >
                 Open full profile
