@@ -3,7 +3,7 @@ import { getCurrentAgentContext } from "@/lib/dashboardService";
 import SellerPresentationClient from "./SellerPresentationClient";
 
 export const metadata = {
-  title: "Seller Presentation | LeadSmart AI",
+  title: "Seller Presentation | RealtorBoss",
   description: "Generate AI-powered seller presentations with property comparisons.",
 };
 

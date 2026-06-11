@@ -17,7 +17,7 @@ import { Send } from "lucide-react";
  * The disclosure block below the checkbox includes the four elements
  * Twilio + the FCC TCPA expect to see at the point of opt-in:
  *
- *   1. WHO is sending — "LeadSmart AI"
+ *   1. WHO is sending — "RealtorBoss"
  *   2. WHAT kinds of messages — "customer care + marketing"
  *   3. FREQUENCY — "message frequency varies"
  *   4. OPT-OUT + COST — "Reply STOP to opt out, message and data rates may apply"
@@ -263,10 +263,10 @@ export default function ContactForm() {
           />
           <span className="text-sm text-slate-700">
             <span className="font-semibold text-slate-900">
-              Yes, send me marketing text messages from LeadSmart AI.
+              Yes, send me marketing text messages from RealtorBoss.
             </span>{" "}
             By checking this box and providing my phone number above, I consent to
-            receive promotional text messages from <strong>LeadSmart AI</strong>{" "}
+            receive promotional text messages from <strong>RealtorBoss</strong>{" "}
             about real-estate services, new listings, market updates, and special
             offers.
           </span>

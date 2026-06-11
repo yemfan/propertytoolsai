@@ -2,7 +2,7 @@ import LoanBrokerPricingClientPage from "./page.client";
 import { redirectAdminSupportAwayFromCommercialPricing } from "@/lib/auth/redirectStaffFromCommercialPricing";
 
 export const metadata = {
-  title: "Loan broker plans | LeadSmart AI",
+  title: "Loan broker plans | RealtorBoss",
   description: "Pricing for mortgage professionals — upgrade when you need full loan broker workspace tools.",
 };
 

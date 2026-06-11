@@ -1,8 +1,8 @@
 import ScanCardClient from "./ScanCardClient";
 
 export const metadata = {
-  title: "Scan Business Card | LeadSmart AI",
-  description: "Scan a business card to add a contact to LeadSmart AI.",
+  title: "Scan Business Card | RealtorBoss",
+  description: "Scan a business card to add a contact to RealtorBoss.",
 };
 
 export default function ScanCardPage() {

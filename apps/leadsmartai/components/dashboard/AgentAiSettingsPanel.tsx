@@ -88,7 +88,7 @@ export default function AgentAiSettingsPanel() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-gray-600">
-        Choose how LeadSmart AI sounds for SMS, email, call summaries, and automated greetings. This adjusts
+        Choose how RealtorBoss sounds for SMS, email, call summaries, and automated greetings. This adjusts
         tone and wording only — compliance and safety rules are unchanged.
       </p>
 

@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 /**
- * Root `og:image` for LeadSmart AI — auto-detected by Next.js App Router.
+ * Root `og:image` for RealtorBoss — auto-detected by Next.js App Router.
  * Rendered on demand as a 1200×630 PNG from this JSX tree (Vercel OG).
  *
  * Same pattern as PropertyTools. Before this existed, `app/layout.tsx`
@@ -12,7 +12,7 @@ import { ImageResponse } from "next/og";
  */
 
 export const runtime = "edge";
-export const alt = "LeadSmart AI — The AI Deal Engine for Real Estate";
+export const alt = "RealtorBoss — Your AI Real Estate Team";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -85,7 +85,7 @@ export default async function OpengraphImage() {
                 justifyContent: "center",
                 width: "52px",
                 height: "52px",
-                background: "linear-gradient(135deg, #0072ce 0%, #4F46E5 100%)",
+                background: "#0B1F44",
                 borderRadius: "14px",
                 color: "#ffffff",
                 fontSize: "20px",
@@ -93,9 +93,12 @@ export default async function OpengraphImage() {
                 letterSpacing: "-0.02em",
               }}
             >
-              LS
+              R
             </div>
-            LeadSmart AI
+            <div style={{ display: "flex" }}>
+              <span style={{ color: "#0B1F44" }}>Realtor</span>
+              <span style={{ color: "#D4A017" }}>Boss</span>
+            </div>
           </div>
 
           {/* Middle: headline */}
@@ -118,7 +121,7 @@ export default async function OpengraphImage() {
                 maxWidth: "1000px",
               }}
             >
-              You don&apos;t have a
+              Hire an AI
             </div>
             <div
               style={{
@@ -131,7 +134,7 @@ export default async function OpengraphImage() {
                 maxWidth: "1000px",
               }}
             >
-              traffic problem.
+              Real Estate Team.
             </div>
             <div
               style={{
@@ -140,13 +143,11 @@ export default async function OpengraphImage() {
                 fontWeight: 800,
                 lineHeight: 1.02,
                 letterSpacing: "-0.03em",
-                background: "linear-gradient(90deg, #0072ce 0%, #4F46E5 100%)",
-                backgroundClip: "text",
-                color: "transparent",
+                color: "#D4A017",
                 maxWidth: "1000px",
               }}
             >
-              You have a conversion problem.
+              Close More Deals.
             </div>
           </div>
 
@@ -161,20 +162,20 @@ export default async function OpengraphImage() {
                 maxWidth: "960px",
               }}
             >
-              AI-powered lead follow-up, scoring, and pipeline management for real estate agents.
+              Your AI Real Estate Team — from first call to closing.
             </div>
             <div style={{ display: "flex", gap: "24px", fontSize: "18px", color: "#0f172a", fontWeight: 500 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <span style={{ color: "#10b981", fontSize: "20px" }}>✓</span>
-                Instant AI reply
+                AI Receptionist
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <span style={{ color: "#10b981", fontSize: "20px" }}>✓</span>
-                Smart lead scoring
+                AI Sales Assistant
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <span style={{ color: "#10b981", fontSize: "20px" }}>✓</span>
-                Free to start
+                AI Transaction Assistant
               </div>
             </div>
           </div>

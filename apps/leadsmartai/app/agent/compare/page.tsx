@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "LeadSmart AI vs. the rest — feature comparison",
+  title: "RealtorBoss vs. the rest — feature comparison",
   description:
-    "How LeadSmart AI compares to Follow Up Boss, kvCORE, Lofty, BoomTown, LionDesk and Sierra Interactive on AI, dialer, e-sign, team workflows, and Chinese-market support.",
+    "How RealtorBoss compares to Follow Up Boss, kvCORE, Lofty, BoomTown, LionDesk and Sierra Interactive on AI, dialer, e-sign, team workflows, and Chinese-market support.",
   keywords: [
     "real estate CRM comparison",
     "Follow Up Boss vs",
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/agent/compare" },
   openGraph: {
-    title: "LeadSmart AI vs. the rest — feature comparison",
+    title: "RealtorBoss vs. the rest — feature comparison",
     description:
       "Side-by-side comparison vs Follow Up Boss, kvCORE, Lofty, BoomTown, LionDesk, and Sierra Interactive — at a fraction of the price.",
     url: "/agent/compare",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "LeadSmart AI vs. the rest",
+    title: "RealtorBoss vs. the rest",
     description:
       "Feature comparison vs Follow Up Boss, kvCORE, Lofty, BoomTown, LionDesk, and Sierra Interactive.",
   },
@@ -63,7 +63,7 @@ type ProductKey =
   | "sierra";
 
 const PRODUCTS: Array<{ key: ProductKey; name: string; price: string }> = [
-  { key: "leadsmart", name: "LeadSmart AI", price: "$49–$99 / mo" },
+  { key: "leadsmart", name: "RealtorBoss", price: "$49–$99 / mo" },
   { key: "followup_boss", name: "Follow Up Boss", price: "$69–$1,000+ / mo" },
   { key: "kvcore", name: "kvCORE", price: "$499+ / mo" },
   { key: "lofty", name: "Lofty (Chime)", price: "$499+ / mo" },
@@ -332,7 +332,7 @@ const CATEGORIES: Category[] = [
   {
     title: "Differentiators",
     rows: [
-      r("LeadSmart AI Coaching (Producer Track + Top Producer Track)", {
+      r("RealtorBoss Coaching (Producer Track + Top Producer Track)", {
         leadsmart: "yes",
         followup_boss: "no",
         kvcore: "no",
@@ -408,7 +408,7 @@ export default function CompareAgentPage() {
             Comparison
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
-            LeadSmart AI vs. the rest
+            RealtorBoss vs. the rest
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600 md:text-lg">
             How we stack up against Follow Up Boss, kvCORE, Lofty, BoomTown,

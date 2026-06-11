@@ -32,7 +32,7 @@ export async function generateMetadata({
   if (!city || !isValidKeywordSlugForCity("sell-house", p.city, p.keyword)) return {};
   const keyword = resolveKeyword(p.city, p.keyword);
   return {
-    title: `${keyword} | ${city.city}, ${city.state} Seller Guide | LeadSmart AI`,
+    title: `${keyword} | ${city.city}, ${city.state} Seller Guide | RealtorBoss`,
     description: `Localized selling strategy for ${keyword} in ${city.city}, ${city.state}.`,
     alternates: { canonical: `/sell-house/${p.city}/${p.keyword}` },
   };

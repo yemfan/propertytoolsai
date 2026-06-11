@@ -9,7 +9,7 @@ const tickets = [
 ];
 
 export const metadata = {
-  title: "Support Dashboard | LeadSmart AI",
+  title: "Support Dashboard | RealtorBoss",
   description: "Tickets, conversations, and operations for platform support.",
 };
 

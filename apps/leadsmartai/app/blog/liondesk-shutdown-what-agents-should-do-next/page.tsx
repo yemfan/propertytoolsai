@@ -110,7 +110,7 @@ export default function LiondeskShutdownPost() {
         author: { "@type": "Person", name: post?.author ?? "Michael Ye" },
         publisher: {
           "@type": "Organization",
-          name: "LeadSmart AI",
+          name: "RealtorBoss",
           logo: {
             "@type": "ImageObject",
             url: `${SITE_URL}/images/lslog64.png`,
@@ -133,7 +133,7 @@ export default function LiondeskShutdownPost() {
             name: "What is the best LionDesk alternative for solo agents?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "Solo agents should look for a CRM built around speed-to-lead — AI text-back within seconds, missed-call automation, and a workflow that doesn't require a team admin to operate. LeadSmart AI was designed specifically for solo agents and small teams who win on response time.",
+              text: "Solo agents should look for a CRM built around speed-to-lead — AI text-back within seconds, missed-call automation, and a workflow that doesn't require a team admin to operate. RealtorBoss was designed specifically for solo agents and small teams who win on response time.",
             },
           },
           {
@@ -141,7 +141,7 @@ export default function LiondeskShutdownPost() {
             name: "How do I export my data from LionDesk?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "Export contacts and activity history as a CSV from LionDesk's Settings → Data section. Most modern CRMs — including LeadSmart AI — accept a duplicate-aware CSV import that maps standard fields automatically.",
+              text: "Export contacts and activity history as a CSV from LionDesk's Settings → Data section. Most modern CRMs — including RealtorBoss — accept a duplicate-aware CSV import that maps standard fields automatically.",
             },
           },
           {
@@ -338,7 +338,7 @@ export default function LiondeskShutdownPost() {
 
         <section className="mt-12">
           <h2 className="text-xl font-semibold tracking-tight text-slate-900 md:text-2xl dark:text-white">
-            Where LeadSmart AI fits in
+            Where RealtorBoss fits in
           </h2>
           <div className="mt-4 space-y-5 text-base leading-7 text-slate-700 dark:text-slate-200">
             <p>
@@ -347,7 +347,7 @@ export default function LiondeskShutdownPost() {
                 href="/"
                 className="font-semibold text-blue-700 hover:underline dark:text-blue-300"
               >
-                LeadSmart AI
+                RealtorBoss
               </Link>{" "}
               to close. Every leaving-LionDesk agent we&apos;ve talked
               to in the last few weeks has had the same shopping list
@@ -417,7 +417,7 @@ export default function LiondeskShutdownPost() {
             Try it before you commit
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Send a test lead through LeadSmart AI and watch the
+            Send a test lead through RealtorBoss and watch the
             response fire. If it doesn&apos;t feel meaningfully faster
             than what you had in LionDesk, move on with a clear
             conscience.
@@ -462,7 +462,7 @@ export default function LiondeskShutdownPost() {
               </h3>
               <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
                 Look for AI text-back, missed-call recovery, and
-                pricing that fits a solo P&amp;L. LeadSmart AI was
+                pricing that fits a solo P&amp;L. RealtorBoss was
                 designed for exactly this segment — see how it
                 compares to Follow Up Boss, kvCORE, and Lofty on our{" "}
                 <Link

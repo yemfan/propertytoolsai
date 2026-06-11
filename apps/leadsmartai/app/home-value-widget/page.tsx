@@ -218,7 +218,7 @@ export default function HomeValueWidgetPage() {
         )}
 
         <p className="mt-4 text-[10px] text-gray-400 text-center">
-          Powered by LeadSmart AI
+          Powered by RealtorBoss
         </p>
       </div>
     </div>

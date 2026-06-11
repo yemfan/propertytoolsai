@@ -1,7 +1,7 @@
 import ImportFileClient from "./ImportFileClient";
 
 export const metadata = {
-  title: "AI Import Contacts | LeadSmart AI",
+  title: "AI Import Contacts | RealtorBoss",
   description:
     "Extract contacts from a PDF, image, or text file using AI, then preview and edit before saving.",
   robots: { index: false },

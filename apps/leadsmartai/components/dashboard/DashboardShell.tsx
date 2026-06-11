@@ -11,9 +11,8 @@ import TopBar from "@/components/dashboard/TopBar";
 import { isAgentOrBrokerProfileRole } from "@/lib/rolePortalPaths";
 import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 
-// RealtorBoss repositioning (Phase 1): the authenticated portal brands
-// as RealtorBoss; the public marketing site keeps LeadSmart AI until
-// the domain/logo/SEO migration lands.
+// RealtorBoss brand — product and marketing site both carry it (the
+// domain stays leadsmart-ai.com for now).
 const APP_NAME = "RealtorBoss";
 
 const sidebarFooter = (

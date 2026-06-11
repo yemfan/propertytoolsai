@@ -22,7 +22,7 @@ import {
   type NavSection,
 } from "@repo/ui";
 import HeaderAuthActions from "@/components/HeaderAuthActions";
-import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
+import { RealtorBossLogo, RealtorBossMark } from "@/components/brand/RealtorBossLogo";
 import { SupportChatLauncher } from "@/components/support/CustomerSupportChat";
 
 /**
@@ -62,7 +62,7 @@ export function MarketingTopNav({
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
           <div className="lg:hidden">
             <MobileSidebar
-              appName="LeadSmart AI"
+              appName="RealtorBoss"
               workspaceLabel={workspaceLabel}
               sections={sections}
               user={user}
@@ -71,13 +71,13 @@ export function MarketingTopNav({
           </div>
           <Link
             href="/"
-            aria-label="LeadSmart AI home"
+            aria-label="RealtorBoss home"
             className="flex min-w-0 items-center"
           >
-            {/* Logo widths tuned for the narrowest viewport (375px iPhone SE):
-             *   140px below sm leaves ~150px for the right-side actions
-             *   after the hamburger + padding. */}
-            <LeadSmartLogo className="h-7 w-auto max-w-[140px] sm:h-9 sm:max-w-[220px]" />
+            {/* Mark-only below sm (375px iPhone SE leaves ~150px for the
+             *  right-side actions after the hamburger + padding). */}
+            <span className="sm:hidden"><RealtorBossMark className="h-7 w-7" /></span>
+            <span className="hidden sm:block"><RealtorBossLogo compact /></span>
           </Link>
         </div>
 

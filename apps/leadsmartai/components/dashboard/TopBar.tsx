@@ -465,7 +465,7 @@ export default function TopBar({
 
   return (
     <Topbar
-      appName="LeadSmart AI"
+      appName="RealtorBoss"
       sections={navSections}
       searchPlaceholder="Search leads, clients, addresses..."
       mobileWorkspaceLabel="Agent portal"

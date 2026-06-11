@@ -4,7 +4,7 @@ import Link from "next/link";
 import SphereMonetizationPanel from "@/components/dashboard/SphereMonetizationPanel";
 
 export const metadata: Metadata = {
-  title: "Sphere monetization | LeadSmart AI",
+  title: "Sphere monetization | RealtorBoss",
 };
 
 /**

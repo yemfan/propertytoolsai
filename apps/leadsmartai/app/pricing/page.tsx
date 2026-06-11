@@ -24,7 +24,7 @@ export default async function ConsumerPricingPage() {
         data={{
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",
-          name: "LeadSmart AI",
+          name: "RealtorBoss",
           description:
             "AI-powered CRM and lead management platform for real estate professionals. Capture, qualify, and convert leads with intelligent automation.",
           url: "https://leadsmart-ai.com/pricing",

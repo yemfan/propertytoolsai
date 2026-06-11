@@ -2,16 +2,16 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "About LeadSmart AI | AI Growth Engine for Real Estate",
+  title: "About RealtorBoss | AI Growth Engine for Real Estate",
   description:
-    "LeadSmart AI helps agents and financing professionals capture, qualify, and convert leads with AI—from first click to closed deal.",
+    "RealtorBoss helps agents and financing professionals capture, qualify, and convert leads with AI—from first click to closed deal.",
   alternates: {
     canonical: "/about",
   },
   openGraph: {
-    title: "About LeadSmart AI | AI Growth Engine for Real Estate",
+    title: "About RealtorBoss | AI Growth Engine for Real Estate",
     description:
-      "LeadSmart AI helps agents and financing professionals capture, qualify, and convert leads with AI—from first click to closed deal.",
+      "RealtorBoss helps agents and financing professionals capture, qualify, and convert leads with AI—from first click to closed deal.",
   },
 };
 

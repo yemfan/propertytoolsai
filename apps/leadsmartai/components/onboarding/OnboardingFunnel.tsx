@@ -286,7 +286,7 @@ export default function OnboardingFunnel({
     return (
       <Shell step={1}>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-xl backdrop-blur-md sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-wider text-sky-300/90">LeadSmart AI</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-sky-300/90">RealtorBoss</p>
           <h1 className="mt-2 font-heading text-2xl font-bold leading-tight sm:text-3xl">
             You&apos;re minutes from your first qualified leads
           </h1>
@@ -474,7 +474,7 @@ export default function OnboardingFunnel({
               Open my inbox →
             </button>
           ) : (
-            <p className="mt-6 text-xs text-slate-500">Secure handshake with LeadSmart AI routing…</p>
+            <p className="mt-6 text-xs text-slate-500">Secure handshake with RealtorBoss routing…</p>
           )}
         </div>
       </Shell>

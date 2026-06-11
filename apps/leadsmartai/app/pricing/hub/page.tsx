@@ -2,9 +2,9 @@ import PricingHubClientPage from "./page.client";
 import { redirectAdminSupportAwayFromCommercialPricing } from "@/lib/auth/redirectStaffFromCommercialPricing";
 
 export const metadata = {
-  title: "Choose a plan | LeadSmart AI",
+  title: "Choose a plan | RealtorBoss",
   description:
-    "Compare PropertyToolsAI consumer pricing, LeadSmart AI for agents, and loan broker plans.",
+    "Compare PropertyToolsAI consumer pricing, RealtorBoss for agents, and loan broker plans.",
 };
 
 export default async function PricingHubPage() {

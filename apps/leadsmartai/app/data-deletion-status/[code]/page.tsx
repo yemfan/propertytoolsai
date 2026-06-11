@@ -17,9 +17,9 @@ import type { Metadata } from "next";
  */
 
 export const metadata: Metadata = {
-  title: "Data Deletion Status | LeadSmart AI",
+  title: "Data Deletion Status | RealtorBoss",
   description:
-    "Status of a Facebook data-deletion request submitted to LeadSmart AI.",
+    "Status of a Facebook data-deletion request submitted to RealtorBoss.",
   robots: { index: false, follow: false },
 };
 
@@ -44,7 +44,7 @@ export default async function DataDeletionStatusPage({ params }: PageProps) {
       {isValidShape ? (
         <>
           <p className="mt-3 text-sm text-slate-600">
-            Your deletion request was received by LeadSmart AI. Reference code:
+            Your deletion request was received by RealtorBoss. Reference code:
           </p>
           <code className="mt-2 block rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-900">
             {decodeURIComponent(code)}
@@ -55,7 +55,7 @@ export default async function DataDeletionStatusPage({ params }: PageProps) {
               Status: pending
             </p>
             <p className="mt-1 text-sm text-emerald-800">
-              We have logged your request. Any LeadSmart AI-held data linked to
+              We have logged your request. Any RealtorBoss-held data linked to
               your Facebook account will be removed within 30 days, as
               described in our{" "}
               <a

@@ -40,9 +40,10 @@ const fontMono = Geist_Mono({
 import type { Metadata } from "next";
 
 const SITE_URL = getSiteUrl().replace(/\/$/, "");
-const SITE_NAME = "LeadSmart AI";
+// RealtorBoss rebrand on the same domain (leadsmart-ai.com stays the URL).
+const SITE_NAME = "RealtorBoss";
 const SITE_DESCRIPTION =
-  "AI-powered real estate lead management, smart CRM, and automated follow-ups for top-producing agents.";
+  "RealtorBoss is an AI-powered real estate team that answers every call, follows up with every lead, coordinates every transaction, and helps agents close more deals without hiring additional staff.";
 
 /**
  * Tab: `app/icon.png` + `/images/lslog64.png`. Apple: `app/apple-icon.png` + `/images/ls180.png`.
@@ -56,13 +57,13 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   keywords: [
-    "real estate CRM",
-    "AI lead management",
+    "AI real estate team",
+    "AI real estate assistant",
+    "AI receptionist for realtors",
     "real estate agent software",
-    "lead follow-up automation",
-    "property lead scoring",
-    "real estate email automation",
-    "smart CRM for agents",
+    "AI lead follow-up",
+    "real estate transaction coordination",
+    "AI ISA for real estate",
   ],
   authors: [{ name: SITE_NAME, url: SITE_URL }],
   creator: SITE_NAME,
@@ -90,12 +91,12 @@ export const metadata: Metadata = {
     title: SITE_NAME,
     description: SITE_DESCRIPTION,
     // Same as openGraph.images — Next auto-picks up opengraph-image.tsx
-    // for twitter:image as well.
-    creator: "@leadsmartai",
+    // for twitter:image as well. No creator handle until a RealtorBoss
+    // account exists (the old @leadsmartai handle would misattribute).
   },
   icons: {
-    // RealtorBoss mark (app/icon.png + app/apple-icon.png hold the same
-    // tiles via Next's file conventions, which take precedence).
+    // RealtorBoss tiles (app/icon.png + app/apple-icon.png hold the same
+    // assets via Next's file conventions, which take precedence).
     icon: [{ url: "/brand/realtorboss/realtorboss-icon-64.png", sizes: "64x64", type: "image/png" }],
     shortcut: "/brand/realtorboss/realtorboss-icon-64.png",
     apple: [{ url: "/brand/realtorboss/realtorboss-icon-180.png", sizes: "180x180", type: "image/png" }],
@@ -119,7 +120,7 @@ export const metadata: Metadata = {
  *      in Google SERPs pointing at /dashboard/leads for quick agent
  *      access.
  *
- *   3. SoftwareApplication — describes LeadSmart AI as a real estate
+ *   3. SoftwareApplication — describes RealtorBoss as a real estate
  *      CRM product with an offer ladder (Free / Pro / Elite / Team).
  *      AggregateRating is intentionally omitted because we don't yet
  *      have real review data — adding fake ratings gets penalized.
@@ -133,7 +134,7 @@ const jsonLd = [
     "@type": "Organization",
     name: SITE_NAME,
     url: SITE_URL,
-    logo: `${SITE_URL}/images/lslog64.png`,
+    logo: `${SITE_URL}/brand/realtorboss/realtorboss-icon-512.png`,
     description: SITE_DESCRIPTION,
     sameAs: [] as string[],
   },

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CookieSettingsLink } from "@/components/cookie-consent/CookieConsent";
-import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
+import { RealtorBossLogo } from "@/components/brand/RealtorBossLogo";
 
 /**
  * Public-only product links. Removed `/dashboard`, `/client/dashboard`,
@@ -136,14 +136,14 @@ export default function Footer() {
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-200/80 pt-8 sm:flex-row dark:border-slate-800">
           {/* Brand — single horizontal lockup (TOM MN-002: the previous
               monogram-box + separate wordmark read as two logos). */}
-          <Link href="/" aria-label="LeadSmart AI home" className="inline-flex">
-            <LeadSmartLogo compact priority={false} className="max-h-9" />
+          <Link href="/" aria-label="RealtorBoss home" className="inline-flex">
+            <RealtorBossLogo compact />
           </Link>
 
           <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500">
             <CookieSettingsLink className="hover:text-[#0072ce] hover:underline dark:hover:text-[#4da3e8]" />
             <span>
-              &copy; {new Date().getFullYear()} LeadSmart AI. All rights reserved.
+              &copy; {new Date().getFullYear()} RealtorBoss (formerly LeadSmart AI). All rights reserved.
             </span>
           </div>
         </div>

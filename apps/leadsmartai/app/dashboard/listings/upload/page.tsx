@@ -2,9 +2,9 @@ import { Suspense } from "react";
 import { UploadListingClient } from "./UploadListingClient";
 
 export const metadata = {
-  title: "Upload listing agreement | LeadSmart AI",
+  title: "Upload listing agreement | RealtorBoss",
   description:
-    "Drop in a signed RLA — LeadSmart AI extracts list price, listing dates, sellers, and commission so you don't have to retype them.",
+    "Drop in a signed RLA — RealtorBoss extracts list price, listing dates, sellers, and commission so you don't have to retype them.",
 };
 
 export default function UploadListingPage() {

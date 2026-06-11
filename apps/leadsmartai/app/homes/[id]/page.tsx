@@ -23,11 +23,11 @@ export async function generateMetadata(props: {
   const adapter = getIdxAdapter();
   const result = await adapter.getListing(id);
   if (isIdxFailure(result)) {
-    return { title: "Listing | LeadSmart AI" };
+    return { title: "Listing | RealtorBoss" };
   }
   const l = result.data;
   return {
-    title: `${l.formattedAddress} | LeadSmart AI`,
+    title: `${l.formattedAddress} | RealtorBoss`,
     description: l.description ?? `${l.beds ?? "?"} bed ${l.baths ?? "?"} bath home for sale at ${l.formattedAddress}.`,
   };
 }
