@@ -147,6 +147,7 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
   const [calls, setCalls] = useState<CallEvent[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [activities, setActivities] = useState<ActivityRow[]>([]);
+  const [teamStatus, setTeamStatus] = useState<Record<string, "active" | "paused">>({});
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -154,7 +155,7 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
     const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
 
-    const [summaryRes, tasksRes, eventsRes, hotRes, txRes, callsRes, recsRes, actsRes] = await Promise.all([
+    const [summaryRes, tasksRes, eventsRes, hotRes, txRes, callsRes, recsRes, actsRes, teamRes] = await Promise.all([
       fetch("/api/dashboard/summary").then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/tasks?status=open").then((r) => r.json()).catch(() => ({})),
       fetch(`/api/dashboard/calendar/events?from=${todayStart}&to=${todayEnd}`).then((r) => r.json()).catch(() => ({})),
@@ -163,6 +164,7 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
       fetch("/api/dashboard/missed-call/events?limit=20").then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/realtorboss/recommendations").then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/realtorboss/activities?limit=40").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/dashboard/realtorboss/team").then((r) => r.json()).catch(() => ({})),
     ]);
 
     const m = summaryRes?.metrics;
@@ -183,6 +185,11 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
     setCalls((callsRes?.events ?? []) as CallEvent[]);
     setRecommendations((recsRes?.recommendations ?? []) as Recommendation[]);
     setActivities((actsRes?.activities ?? []) as ActivityRow[]);
+    const statuses: Record<string, "active" | "paused"> = {};
+    for (const a of (teamRes?.assistants ?? []) as { type: string; status: "active" | "paused" }[]) {
+      statuses[a.type] = a.status;
+    }
+    setTeamStatus(statuses);
     setLoading(false);
   }, []);
 
@@ -354,13 +361,29 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
       <section>
         <h2 className="mb-2 text-sm font-semibold text-gray-900">Your AI Team</h2>
         <div className="grid gap-3 md:grid-cols-3">
-          {AI_TEAM.filter((a) => a.type !== "boss_assistant").map((a) => (
-            <Link key={a.type} href={a.href} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:bg-gray-50">
-              <p className="text-sm font-semibold text-gray-900">{a.name}</p>
-              <p className="text-xs text-gray-500">{a.role} · {a.mission}</p>
-              <p className="mt-2 text-xs font-medium text-blue-700">{teamStats[a.type] ?? "—"}</p>
-            </Link>
-          ))}
+          {AI_TEAM.filter((a) => a.type !== "boss_assistant").map((a) => {
+            // Constitution: assistant cards show role, status, key
+            // metrics, and recent activity — checking on an employee.
+            const status = teamStatus[a.type] ?? "active";
+            const latest = activities.find((act) => act.assistant_type === a.type);
+            return (
+              <Link key={a.type} href={a.href} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:bg-gray-50">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-gray-900">{a.name}</p>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600"}`}>
+                    {status}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500">{a.role} · {a.mission}</p>
+                <p className="mt-2 text-xs font-medium text-blue-700">{teamStats[a.type] ?? "—"}</p>
+                {latest && (
+                  <p className="mt-1.5 truncate border-t border-gray-100 pt-1.5 text-[11px] text-gray-500">
+                    <span className="font-medium text-gray-600">Latest:</span> {latest.summary} · {fmtAgo(latest.created_at)}
+                  </p>
+                )}
+              </Link>
+            );
+          })}
         </div>
       </section>
 
