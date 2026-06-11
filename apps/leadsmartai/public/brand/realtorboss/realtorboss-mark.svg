@@ -1,0 +1,33 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" fill="none" role="img" aria-label="RealtorBoss">
+  <!--
+    RealtorBoss brand mark — an "R" delegating to three team nodes
+    (the AI Receptionist / Sales Assistant / Transaction Assistant).
+    Navy #1E3A66, gold #D9A227. Vector recreation of the approved
+    V2 concept (ringed nodes, bold strokes for small-size legibility).
+  -->
+  <g stroke="#1E3A66" stroke-width="16">
+    <!-- R stem -->
+    <path d="M84 26 V112" />
+    <!-- R bowl (closes back to the stem) -->
+    <path d="M84 34 H118 Q136 34 136 52 V54 Q136 72 118 72 H84" />
+    <!-- R leg (lands on the base junction) -->
+    <path d="M100 72 L131 106" />
+  </g>
+  <!-- base junction the team hangs from -->
+  <path d="M76 112 H140" stroke="#1E3A66" stroke-width="10" />
+  <!-- connectors -->
+  <g stroke="#1E3A66" stroke-width="9">
+    <path d="M82 114 L48 142" />
+    <path d="M100 114 V142" />
+    <path d="M134 114 L152 142" />
+  </g>
+  <!-- team nodes: navy ring, gold core -->
+  <g>
+    <circle cx="48" cy="151" r="13" fill="#FFFFFF" stroke="#1E3A66" stroke-width="8" />
+    <circle cx="48" cy="151" r="6.5" fill="#D9A227" />
+    <circle cx="100" cy="151" r="13" fill="#FFFFFF" stroke="#1E3A66" stroke-width="8" />
+    <circle cx="100" cy="151" r="6.5" fill="#D9A227" />
+    <circle cx="152" cy="151" r="13" fill="#FFFFFF" stroke="#1E3A66" stroke-width="8" />
+    <circle cx="152" cy="151" r="6.5" fill="#D9A227" />
+  </g>
+</svg>
