@@ -3,3 +3,4 @@
 // First extraction: RE communication intent taxonomy + classifiers (vs Core's
 // industry-agnostic messaging safety/escalation).
 export * from "./communication";
+export * from "./realtorboss";

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { finalizeCallByProviderId, logInboundCallStart } from "@/lib/missed-call/service";
 import { resolveAgentIdByReceptionistNumber } from "@/lib/voice-receptionist/settings";
 import { captureLeadFromInboundCall } from "@/lib/voice-agent/lead-capture";
+import { logAssistantActivity } from "@/lib/realtorboss/activities";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
@@ -95,13 +97,45 @@ export async function POST(req: NextRequest) {
     }
 
     const summary = call.call_analysis?.call_summary?.trim() || "";
+    const status = mapStatus(call.call_status, call.disconnection_reason);
     await finalizeCallByProviderId({
       providerCallId: call.call_id,
-      status: mapStatus(call.call_status, call.disconnection_reason),
+      status,
       durationSeconds: durationSeconds(call),
       // Only overwrite the placement note once we have a summary (call_analyzed).
       note: summary ? `AI call summary: ${summary}` : null,
     });
+
+    // RealtorBoss activity feed — outbound AI calls belong to the Sales
+    // Assistant. Logged once, on call_ended (call_analyzed would double
+    // up). Runs after the response; a failure can't affect the webhook.
+    if (body.event === "call_ended" && call.direction === "outbound") {
+      const callId = call.call_id;
+      const toNumber = call.to_number ?? null;
+      after(async () => {
+        try {
+          const { data } = await supabaseAdmin
+            .from("call_logs")
+            .select("agent_id, contact_id")
+            .eq("twilio_call_sid", callId)
+            .maybeSingle();
+          const row = data as { agent_id: unknown; contact_id: string | null } | null;
+          if (!row?.agent_id) return;
+          await logAssistantActivity({
+            agentId: String(row.agent_id),
+            assistantType: "sales_assistant",
+            activityType: "outbound_ai_call",
+            summary: `Placed an AI call${toNumber ? ` to ${toNumber}` : ""}`,
+            outcome: status === "completed" ? "Connected" : status.replace(/_/g, " "),
+            requiresAttention: false,
+            relatedEntityType: row.contact_id ? "contact" : null,
+            relatedEntityId: row.contact_id,
+          });
+        } catch (e) {
+          console.error("retell/call-events: outbound activity log failed", e);
+        }
+      });
+    }
 
     // On analysis of an INBOUND call, capture the caller as a CRM contact + a
     // follow-up task (extracted from Lucy's summary). Runs after the response so
@@ -122,6 +156,16 @@ export async function POST(req: NextRequest) {
           const agentId = await resolveAgentIdByReceptionistNumber(toNumber);
           if (agentId) {
             await captureLeadFromInboundCall({ agentId, fromPhone, summary, transcript, providerCallId });
+            // RealtorBoss activity feed — the Receptionist answered and
+            // summarized this inbound call. Logged here (call_analyzed)
+            // so the activity carries the AI summary.
+            await logAssistantActivity({
+              agentId,
+              assistantType: "receptionist",
+              activityType: "inbound_call_answered",
+              summary: `Answered a call from ${fromPhone}`,
+              outcome: summary.length > 180 ? `${summary.slice(0, 177)}…` : summary,
+            });
           }
         } catch (e) {
           console.error("retell/call-events: lead capture failed", e);

@@ -1,5 +1,6 @@
 import { getAgentDisplayName } from "@/lib/ai-call/lead-resolution";
 import { getReceptionistConfig, getBookingSettings } from "@/lib/voice-receptionist/settings";
+import { buildReceptionistVoiceNotes } from "@/lib/realtorboss/voicePersona";
 import {
   describeHours,
   defaultBusinessHours,
@@ -78,7 +79,11 @@ export async function loadReceptionistContext(
       ? "Thirty-minute appointments you can book: property showings, buyer consultations, listing consultations, and general meetings. Use check_availability first, then book_appointment. Always speak durations and times as words (say \"thirty minutes\", never \"three zero\")."
       : "No online appointment booking. If the caller wants to schedule, take a message or offer a call-back.",
     knowledgeText: cfg.extraNotes || "",
-    extraNotes: "",
+    // RealtorBoss: qualification/escalation playbook from the skills
+    // enabled on this agent's AI Receptionist, plus voice-channel
+    // compliance guardrails. Lands under "About the business" in the
+    // shared system prompt.
+    extraNotes: await buildReceptionistVoiceNotes(agentId),
     greeting: cfg.greeting || "",
   };
 }
