@@ -5,8 +5,8 @@
   <g transform="translate(16 12) scale(1.08)">
     <g stroke="#1E3A66" stroke-width="16">
       <path d="M84 26 V112" />
-      <path d="M84 34 H118 Q136 34 136 52 V54 Q136 72 118 72 H84" />
-      <path d="M111 82 L132 105" />
+      <path d="M84 34 H118 Q136 34 136 52 V54 Q136 72 118 72 H102" />
+      <path d="M104 72 L131 106" />
     </g>
     <path d="M76 112 H140" stroke="#1E3A66" stroke-width="10" />
     <g stroke="#1E3A66" stroke-width="9">
@@ -27,8 +27,9 @@
     <tspan fill="#1E3A66">Realtor</tspan><tspan fill="#D9A227">Boss</tspan>
   </text>
   <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
-    <line x1="262" y1="166" x2="308" y2="166" stroke="#D9A227" stroke-width="4" />
-    <text x="322" y="176" fill="#1E3A66" font-weight="600" font-size="25" letter-spacing="1.5">YOUR AI REAL ESTATE TEAM</text>
-    <line x1="706" y1="166" x2="752" y2="166" stroke="#D9A227" stroke-width="4" />
+    <!-- Tagline centered under the wordmark (wordmark spans ~262→800, center 531) -->
+    <line x1="287" y1="166" x2="333" y2="166" stroke="#D9A227" stroke-width="4" />
+    <text x="531" y="176" text-anchor="middle" fill="#1E3A66" font-weight="600" font-size="25" letter-spacing="1.5">YOUR AI REAL ESTATE TEAM</text>
+    <line x1="729" y1="166" x2="775" y2="166" stroke="#D9A227" stroke-width="4" />
   </g>
 </svg>
