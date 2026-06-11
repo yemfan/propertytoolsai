@@ -50,10 +50,10 @@ function l(icon: ReactNode): ReactNode {
 }
 
 /**
- * LeadSmart AI — agent portal sidebar.
+ * RealtorBoss — agent portal sidebar.
  *
  * Visual structure (consumed by `PremiumSidebarV2`):
- *   pinned Home  →  WORK band  →  ENGAGE band  →  ANALYZE band  →  MANAGE band  →  Admin
+ *   pinned Boss Assistant  →  AI TEAM band  →  WORK band  →  ENGAGE band  →  ANALYZE band  →  MANAGE band  →  Admin
  *
  * The supercategory bands ("section-label" sections) collapse the ten
  * collapsible groups into four scannable clusters; legacy `PremiumSidebar`
@@ -61,7 +61,8 @@ function l(icon: ReactNode): ReactNode {
  * labels (see `packages/ui/navigation`).
  *
  * Sections kept their original semantics:
- *   Home         — daily overview
+ *   Boss Assistant — AI Chief of Staff command center (default home)
+ *   Your AI Team — AI Receptionist / Sales Assistant / Transaction Assistant
  *   Leads        — prospecting + ops (contacts, queue, tasks, calendar)
  *   Buyers       — buyer-side activity (showings → offers)
  *   Sellers      — seller-side activity (presentations, listings)
@@ -75,14 +76,35 @@ function l(icon: ReactNode): ReactNode {
  */
 const navConfig = {
   id: "leadsmart",
-  sidebarTitle: "Agent portal",
+  sidebarTitle: "RealtorBoss",
   sections: [
-    /* ── Home ── */
+    /* ── Boss Assistant — the AI Chief of Staff command center ── */
     {
-      label: "Home",
-      href: "/dashboard/overview",
-      match: ["/dashboard", "/dashboard/overview", "/dashboard/broker"],
+      label: "Boss Assistant",
+      href: "/dashboard/boss",
+      match: ["/dashboard", "/dashboard/boss", "/dashboard/broker"],
       icon: p(<LayoutDashboard size={17} strokeWidth={STROKE} aria-hidden />),
+    },
+
+    /* ── YOUR AI TEAM ── the three working assistants ── */
+    { kind: "section-label" as const, label: "Your AI Team" },
+    {
+      label: "AI Receptionist",
+      href: "/dashboard/ai-receptionist",
+      match: ["/dashboard/ai-receptionist"],
+      icon: p(<Headphones size={17} strokeWidth={STROKE} aria-hidden />),
+    },
+    {
+      label: "AI Sales Assistant",
+      href: "/dashboard/ai-sales-assistant",
+      match: ["/dashboard/ai-sales-assistant"],
+      icon: p(<Sparkles size={17} strokeWidth={STROKE} aria-hidden />),
+    },
+    {
+      label: "AI Transaction Assistant",
+      href: "/dashboard/ai-transaction-assistant",
+      match: ["/dashboard/ai-transaction-assistant"],
+      icon: p(<KeyRound size={17} strokeWidth={STROKE} aria-hidden />),
     },
 
     /* ── WORK ── side-of-deal activity + the bridge transactional layer ── */
@@ -248,9 +270,11 @@ const navConfig = {
           icon: l(<MessageCircle size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
-          // The AI Assistant voice console — Inbound (incoming-call activity +
+          // The voice console — Inbound (incoming-call activity +
           // missed-call auto-text settings) and Outbound (place AI calls).
-          label: "AI Assistant",
+          // Renamed from "AI Assistant" so it doesn't collide with the
+          // "Your AI Team" band; the AI Receptionist page links here.
+          label: "Voice Console",
           href: "/dashboard/missed-call",
           match: ["/dashboard/missed-call"],
           icon: l(<PhoneMissed size={14} strokeWidth={STROKE} aria-hidden />),
@@ -303,6 +327,14 @@ const navConfig = {
       label: "Insights",
       icon: p(<TrendingUp size={17} strokeWidth={STROKE} aria-hidden />),
       items: [
+        {
+          // The classic daily-overview dashboard — superseded as the
+          // default home by the Boss Assistant but kept reachable.
+          label: "Daily Overview",
+          href: "/dashboard/overview",
+          match: ["/dashboard/overview"],
+          icon: l(<LayoutDashboard size={14} strokeWidth={STROKE} aria-hidden />),
+        },
         {
           label: "Performance",
           href: "/dashboard/performance",

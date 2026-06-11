@@ -9,7 +9,10 @@ import TopBar from "@/components/dashboard/TopBar";
 import { isAgentOrBrokerProfileRole } from "@/lib/rolePortalPaths";
 import { signOutWithFullReload } from "@/lib/auth/signOutClient";
 
-const APP_NAME = "LeadSmart AI";
+// RealtorBoss repositioning (Phase 1): the authenticated portal brands
+// as RealtorBoss; the public marketing site keeps LeadSmart AI until
+// the domain/logo/SEO migration lands.
+const APP_NAME = "RealtorBoss";
 
 const sidebarFooter = (
   <div className="rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-3 py-2.5 text-sm leading-snug text-white shadow-lg shadow-slate-900/25 ring-1 ring-white/10">

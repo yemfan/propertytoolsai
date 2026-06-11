@@ -1,0 +1,174 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getAssistant } from "@/lib/realtorboss/team";
+import { AssistantHeader, AssistantKpiCard } from "@/components/realtorboss/AssistantPage";
+
+type TransactionItem = {
+  id: string;
+  property_address: string;
+  status: string;
+  contact_name: string | null;
+  inspection_deadline: string | null;
+  inspection_completed_at: string | null;
+  appraisal_deadline: string | null;
+  appraisal_completed_at: string | null;
+  loan_contingency_deadline: string | null;
+  loan_contingency_removed_at: string | null;
+  closing_date: string | null;
+  task_total: number;
+  task_completed: number;
+  task_overdue: number;
+};
+
+type Alert = {
+  transactionId: string;
+  propertyAddress: string;
+  contactName: string | null;
+  label: string;
+  due: Date;
+  risk: "high" | "medium";
+};
+
+const assistant = getAssistant("transaction_assistant");
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export default function TransactionAssistantClient() {
+  const [transactions, setTransactions] = useState<TransactionItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    const res = await fetch("/api/dashboard/transactions").then((r) => r.json()).catch(() => ({}));
+    setTransactions((res?.transactions ?? []) as TransactionItem[]);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const active = useMemo(
+    () => transactions.filter((t) => t.status === "active" || t.status === "pending"),
+    [transactions],
+  );
+
+  // Open contingency / closing deadlines within 14 days (or overdue).
+  const alerts = useMemo<Alert[]>(() => {
+    const now = Date.now();
+    const horizon = now + 14 * DAY_MS;
+    const out: Alert[] = [];
+    for (const t of active) {
+      const candidates: { label: string; date: string | null; done: string | null }[] = [
+        { label: "Inspection contingency", date: t.inspection_deadline, done: t.inspection_completed_at },
+        { label: "Appraisal deadline", date: t.appraisal_deadline, done: t.appraisal_completed_at },
+        { label: "Loan contingency", date: t.loan_contingency_deadline, done: t.loan_contingency_removed_at },
+        { label: "Closing", date: t.closing_date, done: null },
+      ];
+      for (const c of candidates) {
+        if (!c.date || c.done) continue;
+        const due = new Date(c.date);
+        if (due.getTime() > horizon) continue;
+        out.push({
+          transactionId: t.id,
+          propertyAddress: t.property_address,
+          contactName: t.contact_name,
+          label: c.label,
+          due,
+          risk: due.getTime() < now + 3 * DAY_MS ? "high" : "medium",
+        });
+      }
+    }
+    return out.sort((a, b) => a.due.getTime() - b.due.getTime());
+  }, [active]);
+
+  const overdueTaskCount = useMemo(
+    () => active.reduce((sum, t) => sum + (t.task_overdue ?? 0), 0),
+    [active],
+  );
+  const atRisk = useMemo(
+    () =>
+      active.filter(
+        (t) =>
+          (t.task_overdue ?? 0) > 0 ||
+          alerts.some((a) => a.transactionId === t.id && a.risk === "high"),
+      ),
+    [active, alerts],
+  );
+
+  return (
+    <div className="space-y-4">
+      <AssistantHeader
+        assistant={assistant}
+        actions={[
+          { label: "All deals", href: "/dashboard/transactions" },
+          { label: "Coordinator board", href: "/dashboard/transactions/coordinator" },
+        ]}
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <AssistantKpiCard label="Active transactions" value={loading ? undefined : active.length} />
+        <AssistantKpiCard label="Deadlines in 14 days" value={loading ? undefined : alerts.length} tone={alerts.some((a) => a.risk === "high") ? "warn" : undefined} />
+        <AssistantKpiCard label="Overdue checklist items" value={loading ? undefined : overdueTaskCount} tone={overdueTaskCount > 0 ? "warn" : undefined} />
+        <AssistantKpiCard label="Transactions at risk" value={loading ? undefined : atRisk.length} tone={atRisk.length > 0 ? "hot" : undefined} />
+      </div>
+
+      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold text-gray-900">Upcoming Deadlines & Risks</h2>
+        {alerts.length === 0 ? (
+          <p className="py-6 text-center text-sm text-gray-400">
+            {loading ? "Checking your transactions…" : "No open deadlines in the next 14 days."}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {alerts.map((a) => (
+              <Link key={`${a.transactionId}-${a.label}`} href={`/dashboard/transactions/${a.transactionId}`} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-gray-900">{a.propertyAddress}</p>
+                  <p className="text-xs text-gray-500">
+                    {a.label}
+                    {a.contactName ? ` · ${a.contactName}` : ""}
+                  </p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${a.risk === "high" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                  {a.due.getTime() < Date.now() ? "overdue · " : ""}
+                  {a.due.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-900">Active Transactions</h2>
+          <Link href="/dashboard/transactions" className="text-xs font-medium text-blue-600 hover:text-blue-800">View all</Link>
+        </div>
+        {active.length === 0 ? (
+          <p className="py-6 text-center text-sm text-gray-400">
+            {loading ? "Loading…" : "No active transactions. New deals show up here automatically."}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {active.slice(0, 10).map((t) => (
+              <Link key={t.id} href={`/dashboard/transactions/${t.id}`} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-gray-900">{t.property_address}</p>
+                  <p className="text-xs text-gray-500">
+                    {t.contact_name ?? "—"} · {t.task_completed}/{t.task_total} tasks done
+                    {(t.task_overdue ?? 0) > 0 ? ` · ${t.task_overdue} overdue` : ""}
+                  </p>
+                </div>
+                {t.closing_date && (
+                  <span className="shrink-0 text-xs text-gray-400">
+                    closes {new Date(t.closing_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
