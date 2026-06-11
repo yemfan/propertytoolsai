@@ -8,7 +8,8 @@ export type AssistantType =
   | "boss_assistant"
   | "receptionist"
   | "sales_assistant"
-  | "transaction_assistant";
+  | "transaction_assistant"
+  | "accountant";
 
 export type AssistantDef = {
   type: AssistantType;
@@ -85,6 +86,27 @@ export const AI_TEAM: readonly AssistantDef[] = [
       "Upcoming deadlines",
       "Overdue items",
       "Risk alerts",
+    ],
+  },
+  {
+    // Modeled on HelmSmart's Alex (AI Finance Director): "get the
+    // business paid faster" — invoices, expenses, commission pipeline.
+    type: "accountant",
+    name: "AI Accountant",
+    role: "Money & books",
+    mission: "Get you paid faster.",
+    href: "/dashboard/ai-accountant",
+    skills: [
+      "invoice_tracking",
+      "payment_reminders",
+      "expense_tracking",
+      "commission_tracking",
+    ],
+    kpis: [
+      "Outstanding invoices",
+      "Overdue invoices",
+      "Expenses this month",
+      "Commission pipeline",
     ],
   },
 ] as const;

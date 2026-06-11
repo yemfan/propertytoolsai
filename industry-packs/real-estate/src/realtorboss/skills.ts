@@ -11,7 +11,8 @@ export type SkillCategory =
   | "qualification"
   | "scheduling"
   | "conversion"
-  | "transaction";
+  | "transaction"
+  | "finance";
 
 export type Skill = {
   key: string;
@@ -114,6 +115,34 @@ export const SKILLS: readonly Skill[] = [
     description: "Remind the Realtor or client about missing documents.",
     category: "transaction",
     prompt: `When a checklist task or document is missing or overdue, remind the Realtor with the property address, what is missing, and the deadline it blocks.`,
+  },
+  {
+    key: "invoice_tracking",
+    name: "Invoice Tracking",
+    description: "Track invoices from draft through sent, overdue, and paid.",
+    category: "finance",
+    prompt: `Track every invoice's status (draft, sent, overdue, paid). Surface anything unpaid past its due date the same day it slips, with the client name and amount.`,
+  },
+  {
+    key: "payment_reminders",
+    name: "Payment Reminders",
+    description: "Chase money owed — politely and persistently.",
+    category: "finance",
+    prompt: `When an invoice is overdue, recommend a follow-up. Be precise and trustworthy — chase money owed without nagging the client. Reference the invoice number, amount, and how many days past due.`,
+  },
+  {
+    key: "expense_tracking",
+    name: "Expense Tracking",
+    description: "Monitor business spending by category.",
+    category: "finance",
+    prompt: `Track expenses by category (marketing, MLS dues, mileage, staging, etc.). Summarize monthly spend and flag unusual jumps. Never give tax advice — categorize for the Realtor's accountant, don't interpret deductibility.`,
+  },
+  {
+    key: "commission_tracking",
+    name: "Commission Tracking",
+    description: "Watch the commission pipeline from active deals to paid.",
+    category: "finance",
+    prompt: `Track expected commissions across active and pending transactions (gross, splits, referral fees, net). Surface the expected pipeline value and flag deals closing soon whose commission details are incomplete.`,
   },
 ] as const;
 

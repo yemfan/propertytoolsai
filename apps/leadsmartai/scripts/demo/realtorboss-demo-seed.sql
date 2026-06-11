@@ -65,6 +65,9 @@ begin
   delete from public.transaction_tasks where transaction_id in (select id from public.transactions where agent_id = v_agent);
   delete from public.transactions where agent_id = v_agent;
   delete from public.crm_tasks where agent_id = v_agent;
+  delete from public.invoice_lines where invoice_id in (select id from public.invoices where agent_id = v_agent);
+  delete from public.invoices where agent_id = v_agent;
+  delete from public.expenses where agent_id = v_agent;
   begin
     delete from public.contacts where agent_id = v_agent;
   exception when others then
@@ -173,17 +176,21 @@ begin
   insert into public.transactions
     (id, agent_id, contact_id, transaction_type, property_address, city, state, purchase_price, status,
      mutual_acceptance_date, inspection_deadline, inspection_completed_at, appraisal_deadline, appraisal_completed_at,
-     loan_contingency_deadline, loan_contingency_removed_at, closing_date)
+     loan_contingency_deadline, loan_contingency_removed_at, closing_date,
+     commission_pct, gross_commission, brokerage_split_pct, referral_fee_pct, agent_net_commission)
   values
     (t_cherry, v_agent, c_emily, 'buyer_rep', '148 W Cherry Ave', 'Monrovia', 'CA', 935000, 'active',
      (now() - interval '8 days')::date, (now() + interval '2 days')::date, null, (now() + interval '9 days')::date, null,
-     (now() + interval '16 days')::date, null, (now() + interval '32 days')::date),
+     (now() + interval '16 days')::date, null, (now() + interval '32 days')::date,
+     2.5, 23375, 70, 0, 16362.50),
     (t_maple, v_agent, c_daniel, 'buyer_rep', '2204 Maple Ct', 'Pasadena', 'CA', 612000, 'active',
      (now() - interval '15 days')::date, (now() - interval '5 days')::date, now() - interval '5 days', (now() + interval '6 days')::date, null,
-     (now() + interval '13 days')::date, null, (now() + interval '27 days')::date),
+     (now() + interval '13 days')::date, null, (now() + interval '27 days')::date,
+     2.5, 15300, 70, 0, 10710),
     (t_birch, v_agent, c_castillo, 'listing_rep', '87 Birchwood Ln', 'Pasadena', 'CA', 745000, 'active',
      (now() - interval '28 days')::date, (now() - interval '20 days')::date, now() - interval '20 days', (now() - interval '12 days')::date, now() - interval '12 days',
-     (now() - interval '5 days')::date, now() - interval '5 days', (now() + interval '2 days')::date);
+     (now() - interval '5 days')::date, now() - interval '5 days', (now() + interval '2 days')::date,
+     3.0, 22350, 70, 0, 15645);
 
   insert into public.transaction_tasks (transaction_id, stage, title, description, due_date, completed_at, order_index, seed_key, source) values
     (t_cherry, 'inspection', 'Schedule home inspection', null, (now() - interval '2 days')::date, now() - interval '3 days', 1, 'schedule_inspection', 'seed'),
@@ -238,6 +245,36 @@ begin
     (v_agent, 'sales_assistant', 'follow_up_sms', 'Followed up with David Wang about the Arcadia market report', 'He opened it again within an hour', 'normal', false, 'contact', c_david::text, now() - interval '4 days'),
     (v_agent, 'transaction_assistant', 'deadline_tracking', 'Started tracking 148 W Cherry Ave — 4 contingency dates loaded', 'Inspection, appraisal, loan, closing monitored', 'normal', false, 'transaction', t_cherry::text, now() - interval '5 days'),
     (v_agent, 'receptionist', 'inbound_call_answered', 'Answered an after-hours call about selling in Sierra Madre', 'Took a message; suggested a valuation', 'normal', false, null, null, now() - interval '6 days');
+
+  -- ── Money: invoices + expenses (the AI Accountant's domain) ──────
+  insert into public.invoices (id, agent_id, contact_id, client_name, client_email, invoice_number, status, issue_date, due_date, subtotal, tax_rate, tax_amount, total, notes, paid_at, created_at) values
+    ('0bde0004-0000-4000-8000-000000000001', v_agent, null, 'Hillcrest Realty Group', 'accounting@hillcrestrealty.example.com', 'INV-0012', 'overdue',
+     (now() - interval '24 days')::date, (now() - interval '9 days')::date, 2500, 0, 0, 2500,
+     'Referral fee — buyer referral, 1830 Oak Knoll Ave closing.', null, now() - interval '24 days'),
+    ('0bde0004-0000-4000-8000-000000000002', v_agent, c_maria, 'Maria Lopez', 'maria.lopez@example.com', 'INV-0013', 'sent',
+     (now() - interval '3 days')::date, (now() + interval '5 days')::date, 850, 0, 0, 850,
+     'Staging coordination — 4521 Rosewood Dr pre-listing.', null, now() - interval '3 days'),
+    ('0bde0004-0000-4000-8000-000000000003', v_agent, c_castillo, 'Robert & Joan Castillo', 'castillos@example.com', 'INV-0011', 'paid',
+     (now() - interval '18 days')::date, (now() - interval '4 days')::date, 1200, 0, 0, 1200,
+     'Pre-sale repair coordination — 87 Birchwood Ln.', now() - interval '5 days', now() - interval '18 days');
+
+  insert into public.invoice_lines (invoice_id, description, quantity, unit_price, amount, sort_order) values
+    ('0bde0004-0000-4000-8000-000000000001', 'Buyer referral fee (25% of side)', 1, 2500, 2500, 0),
+    ('0bde0004-0000-4000-8000-000000000002', 'Staging consult + vendor coordination', 1, 850, 850, 0),
+    ('0bde0004-0000-4000-8000-000000000003', 'Repair vendor coordination + oversight', 1, 1200, 1200, 0);
+
+  insert into public.expenses (agent_id, expense_date, amount, category, vendor, notes, created_at) values
+    (v_agent, (now() - interval '2 days')::date, 285, 'Photography & Media', 'SnapHouse Photo Co.', '4521 Rosewood Dr listing shoot', now() - interval '2 days'),
+    (v_agent, (now() - interval '5 days')::date, 89, 'Signage & Lockboxes', 'SupraKey', 'Two lockboxes', now() - interval '5 days'),
+    (v_agent, (now() - interval '8 days')::date, 450, 'Marketing & Advertising', 'Meta Ads', 'June buyer-lead campaign', now() - interval '8 days'),
+    (v_agent, (now() - interval '12 days')::date, 162, 'MLS & Association Dues', 'CRMLS', 'Quarterly MLS dues', now() - interval '12 days'),
+    (v_agent, (now() - interval '1 day')::date, 64, 'Mileage & Auto', null, 'Showings — Pasadena loop', now() - interval '1 day');
+
+  -- Accountant activity (matches the invoice story above)
+  insert into public.assistant_activities (agent_id, assistant_type, activity_type, summary, outcome, priority, requires_attention, related_entity_type, related_entity_id, created_at) values
+    (v_agent, 'accountant', 'invoices_overdue', '1 invoice became overdue (INV-0012)', 'Follow-up recommended', 'high', true, 'invoice', '0bde0004-0000-4000-8000-000000000001', now() - interval '8 hours'),
+    (v_agent, 'accountant', 'invoice_paid', 'Invoice INV-0011 from Robert & Joan Castillo was paid', '$1,200 collected', 'normal', false, 'invoice', '0bde0004-0000-4000-8000-000000000003', now() - interval '5 days'),
+    (v_agent, 'accountant', 'invoice_sent', 'Sent invoice INV-0013 to Maria Lopez', '$850 now outstanding', 'normal', false, 'invoice', '0bde0004-0000-4000-8000-000000000002', now() - interval '3 days');
 
   -- ── Notification inbox (lights the bell badge) ───────────────────
   insert into public.agent_inbox_notifications (agent_id, type, priority, title, body, data, read, push_sent_at, created_at) values

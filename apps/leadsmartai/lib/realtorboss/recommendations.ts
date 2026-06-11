@@ -87,6 +87,41 @@ async function buildCandidates(agentId: string): Promise<Candidate[]> {
     }
   }
 
+  // ── Overdue invoices (AI Accountant: get paid faster) ────────────
+  if (!paused.has("accountant")) {
+    const { data: overdueInv } = await supabaseAdmin
+      .from("invoices")
+      .select("id,invoice_number,client_name,total,due_date,status")
+      .eq("agent_id", agentId)
+      .or(`status.eq.overdue,and(status.eq.sent,due_date.lt.${new Date().toISOString().slice(0, 10)})`)
+      .order("due_date", { ascending: true })
+      .limit(3);
+    for (const inv of (overdueInv ?? []) as {
+      id: string;
+      invoice_number: string;
+      client_name: string | null;
+      total: number | null;
+      due_date: string | null;
+    }[]) {
+      const days = inv.due_date
+        ? Math.max(1, Math.floor((now - new Date(inv.due_date).getTime()) / DAY_MS))
+        : null;
+      out.push({
+        recommendation_type: "invoice_overdue",
+        title: `Chase invoice ${inv.invoice_number}${inv.client_name ? ` — ${inv.client_name}` : ""}`,
+        summary: `${inv.total != null ? `$${Math.round(inv.total).toLocaleString()}` : "Unpaid"}${days ? ` · ${days} day${days === 1 ? "" : "s"} past due` : ""}`,
+        reason: "Money owed to you ages fast — a polite nudge now usually settles it.",
+        priority: 22,
+        related_entity_type: "invoice",
+        related_entity_id: inv.id,
+        recommended_action: "Open invoices",
+        action_href: "/dashboard/books",
+        expected_outcome: "Invoice paid without souring the relationship.",
+        dedupe_key: `invoice_overdue:${inv.id}`,
+      });
+    }
+  }
+
   // ── Hot leads (sales assistant) ──────────────────────────────────
   if (!paused.has("sales_assistant")) {
     const { data: hot } = await supabaseAdmin

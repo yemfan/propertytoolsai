@@ -58,6 +58,7 @@ export const ASSISTANT_LABELS: Record<string, string> = {
   receptionist: "AI Receptionist",
   sales_assistant: "AI Sales Assistant",
   transaction_assistant: "AI Transaction Assistant",
+  accountant: "AI Accountant",
   boss_assistant: "Boss Assistant",
 };
 

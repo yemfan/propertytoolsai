@@ -62,6 +62,7 @@ type SummaryMetrics = {
 
 type Recommendation = {
   id: string;
+  recommendation_type: string;
   title: string;
   summary: string | null;
   reason: string | null;
@@ -88,6 +89,7 @@ const ASSISTANT_LABELS: Record<string, string> = {
   receptionist: "AI Receptionist",
   sales_assistant: "AI Sales Assistant",
   transaction_assistant: "AI Transaction Assistant",
+  accountant: "AI Accountant",
 };
 
 // ── Derived views ────────────────────────────────────────────────────
@@ -246,10 +248,12 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
     const rec = by("receptionist");
     const sales = by("sales_assistant");
     const tx = by("transaction_assistant");
+    const acct = by("accountant");
     const booked = recent.filter((a) => a.activity_type === "appointment_booked").length;
     if (rec > 0) parts.push(`Receptionist handled ${rec} call${rec === 1 ? "" : "s"}`);
     if (sales > 0) parts.push(`Sales Assistant ran ${sales} follow-up${sales === 1 ? "" : "s"}`);
     if (tx > 0) parts.push(`Transaction Assistant flagged ${tx} item${tx === 1 ? "" : "s"}`);
+    if (acct > 0) parts.push(`Accountant tracked ${acct} money item${acct === 1 ? "" : "s"}`);
     if (booked > 0) parts.push(`${booked} appointment${booked === 1 ? "" : "s"} booked`);
     if (parts.length === 0) return null;
     // Constitution briefing voice: lead with the team's total output.
@@ -257,12 +261,17 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
   }, [activities]);
 
   // Per-assistant headline stats for the AI Team cards (today, from real logs).
+  const overdueInvoiceRecs = recommendations.filter((r) => r.recommendation_type === "invoice_overdue").length;
   const teamStats: Record<string, string> = {
     receptionist: `${callsToday.filter((c) => c.direction === "inbound").length} calls today · ${callsToday.filter((c) => c.textback_sent).length} text-backs`,
     sales_assistant: metrics
       ? `${metrics.hotLeads} hot leads · ${metrics.inactive7Days} quiet leads to revive`
       : "—",
     transaction_assistant: `${activeTransactions.length} active deals · ${alerts.length} deadline${alerts.length === 1 ? "" : "s"} in 7 days`,
+    accountant:
+      overdueInvoiceRecs > 0
+        ? `${overdueInvoiceRecs} overdue invoice${overdueInvoiceRecs === 1 ? "" : "s"} flagged`
+        : "Invoices, expenses & commission pipeline",
   };
 
   return (
@@ -386,7 +395,7 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
       {/* ── Your AI Team ── */}
       <section>
         <h2 className="mb-2 text-sm font-semibold text-gray-900">Your AI Team</h2>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {AI_TEAM.filter((a) => a.type !== "boss_assistant").map((a) => {
             // Constitution: assistant cards show role, status, key
             // metrics, and recent activity — checking on an employee.
