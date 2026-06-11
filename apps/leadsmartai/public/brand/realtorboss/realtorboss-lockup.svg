@@ -5,8 +5,8 @@
   <g transform="translate(16 12) scale(1.08)">
     <g stroke="#1E3A66" stroke-width="16">
       <path d="M84 26 V112" />
-      <path d="M84 34 H118 Q136 34 136 52 V54 Q136 72 118 72 H102" />
-      <path d="M104 72 L131 106" />
+      <path d="M84 34 H118 Q136 34 136 52 V54 Q136 72 118 72 H84" />
+      <path d="M111 82 L132 105" />
     </g>
     <path d="M76 112 H140" stroke="#1E3A66" stroke-width="10" />
     <g stroke="#1E3A66" stroke-width="9">

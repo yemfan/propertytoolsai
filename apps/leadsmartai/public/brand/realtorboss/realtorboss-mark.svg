@@ -8,10 +8,10 @@
   <g stroke="#1E3A66" stroke-width="16">
     <!-- R stem -->
     <path d="M84 26 V112" />
-    <!-- R bowl (bottom stops short of the stem — open counter notch) -->
-    <path d="M84 34 H118 Q136 34 136 52 V54 Q136 72 118 72 H102" />
-    <!-- R leg (lands on the base junction) -->
-    <path d="M104 72 L131 106" />
+    <!-- R bowl — closed loop back into the stem -->
+    <path d="M84 34 H118 Q136 34 136 52 V54 Q136 72 118 72 H84" />
+    <!-- R leg — detached from the bowl, lands on the base junction -->
+    <path d="M111 82 L132 105" />
   </g>
   <!-- base junction the team hangs from -->
   <path d="M76 112 H140" stroke="#1E3A66" stroke-width="10" />
