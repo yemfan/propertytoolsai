@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { BrandCheck } from "@/components/brand/BrandCheck";
-import { LeadSmartLogo } from "@/components/brand/LeadSmartLogo";
+import { RealtorBossLogo } from "@/components/brand/RealtorBossLogo";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildDemoLeads, randomIncomingSnippet } from "./demoLeads";
@@ -67,7 +67,7 @@ function Shell({
       <div className="relative mx-auto flex min-h-screen max-w-lg flex-col px-4 py-8 sm:max-w-xl sm:px-6 sm:py-12">
         <header className="mb-6 flex items-center justify-between gap-3 onboarding-fade-up">
           <Link href="/" className="flex items-center opacity-90 transition hover:opacity-100">
-            <LeadSmartLogo compact className="max-w-[200px] sm:max-w-[240px]" priority={false} />
+            <RealtorBossLogo compact tone="dark" className="max-w-[240px]" />
           </Link>
           <Link
             href="/agent/pricing"
