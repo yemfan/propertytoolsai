@@ -27,8 +27,8 @@
     <tspan fill="#1E3A66">Realtor</tspan><tspan fill="#D9A227">Boss</tspan>
   </text>
   <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
-    <line x1="262" y1="166" x2="312" y2="166" stroke="#D9A227" stroke-width="4" />
-    <text x="326" y="176" fill="#1E3A66" font-weight="600" font-size="26" letter-spacing="3">YOUR AI REAL ESTATE TEAM</text>
-    <line x1="772" y1="166" x2="822" y2="166" stroke="#D9A227" stroke-width="4" />
+    <line x1="262" y1="166" x2="308" y2="166" stroke="#D9A227" stroke-width="4" />
+    <text x="322" y="176" fill="#1E3A66" font-weight="600" font-size="25" letter-spacing="1.5">YOUR AI REAL ESTATE TEAM</text>
+    <line x1="706" y1="166" x2="752" y2="166" stroke="#D9A227" stroke-width="4" />
   </g>
 </svg>
