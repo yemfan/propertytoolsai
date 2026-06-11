@@ -8,6 +8,7 @@ import PostToFacebookCard from "@/components/dashboard/PostToFacebookCard";
 import { PlaybooksPanel } from "@/components/dashboard/PlaybooksPanel";
 import { LimitWarningBanner } from "@/components/entitlements/LimitWarningBanner";
 import { TransactionTypeBadge } from "@/components/transactions/TransactionAtoms";
+import { TransactionHealthBanner } from "@/components/realtorboss/TransactionHealthBanner";
 import type {
   CounterpartyRole,
   TransactionCounterpartyRow,
@@ -267,6 +268,24 @@ export function TransactionDetailClient({ initial }: { initial: Bundle }) {
           {error}
         </div>
       ) : null}
+
+      {/* RealtorBoss: lead with health, not data — what's happening,
+          what's next, what's missing, what's at risk. */}
+      <TransactionHealthBanner
+        input={{
+          status: txn.status,
+          inspection_deadline: txn.inspection_deadline,
+          inspection_completed_at: txn.inspection_completed_at,
+          appraisal_deadline: txn.appraisal_deadline,
+          appraisal_completed_at: txn.appraisal_completed_at,
+          loan_contingency_deadline: txn.loan_contingency_deadline,
+          loan_contingency_removed_at: txn.loan_contingency_removed_at,
+          closing_date: txn.closing_date,
+          task_total: totals.total,
+          task_completed: totals.completed,
+          task_overdue: totals.overdue,
+        }}
+      />
 
       {/* Listing-side surfaces: compact horizontal strip rather than the
           previous 3-column card grid. Same items (offers, weekly seller

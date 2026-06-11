@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { getAssistant } from "@/lib/realtorboss/team";
+import { LeadProfileDrawer } from "@/components/realtorboss/LeadProfileDrawer";
 import { AssistantHeader, AssistantKpiCard } from "@/components/realtorboss/AssistantPage";
 
 type SummaryMetrics = {
@@ -28,6 +29,7 @@ export default function SalesAssistantClient() {
   const [metrics, setMetrics] = useState<SummaryMetrics | null>(null);
   const [hotLeads, setHotLeads] = useState<Lead[]>([]);
   const [quietLeads, setQuietLeads] = useState<Lead[]>([]);
+  const [profileLeadId, setProfileLeadId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -78,6 +80,7 @@ export default function SalesAssistantClient() {
           loading={loading}
           empty="No hot leads right now."
           viewAllHref="/dashboard/leads?filter=hot"
+          onOpenLead={setProfileLeadId}
         />
         <LeadList
           title="Reactivation queue — quiet for 7+ days"
@@ -85,8 +88,11 @@ export default function SalesAssistantClient() {
           loading={loading}
           empty="No quiet leads — everyone has recent activity."
           viewAllHref="/dashboard/leads?filter=inactive"
+          onOpenLead={setProfileLeadId}
         />
       </div>
+
+      <LeadProfileDrawer leadId={profileLeadId} onClose={() => setProfileLeadId(null)} />
     </div>
   );
 }
@@ -97,12 +103,14 @@ function LeadList({
   loading,
   empty,
   viewAllHref,
+  onOpenLead,
 }: {
   title: string;
   leads: Lead[];
   loading: boolean;
   empty: string;
   viewAllHref: string;
+  onOpenLead: (id: string) => void;
 }) {
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -115,7 +123,12 @@ function LeadList({
       ) : (
         <div className="space-y-2">
           {leads.map((l) => (
-            <Link key={l.id} href={`/dashboard/contacts?list=leads&highlight=${encodeURIComponent(l.id)}`} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50">
+            <button
+              key={l.id}
+              type="button"
+              onClick={() => onOpenLead(l.id)}
+              className="flex w-full items-center justify-between rounded-lg border border-gray-100 px-3 py-2 text-left hover:bg-gray-50"
+            >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-gray-900">{l.name ?? "Unnamed lead"}</p>
                 <p className="truncate text-xs text-gray-500">
@@ -125,7 +138,7 @@ function LeadList({
               {typeof l.engagement_score === "number" && (
                 <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">{l.engagement_score}</span>
               )}
-            </Link>
+            </button>
           ))}
         </div>
       )}

@@ -246,11 +246,14 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
     const rec = by("receptionist");
     const sales = by("sales_assistant");
     const tx = by("transaction_assistant");
+    const booked = recent.filter((a) => a.activity_type === "appointment_booked").length;
     if (rec > 0) parts.push(`Receptionist handled ${rec} call${rec === 1 ? "" : "s"}`);
     if (sales > 0) parts.push(`Sales Assistant ran ${sales} follow-up${sales === 1 ? "" : "s"}`);
     if (tx > 0) parts.push(`Transaction Assistant flagged ${tx} item${tx === 1 ? "" : "s"}`);
+    if (booked > 0) parts.push(`${booked} appointment${booked === 1 ? "" : "s"} booked`);
     if (parts.length === 0) return null;
-    return { line: parts.join(" · "), needsYou };
+    // Constitution briefing voice: lead with the team's total output.
+    return { total: recent.length, line: parts.join(" · "), needsYou };
   }, [activities]);
 
   // Per-assistant headline stats for the AI Team cards (today, from real logs).
@@ -292,7 +295,10 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-amber-200/70 bg-gradient-to-r from-amber-50 to-white px-3 py-2">
           <span className="text-sm" aria-hidden>⚡</span>
           <p className="text-xs font-medium text-gray-700">
-            <span className="font-semibold text-gray-900">Your AI team, last 24h:</span> {teamDigest.line}
+            <span className="font-semibold text-gray-900">
+              Your AI team completed {teamDigest.total} activit{teamDigest.total === 1 ? "y" : "ies"} in the last 24h:
+            </span>{" "}
+            {teamDigest.line}
           </p>
           {teamDigest.needsYou > 0 && (
             <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
