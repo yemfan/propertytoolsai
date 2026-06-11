@@ -5,8 +5,8 @@
   <g transform="translate(16 12) scale(1.08)">
     <g stroke="#1E3A66" stroke-width="16">
       <path d="M84 26 V112" />
-      <path d="M84 34 H118 Q136 34 136 52 V54 Q136 72 118 72 H84" />
-      <path d="M100 72 L131 106" />
+      <path d="M84 34 H118 Q136 34 136 52 V54 Q136 72 118 72 H102" />
+      <path d="M104 72 L131 106" />
     </g>
     <path d="M76 112 H140" stroke="#1E3A66" stroke-width="10" />
     <g stroke="#1E3A66" stroke-width="9">
@@ -27,8 +27,8 @@
     <tspan fill="#1E3A66">Realtor</tspan><tspan fill="#D9A227">Boss</tspan>
   </text>
   <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
-    <line x1="262" y1="166" x2="320" y2="166" stroke="#D9A227" stroke-width="4" />
-    <text x="338" y="176" fill="#1E3A66" font-weight="600" font-size="30" letter-spacing="9">YOUR AI REAL ESTATE TEAM</text>
-    <line x1="978" y1="166" x2="1036" y2="166" stroke="#D9A227" stroke-width="4" />
+    <line x1="262" y1="166" x2="316" y2="166" stroke="#D9A227" stroke-width="4" />
+    <text x="332" y="176" fill="#1E3A66" font-weight="600" font-size="27" letter-spacing="4.5">YOUR AI REAL ESTATE TEAM</text>
+    <line x1="824" y1="166" x2="878" y2="166" stroke="#D9A227" stroke-width="4" />
   </g>
 </svg>

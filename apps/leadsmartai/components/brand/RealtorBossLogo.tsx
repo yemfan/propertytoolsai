@@ -10,8 +10,8 @@ export function RealtorBossMark({ className }: { className?: string }) {
     <svg viewBox="0 0 200 200" fill="none" aria-hidden className={cn("h-8 w-8", className)}>
       <g stroke={NAVY} strokeWidth={16}>
         <path d="M84 26 V112" />
-        <path d="M84 34 H118 Q136 34 136 52 V54 Q136 72 118 72 H84" />
-        <path d="M100 72 L131 106" />
+        <path d="M84 34 H118 Q136 34 136 52 V54 Q136 72 118 72 H102" />
+        <path d="M104 72 L131 106" />
       </g>
       <path d="M76 112 H140" stroke={NAVY} strokeWidth={10} />
       <g stroke={NAVY} strokeWidth={9}>
@@ -54,7 +54,7 @@ export function RealtorBossLogo({ className, compact }: Props) {
         </span>
         {!compact && (
           <span
-            className="mt-1 text-[9px] font-semibold uppercase tracking-[0.28em]"
+            className="mt-1 text-[9px] font-semibold uppercase tracking-[0.16em]"
             style={{ color: NAVY }}
           >
             Your AI Real Estate Team
