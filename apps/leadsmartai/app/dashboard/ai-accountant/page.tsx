@@ -3,19 +3,21 @@ import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { listInvoices } from "@/lib/books/invoices";
 import { expenseTotalsForAgent, listExpensesForAgent } from "@/lib/books/expenses";
 import { listTransactionsForAgent } from "@/lib/transactions/service";
+import { getRevenueSummary } from "@/lib/performance/revenueService";
 import AccountantClient from "./AccountantClient";
 
 export const metadata: Metadata = {
   title: "AI Accountant",
-  description: "Invoices, expenses, and your commission pipeline — your AI Accountant gets you paid faster.",
+  description: "Your commission pipeline, expenses, and receivables — know what you'll make and keep more of it.",
   robots: { index: false },
 };
 
 /**
  * AI Accountant — fifth member of the AI team (modeled on HelmSmart's
- * Alex, the AI Finance Director). Owns the money features: invoices
- * (Books), expenses, and the commission pipeline. Server-composed from
- * the same service layer Books uses — no new queries to maintain.
+ * Alex, the AI Finance Director). A Realtor's paycheck is COMMISSION at
+ * closing, so the page leads with the pipeline; expenses second;
+ * invoices (referral fees / rebills) are receivables, the side story.
+ * Server-composed from existing service layers — no new queries.
  */
 export default async function AiAccountantPage() {
   const { agentId } = await getCurrentAgentContext();
@@ -24,21 +26,36 @@ export default async function AiAccountantPage() {
   monthStart.setDate(1);
   const monthStartIso = monthStart.toISOString().slice(0, 10);
 
-  const [invoices, expenseTotals, recentExpenses, transactions] = await Promise.all([
+  const [invoices, expenseTotals, recentExpenses, transactions, revenue] = await Promise.all([
     listInvoices(50),
     expenseTotalsForAgent(agentId, { from: monthStartIso }),
     listExpensesForAgent(agentId, { limit: 6 }),
     listTransactionsForAgent(String(agentId)).catch(() => []),
+    getRevenueSummary(String(agentId), "ytd").catch(() => null),
   ]);
 
-  // Commission pipeline: expected net (fall back to gross) across
-  // active + pending deals — same fields the revenue/forecast services read.
-  const pipeline = transactions
+  // The pipeline: every active/pending deal with its expected payout.
+  const pipelineDeals = transactions
     .filter((t) => t.status === "active" || t.status === "pending")
-    .reduce((sum, t) => sum + (t.agent_net_commission ?? t.gross_commission ?? 0), 0);
+    .map((t) => ({
+      id: t.id,
+      property_address: t.property_address,
+      contact_name: t.contact_name,
+      closing_date: t.closing_date,
+      expected_net: t.agent_net_commission ?? t.gross_commission ?? null,
+      commission_missing: t.gross_commission == null && t.agent_net_commission == null,
+    }))
+    .sort((a, b) => {
+      if (!a.closing_date) return 1;
+      if (!b.closing_date) return -1;
+      return new Date(a.closing_date).getTime() - new Date(b.closing_date).getTime();
+    });
 
   return (
     <AccountantClient
+      pipelineDeals={pipelineDeals}
+      closedYtdNet={revenue?.netCommission ?? 0}
+      closedYtdCount={revenue?.closedCount ?? 0}
       invoices={invoices.map((i) => ({
         id: i.id,
         invoice_number: i.invoice_number,
@@ -56,8 +73,6 @@ export default async function AiAccountantPage() {
         category: e.category,
         vendor: e.vendor,
       }))}
-      commissionPipeline={pipeline}
-      activeDeals={transactions.filter((t) => t.status === "active" || t.status === "pending").length}
     />
   );
 }

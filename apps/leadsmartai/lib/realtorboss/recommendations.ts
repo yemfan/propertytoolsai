@@ -87,7 +87,33 @@ async function buildCandidates(agentId: string): Promise<Candidate[]> {
     }
   }
 
-  // ── Overdue invoices (AI Accountant: get paid faster) ────────────
+  // ── AI Accountant: the paycheck is commission at closing ─────────
+  if (!paused.has("accountant")) {
+    // Deals closing soon with no commission details = an unknown paycheck.
+    const txs = await listTransactionsForAgent(agentId).catch(() => []);
+    for (const t of txs) {
+      if (t.status !== "active" && t.status !== "pending") continue;
+      if (t.gross_commission != null || t.agent_net_commission != null) continue;
+      if (!t.closing_date) continue;
+      const close = new Date(t.closing_date);
+      if (close.getTime() > now + 14 * DAY_MS || close.getTime() < now - DAY_MS) continue;
+      out.push({
+        recommendation_type: "commission_missing",
+        title: `Confirm commission details — ${t.property_address}`,
+        summary: `Closes ${fmtDay(close)} with no commission recorded`,
+        reason: "This closing's payout is unknown until the commission, split, and referral fee are entered.",
+        priority: 18,
+        related_entity_type: "transaction",
+        related_entity_id: t.id,
+        recommended_action: "Open transaction",
+        action_href: `/dashboard/transactions/${t.id}`,
+        expected_outcome: "Pipeline and payout numbers you can trust.",
+        dedupe_key: `commission_missing:${t.id}`,
+      });
+    }
+  }
+
+  // ── Overdue receivables (referral fees, rebills) ─────────────────
   if (!paused.has("accountant")) {
     const { data: overdueInv } = await supabaseAdmin
       .from("invoices")
@@ -108,9 +134,9 @@ async function buildCandidates(agentId: string): Promise<Candidate[]> {
         : null;
       out.push({
         recommendation_type: "invoice_overdue",
-        title: `Chase invoice ${inv.invoice_number}${inv.client_name ? ` — ${inv.client_name}` : ""}`,
+        title: `Chase receivable ${inv.invoice_number}${inv.client_name ? ` — ${inv.client_name}` : ""}`,
         summary: `${inv.total != null ? `$${Math.round(inv.total).toLocaleString()}` : "Unpaid"}${days ? ` · ${days} day${days === 1 ? "" : "s"} past due` : ""}`,
-        reason: "Money owed to you ages fast — a polite nudge now usually settles it.",
+        reason: "Money owed to you outside of closings ages fast — a polite nudge now usually settles it.",
         priority: 22,
         related_entity_type: "invoice",
         related_entity_id: inv.id,

@@ -4,6 +4,15 @@ import Link from "next/link";
 import { getAssistant } from "@/lib/realtorboss/team";
 import { AssistantHeader, AssistantKpiCard } from "@/components/realtorboss/AssistantPage";
 
+type PipelineDeal = {
+  id: string;
+  property_address: string;
+  contact_name: string | null;
+  closing_date: string | null;
+  expected_net: number | null;
+  commission_missing: boolean;
+};
+
 type InvoiceItem = {
   id: string;
   invoice_number: string;
@@ -40,24 +49,26 @@ const STATUS_CHIP: Record<string, string> = {
 };
 
 export default function AccountantClient({
+  pipelineDeals,
+  closedYtdNet,
+  closedYtdCount,
   invoices,
   expensesMonthTotal,
   expensesByCategory,
   recentExpenses,
-  commissionPipeline,
-  activeDeals,
 }: {
+  pipelineDeals: PipelineDeal[];
+  closedYtdNet: number;
+  closedYtdCount: number;
   invoices: InvoiceItem[];
   expensesMonthTotal: number;
   expensesByCategory: { category: string; total: number }[];
   recentExpenses: ExpenseItem[];
-  commissionPipeline: number;
-  activeDeals: number;
 }) {
-  const open = invoices.filter((i) => i.status === "sent" || i.status === "overdue");
-  const overdue = invoices.filter((i) => i.status === "overdue");
-  const outstanding = open.reduce((s, i) => s + (i.total || 0), 0);
-  const overdueAmount = overdue.reduce((s, i) => s + (i.total || 0), 0);
+  const pipelineTotal = pipelineDeals.reduce((s, d) => s + (d.expected_net ?? 0), 0);
+  const nextPayout = pipelineDeals.find((d) => d.closing_date && d.expected_net != null);
+  const openReceivables = invoices.filter((i) => i.status === "sent" || i.status === "overdue");
+  const overdueReceivables = openReceivables.filter((i) => i.status === "overdue");
   const topCategories = [...expensesByCategory].sort((a, b) => b.total - a.total).slice(0, 3);
 
   return (
@@ -65,57 +76,67 @@ export default function AccountantClient({
       <AssistantHeader
         assistant={assistant}
         actions={[
-          { label: "Invoices", href: "/dashboard/books" },
           { label: "Expenses", href: "/dashboard/expenses" },
+          { label: "Invoices", href: "/dashboard/books" },
           { label: "Manage", href: "/dashboard/ai-team" },
         ]}
       />
 
+      {/* A Realtor's paycheck is commission at closing — lead with it. */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <AssistantKpiCard label="Outstanding invoices" value={money(outstanding)} hint={`${open.length} open`} />
         <AssistantKpiCard
-          label="Overdue"
-          value={money(overdueAmount)}
-          hint={`${overdue.length} invoice${overdue.length === 1 ? "" : "s"}`}
-          tone={overdue.length > 0 ? "hot" : undefined}
+          label="Commission pipeline"
+          value={money(pipelineTotal)}
+          hint={`${pipelineDeals.length} deal${pipelineDeals.length === 1 ? "" : "s"} · expected net`}
+        />
+        <AssistantKpiCard
+          label="Next payout"
+          value={nextPayout?.expected_net != null ? money(nextPayout.expected_net) : "—"}
+          hint={nextPayout?.closing_date ? `${nextPayout.property_address} · closes ${fmtDay(nextPayout.closing_date)}` : "no closing scheduled"}
+        />
+        <AssistantKpiCard
+          label="Closed this year"
+          value={money(closedYtdNet)}
+          hint={`${closedYtdCount} closing${closedYtdCount === 1 ? "" : "s"} · net`}
         />
         <AssistantKpiCard label="Expenses this month" value={money(expensesMonthTotal)} />
-        <AssistantKpiCard label="Commission pipeline" value={money(commissionPipeline)} hint={`${activeDeals} active deal${activeDeals === 1 ? "" : "s"} · expected net`} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* ── Money owed to you ── */}
-        <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-900">Money owed to you</h2>
-            <Link href="/dashboard/books" className="text-xs font-medium text-blue-600 hover:text-blue-800">All invoices</Link>
-          </div>
-          {invoices.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-400">
-              Your AI Accountant is ready — create your first invoice in Books and it will be tracked from sent to paid.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {[...overdue, ...invoices.filter((i) => i.status !== "overdue")].slice(0, 8).map((i) => (
-                <Link key={i.id} href="/dashboard/books" className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-gray-900">
-                      {i.invoice_number} · {i.client_name ?? "—"}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {money(i.total || 0)}{i.due_date ? ` · due ${fmtDay(i.due_date)}` : ""}
-                    </p>
-                  </div>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_CHIP[i.status] ?? "bg-gray-100 text-gray-600"}`}>
-                    {i.status}
+      {/* ── Commission pipeline — the real paycheck ── */}
+      <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-900">Commission pipeline</h2>
+          <Link href="/dashboard/performance" className="text-xs font-medium text-blue-600 hover:text-blue-800">Revenue & forecast</Link>
+        </div>
+        {pipelineDeals.length === 0 ? (
+          <p className="py-6 text-center text-sm text-gray-400">
+            Your AI Accountant is ready — when a deal goes under contract, its expected commission shows up here.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {pipelineDeals.map((d) => (
+              <Link key={d.id} href={`/dashboard/transactions/${d.id}`} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-gray-900">{d.property_address}</p>
+                  <p className="text-xs text-gray-500">
+                    {d.contact_name ?? "—"}{d.closing_date ? ` · closes ${fmtDay(d.closing_date)}` : " · no closing date"}
+                  </p>
+                </div>
+                {d.commission_missing ? (
+                  <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                    commission details missing
                   </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
+                ) : (
+                  <span className="shrink-0 text-sm font-semibold text-gray-900">{money(d.expected_net ?? 0)}</span>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
-        {/* ── Spending this month ── */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* ── Spending this month (1099 life: every category counts) ── */}
         <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-900">Spending this month</h2>
@@ -132,7 +153,7 @@ export default function AccountantClient({
           )}
           {recentExpenses.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400">
-              No expenses logged yet — track them and your AI Accountant will keep the categories clean for tax time.
+              No expenses logged yet — track them and your AI Accountant keeps the categories clean for tax time.
             </p>
           ) : (
             <div className="space-y-2">
@@ -144,6 +165,39 @@ export default function AccountantClient({
                   </div>
                   <span className="shrink-0 text-sm font-semibold text-gray-700">{money(e.amount || 0)}</span>
                 </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ── Receivables — the side story (referral fees, rebills) ── */}
+        <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">
+              Receivables
+              {overdueReceivables.length > 0 && (
+                <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                  {overdueReceivables.length} overdue
+                </span>
+              )}
+            </h2>
+            <Link href="/dashboard/books" className="text-xs font-medium text-blue-600 hover:text-blue-800">All invoices</Link>
+          </div>
+          <p className="mb-2 text-[11px] text-gray-400">Referral fees, vendor rebills, and anything else owed to you outside of closings.</p>
+          {invoices.length === 0 ? (
+            <p className="py-4 text-center text-sm text-gray-400">Nothing outstanding — commissions are tracked in the pipeline above.</p>
+          ) : (
+            <div className="space-y-2">
+              {[...overdueReceivables, ...invoices.filter((i) => i.status !== "overdue")].slice(0, 5).map((i) => (
+                <Link key={i.id} href="/dashboard/books" className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-gray-900">{i.invoice_number} · {i.client_name ?? "—"}</p>
+                    <p className="text-xs text-gray-500">{money(i.total || 0)}{i.due_date ? ` · due ${fmtDay(i.due_date)}` : ""}</p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_CHIP[i.status] ?? "bg-gray-100 text-gray-600"}`}>
+                    {i.status}
+                  </span>
+                </Link>
               ))}
             </div>
           )}
