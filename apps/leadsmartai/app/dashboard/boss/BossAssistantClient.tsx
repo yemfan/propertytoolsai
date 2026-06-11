@@ -1,0 +1,439 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AI_TEAM } from "@/lib/realtorboss/team";
+import BriefingsCard from "@/components/dashboard/BriefingsCard";
+
+// ── API row shapes (subset of fields the Boss Assistant reads) ──────
+
+type TaskItem = {
+  id: string;
+  title: string;
+  priority: string;
+  due_at: string | null;
+  lead_name: string | null;
+};
+
+type EventItem = { id: string; title: string; lead_name: string | null; starts_at: string };
+
+type HotLead = {
+  id: string;
+  name: string | null;
+  rating: string | null;
+  source: string | null;
+  engagement_score: number | null;
+  last_activity_at: string | null;
+  ai_intent: string | null;
+};
+
+type TransactionItem = {
+  id: string;
+  property_address: string;
+  status: string;
+  contact_name: string | null;
+  inspection_deadline: string | null;
+  inspection_completed_at: string | null;
+  appraisal_deadline: string | null;
+  appraisal_completed_at: string | null;
+  loan_contingency_deadline: string | null;
+  loan_contingency_removed_at: string | null;
+  closing_date: string | null;
+  task_overdue: number;
+};
+
+type CallEvent = {
+  id: string;
+  contact_name: string | null;
+  direction: "inbound" | "outbound";
+  status: string;
+  from_phone: string | null;
+  textback_sent: boolean;
+  created_at: string;
+};
+
+type SummaryMetrics = {
+  totalLeads: number;
+  hotLeads: number;
+  inactive7Days: number;
+  messagesSent: number;
+};
+
+// ── Derived views ────────────────────────────────────────────────────
+
+type DeadlineAlert = {
+  transactionId: string;
+  propertyAddress: string;
+  label: string;
+  due: Date;
+  /** overdue | ≤3 days = high; ≤7 days = medium */
+  risk: "high" | "medium";
+};
+
+type Priority = {
+  key: string;
+  title: string;
+  why: string;
+  action: string;
+  href: string;
+};
+
+/** Earliest open contingency/closing deadline per active transaction, within 7 days or overdue. */
+function deadlineAlerts(transactions: TransactionItem[]): DeadlineAlert[] {
+  const now = Date.now();
+  const horizon = now + 7 * 24 * 60 * 60 * 1000;
+  const alerts: DeadlineAlert[] = [];
+  for (const t of transactions) {
+    if (t.status !== "active" && t.status !== "pending") continue;
+    const candidates: { label: string; date: string | null; done: string | null }[] = [
+      { label: "Inspection contingency", date: t.inspection_deadline, done: t.inspection_completed_at },
+      { label: "Appraisal deadline", date: t.appraisal_deadline, done: t.appraisal_completed_at },
+      { label: "Loan contingency", date: t.loan_contingency_deadline, done: t.loan_contingency_removed_at },
+      { label: "Closing", date: t.closing_date, done: null },
+    ];
+    for (const c of candidates) {
+      if (!c.date || c.done) continue;
+      const due = new Date(c.date);
+      if (due.getTime() > horizon) continue;
+      alerts.push({
+        transactionId: t.id,
+        propertyAddress: t.property_address,
+        label: c.label,
+        due,
+        risk: due.getTime() < now + 3 * 24 * 60 * 60 * 1000 ? "high" : "medium",
+      });
+    }
+  }
+  return alerts.sort((a, b) => a.due.getTime() - b.due.getTime());
+}
+
+function fmtDay(d: Date): string {
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function fmtAgo(iso: string): string {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
+}
+
+export default function BossAssistantClient({ greetingName }: { greetingName: string }) {
+  const [metrics, setMetrics] = useState<SummaryMetrics | null>(null);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [hotLeads, setHotLeads] = useState<HotLead[]>([]);
+  const [transactions, setTransactions] = useState<TransactionItem[]>([]);
+  const [calls, setCalls] = useState<CallEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = useCallback(async () => {
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+    const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
+
+    const [summaryRes, tasksRes, eventsRes, hotRes, txRes, callsRes] = await Promise.all([
+      fetch("/api/dashboard/summary").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/dashboard/tasks?status=open").then((r) => r.json()).catch(() => ({})),
+      fetch(`/api/dashboard/calendar/events?from=${todayStart}&to=${todayEnd}`).then((r) => r.json()).catch(() => ({})),
+      fetch("/api/dashboard/leads?filter=hot&pageSize=5").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/dashboard/transactions").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/dashboard/missed-call/events?limit=20").then((r) => r.json()).catch(() => ({})),
+    ]);
+
+    const m = summaryRes?.metrics;
+    if (m) {
+      setMetrics({
+        totalLeads: m.totalLeads ?? 0,
+        hotLeads: m.hotLeads ?? 0,
+        inactive7Days: m.inactive7Days ?? 0,
+        messagesSent: m.messagesSent ?? 0,
+      });
+    }
+    setTasks(((tasksRes?.tasks ?? []) as TaskItem[]).map((t) => ({
+      id: t.id, title: t.title, priority: t.priority, due_at: t.due_at, lead_name: t.lead_name ?? null,
+    })));
+    setEvents(((eventsRes?.events ?? []) as EventItem[]).slice(0, 5));
+    setHotLeads(((hotRes?.leads ?? []) as HotLead[]).slice(0, 5));
+    setTransactions((txRes?.transactions ?? []) as TransactionItem[]);
+    setCalls((callsRes?.events ?? []) as CallEvent[]);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { void loadData(); }, [loadData]);
+
+  const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  const overdueTasks = useMemo(
+    () => tasks.filter((t) => t.due_at && new Date(t.due_at).getTime() < Date.now()),
+    [tasks],
+  );
+  const activeTransactions = useMemo(
+    () => transactions.filter((t) => t.status === "active" || t.status === "pending"),
+    [transactions],
+  );
+  const alerts = useMemo(() => deadlineAlerts(transactions), [transactions]);
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const callsToday = useMemo(
+    () => calls.filter((c) => new Date(c.created_at).getTime() >= todayMidnight),
+    [calls, todayMidnight],
+  );
+  const missedNeedingFollowUp = useMemo(
+    () => calls.filter((c) => c.direction === "inbound" && c.status !== "completed" && !c.textback_sent),
+    [calls],
+  );
+
+  // Top priorities — ordered per the Boss Assistant mandate: deadlines →
+  // hot opportunities → overdue tasks → AI activity needing a human.
+  const priorities = useMemo<Priority[]>(() => {
+    const out: Priority[] = [];
+    for (const a of alerts.slice(0, 2)) {
+      out.push({
+        key: `deadline-${a.transactionId}-${a.label}`,
+        title: `${a.label} — ${a.propertyAddress}`,
+        why: a.due.getTime() < Date.now()
+          ? `This deadline passed ${fmtDay(a.due)} and is still open.`
+          : `Due ${fmtDay(a.due)}. Missing it can put the deal at risk.`,
+        action: "Review transaction",
+        href: `/dashboard/transactions/${a.transactionId}`,
+      });
+    }
+    for (const l of hotLeads.slice(0, 2)) {
+      out.push({
+        key: `lead-${l.id}`,
+        title: `Call ${l.name ?? "hot lead"}`,
+        why: `Rated hot${l.ai_intent ? ` · ${l.ai_intent}` : ""}${l.last_activity_at ? ` · active ${fmtAgo(l.last_activity_at)}` : ""}. Fast follow-up wins listings and offers.`,
+        action: "Open lead",
+        href: `/dashboard/contacts?list=leads&highlight=${encodeURIComponent(l.id)}`,
+      });
+    }
+    if (overdueTasks.length > 0) {
+      out.push({
+        key: "overdue-tasks",
+        title: `Clear ${overdueTasks.length} overdue task${overdueTasks.length > 1 ? "s" : ""}`,
+        why: `Oldest: "${overdueTasks[0]?.title}". Overdue tasks usually hide a stalled follow-up.`,
+        action: "Open tasks",
+        href: "/dashboard/tasks",
+      });
+    }
+    if (missedNeedingFollowUp.length > 0) {
+      out.push({
+        key: "missed-calls",
+        title: `${missedNeedingFollowUp.length} missed call${missedNeedingFollowUp.length > 1 ? "s" : ""} need a human follow-up`,
+        why: "The AI Receptionist could not reach these callers with a text-back.",
+        action: "Review calls",
+        href: "/dashboard/ai-receptionist",
+      });
+    }
+    return out.slice(0, 5);
+  }, [alerts, hotLeads, overdueTasks, missedNeedingFollowUp]);
+
+  // Per-assistant headline stats for the AI Team cards (today, from real logs).
+  const teamStats: Record<string, string> = {
+    receptionist: `${callsToday.filter((c) => c.direction === "inbound").length} calls today · ${callsToday.filter((c) => c.textback_sent).length} text-backs`,
+    sales_assistant: metrics
+      ? `${metrics.hotLeads} hot leads · ${metrics.inactive7Days} quiet leads to revive`
+      : "—",
+    transaction_assistant: `${activeTransactions.length} active deals · ${alerts.length} deadline${alerts.length === 1 ? "" : "s"} in 7 days`,
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* ── Daily briefing header ── */}
+      <div>
+        <h1 className="text-xl font-semibold text-gray-900">
+          {greeting}{greetingName ? `, ${greetingName}` : ""}.
+        </h1>
+        <p className="text-sm text-gray-500">
+          {now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+          {" — here is what needs your attention today."}
+        </p>
+      </div>
+
+      {/* AI-written morning plan / evening summary (existing briefings engine). */}
+      <BriefingsCard />
+
+      {/* ── Daily summary cards ── */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <SummaryCard label="Total Leads" value={metrics?.totalLeads} href="/dashboard/contacts" />
+        <SummaryCard label="Hot Leads" value={metrics?.hotLeads} href="/dashboard/leads?filter=hot" tone="hot" />
+        <SummaryCard label="Appointments Today" value={loading ? undefined : events.length} href="/dashboard/calendar" />
+        <SummaryCard label="Active Transactions" value={loading ? undefined : activeTransactions.length} href="/dashboard/transactions" />
+        <SummaryCard label="Overdue Tasks" value={loading ? undefined : overdueTasks.length} href="/dashboard/tasks" tone={overdueTasks.length > 0 ? "warn" : undefined} />
+        <SummaryCard label="Calls Today" value={loading ? undefined : callsToday.length} href="/dashboard/ai-receptionist" />
+      </div>
+
+      {/* ── Top priorities ── */}
+      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <h2 className="text-sm font-semibold text-gray-900">Top Priorities</h2>
+        {priorities.length === 0 ? (
+          <p className="py-4 text-center text-sm text-gray-400">
+            {loading ? "Checking your business…" : "Nothing urgent — your AI team has things under control."}
+          </p>
+        ) : (
+          <ol className="mt-3 space-y-2">
+            {priorities.map((p, i) => (
+              <li key={p.key} className="flex items-start justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900">{i + 1}. {p.title}</p>
+                  <p className="text-xs text-gray-500">{p.why}</p>
+                </div>
+                <Link href={p.href} className="shrink-0 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">
+                  {p.action}
+                </Link>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
+      {/* ── Your AI Team ── */}
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-gray-900">Your AI Team</h2>
+        <div className="grid gap-3 md:grid-cols-3">
+          {AI_TEAM.filter((a) => a.type !== "boss_assistant").map((a) => (
+            <Link key={a.type} href={a.href} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:bg-gray-50">
+              <p className="text-sm font-semibold text-gray-900">{a.name}</p>
+              <p className="text-xs text-gray-500">{a.role} · {a.mission}</p>
+              <p className="mt-2 text-xs font-medium text-blue-700">{teamStats[a.type] ?? "—"}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* ── Hot leads ── */}
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">Hot Leads</h2>
+            <Link href="/dashboard/leads?filter=hot" className="text-xs font-medium text-blue-600 hover:text-blue-800">View all</Link>
+          </div>
+          {hotLeads.length === 0 ? (
+            <p className="py-4 text-center text-sm text-gray-400">No hot leads right now.</p>
+          ) : (
+            <div className="space-y-2">
+              {hotLeads.map((l) => (
+                <Link key={l.id} href={`/dashboard/contacts?list=leads&highlight=${encodeURIComponent(l.id)}`} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-gray-900">{l.name ?? "Unnamed lead"}</p>
+                    <p className="truncate text-xs text-gray-500">
+                      {[l.ai_intent, l.source, l.last_activity_at ? `active ${fmtAgo(l.last_activity_at)}` : null]
+                        .filter(Boolean)
+                        .join(" · ") || "No activity yet"}
+                    </p>
+                  </div>
+                  {typeof l.engagement_score === "number" && (
+                    <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">{l.engagement_score}</span>
+                  )}
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ── Today's appointments ── */}
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">Upcoming Appointments</h2>
+            <Link href="/dashboard/calendar" className="text-xs font-medium text-blue-600 hover:text-blue-800">View calendar</Link>
+          </div>
+          {events.length === 0 ? (
+            <p className="py-4 text-center text-sm text-gray-400">No appointments today.</p>
+          ) : (
+            <div className="space-y-2">
+              {events.map((e) => (
+                <div key={e.id} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-gray-900">{e.title}</p>
+                    {e.lead_name && <p className="text-xs text-gray-500">{e.lead_name}</p>}
+                  </div>
+                  <span className="text-xs font-medium text-blue-600">
+                    {new Date(e.starts_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* ── Transaction alerts ── */}
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">Transaction Alerts</h2>
+            <Link href="/dashboard/ai-transaction-assistant" className="text-xs font-medium text-blue-600 hover:text-blue-800">View all</Link>
+          </div>
+          {alerts.length === 0 ? (
+            <p className="py-4 text-center text-sm text-gray-400">No deadlines in the next 7 days.</p>
+          ) : (
+            <div className="space-y-2">
+              {alerts.slice(0, 5).map((a) => (
+                <Link key={`${a.transactionId}-${a.label}`} href={`/dashboard/transactions/${a.transactionId}`} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 hover:bg-gray-50">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-gray-900">{a.propertyAddress}</p>
+                    <p className="text-xs text-gray-500">{a.label}</p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${a.risk === "high" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                    {fmtDay(a.due)}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ── AI team activity (real call logs) ── */}
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">AI Team Activity</h2>
+            <Link href="/dashboard/ai-receptionist" className="text-xs font-medium text-blue-600 hover:text-blue-800">View all</Link>
+          </div>
+          {calls.length === 0 ? (
+            <p className="py-4 text-center text-sm text-gray-400">No AI activity yet — calls and text-backs will show up here.</p>
+          ) : (
+            <div className="space-y-2">
+              {calls.slice(0, 5).map((c) => (
+                <div key={c.id} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-gray-900">
+                      AI Receptionist · {c.direction === "inbound" ? "inbound call" : "outbound call"}
+                      {c.contact_name ? ` with ${c.contact_name}` : c.from_phone ? ` from ${c.from_phone}` : ""}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {c.status}{c.textback_sent ? " · follow-up text sent" : ""}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs text-gray-400">{fmtAgo(c.created_at)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  href,
+  tone,
+}: {
+  label: string;
+  value: number | undefined;
+  href: string;
+  tone?: "hot" | "warn";
+}) {
+  const valueClass = tone === "hot" ? "text-red-600" : tone === "warn" ? "text-amber-600" : "text-gray-900";
+  return (
+    <Link href={href} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:bg-gray-50">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className={`mt-1 text-2xl font-bold ${valueClass}`}>{value ?? "—"}</p>
+    </Link>
+  );
+}

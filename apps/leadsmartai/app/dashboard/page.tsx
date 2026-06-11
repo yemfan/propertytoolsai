@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
-import OverviewPage from "./overview/page";
+import BossAssistantPage from "./boss/page";
 import { redirect } from "next/navigation";
 import { supabaseServerClient } from "@/lib/supabaseServerClient";
 import { BROKER_PORTAL_ROLES } from "@/lib/rolePortalPaths";
 
 export const metadata: Metadata = {
-  title: "Dashboard",
-  description: "Your LeadSmart AI agent dashboard — manage leads, tasks, and tools.",
+  title: "Boss Assistant",
+  description: "Your RealtorBoss command center — priorities, leads, transactions, and your AI team.",
   robots: { index: false },
 };
 
 /**
- * `/dashboard` — agents see the standard overview; brokerage roles land on the broker dashboard.
+ * `/dashboard` — agents land on the Boss Assistant command center;
+ * brokerage roles land on the broker dashboard. The classic daily
+ * overview stays available at /dashboard/overview.
  */
 export default async function DashboardRootPage() {
   const supabase = supabaseServerClient();
@@ -32,5 +34,5 @@ export default async function DashboardRootPage() {
     }
   }
 
-  return <OverviewPage />;
+  return <BossAssistantPage />;
 }
