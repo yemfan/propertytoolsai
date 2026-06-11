@@ -59,6 +59,33 @@ type SummaryMetrics = {
   messagesSent: number;
 };
 
+type Recommendation = {
+  id: string;
+  title: string;
+  summary: string | null;
+  reason: string | null;
+  recommended_action: string | null;
+  action_href: string | null;
+  status: "new" | "accepted";
+};
+
+type ActivityRow = {
+  id: string;
+  assistant_type: string;
+  activity_type: string;
+  summary: string;
+  outcome: string | null;
+  requires_attention: boolean;
+  created_at: string;
+};
+
+const ASSISTANT_LABELS: Record<string, string> = {
+  boss_assistant: "Boss Assistant",
+  receptionist: "AI Receptionist",
+  sales_assistant: "AI Sales Assistant",
+  transaction_assistant: "AI Transaction Assistant",
+};
+
 // ── Derived views ────────────────────────────────────────────────────
 
 type DeadlineAlert = {
@@ -68,14 +95,6 @@ type DeadlineAlert = {
   due: Date;
   /** overdue | ≤3 days = high; ≤7 days = medium */
   risk: "high" | "medium";
-};
-
-type Priority = {
-  key: string;
-  title: string;
-  why: string;
-  action: string;
-  href: string;
 };
 
 /** Earliest open contingency/closing deadline per active transaction, within 7 days or overdue. */
@@ -126,6 +145,8 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
   const [hotLeads, setHotLeads] = useState<HotLead[]>([]);
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [calls, setCalls] = useState<CallEvent[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [activities, setActivities] = useState<ActivityRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -133,13 +154,15 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
     const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
 
-    const [summaryRes, tasksRes, eventsRes, hotRes, txRes, callsRes] = await Promise.all([
+    const [summaryRes, tasksRes, eventsRes, hotRes, txRes, callsRes, recsRes, actsRes] = await Promise.all([
       fetch("/api/dashboard/summary").then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/tasks?status=open").then((r) => r.json()).catch(() => ({})),
       fetch(`/api/dashboard/calendar/events?from=${todayStart}&to=${todayEnd}`).then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/leads?filter=hot&pageSize=5").then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/transactions").then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/missed-call/events?limit=20").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/dashboard/realtorboss/recommendations").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/dashboard/realtorboss/activities?limit=10").then((r) => r.json()).catch(() => ({})),
     ]);
 
     const m = summaryRes?.metrics;
@@ -158,7 +181,19 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
     setHotLeads(((hotRes?.leads ?? []) as HotLead[]).slice(0, 5));
     setTransactions((txRes?.transactions ?? []) as TransactionItem[]);
     setCalls((callsRes?.events ?? []) as CallEvent[]);
+    setRecommendations((recsRes?.recommendations ?? []) as Recommendation[]);
+    setActivities((actsRes?.activities ?? []) as ActivityRow[]);
     setLoading(false);
+  }, []);
+
+  /** Mark a recommendation done/dismissed — optimistic removal, server persists. */
+  const resolveRecommendation = useCallback(async (id: string, status: "completed" | "dismissed") => {
+    setRecommendations((prev) => prev.filter((r) => r.id !== id));
+    await fetch(`/api/dashboard/realtorboss/recommendations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    }).catch(() => {});
   }, []);
 
   useEffect(() => { void loadData(); }, [loadData]);
@@ -181,55 +216,9 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
     () => calls.filter((c) => new Date(c.created_at).getTime() >= todayMidnight),
     [calls, todayMidnight],
   );
-  const missedNeedingFollowUp = useMemo(
-    () => calls.filter((c) => c.direction === "inbound" && c.status !== "completed" && !c.textback_sent),
-    [calls],
-  );
-
-  // Top priorities — ordered per the Boss Assistant mandate: deadlines →
-  // hot opportunities → overdue tasks → AI activity needing a human.
-  const priorities = useMemo<Priority[]>(() => {
-    const out: Priority[] = [];
-    for (const a of alerts.slice(0, 2)) {
-      out.push({
-        key: `deadline-${a.transactionId}-${a.label}`,
-        title: `${a.label} — ${a.propertyAddress}`,
-        why: a.due.getTime() < Date.now()
-          ? `This deadline passed ${fmtDay(a.due)} and is still open.`
-          : `Due ${fmtDay(a.due)}. Missing it can put the deal at risk.`,
-        action: "Review transaction",
-        href: `/dashboard/transactions/${a.transactionId}`,
-      });
-    }
-    for (const l of hotLeads.slice(0, 2)) {
-      out.push({
-        key: `lead-${l.id}`,
-        title: `Call ${l.name ?? "hot lead"}`,
-        why: `Rated hot${l.ai_intent ? ` · ${l.ai_intent}` : ""}${l.last_activity_at ? ` · active ${fmtAgo(l.last_activity_at)}` : ""}. Fast follow-up wins listings and offers.`,
-        action: "Open lead",
-        href: `/dashboard/contacts?list=leads&highlight=${encodeURIComponent(l.id)}`,
-      });
-    }
-    if (overdueTasks.length > 0) {
-      out.push({
-        key: "overdue-tasks",
-        title: `Clear ${overdueTasks.length} overdue task${overdueTasks.length > 1 ? "s" : ""}`,
-        why: `Oldest: "${overdueTasks[0]?.title}". Overdue tasks usually hide a stalled follow-up.`,
-        action: "Open tasks",
-        href: "/dashboard/tasks",
-      });
-    }
-    if (missedNeedingFollowUp.length > 0) {
-      out.push({
-        key: "missed-calls",
-        title: `${missedNeedingFollowUp.length} missed call${missedNeedingFollowUp.length > 1 ? "s" : ""} need a human follow-up`,
-        why: "The AI Receptionist could not reach these callers with a text-back.",
-        action: "Review calls",
-        href: "/dashboard/ai-receptionist",
-      });
-    }
-    return out.slice(0, 5);
-  }, [alerts, hotLeads, overdueTasks, missedNeedingFollowUp]);
+  // Top priorities come from the boss_recommendations engine
+  // (/api/dashboard/realtorboss/recommendations) — synced server-side
+  // from CRM signals, with accept/dismiss state that persists.
 
   // Per-assistant headline stats for the AI Team cards (today, from real logs).
   const teamStats: Record<string, string> = {
@@ -266,24 +255,49 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
         <SummaryCard label="Calls Today" value={loading ? undefined : callsToday.length} href="/dashboard/ai-receptionist" />
       </div>
 
-      {/* ── Top priorities ── */}
+      {/* ── Top priorities (boss_recommendations engine) ── */}
       <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-gray-900">Top Priorities</h2>
-        {priorities.length === 0 ? (
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-900">Top Priorities</h2>
+          <Link href="/dashboard/ai-team" className="text-xs font-medium text-blue-600 hover:text-blue-800">Manage AI team</Link>
+        </div>
+        {recommendations.length === 0 ? (
           <p className="py-4 text-center text-sm text-gray-400">
             {loading ? "Checking your business…" : "Nothing urgent — your AI team has things under control."}
           </p>
         ) : (
           <ol className="mt-3 space-y-2">
-            {priorities.map((p, i) => (
-              <li key={p.key} className="flex items-start justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2">
-                <div className="min-w-0">
+            {recommendations.map((p, i) => (
+              <li key={p.id} className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-gray-900">{i + 1}. {p.title}</p>
-                  <p className="text-xs text-gray-500">{p.why}</p>
+                  <p className="text-xs text-gray-500">
+                    {[p.summary, p.reason].filter(Boolean).join(" — ")}
+                  </p>
                 </div>
-                <Link href={p.href} className="shrink-0 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">
-                  {p.action}
-                </Link>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {p.action_href && (
+                    <Link href={p.action_href} className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700">
+                      {p.recommended_action ?? "Open"}
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void resolveRecommendation(p.id, "completed")}
+                    className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                    title="Mark done"
+                  >
+                    Done
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void resolveRecommendation(p.id, "dismissed")}
+                    className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-400 hover:bg-gray-50"
+                    title="Dismiss"
+                  >
+                    ✕
+                  </button>
+                </div>
               </li>
             ))}
           </ol>
@@ -392,7 +406,24 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
             <h2 className="text-sm font-semibold text-gray-900">AI Team Activity</h2>
             <Link href="/dashboard/ai-receptionist" className="text-xs font-medium text-blue-600 hover:text-blue-800">View all</Link>
           </div>
-          {calls.length === 0 ? (
+          {activities.length > 0 ? (
+            <div className="space-y-2">
+              {activities.slice(0, 5).map((a) => (
+                <div key={a.id} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-gray-900">
+                      {ASSISTANT_LABELS[a.assistant_type] ?? a.assistant_type} · {a.summary}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {a.outcome ?? a.activity_type.replace(/_/g, " ")}
+                      {a.requires_attention ? " · needs your attention" : ""}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs text-gray-400">{fmtAgo(a.created_at)}</span>
+                </div>
+              ))}
+            </div>
+          ) : calls.length === 0 ? (
             <p className="py-4 text-center text-sm text-gray-400">No AI activity yet — calls and text-backs will show up here.</p>
           ) : (
             <div className="space-y-2">

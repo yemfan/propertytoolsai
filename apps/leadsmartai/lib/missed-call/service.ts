@@ -2,6 +2,7 @@ import "server-only";
 
 import { sendSMS } from "@/lib/twilioSms";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { logAssistantActivity } from "@/lib/realtorboss/activities";
 import { getOpenAIConfig } from "@/lib/ai/openaiClient";
 import { getSelectedSalesModelServer } from "@/lib/sales-model-server";
 import { getSalesModel, DEFAULT_SALES_MODEL } from "@/lib/sales-models";
@@ -486,6 +487,21 @@ export async function handleMissedCall(args: {
     contactId: contact?.id ?? null,
     textbackMessageLogId,
     smsSent,
+  });
+
+  // RealtorBoss activity feed (fire-and-forget — never fails the flow).
+  void logAssistantActivity({
+    agentId: args.agentId,
+    assistantType: "receptionist",
+    activityType: smsSent ? "missed_call_textback" : "missed_call",
+    summary: smsSent
+      ? `Texted back a missed call from ${contact?.name?.trim() || args.callerPhone}`
+      : `Missed call from ${contact?.name?.trim() || args.callerPhone} — no text-back sent`,
+    outcome: smsSent ? "Text-back sent" : "Needs follow-up",
+    priority: smsSent ? "normal" : "high",
+    requiresAttention: !smsSent,
+    relatedEntityType: contact?.id ? "contact" : null,
+    relatedEntityId: contact?.id ?? null,
   });
 
   return { smsSent, logId };

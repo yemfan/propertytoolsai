@@ -106,6 +106,12 @@ const navConfig = {
       match: ["/dashboard/ai-transaction-assistant"],
       icon: p(<KeyRound size={17} strokeWidth={STROKE} aria-hidden />),
     },
+    {
+      label: "Manage AI Team",
+      href: "/dashboard/ai-team",
+      match: ["/dashboard/ai-team"],
+      icon: p(<Settings size={17} strokeWidth={STROKE} aria-hidden />),
+    },
 
     /* ── WORK ── side-of-deal activity + the bridge transactional layer ── */
     { kind: "section-label" as const, label: "Work" },

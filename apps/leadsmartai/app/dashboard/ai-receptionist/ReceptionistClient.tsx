@@ -54,6 +54,7 @@ export default function ReceptionistClient() {
         actions={[
           { label: "Voice console", href: "/dashboard/missed-call" },
           { label: "Voice settings", href: "/dashboard/settings" },
+          { label: "Manage", href: "/dashboard/ai-team" },
         ]}
       />
 

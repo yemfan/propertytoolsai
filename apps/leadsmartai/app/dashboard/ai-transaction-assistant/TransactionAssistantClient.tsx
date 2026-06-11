@@ -102,6 +102,7 @@ export default function TransactionAssistantClient() {
         actions={[
           { label: "All deals", href: "/dashboard/transactions" },
           { label: "Coordinator board", href: "/dashboard/transactions/coordinator" },
+          { label: "Manage", href: "/dashboard/ai-team" },
         ]}
       />
 

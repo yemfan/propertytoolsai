@@ -1,0 +1,26 @@
+import { NextResponse } from "next/server";
+import { getCurrentAgentContext } from "@/lib/dashboardService";
+import {
+  listBossRecommendations,
+  syncBossRecommendations,
+} from "@/lib/realtorboss/recommendations";
+
+export const runtime = "nodejs";
+
+/**
+ * GET /api/dashboard/realtorboss/recommendations
+ * Syncs recommendations from current CRM signals, then returns the
+ * open (new/accepted) set ordered by urgency.
+ */
+export async function GET() {
+  try {
+    const { agentId } = await getCurrentAgentContext();
+    await syncBossRecommendations(agentId);
+    const recommendations = await listBossRecommendations(agentId, 5);
+    return NextResponse.json({ ok: true, recommendations });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Server error";
+    console.error("GET /api/dashboard/realtorboss/recommendations:", err);
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
+}
