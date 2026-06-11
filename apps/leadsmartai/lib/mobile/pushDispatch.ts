@@ -486,6 +486,13 @@ export async function dispatchMobileBriefingPush(params: {
       : "Your evening summary is ready in LeadSmart.");
 
   const now = new Date().toISOString();
+  // Notification philosophy: a briefing is a scheduled prompt, not an
+  // urgent event — it rides the agent's "reminder" push preference.
+  // The inbox row is written either way so the briefing still appears
+  // in the notifications inbox; only the push is suppressed.
+  const prefs = await getAgentNotificationPreferences(params.agentId);
+  const allowPush = prefs.push_reminder !== false;
+
   // `agent_inbox_notifications.type` is a check-constrained text
   // column allowing hot_lead / missed_call / reminder / new_lead;
   // briefings classify cleanly as "reminder" (a scheduled prompt
@@ -499,8 +506,9 @@ export async function dispatchMobileBriefingPush(params: {
     title,
     body,
     deepLink: { screen: "home" },
-    pushSentAt: null,
+    pushSentAt: allowPush ? null : now,
   });
+  if (!allowPush) return false;
 
   const userId = await getAuthUserIdForAgent(params.agentId);
   if (!userId) {

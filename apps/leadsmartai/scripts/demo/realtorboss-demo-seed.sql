@@ -56,6 +56,7 @@ begin
   -- ── Reset the sandbox ────────────────────────────────────────────
   -- Cached AI briefings reference old data — clear so they regenerate.
   delete from public.daily_briefings where agent_id = v_agent;
+  delete from public.agent_inbox_notifications where agent_id = v_agent;
   delete from public.boss_recommendations where agent_id = v_agent;
   delete from public.assistant_activities where agent_id = v_agent;
   delete from public.sms_messages where agent_id = v_agent;
@@ -237,6 +238,11 @@ begin
     (v_agent, 'sales_assistant', 'follow_up_sms', 'Followed up with David Wang about the Arcadia market report', 'He opened it again within an hour', 'normal', false, 'contact', c_david::text, now() - interval '4 days'),
     (v_agent, 'transaction_assistant', 'deadline_tracking', 'Started tracking 148 W Cherry Ave — 4 contingency dates loaded', 'Inspection, appraisal, loan, closing monitored', 'normal', false, 'transaction', t_cherry::text, now() - interval '5 days'),
     (v_agent, 'receptionist', 'inbound_call_answered', 'Answered an after-hours call about selling in Sierra Madre', 'Took a message; suggested a valuation', 'normal', false, null, null, now() - interval '6 days');
+
+  -- ── Notification inbox (lights the bell badge) ───────────────────
+  insert into public.agent_inbox_notifications (agent_id, type, priority, title, body, data, read, push_sent_at, created_at) values
+    (v_agent, 'hot_lead', 'high', 'Hot lead — Grace Liu', 'Relocating from Seattle, ~$750k cash. Asked for downtown condo tours next week.', '{"deep_link":{"screen":"lead","contact_id":"0bde0001-0000-4000-8000-000000000012"}}'::jsonb, false, now(), now() - interval '3 hours'),
+    (v_agent, 'missed_call', 'medium', 'Missed call from (310) 555-0466', 'Auto text-back sent. Tap to follow up.', '{"deep_link":{"screen":"home"}}'::jsonb, false, now(), now() - interval '7 hours');
 
   raise notice 'RealtorBoss demo seeded for agent %', v_agent;
 end $$;
