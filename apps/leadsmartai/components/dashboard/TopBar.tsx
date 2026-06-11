@@ -475,12 +475,14 @@ export default function TopBar({
       leadingExtra={
         <Link
           href="/dashboard"
-          className="flex min-w-0 shrink-0 items-center rounded-2xl p-1 outline-none transition hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35"
+          className="flex min-w-0 shrink-0 items-center rounded-2xl p-1 outline-none transition hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-[#0072ce]/35 lg:hidden"
         >
-          {/* Phones get the mark only — the top bar's trailing actions are
-              shrink-0, so the wordmark is what must yield at ~375px. */}
+          {/* The sidebar (lg+) carries the brand lockup, so the top bar
+              only shows a logo when the sidebar is hidden: mark on
+              phones (trailing actions are shrink-0 — the wordmark must
+              yield at ~375px), lockup on sm–lg. */}
           <span className="sm:hidden"><RealtorBossMark className="h-8 w-8" /></span>
-          <span className="hidden sm:block"><RealtorBossLogo compact className="max-w-[min(100%,220px)]" /></span>
+          <span className="hidden sm:block lg:hidden"><RealtorBossLogo compact className="max-w-[min(100%,220px)]" /></span>
         </Link>
       }
       searchSlot={<div className="hidden min-[480px]:block w-full">{searchField("ls-dashboard-search")}</div>}

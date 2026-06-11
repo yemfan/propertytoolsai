@@ -48,6 +48,12 @@ export type PremiumSidebarV2User = {
 export type PremiumSidebarV2Props = {
   appName: string;
   workspaceLabel?: string;
+  /**
+   * Replaces the default workspace-switcher block at the top of the
+   * sidebar with custom brand content (e.g. a logo lockup linking
+   * home). Omit to keep the classic switcher.
+   */
+  brandHeader?: ReactNode;
   sections: NavSection[];
   /** Renders the search trigger row when provided. Wire to Cmd-K. */
   onSearchClick?: () => void;
@@ -148,6 +154,7 @@ function LeafIconSlot({ children }: { children: ReactNode }) {
 export function PremiumSidebarV2({
   appName,
   workspaceLabel = "Workspace",
+  brandHeader,
   sections,
   onSearchClick,
   user,
@@ -203,7 +210,12 @@ export function PremiumSidebarV2({
         className
       )}
     >
-      {/* Workspace switcher */}
+      {/* Brand header (when provided) or the classic workspace switcher */}
+      {brandHeader ? (
+        <div className="shrink-0 border-b border-slate-200/80 bg-white/60 px-3 py-3">
+          {brandHeader}
+        </div>
+      ) : (
       <button
         type="button"
         aria-label={`${appName} workspace switcher`}
@@ -237,6 +249,7 @@ export function PremiumSidebarV2({
           aria-hidden
         />
       </button>
+      )}
 
       {/* Search trigger */}
       {onSearchClick ? (

@@ -9,7 +9,16 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
  */
 export async function signOutWithFullReload(nextPath = "/") {
   try {
-    await supabaseBrowser().auth.signOut();
+    // `scope: "local"` clears this browser's session cookies without the
+    // server round-trip that `global` (the default) makes — that call can
+    // reject or, worse, never settle (supabase-js serializes auth ops
+    // behind a navigator lock another tab may hold), which left the
+    // button doing nothing. The timeout race guarantees we always reach
+    // the hard navigation below.
+    await Promise.race([
+      supabaseBrowser().auth.signOut({ scope: "local" }),
+      new Promise((resolve) => setTimeout(resolve, 2500)),
+    ]);
   } catch (e) {
     console.error("signOut failed", e);
   }
