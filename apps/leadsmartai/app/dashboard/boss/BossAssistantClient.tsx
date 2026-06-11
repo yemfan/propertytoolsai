@@ -162,7 +162,7 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
       fetch("/api/dashboard/transactions").then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/missed-call/events?limit=20").then((r) => r.json()).catch(() => ({})),
       fetch("/api/dashboard/realtorboss/recommendations").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/dashboard/realtorboss/activities?limit=10").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/dashboard/realtorboss/activities?limit=40").then((r) => r.json()).catch(() => ({})),
     ]);
 
     const m = summaryRes?.metrics;
@@ -220,6 +220,25 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
   // (/api/dashboard/realtorboss/recommendations) — synced server-side
   // from CRM signals, with accept/dismiss state that persists.
 
+  // "While you were out" digest — what the AI team did in the last 24h,
+  // straight from assistant_activities (no projections).
+  const teamDigest = useMemo(() => {
+    const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const recent = activities.filter((a) => new Date(a.created_at).getTime() >= dayAgo);
+    if (recent.length === 0) return null;
+    const by = (t: string) => recent.filter((a) => a.assistant_type === t).length;
+    const needsYou = recent.filter((a) => a.requires_attention).length;
+    const parts: string[] = [];
+    const rec = by("receptionist");
+    const sales = by("sales_assistant");
+    const tx = by("transaction_assistant");
+    if (rec > 0) parts.push(`Receptionist handled ${rec} call${rec === 1 ? "" : "s"}`);
+    if (sales > 0) parts.push(`Sales Assistant ran ${sales} follow-up${sales === 1 ? "" : "s"}`);
+    if (tx > 0) parts.push(`Transaction Assistant flagged ${tx} item${tx === 1 ? "" : "s"}`);
+    if (parts.length === 0) return null;
+    return { line: parts.join(" · "), needsYou };
+  }, [activities]);
+
   // Per-assistant headline stats for the AI Team cards (today, from real logs).
   const teamStats: Record<string, string> = {
     receptionist: `${callsToday.filter((c) => c.direction === "inbound").length} calls today · ${callsToday.filter((c) => c.textback_sent).length} text-backs`,
@@ -241,6 +260,21 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
           {" — here is what needs your attention today."}
         </p>
       </div>
+
+      {/* ── While you were out — the AI team's last 24h ── */}
+      {teamDigest && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-amber-200/70 bg-gradient-to-r from-amber-50 to-white px-3 py-2">
+          <span className="text-sm" aria-hidden>⚡</span>
+          <p className="text-xs font-medium text-gray-700">
+            <span className="font-semibold text-gray-900">Your AI team, last 24h:</span> {teamDigest.line}
+          </p>
+          {teamDigest.needsYou > 0 && (
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+              {teamDigest.needsYou} need{teamDigest.needsYou === 1 ? "s" : ""} your attention
+            </span>
+          )}
+        </div>
+      )}
 
       {/* AI-written morning plan / evening summary (existing briefings engine). */}
       <BriefingsCard />
