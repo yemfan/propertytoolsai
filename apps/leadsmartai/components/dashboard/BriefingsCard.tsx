@@ -220,9 +220,9 @@ function BossInstructionsPane() {
     void load();
   }, [load]);
 
-  // While anything is pending/processing, refresh once a minute so the
-  // routed task list appears without a manual reload (the Boss checks
-  // every 5 minutes).
+  // Instructions process immediately on Send (the cron is just the
+  // safety net) — poll every few seconds while one is in flight so
+  // the routed task list appears as soon as the Boss finishes.
   const hasPending = instructions.some((i) => i.status === "pending" || i.status === "processing");
   useEffect(() => {
     if (!hasPending) {
@@ -230,7 +230,7 @@ function BossInstructionsPane() {
       pollRef.current = null;
       return;
     }
-    pollRef.current = setInterval(() => void load(), 60_000);
+    pollRef.current = setInterval(() => void load(), 4_000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
@@ -265,7 +265,7 @@ function BossInstructionsPane() {
         <div>
           <h3 className="text-sm font-semibold text-[#0B1F44]">Instructions for your Boss Assistant</h3>
           <p className="text-[11px] text-slate-500">
-            Checked every 5 minutes — turned into tasks and routed to your team.
+            Processed the moment you hit Send — turned into tasks and routed to your team.
           </p>
         </div>
       </header>
@@ -320,7 +320,7 @@ function InstructionItem({
 }) {
   const statusLine =
     instruction.status === "pending" || instruction.status === "processing"
-      ? "Your Boss Assistant will pick this up within 5 minutes…"
+      ? "Your Boss Assistant is on it — breaking this into tasks…"
       : instruction.status === "failed"
         ? "Couldn't process this one — try rephrasing it."
         : null;

@@ -1,9 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getCurrentAgentContext } from "@/lib/dashboardService";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { processInstructionById } from "@/lib/realtorboss/instructions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Immediate processing runs after the response (Claude parse + draft
+// calls can take ~30s on a complex instruction).
+export const maxDuration = 120;
 
 /**
  * The Boss Assistant instruction channel.
@@ -67,6 +71,19 @@ export async function POST(req: NextRequest) {
       .select("id, content, status, created_at")
       .single();
     if (error) throw new Error(error.message);
+
+    // Process right away — no waiting for the 5-minute cron. Runs
+    // after the response so Send returns instantly; the card polls
+    // for the routed task list. The cron stays as the safety net.
+    const instructionId = (data as { id: string }).id;
+    after(async () => {
+      try {
+        await processInstructionById(instructionId);
+      } catch (e) {
+        console.error("[boss-instructions] immediate processing failed:", e);
+      }
+    });
+
     return NextResponse.json({ ok: true, instruction: data });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Server error";
