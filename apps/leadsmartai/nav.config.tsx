@@ -139,12 +139,11 @@ const navConfig = {
           match: ["/dashboard/drafts"],
           icon: l(<PenLine size={14} strokeWidth={STROKE} aria-hidden />),
         },
-        {
-          label: "Lead Queue",
-          href: "/dashboard/lead-queue",
-          match: ["/dashboard/lead-queue"],
-          icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
-        },
+        // Lead Queue hidden for now (route stays live at
+        // /dashboard/lead-queue) — restore by re-adding:
+        // { label: "Lead Queue", href: "/dashboard/lead-queue",
+        //   match: ["/dashboard/lead-queue"],
+        //   icon: l(<ClipboardList .../>) }
       ],
     },
     {

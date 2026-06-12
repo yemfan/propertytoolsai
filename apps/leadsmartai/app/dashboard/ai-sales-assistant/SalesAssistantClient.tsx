@@ -62,7 +62,7 @@ export default function SalesAssistantClient() {
       <AssistantHeader
         assistant={assistant}
         actions={[
-          { label: "Lead queue", href: "/dashboard/lead-queue" },
+          // Lead Queue hidden for now (route stays live at /dashboard/lead-queue).
           { label: "Conversations", href: "/dashboard/inbox" },
           { label: "Outbound calls", href: "/dashboard/ai-receptionist" },
           { label: "Manage", href: "/dashboard/ai-team" },
