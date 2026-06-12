@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { ChevronDown, ChevronUp, Settings as SettingsIcon } from "lucide-react";
 import { getAssistant } from "@/lib/realtorboss/team";
 import { LeadProfileDrawer } from "@/components/realtorboss/LeadProfileDrawer";
 import { AssistantHeader, AssistantKpiCard } from "@/components/realtorboss/AssistantPage";
+import { AssistantCallSettings } from "@/components/realtorboss/AssistantCallSettings";
 
 type SummaryMetrics = {
   totalLeads: number;
@@ -31,6 +33,7 @@ export default function SalesAssistantClient() {
   const [quietLeads, setQuietLeads] = useState<Lead[]>([]);
   const [profileLeadId, setProfileLeadId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const load = useCallback(async () => {
     const [summaryRes, hotRes, quietRes] = await Promise.all([
@@ -72,6 +75,35 @@ export default function SalesAssistantClient() {
         <AssistantKpiCard label="Total leads" value={loading ? undefined : metrics?.totalLeads} />
         <AssistantKpiCard label="Messages sent" value={loading ? undefined : metrics?.messagesSent} hint="all time" />
       </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setSettingsOpen((v) => !v)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+          aria-expanded={settingsOpen}
+        >
+          <SettingsIcon className="h-3.5 w-3.5" strokeWidth={2} />
+          Call settings
+          {settingsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+
+      {settingsOpen && (
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-1 text-sm font-semibold text-gray-900">
+            Your Sales Assistant&apos;s voice &amp; knowledge
+          </h2>
+          <p className="mb-4 text-xs text-gray-500">
+            Used on its outbound lead calls — follow-ups and reactivations. Separate from your
+            Receptionist&apos;s knowledge base, so each assistant speaks from its own brief.
+          </p>
+          <AssistantCallSettings
+            type="sales_assistant"
+            knowledgePlaceholder="Current listings to mention, neighborhoods you specialize in, financing partners, what makes you different…"
+          />
+        </section>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <LeadList
