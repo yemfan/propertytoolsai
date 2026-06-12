@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
+import nextDynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AI_TEAM } from "@/lib/realtorboss/team";
 import { LeadProfileDrawer } from "@/components/realtorboss/LeadProfileDrawer";
@@ -88,6 +89,7 @@ const ASSISTANT_LABELS: Record<string, string> = {
   boss_assistant: "Boss Assistant",
   receptionist: "AI Receptionist",
   sales_assistant: "AI Sales Assistant",
+  marketing_assistant: "AI Marketing Assistant",
   transaction_assistant: "AI Transaction Assistant",
   accountant: "AI Accountant",
 };
@@ -569,8 +571,66 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
         </section>
       </div>
 
+      {/* ── Business performance (absorbed the old /dashboard/performance
+          page). Collapsed by default — the constitution keeps the command
+          center calm; the deep numbers are one click away. ── */}
+      <PerformanceSection />
+
       <LeadProfileDrawer leadId={profileLeadId} onClose={() => setProfileLeadId(null)} />
     </div>
+  );
+}
+
+const RevenuePanel = nextDynamic(
+  () => import("@/components/dashboard/RevenuePanel").then((m) => m.RevenuePanel),
+  { ssr: false, loading: () => <p className="py-4 text-sm text-gray-400">Loading…</p> },
+);
+const PipelineForecastPanel = nextDynamic(
+  () => import("@/components/dashboard/PipelineForecastPanel").then((m) => m.PipelineForecastPanel),
+  { ssr: false, loading: () => <p className="py-4 text-sm text-gray-400">Loading…</p> },
+);
+const EmailEngagementPanel = nextDynamic(
+  () => import("@/components/dashboard/EmailEngagementPanel").then((m) => m.EmailEngagementPanel),
+  { ssr: false, loading: () => <p className="py-4 text-sm text-gray-400">Loading…</p> },
+);
+
+function PerformanceSection() {
+  // Panels (and their recharts payload) load only when opened.
+  const [open, setOpen] = useState(false);
+  return (
+    <section>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+        aria-expanded={open}
+      >
+        📈 Business performance
+        <span className="text-gray-400">{open ? "▾" : "▸"}</span>
+      </button>
+      {open && (
+        <div className="mt-3 space-y-5">
+          <div>
+            <h3 className="mb-2 text-sm font-semibold text-gray-900">Revenue &amp; commission</h3>
+            <RevenuePanel />
+          </div>
+          <div>
+            <h3 className="mb-1 text-sm font-semibold text-gray-900">Pipeline forecast</h3>
+            <p className="mb-2 text-xs text-gray-500">
+              What&apos;s on deck — active and pending deals weighted by close-date proximity.
+            </p>
+            <PipelineForecastPanel />
+          </div>
+          <div>
+            <h3 className="mb-1 text-sm font-semibold text-gray-900">Email engagement</h3>
+            <p className="mb-2 text-xs text-gray-500">
+              Opens &amp; clicks across outbound mail.
+            </p>
+            <EmailEngagementPanel />
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
