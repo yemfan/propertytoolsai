@@ -287,6 +287,11 @@ begin
     -- earlier this week
     (v_agent, 'receptionist', 'inbound_call_answered', 'Answered a call from Sarah Becker', 'School-boundary questions on 312 Alder St; second showing scheduled', 'normal', false, 'contact', c_beckers::text, now() - interval '2 days 3 hours'),
     (v_agent, 'receptionist', 'missed_call_textback', 'Texted back a missed call from +18185550771', 'Text-back sent', 'normal', false, null, null, now() - interval '2 days 6 hours'),
+    -- Marketing Assistant (demand generation — took this over from Sales)
+    (v_agent, 'marketing_assistant', 'post_published', 'Published a facebook post', 'Just listed: 4521 Rosewood Dr, Arcadia — 4bd/3ba on a quarter acre. DM for the private tour list.', 'normal', false, null, null, now() - interval '4 hours'),
+    (v_agent, 'marketing_assistant', 'nurture_message_sent', 'Sent an approved nurture email to a sphere contact', 'June market update: Pasadena inventory is up 12% — what that means if you''re thinking of selling this year.', 'normal', false, null, null, now() - interval '8 hours'),
+    (v_agent, 'marketing_assistant', 'marketing_plan_step', 'Ran a marketing plan step (send email)', 'via email', 'normal', false, 'contact', c_david::text, now() - interval '1 day 3 hours'),
+    (v_agent, 'marketing_assistant', 'post_published', 'Published an instagram post', 'Open house this Saturday at 312 Alder St, Monrovia — 11am to 2pm. Come say hi!', 'normal', false, null, null, now() - interval '2 days 1 hour'),
     (v_agent, 'sales_assistant', 'reactivation_sms', E'Sent a warm reactivation text to Kevin O’Brien', 'Delivered — awaiting reply', 'normal', false, 'contact', c_kevin::text, now() - interval '3 days'),
     (v_agent, 'sales_assistant', 'follow_up_sms', 'Followed up with David Wang about the Arcadia market report', 'He opened it again within an hour', 'normal', false, 'contact', c_david::text, now() - interval '4 days'),
     (v_agent, 'transaction_assistant', 'deadline_tracking', 'Started tracking 148 W Cherry Ave — 4 contingency dates loaded', 'Inspection, appraisal, loan, closing monitored', 'normal', false, 'transaction', t_cherry::text, now() - interval '5 days'),

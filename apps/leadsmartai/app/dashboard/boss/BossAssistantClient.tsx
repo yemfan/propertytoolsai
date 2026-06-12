@@ -247,11 +247,13 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
     const parts: string[] = [];
     const rec = by("receptionist");
     const sales = by("sales_assistant");
+    const marketing = by("marketing_assistant");
     const tx = by("transaction_assistant");
     const acct = by("accountant");
     const booked = recent.filter((a) => a.activity_type === "appointment_booked").length;
     if (rec > 0) parts.push(`Receptionist handled ${rec} call${rec === 1 ? "" : "s"}`);
     if (sales > 0) parts.push(`Sales Assistant ran ${sales} follow-up${sales === 1 ? "" : "s"}`);
+    if (marketing > 0) parts.push(`Marketing Assistant made ${marketing} touch${marketing === 1 ? "" : "es"}`);
     if (tx > 0) parts.push(`Transaction Assistant flagged ${tx} item${tx === 1 ? "" : "s"}`);
     if (acct > 0) parts.push(`Accountant tracked ${acct} money item${acct === 1 ? "" : "s"}`);
     if (booked > 0) parts.push(`${booked} appointment${booked === 1 ? "" : "s"} booked`);
@@ -262,11 +264,20 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
 
   // Per-assistant headline stats for the AI Team cards (today, from real logs).
   const overdueInvoiceRecs = recommendations.filter((r) => r.recommendation_type === "invoice_overdue").length;
+  const marketingTouches24h = activities.filter(
+    (a) =>
+      a.assistant_type === "marketing_assistant" &&
+      new Date(a.created_at).getTime() >= Date.now() - 24 * 60 * 60 * 1000,
+  ).length;
   const teamStats: Record<string, string> = {
     receptionist: `${callsToday.filter((c) => c.direction === "inbound").length} calls today · ${callsToday.filter((c) => c.textback_sent).length} text-backs`,
     sales_assistant: metrics
       ? `${metrics.hotLeads} hot leads · ${metrics.inactive7Days} quiet leads to revive`
       : "—",
+    marketing_assistant:
+      marketingTouches24h > 0
+        ? `${marketingTouches24h} marketing touch${marketingTouches24h === 1 ? "" : "es"} in 24h`
+        : "Posts, plans & sphere nurture",
     transaction_assistant: `${activeTransactions.length} active deals · ${alerts.length} deadline${alerts.length === 1 ? "" : "s"} in 7 days`,
     accountant:
       overdueInvoiceRecs > 0
@@ -395,7 +406,8 @@ export default function BossAssistantClient({ greetingName }: { greetingName: st
       {/* ── Your AI Team ── */}
       <section>
         <h2 className="mb-2 text-sm font-semibold text-gray-900">Your AI Team</h2>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {/* 5 members → 3+2 on xl reads better than a cramped 5-up row. */}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {AI_TEAM.filter((a) => a.type !== "boss_assistant").map((a) => {
             // Constitution: assistant cards show role, status, key
             // metrics, and recent activity — checking on an employee.

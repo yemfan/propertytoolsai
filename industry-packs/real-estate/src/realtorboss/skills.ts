@@ -11,6 +11,7 @@ export type SkillCategory =
   | "qualification"
   | "scheduling"
   | "conversion"
+  | "marketing"
   | "transaction"
   | "finance";
 
@@ -101,6 +102,34 @@ export const SKILLS: readonly Skill[] = [
     description: "Handle common objections calmly.",
     category: "conversion",
     prompt: `Handle objections calmly and without pressure. Common ones: "I'm just looking", "I'm not ready yet", "I already have an agent", "I need to talk to my spouse", "Prices are too high", "Interest rates are too high". Acknowledge, add a helpful fact, and offer a low-commitment next step.`,
+  },
+  {
+    key: "social_content",
+    name: "Social Content",
+    description: "Create and schedule social posts that keep the Realtor visible.",
+    category: "marketing",
+    prompt: `Create social posts (listings, market updates, open houses, wins) and keep a steady publishing schedule. Match the Realtor's voice, keep captions short and human, and never invent listing facts — use only what is in the CRM.`,
+  },
+  {
+    key: "marketing_plans",
+    name: "Marketing Plans",
+    description: "Build and run multi-step SMS/email marketing plans.",
+    category: "marketing",
+    prompt: `Build and run multi-step marketing plans (SMS and email sequences). Every step must add value — market info, new listings, helpful answers. Watch plans for stalls and surface ones that stop producing engagement.`,
+  },
+  {
+    key: "sphere_nurture",
+    name: "Sphere Nurture",
+    description: "Keep the Realtor's sphere warm with drips and digests.",
+    category: "marketing",
+    prompt: `Keep the sphere warm: drip campaigns, buyer/seller digests, and occasion touches. The goal is staying top of mind, never selling hard — a Realtor's repeat and referral business lives here.`,
+  },
+  {
+    key: "lead_generation",
+    name: "Lead Generation",
+    description: "Run campaigns and tools that bring in new leads.",
+    category: "marketing",
+    prompt: `Run the surfaces that create new leads: ad campaigns, quick posts, the home-valuation tool, and shareable links. Track which sources actually produce contacts and recommend doubling down on what works.`,
   },
   {
     key: "transaction_deadlines",

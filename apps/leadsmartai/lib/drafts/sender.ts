@@ -185,6 +185,21 @@ async function processOne(
       });
     }
     await markSent(draftId);
+
+    // RealtorBoss activity feed — sphere/nurture touches are the
+    // Marketing Assistant's work (fire-and-forget, never fails the send).
+    void (async () => {
+      const { logAssistantActivity } = await import("@/lib/realtorboss/activities");
+      void logAssistantActivity({
+        agentId: String(row.agent_id),
+        assistantType: "marketing_assistant",
+        activityType: "nurture_message_sent",
+        summary: `Sent an approved nurture ${row.channel === "sms" ? "text" : "email"} to a sphere contact`,
+        outcome: row.body.length > 140 ? `${row.body.slice(0, 137)}…` : row.body,
+        requiresAttention: false,
+      });
+    })();
+
     return { draftId, reason: "sent" };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Send failed";
