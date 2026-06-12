@@ -97,55 +97,150 @@ const navConfig = {
     {
       label: "Transactions",
       href: "/dashboard/transactions",
-      match: ["/dashboard/transactions", "/dashboard/transactions/coordinator"],
+      match: ["/dashboard/transactions"],
       icon: p(<KeyRound size={17} strokeWidth={STROKE} aria-hidden />),
     },
+    {
+      // Shared by most of the team (Receptionist answers, Sales
+      // Assistant follows up) — so it stays a common work row rather
+      // than living under any single assistant.
+      label: "Conversations",
+      href: "/dashboard/inbox",
+      match: ["/dashboard/inbox", "/dashboard/calls"],
+      icon: p(<MessageCircle size={17} strokeWidth={STROKE} aria-hidden />),
+    },
 
-    /* ── Your AI Team ── */
+    /* ── Your AI Team — each agent groups the work IT does.
+       Surfaces shared by most agents (Conversations) stay above. ── */
     { kind: "divider" as const },
     {
       label: "Receptionist",
-      href: "/dashboard/ai-receptionist",
-      match: ["/dashboard/ai-receptionist"],
       icon: p(<Headphones size={17} strokeWidth={STROKE} aria-hidden />),
-    },
-    {
-      label: "Sales Assistant",
-      href: "/dashboard/ai-sales-assistant",
-      match: ["/dashboard/ai-sales-assistant"],
-      icon: p(<TrendingUp size={17} strokeWidth={STROKE} aria-hidden />),
-    },
-    {
-      label: "Transaction Assistant",
-      href: "/dashboard/ai-transaction-assistant",
-      match: ["/dashboard/ai-transaction-assistant"],
-      icon: p(<ClipboardList size={17} strokeWidth={STROKE} aria-hidden />),
-    },
-    {
-      label: "Accountant",
-      href: "/dashboard/ai-accountant",
-      match: ["/dashboard/ai-accountant"],
-      icon: p(<Receipt size={17} strokeWidth={STROKE} aria-hidden />),
-    },
-
-    /* ── Everything else, collapsed ── */
-    { kind: "divider" as const },
-    {
-      label: "More",
-      icon: p(<Wrench size={17} strokeWidth={STROKE} aria-hidden />),
       items: [
         {
-          label: "Conversations",
-          href: "/dashboard/inbox",
-          match: ["/dashboard/inbox", "/dashboard/calls"],
-          icon: l(<MessageCircle size={14} strokeWidth={STROKE} aria-hidden />),
+          label: "Overview",
+          href: "/dashboard/ai-receptionist",
+          match: ["/dashboard/ai-receptionist"],
+          icon: l(<Headphones size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
+          // All calls live here — inbound answering, text-backs, and
+          // outbound AI calls. The phone is the Receptionist's
+          // instrument in both directions.
           label: "Voice Console",
           href: "/dashboard/missed-call",
           match: ["/dashboard/missed-call"],
           icon: l(<PhoneMissed size={14} strokeWidth={STROKE} aria-hidden />),
         },
+      ],
+    },
+    {
+      label: "Sales Assistant",
+      icon: p(<TrendingUp size={17} strokeWidth={STROKE} aria-hidden />),
+      items: [
+        {
+          label: "Overview",
+          href: "/dashboard/ai-sales-assistant",
+          match: ["/dashboard/ai-sales-assistant"],
+          icon: l(<TrendingUp size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          // Its approval queue — messages drafted by the assistant,
+          // waiting for the Boss to approve before they send.
+          label: "Drafts",
+          href: "/dashboard/drafts",
+          match: ["/dashboard/drafts"],
+          icon: l(<PenLine size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          label: "Lead Queue",
+          href: "/dashboard/lead-queue",
+          match: ["/dashboard/lead-queue"],
+          icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          label: "Templates",
+          href: "/dashboard/templates",
+          match: ["/dashboard/templates"],
+          icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          label: "Marketing Plans",
+          href: "/dashboard/marketing/plans",
+          match: ["/dashboard/marketing"],
+          icon: l(<Megaphone size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          label: "Generate Leads",
+          href: "/dashboard/leads/generate",
+          match: ["/dashboard/leads/generate"],
+          icon: l(<Sparkles size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+      ],
+    },
+    {
+      label: "Transaction Assistant",
+      icon: p(<ClipboardList size={17} strokeWidth={STROKE} aria-hidden />),
+      items: [
+        {
+          label: "Overview",
+          href: "/dashboard/ai-transaction-assistant",
+          match: ["/dashboard/ai-transaction-assistant"],
+          icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          label: "Coordinator Board",
+          href: "/dashboard/transactions/coordinator",
+          match: ["/dashboard/transactions/coordinator"],
+          icon: l(<LayoutGrid size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          label: "Offers",
+          href: "/dashboard/offers",
+          match: ["/dashboard/offers"],
+          icon: l(<FileSignature size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+      ],
+    },
+    {
+      label: "Accountant",
+      icon: p(<Receipt size={17} strokeWidth={STROKE} aria-hidden />),
+      items: [
+        {
+          label: "Overview",
+          href: "/dashboard/ai-accountant",
+          match: ["/dashboard/ai-accountant"],
+          icon: l(<Receipt size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          label: "Invoices",
+          href: "/dashboard/books",
+          match: ["/dashboard/books"],
+          icon: l(<Receipt size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          label: "Expenses",
+          href: "/dashboard/expenses",
+          match: ["/dashboard/expenses"],
+          icon: l(<Wallet size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+      ],
+    },
+    {
+      label: "Manage AI Team",
+      href: "/dashboard/ai-team",
+      match: ["/dashboard/ai-team"],
+      icon: p(<Settings size={17} strokeWidth={STROKE} aria-hidden />),
+    },
+
+    /* ── Everything else, collapsed ── */
+    { kind: "divider" as const },
+    {
+      // The Realtor's own tools — things the human does, not the AI
+      // team. Anything an agent does for you lives under that agent.
+      label: "More",
+      icon: p(<Wrench size={17} strokeWidth={STROKE} aria-hidden />),
+      items: [
         {
           label: "Open Houses",
           href: "/dashboard/open-houses",
@@ -159,12 +254,6 @@ const navConfig = {
           icon: l(<Eye size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
-          label: "Offers",
-          href: "/dashboard/offers",
-          match: ["/dashboard/offers"],
-          icon: l(<FileSignature size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
           label: "Listings",
           href: "/dashboard/properties",
           match: ["/dashboard/properties"],
@@ -175,55 +264,6 @@ const navConfig = {
           href: "/dashboard/seller-presentation",
           match: ["/dashboard/seller-presentation", "/dashboard/presentations"],
           icon: l(<Presentation size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          label: "Lead Queue",
-          href: "/dashboard/lead-queue",
-          match: ["/dashboard/lead-queue"],
-          icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          label: "Generate Leads",
-          href: "/dashboard/leads/generate",
-          match: ["/dashboard/leads/generate"],
-          icon: l(<Sparkles size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          label: "Coordinator Board",
-          href: "/dashboard/transactions/coordinator",
-          match: ["/dashboard/transactions/coordinator"],
-          icon: l(<LayoutGrid size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          // Owned by the AI Accountant; kept here for direct access.
-          label: "Invoices",
-          href: "/dashboard/books",
-          match: ["/dashboard/books"],
-          icon: l(<Receipt size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          label: "Expenses",
-          href: "/dashboard/expenses",
-          match: ["/dashboard/expenses"],
-          icon: l(<Wallet size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          label: "Drafts",
-          href: "/dashboard/drafts",
-          match: ["/dashboard/drafts"],
-          icon: l(<PenLine size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          label: "Templates",
-          href: "/dashboard/templates",
-          match: ["/dashboard/templates"],
-          icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          label: "Marketing Plans",
-          href: "/dashboard/marketing/plans",
-          match: ["/dashboard/marketing"],
-          icon: l(<Megaphone size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Sales Model",
@@ -278,12 +318,6 @@ const navConfig = {
           href: "/dashboard/cma",
           match: ["/dashboard/cma"],
           icon: l(<Ruler size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          label: "Manage AI Team",
-          href: "/dashboard/ai-team",
-          match: ["/dashboard/ai-team"],
-          icon: l(<Settings size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Billing",
