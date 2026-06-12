@@ -1,13 +1,11 @@
-import PerformanceClient from "./PerformanceClient";
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Performance",
-  description: "Analyze lead conversion rates and agent performance.",
-  keywords: ["performance", "analytics", "conversion"],
-  robots: { index: false },
-};
-
+/**
+ * Performance merged into the Boss Assistant command center — the
+ * revenue/commission, pipeline-forecast, and email-engagement panels
+ * live in its collapsed "Business performance" section now. Kept as a
+ * redirect for old links.
+ */
 export default function PerformancePage() {
-  return <PerformanceClient />;
+  redirect("/dashboard/boss");
 }
