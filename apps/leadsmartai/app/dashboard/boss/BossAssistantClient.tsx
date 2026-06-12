@@ -89,6 +89,7 @@ const ASSISTANT_LABELS: Record<string, string> = {
   boss_assistant: "Boss Assistant",
   receptionist: "AI Receptionist",
   sales_assistant: "AI Sales Assistant",
+  marketing_assistant: "AI Marketing Assistant",
   transaction_assistant: "AI Transaction Assistant",
   accountant: "AI Accountant",
 };
