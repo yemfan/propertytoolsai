@@ -113,6 +113,16 @@ export async function POST(req: Request) {
       mls_url: null,
     };
 
+    // The Marketing Assistant's own knowledge base grounds the copy.
+    let brandKnowledge: string | null = null;
+    try {
+      const { getAssistantVoiceSettings } = await import("@/lib/realtorboss/voicePersona");
+      const voice = await getAssistantVoiceSettings(String(auth.ctx.agentId), "marketing_assistant");
+      brandKnowledge = voice.voiceKnowledge;
+    } catch {
+      // Caption still works without it.
+    }
+
     const out = await generateDraftCaption({
       trigger,
       platform,
@@ -123,6 +133,7 @@ export async function POST(req: Request) {
       brief,
       agentName:
         (agentRow as { brand_name: string | null } | null)?.brand_name ?? null,
+      brandKnowledge,
     });
 
     return NextResponse.json({

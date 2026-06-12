@@ -20,7 +20,13 @@ export const runtime = "nodejs";
  * callers (Sales Assistant today).
  */
 
-const EDITABLE_TYPES: AssistantType[] = ["sales_assistant", "receptionist"];
+const EDITABLE_TYPES: AssistantType[] = [
+  "sales_assistant",
+  "receptionist",
+  // Marketing reuses the same per-assistant fields: voice_knowledge is
+  // its brand/business knowledge base (grounds post + nurture copy).
+  "marketing_assistant",
+];
 
 function parseType(v: unknown): AssistantType | null {
   return EDITABLE_TYPES.includes(v as AssistantType) ? (v as AssistantType) : null;

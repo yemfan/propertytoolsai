@@ -36,9 +36,15 @@ function SaveButton({ saving, saved }: { saving: boolean; saved: boolean }) {
 export function AssistantCallSettings({
   type,
   knowledgePlaceholder,
+  showName = true,
+  knowledgeHint,
 }: {
-  type: "sales_assistant" | "receptionist";
+  type: "sales_assistant" | "receptionist" | "marketing_assistant";
   knowledgePlaceholder: string;
+  /** Hide the voice-name field for assistants that don't speak (Marketing). */
+  showName?: boolean;
+  /** Override the knowledge helper line (defaults to call framing). */
+  knowledgeHint?: string;
 }) {
   const [voiceName, setVoiceName] = useState("");
   const [voiceKnowledge, setVoiceKnowledge] = useState("");
@@ -87,22 +93,24 @@ export function AssistantCallSettings({
 
   return (
     <form onSubmit={save} className="space-y-4">
-      <div>
-        <label className={labelCls} htmlFor={`${type}-voice-name`}>
-          Voice name
-        </label>
-        <input
-          id={`${type}-voice-name`}
-          className={inputCls}
-          value={voiceName}
-          onChange={(e) => setVoiceName(e.target.value)}
-          placeholder="e.g. Sophie"
-          maxLength={100}
-        />
-        <p className={hintCls}>
-          The name this assistant uses on its calls. Leave blank to use your account voice name.
-        </p>
-      </div>
+      {showName && (
+        <div>
+          <label className={labelCls} htmlFor={`${type}-voice-name`}>
+            Voice name
+          </label>
+          <input
+            id={`${type}-voice-name`}
+            className={inputCls}
+            value={voiceName}
+            onChange={(e) => setVoiceName(e.target.value)}
+            placeholder="e.g. Sophie"
+            maxLength={100}
+          />
+          <p className={hintCls}>
+            The name this assistant uses on its calls. Leave blank to use your account voice name.
+          </p>
+        </div>
+      )}
       <div>
         <label className={labelCls} htmlFor={`${type}-voice-knowledge`}>
           Knowledge base
@@ -116,8 +124,8 @@ export function AssistantCallSettings({
           maxLength={4000}
         />
         <p className={hintCls}>
-          What this assistant may state as fact on its calls. Leave blank to share the
-          Receptionist&apos;s knowledge base.
+          {knowledgeHint ??
+            "What this assistant may state as fact on its calls. Leave blank to share the Receptionist's knowledge base."}
         </p>
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}

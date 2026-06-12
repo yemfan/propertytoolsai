@@ -9,6 +9,7 @@ import {
   type Trigger,
 } from "@/lib/leads-gen/subjects";
 import { buildComposeInstruction } from "@/lib/leads-gen/share";
+import { getAssistantVoiceSettings } from "@/lib/realtorboss/voicePersona";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -122,12 +123,23 @@ export async function POST(req: Request) {
       // Non-fatal — caption still works without it.
     }
 
+    // The Marketing Assistant's own knowledge base grounds the copy
+    // (service areas, specialties, brand facts). Best-effort.
+    let brandKnowledge: string | null = null;
+    try {
+      const voice = await getAssistantVoiceSettings(auth.agentId, "marketing_assistant");
+      brandKnowledge = voice.voiceKnowledge;
+    } catch {
+      // Caption still works without it.
+    }
+
     const draft = await generateDraftCaption({
       trigger: trigger as Trigger,
       platform,
       subject,
       brief: brief ?? null,
       agentName,
+      brandKnowledge,
     });
 
     // Build the convenience compose URL against the first-draft
