@@ -31,7 +31,9 @@ export async function GET(req: NextRequest) {
     if (ids.length > 0) {
       const { data: taskRows, error: taskErr } = await supabaseAdmin
         .from("boss_instruction_tasks")
-        .select("id, instruction_id, title, details, assigned_to, status, created_at")
+        .select(
+          "id, instruction_id, title, details, assigned_to, status, draft_channel, draft_subject, draft_body, execution_note, created_at",
+        )
         .in("instruction_id", ids)
         .order("created_at", { ascending: true });
       if (taskErr) throw new Error(taskErr.message);

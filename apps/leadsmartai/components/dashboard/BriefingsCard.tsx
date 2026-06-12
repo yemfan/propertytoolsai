@@ -55,7 +55,18 @@ type InstructionTask = {
     | "transaction_assistant"
     | "accountant"
     | "realtor";
-  status: "assigned" | "needs_review" | "done" | "dismissed";
+  status:
+    | "assigned"
+    | "needs_review"
+    | "awaiting_approval"
+    | "sent"
+    | "done"
+    | "dismissed"
+    | "failed";
+  draft_channel: "sms" | "email" | null;
+  draft_subject: string | null;
+  draft_body: string | null;
+  execution_note: string | null;
   created_at: string;
 };
 
@@ -285,7 +296,12 @@ function BossInstructionsPane() {
           <SkeletonBody />
         ) : instructions.length === 0 ? null : (
           instructions.map((ins) => (
-            <InstructionItem key={ins.id} instruction={ins} tasks={tasks.filter((t) => t.instruction_id === ins.id)} />
+            <InstructionItem
+              key={ins.id}
+              instruction={ins}
+              tasks={tasks.filter((t) => t.instruction_id === ins.id)}
+              onChanged={load}
+            />
           ))
         )}
       </div>
@@ -296,9 +312,11 @@ function BossInstructionsPane() {
 function InstructionItem({
   instruction,
   tasks,
+  onChanged,
 }: {
   instruction: InstructionRow;
   tasks: InstructionTask[];
+  onChanged: () => void | Promise<void>;
 }) {
   const statusLine =
     instruction.status === "pending" || instruction.status === "processing"
@@ -315,27 +333,102 @@ function InstructionItem({
           {statusLine}
         </p>
       ) : (
-        <ul className="mt-2 space-y-1.5">
+        <ul className="mt-2 space-y-2">
           {tasks.map((t) => (
-            <li key={t.id} className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-sm text-slate-800">{t.title}</p>
-                {t.details && <p className="truncate text-[11px] text-slate-400">{t.details}</p>}
-              </div>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                  t.assigned_to === "realtor"
-                    ? "bg-amber-50 text-amber-800"
-                    : "bg-[#0B1F44]/5 text-[#0B1F44]"
-                }`}
-              >
-                {ASSIGNEE_LABELS[t.assigned_to]}
-              </span>
-            </li>
+            <TaskItem key={t.id} task={t} onChanged={onChanged} />
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+function TaskItem({
+  task: t,
+  onChanged,
+}: {
+  task: InstructionTask;
+  onChanged: () => void | Promise<void>;
+}) {
+  const [busy, setBusy] = useState<"approve" | "dismiss" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function act(action: "approve" | "dismiss") {
+    setBusy(action);
+    setError(null);
+    try {
+      const res = await fetch("/api/dashboard/realtorboss/instruction-tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: t.id, action }),
+      }).then((r) => r.json());
+      if (!res?.ok) throw new Error(res?.error || "Action failed.");
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Action failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <li>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm text-slate-800">
+            {t.status === "sent" && <span className="mr-1 text-emerald-600">✓</span>}
+            {t.status === "dismissed" && <span className="mr-1 text-slate-400">✕</span>}
+            {t.title}
+          </p>
+          {t.details && <p className="truncate text-[11px] text-slate-400">{t.details}</p>}
+        </div>
+        <span
+          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+            t.assigned_to === "realtor"
+              ? "bg-amber-50 text-amber-800"
+              : t.status === "sent"
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-[#0B1F44]/5 text-[#0B1F44]"
+          }`}
+        >
+          {t.status === "sent" ? "Sent" : ASSIGNEE_LABELS[t.assigned_to]}
+        </span>
+      </div>
+
+      {/* The assistant's draft — the approval moment. Nothing sends
+          without this click. */}
+      {t.status === "awaiting_approval" && t.draft_body && (
+        <div className="mt-1.5 rounded-lg border border-[#D4A017]/30 bg-[#D4A017]/5 p-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#8a6a0e]">
+            Draft {t.draft_channel === "sms" ? "text" : "email"}
+            {t.execution_note && !t.execution_note.startsWith("to:") ? ` · ${t.execution_note}` : ""}
+          </p>
+          {t.draft_subject && (
+            <p className="mt-1 text-xs font-medium text-slate-800">{t.draft_subject}</p>
+          )}
+          <p className="mt-1 whitespace-pre-wrap text-xs text-slate-700">{t.draft_body}</p>
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => act("approve")}
+              className="rounded-lg bg-[#0B1F44] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#142c5c] disabled:opacity-50"
+            >
+              {busy === "approve" ? "Sending…" : "Approve & send"}
+            </button>
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => act("dismiss")}
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Dismiss
+            </button>
+            {error && <span className="text-[11px] text-red-600">{error}</span>}
+          </div>
+        </div>
+      )}
+    </li>
   );
 }
 

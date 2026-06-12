@@ -33,6 +33,11 @@ export type ParsedTask = {
     | "transaction_assistant"
     | "accountant"
     | "realtor";
+  /** Person/company the task is about (verbatim from the instruction)
+   *  — lets execution match a CRM contact or invoice. */
+  contact_name: string | null;
+  /** Preferred channel when the task is a message ("sms" | "email"). */
+  channel: "sms" | "email" | null;
 };
 
 const ASSISTANT_LABELS: Record<ParsedTask["assignee"], string> = {
@@ -61,7 +66,13 @@ Routing rules:
 - 1 to 8 tasks. If the instruction is not actionable at all (a greeting, a question, venting), return one task assigned to "realtor" titled "Review note" with the content as details.
 
 Output ONLY a JSON object, no commentary, no markdown fences:
-{ "tasks": [ { "title": "string", "details": "string or null", "assignee": "receptionist|sales_assistant|marketing_assistant|transaction_assistant|accountant|realtor" } ] }`;
+{ "tasks": [ {
+  "title": "string",
+  "details": "string or null",
+  "assignee": "receptionist|sales_assistant|marketing_assistant|transaction_assistant|accountant|realtor",
+  "contact_name": "the person or company this task is about, verbatim from the instruction, or null",
+  "channel": "sms or email when the task is sending a message (sms when they said text/SMS, email when they said email; default sms for lead messages, email for invoices), else null"
+} ] }`;
 
 export async function parseInstruction(content: string): Promise<ParsedTask[]> {
   const client = getAnthropicClient();
@@ -90,11 +101,20 @@ export async function parseInstruction(content: string): Promise<ParsedTask[]> {
   ]);
   const tasks = (Array.isArray(raw.tasks) ? raw.tasks : [])
     .map((t) => {
-      const r = t as { title?: unknown; details?: unknown; assignee?: unknown };
+      const r = t as {
+        title?: unknown;
+        details?: unknown;
+        assignee?: unknown;
+        contact_name?: unknown;
+        channel?: unknown;
+      };
       const title = typeof r.title === "string" ? r.title.trim().slice(0, 200) : "";
       const assignee = VALID.has(String(r.assignee)) ? (r.assignee as ParsedTask["assignee"]) : "realtor";
       const details = typeof r.details === "string" && r.details.trim() ? r.details.trim().slice(0, 1000) : null;
-      return title ? { title, details, assignee } : null;
+      const contactName =
+        typeof r.contact_name === "string" && r.contact_name.trim() ? r.contact_name.trim().slice(0, 120) : null;
+      const channel = r.channel === "sms" || r.channel === "email" ? r.channel : null;
+      return title ? { title, details, assignee, contact_name: contactName, channel } : null;
     })
     .filter((t): t is ParsedTask => t !== null)
     .slice(0, 8);
@@ -173,27 +193,45 @@ export async function processPendingInstructions(limit = 10): Promise<{
           assignedToAi.push(t);
         }
 
-        await supabaseAdmin.from("boss_instruction_tasks").insert({
-          instruction_id: row.id,
-          agent_id: agentId,
-          title: t.title,
-          details: t.details,
-          assigned_to: t.assignee,
-          status: t.assignee === "realtor" ? "needs_review" : "assigned",
-          crm_task_id: crmTaskId,
-        });
+        const { data: insertedTask } = await supabaseAdmin
+          .from("boss_instruction_tasks")
+          .insert({
+            instruction_id: row.id,
+            agent_id: agentId,
+            title: t.title,
+            details: t.details,
+            assigned_to: t.assignee,
+            status: t.assignee === "realtor" ? "needs_review" : "assigned",
+            crm_task_id: crmTaskId,
+          })
+          .select("id")
+          .maybeSingle();
         tasksCreated += 1;
 
+        // EXECUTION (architecture unfrozen): messaging tasks get the
+        // real draft prepared now — the Realtor approves on the Boss
+        // card and it sends. Falls back to plain "assigned" when we
+        // can't execute confidently.
+        const taskId = (insertedTask as { id: string } | null)?.id;
+        let executed: "awaiting_approval" | "assigned" = "assigned";
+        if (taskId && t.assignee !== "realtor") {
+          const { tryExecuteTask } = await import("@/lib/realtorboss/execution");
+          executed = await tryExecuteTask({ agentId, taskId, task: t });
+        }
+
         // Visibility: the owning assistant's feed shows what the Boss
-        // put on its desk.
+        // put on its desk — and whether a draft is waiting for you.
         if (t.assignee !== "realtor") {
           void logAssistantActivity({
             agentId,
             assistantType: t.assignee,
-            activityType: "boss_task_assigned",
-            summary: `Boss Assistant assigned: ${t.title}`,
+            activityType: executed === "awaiting_approval" ? "boss_task_drafted" : "boss_task_assigned",
+            summary:
+              executed === "awaiting_approval"
+                ? `Drafted for your approval: ${t.title}`
+                : `Boss Assistant assigned: ${t.title}`,
             outcome: t.details,
-            requiresAttention: false,
+            requiresAttention: executed === "awaiting_approval",
           });
         }
       }
