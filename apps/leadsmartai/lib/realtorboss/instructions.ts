@@ -152,17 +152,55 @@ export async function processPendingInstructions(limit = 10): Promise<{
   let failed = 0;
 
   for (const row of rows) {
-    const agentId = String(row.agent_id);
-    // Claim — a parallel cron invocation skips rows already processing.
-    const { data: claimed } = await supabaseAdmin
-      .from("boss_instructions")
-      .update({ status: "processing", updated_at: new Date().toISOString() })
-      .eq("id", row.id)
-      .eq("status", "pending")
-      .select("id");
-    if (!claimed || claimed.length === 0) continue;
+    const result = await processInstructionRow(row);
+    if (result === null) continue; // another worker claimed it
+    if (result.ok) {
+      processed += 1;
+      tasksCreated += result.tasksCreated;
+    } else {
+      failed += 1;
+    }
+  }
 
-    try {
+  return { processed, tasksCreated, failed };
+}
+
+/**
+ * Process ONE instruction immediately — used by the submit endpoint
+ * (via `after()`) so clicking Send doesn't wait for the 5-minute
+ * cron; the cron remains the safety net for anything that slips
+ * (e.g. a serverless instance dying mid-processing).
+ */
+export async function processInstructionById(id: string): Promise<void> {
+  const { data } = await supabaseAdmin
+    .from("boss_instructions")
+    .select("id, agent_id, content")
+    .eq("id", id)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (!data) return;
+  await processInstructionRow(data as InstructionRow);
+}
+
+/** Claim + parse + route + execute one instruction. Returns null when
+ *  another worker already claimed it. */
+async function processInstructionRow(
+  row: InstructionRow,
+): Promise<{ ok: boolean; tasksCreated: number } | null> {
+  const agentId = String(row.agent_id);
+  let tasksCreated = 0;
+
+  // Claim — a parallel worker (cron vs. submit) skips rows already
+  // processing.
+  const { data: claimed } = await supabaseAdmin
+    .from("boss_instructions")
+    .update({ status: "processing", updated_at: new Date().toISOString() })
+    .eq("id", row.id)
+    .eq("status", "pending")
+    .select("id");
+  if (!claimed || claimed.length === 0) return null;
+
+  try {
       const tasks = await parseInstruction(row.content);
 
       const assignedToAi: ParsedTask[] = [];
@@ -244,7 +282,6 @@ export async function processPendingInstructions(limit = 10): Promise<{
           updated_at: new Date().toISOString(),
         })
         .eq("id", row.id);
-      processed += 1;
 
       void logAssistantActivity({
         agentId,
@@ -261,8 +298,8 @@ export async function processPendingInstructions(limit = 10): Promise<{
           .join(" · "),
         requiresAttention: forRealtor.length > 0,
       });
+      return { ok: true, tasksCreated };
     } catch (e) {
-      failed += 1;
       console.error(`[boss-instructions] processing ${row.id} failed:`, e);
       await supabaseAdmin
         .from("boss_instructions")
@@ -272,8 +309,6 @@ export async function processPendingInstructions(limit = 10): Promise<{
           updated_at: new Date().toISOString(),
         })
         .eq("id", row.id);
+      return { ok: false, tasksCreated };
     }
-  }
-
-  return { processed, tasksCreated, failed };
 }
