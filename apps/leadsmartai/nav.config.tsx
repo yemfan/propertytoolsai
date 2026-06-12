@@ -17,7 +17,6 @@ import {
   Megaphone,
   MessageCircle,
   PenLine,
-  Presentation,
   Receipt,
   Rocket,
   Route,
@@ -138,6 +137,18 @@ const navConfig = {
           href: "/dashboard/open-houses",
           match: ["/dashboard/open-houses", "/dashboard/open-house"],
           icon: l(<DoorOpen size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          // Inventory + the Presentations tab (a listing presentation
+          // is how a listing gets won). match entries are EXACT paths.
+          label: "Listings",
+          href: "/dashboard/properties",
+          match: [
+            "/dashboard/properties",
+            "/dashboard/seller-presentation",
+            "/dashboard/presentations",
+          ],
+          icon: l(<House size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           // Pipeline insights — where the Sales Assistant's next
@@ -274,18 +285,8 @@ const navConfig = {
           match: ["/dashboard/showings"],
           icon: l(<Eye size={14} strokeWidth={STROKE} aria-hidden />),
         },
-        {
-          label: "Listings",
-          href: "/dashboard/properties",
-          match: ["/dashboard/properties"],
-          icon: l(<House size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          label: "Presentations",
-          href: "/dashboard/seller-presentation",
-          match: ["/dashboard/seller-presentation", "/dashboard/presentations"],
-          icon: l(<Presentation size={14} strokeWidth={STROKE} aria-hidden />),
-        },
+        // Listings (with the Presentations tab) moved under the
+        // Sales Assistant.
         {
           label: "Sales Model",
           href: "/dashboard/sales-model",
