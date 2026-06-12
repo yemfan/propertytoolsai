@@ -295,12 +295,8 @@ const navConfig = {
         },
         // Daily Overview removed from the nav (the Boss Assistant IS
         // the daily overview now); route stays live at /dashboard/overview.
-        {
-          label: "Performance",
-          href: "/dashboard/performance",
-          match: ["/dashboard/performance"],
-          icon: l(<BarChart3 size={14} strokeWidth={STROKE} aria-hidden />),
-        },
+        // Performance merged into the Boss Assistant (collapsed
+        // "Business performance" section); route redirects there.
         {
           label: "Coaching",
           href: "/dashboard/coaching",
