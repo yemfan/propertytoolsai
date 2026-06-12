@@ -2,101 +2,415 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronUp, PhoneOutgoing, Settings as SettingsIcon, X } from "lucide-react";
 import { getAssistant } from "@/lib/realtorboss/team";
 import { AssistantHeader, AssistantKpiCard } from "@/components/realtorboss/AssistantPage";
+import MissedCallSettingsForm from "@/components/dashboard/MissedCallSettingsForm";
+import OutboundCallPanel from "@/components/dashboard/OutboundCallPanel";
+import BulkCallPanel from "@/components/dashboard/BulkCallPanel";
+import AppointmentRemindersPanel from "@/components/dashboard/AppointmentRemindersPanel";
 
-type CallEvent = {
+/**
+ * /dashboard/ai-receptionist — the ONE Receptionist page.
+ *
+ * Everything the Receptionist does lives here: the full call list
+ * (answered, missed + text-back, call-backs), what action each call
+ * produced, and — folded into collapsibles — call settings and the
+ * manual outbound-call tools. Double-click a row for full details.
+ */
+
+type CallAction = {
+  kind:
+    | "contact_created"
+    | "appointment_set"
+    | "task_created"
+    | "textback_sent"
+    | "callback"
+    | "personal_reminder";
+  label: string;
+  href?: string;
+};
+
+type CallbackState = {
+  status: "scheduled" | "answered" | "exhausted" | "cancelled";
+  attempts: number;
+  next_attempt_at: string | null;
+};
+
+type ReceptionistCall = {
   id: string;
   contact_id: string | null;
   contact_name: string | null;
   direction: "inbound" | "outbound";
   status: string;
   from_phone: string | null;
+  to_phone: string | null;
   duration_seconds: number | null;
   textback_sent: boolean;
+  textback_message: string | null;
   textback_status: string | null;
+  textback_sent_at: string | null;
+  notes: string | null;
   created_at: string;
+  reason: string;
+  actions: CallAction[];
+  callback: CallbackState | null;
 };
 
 const assistant = getAssistant("receptionist");
 
+const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
+  completed: { label: "Answered", cls: "bg-emerald-50 text-emerald-700" },
+  in_progress: { label: "In progress", cls: "bg-sky-50 text-sky-700" },
+  missed: { label: "Missed", cls: "bg-amber-50 text-amber-700" },
+  no_answer: { label: "No answer", cls: "bg-amber-50 text-amber-700" },
+  busy: { label: "Busy", cls: "bg-amber-50 text-amber-700" },
+  voicemail: { label: "Voicemail", cls: "bg-slate-100 text-slate-600" },
+  initiated: { label: "Dialing", cls: "bg-sky-50 text-sky-700" },
+  failed: { label: "Failed", cls: "bg-red-50 text-red-700" },
+};
+
+function statusBadge(status: string) {
+  return STATUS_LABELS[status] ?? { label: status.replace(/_/g, " "), cls: "bg-slate-100 text-slate-600" };
+}
+
+function fmtWhen(iso: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function fmtDuration(s: number | null) {
+  if (s == null) return null;
+  const m = Math.floor(s / 60);
+  const r = Math.round(s % 60);
+  return m > 0 ? `${m}m ${r}s` : `${r}s`;
+}
+
+function callerPhone(c: ReceptionistCall) {
+  return (c.direction === "inbound" ? c.from_phone : c.to_phone) ?? "—";
+}
+
 export default function ReceptionistClient() {
-  const [calls, setCalls] = useState<CallEvent[]>([]);
+  const [calls, setCalls] = useState<ReceptionistCall[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<ReceptionistCall | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [outboundOpen, setOutboundOpen] = useState(false);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/dashboard/missed-call/events?limit=50")
+    const res = await fetch("/api/dashboard/realtorboss/receptionist-calls?limit=100")
       .then((r) => r.json())
       .catch(() => ({}));
-    setCalls((res?.events ?? []) as CallEvent[]);
+    setCalls((res?.calls ?? []) as ReceptionistCall[]);
     setLoading(false);
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const todayMidnight = useMemo(() => {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime();
   }, []);
 
-  const inboundToday = calls.filter(
-    (c) => c.direction === "inbound" && new Date(c.created_at).getTime() >= todayMidnight,
+  const answeredToday = calls.filter(
+    (c) =>
+      c.direction === "inbound" &&
+      c.status === "completed" &&
+      new Date(c.created_at).getTime() >= todayMidnight,
   );
-  const answeredToday = inboundToday.filter((c) => c.status === "completed");
-  const leadsCapturedToday = inboundToday.filter((c) => c.contact_id != null);
-  const recovered = calls.filter((c) => c.direction === "inbound" && c.status !== "completed" && c.textback_sent);
-  const needsHuman = calls.filter((c) => c.direction === "inbound" && c.status !== "completed" && !c.textback_sent);
+  const recovered = calls.filter(
+    (c) =>
+      c.direction === "inbound" &&
+      c.status === "missed" &&
+      (c.textback_sent || c.callback?.status === "answered"),
+  );
+  const callingBack = calls.filter((c) => c.status === "missed" && c.callback?.status === "scheduled");
+  const needsYou = calls.filter(
+    (c) =>
+      c.direction === "inbound" &&
+      c.status === "missed" &&
+      (c.callback?.status === "exhausted" || (!c.textback_sent && !c.callback)),
+  );
 
   return (
     <div className="space-y-4">
       <AssistantHeader
         assistant={assistant}
         actions={[
-          { label: "Voice console", href: "/dashboard/missed-call" },
           { label: "Voice settings", href: "/dashboard/settings" },
           { label: "Manage", href: "/dashboard/ai-team" },
         ]}
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <AssistantKpiCard label="Calls answered today" value={loading ? undefined : answeredToday.length} />
-        <AssistantKpiCard label="New leads captured today" value={loading ? undefined : leadsCapturedToday.length} />
-        <AssistantKpiCard label="Missed calls recovered" value={loading ? undefined : recovered.length} hint="text-back sent" />
-        <AssistantKpiCard label="Needing human follow-up" value={loading ? undefined : needsHuman.length} tone={needsHuman.length > 0 ? "warn" : undefined} />
+        <AssistantKpiCard
+          label="Missed calls recovered"
+          value={loading ? undefined : recovered.length}
+          hint="text-back or call-back"
+        />
+        <AssistantKpiCard
+          label="Calling back now"
+          value={loading ? undefined : callingBack.length}
+          hint="auto call-backs at 5, 10, 30 min"
+        />
+        <AssistantKpiCard
+          label="Needing you"
+          value={loading ? undefined : needsYou.length}
+          tone={needsYou.length > 0 ? "warn" : undefined}
+        />
       </div>
 
-      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">Recent Conversations</h2>
-          <Link href="/dashboard/missed-call" className="text-xs font-medium text-blue-600 hover:text-blue-800">Open voice console</Link>
+      {/* Collapsibles: settings + manual outbound tools */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setSettingsOpen((v) => !v)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+          aria-expanded={settingsOpen}
+        >
+          <SettingsIcon className="h-3.5 w-3.5" strokeWidth={2} />
+          Call settings
+          {settingsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOutboundOpen((v) => !v)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+          aria-expanded={outboundOpen}
+        >
+          <PhoneOutgoing className="h-3.5 w-3.5" strokeWidth={2} />
+          Place a call
+          {outboundOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+
+      {settingsOpen && (
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-1 text-sm font-semibold text-gray-900">Call settings</h2>
+          <p className="mb-4 text-xs text-gray-500">
+            Forward number, missed-call text-back template, and AI personalization. When a missed
+            caller isn&apos;t reached by text, your Receptionist calls them back at 5, 10, and 30
+            minutes until they answer.
+          </p>
+          <MissedCallSettingsForm />
+        </section>
+      )}
+
+      {outboundOpen && (
+        <div className="space-y-4">
+          <OutboundCallPanel />
+          <AppointmentRemindersPanel />
+          <BulkCallPanel />
+        </div>
+      )}
+
+      {/* The call list */}
+      <section className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+          <h2 className="text-sm font-semibold text-gray-900">All calls</h2>
+          <p className="text-[11px] text-gray-400">Double-click a call for full details</p>
         </div>
         {calls.length === 0 ? (
-          <p className="py-6 text-center text-sm text-gray-400">
-            {loading ? "Loading call activity…" : "No calls yet. Once your AI Receptionist starts answering, every conversation shows up here."}
+          <p className="py-10 text-center text-sm text-gray-400">
+            {loading
+              ? "Loading calls…"
+              : "No calls yet. Once your AI Receptionist starts answering, every call shows up here."}
           </p>
         ) : (
-          <div className="space-y-2">
-            {calls.slice(0, 15).map((c) => (
-              <div key={c.id} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-gray-900">
-                    {c.contact_name ?? c.from_phone ?? "Unknown caller"}
-                    <span className="ml-2 text-xs font-normal text-gray-400">{c.direction}</span>
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {c.status}
-                    {c.duration_seconds != null ? ` · ${Math.round(c.duration_seconds / 60)}m` : ""}
-                    {c.textback_sent ? ` · text-back ${c.textback_status ?? "sent"}` : ""}
-                  </p>
-                </div>
-                <span className="shrink-0 text-xs text-gray-400">
-                  {new Date(c.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-                </span>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 text-[11px] uppercase tracking-wide text-gray-400">
+                  <th className="px-4 py-2 font-medium">When</th>
+                  <th className="px-4 py-2 font-medium">Phone</th>
+                  <th className="px-4 py-2 font-medium">Name</th>
+                  <th className="px-4 py-2 font-medium">Call reason</th>
+                  <th className="px-4 py-2 font-medium">Action taken</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {calls.map((c) => {
+                  const badge = statusBadge(c.status);
+                  return (
+                    <tr
+                      key={c.id}
+                      onDoubleClick={() => setSelected(c)}
+                      className="cursor-pointer border-b border-gray-50 last:border-0 hover:bg-slate-50"
+                      title="Double-click for full call details"
+                    >
+                      <td className="whitespace-nowrap px-4 py-2.5 text-xs text-gray-500">
+                        {fmtWhen(c.created_at)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2.5 text-xs text-gray-600">
+                        {callerPhone(c)}
+                      </td>
+                      <td className="max-w-[10rem] truncate px-4 py-2.5 font-medium text-gray-900">
+                        {c.contact_name ?? "Unknown caller"}
+                      </td>
+                      <td className="max-w-[18rem] truncate px-4 py-2.5 text-xs text-gray-600">
+                        {c.reason}
+                      </td>
+                      <td className="max-w-[16rem] px-4 py-2.5">
+                        {c.actions.length === 0 ? (
+                          <span className="text-xs text-gray-400">—</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {c.actions.map((a, i) => (
+                              <span
+                                key={`${a.kind}-${i}`}
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                  a.kind === "callback"
+                                    ? "bg-[#D4A017]/10 text-[#8a6a0e]"
+                                    : "bg-slate-100 text-slate-600"
+                                }`}
+                              >
+                                {a.label}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-2.5">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badge.cls}`}>
+                          {badge.label}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
+
+      {selected && <CallDetailModal call={selected} onClose={() => setSelected(null)} />}
+    </div>
+  );
+}
+
+function CallDetailModal({ call, onClose }: { call: ReceptionistCall; onClose: () => void }) {
+  const badge = statusBadge(call.status);
+  const duration = fmtDuration(call.duration_seconds);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Call details"
+    >
+      <div
+        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-semibold text-gray-900">
+              {call.contact_name ?? "Unknown caller"}
+            </h3>
+            <p className="text-xs text-gray-500">
+              {callerPhone(call)} · {call.direction === "inbound" ? "Inbound" : "Outbound"} ·{" "}
+              {fmtWhen(call.created_at)}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badge.cls}`}>
+            {badge.label}
+          </span>
+          {duration && <span className="text-xs text-gray-500">{duration}</span>}
+        </div>
+
+        <div className="mt-4 space-y-4 text-sm">
+          <section>
+            <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              Call reason
+            </h4>
+            <p className="mt-1 whitespace-pre-wrap text-gray-700">{call.reason}</p>
+          </section>
+
+          {call.actions.length > 0 && (
+            <section>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                What your Receptionist did
+              </h4>
+              <ul className="mt-1 space-y-1">
+                {call.actions.map((a, i) => (
+                  <li key={`${a.kind}-${i}`} className="flex items-center gap-2 text-gray-700">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#D4A017]" />
+                    {a.href ? (
+                      <Link href={a.href} className="text-[#0B1F44] underline-offset-2 hover:underline">
+                        {a.label}
+                      </Link>
+                    ) : (
+                      a.label
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {call.textback_sent && (
+            <section>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Text-back sent{call.textback_status ? ` · ${call.textback_status}` : ""}
+              </h4>
+              <p className="mt-1 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-xs text-gray-700">
+                {call.textback_message ?? "Message body unavailable."}
+              </p>
+            </section>
+          )}
+
+          {call.callback && (
+            <section>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Call-back schedule
+              </h4>
+              <p className="mt-1 text-gray-700">
+                {call.callback.status === "scheduled" &&
+                  `${call.callback.attempts} of 3 attempts placed — next one ${
+                    call.callback.next_attempt_at ? `at ${fmtWhen(call.callback.next_attempt_at)}` : "soon"
+                  }. Your Receptionist keeps calling at 5, 10, and 30 minutes until they answer.`}
+                {call.callback.status === "answered" &&
+                  `Reached after ${Math.max(call.callback.attempts, 1)} call-back${call.callback.attempts === 1 ? "" : "s"}.`}
+                {call.callback.status === "exhausted" &&
+                  "All 3 call-backs placed without an answer — this one needs your personal touch."}
+                {call.callback.status === "cancelled" && "Call-backs were cancelled."}
+              </p>
+            </section>
+          )}
+
+          {call.contact_id && (
+            <div className="border-t border-gray-100 pt-3">
+              <Link
+                href={`/dashboard/leads/${call.contact_id}`}
+                className="text-xs font-medium text-[#0B1F44] underline-offset-2 hover:underline"
+              >
+                Open contact profile →
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

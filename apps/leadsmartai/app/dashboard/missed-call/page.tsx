@@ -1,22 +1,10 @@
-import type { Metadata } from "next";
-import MissedCallPageClient from "./MissedCallPageClient";
-
-export const metadata: Metadata = {
-  title: "AI Assistant",
-  description:
-    "Your AI voice assistant — inbound call activity + missed-call auto-text, plus AI Concierge outbound calls.",
-  robots: { index: false },
-};
+import { redirect } from "next/navigation";
 
 /**
- * Activity-first dashboard surface for missed-call text-back.
- *
- * The page renders MissedCallPageClient which puts the call log front
- * and center; settings live behind a "Settings" button that expands a
- * collapsible panel inline. The legacy MissedCallSettingsPanel is
- * still mounted on /dashboard/settings → Voice tab for agents who go
- * to settings expecting to find it there.
+ * The voice console merged into the one Receptionist page — calls,
+ * text-backs, call-backs, settings, and outbound tools all live at
+ * /dashboard/ai-receptionist now. Kept as a redirect for old links.
  */
 export default function MissedCallPage() {
-  return <MissedCallPageClient />;
+  redirect("/dashboard/ai-receptionist");
 }

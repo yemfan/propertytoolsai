@@ -183,6 +183,10 @@ export async function findContactByPhone(
   phone: string | null;
   email: string | null;
   property_address: string | null;
+  /** Sphere/personal relationship — not a lead. Post-call handling
+   *  sends the Realtor a reminder instead of running lead capture
+   *  or the AI call-back ladder. */
+  personal: boolean;
 } | null> {
   const usPhone = toUsDisplayPhone(phoneRaw);
   const digits = phoneRaw.replace(/\D/g, "").slice(-10);
@@ -196,10 +200,12 @@ export async function findContactByPhone(
     phone_number: string | null;
     email: string | null;
     property_address: string | null;
+    lifecycle_stage: string | null;
+    relationship_type: string | null;
   };
 
   const cols =
-    "id, name, first_name, last_name, phone, phone_number, email, property_address";
+    "id, name, first_name, last_name, phone, phone_number, email, property_address, lifecycle_stage, relationship_type";
 
   if (usPhone) {
     const byNumber = await supabaseAdmin
@@ -242,6 +248,8 @@ export async function findContactByPhone(
       phone: r.phone_number ?? r.phone ?? null,
       email: r.email,
       property_address: r.property_address,
+      personal:
+        r.lifecycle_stage === "sphere" || r.relationship_type === "sphere",
     };
   }
 }
@@ -418,9 +426,21 @@ export async function handleMissedCall(args: {
 }): Promise<{ smsSent: boolean; logId: string | null; error?: string }> {
   const settings = await getOrInitSettings(args.agentId);
   if (!settings.enabled) {
-    // Still log the missed call so the activity feed shows it.
-    await logMissedCall(args, null);
-    return { smsSent: false, logId: null };
+    // Still log the missed call so the activity feed shows it — and
+    // still remind the Realtor when the caller is a personal contact
+    // (that's an inbox note, not an automated send).
+    const contact = await findContactByPhone(args.agentId, args.callerPhone).catch(() => null);
+    const logId = await logMissedCall(args, null);
+    if (contact?.personal) {
+      await notifyPersonalCall({
+        agentId: args.agentId,
+        contact,
+        callerPhone: args.callerPhone,
+        kind: "missed",
+        smsSent: false,
+      });
+    }
+    return { smsSent: false, logId };
   }
 
   const callerE164 = toE164(args.callerPhone);
@@ -504,7 +524,73 @@ export async function handleMissedCall(args: {
     relatedEntityId: contact?.id ?? null,
   });
 
+  // Post-miss routing: a personal (sphere) caller gets the Realtor a
+  // reminder to call them back themselves; everyone else enters the
+  // AI call-back ladder (+5/+10/+30 minutes until reached).
+  if (contact?.personal) {
+    await notifyPersonalCall({
+      agentId: args.agentId,
+      contact,
+      callerPhone: args.callerPhone,
+      kind: "missed",
+      smsSent,
+    });
+  } else {
+    const { scheduleCallBacks } = await import("@/lib/missed-call/callbacks");
+    await scheduleCallBacks({
+      agentId: args.agentId,
+      callerPhone: args.callerPhone,
+      contactId: contact?.id ?? null,
+      callLogId: logId,
+    });
+  }
+
   return { smsSent, logId };
+}
+
+/**
+ * Personal-call reminder: when the caller is a sphere contact, the
+ * right follow-up is the Realtor reaching out personally — not lead
+ * capture or an AI call-back ladder. Drops a reminder in the agent
+ * inbox (bell); best-effort, never fails the voice flow.
+ */
+export async function notifyPersonalCall(args: {
+  agentId: string;
+  contact: { id: string; name: string | null };
+  callerPhone: string;
+  kind: "missed" | "answered";
+  smsSent?: boolean;
+}): Promise<void> {
+  const name = args.contact.name?.trim() || args.callerPhone || "A personal contact";
+  try {
+    const { insertAgentInboxNotification } = await import(
+      "@/lib/notifications/agentNotifications"
+    );
+    await insertAgentInboxNotification({
+      agentId: args.agentId,
+      type: "missed_call",
+      priority: "medium",
+      title: `Personal call from ${name}`,
+      body:
+        args.kind === "missed"
+          ? `${name} called and didn't reach you.${args.smsSent ? " A text-back was sent." : ""} This looks personal — give them a call back when you have a minute.`
+          : `${name} called and your AI Receptionist took it. This looks personal — they'd probably love to hear from you directly.`,
+      deepLink: { screen: "call_log", leadId: args.contact.id },
+      pushSentAt: new Date().toISOString(),
+    });
+    void logAssistantActivity({
+      agentId: args.agentId,
+      assistantType: "receptionist",
+      activityType: "personal_call_reminder",
+      summary: `Reminded you to call ${name} back — personal call`,
+      outcome: "Reminder in your inbox",
+      requiresAttention: false,
+      relatedEntityType: "contact",
+      relatedEntityId: args.contact.id,
+    });
+  } catch (e) {
+    console.error("[missed-call] personal reminder failed:", e);
+  }
 }
 
 async function logMissedCall(

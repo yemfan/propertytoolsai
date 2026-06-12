@@ -53,6 +53,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/receptionist-callbacks",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/smart-automation",
       "schedule": "0 */6 * * *"
     },
