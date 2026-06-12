@@ -9,7 +9,6 @@ import {
   DoorOpen,
   Eye,
   FileSignature,
-  Gem,
   Headphones,
   House,
   KeyRound,
@@ -22,7 +21,6 @@ import {
   Receipt,
   Rocket,
   Route,
-  Ruler,
   Settings,
   Sparkles,
   Target,
@@ -139,6 +137,14 @@ const navConfig = {
           match: ["/dashboard/drafts"],
           icon: l(<PenLine size={14} strokeWidth={STROKE} aria-hidden />),
         },
+        {
+          // Pipeline insights — where the Sales Assistant's next
+          // opportunities come from, so it lives on its desk.
+          label: "Growth & Opportunities",
+          href: "/dashboard/growth",
+          match: ["/dashboard/growth"],
+          icon: l(<Rocket size={14} strokeWidth={STROKE} aria-hidden />),
+        },
         // Lead Queue hidden for now (route stays live at
         // /dashboard/lead-queue) — restore by re-adding:
         // { label: "Lead Queue", href: "/dashboard/lead-queue",
@@ -159,9 +165,19 @@ const navConfig = {
           icon: l(<Megaphone size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
+          // Hosts the Sphere tab too (sphere monetization + the
+          // likely-seller/buyer deep dives stay highlighted here).
           label: "Marketing Plans",
           href: "/dashboard/marketing/plans",
-          match: ["/dashboard/marketing"],
+          // match entries are EXACT paths (see @repo/ui matchPath.ts).
+          match: [
+            "/dashboard/marketing",
+            "/dashboard/marketing/plans",
+            "/dashboard/sphere/monetization",
+            "/dashboard/sphere/likely-buyers",
+            "/dashboard/sphere/likely-sellers",
+            "/dashboard/sphere/signals",
+          ],
           icon: l(<Route size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
@@ -277,12 +293,8 @@ const navConfig = {
           match: ["/dashboard/playbooks"],
           icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
         },
-        {
-          label: "Daily Overview",
-          href: "/dashboard/overview",
-          match: ["/dashboard/overview"],
-          icon: l(<LayoutDashboard size={14} strokeWidth={STROKE} aria-hidden />),
-        },
+        // Daily Overview removed from the nav (the Boss Assistant IS
+        // the daily overview now); route stays live at /dashboard/overview.
         {
           label: "Performance",
           href: "/dashboard/performance",
@@ -295,30 +307,15 @@ const navConfig = {
           match: ["/dashboard/coaching"],
           icon: l(<Compass size={14} strokeWidth={STROKE} aria-hidden />),
         },
-        {
-          label: "Sphere Monetization",
-          href: "/dashboard/sphere/monetization",
-          match: ["/dashboard/sphere/monetization"],
-          icon: l(<Gem size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          label: "Growth & Opportunities",
-          href: "/dashboard/growth",
-          match: ["/dashboard/growth"],
-          icon: l(<Rocket size={14} strokeWidth={STROKE} aria-hidden />),
-        },
+        // Sphere Monetization moved into Marketing Plans (Sphere tab).
+        // Growth & Opportunities moved under the Sales Assistant.
         {
           label: "Property Tools",
           href: "/dashboard/tools",
           match: ["/dashboard/tools"],
           icon: l(<Wrench size={14} strokeWidth={STROKE} aria-hidden />),
         },
-        {
-          label: "CMAs",
-          href: "/dashboard/cma",
-          match: ["/dashboard/cma"],
-          icon: l(<Ruler size={14} strokeWidth={STROKE} aria-hidden />),
-        },
+        // CMAs removed from the nav; route stays live at /dashboard/cma.
         {
           label: "Billing",
           href: "/dashboard/billing",
