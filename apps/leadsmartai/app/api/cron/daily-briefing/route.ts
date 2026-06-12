@@ -61,13 +61,17 @@ export async function GET(req: Request) {
       const localHHMM = currentLocalHHMM(tz);
       const dueKinds: BriefingKind[] = [];
 
+      // Evening summaries are retired (2026-06): the dashboard card's
+      // space now hosts the Boss Assistant instruction channel, and the
+      // morning briefing is dismissible. `?kind=evening&force=1` still
+      // works for manual testing; the schedule never generates one.
+      void eveningTarget;
       if (force && forceKind) {
         dueKinds.push(forceKind);
       } else if (force) {
-        dueKinds.push("morning", "evening");
+        dueKinds.push("morning");
       } else {
         if (withinFifteen(localHHMM, morningTarget)) dueKinds.push("morning");
-        if (withinFifteen(localHHMM, eveningTarget)) dueKinds.push("evening");
       }
 
       if (!dueKinds.length) {
