@@ -129,14 +129,8 @@ const navConfig = {
           match: ["/dashboard/ai-sales-assistant"],
           icon: l(<TrendingUp size={14} strokeWidth={STROKE} aria-hidden />),
         },
-        {
-          // Its approval queue — messages drafted by the assistant,
-          // waiting for the Boss to approve before they send.
-          label: "Drafts",
-          href: "/dashboard/drafts",
-          match: ["/dashboard/drafts"],
-          icon: l(<PenLine size={14} strokeWidth={STROKE} aria-hidden />),
-        },
+        // Drafts moved under the Marketing Assistant — the approval
+        // queue holds its sphere-nurture messages.
         {
           // Pipeline insights — where the Sales Assistant's next
           // opportunities come from, so it lives on its desk.
@@ -163,6 +157,14 @@ const navConfig = {
           href: "/dashboard/ai-marketing-assistant",
           match: ["/dashboard/ai-marketing-assistant"],
           icon: l(<Megaphone size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          // Its approval queue — nurture messages drafted for the
+          // sphere, waiting for the Boss to approve before they send.
+          label: "Drafts",
+          href: "/dashboard/drafts",
+          match: ["/dashboard/drafts"],
+          icon: l(<PenLine size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           // Hosts the Sphere tab too (sphere monetization + the
