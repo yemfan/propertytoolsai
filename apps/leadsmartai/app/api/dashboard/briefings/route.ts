@@ -33,7 +33,7 @@ export async function GET(req: Request) {
   const fetchKind = async (kind: "morning" | "evening") => {
     const { data, error } = await supabaseAdmin
       .from("daily_briefings")
-      .select("id,kind,headline,summary,insights,created_at")
+      .select("id,kind,headline,summary,insights,created_at,read_at")
       .eq("agent_id", ctx.agentId)
       .eq("kind", kind)
       .order("created_at", { ascending: false })
