@@ -1,6 +1,10 @@
 import { getAgentDisplayName } from "@/lib/ai-call/lead-resolution";
 import { getReceptionistConfig, getBookingSettings } from "@/lib/voice-receptionist/settings";
-import { buildReceptionistVoiceNotes } from "@/lib/realtorboss/voicePersona";
+import {
+  buildReceptionistVoiceNotes,
+  getAssistantVoiceSettings,
+  voiceNotesFromSkills,
+} from "@/lib/realtorboss/voicePersona";
 import {
   describeHours,
   defaultBusinessHours,
@@ -85,5 +89,30 @@ export async function loadReceptionistContext(
     // shared system prompt.
     extraNotes: await buildReceptionistVoiceNotes(agentId),
     greeting: cfg.greeting || "",
+  };
+}
+
+/**
+ * Context for the SALES ASSISTANT's outbound lead calls (follow-up,
+ * reactivation). Business facts (name, timezone, hours, booking) come
+ * from the shared receptionist config, but the voice identity is the
+ * Sales Assistant's own: its voice name, its knowledge base, and the
+ * playbook from ITS enabled skills — so the receptionist and the
+ * sales assistant each speak from their own brief.
+ *
+ * Falls back to the receptionist's knowledge until the Sales
+ * Assistant has its own, so early calls are never knowledge-less.
+ */
+export async function loadSalesCallContext(
+  agentId: string,
+): Promise<ReceptionistContext | null> {
+  const base = await loadReceptionistContext(agentId);
+  if (!base) return null;
+  const voice = await getAssistantVoiceSettings(agentId, "sales_assistant");
+  return {
+    ...base,
+    agentName: voice.voiceName || base.agentName,
+    knowledgeText: voice.voiceKnowledge ?? base.knowledgeText,
+    extraNotes: voiceNotesFromSkills(voice.enabledSkills),
   };
 }

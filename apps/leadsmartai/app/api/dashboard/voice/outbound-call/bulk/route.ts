@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getContacts } from "@/lib/dashboardService";
-import { loadReceptionistContext } from "@/lib/voice-agent/context";
+import { loadReceptionistContext, loadSalesCallContext } from "@/lib/voice-agent/context";
 import { placeOutboundCall } from "@/lib/voice-agent/outbound";
 import { normalizePhoneE164, type OutboundPurpose } from "@repo/voice";
 import { requireCrmFeature } from "@/lib/billing/guard";
@@ -45,7 +45,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const ctx = await loadReceptionistContext(agentId);
+    // Lead-facing purposes are the Sales Assistant's work (its own
+    // voice + knowledge); appointment reminders stay with the Receptionist.
+    const ctx =
+      purpose === "appointment_reminder"
+        ? await loadReceptionistContext(agentId)
+        : await loadSalesCallContext(agentId);
     if (!ctx) {
       return NextResponse.json(
         { ok: false, error: "Your AI receptionist is turned off — enable it in Settings → Voice." },

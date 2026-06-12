@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, PhoneOutgoing, Settings as SettingsIcon, X } fr
 import { getAssistant } from "@/lib/realtorboss/team";
 import { AssistantHeader, AssistantKpiCard } from "@/components/realtorboss/AssistantPage";
 import MissedCallSettingsForm from "@/components/dashboard/MissedCallSettingsForm";
+import { ReceptionistVoiceForm } from "@/components/realtorboss/AssistantCallSettings";
 import OutboundCallPanel from "@/components/dashboard/OutboundCallPanel";
 import BulkCallPanel from "@/components/dashboard/BulkCallPanel";
 import AppointmentRemindersPanel from "@/components/dashboard/AppointmentRemindersPanel";
@@ -192,15 +193,27 @@ export default function ReceptionistClient() {
       </div>
 
       {settingsOpen && (
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-1 text-sm font-semibold text-gray-900">Call settings</h2>
-          <p className="mb-4 text-xs text-gray-500">
-            Forward number, missed-call text-back template, and AI personalization. When a missed
-            caller isn&apos;t reached by text, your Receptionist calls them back at 5, 10, and 30
-            minutes until they answer.
-          </p>
-          <MissedCallSettingsForm />
-        </section>
+        <div className="space-y-4">
+          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-1 text-sm font-semibold text-gray-900">
+              Your Receptionist&apos;s voice &amp; knowledge
+            </h2>
+            <p className="mb-4 text-xs text-gray-500">
+              How your Receptionist greets callers and what it knows. Each assistant on your team
+              has its own knowledge base — this one answers your phone.
+            </p>
+            <ReceptionistVoiceForm />
+          </section>
+          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-1 text-sm font-semibold text-gray-900">Missed-call settings</h2>
+            <p className="mb-4 text-xs text-gray-500">
+              Forward number, missed-call text-back template, and AI personalization. When a missed
+              caller isn&apos;t reached by text, your Receptionist calls them back at 5, 10, and 30
+              minutes until they answer.
+            </p>
+            <MissedCallSettingsForm />
+          </section>
+        </div>
       )}
 
       {outboundOpen && (

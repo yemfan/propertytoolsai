@@ -1,38 +1,85 @@
 import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { buildVoicePlaybook, VOICE_GUARDRAILS, getAssistant } from "@helm/pack-real-estate";
+import {
+  buildVoicePlaybook,
+  VOICE_GUARDRAILS,
+  getAssistant,
+  type AssistantType,
+} from "@helm/pack-real-estate";
 
 /**
- * Real-estate behaviour block injected into the voice receptionist's
- * per-call system prompt (as `ReceptionistContext.extraNotes`).
+ * Per-assistant voice identity. Each AI team member that talks on the
+ * phone has its OWN call settings + knowledge base:
  *
- * Driven by the agent's AI-team configuration: the skills enabled on
- * their AI Receptionist (Manage AI Team page) select which
- * qualification/escalation lines the live phone agent follows. Falls
- * back to the roster defaults when no row exists, and always includes
- * the compliance guardrails.
+ *   • voiceName       — the name it uses on live calls
+ *   • voiceKnowledge  — what it may state as fact on its calls
+ *   • enabledSkills   — which playbook lines it follows
  *
- * Sits on the inbound-call hot path — one indexed read, and any
- * failure degrades to the roster default rather than failing the call.
+ * The Receptionist's number/greeting/hours stay in
+ * voice_receptionist_settings (inbound config is richer); the fields
+ * here are the assistant-level overlay, used directly by outbound
+ * assistants (Sales Assistant).
  */
-export async function buildReceptionistVoiceNotes(agentId: string): Promise<string> {
-  let skills: readonly string[] = getAssistant("receptionist").skills;
+
+export type AssistantVoiceSettings = {
+  voiceName: string | null;
+  voiceKnowledge: string | null;
+  enabledSkills: readonly string[];
+};
+
+export async function getAssistantVoiceSettings(
+  agentId: string,
+  type: AssistantType,
+): Promise<AssistantVoiceSettings> {
+  let skills: readonly string[] = getAssistant(type).skills;
+  let voiceName: string | null = null;
+  let voiceKnowledge: string | null = null;
   try {
     const { data } = await supabaseAdmin
       .from("ai_assistants")
-      .select("enabled_skills")
+      .select("enabled_skills, voice_name, voice_knowledge")
       .eq("agent_id", agentId)
-      .eq("type", "receptionist")
+      .eq("type", type)
       .maybeSingle();
-    const enabled = (data as { enabled_skills?: unknown } | null)?.enabled_skills;
-    if (Array.isArray(enabled)) {
-      skills = enabled.filter((s): s is string => typeof s === "string");
+    const row = data as {
+      enabled_skills?: unknown;
+      voice_name?: string | null;
+      voice_knowledge?: string | null;
+    } | null;
+    if (Array.isArray(row?.enabled_skills)) {
+      skills = row.enabled_skills.filter((s): s is string => typeof s === "string");
     }
+    voiceName = row?.voice_name?.trim() || null;
+    voiceKnowledge = row?.voice_knowledge?.trim() || null;
   } catch (e) {
-    console.warn("[realtorboss] voice persona lookup failed, using roster defaults:", e);
+    console.warn("[realtorboss] assistant voice lookup failed, using roster defaults:", e);
   }
+  return { voiceName, voiceKnowledge, enabledSkills: skills };
+}
 
-  const playbook = buildVoicePlaybook(skills);
+/**
+ * Behaviour block injected into an assistant's per-call system prompt
+ * (as `ReceptionistContext.extraNotes`): the qualification/escalation
+ * playbook from the skills enabled on THAT assistant, plus the
+ * compliance guardrails. Falls back to the roster defaults when no
+ * row exists; any failure degrades rather than failing the call.
+ */
+export async function buildAssistantVoiceNotes(
+  agentId: string,
+  type: AssistantType,
+): Promise<string> {
+  const { enabledSkills } = await getAssistantVoiceSettings(agentId, type);
+  return voiceNotesFromSkills(enabledSkills);
+}
+
+/** Playbook + compliance block from an already-loaded skill list. */
+export function voiceNotesFromSkills(enabledSkills: readonly string[]): string {
+  const playbook = buildVoicePlaybook(enabledSkills);
   return [playbook, `## Compliance\n${VOICE_GUARDRAILS}`].filter(Boolean).join("\n\n");
+}
+
+/** Inbound-call hot path — the Receptionist's playbook. */
+export async function buildReceptionistVoiceNotes(agentId: string): Promise<string> {
+  return buildAssistantVoiceNotes(agentId, "receptionist");
 }
