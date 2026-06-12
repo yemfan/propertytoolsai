@@ -1,14 +1,20 @@
-import MarketingPlansClient from "./MarketingPlansClient";
+import MarketingPlansTabs from "./MarketingPlansTabs";
 
 export const metadata = {
   title: "Marketing Plans | RealtorBoss",
-  description: "Create, customize, and manage automated marketing plans for your leads.",
+  description:
+    "Create, customize, and manage automated marketing plans — and monetize your sphere.",
 };
 
-export default function MarketingPlansPage() {
+export default async function MarketingPlansPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
-      <MarketingPlansClient />
+      <MarketingPlansTabs initialTab={tab === "sphere" ? "sphere" : "plans"} />
     </div>
   );
 }

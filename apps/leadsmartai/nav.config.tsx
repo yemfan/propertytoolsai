@@ -9,7 +9,6 @@ import {
   DoorOpen,
   Eye,
   FileSignature,
-  Gem,
   Headphones,
   House,
   KeyRound,
@@ -166,9 +165,19 @@ const navConfig = {
           icon: l(<Megaphone size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
+          // Hosts the Sphere tab too (sphere monetization + the
+          // likely-seller/buyer deep dives stay highlighted here).
           label: "Marketing Plans",
           href: "/dashboard/marketing/plans",
-          match: ["/dashboard/marketing"],
+          // match entries are EXACT paths (see @repo/ui matchPath.ts).
+          match: [
+            "/dashboard/marketing",
+            "/dashboard/marketing/plans",
+            "/dashboard/sphere/monetization",
+            "/dashboard/sphere/likely-buyers",
+            "/dashboard/sphere/likely-sellers",
+            "/dashboard/sphere/signals",
+          ],
           icon: l(<Route size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
@@ -298,12 +307,7 @@ const navConfig = {
           match: ["/dashboard/coaching"],
           icon: l(<Compass size={14} strokeWidth={STROKE} aria-hidden />),
         },
-        {
-          label: "Sphere Monetization",
-          href: "/dashboard/sphere/monetization",
-          match: ["/dashboard/sphere/monetization"],
-          icon: l(<Gem size={14} strokeWidth={STROKE} aria-hidden />),
-        },
+        // Sphere Monetization moved into Marketing Plans (Sphere tab).
         // Growth & Opportunities moved under the Sales Assistant.
         {
           label: "Property Tools",
