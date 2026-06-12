@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { BookOpen, ChevronDown, ChevronUp } from "lucide-react";
 import { getAssistant } from "@/lib/realtorboss/team";
 import { AssistantHeader, AssistantKpiCard } from "@/components/realtorboss/AssistantPage";
+import { AssistantCallSettings } from "@/components/realtorboss/AssistantCallSettings";
 
 /**
  * Marketing Assistant overview — demand generation. Took over from
@@ -46,6 +49,7 @@ function fmtWhen(iso: string) {
 }
 
 export default function MarketingAssistantClient({ data }: { data: MarketingData }) {
+  const [knowledgeOpen, setKnowledgeOpen] = useState(false);
   return (
     <div className="space-y-4">
       <AssistantHeader
@@ -64,6 +68,37 @@ export default function MarketingAssistantClient({ data }: { data: MarketingData
         <AssistantKpiCard label="Marketing plans running" value={data.plansActive} />
         <AssistantKpiCard label="New leads this month" value={data.newLeadsThisMonth} />
       </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setKnowledgeOpen((v) => !v)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+          aria-expanded={knowledgeOpen}
+        >
+          <BookOpen className="h-3.5 w-3.5" strokeWidth={2} />
+          Brand &amp; knowledge
+          {knowledgeOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+
+      {knowledgeOpen && (
+        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-1 text-sm font-semibold text-gray-900">
+            Your Marketing Assistant&apos;s knowledge base
+          </h2>
+          <p className="mb-4 text-xs text-gray-500">
+            Grounds everything it writes — post captions, plans, nurture copy. Its own brief,
+            separate from your Receptionist&apos;s and Sales Assistant&apos;s.
+          </p>
+          <AssistantCallSettings
+            type="marketing_assistant"
+            showName={false}
+            knowledgePlaceholder="Service areas, your specialties and niches, brand taglines, what makes you different, standing facts to weave into posts…"
+            knowledgeHint="Facts your Marketing Assistant may use in post and nurture copy. It only uses what's relevant per post and never invents beyond it."
+          />
+        </section>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Publishing calendar */}

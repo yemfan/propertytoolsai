@@ -42,6 +42,10 @@ export type DraftInput = {
   brief?: string | null;
   /** Agent's display name — folded into the closing CTA so the post sounds personal. */
   agentName?: string | null;
+  /** The Marketing Assistant's own knowledge base (ai_assistants.voice_knowledge):
+   *  brand facts, service areas, specialties. Factual grounding only — the
+   *  model uses what's relevant and never invents beyond it. */
+  brandKnowledge?: string | null;
 };
 
 export type DraftOutput = {
@@ -188,6 +192,14 @@ function buildUserPrompt(input: DraftInput): string {
     lines.push("");
     lines.push("Agent's brief / specific angle:");
     lines.push(brief.trim());
+  }
+
+  if (input.brandKnowledge?.trim()) {
+    lines.push("");
+    lines.push(
+      "Brand & business knowledge (the agent's standing facts — service areas, specialties, what makes them different). Use only what's relevant to THIS post; never contradict it; never invent beyond it:",
+    );
+    lines.push(input.brandKnowledge.trim().slice(0, 2000));
   }
 
   lines.push("");
