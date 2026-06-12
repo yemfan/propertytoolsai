@@ -145,17 +145,31 @@ const navConfig = {
           match: ["/dashboard/lead-queue"],
           icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
         },
+      ],
+    },
+    {
+      // Took demand generation over from the Sales Assistant: it
+      // CREATES leads and keeps the Realtor visible; Sales converts.
+      label: "Marketing Assistant",
+      icon: p(<Megaphone size={17} strokeWidth={STROKE} aria-hidden />),
+      items: [
         {
-          label: "Templates",
-          href: "/dashboard/templates",
-          match: ["/dashboard/templates"],
-          icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
+          label: "Overview",
+          href: "/dashboard/ai-marketing-assistant",
+          match: ["/dashboard/ai-marketing-assistant"],
+          icon: l(<Megaphone size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Marketing Plans",
           href: "/dashboard/marketing/plans",
           match: ["/dashboard/marketing"],
-          icon: l(<Megaphone size={14} strokeWidth={STROKE} aria-hidden />),
+          icon: l(<Route size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          label: "Templates",
+          href: "/dashboard/templates",
+          match: ["/dashboard/templates"],
+          icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           label: "Generate Leads",

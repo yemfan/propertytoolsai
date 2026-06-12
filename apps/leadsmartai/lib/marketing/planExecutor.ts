@@ -109,6 +109,22 @@ export async function executeActivePlans(): Promise<ExecutionResult> {
             metadata: { plan_id: planId, step_id: step.id, action: step.action, channel: step.channel },
           } as Record<string, unknown>);
         }
+
+        // RealtorBoss activity feed — running plans is the Marketing
+        // Assistant's work (fire-and-forget, never fails the step).
+        void (async () => {
+          const { logAssistantActivity } = await import("@/lib/realtorboss/activities");
+          void logAssistantActivity({
+            agentId,
+            assistantType: "marketing_assistant",
+            activityType: "marketing_plan_step",
+            summary: `Ran a marketing plan step (${step.action.replace(/_/g, " ")})`,
+            outcome: step.channel ? `via ${step.channel}` : null,
+            requiresAttention: false,
+            relatedEntityType: leadId ? "contact" : null,
+            relatedEntityId: leadId,
+          });
+        })();
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Unknown error";
         await supabaseAdmin

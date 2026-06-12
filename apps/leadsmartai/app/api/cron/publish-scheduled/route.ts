@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { publishPost } from "@/lib/leads-gen/publish";
 import { dispatchMobilePublishFailurePush } from "@/lib/mobile/pushDispatch";
+import { logAssistantActivity } from "@/lib/realtorboss/activities";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -193,6 +194,17 @@ export async function POST(req: Request) {
           } as Record<string, unknown>)
           .eq("id", row.id);
         posted += 1;
+
+        // RealtorBoss activity feed — publishing is the Marketing
+        // Assistant's work (fire-and-forget, never fails the cron).
+        void logAssistantActivity({
+          agentId: String(row.agent_id),
+          assistantType: "marketing_assistant",
+          activityType: "post_published",
+          summary: `Published a ${row.platform} post`,
+          outcome: row.caption ? (row.caption.length > 140 ? `${row.caption.slice(0, 137)}…` : row.caption) : null,
+          requiresAttention: false,
+        });
         continue;
       }
 

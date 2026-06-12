@@ -8,6 +8,7 @@ export type AssistantType =
   | "boss_assistant"
   | "receptionist"
   | "sales_assistant"
+  | "marketing_assistant"
   | "transaction_assistant"
   | "accountant";
 
@@ -72,6 +73,29 @@ export const AI_TEAM: readonly AssistantDef[] = [
       "Follow-ups completed",
       "Appointments booked",
       "Hot leads identified",
+    ],
+  },
+  {
+    // Took over demand generation from the Sales Assistant: the Sales
+    // Assistant CONVERTS leads (speed-to-lead, follow-up, queue); the
+    // Marketing Assistant CREATES them and keeps the Realtor visible —
+    // social posts, marketing plans, templates, sphere nurture.
+    type: "marketing_assistant",
+    name: "AI Marketing Assistant",
+    role: "Demand generation",
+    mission: "Keep your pipeline full.",
+    href: "/dashboard/ai-marketing-assistant",
+    skills: [
+      "social_content",
+      "marketing_plans",
+      "sphere_nurture",
+      "lead_generation",
+    ],
+    kpis: [
+      "Posts published",
+      "Plans running",
+      "Sphere touches",
+      "New leads this month",
     ],
   },
   {

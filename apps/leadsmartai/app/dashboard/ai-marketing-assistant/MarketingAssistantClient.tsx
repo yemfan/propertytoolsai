@@ -1,0 +1,142 @@
+"use client";
+
+import Link from "next/link";
+import { getAssistant } from "@/lib/realtorboss/team";
+import { AssistantHeader, AssistantKpiCard } from "@/components/realtorboss/AssistantPage";
+
+/**
+ * Marketing Assistant overview — demand generation. Took over from
+ * the Sales Assistant: it CREATES leads and keeps the Realtor visible
+ * (social posts, marketing plans, sphere nurture, lead-gen tools);
+ * the Sales Assistant converts what it produces.
+ */
+
+export type MarketingData = {
+  postsScheduled: number;
+  postsPublished30d: number;
+  plansActive: number;
+  templates: number;
+  newLeadsThisMonth: number;
+  upcomingPosts: {
+    id: string;
+    platform: string;
+    caption: string | null;
+    scheduled_for: string;
+    status: string;
+  }[];
+  activities: {
+    id: string;
+    activity_type: string;
+    summary: string;
+    outcome: string | null;
+    created_at: string;
+    requires_attention: boolean;
+  }[];
+};
+
+const assistant = getAssistant("marketing_assistant");
+
+function fmtWhen(iso: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export default function MarketingAssistantClient({ data }: { data: MarketingData }) {
+  return (
+    <div className="space-y-4">
+      <AssistantHeader
+        assistant={assistant}
+        actions={[
+          { label: "Marketing plans", href: "/dashboard/marketing/plans" },
+          { label: "Templates", href: "/dashboard/templates" },
+          { label: "Generate leads", href: "/dashboard/leads/generate" },
+          { label: "Manage", href: "/dashboard/ai-team" },
+        ]}
+      />
+
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <AssistantKpiCard label="Posts scheduled" value={data.postsScheduled} />
+        <AssistantKpiCard label="Posts published" value={data.postsPublished30d} hint="last 30 days" />
+        <AssistantKpiCard label="Marketing plans running" value={data.plansActive} />
+        <AssistantKpiCard label="New leads this month" value={data.newLeadsThisMonth} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Publishing calendar */}
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">Coming up</h2>
+            <Link
+              href="/dashboard/leads/generate"
+              className="text-xs font-medium text-blue-600 hover:text-blue-800"
+            >
+              Open scheduler
+            </Link>
+          </div>
+          {data.upcomingPosts.length === 0 ? (
+            <p className="py-6 text-center text-sm text-gray-400">
+              Nothing scheduled — a quiet calendar means a quiet pipeline.{" "}
+              <Link href="/dashboard/leads/generate" className="text-blue-600 hover:underline">
+                Schedule a post
+              </Link>
+              .
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {data.upcomingPosts.map((p) => (
+                <li
+                  key={p.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-gray-900">
+                      {p.caption?.trim() || "(no caption)"}
+                    </p>
+                    <p className="text-xs capitalize text-gray-500">{p.platform}</p>
+                  </div>
+                  <span className="shrink-0 text-xs text-gray-400">{fmtWhen(p.scheduled_for)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* What it's been doing */}
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <h2 className="mb-3 text-sm font-semibold text-gray-900">Latest activity</h2>
+          {data.activities.length === 0 ? (
+            <p className="py-6 text-center text-sm text-gray-400">
+              No activity yet. Once your Marketing Assistant starts publishing and nurturing, its
+              work shows up here.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {data.activities.map((a) => (
+                <li key={a.id} className="rounded-lg border border-gray-100 px-3 py-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm text-gray-900">{a.summary}</p>
+                    <span className="shrink-0 text-xs text-gray-400">{fmtWhen(a.created_at)}</span>
+                  </div>
+                  {a.outcome && <p className="text-xs text-gray-500">{a.outcome}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      {/* Hand-off note — constitution: a team, with clear lanes */}
+      <p className="text-xs text-gray-400">
+        Your Marketing Assistant creates demand; leads it generates are handed to your{" "}
+        <Link href="/dashboard/ai-sales-assistant" className="text-gray-500 underline-offset-2 hover:underline">
+          Sales Assistant
+        </Link>{" "}
+        to convert.
+      </p>
+    </div>
+  );
+}
