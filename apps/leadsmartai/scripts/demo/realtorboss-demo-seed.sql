@@ -39,6 +39,7 @@ declare
   c_castillo uuid := '0bde0001-0000-4000-8000-000000000010';
   c_daniel  uuid := '0bde0001-0000-4000-8000-000000000011';
   c_grace   uuid := '0bde0001-0000-4000-8000-000000000012';
+  c_tony    uuid := '0bde0001-0000-4000-8000-000000000013'; -- sphere (personal)
   -- transactions
   t_cherry  uuid := '0bde0002-0000-4000-8000-000000000001';
   t_maple   uuid := '0bde0002-0000-4000-8000-000000000002';
@@ -60,7 +61,9 @@ begin
   delete from public.boss_recommendations where agent_id = v_agent;
   delete from public.assistant_activities where agent_id = v_agent;
   delete from public.sms_messages where agent_id = v_agent;
+  delete from public.receptionist_callbacks where agent_id = v_agent;
   delete from public.call_logs where agent_id = v_agent;
+  delete from public.voice_appointments where agent_id = v_agent;
   delete from public.lead_calendar_events where agent_id = v_agent;
   delete from public.transaction_tasks where transaction_id in (select id from public.transactions where agent_id = v_agent);
   delete from public.transactions where agent_id = v_agent;
@@ -153,7 +156,13 @@ begin
      'Pasadena, CA', 600000, 800000, null,
      now() - interval '3 hours', now() - interval '3 hours', true, false,
      'Called this morning; the AI Receptionist captured her details and she asked for condo tours next week. Cash budget ~$750k.',
-     now() - interval '3 hours');
+     now() - interval '3 hours'),
+    (c_tony, v_agent, 'sphere', 'Tony Russo', 'Tony', 'Russo', 'tony.russo@example.com', '+16265550700',
+     'Sphere', 'warm', 40, null, null, null,
+     null, null, null, null,
+     now() - interval '2 hours', now() - interval '30 days', false, false,
+     'College roommate — golf buddy. Personal contact, not a client.',
+     now() - interval '2 years');
 
   -- ── Tasks (3 overdue, 2 today, 2 upcoming) ───────────────────────
   insert into public.crm_tasks (agent_id, contact_id, title, description, due_at, status, priority, source, created_at) values
@@ -203,17 +212,50 @@ begin
     (t_birch, 'closing', 'Collect signed closing disclosures', null, (now() - interval '1 day')::date, null, 2, 'closing_disclosures', 'seed'),
     (t_birch, 'closing', 'Schedule final walkthrough', null, (now() + interval '1 day')::date, null, 3, 'final_walkthrough', 'seed');
 
-  -- ── Call logs (answered / missed-recovered / outbound) ───────────
+  -- ── Text-back message bodies (linked from call_logs below) ───────
+  insert into public.message_logs (id, lead_id, type, status, content, created_at) values
+    ('0bde0003-0000-4000-8000-000000000001', 'demo-caller-3105550466', 'sms', 'sent',
+     'Hey there — Michael here. Sorry I missed your call. What''s the best way I can help? Happy to text or set up a quick call back.', now() - interval '7 hours'),
+    ('0bde0003-0000-4000-8000-000000000002', 'demo-caller-8185550771', 'sms', 'sent',
+     'Hey there — Michael here. Sorry I missed your call. What''s the best way I can help? Happy to text or set up a quick call back.', now() - interval '2 days 6 hours'),
+    ('0bde0003-0000-4000-8000-000000000003', 'demo-caller-6265550633', 'sms', 'sent',
+     'Hey there — Michael here. Sorry I missed your call. What''s the best way I can help? Happy to text or set up a quick call back.', now() - interval '35 minutes')
+  on conflict (id) do update set created_at = excluded.created_at, status = excluded.status;
+
+  -- ── Call logs (answered / missed-recovered / call-backs / personal) ──
   insert into public.call_logs (agent_id, contact_id, direction, status, from_phone, to_phone, duration_seconds, textback_message_log_id, notes, created_at) values
+    -- A fresh miss: text-back sent, call-back ladder running (attempt 1 placed, attempt 2 pending).
+    (v_agent, null, 'inbound', 'missed', '+16265550633', '+18778017240', null, '0bde0003-0000-4000-8000-000000000003', 'Auto text-back sent.', now() - interval '35 minutes'),
+    (v_agent, null, 'outbound', 'no_answer', '+18778017240', '+16265550633', 0, null, 'Automatic call-back (attempt 1 of 3) for a missed call.', now() - interval '30 minutes'),
+    -- A personal call: sphere contact, reminder sent to the Realtor instead of lead capture.
+    (v_agent, c_tony, 'inbound', 'missed', '+16265550700', '+18778017240', null, null, 'Personal call — reminder sent to you.', now() - interval '2 hours'),
     (v_agent, c_grace, 'inbound', 'completed', '+16265550199', '+18778017240', 263, null, 'AI call summary: Grace Liu is relocating from Seattle, cash budget around $750k, wants downtown Pasadena condo tours next week. Captured contact details and requested follow-up.', now() - interval '3 hours'),
     (v_agent, null, 'inbound', 'completed', '+16265550802', '+18778017240', 142, null, 'AI call summary: Caller asked about this weekend''s open house times for 312 Alder St; provided schedule and offered a private showing.', now() - interval '5 hours'),
+    -- Recovered by call-back: missed at -7h, reached on the second attempt.
     (v_agent, null, 'inbound', 'missed', '+13105550466', '+18778017240', null, '0bde0003-0000-4000-8000-000000000001', 'Auto text-back sent.', now() - interval '7 hours'),
+    (v_agent, null, 'outbound', 'no_answer', '+18778017240', '+13105550466', 0, null, 'Automatic call-back (attempt 1 of 3) for a missed call.', now() - interval '6 hours 55 minutes'),
+    (v_agent, null, 'outbound', 'completed', '+18778017240', '+13105550466', 158, null, 'AI call summary: Returned the missed call — caller wanted rental info for a Pasadena duplex; took details and promised the Realtor would follow up.', now() - interval '6 hours 50 minutes'),
     (v_agent, c_jane, 'inbound', 'completed', '+16265550141', '+18778017240', 318, null, 'AI call summary: Jane Chen confirmed she is pre-approved and asked to tour 312 Alder St and two comparables this weekend. Appointment request handed to the Realtor.', now() - interval '1 day 2 hours'),
     (v_agent, c_maria, 'inbound', 'completed', '+18185550162', '+18185550100', 204, null, 'AI call summary: Maria Lopez asked what her Rosewood Dr home could list for; booked a listing presentation for tomorrow morning.', now() - interval '1 day 4 hours'),
+    -- Exhausted ladder: missed yesterday, three call-backs unanswered — needs the Realtor.
     (v_agent, null, 'inbound', 'missed', '+16265550913', '+18778017240', null, null, 'Missed; text-back send failed.', now() - interval '1 day 6 hours'),
+    (v_agent, null, 'outbound', 'no_answer', '+18778017240', '+16265550913', 0, null, 'Automatic call-back (attempt 3 of 3) for a missed call.', now() - interval '1 day 5 hours 30 minutes'),
     (v_agent, c_kevin, 'outbound', 'completed', '+18778017240', '+13235550133', 95, null, 'AI call summary: Reactivation call to Kevin O''Brien — still interested but waiting on a promotion decision in August. Asked to check back mid-July.', now() - interval '1 day 8 hours'),
     (v_agent, c_beckers, 'inbound', 'completed', '+16265550112', '+18778017240', 187, null, 'AI call summary: Sarah Becker asked about Madison Elementary boundaries for 312 Alder St; scheduled a second showing.', now() - interval '2 days 3 hours'),
     (v_agent, null, 'inbound', 'missed', '+18185550771', '+18778017240', null, '0bde0003-0000-4000-8000-000000000002', 'Auto text-back sent.', now() - interval '2 days 6 hours');
+
+  -- ── Call-back ladders (one per missed caller above) ──────────────
+  insert into public.receptionist_callbacks (agent_id, contact_id, phone_e164, attempts, next_attempt_at, status, created_at, updated_at) values
+    -- Running: attempt 1 placed, attempt 2 due shortly.
+    (v_agent, null, '+16265550633', 1, now() + interval '4 minutes', 'scheduled', now() - interval '35 minutes', now() - interval '30 minutes'),
+    -- Recovered on the second attempt.
+    (v_agent, null, '+13105550466', 2, null, 'answered', now() - interval '7 hours', now() - interval '6 hours 50 minutes'),
+    -- Exhausted — three attempts, no answer.
+    (v_agent, null, '+16265550913', 3, null, 'exhausted', now() - interval '1 day 6 hours', now() - interval '1 day 5 hours 30 minutes');
+
+  -- ── Appointment booked on a call (Grace's condo tour) ────────────
+  insert into public.voice_appointments (agent_id, contact_id, caller_name, caller_phone, title, start_at, end_at, status, source, created_at) values
+    (v_agent, c_grace::text, 'Grace Liu', '+16265550199', 'Buyer consultation — Grace Liu', date_trunc('day', now()) + interval '3 days 18 hours', date_trunc('day', now()) + interval '3 days 18 hours 30 minutes', 'booked', 'ai_receptionist', now() - interval '2 hours 55 minutes');
 
   -- ── SMS threads ──────────────────────────────────────────────────
   insert into public.sms_messages (agent_id, contact_id, message, direction, twilio_status, created_at) values
@@ -230,7 +272,11 @@ begin
     (v_agent, 'sales_assistant', 'sms_auto_reply', 'Replied to Jane Chen via SMS (Auto Pilot)', 'Confirmed Saturday 11am showing + sent two comparable addresses', 'normal', false, 'contact', c_jane::text, now() - interval '4 hours'),
     (v_agent, 'receptionist', 'inbound_call_answered', 'Answered a call about 312 Alder St open house times', 'Provided schedule, offered a private showing', 'normal', false, null, null, now() - interval '5 hours'),
     (v_agent, 'transaction_assistant', 'wire_fraud_alert', 'Texted you a wire-fraud reminder for 87 Birchwood Ln (closes in 2 days, wire instructions unverified)', 'Alert sent', 'high', true, 'transaction', t_birch::text, now() - interval '6 hours'),
+    (v_agent, 'receptionist', 'missed_call_textback', 'Texted back a missed call from (626) 555-0633', 'Text-back sent — call-backs scheduled', 'normal', false, null, null, now() - interval '35 minutes'),
+    (v_agent, 'receptionist', 'missed_call_callback', 'Called (626) 555-0633 back (attempt 1 of 3)', 'No answer — will retry', 'normal', false, null, null, now() - interval '30 minutes'),
+    (v_agent, 'receptionist', 'personal_call_reminder', 'Reminded you to call Tony Russo back — personal call', 'Reminder in your inbox', 'normal', false, 'contact', c_tony::text, now() - interval '2 hours'),
     (v_agent, 'receptionist', 'missed_call_textback', 'Texted back a missed call from +13105550466', 'Text-back sent', 'normal', false, null, null, now() - interval '7 hours'),
+    (v_agent, 'receptionist', 'missed_call_callback', 'Called (310) 555-0466 back (attempt 2 of 3)', 'Reached — rental inquiry, details captured', 'normal', false, null, null, now() - interval '6 hours 50 minutes'),
     (v_agent, 'transaction_assistant', 'transaction_digest', 'Emailed your transaction digest: 1 overdue, 5 upcoming tasks', 'Digest sent', 'high', true, null, null, now() - interval '9 hours'),
     -- yesterday
     (v_agent, 'sales_assistant', 'hot_lead_flagged', 'Flagged Jane Chen as hot — pre-approved and requesting weekend tours', 'Recommended priority follow-up', 'high', true, 'contact', c_jane::text, now() - interval '1 day 2 hours'),
@@ -279,7 +325,7 @@ begin
   -- ── Notification inbox (lights the bell badge) ───────────────────
   insert into public.agent_inbox_notifications (agent_id, type, priority, title, body, data, read, push_sent_at, created_at) values
     (v_agent, 'hot_lead', 'high', 'Hot lead — Grace Liu', 'Relocating from Seattle, ~$750k cash. Asked for downtown condo tours next week.', '{"deep_link":{"screen":"lead","contact_id":"0bde0001-0000-4000-8000-000000000012"}}'::jsonb, false, now(), now() - interval '3 hours'),
-    (v_agent, 'missed_call', 'medium', 'Missed call from (310) 555-0466', 'Auto text-back sent. Tap to follow up.', '{"deep_link":{"screen":"home"}}'::jsonb, false, now(), now() - interval '7 hours');
+    (v_agent, 'missed_call', 'medium', 'Personal call from Tony Russo', 'Tony Russo called and didn''t reach you. This looks personal — give him a call back when you have a minute.', '{"deep_link":{"screen":"call_log","contact_id":"0bde0001-0000-4000-8000-000000000013"}}'::jsonb, false, now(), now() - interval '2 hours');
 
   raise notice 'RealtorBoss demo seeded for agent %', v_agent;
 end $$;

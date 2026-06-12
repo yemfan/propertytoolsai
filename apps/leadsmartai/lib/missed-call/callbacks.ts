@@ -1,0 +1,235 @@
+import "server-only";
+
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { toE164 } from "@/lib/missed-call/service";
+import { logAssistantActivity } from "@/lib/realtorboss/activities";
+
+/**
+ * Missed-call auto call-back ladder.
+ *
+ * When the Receptionist logs a missed call (and the caller isn't a
+ * personal contact), a `receptionist_callbacks` row schedules outbound
+ * AI call-backs at +5, +10, and +30 minutes after the miss. The cron
+ * (/api/cron/receptionist-callbacks, every 5 minutes) places due
+ * attempts via the same Retell outbound path the voice console uses.
+ * The ladder resolves the moment ANY call with that caller connects —
+ * they answer a call-back, or they call again and the AI answers.
+ */
+
+/** Minutes after the missed call for attempts 1, 2, 3. */
+export const CALLBACK_OFFSETS_MINUTES = [5, 10, 30] as const;
+
+export const MAX_CALLBACK_ATTEMPTS = CALLBACK_OFFSETS_MINUTES.length;
+
+export type CallbackRow = {
+  id: string;
+  agent_id: unknown;
+  contact_id: string | null;
+  call_log_id: string | null;
+  phone_e164: string;
+  attempts: number;
+  next_attempt_at: string | null;
+  status: "scheduled" | "answered" | "exhausted" | "cancelled";
+  last_provider_call_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * Start (or no-op into) a call-back ladder for a missed call. The
+ * partial unique index on (agent_id, phone_e164) where scheduled
+ * guarantees one active ladder per caller — a second miss while one
+ * is running just keeps the existing schedule. Best-effort: never
+ * throws, a scheduling failure must not fail the text-back flow.
+ */
+export async function scheduleCallBacks(args: {
+  agentId: string;
+  callerPhone: string;
+  contactId: string | null;
+  callLogId: string | null;
+}): Promise<{ scheduled: boolean }> {
+  const phone = toE164(args.callerPhone);
+  if (!phone) return { scheduled: false };
+
+  try {
+    const firstAttemptAt = new Date(
+      Date.now() + CALLBACK_OFFSETS_MINUTES[0] * 60_000,
+    ).toISOString();
+    const { error } = await supabaseAdmin
+      .from("receptionist_callbacks")
+      .insert({
+        agent_id: args.agentId,
+        contact_id: args.contactId,
+        call_log_id: args.callLogId,
+        phone_e164: phone,
+        attempts: 0,
+        next_attempt_at: firstAttemptAt,
+        status: "scheduled",
+      });
+    if (error) {
+      // 23505 = an active ladder already exists for this caller. Expected.
+      if (error.code !== "23505") {
+        console.error("[callbacks] schedule failed:", error.message);
+      }
+      return { scheduled: false };
+    }
+    return { scheduled: true };
+  } catch (e) {
+    console.error("[callbacks] schedule threw:", e);
+    return { scheduled: false };
+  }
+}
+
+/**
+ * Resolve any active ladder for this caller — called from the Retell
+ * call-events webhook whenever a call with them CONNECTS, in either
+ * direction. Also flips a freshly-exhausted ladder to answered when
+ * the final attempt is the one that connects. Best-effort.
+ */
+export async function resolveCallBacksForPhone(args: {
+  agentId: string;
+  phone: string;
+}): Promise<void> {
+  const phone = toE164(args.phone);
+  if (!phone) return;
+  try {
+    await supabaseAdmin
+      .from("receptionist_callbacks")
+      .update({ status: "answered", updated_at: new Date().toISOString() })
+      .eq("agent_id", args.agentId)
+      .eq("phone_e164", phone)
+      .in("status", ["scheduled", "exhausted"]);
+  } catch (e) {
+    console.error("[callbacks] resolve threw:", e);
+  }
+}
+
+/**
+ * Place every due call-back. Runs from the every-5-minutes cron. Each row:
+ * place the outbound AI call, bump the attempt counter, and either
+ * schedule the next rung or exhaust the ladder after the third try
+ * (flagging the Boss feed for human follow-up).
+ *
+ * Dynamic imports keep the Retell voice stack out of the module
+ * graph of everything that merely schedules/resolves ladders.
+ */
+export async function processDueCallBacks(limit = 25): Promise<{
+  due: number;
+  placed: number;
+  exhausted: number;
+  errors: number;
+}> {
+  const nowIso = new Date().toISOString();
+  const { data, error } = await supabaseAdmin
+    .from("receptionist_callbacks")
+    .select(
+      "id, agent_id, contact_id, call_log_id, phone_e164, attempts, next_attempt_at, status, last_provider_call_id, created_at, updated_at",
+    )
+    .eq("status", "scheduled")
+    .lte("next_attempt_at", nowIso)
+    .order("next_attempt_at", { ascending: true })
+    .limit(limit);
+  if (error) {
+    console.error("[callbacks] due query failed:", error.message);
+    return { due: 0, placed: 0, exhausted: 0, errors: 1 };
+  }
+
+  const rows = (data ?? []) as CallbackRow[];
+  if (rows.length === 0) return { due: 0, placed: 0, exhausted: 0, errors: 0 };
+
+  const [{ placeOutboundCall }, { loadReceptionistContext }, svc] =
+    await Promise.all([
+      import("@/lib/voice-agent/outbound"),
+      import("@/lib/voice-agent/context"),
+      import("@/lib/missed-call/service"),
+    ]);
+
+  let placed = 0;
+  let exhausted = 0;
+  let errors = 0;
+
+  for (const row of rows) {
+    const agentId = String(row.agent_id);
+    const attemptNumber = row.attempts + 1;
+    try {
+      // The same toggle that powers the text-back governs the ladder;
+      // the voice receptionist must also be enabled (no Retell config
+      // → no outbound voice to call back with).
+      const settings = await svc.getOrInitSettings(agentId);
+      const ctx = settings.enabled ? await loadReceptionistContext(agentId) : null;
+      if (!ctx) {
+        await supabaseAdmin
+          .from("receptionist_callbacks")
+          .update({ status: "cancelled", updated_at: new Date().toISOString() })
+          .eq("id", row.id);
+        continue;
+      }
+
+      const contact = await svc.findContactByPhone(agentId, row.phone_e164);
+      const leadName = contact?.name?.trim() || "the caller";
+
+      const { callId } = await placeOutboundCall({
+        ctx,
+        agentId,
+        leadName,
+        toNumberE164: row.phone_e164,
+        purpose: "follow_up",
+        detail: `They called earlier and we missed them — this is call-back attempt ${attemptNumber}. Apologize briefly for missing their call and ask how you can help.`,
+      });
+      placed += 1;
+
+      const isLastAttempt = attemptNumber >= MAX_CALLBACK_ATTEMPTS;
+      const nextOffsetMin = isLastAttempt
+        ? null
+        : CALLBACK_OFFSETS_MINUTES[attemptNumber] - CALLBACK_OFFSETS_MINUTES[attemptNumber - 1];
+      await supabaseAdmin
+        .from("receptionist_callbacks")
+        .update({
+          attempts: attemptNumber,
+          last_provider_call_id: callId,
+          status: isLastAttempt ? "exhausted" : "scheduled",
+          next_attempt_at: nextOffsetMin
+            ? new Date(Date.now() + nextOffsetMin * 60_000).toISOString()
+            : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id);
+      if (isLastAttempt) exhausted += 1;
+
+      // Tag the call_logs row the placement wrote so the call list
+      // reads as a call-back, not a generic outbound call.
+      await supabaseAdmin
+        .from("call_logs")
+        .update({
+          notes: `Automatic call-back (attempt ${attemptNumber} of ${MAX_CALLBACK_ATTEMPTS}) for a missed call.`,
+        })
+        .eq("twilio_call_sid", callId);
+
+      void logAssistantActivity({
+        agentId,
+        assistantType: "receptionist",
+        activityType: "missed_call_callback",
+        summary: `Called ${leadName} back (attempt ${attemptNumber} of ${MAX_CALLBACK_ATTEMPTS})`,
+        outcome: isLastAttempt ? "Final attempt — will flag if unanswered" : "Will retry if unanswered",
+        priority: isLastAttempt ? "high" : "normal",
+        requiresAttention: false,
+        relatedEntityType: row.contact_id ? "contact" : null,
+        relatedEntityId: row.contact_id,
+      });
+    } catch (e) {
+      errors += 1;
+      console.error(`[callbacks] attempt failed for ${row.id}:`, e);
+      // Push the rung 10 minutes out rather than hot-looping the failure.
+      await supabaseAdmin
+        .from("receptionist_callbacks")
+        .update({
+          next_attempt_at: new Date(Date.now() + 10 * 60_000).toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id)
+        .eq("status", "scheduled");
+    }
+  }
+
+  return { due: rows.length, placed, exhausted, errors };
+}

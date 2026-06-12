@@ -18,7 +18,6 @@ import {
   Megaphone,
   MessageCircle,
   PenLine,
-  PhoneMissed,
   Presentation,
   Receipt,
   Rocket,
@@ -114,25 +113,13 @@ const navConfig = {
        Surfaces shared by most agents (Conversations) stay above. ── */
     { kind: "divider" as const },
     {
+      // ONE page: every call (answered, missed + text-back, auto
+      // call-backs), settings, and outbound tools all live on the
+      // Receptionist page itself — no sub-pages.
       label: "Receptionist",
+      href: "/dashboard/ai-receptionist",
+      match: ["/dashboard/ai-receptionist", "/dashboard/missed-call"],
       icon: p(<Headphones size={17} strokeWidth={STROKE} aria-hidden />),
-      items: [
-        {
-          label: "Overview",
-          href: "/dashboard/ai-receptionist",
-          match: ["/dashboard/ai-receptionist"],
-          icon: l(<Headphones size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-        {
-          // All calls live here — inbound answering, text-backs, and
-          // outbound AI calls. The phone is the Receptionist's
-          // instrument in both directions.
-          label: "Voice Console",
-          href: "/dashboard/missed-call",
-          match: ["/dashboard/missed-call"],
-          icon: l(<PhoneMissed size={14} strokeWidth={STROKE} aria-hidden />),
-        },
-      ],
     },
     {
       label: "Sales Assistant",

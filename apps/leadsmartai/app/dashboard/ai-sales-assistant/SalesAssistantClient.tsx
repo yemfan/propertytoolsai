@@ -61,7 +61,7 @@ export default function SalesAssistantClient() {
         actions={[
           { label: "Lead queue", href: "/dashboard/lead-queue" },
           { label: "Conversations", href: "/dashboard/inbox" },
-          { label: "Outbound calls", href: "/dashboard/missed-call" },
+          { label: "Outbound calls", href: "/dashboard/ai-receptionist" },
           { label: "Manage", href: "/dashboard/ai-team" },
         ]}
       />

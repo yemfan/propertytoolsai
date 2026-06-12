@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse, after } from "next/server";
-import { finalizeCallByProviderId, logInboundCallStart } from "@/lib/missed-call/service";
+import {
+  finalizeCallByProviderId,
+  findContactByPhone,
+  logInboundCallStart,
+  notifyPersonalCall,
+} from "@/lib/missed-call/service";
+import { resolveCallBacksForPhone } from "@/lib/missed-call/callbacks";
 import { resolveAgentIdByReceptionistNumber } from "@/lib/voice-receptionist/settings";
 import { captureLeadFromInboundCall } from "@/lib/voice-agent/lead-capture";
 import { logAssistantActivity } from "@/lib/realtorboss/activities";
@@ -106,6 +112,36 @@ export async function POST(req: NextRequest) {
       note: summary ? `AI call summary: ${summary}` : null,
     });
 
+    // A CONNECTED call with the caller — in either direction — resolves
+    // any pending missed-call call-back ladder for them: they answered
+    // a call-back, or they called again and the receptionist answered.
+    if (body.event === "call_ended" && status === "completed") {
+      const callId = call.call_id;
+      const direction = call.direction;
+      const fromNumber = call.from_number ?? null;
+      const toNumber = call.to_number ?? null;
+      after(async () => {
+        try {
+          if (direction === "inbound" && fromNumber && toNumber) {
+            const agentId = await resolveAgentIdByReceptionistNumber(toNumber);
+            if (agentId) await resolveCallBacksForPhone({ agentId, phone: fromNumber });
+          } else if (direction === "outbound" && toNumber) {
+            const { data } = await supabaseAdmin
+              .from("call_logs")
+              .select("agent_id")
+              .eq("twilio_call_sid", callId)
+              .maybeSingle();
+            const agentId = (data as { agent_id: unknown } | null)?.agent_id;
+            if (agentId) {
+              await resolveCallBacksForPhone({ agentId: String(agentId), phone: toNumber });
+            }
+          }
+        } catch (e) {
+          console.error("retell/call-events: callback resolve failed", e);
+        }
+      });
+    }
+
     // RealtorBoss activity feed — outbound AI calls belong to the Sales
     // Assistant. Logged once, on call_ended (call_analyzed would double
     // up). Runs after the response; a failure can't affect the webhook.
@@ -155,7 +191,20 @@ export async function POST(req: NextRequest) {
         try {
           const agentId = await resolveAgentIdByReceptionistNumber(toNumber);
           if (agentId) {
-            await captureLeadFromInboundCall({ agentId, fromPhone, summary, transcript, providerCallId });
+            // Personal (sphere) callers don't become leads — the right
+            // follow-up is the Realtor calling back personally, so we
+            // skip capture and drop a reminder in their inbox instead.
+            const known = await findContactByPhone(agentId, fromPhone).catch(() => null);
+            if (known?.personal) {
+              await notifyPersonalCall({
+                agentId,
+                contact: known,
+                callerPhone: fromPhone,
+                kind: "answered",
+              });
+            } else {
+              await captureLeadFromInboundCall({ agentId, fromPhone, summary, transcript, providerCallId });
+            }
             // RealtorBoss activity feed — the Receptionist answered and
             // summarized this inbound call. Logged here (call_analyzed)
             // so the activity carries the AI summary.
@@ -163,7 +212,7 @@ export async function POST(req: NextRequest) {
               agentId,
               assistantType: "receptionist",
               activityType: "inbound_call_answered",
-              summary: `Answered a call from ${fromPhone}`,
+              summary: `Answered a call from ${known?.name?.trim() || fromPhone}`,
               outcome: summary.length > 180 ? `${summary.slice(0, 177)}…` : summary,
             });
           }
