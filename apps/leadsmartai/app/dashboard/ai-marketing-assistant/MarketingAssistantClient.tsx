@@ -55,6 +55,7 @@ export default function MarketingAssistantClient({ data }: { data: MarketingData
       <AssistantHeader
         assistant={assistant}
         actions={[
+          { label: "Drafts", href: "/dashboard/drafts" },
           { label: "Marketing plans", href: "/dashboard/marketing/plans" },
           { label: "Templates", href: "/dashboard/templates" },
           { label: "Generate leads", href: "/dashboard/leads/generate" },

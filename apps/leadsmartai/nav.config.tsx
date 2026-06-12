@@ -129,13 +129,15 @@ const navConfig = {
           match: ["/dashboard/ai-sales-assistant"],
           icon: l(<TrendingUp size={14} strokeWidth={STROKE} aria-hidden />),
         },
+        // Drafts moved under the Marketing Assistant — the approval
+        // queue holds its sphere-nurture messages.
         {
-          // Its approval queue — messages drafted by the assistant,
-          // waiting for the Boss to approve before they send.
-          label: "Drafts",
-          href: "/dashboard/drafts",
-          match: ["/dashboard/drafts"],
-          icon: l(<PenLine size={14} strokeWidth={STROKE} aria-hidden />),
+          // Open houses feed the Sales Assistant's pipeline (sign-ins
+          // become leads, follow-ups convert them).
+          label: "Open Houses",
+          href: "/dashboard/open-houses",
+          match: ["/dashboard/open-houses", "/dashboard/open-house"],
+          icon: l(<DoorOpen size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           // Pipeline insights — where the Sales Assistant's next
@@ -163,6 +165,14 @@ const navConfig = {
           href: "/dashboard/ai-marketing-assistant",
           match: ["/dashboard/ai-marketing-assistant"],
           icon: l(<Megaphone size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          // Its approval queue — nurture messages drafted for the
+          // sphere, waiting for the Boss to approve before they send.
+          label: "Drafts",
+          href: "/dashboard/drafts",
+          match: ["/dashboard/drafts"],
+          icon: l(<PenLine size={14} strokeWidth={STROKE} aria-hidden />),
         },
         {
           // Hosts the Sphere tab too (sphere monetization + the
@@ -257,12 +267,7 @@ const navConfig = {
       label: "More",
       icon: p(<Wrench size={17} strokeWidth={STROKE} aria-hidden />),
       items: [
-        {
-          label: "Open Houses",
-          href: "/dashboard/open-houses",
-          match: ["/dashboard/open-houses", "/dashboard/open-house"],
-          icon: l(<DoorOpen size={14} strokeWidth={STROKE} aria-hidden />),
-        },
+        // Open Houses moved under the Sales Assistant.
         {
           label: "Showings",
           href: "/dashboard/showings",
