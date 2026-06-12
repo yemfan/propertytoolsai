@@ -22,7 +22,6 @@ import {
   Receipt,
   Rocket,
   Route,
-  Ruler,
   Settings,
   Sparkles,
   Target,
@@ -138,6 +137,14 @@ const navConfig = {
           href: "/dashboard/drafts",
           match: ["/dashboard/drafts"],
           icon: l(<PenLine size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
+          // Pipeline insights — where the Sales Assistant's next
+          // opportunities come from, so it lives on its desk.
+          label: "Growth & Opportunities",
+          href: "/dashboard/growth",
+          match: ["/dashboard/growth"],
+          icon: l(<Rocket size={14} strokeWidth={STROKE} aria-hidden />),
         },
         // Lead Queue hidden for now (route stays live at
         // /dashboard/lead-queue) — restore by re-adding:
@@ -277,12 +284,8 @@ const navConfig = {
           match: ["/dashboard/playbooks"],
           icon: l(<ClipboardList size={14} strokeWidth={STROKE} aria-hidden />),
         },
-        {
-          label: "Daily Overview",
-          href: "/dashboard/overview",
-          match: ["/dashboard/overview"],
-          icon: l(<LayoutDashboard size={14} strokeWidth={STROKE} aria-hidden />),
-        },
+        // Daily Overview removed from the nav (the Boss Assistant IS
+        // the daily overview now); route stays live at /dashboard/overview.
         {
           label: "Performance",
           href: "/dashboard/performance",
@@ -301,24 +304,14 @@ const navConfig = {
           match: ["/dashboard/sphere/monetization"],
           icon: l(<Gem size={14} strokeWidth={STROKE} aria-hidden />),
         },
-        {
-          label: "Growth & Opportunities",
-          href: "/dashboard/growth",
-          match: ["/dashboard/growth"],
-          icon: l(<Rocket size={14} strokeWidth={STROKE} aria-hidden />),
-        },
+        // Growth & Opportunities moved under the Sales Assistant.
         {
           label: "Property Tools",
           href: "/dashboard/tools",
           match: ["/dashboard/tools"],
           icon: l(<Wrench size={14} strokeWidth={STROKE} aria-hidden />),
         },
-        {
-          label: "CMAs",
-          href: "/dashboard/cma",
-          match: ["/dashboard/cma"],
-          icon: l(<Ruler size={14} strokeWidth={STROKE} aria-hidden />),
-        },
+        // CMAs removed from the nav; route stays live at /dashboard/cma.
         {
           label: "Billing",
           href: "/dashboard/billing",
