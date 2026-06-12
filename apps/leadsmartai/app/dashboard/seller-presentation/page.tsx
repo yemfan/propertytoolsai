@@ -1,24 +1,11 @@
-import { supabaseServer } from "@/lib/supabaseServer";
-import { getCurrentAgentContext } from "@/lib/dashboardService";
-import SellerPresentationClient from "./SellerPresentationClient";
+import { redirect } from "next/navigation";
 
-export const metadata = {
-  title: "Seller Presentation | RealtorBoss",
-  description: "Generate AI-powered seller presentations with property comparisons.",
-};
-
-export default async function SellerPresentationPage() {
-  await getCurrentAgentContext();
-
-  const { data: properties } = await supabaseServer
-    .from("properties_warehouse")
-    .select("id, address, city, state, beds, baths, sqft, property_type, year_built")
-    .order("updated_at", { ascending: false })
-    .limit(100);
-
-  return (
-    <SellerPresentationClient
-      properties={(properties ?? []) as Array<Record<string, unknown>>}
-    />
-  );
+/**
+ * Seller presentations moved into the Listings page (Presentations
+ * tab) — a listing presentation is how a listing gets won. Kept as a
+ * redirect for old links; the client component still lives here and
+ * is imported by the Listings tabs.
+ */
+export default function SellerPresentationPage() {
+  redirect("/dashboard/properties?tab=presentations");
 }
