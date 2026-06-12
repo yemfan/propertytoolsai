@@ -132,6 +132,14 @@ const navConfig = {
         // Drafts moved under the Marketing Assistant — the approval
         // queue holds its sphere-nurture messages.
         {
+          // Open houses feed the Sales Assistant's pipeline (sign-ins
+          // become leads, follow-ups convert them).
+          label: "Open Houses",
+          href: "/dashboard/open-houses",
+          match: ["/dashboard/open-houses", "/dashboard/open-house"],
+          icon: l(<DoorOpen size={14} strokeWidth={STROKE} aria-hidden />),
+        },
+        {
           // Pipeline insights — where the Sales Assistant's next
           // opportunities come from, so it lives on its desk.
           label: "Growth & Opportunities",
@@ -259,12 +267,7 @@ const navConfig = {
       label: "More",
       icon: p(<Wrench size={17} strokeWidth={STROKE} aria-hidden />),
       items: [
-        {
-          label: "Open Houses",
-          href: "/dashboard/open-houses",
-          match: ["/dashboard/open-houses", "/dashboard/open-house"],
-          icon: l(<DoorOpen size={14} strokeWidth={STROKE} aria-hidden />),
-        },
+        // Open Houses moved under the Sales Assistant.
         {
           label: "Showings",
           href: "/dashboard/showings",
